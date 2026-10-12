@@ -257,6 +257,10 @@ impl Record {
         }
     }
 
+    pub fn sticker(id: i64) -> Self {
+        Self { record_type: "Sticker", table: "stickers", id, branding: None }
+    }
+
     pub fn soundboard_sound(id: i64) -> Self {
         Self {
             record_type: "SoundboardSound",

@@ -3,7 +3,9 @@
  * reading and deleting, with the sync events each one publishes on `room:<id>`,
  * `thread:<id>` and the viewer's `user` topic.
  */
+
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
+import type { MessageSticker } from "../../src/gen/MessageSticker.ts";
 import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { ThreadInvolvement } from "../../src/gen/ThreadInvolvement.ts";
@@ -77,6 +79,7 @@ export function createThreads(
   ctx: S2Context,
   uploads: Uploads,
   held: (run: () => MockResponse) => MockResponse | Promise<MockResponse>,
+  sticker: ((id: number) => MessageSticker) | undefined = undefined,
 ): Threads {
   const threadOr404 = (threadId: number): ThreadRecord => {
     const thread = ctx.world().threads.get(threadId);
@@ -303,7 +306,7 @@ export function createThreads(
       }
     }
 
-    const parsed = parseMessage(messageBody, uploads.attachment);
+    const parsed = parseMessage(messageBody, uploads.attachment, sticker);
     const requested = stringField(body, "name")?.trim() ?? "";
 
     if ([...requested].length > THREAD_NAME_LIMIT) {
@@ -369,7 +372,7 @@ export function createThreads(
 
     if (duplicate !== undefined) return ok(duplicate);
 
-    const parsed = parseMessage(body, uploads.attachment);
+    const parsed = parseMessage(body, uploads.attachment, sticker);
     const replyTo = parsed.replyToMessageId;
 
     if (replyTo !== null && !thread.messages.some((message) => message.id === replyTo)) {

@@ -39,6 +39,7 @@ mod branding_images;
 pub mod board_automations;
 pub mod huddles;
 pub mod soundboard;
+pub mod stickers;
 pub mod join;
 pub mod invites;
 pub mod message_actions;
@@ -471,6 +472,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             axum::routing::post(unparsed_action(huddles::leave)),
         )
         .route(
+            "/api/v1/rooms/{room_id}/huddle/activity",
+            axum::routing::post(unparsed_action(huddles::activity)),
+        )
+        .route(
             "/api/v1/rooms/{room_id}/huddle/moderation",
             axum::routing::post(unparsed_action(huddles::moderate)),
         )
@@ -511,6 +516,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(settings::routes())
         .merge(admin::routes())
         .merge(soundboard::routes())
+        .merge(stickers::routes())
         .merge(invites::routes())
         .merge(bots::routes())
         .merge(webhooks::routes())

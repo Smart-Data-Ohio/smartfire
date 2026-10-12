@@ -25,6 +25,7 @@ pub mod variation;
 pub mod verifier;
 pub mod vips;
 pub mod workspace_icon;
+pub mod sticker;
 
 pub use blob::{Blob, NewBlob};
 pub use disk::DiskService;

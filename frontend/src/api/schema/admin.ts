@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { AfkPolicy as GeneratedAfkPolicy } from "../../gen/AfkPolicy.ts";
 import type { AuditLogEntry as GeneratedAuditLogEntry } from "../../gen/AuditLogEntry.ts";
 import type { AuditLogFilters as GeneratedAuditLogFilters } from "../../gen/AuditLogFilters.ts";
 import type { AuditLogPage as GeneratedAuditLogPage } from "../../gen/AuditLogPage.ts";
@@ -30,7 +31,15 @@ import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 
 /** The workspace: name, logo, join link and the room-creation switch. */
+export const AfkPolicy = Schema.Struct({
+  roomId: Schema.NullOr(Schema.Int),
+  timeoutMinutes: Schema.Int,
+});
+
+export type AfkPolicyPin = Assert<Pinned<typeof AfkPolicy, GeneratedAfkPolicy>>;
+
 export const Workspace = Schema.Struct({
+  afkPolicy: AfkPolicy,
   name: Schema.String,
   logoUrl: Schema.String,
   logoAttached: Schema.Boolean,
@@ -44,6 +53,7 @@ export const Workspace = Schema.Struct({
   canAdminister: Schema.Boolean,
   restrictRoomCreationToAdministrators: Schema.Boolean,
   uploadLimitBytes: Schema.Int,
+  stageAudienceBudget: Schema.Int,
   version: Schema.String,
   description: Schema.String,
   vanitySlug: Schema.NullOr(Schema.String),
@@ -56,9 +66,11 @@ export type WorkspacePin = Assert<Pinned<typeof Workspace, GeneratedWorkspace>>;
 
 /** `PATCH /admin/workspace`: `null` leaves a key as it is. */
 export const UpdateWorkspace = Schema.Struct({
+  afkPolicy: Schema.NullOr(AfkPolicy),
   name: Schema.NullOr(Schema.String),
   restrictRoomCreationToAdministrators: Schema.NullOr(Schema.Boolean),
   uploadLimitBytes: Schema.NullOr(Schema.Int),
+  stageAudienceBudget: Schema.NullOr(Schema.Int),
   description: Schema.NullOr(Schema.String),
   vanitySlug: Schema.NullOr(Schema.String),
 });

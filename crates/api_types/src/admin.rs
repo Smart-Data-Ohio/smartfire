@@ -19,6 +19,7 @@ use crate::Timestamp;
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Workspace {
+    pub afk_policy: AfkPolicy,
     pub name: String,
     /// The logo image (the stock app icon when none is attached), with a cache version.
     pub logo_url: String,
@@ -35,6 +36,8 @@ pub struct Workspace {
     pub restrict_room_creation_to_administrators: bool,
     /// Maximum bytes per uploaded file. Defaults to 100 MiB.
     pub upload_limit_bytes: i64,
+    /// Declared audience admission limit per stage, default 300.
+    pub stage_audience_budget: i64,
     /// The footer's "Smartfire version" badge text.
     pub version: String,
     /// Plain-text workspace description, empty when unset.
@@ -49,14 +52,28 @@ pub struct Workspace {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateWorkspace {
+    /// Null leaves the policy unchanged. A policy with roomId null disables AFK moves.
+    pub afk_policy: Option<AfkPolicy>,
     pub name: Option<String>,
     pub restrict_room_creation_to_administrators: Option<bool>,
     pub upload_limit_bytes: Option<i64>,
+    pub stage_audience_budget: Option<i64>,
     /// An empty string clears the description; null leaves it unchanged.
     pub description: Option<String>,
     /// An empty string removes the alias; null leaves it unchanged.
     pub vanity_slug: Option<String>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AfkPolicy {
+    pub room_id: Option<i64>,
+    #[serde(default = "default_afk_timeout")]
+    pub timeout_minutes: i64,
+}
+
+fn default_afk_timeout() -> i64 { 5 }
 
 /// `PUT /api/v1/admin/workspace/logo`: a blob uploaded with `POST /api/v1/uploads` becomes the
 /// logo. `DELETE` removes it. `POST /api/v1/admin/workspace/join_code` makes a new join link

@@ -52,6 +52,7 @@ pub(crate) fn message() -> MessageDTO {
         client_message_id: "4f1c7a0e-5b0e-4c55-9d0a-6f3b2d1e8c11".into(),
         body_html: "<p>Hello <strong>there</strong></p>".into(),
         sound: None,
+        sticker: None,
         markdown_source: Some("Hello **there**".into()),
         system_note: false,
         action: false,
@@ -348,6 +349,11 @@ fn api_errors_are_tagged_unions_under_error() {
                 message: "Changed".into(),
             },
             json!({"_tag": "Conflict", "message": "Changed"}),
+            409,
+        ),
+        (
+            ApiError::StageAudienceFull { message: "This stage is full".into() },
+            json!({"_tag": "StageAudienceFull", "message": "This stage is full"}),
             409,
         ),
         (
@@ -680,6 +686,7 @@ fn create_message_requests_round_trip() {
             markdown_source: "Ship it :rocket:".into(),
             reply_to_message_id: None,
             reply_notify_author: None,
+            sticker_id: None,
             attachment_signed_id: None,
             attachment_signed_ids: None,
             drive_file_ids: None,

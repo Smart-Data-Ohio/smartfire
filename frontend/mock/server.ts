@@ -74,6 +74,7 @@ import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createSettings } from "./s2/settings.ts";
 import { createSignIn } from "./s2/sign-in.ts";
 import { createSlack } from "./s2/slack.ts";
+import { createStickers } from "./s2/stickers.ts";
 import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
@@ -790,7 +791,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     if (duplicate !== undefined) return { status: 200, json: duplicate };
 
-    const parsed = parseMessage(body, uploads.attachment);
+    const parsed = parseMessage(body, uploads.attachment, stickers.reference);
     const replyTo = parsed.replyToMessageId;
 
     if (replyTo !== null && !record.messages.some((message) => message.id === replyTo)) {
@@ -973,13 +974,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     (name) => admin.iconFile(name),
   );
 
-  const admin = createAdmin(ctx, uploads);
+  const admin = createAdmin(ctx, uploads, () => huddles.publishStages());
   const signIn = createSignIn(ctx, admin, () => csrf);
   const invites = createInvites(ctx);
   const join = createJoin(ctx, admin, invites);
   // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
   const settings = createSettings(ctx, uploads, admin.requireSudo);
-  const threads = createThreads(ctx, uploads, whenReleased);
+  const stickers = createStickers(ctx);
+  const threads = createThreads(ctx, uploads, whenReleased, stickers.reference);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
 
@@ -1019,7 +1021,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const account = createAccount(ctx, () => csrf);
   const soundboard = createSoundboard(ctx, uploads);
-  const huddles = createHuddles(ctx, simulate, soundboard.has);
+
+  const huddles = createHuddles(
+    ctx,
+    simulate,
+    soundboard.has,
+    admin.afkPolicy,
+    admin.stageAudienceBudget,
+  );
+
   const events = createEvents(ctx);
   const cards = createCards(ctx, uploads, events);
   const fizzy = createFizzy(ctx, threads);
@@ -1038,6 +1048,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...events.routes,
     ...huddles.routes,
     ...soundboard.routes,
+    ...stickers.routes,
     ...cards.routes,
     ...fizzy.routes,
     ...uploads.routes,
@@ -1577,7 +1588,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         });
       }
     },
-    handleBinary: (request) => uploads.handleBinary(request),
+    handleBinary: async (request) =>
+      stickers.handleBinary(request) ?? uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
     joined: () => join.joined(),

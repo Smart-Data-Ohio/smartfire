@@ -294,6 +294,7 @@ async fn post_message(c: &mut Ctx) -> Result {
     if signed_id.is_none()
         && signed_ids.is_empty()
         && drive_file_ids.is_empty()
+        && input.sticker_id.is_none()
         && input.markdown_source.trim().is_empty()
     {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
@@ -346,6 +347,7 @@ async fn post_message(c: &mut Ctx) -> Result {
             let markdown_source =
                 Some(input.markdown_source).filter(|source| !source.trim().is_empty());
             let attributes = MessageParams {
+                sticker_id: input.sticker_id,
                 markdown_source,
                 // `message[attachment]` given a direct upload's signed blob id.
                 attachment: signed_id.map(Assignment::Signed),

@@ -181,7 +181,7 @@ export function createAnnouncements(ctx: S2Context): Announcements {
     const markdown =
       source.markdownSource ?? source.bodyHtml.replace(/<br\s*\/?>/g, "\n").replace(/<[^>]+>/g, "");
 
-    const copy = ctx.postToRoom(record, {
+    const draft = {
       creatorId: source.creatorId,
       markdown,
       clientMessageId: ctx.uuid(),
@@ -191,7 +191,10 @@ export function createAnnouncements(ctx: S2Context): Announcements {
       action: false,
       systemNote: false,
       forward: null,
-    });
+    };
+
+    const media = source.sticker === undefined ? draft : { ...draft, sticker: source.sticker };
+    const copy = ctx.postToRoom(record, media);
 
     const sourceRoom = ctx.world().rooms.get(source.roomId);
     const index = record.messages.findIndex((message) => message.id === copy.id);

@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { HuddleAfkMoved as GeneratedHuddleAfkMoved } from "../../gen/HuddleAfkMoved.ts";
 import type { HuddleCredentials as GeneratedHuddleCredentials } from "../../gen/HuddleCredentials.ts";
 import type { HuddleDetail as GeneratedHuddleDetail } from "../../gen/HuddleDetail.ts";
 import type { HuddleModeration as GeneratedHuddleModeration } from "../../gen/HuddleModeration.ts";
@@ -20,6 +21,16 @@ import { User } from "./user.ts";
 export const GrantId = Schema.Int.pipe(Schema.brand("GrantId"));
 
 export type GrantId = typeof GrantId.Type;
+
+export const HuddleAfkMoved = Schema.Struct({
+  identity: Schema.String,
+  sourceRoomId: RoomId,
+  roomId: RoomId,
+  roomName: Schema.String,
+  timeoutMinutes: Schema.Int,
+});
+
+export type HuddleAfkMovedPin = Assert<Pinned<typeof HuddleAfkMoved, GeneratedHuddleAfkMoved>>;
 
 /** Someone in a room's call, with the LiveKit identities of each tab or device they joined from. */
 export const HuddleParticipant = Schema.Struct({

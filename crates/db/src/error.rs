@@ -2,8 +2,12 @@ use std::fmt;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Sticker capacity reached (limit: 60 stickers)")]
+    StickerLimitReached,
     #[error("This voice room is full")]
     HuddleRoomFull,
+    #[error("Stage audience is full")]
+    StageAudienceFull,
     #[error("Invalid slash command options")]
     FieldValidation(campfire_slash_schema::FieldErrors),
     /// `Google::SignIn::Rejected`: safe stable reason, never raw claims or credentials.

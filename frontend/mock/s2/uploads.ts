@@ -41,6 +41,7 @@ export function isBinaryPath(path: string): boolean {
   return (
     path.startsWith("/rails/active_storage/") ||
     path.startsWith("/icons/") ||
+    path.startsWith("/stickers/") ||
     path.startsWith("/assets/icons/brands/")
   );
 }

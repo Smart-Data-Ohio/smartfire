@@ -55,6 +55,9 @@ export type StageStreamPin = Assert<Pinned<typeof StageStream, GeneratedStageStr
 /** A stage's roster and stream, the same for every viewer; also the `stage.updated` event's data. */
 export const StageState = Schema.Struct({
   roomId: RoomId,
+  audienceCount: Schema.Int,
+  audienceBudget: Schema.Int,
+  audienceAvailability: Schema.Literals(["open", "full"]),
   members: Schema.Array(StageMember),
   live: Schema.NullOr(StageStream),
 });

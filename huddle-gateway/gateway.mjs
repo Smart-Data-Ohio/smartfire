@@ -197,6 +197,7 @@ function adminToken(config, grant) {
 }
 
 function genericBody(status, code) {
+  if (code === "stage_full") return "This stage is full\n";
   if (code === "room_full") return "This voice room is full\n";
   if (status === 401) return "Unauthorized\n";
   if (status === 403) return "Forbidden\n";
@@ -257,6 +258,17 @@ export function createGateway(options) {
     return target;
   }
 
+  async function capacityError(response) {
+    const body = await readBounded(response);
+    let code = "room_full";
+    try {
+      if (JSON.parse(body.toString("utf8")).error === "StageAudienceFull") code = "stage_full";
+    } catch {
+      // Older backends returned an empty conflict response for voice room capacity.
+    }
+    return new GatewayError(code, 403);
+  }
+
   async function authorize(token, signal) {
     return boundedFetch(campfireEndpoint("/internal/huddle/authorize"), {
       method: "POST",
@@ -269,8 +281,8 @@ export function createGateway(options) {
       body: "{}",
     }, config.requestTimeoutMs, signal, async (response) => {
       if (response.status !== 200) {
+        if (response.status === 409) throw await capacityError(response);
         await response.body?.cancel().catch(() => {});
-        if (response.status === 409) throw new GatewayError("room_full", 403);
         const status = response.status === 401 || response.status === 403 ? response.status : 503;
         throw new GatewayError("authorization_denied", status);
       }
@@ -296,8 +308,8 @@ export function createGateway(options) {
       },
     }, config.requestTimeoutMs, signal, async (response) => {
       if (response.status !== 200) {
+        if (response.status === 409) throw await capacityError(response);
         await response.body?.cancel().catch(() => {});
-        if (response.status === 409) throw new GatewayError("room_full", 403);
         throw new GatewayError("grant_denied", response.status === 401 || response.status === 403 ? response.status : 503);
       }
       const body = await readBounded(response);

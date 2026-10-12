@@ -89,7 +89,7 @@ pub fn prepare(
 
 // libnsgif tolerates incomplete final frames, even with libvips' strict loader options.
 // Require complete blocks and a trailer before asking the decoder to evaluate pixels.
-fn gif_frames(bytes: &[u8]) -> Option<usize> {
+pub(crate) fn gif_frames(bytes: &[u8]) -> Option<usize> {
     fn take<'a>(data: &mut &'a [u8], size: usize) -> Option<&'a [u8]> {
         let (head, tail) = data.split_at_checked(size)?;
         *data = tail;

@@ -30,12 +30,35 @@ pub struct AccountSettings {
 
 const RESTRICT_ROOM_CREATION: &str = "restrict_room_creation_to_administrators";
 const UPLOAD_LIMIT: &str = "upload_limit_bytes";
+const STAGE_AUDIENCE_BUDGET: &str = "stage_audience_budget";
 const DESCRIPTION: &str = "description";
 const VANITY_SLUG: &str = "vanity_slug";
 /// The welcome card and server guide (U1, U4): a JSON object the API layer validates and reads.
 const WELCOME: &str = "welcome";
 const ANIMATED_EMOJI_LIMIT: &str = "animated_emoji_limit";
+const AFK_POLICY: &str = "afk_policy";
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AfkPolicy {
+    pub room_id: Option<i64>,
+    #[serde(default = "default_afk_timeout")]
+    pub timeout_minutes: i64,
+}
+
+fn default_afk_timeout() -> i64 { 5 }
+
+impl AfkPolicy {
+    pub fn validate(&self) -> Result<()> {
+        let mut errors = crate::Errors::default();
+        if ![1, 5, 15, 30, 60].contains(&self.timeout_minutes) {
+            errors.add("afkPolicy", "timeout must be 1, 5, 15, 30 or 60 minutes");
+        }
+        errors.into_result()
+    }
+}
 pub const DEFAULT_ANIMATED_EMOJI_LIMIT: i64 = 250;
+pub const DEFAULT_STAGE_AUDIENCE_BUDGET: i64 = 300;
 pub const DEFAULT_UPLOAD_LIMIT_BYTES: i64 = 100 * 1024 * 1024;
 /// Largest integer the SPA can represent exactly.
 pub const MAX_UPLOAD_LIMIT_BYTES: i64 = 9_007_199_254_740_991;
@@ -166,6 +189,13 @@ impl AccountSettings {
             .unwrap_or("")
     }
 
+    pub fn afk_policy(&self) -> AfkPolicy {
+        self.data.get(AFK_POLICY)
+            .and_then(|value| serde_json::from_value::<AfkPolicy>(value.clone()).ok())
+            .filter(|policy| policy.validate().is_ok())
+            .unwrap_or(AfkPolicy { room_id: None, timeout_minutes: 5 })
+    }
+
     pub fn vanity_slug(&self) -> Option<&str> {
         self.data
             .get(VANITY_SLUG)
@@ -191,6 +221,14 @@ impl AccountSettings {
             .unwrap_or(DEFAULT_UPLOAD_LIMIT_BYTES)
     }
 
+    pub fn stage_audience_budget(&self) -> i64 {
+        self.data
+            .get(STAGE_AUDIENCE_BUDGET)
+            .and_then(Value::as_i64)
+            .filter(|budget| (1..=MAX_UPLOAD_LIMIT_BYTES).contains(budget))
+            .unwrap_or(DEFAULT_STAGE_AUDIENCE_BUDGET)
+    }
+
     pub fn animated_emoji_limit(&self) -> i64 {
         self.data
             .get(ANIMATED_EMOJI_LIMIT)
@@ -209,6 +247,12 @@ impl AccountSettings {
     pub fn assign(&mut self, values: &[(&str, &str)]) -> Result<()> {
         for (key, value) in values {
             match *key {
+                AFK_POLICY => {
+                    let policy: AfkPolicy = serde_json::from_str(value)
+                        .map_err(|error| Error::Other(error.to_string()))?;
+                    policy.validate()?;
+                    self.data.insert(AFK_POLICY.into(), serde_json::to_value(policy).expect("AFK policy encodes"));
+                }
                 RESTRICT_ROOM_CREATION => self.set_restrict_room_creation_to_administrators(value),
                 UPLOAD_LIMIT => {
                     let bytes = value
@@ -219,6 +263,17 @@ impl AccountSettings {
                             Error::Other("upload limit must be a positive safe integer".into())
                         })?;
                     self.data.insert(UPLOAD_LIMIT.into(), Value::from(bytes));
+                }
+                STAGE_AUDIENCE_BUDGET => {
+                    let budget = value
+                        .parse::<i64>()
+                        .ok()
+                        .filter(|budget| (1..=MAX_UPLOAD_LIMIT_BYTES).contains(budget))
+                        .ok_or_else(|| {
+                            Error::Other("stage audience budget must be a positive safe integer".into())
+                        })?;
+                    self.data
+                        .insert(STAGE_AUDIENCE_BUDGET.into(), Value::from(budget));
                 }
                 ANIMATED_EMOJI_LIMIT => {
                     let limit = value
@@ -386,6 +441,14 @@ impl Account {
             let original = self.settings();
             let mut updated = original.clone();
             updated.assign(values)?;
+            if values.iter().any(|(key, _)| *key == AFK_POLICY)
+                && let Some(id) = updated.afk_policy().room_id
+                && !crate::Room::find_by_id(tx.conn(), id)?.is_some_and(|room| room.voice() && !room.deleted())
+            {
+                let mut errors = crate::Errors::default();
+                errors.add("afkPolicy", "room must be an existing voice room");
+                return errors.into_result();
+            }
             if self.settings_json.is_none() || updated != original {
                 let json = updated.to_json();
                 self.settings_json = Some(json.clone());
