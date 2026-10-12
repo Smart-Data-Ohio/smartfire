@@ -6,7 +6,7 @@ use ts_rs::TS;
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
     ApprovalUpdated, BoardAutomationsChanged, CustomStyles, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
-    HuddleSoundboardPlayed, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
+    HuddleAfkMoved, HuddleSoundboardPlayed, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
     RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
     ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
     ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
@@ -261,6 +261,9 @@ pub enum SyncPayload {
     /// revoked; rejoin for a fresh token.
     #[serde(rename = "huddle.role")]
     HuddleRole(HuddleRoleChanged),
+
+    #[serde(rename = "huddle.afk.moved")]
+    HuddleAfkMoved(HuddleAfkMoved),
     /// On the viewer's `user` topic: someone joined or left a call in one of their rooms, or it
     /// ended.
     #[serde(rename = "huddle.notice")]

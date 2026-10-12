@@ -90,7 +90,7 @@ pub use activity::{
     ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
 };
 pub use admin::{
-    AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
+    AfkPolicy, AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
     EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
     PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
@@ -159,7 +159,7 @@ pub use events::{
 pub use huddle::{
     HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
     HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
-    HuddleRoleChanged, ModerateHuddle,
+    HuddleRoleChanged, HuddleActivity, HuddleAfkMoved, ModerateHuddle,
 };
 pub use join::{OpenRoomPreview, RoomJoin};
 pub use invites::{CreateWorkspaceInvite, WorkspaceInvite, WorkspaceInviteCreated, WorkspaceInviteCreator, WorkspaceInviteExpiry, WorkspaceInviteList, WorkspaceInviteState};

@@ -6,6 +6,8 @@
  * account, a revoked grant). An operation counter drops the results of anything a newer
  * action overtook. The media itself sits behind a `CallTransport`.
  */
+
+import type { HuddleAfkMoved } from "../../gen/HuddleAfkMoved.ts";
 import type { HuddleCredentials } from "../../gen/HuddleCredentials.ts";
 import type { StageRole } from "../../gen/StageRole.ts";
 import type { StageStream } from "../../gen/StageStream.ts";
@@ -15,6 +17,7 @@ import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { onAccountChange, store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
 import { ActionError } from "../../sync/run.ts";
+import { toast } from "../../ui/toast-store.ts";
 import {
   activePhase,
   type CallBusy,
@@ -63,6 +66,8 @@ import {
 
 export const AUTH_CHECK_INTERVAL_MS = 45_000;
 
+export const ACTIVITY_INTERVAL_MS = 10_000;
+
 export const STATS_INTERVAL_MS = 2_000;
 
 export const RECONNECT_COUNTDOWN_SECONDS = 30;
@@ -80,6 +85,13 @@ export const MICROPHONE_RESTART_ERROR =
 
 const SIGN_IN_EXPIRED = "Your sign-in expired. Sign in again to join a huddle.";
 
+interface CallAudio {
+  /** The caller's setting, excluding a temporary push-to-talk hold. */
+  microphoneEnabled: boolean;
+  deafened: boolean;
+  microphoneBeforeDeafen: boolean;
+}
+
 /** Everything the controller reaches outside itself, so tests can stand in for it. */
 export interface CallEnvironment {
   join(roomId: number): Promise<HuddleCredentials>;
@@ -87,6 +99,7 @@ export interface CallEnvironment {
   leaveOnUnload(roomId: number): void;
   /** `GET /rooms/:id/huddle`: rejects with an `ActionError` once access ended. */
   check(roomId: number): Promise<void>;
+  activity(roomId: number, identity: string): Promise<void>;
   startStream(roomId: number, quality: StreamQuality): Promise<StageStream>;
   stopStream(roomId: number, streamId: number | null): Promise<void>;
   stopStreamOnUnload(roomId: number, streamId: number | null): void;
@@ -120,6 +133,7 @@ export const browserEnvironment: CallEnvironment = {
   check: async (roomId) => {
     await huddles.room(roomId);
   },
+  activity: (roomId, identity) => huddles.activity(roomId, identity),
   startStream: (roomId, quality) => huddles.startStream(roomId, quality),
   stopStream: (roomId, streamId) => huddles.stopStream(roomId, streamId),
   stopStreamOnUnload: (roomId, streamId) => {
@@ -272,6 +286,8 @@ export class CallController {
   #reconnectTimer: ReturnType<typeof setInterval> | null = null;
   #authTimer: ReturnType<typeof setInterval> | null = null;
   #authCheck: Promise<void> | null = null;
+  #lastActivity = -Infinity;
+  #afkSource: { identity: string; roomId: number; audio: CallAudio } | null = null;
   #meterTimer: ReturnType<typeof setInterval> | null = null;
   #snapshotTimer: ReturnType<typeof setInterval> | null = null;
   #statsTimer: ReturnType<typeof setInterval> | null = null;
@@ -410,6 +426,7 @@ export class CallController {
 
   #refreshSnapshot(): void {
     const snapshot = this.#transport?.snapshot() ?? EMPTY_SNAPSHOT;
+    this.#speechActivity(snapshot);
     const key = snapshotKey(snapshot);
 
     if (key === this.#lastSnapshotKey) {
@@ -421,6 +438,16 @@ export class CallController {
     this.#autoExpandStream();
   }
 
+  #rememberAudio(microphoneEnabled: boolean): void {
+    if (this.#afkSource !== null) {
+      this.#afkSource.audio = {
+        microphoneEnabled,
+        deafened: this.#state.deafened,
+        microphoneBeforeDeafen: this.#microphoneBeforeDeafen,
+      };
+    }
+  }
+
   // ── Joining ───────────────────────────────────────────────────────────────────────────────
 
   /**
@@ -430,6 +457,15 @@ export class CallController {
    * straight away; the token stays the authority on publishing.
    */
   async join(roomId: number, roomName: string, canPublishHint: boolean | null): Promise<void> {
+    await this.#join(roomId, roomName, canPublishHint, null);
+  }
+
+  async #join(
+    roomId: number,
+    roomName: string,
+    canPublishHint: boolean | null,
+    audio: CallAudio | null,
+  ): Promise<void> {
     // Another account answered the page: no call starts until it reloads.
     if (!Number.isInteger(roomId) || roomId <= 0 || store.getState().accountChanged) {
       return;
@@ -443,6 +479,7 @@ export class CallController {
       return;
     }
 
+    this.#afkSource = null;
     this.#operation += 1;
 
     const operation = this.#operation;
@@ -460,6 +497,7 @@ export class CallController {
     }
 
     this.#canPublishHint = canPublishHint;
+    this.#lastActivity = -Infinity;
     this.#pushToTalkActive = false;
     this.#pushToTalkOpenedMic = false;
 
@@ -467,12 +505,15 @@ export class CallController {
     // so a fresh join gets a fresh attempt.
     const available = state.noise.available || (await this.#noiseSupported());
 
+    if (operation !== this.#operation) return;
+    this.#microphoneBeforeDeafen = audio?.microphoneBeforeDeafen ?? false;
+
     this.#set({
       roomId,
       roomName,
       identity: null,
       canPublish: true,
-      deafened: false,
+      deafened: audio?.deafened ?? false,
       expandedVideoId: null,
       viewOpen: this.#env.opensCallView(),
       // A retry in the same room keeps its timer, as a rejoin does.
@@ -482,7 +523,7 @@ export class CallController {
     });
     this.#holdRoom(roomId);
 
-    if (canPublishHint !== false && (await this.#env.shouldCheckDevices())) {
+    if (audio === null && canPublishHint !== false && (await this.#env.shouldCheckDevices())) {
       if (operation !== this.#operation) {
         return;
       }
@@ -496,7 +537,7 @@ export class CallController {
       return;
     }
 
-    await this.#connect(operation);
+    await this.#connect(operation, audio);
   }
 
   async #noiseSupported(): Promise<boolean> {
@@ -505,7 +546,7 @@ export class CallController {
     return noiseSuppressionSupported();
   }
 
-  async #connect(operation: number): Promise<void> {
+  async #connect(operation: number, audio: CallAudio | null = null): Promise<void> {
     const roomId = this.#state.roomId;
 
     if (roomId === null) {
@@ -563,10 +604,15 @@ export class CallController {
 
       await transport.startAudio().catch(() => undefined);
 
+      transport.setDeafened(this.#state.deafened);
+
       // A listener's token can't publish, so LiveKit would reject the microphone outright:
       // they join subscribe-only. Push-to-talk joins with the microphone closed.
+      const microphoneEnabled =
+        credentials.canPublish && (audio?.microphoneEnabled ?? !this.#pushToTalk());
+
       if (credentials.canPublish) {
-        await transport.setMicrophone(!this.#pushToTalk());
+        await transport.setMicrophone(microphoneEnabled);
       }
 
       if (operation !== this.#operation || transport !== this.#transport) {
@@ -576,6 +622,15 @@ export class CallController {
       }
 
       this.#setPhase("connected", "Huddle active");
+      this.#afkSource = {
+        identity: credentials.identity,
+        roomId,
+        audio: {
+          microphoneEnabled,
+          deafened: this.#state.deafened,
+          microphoneBeforeDeafen: this.#microphoneBeforeDeafen,
+        },
+      };
       this.#set({ quality: "unknown" });
       this.#refreshSnapshot();
       this.#startAuthChecks();
@@ -651,6 +706,50 @@ export class CallController {
     await this.#rejoin(roomId);
   }
 
+  async afkMoved(moved: HuddleAfkMoved): Promise<void> {
+    const source = this.#afkSource;
+
+    if (source?.identity !== moved.identity || source.roomId !== moved.sourceRoomId) return;
+    await this.#join(moved.roomId, moved.roomName, null, source.audio);
+
+    if (this.#state.phase === "connected" && this.#state.roomId === moved.roomId) {
+      toast({
+        title: `You were moved to ${moved.roomName} after ${moved.timeoutMinutes} ${moved.timeoutMinutes === 1 ? "minute" : "minutes"} of inactivity`,
+      });
+    }
+  }
+
+  /** Pointer, keyboard and focus events count even with a muted microphone. */
+  activity(): void {
+    if (document.visibilityState !== "hidden") this.#recordActivity();
+  }
+
+  #speechActivity(snapshot: CallState["snapshot"]): void {
+    if (
+      snapshot.microphoneEnabled &&
+      snapshot.participants.some(
+        (person) => person.local && person.speaking && !person.microphoneMuted,
+      )
+    ) {
+      this.#recordActivity();
+    }
+  }
+
+  #recordActivity(): void {
+    const { roomId, identity, phase } = this.#state;
+    const now = performance.now();
+
+    if (
+      phase !== "connected" ||
+      roomId === null ||
+      identity === null ||
+      now - this.#lastActivity < ACTIVITY_INTERVAL_MS
+    )
+      return;
+    this.#lastActivity = now;
+    void this.#env.activity(roomId, identity).catch(() => undefined);
+  }
+
   async #rejoin(roomId: number): Promise<void> {
     const state = this.#state;
 
@@ -658,6 +757,7 @@ export class CallController {
       return;
     }
 
+    this.#afkSource = null;
     this.#operation += 1;
 
     const operation = this.#operation;
@@ -1009,6 +1109,7 @@ export class CallController {
   async leave(): Promise<void> {
     const roomId = this.#state.roomId;
 
+    this.#afkSource = null;
     this.#operation += 1;
     await this.#disconnectCurrent();
 
@@ -1033,6 +1134,7 @@ export class CallController {
     // Mid-connect the grant may already exist: report the leave then too.
     const live = this.#transport !== null || this.#state.phase === "connecting";
 
+    this.#afkSource = null;
     this.#operation += 1;
     this.#endStreamOnDisconnect(true);
     this.#stopTimers();
@@ -1056,6 +1158,7 @@ export class CallController {
   }
 
   async #endForAccess(tag: string | null): Promise<void> {
+    this.#afkSource = null;
     this.#operation += 1;
     await this.#disconnectCurrent();
     this.#setPhase(
@@ -1170,6 +1273,8 @@ export class CallController {
   }
 
   async #unexpectedDisconnect(transport: CallTransport, reason: DisconnectReason): Promise<void> {
+    // AFK enforcement can remove the transport before its move notification arrives.
+    if (reason !== "removed") this.#afkSource = null;
     this.#operation += 1;
     this.#transport = null;
     this.#unsubscribeTransport?.();
@@ -1430,6 +1535,7 @@ export class CallController {
     }
 
     const enabling = !state.snapshot.microphoneEnabled;
+    const previousMicrophoneEnabled = this.#afkSource?.audio.microphoneEnabled ?? false;
 
     this.#setBusy("microphone", true);
 
@@ -1441,6 +1547,7 @@ export class CallController {
         transport.setDeafened(false);
       }
 
+      this.#rememberAudio(enabling);
       await transport.setMicrophone(enabling);
 
       if (transport === this.#transport) {
@@ -1452,6 +1559,7 @@ export class CallController {
       }
     } catch {
       if (transport === this.#transport) {
+        this.#rememberAudio(previousMicrophoneEnabled);
         this.#flash("The microphone could not be changed.");
       }
     } finally {
@@ -1471,8 +1579,14 @@ export class CallController {
     }
 
     const deafened = !state.deafened;
+    const reopenMicrophone = this.#microphoneBeforeDeafen;
+
+    this.#microphoneBeforeDeafen = deafened
+      ? (this.#afkSource?.audio.microphoneEnabled ?? false)
+      : false;
 
     this.#set({ deafened });
+    this.#rememberAudio(!deafened && reopenMicrophone);
     transport.setDeafened(deafened);
 
     if (!state.canPublish) {
@@ -1481,13 +1595,10 @@ export class CallController {
 
     try {
       if (deafened) {
-        this.#microphoneBeforeDeafen = state.snapshot.microphoneEnabled;
-
         if (state.snapshot.microphoneEnabled) {
           await transport.setMicrophone(false);
         }
-      } else if (this.#microphoneBeforeDeafen) {
-        this.#microphoneBeforeDeafen = false;
+      } else if (reopenMicrophone) {
         await transport.setMicrophone(true);
       }
     } catch {
@@ -2046,8 +2157,12 @@ export class CallController {
       }
     }, METER_INTERVAL_MS);
     this.#snapshotTimer = setInterval(() => {
-      if (document.visibilityState !== "hidden" && this.#transport !== null) {
-        this.#refreshSnapshot();
+      if (this.#transport !== null) {
+        if (document.visibilityState === "hidden") {
+          this.#speechActivity(this.#transport.snapshot());
+        } else {
+          this.#refreshSnapshot();
+        }
       }
     }, SNAPSHOT_INTERVAL_MS);
   }

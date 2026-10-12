@@ -126,3 +126,36 @@ its 404 as the end of membership: it stops, clears, and never retries.
 This slice sets no concurrency cap. The desired voice concurrency is still an
 open decision (see the roadmap), to be settled with load testing before
 capacity expectations are set.
+
+## AFK voice policy
+
+Administrators choose an AFK voice room and an idle timeout in Workspace,
+under Voice and huddles. The timeout is 1, 5, 15, 30 or 60 minutes and defaults
+to 5. Choosing None disables moves. Only an existing voice room can be the
+destination; stage rooms cannot be AFK destinations.
+
+Activity means pointer, keyboard or focus interaction with the app, or local
+speech detected while the microphone is unmuted. Clients report activity at
+most once every 10 seconds, only during a connected call. Hidden tabs report
+only detected speech. A muted microphone alone never establishes inactivity.
+Joining or reconnecting starts a new activity baseline for the grant.
+
+The gateway's existing presence checks evaluate the policy on each due
+sighting, normally every 10 seconds. There is no new scheduler or boot job.
+The instance policy lives in `accounts.settings.afk_policy`, preserving other
+settings. Live grants use their existing `updated_at` timestamp as the activity
+clock; presence sightings update `last_seen_at` separately. No migration is
+needed.
+
+A move requires current membership in the AFK room. Missing, deleted or
+inaccessible destinations leave the caller where they are. Stage audiences
+stay put; idle speakers and hosts can move. The configured AFK room is exempt
+from voice user limits for both joins and gateway admission while the policy
+is enabled, so a full destination cannot prevent a move.
+
+The server revokes the source grant and emits `huddle.afk.moved` on the user's
+sync topic after commit. The event names the source identity, so only the
+matching tab leaves its call and joins the AFK room. That tab shows the room
+and timeout in a toast after joining. The gateway refuses the revoked source
+grant, and the server logs the move with the user, rooms and timeout. Ordinary
+admission still checks destination membership when the client joins.

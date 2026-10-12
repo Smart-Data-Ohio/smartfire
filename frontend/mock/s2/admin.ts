@@ -5,6 +5,7 @@
  * see them); the admin-only facts (email, two-step sign-in, Google) live here.
  */
 import { descriptionError, vanitySlugError } from "../../src/features/admin/workspace-identity.ts";
+import type { AfkPolicy } from "../../src/gen/AfkPolicy.ts";
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { AuditLogEntry } from "../../src/gen/AuditLogEntry.ts";
 import type { AuditLogPage } from "../../src/gen/AuditLogPage.ts";
@@ -18,7 +19,7 @@ import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
 import { HttpError, noContent, notFound, ok, validation } from "../http.ts";
-import { booleanField, intField, type Json, stringField } from "../json.ts";
+import { booleanField, field, intField, isRecord, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { MOCK_TOTP, RATE_ALERT } from "./account.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
@@ -38,6 +39,7 @@ interface Private {
 type Image = ProfileImage;
 
 interface State {
+  afkPolicy: AfkPolicy;
   name: string;
   logo: Image | null;
   banner: Image | null;
@@ -128,6 +130,7 @@ function initialState(world: World, now: number): State {
   const viewer = world.users.get(VIEWER_ID)?.name ?? "You";
 
   return {
+    afkPolicy: { roomId: null, timeoutMinutes: 5 },
     name: "Smart Data",
     logo: null,
     banner: null,
@@ -199,6 +202,7 @@ export interface AdminModule {
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
   /** The workspace's description, for the signed-out boot. */
+  readonly afkPolicy: () => AfkPolicy;
   readonly description: () => string;
   readonly customStyles: () => string | null;
   readonly roomCreationRestricted: () => boolean;
@@ -374,6 +378,7 @@ export function createAdmin(
     const held = current();
 
     return {
+      afkPolicy: held.afkPolicy,
       name: held.name,
       logoUrl: held.logo?.url ?? "/account/logo",
       logoAttached: held.logo !== null,
@@ -490,6 +495,34 @@ export function createAdmin(
   const updateWorkspace = (body: Json | undefined) => {
     const held = current();
     const name = stringField(body, "name");
+    const policy = field(body, "afkPolicy");
+
+    let afkPolicy = held.afkPolicy;
+
+    if (policy !== undefined && policy !== null) {
+      if (!isRecord(policy)) throw validation("afkPolicy", "must be an object");
+
+      const roomId = intField(policy, "roomId");
+
+      const timeoutMinutes =
+        field(policy, "timeoutMinutes") === undefined ? 5 : intField(policy, "timeoutMinutes");
+
+      if (
+        (field(policy, "roomId") !== undefined &&
+          field(policy, "roomId") !== null &&
+          roomId === null) ||
+        timeoutMinutes === null
+      )
+        throw validation("afkPolicy", "must name a room and timeout using integers");
+
+      if (![1, 5, 15, 30, 60].includes(timeoutMinutes))
+        throw validation("afkPolicy", "timeout must be 1, 5, 15, 30 or 60 minutes");
+      const room = roomId === null ? null : ctx.world().rooms.get(roomId);
+
+      if (roomId !== null && room?.room.kind !== "voice")
+        throw validation("afkPolicy", "room must be an existing voice room");
+      afkPolicy = { roomId, timeoutMinutes };
+    }
 
     const description = stringField(body, "description");
     const vanitySlug = stringField(body, "vanitySlug");
@@ -517,6 +550,8 @@ export function createAdmin(
     if (uploadLimit !== null && (uploadLimit <= 0 || !Number.isSafeInteger(uploadLimit))) {
       throw validation("uploadLimitBytes", "must be a positive safe integer");
     }
+
+    held.afkPolicy = afkPolicy;
 
     if (name !== null && name.trim() !== "" && name !== held.name) {
       audit("account.settings.change", name, "Account", `name: ${held.name} → ${name}`);
@@ -821,6 +856,7 @@ export function createAdmin(
       handling = { method: method.toUpperCase(), path, returnTo: origin };
     },
     branding,
+    afkPolicy: () => current().afkPolicy,
     description: () => current().description,
     customStyles: () => current().css,
     roomCreationRestricted: () => current().restrict,

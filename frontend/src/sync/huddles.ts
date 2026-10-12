@@ -54,6 +54,9 @@ export const huddles = {
   /** A fresh grant and its LiveKit credentials. */
   join: (roomId: number): Promise<HuddleCredentials> => runAction(api.joinHuddle(roomId)),
 
+  activity: (roomId: number, identity: string): Promise<void> =>
+    runAction(api.huddleActivity(roomId, { identity })),
+
   /** Reports this session out of the call. Never rejects: leaving works offline too. */
   leave: async (roomId: number): Promise<void> => {
     await runAction(api.leaveHuddle(roomId)).catch(() => undefined);
@@ -109,6 +112,7 @@ export type HuddleSignal = Extract<
     readonly type:
       | "huddle.presence"
       | "huddle.role"
+      | "huddle.afk.moved"
       | "huddle.notice"
       | "huddle.ring"
       | "stage.updated"
@@ -120,6 +124,7 @@ function isHuddleSignal(event: SyncEvent): event is HuddleSignal {
   switch (event.type) {
     case "huddle.presence":
     case "huddle.role":
+    case "huddle.afk.moved":
       return true;
     case "huddle.notice":
       return event.data.kind === "ended" || !event.data.unchanged;

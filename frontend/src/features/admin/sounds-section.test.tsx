@@ -25,6 +25,7 @@ const workspace: Workspace = {
   joinUrl: "/join/test",
   canAdminister: true,
   restrictRoomCreationToAdministrators: false,
+  afkPolicy: { roomId: null, timeoutMinutes: 5 },
   uploadLimitBytes: 100 * 1024 * 1024,
   stageAudienceBudget: 300,
   version: "test",

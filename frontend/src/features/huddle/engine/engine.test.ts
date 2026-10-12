@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { parseFakeToken } from "./fake.ts";
+import { FakeTransport, parseFakeToken } from "./fake.ts";
 import { scaleMeterVolume } from "./meter.ts";
 import {
   DEVICE_STORAGE_KEY,
@@ -245,5 +245,35 @@ describe("fake tokens", () => {
     expect(parseFakeToken(JSON.stringify({ identity: 3, userId: 3 }))).toBeNull();
     expect(parseFakeToken(JSON.stringify({ identity: "a", userId: "x" }))).toBeNull();
     expect(parseFakeToken("null")).toBeNull();
+  });
+});
+
+describe("fake transport teardown", () => {
+  it("unpublishes the microphone before reporting participant removal", async () => {
+    const transport = new FakeTransport(8);
+    await transport.connect(
+      "mock://livekit",
+      JSON.stringify({ identity: "viewer", userId: 7, canPublish: true, simulate: false }),
+      false,
+      48_000,
+    );
+    await transport.setMicrophone(true);
+    const events: { type: string; microphoneEnabled: boolean }[] = [];
+    transport.subscribe((event) => {
+      events.push({ type: event.type, microphoneEnabled: transport.snapshot().microphoneEnabled });
+    });
+
+    try {
+      const hooks = window.__smartfireHuddle;
+
+      if (hooks === undefined) throw new Error("no fake transport hooks");
+      hooks.disconnect("removed");
+      expect(events).toEqual([
+        { type: "changed", microphoneEnabled: false },
+        { type: "disconnected", microphoneEnabled: false },
+      ]);
+    } finally {
+      await transport.disconnect();
+    }
   });
 });
