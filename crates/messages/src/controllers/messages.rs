@@ -215,6 +215,7 @@ pub enum AttachmentPolicy {
 #[derive(Debug, Default, Clone)]
 pub struct MessageParams {
     pub clear_markdown_source: bool,
+    pub sticker_id: Option<i64>,
     pub client_message_lookup: campfire_db::models::agent_posting::client_ids::Lookup,
     pub body: Option<String>,
     pub markdown_source: Option<String>,
@@ -537,6 +538,7 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
             let files = attachment_blobs(tx, files, attributes.attachment_policy)?;
             let message = thread.post_message(tx, creator_id, NewMessage {
                 markdown_source: attributes.markdown_source,
+                sticker_id: attributes.sticker_id,
                 client_message_id: attributes.client_message_id,
                 attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                 attachment_blob_ids: files.iter().map(|blob| blob.id).collect(),
@@ -613,6 +615,7 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                     creator_id,
                     client_message_id: attributes.client_message_id,
                     markdown_source: attributes.markdown_source,
+                    sticker_id: attributes.sticker_id,
                     reply_to_message_id: attributes.reply_to_message_id,
                     reply_notify_author: attributes.reply_notify_author,
                     drive_file_ids: attributes.drive_file_ids,

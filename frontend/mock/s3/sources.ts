@@ -8,7 +8,7 @@ import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import { VIEWER_ID } from "../seed.ts";
 import { conversationTitle, type Namer } from "./conversations.ts";
-import { plainText, truncateBody } from "./model.ts";
+import { messageText, truncateBody } from "./model.ts";
 
 /** What the reminder body starts with (`presenters::activity`). */
 export const REMINDER_PREFIX = "You asked to be reminded about this message: ";
@@ -31,7 +31,7 @@ export function messageSource(names: Namer, message: MessageDTO): ActivitySource
     eventId: null,
     creatorId: message.creatorId,
     title: conversationTitle(names, message.roomId, message.threadId),
-    body: truncateBody(plainText(message.markdownSource)),
+    body: truncateBody(messageText(message)),
     occurredAt: message.createdAt,
     approvalStatus: null,
     budgetCap: null,
@@ -49,7 +49,7 @@ export function reminderSource(
     ...messageSource(names, message),
     sourceType: "saved_item",
     sourceId: savedItemId,
-    body: truncateBody(REMINDER_PREFIX + plainText(message.markdownSource)),
+    body: truncateBody(REMINDER_PREFIX + messageText(message)),
   };
 }
 

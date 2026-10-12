@@ -403,6 +403,8 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                     forwarded_at: source.forwarded_at,
                     forwarded_from_message_id: source.forwarded_from_message_id,
                     forwarded_markdown: source.forwarded_markdown,
+                    sticker_id: source.sticker_id,
+                    sticker_name: source.sticker_name.clone(),
                     embeds_suppressed: source.embeds_suppressed,
                     attachment_blob_id: blobs
                         .iter()

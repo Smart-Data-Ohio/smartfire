@@ -58,7 +58,10 @@ export default defineConfig(({ mode }) => {
     ["/users/me/tour", rust],
   ]);
 
-  if (!isMockEnabled(mode)) proxy.set("/api", { ...rust, ws: true });
+  if (!isMockEnabled(mode)) {
+    proxy.set("/api", { ...rust, ws: true });
+    proxy.set("/stickers", rust);
+  }
 
   return {
     base: "/app/",

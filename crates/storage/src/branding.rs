@@ -1,4 +1,4 @@
-//! Bounded workspace image validation. Only GIF and WebP advertise animation; APNG is static.
+//! Bounded workspace and expression image validation. Stickers also validate APNG animation.
 
 use std::io::Read;
 use std::path::Path;
@@ -44,6 +44,7 @@ pub enum Kind {
     Logo,
     Banner,
     Emoji,
+    Sticker,
 }
 
 impl Kind {
@@ -52,6 +53,7 @@ impl Kind {
             Self::Logo => (4096, 4096),
             Self::Banner => (4096, 2304),
             Self::Emoji => (512, 512),
+            Self::Sticker => (320, 320),
         }
     }
 
@@ -60,6 +62,7 @@ impl Kind {
             Self::Logo => "must be at most 4096 × 4096 pixels",
             Self::Banner => "must be at most 4096 × 2304 pixels",
             Self::Emoji => "must be at most 512 × 512 pixels",
+            Self::Sticker => "must be at most 320 × 320 pixels",
         }
     }
 
@@ -68,13 +71,14 @@ impl Kind {
             Self::Logo => (512, 512),
             Self::Banner => (1920, 1080),
             Self::Emoji => (128, 128),
+            Self::Sticker => (320, 320),
         };
         Variation::resize_to_limit(width, height, Some("png"))
     }
 
     fn animated_key(self) -> &'static str {
         match self {
-            Self::Emoji => crate::workspace_icon::ANIMATED_KEY,
+            Self::Emoji | Self::Sticker => crate::workspace_icon::ANIMATED_KEY,
             Self::Logo | Self::Banner => ANIMATED_KEY,
         }
     }
@@ -90,6 +94,7 @@ pub enum Invalid {
 impl Invalid {
     pub fn message(&self, kind: Kind) -> &'static str {
         match self {
+            Self::Format if matches!(kind, Kind::Sticker) => "must be a PNG, APNG or GIF image",
             Self::Format if matches!(kind, Kind::Emoji) => "must be an SVG, PNG, GIF or WebP image",
             Self::Format => "must be a PNG, JPEG, GIF or WebP image",
             Self::Size => "must be 10 MB or smaller",
@@ -165,6 +170,92 @@ pub struct PreparedEmoji {
     pub still: Option<(Variation, Staged)>,
 }
 
+/// libvips' PNG loader reads only the default image. Decode all APNG frames with the PNG
+/// codec, then pass the first animation frame through the same still transformer as GIF.
+pub(crate) fn png_still(
+    storage: &Storage,
+    filename: &Filename,
+    bytes: &[u8],
+    cancel: &Cancellation,
+) -> Result<Option<(Variation, Staged)>, String> {
+    let unreadable = |_| "could not be read".to_owned();
+    let mut decoder = png::Decoder::new_with_limits(
+        std::io::Cursor::new(bytes),
+        png::Limits {
+            bytes: 4 * 1024 * 1024,
+        },
+    );
+    decoder.set_transformations(png::Transformations::normalize_to_color8());
+    let mut reader = decoder.read_info().map_err(unreadable)?;
+    let (width, height) = (reader.info().width, reader.info().height);
+    if width == 0 || height == 0 || width > 320 || height > 320 {
+        return Err(Kind::Sticker.dimension_message().into());
+    }
+    let frames = reader
+        .info()
+        .animation_control
+        .map_or(1, |control| control.num_frames);
+    if frames == 0 || frames > 100 {
+        return Err("must contain at most 100 frames".into());
+    }
+    let hidden_default =
+        reader.info().animation_control.is_some() && reader.info().frame_control.is_none();
+    let mut buffer = vec![0; reader.output_buffer_size().ok_or("could not be read")?];
+    let mut first = None;
+    for index in 0..frames + u32::from(hidden_default) {
+        cancel.check().map_err(|_| "could not be read")?;
+        let output = reader.next_frame(&mut buffer).map_err(unreadable)?;
+        if frames > 1 && index == u32::from(hidden_default) {
+            let mut canvas = vec![0; (width * height * 4) as usize];
+            let (left, top) = reader
+                .info()
+                .frame_control
+                .map_or((0, 0), |frame| (frame.x_offset, frame.y_offset));
+            if left + output.width > width || top + output.height > height {
+                return Err("could not be read".into());
+            }
+            let channels = output.color_type.samples();
+            for (i, pixel) in buffer[..output.buffer_size()]
+                .chunks_exact(channels)
+                .enumerate()
+            {
+                let x = left + i as u32 % output.width;
+                let y = top + i as u32 / output.width;
+                let rgba = match output.color_type {
+                    png::ColorType::Grayscale => [pixel[0], pixel[0], pixel[0], 255],
+                    png::ColorType::GrayscaleAlpha => [pixel[0], pixel[0], pixel[0], pixel[1]],
+                    png::ColorType::Rgb => [pixel[0], pixel[1], pixel[2], 255],
+                    png::ColorType::Rgba => [pixel[0], pixel[1], pixel[2], pixel[3]],
+                    png::ColorType::Indexed => return Err("could not be read".into()),
+                };
+                let offset = ((y * width + x) * 4) as usize;
+                canvas[offset..offset + 4].copy_from_slice(&rgba);
+            }
+            first = Some(canvas);
+        }
+    }
+    reader.finish().map_err(unreadable)?;
+    let Some(first) = first else { return Ok(None) };
+    let file = tempfile::Builder::new()
+        .suffix(".png")
+        .tempfile()
+        .map_err(|_| "could not be read")?;
+    let mut encoder = png::Encoder::new(file.as_file(), width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().map_err(|_| "could not be read")?;
+    writer
+        .write_image_data(&first)
+        .map_err(|_| "could not be read")?;
+    writer.finish().map_err(|_| "could not be read")?;
+    let image =
+        Image::open_emoji(file.path(), "image/png", 1, cancel).map_err(|_| "could not be read")?;
+    let variation = Kind::Sticker.still_variation();
+    let still =
+        transform(storage, filename, image, &variation, cancel).map_err(|_| "could not be read")?;
+    Ok(Some((variation, still)))
+}
+
 /// GIF/WebP emoji has a smaller byte/canvas/frame budget and must decode completely before acceptance.
 pub(crate) fn prepare_emoji(
     storage: &Storage,
@@ -172,13 +263,24 @@ pub(crate) fn prepare_emoji(
     filename: &Filename,
     cancel: &Cancellation,
 ) -> Result<PreparedEmoji, String> {
+    prepare_expression(storage, key, filename, Kind::Emoji, MAX_BYTES, cancel)
+}
+
+pub(crate) fn prepare_expression(
+    storage: &Storage,
+    key: &str,
+    filename: &Filename,
+    kind: Kind,
+    max_bytes: u64,
+    cancel: &Cancellation,
+) -> Result<PreparedEmoji, String> {
     let path = storage.service.path_for(key);
-    let (image, content_type) = header(&path, Kind::Emoji, cancel, MAX_BYTES)
-        .map_err(|invalid| invalid.message(Kind::Emoji).to_owned())?;
-    if image.width() != image.height() {
+    let (image, content_type) = header(&path, kind, cancel, max_bytes)
+        .map_err(|invalid| invalid.message(kind).to_owned())?;
+    if matches!(kind, Kind::Emoji) && image.width() != image.height() {
         return Err("must be square".into());
     }
-    if image.width() < 64 {
+    if matches!(kind, Kind::Emoji) && image.width() < 64 {
         return Err("must be at least 64 pixels wide and tall".into());
     }
     let pages = if matches!(content_type, "image/gif" | "image/webp") {
@@ -197,7 +299,7 @@ pub(crate) fn prepare_emoji(
     decoded.average().map_err(|_| "could not be read")?;
     cancel.check().map_err(|_| "could not be read")?;
     let still = if pages > 1 {
-        let variation = Kind::Emoji.still_variation();
+        let variation = kind.still_variation();
         let staged = transform(storage, filename, image, &variation, cancel)
             .map_err(|_| "could not be read")?;
         Some((variation, staged))
@@ -304,16 +406,17 @@ fn header(
     file.read_exact(&mut magic).map_err(|_| Invalid::Format)?;
     let content_type = if magic.starts_with(b"\x89PNG\r\n\x1a\n") {
         "image/png"
-    } else if magic.starts_with(b"\xff\xd8\xff") && !matches!(kind, Kind::Emoji) {
+    } else if magic.starts_with(b"\xff\xd8\xff") && !matches!(kind, Kind::Emoji | Kind::Sticker) {
         "image/jpeg"
     } else if magic.starts_with(b"GIF87a") || magic.starts_with(b"GIF89a") {
         "image/gif"
-    } else if magic.starts_with(b"RIFF") && &magic[8..] == b"WEBP" {
+    } else if magic.starts_with(b"RIFF") && &magic[8..] == b"WEBP" && !matches!(kind, Kind::Sticker)
+    {
         "image/webp"
     } else {
         return Err(Invalid::Format);
     };
-    let image = if matches!(kind, Kind::Emoji) {
+    let image = if matches!(kind, Kind::Emoji | Kind::Sticker) {
         Image::open_emoji(path, content_type, 1, cancel)
     } else {
         Image::open_branding(path, content_type, cancel)

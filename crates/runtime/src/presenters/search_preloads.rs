@@ -110,13 +110,7 @@ impl Preloads {
                 .map(|files| files.blobs.iter().map(|blob| blob.filename.to_string()).collect::<Vec<_>>().join(", "))
                 .unwrap_or_default();
         }
-        Ok(
-            match m.forward_note.as_deref().filter(|s| !s.trim().is_empty()) {
-                Some(note) if text.trim().is_empty() => note.to_owned(),
-                Some(note) => format!("{note}\n\n{text}"),
-                None => text,
-            },
-        )
+        Ok(m.display_text(text))
     }
 }
 // Stored ActionText nodes are canonicalized, but also scan Trix JSON and nested content.

@@ -6,6 +6,7 @@ import { type Json, stringField } from "../json.ts";
 import { type Route, route, type S2Context } from "../s2/context.ts";
 import { plainDraft } from "../s2/model.ts";
 import type { Threads } from "../s2/threads.ts";
+import { messageText } from "../s3/model.ts";
 import { VIEWER_ID, type World } from "../seed.ts";
 
 const VALIDATION = "Validation";
@@ -90,7 +91,7 @@ export function createFizzy(ctx: S2Context, threads: Threads) {
       throw plainError(503, "FizzyUnreachable", "Could not reach Fizzy. Try again.");
     }
 
-    const text = held.message.bodyHtml
+    const body = held.message.bodyHtml
       .replace(/<br\s*\/?\s*>/gi, "\n")
       .replace(/<\/(?:p|div|li|h[1-6])>/gi, "\n")
       .replace(/<[^>]*>/g, "")
@@ -100,6 +101,8 @@ export function createFizzy(ctx: S2Context, threads: Threads) {
       .replace(/&#39;/g, "'")
       .replace(/&amp;/g, "&")
       .trimEnd();
+
+    const text = messageText(held.message, body);
 
     const truncate = (value: string, length: number) => {
       const characters = [...value];
