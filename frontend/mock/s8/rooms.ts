@@ -47,6 +47,7 @@ function nullableString(
 
 interface RoomManagement {
   readonly routes: readonly Route[];
+  readonly create: (body: Json | undefined) => ReturnType<typeof ok>;
 }
 
 /** Mirrors `VOICE_BITRATES` in crates/db/src/models/room.rs. */
@@ -441,6 +442,7 @@ export function createRoomManagement(
   };
 
   return {
+    create,
     routes: [
       route("GET", /^\/rooms\/new$/, ({ query }) => {
         const type = roomType(query.get("type") ?? "open");

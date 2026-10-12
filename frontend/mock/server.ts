@@ -112,6 +112,7 @@ import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
 import { createRoomIntegrations } from "./s8/room-integrations.ts";
 import { createRoomManagement } from "./s8/rooms.ts";
+import { createTemplates } from "./s8/templates.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -1134,11 +1135,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const workspaceLayout = createWorkspaceLayout(ctx);
   const welcome = createWelcome(ctx, admin, openPreview);
 
+  const roomManagement = createRoomManagement(ctx, admin, huddles);
+
   const routes = [
+    ...createTemplates(ctx, admin, roomManagement).routes,
     ...agents.routes,
     ...approvals.routes,
     ...ledger.routes,
-    ...createRoomManagement(ctx, admin, huddles).routes,
+    ...roomManagement.routes,
     ...createRoomIntegrations(ctx).routes,
     ...createAnnouncements(ctx).routes,
     ...createChannelWebhooks(ctx).routes,
