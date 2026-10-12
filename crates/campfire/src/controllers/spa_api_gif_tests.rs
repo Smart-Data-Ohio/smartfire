@@ -11,7 +11,7 @@ use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use crate::controllers::presenters::test_support::{
-    ALL_TALK, Browser, DAVID, JASON, Reply, Req, TestApp, seed_clock,
+    ALL_TALK, Browser, DAVID, HQ, JASON, Reply, Req, TestApp, seed_clock,
 };
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, ResponseGate, Route};
 
@@ -971,6 +971,68 @@ async fn gifs_image_previews_use_animated_originals() {
     }
 }
 
+
+#[tokio::test]
+async fn gifs_forwarded_imports_keep_animated_original_previews() {
+    for (format, content_type, bytes) in [
+        ("gif", "image/gif", GIF_BYTES),
+        ("webp", "image/webp", WEBP_BYTES),
+    ] {
+        let (app, server) = klipy_app().await;
+        let mut item = item_json();
+        item["file"] = json!({"sm": {format: {
+            "url": format!("https://static.klipy.com/ii/x/sm.{format}"),
+            "width": 220, "height": 220, "size": 400
+        }}});
+        let mut routes = send_routes(&app, content_type, bytes.to_vec());
+        routes[0].body = json!({"result": true, "data": {"data": [item]}})
+            .to_string().into_bytes();
+        routes[1].path = format!("/ii/x/sm.{format}");
+        server.replace_routes(routes);
+        let mut b = app.sign_in(DAVID).await;
+        let reply = post_json(&mut b, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+            &json!({"clientMessageId": "forward-animated", "markdownSource": "GIF", "gifSlug": "hello-hi-662"})).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let mut source: api::MessageDTO = parse(&reply);
+
+        for destination in [HQ, ALL_TALK] {
+            let reply = post_json(&mut b, &format!("/api/v1/messages/{}/forwards", source.id),
+                &json!({"destinations": [{"roomId": destination}]})).await;
+            assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+            let result: api::ForwardResult = parse(&reply);
+            let reply = get(&mut b, &format!("/api/v1/messages/{}", result.forwards[0].id)).await;
+            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+            let forwarded = parse::<api::MessageRead>(&reply).message;
+            let attachment = forwarded.attachment.as_ref()
+                .or_else(|| forwarded.attachments.as_ref().and_then(|files| files.first()))
+                .expect("the forwarded import");
+            let redirect = get(&mut b, attachment.thumbnail_url.as_deref().unwrap()).await;
+            assert_eq!(redirect.status, StatusCode::FOUND, "{}", redirect.text());
+            let file = get(&mut b, redirect.header("location").unwrap()).await;
+            assert_eq!(file.status, StatusCode::OK, "{}", file.text());
+            assert!(file.body == bytes,
+                "forwarded {format} preview must serve the original animated bytes; got {} bytes of {:?}, expected {} bytes",
+                file.body.len(), file.header("content-type"), bytes.len());
+            assert_eq!(attachment.thumbnail_url.as_deref(), Some(attachment.url.as_str()));
+
+            let (source_id, forwarded_id) = (source.id, forwarded.id);
+            app.db().read(move |conn| {
+                let source = campfire_db::Message::find(conn, source_id)?.attachments(conn)?;
+                let copied = campfire_db::Message::find(conn, forwarded_id)?.attachments(conn)?;
+                assert_ne!(source[0].1.key, copied[0].1.key);
+                let source_metadata: Value = serde_json::from_str(source[0].1.metadata.as_deref().unwrap()).unwrap();
+                let copied_metadata: Value = serde_json::from_str(copied[0].1.metadata.as_deref().unwrap()).unwrap();
+                assert_ne!(source_metadata["klipy_mark"], copied_metadata["klipy_mark"]);
+                for key in ["klipy_id", "klipy_slug", "klipy_title", "klipy_attribution"] {
+                    assert_eq!(source_metadata[key], copied_metadata[key], "{key}");
+                }
+                Ok(())
+            }).await.unwrap();
+            source = forwarded;
+        }
+        assert_eq!(server.received().len(), 2, "forwarding uses the stored attachment");
+    }
+}
 
 #[tokio::test]
 async fn gifs_client_upload_metadata_cannot_forge_animated_previews() {

@@ -227,6 +227,42 @@ fn forwarded_filenames_match_pinned_rails() {
     assert_eq!(checked, 560);
 }
 
+#[test]
+fn stage_copy_drops_unverified_klipy_metadata() {
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    let bytes = include_bytes!("../../../test-support/attachments/stickers/animated.gif");
+    let original = storage.create_and_upload(&conn, bytes, Filename::new("image.gif"), Some("image/gif"), now()).unwrap();
+    let sign = |key: &str, purpose: &str| storage.verifier.generate(&Json::String(key.into()).encode(), purpose, None);
+    let wrong_secret = AppMessageVerifier::new(vec![7; 64]).generate(&Json::String(original.key.clone()).encode(), "klipy_import", None);
+    for (case, content_type, mark) in [
+        ("missing", "image/gif", None),
+        ("forged", "image/gif", Some("forged".into())),
+        ("wrong secret", "image/gif", Some(wrong_secret)),
+        ("wrong purpose", "image/gif", Some(sign(&original.key, "blob_key"))),
+        ("wrong key", "image/webp", Some(sign("another-key", "klipy_import"))),
+        ("unsupported type", "image/png", Some(sign(&original.key, "klipy_import"))),
+    ] {
+        let mut source = original.clone();
+        source.content_type = Some(content_type.into());
+        source.metadata.set("klipy_id", Json::String("anything".into()));
+        source.metadata.set("klipy_attribution", Json::String("Unverified".into()));
+        source.metadata.set("klipy_future_field", Json::Bool(true));
+        source.metadata.set("client_note", Json::String("keep me".into()));
+        if let Some(mark) = mark { source.metadata.set("klipy_mark", Json::String(mark)); }
+        let staged = storage.stage_copy(&source).unwrap();
+        let copied = staged.insert(&conn, now()).unwrap();
+        let Json::Object(entries) = &copied.metadata else { panic!("{case}: {:?}", copied.metadata); };
+        assert!(entries.iter().all(|(key, _)| !key.starts_with("klipy_")),
+            "{case}: copied metadata must drop unverified KLIPY fields: {:?}", copied.metadata);
+        assert_eq!(copied.metadata.get("client_note").and_then(Json::as_str), Some("keep me"));
+        assert_ne!(copied.key, source.key);
+        assert_eq!(std::fs::read(storage.path_for(&copied)).unwrap(), bytes);
+    }
+}
+
 fn blob_from(row: &J) -> Blob {
     Blob {
         id: row["id"].as_i64().unwrap(),
