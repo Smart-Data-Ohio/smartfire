@@ -20,6 +20,7 @@ fn present_id(args: &Value, key: &str) -> Option<i64> {
 pub async fn context(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
     messages::present(c, move |presenter| {
+        let _snapshot = campfire_db::Snapshot::begin(presenter.conn)?;
         let message_id = args
             .get("message_id")
             .filter(|v| !super::mcp::blank(v))
@@ -220,7 +221,10 @@ async fn start(
             } else {
                 let prepare = |tx: &mut campfire_db::Tx<'_>, a: &mut campfire_db::NewMessage| {
                     if let Some(attachment) = attachment {
-                        blob = messages::attachment_blob(tx, attachment, messages::AttachmentPolicy::SignedBlob { actor_id: Some(campfire_db::Agent::find(tx.conn(), agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?.user_id) }, "attachment")?;
+                        blob = messages::attachment_blob(tx, attachment, messages::AttachmentPolicy::SignedBlob { actor_id: Some(campfire_db::Agent::find(tx.conn(), agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?.user_id,
+                                ),
+                            }, "attachment",
+                        )?;
                         a.attachment_blob_id = blob.as_ref().map(|blob| blob.id);
                         if !in_thread && let Some(blob) = &blob {
                             crate::controllers::presenters::attachments::enqueue_analysis(tx, blob);
@@ -244,7 +248,8 @@ async fn start(
             if in_thread && let Some(blob) = blob.take() {
                 crate::controllers::presenters::attachments::enqueue_analysis(tx, &blob);
                 if let agent_posting::PostResult::Posted(message) = &result {
-                    campfire_db::models::message_attachment_processing::schedule(tx, message.id, blob.id);
+                    campfire_db::models::message_attachment_processing::schedule(tx, message.id, blob.id,
+                    );
                 }
                 if let agent_posting::PostResult::Posted(message) = &mut result {
                     **message = campfire_db::Message::find(tx.conn(), message.id)?;
@@ -312,6 +317,7 @@ async fn present_post(
         agent_posting::PostResult::Denied(result) => Ok(result),
         agent_posting::PostResult::Posted(message) => {
             messages::present(c, move |p| {
+                let _snapshot = campfire_db::Snapshot::begin(p.conn)?;
                 let mut payload = p.agent_message_payload(&message)?;
                 payload["thread_id"] = json!(message.thread_id);
                 if streaming {
@@ -344,6 +350,7 @@ pub async fn dm(c: &Ctx, agent_id: i64, args: Value, rest: bool) -> Result<Servi
     match outcome {
         agent_direct_messages::DirectMessageResult::Denied(result) => Ok(result),
         agent_direct_messages::DirectMessageResult::Posted {room,message} => messages::present(c,move |p| {
+        let _snapshot = campfire_db::Snapshot::begin(p.conn)?;
             Ok(ServiceResult::ok(json!({"room":{"id":room.id,"name":room.name,"direct":true},"message":p.agent_message_payload(&message)?,"thread_id":message.thread_id}),201))
         }).await,
     }

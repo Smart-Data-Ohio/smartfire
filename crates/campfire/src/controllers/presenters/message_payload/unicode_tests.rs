@@ -29,6 +29,7 @@ async fn unicode_parity_thread_payload_sorts_human_and_agent_owner_options() {
                     tx,
                     NewAgent {
                         user_id: user.id,
+                        kind:campfire_db::AgentKind::Workspace,
                         owner_id: Some(DAVID),
                         ..Default::default()
                     },

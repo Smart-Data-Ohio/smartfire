@@ -72,7 +72,12 @@ impl Approval {
         if !member {
             return Ok(Some("Agent is no longer a member of the room"));
         }
-        let grant:bool=conn.query_row("SELECT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=? AND capability='external_action' AND revoked_at IS NULL AND (room_id=? OR room_id IS NULL))",params![self.agent_id,self.room_id],|r|r.get(0))?;
+        let grant = campfire_db::models::agent_access::capability_for_agent(
+            conn,
+            self.agent_id,
+            "external_action",
+            self.room_id,
+        )?;
         Ok((deleted || !grant).then_some("Agent no longer has the external_action capability"))
     }
     fn actor(&self, conn: &Connection) -> Result<Option<Actor>> {
@@ -254,7 +259,11 @@ fn insert_event(
         return Err(error);
     }
     let id = tx.conn().last_insert_rowid();
-    if pending {
+    let authorized=pending && campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),id)?;
+    if pending && !authorized {
+        tx.conn().execute("UPDATE agent_events SET webhook_status='none',webhook_next_attempt_at=NULL WHERE id=?",[id])?;
+    }
+    if authorized {
         tx.emit_after_commit(Event::job(&EventWebhookJob {
             event_id: id,
             attempt: Some(0),

@@ -164,6 +164,7 @@ pub async fn poll(
         .await
         .map_err(db_error)?;
     super::messages::present(c, move |presenter| {
+        let _snapshot = campfire_db::Snapshot::begin(presenter.conn)?;
         agent_event_polling::poll(
             presenter.conn,
             agent_id,

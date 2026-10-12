@@ -116,6 +116,15 @@ fn preflight(
         Agent::find(tx.conn(), agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
     match op {
         "open_dm" => {
+            if agent.kind == campfire_db::AgentKind::Personal {
+                let target = campfire_db::User::find_by_id(tx.conn(), number(&args, "user_id"))?;
+                if target
+                    .is_none_or(|target| agent.owner_id != Some(target.id) || !target.is_active())
+                {
+                    return Ok(fail("Personal agents may only DM their active owner", 403));
+                }
+                return Ok(ServiceResult::ok(Value::Null, 200));
+            }
             let target = campfire_db::User::find_by_id(tx.conn(), number(&args, "user_id"))?;
             let Some(target) = target else {
                 return Ok(fail("User not found", 404));

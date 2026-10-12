@@ -56,6 +56,7 @@ pub async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &
     // A bot or message that's gone discards the job.
     let (bot, message) = app.db.read(move |conn| Ok((User::find(conn, bot_id)?, Message::find(conn, message_id)?))).await.map_err(discard_missing)?;
     let allowed = app.db.read(move |conn| {
+        if campfire_db::models::agent_access::is_personal_user(conn, bot_id)? { return Ok(false); }
         let message = Message::find(conn, message_id)?;
         campfire_db::models::message_quote::visible(conn, &message, bot_id)
     }).await?;
@@ -68,6 +69,7 @@ pub async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &
     let (bot, room, url, payload, secret) = app
         .db
         .read(move |conn| {
+            if campfire_db::models::agent_access::is_personal_user(conn, bot_id)? { return Ok(None); }
             let room = Room::find(conn, message.room_id)?;
             let Some(webhook) = Webhook::find_by_user(conn, bot_id)? else { return Ok(None) };
             let agent_backed = conn.query_row("SELECT EXISTS(SELECT 1 FROM agents WHERE user_id = ?)", [bot.id], |row| row.get::<_, bool>(0))?;
@@ -143,6 +145,9 @@ pub async fn create_attachment_reply(app: &App, room: &Room, bot: &User, trigger
 /// `Webhook#create_sync_reply`: root replies reference the trigger; thread replies use
 /// ChannelThread#post_message! so membership, locking, reopening and counters stay shared.
 pub fn create_reply(tx: &mut campfire_db::Tx<'_>, trigger: Option<&Message>, mut attributes: NewMessage) -> campfire_db::Result<Message> {
+    if campfire_db::Room::find_for_user(tx.conn(),attributes.creator_id,attributes.room_id)?.is_none() || campfire_db::models::agent_access::capability_for_user(tx.conn(),attributes.creator_id,"post_messages",attributes.room_id)? == Some(false) {
+        return Err(campfire_db::Error::RecordNotFound("Room"));
+    }
     attributes.reply_to_message_id = trigger.map(|message| message.id);
     if let Some(thread_id) = trigger.and_then(|message| message.thread_id) {
         campfire_db::ChannelThread::find(tx.conn(), thread_id)?.post_message(tx, attributes.creator_id, attributes)

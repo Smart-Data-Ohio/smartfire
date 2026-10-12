@@ -394,7 +394,15 @@ pub fn resolve(
             let mut grants = if room.open() {
                 User::active(tx.conn())?
                     .into_iter()
-                    .map(|u| u.id)
+                    .map(|u| {
+                        Ok((
+                            u.id,
+                            campfire_db::models::agent_access::is_personal_user(tx.conn(), u.id)?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?
+                    .into_iter()
+                    .filter_map(|(id, personal)| (!personal).then_some(id))
                     .collect::<Vec<_>>()
             } else {
                 Vec::new()
@@ -435,6 +443,7 @@ fn direct(
     member_ids: &[Value],
     dry: bool,
 ) -> Result<Target> {
+    campfire_db::models::agent_access::check_direct_members(tx.conn(), members)?;
     let room = Room::find_direct_for(tx.conn(), members)?;
     if let Some(room) = room {
         if !dry {

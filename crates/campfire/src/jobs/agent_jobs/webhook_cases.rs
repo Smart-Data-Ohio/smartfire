@@ -376,6 +376,7 @@ async fn ws11_webhook_case_approval_private_refused() {
     let a = t
         .db()
         .write(move |tx| {
+            campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:e.agent_id,capability:"external_action".into(),granted_by_id:127326141,..Default::default()})?;
             let a = campfire_db::AgentApproval::create(
                 tx,
                 campfire_db::NewApproval {

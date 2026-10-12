@@ -146,8 +146,9 @@ async fn ws15e_fizzy_agent_execution_rechecks_and_records_once() {
         assert!(result["room"].is_null());
         assert!(result["message"].is_null());
         assert_eq!(result["outcome"], "delivered");
-        assert_eq!(result["webhook"], "pending");
-        assert_eq!(result["jobs"], 1);
+        let deliverable=!["revoked_grant","room_grant","suspended"].contains(&case);
+        assert_eq!(result["webhook"], if deliverable {"pending"} else {"none"});
+        assert_eq!(result["jobs"], if deliverable {1} else {0});
         assert_eq!(
             result["audits"],
             if case == "audit_failure" { 0 } else { 1 }

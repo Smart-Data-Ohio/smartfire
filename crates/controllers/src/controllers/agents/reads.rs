@@ -7,23 +7,26 @@ use crate::{
 use campfire_db::models::{
     agent_access, agent_payloads, agent_reading, agent_service::ServiceResult,
 };
-use campfire_db::{Agent, AgentGrant, Room};
+use campfire_db::{Agent, Room};
 use campfire_kit::{Ctx, Result};
 use serde_json::{Value, json};
 
 pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceResult> {
     match op {
         "list_rooms" => {
-            let payload = c.app().db.read(move |conn| {
+            let payload = c.app().db.read_snapshot(move |conn| {
                 let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
                 let mut rooms = Room::for_user(conn, agent.user_id)?;
                 // SQLite LOWER(name) lowercases ASCII only, and sorts NULL before text.
                 rooms.sort_by_key(|room| room.name.as_ref().map(|name| name.to_ascii_lowercase()));
-                if !agent.legacy_capabilities(conn)? {
-                    let grants = AgentGrant::all_active(conn)?.into_iter().filter(|grant|grant.agent_id==agent_id && grant.capability!="dm_anyone").map(|grant|grant.room_id).collect::<Vec<_>>();
-                    let active = agent.active(conn)?;
-                    rooms.retain(|room|active && (grants.contains(&None) || grants.contains(&Some(room.id))));
+                let requests = rooms.iter().map(|room|(agent_id,Some(room.id))).collect::<Vec<_>>();
+                let mut visible = std::collections::HashSet::new();
+                for cap in agent_access::CAPABILITIES.iter().filter(|cap| **cap!="dm_anyone") {
+                    for ((_,room),allowed) in agent_access::capabilities_for_agents(conn,cap,&requests)? {
+                        if allowed && let Some(room)=room { visible.insert(room); }
+                    }
                 }
+                rooms.retain(|room|visible.contains(&room.id));
                 Ok(json!(rooms.into_iter().map(|room|json!({"id":room.id,"name":room.name,"type":room.room_type.class_name().strip_prefix("Rooms::").unwrap().to_ascii_lowercase(),"board":room.board(),"direct":room.direct()})).collect::<Vec<_>>()))
             }).await.map_err(db_error)?;
             Ok(ServiceResult::ok(payload, 200))
@@ -168,6 +171,7 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
     // Agents::Reading resolves the conversation and its current read grant before
     // limit conversion, then resolves each cursor inside that conversation.
     messages::present(c,move |p| {
+        let _snapshot = campfire_db::Snapshot::begin(p.conn)?;
         let room_given=args.get("room_id").is_some_and(|v| !blank(v));
         let thread_given=args.get("thread_id").is_some_and(|v| !blank(v));
         if room_given && thread_given {return Ok(ServiceResult::fail("Pass only one of room_id, thread_id",422));}
@@ -216,17 +220,24 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
 async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceResult> {
     let op = op.to_owned();
     let single = op == "get_work";
+    let owned = single || op == "list_work";
     let records = c
         .app()
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             let agent =
                 Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
             let threads = if single {
                 let ids = args.get("work_id").map(lookup_ids).unwrap_or_default();
-                agent_reading::thread_by_ids(conn, &ids)?
-                    .into_iter()
-                    .collect()
+                let selected = agent_reading::visible_work_by_ids(conn, &agent, &ids, true)?;
+                match selected
+                    .first()
+                    .map(|thread| campfire_db::models::agent_work::show_work(conn, &agent, thread.id))
+                    .transpose()?
+                {
+                    Some(campfire_db::models::agent_work::Outcome::Success { payload, .. }) => vec![payload],
+                    _ => Vec::new(),
+                }
             } else if op == "list_board_posts" {
                 let status = text(args.get("status")).unwrap_or_default();
                 let status = campfire_richtext::ruby::strip(&status);
@@ -260,7 +271,16 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
                     .collect::<Vec<_>>();
                 agent_reading::owned_work(conn, agent.user_id, &rooms)?
             };
-            Ok(threads)
+            let allowed = agent_access::capabilities_for_users_in_rooms(
+                conn,
+                &[agent.user_id],
+                &threads.iter().map(|t| t.room_id).collect::<Vec<_>>(),
+                "read_messages",
+            )?;
+            Ok(threads
+                .into_iter()
+                .filter(|thread| allowed.contains(&(agent.user_id, thread.room_id)))
+                .collect::<Vec<_>>())
         })
         .await
         .map_err(db_error)?;
@@ -274,9 +294,16 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
     let payload = c
         .app()
         .db
-        .read(move |conn| {
-            let owner = Agent::find(conn, agent_id)?.and_then(|agent| agent.owner_id);
-            let values = agent_payloads::work_payloads(conn, &records, owner, &access)?;
+        .read_snapshot(move |conn| {
+            let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            let owner = agent.owner_id;
+            let current = agent_reading::visible_work_by_ids(
+                conn,
+                &agent,
+                &records.iter().map(|thread| thread.id).collect::<Vec<_>>(),
+                owned,
+            )?;
+            let values = agent_payloads::work_payloads(conn, &current, owner, &access)?;
             Ok(if single {
                 values.into_iter().next().unwrap_or(Value::Null)
             } else {
@@ -285,7 +312,11 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         })
         .await
         .map_err(db_error)?;
-    Ok(ServiceResult::ok(payload, 200))
+    Ok(if single && payload.is_null() {
+        ServiceResult::fail("Work not found", 404)
+    } else {
+        ServiceResult::ok(payload, 200)
+    })
 }
 
 #[cfg(test)]
