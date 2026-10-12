@@ -250,6 +250,10 @@ fn ws11_publication_deletion_id_follows_events_committed_in_parent() {
     let capture = observed.clone();
     let later = t.write(move |tx| {
         assert!(crate::Webhook::find_by_user(tx.conn(), id("bender"))?.is_some());
+        for cap in ["read_messages","external_action"] {
+            crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:cap.into(),granted_by_id:id("david"),..Default::default()})?;
+        }
+        let approval=crate::AgentApproval::create(tx,crate::NewApproval{agent_id:id("bender_agent"),room_id:Some(id("watercooler")),action:"github.comment".into(),summary:"Committed completion".into(),..Default::default()})?;
         tx.after_commit(move |tx| {
             let page = agent_event_polling::poll(tx.conn(), id("bender_agent"), None, None,
                 tx.now(), &Default::default(), |message| Ok(json!({"id":message.id})))?;
@@ -258,7 +262,7 @@ fn ws11_publication_deletion_id_follows_events_committed_in_parent() {
         });
         ChannelThread::find(tx.conn(), THREAD)?.destroy(tx)?;
         Ok(AgentEvent::create(tx, NewEvent {agent_id:id("bender_agent"),
-            room_id:Some(id("watercooler")), event_type:"github_action_completed".into(),
+            room_id:Some(id("watercooler")), agent_approval_id:Some(approval.id),event_type:"github_action_completed".into(),
             outcome:Some("delivered".into()), metadata:json!({"status":"completed"}),
             ..Default::default()})?.id)
     });

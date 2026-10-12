@@ -167,6 +167,11 @@ pub fn build(
     event: &AgentEvent,
     access: &RepositoryAccess,
 ) -> Result<Payload> {
+    if !super::agent_event_access::delivery_authorized(conn, event.id)? {
+        let missing_message=event.message_id.map(|id|Message::find_by_id(conn,id)).transpose()?.flatten().is_none();
+        let reason=if MESSAGE_TYPES.contains(&event.event_type.as_str()) && missing_message {"Message no longer available"} else {"Event access removed"};
+        return Ok(Payload::Unavailable(reason.into()));
+    }
     let scoped = access.in_event(event.id);
     let access = &scoped;
     let (user_id,owner_id,name,owner):(i64,Option<i64>,String,Option<String>)=conn.query_row(

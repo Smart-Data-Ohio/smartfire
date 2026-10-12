@@ -29,19 +29,12 @@ fn queue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<Option<crate::Ti
     if !WORK_TYPES.contains(&event.event_type.as_str()) || event.webhook_status != "none" {
         return Ok(None);
     }
-    let Some(room_id) = event.room_id else {
+    if !exists(
+        tx.conn(),
+        "SELECT 1 FROM webhooks w JOIN agents a ON a.user_id=w.user_id WHERE a.id=?",
+        [event.agent_id],
+    )? || !super::agent_event_access::delivery_authorized(tx.conn(), event.id)? {
         return Ok(None);
-    };
-    if !webhook_eligible(tx, event.agent_id, room_id)? {
-        return Ok(None);
-    }
-    if let Some(id) = event.metadata.get("thread_id").and_then(Value::as_i64) {
-        let user: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [event.agent_id], |row| row.get(0))?;
-        match ChannelThread::find_by_id(tx.conn(), id)? {
-            Some(thread) if !thread.readable_by(tx.conn(), user)? => return Ok(None),
-            None if event.metadata.get("thread_visibility").and_then(Value::as_str) == Some("private") => return Ok(None),
-            _ => (),
-        }
     }
     let next_attempt_at = tx.now();
     let changed=tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND webhook_status='none'",params![next_attempt_at,event.id])?;
@@ -54,17 +47,15 @@ fn queue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<Option<crate::Ti
     Ok((changed != 0).then_some(next_attempt_at))
 }
 fn webhook_eligible(tx: &Tx<'_>, agent_id: i64, room_id: i64) -> Result<bool> {
-    // One current statement, retaining suspended/user/deleted-room/revoked-grant
-    // checks. No permission snapshot crosses the writer transaction.
-    exists(tx.conn(),"SELECT 1 FROM agents a JOIN users u ON u.id=a.user_id
-        LEFT JOIN rooms r ON r.id=? WHERE a.id=? AND a.suspended_at IS NULL AND u.status=0
-        AND (r.id IS NULL OR r.deleted_at IS NULL)
-        AND EXISTS(SELECT 1 FROM memberships m WHERE m.user_id=a.user_id AND m.room_id=?)
-        AND EXISTS(SELECT 1 FROM webhooks w WHERE w.user_id=a.user_id)
-        AND (NOT EXISTS(SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id)
-          OR EXISTS(SELECT 1 FROM agent_grants g WHERE g.agent_id=a.id AND g.capability='read_messages'
-            AND g.revoked_at IS NULL AND (g.room_id IS NULL OR g.room_id=?)))",
-        params![room_id,agent_id,room_id,room_id])
+    Ok(super::agent_access::capability_for_agent(
+        tx.conn(),
+        agent_id,
+        "read_messages",
+        Some(room_id),
+    )? && exists(tx.conn(),
+        "SELECT 1 FROM agents a JOIN memberships m ON m.user_id=a.user_id JOIN webhooks w ON w.user_id=a.user_id WHERE a.id=? AND m.room_id=?",
+        params![agent_id,room_id],
+    )?)
 }
 
 fn actor_name(tx: &Tx<'_>, actor_id: Option<i64>) -> Result<Option<String>> {
@@ -243,6 +234,7 @@ pub fn publish_deleted_webhook(
                 (Agent::find(tx.conn(), event.agent_id)?, event.room_id)
                 && event.metadata.get("thread_visibility").and_then(Value::as_str) != Some("private")
                 && webhook_eligible(tx, agent.id, room)?
+                && super::agent_event_access::delivery_authorized(tx.conn(), event.id)?
             {
                 tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",params![tx.now(),event.id])?;
             }

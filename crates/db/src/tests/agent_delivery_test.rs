@@ -47,6 +47,7 @@ fn ws11_agent_delivery_claims_revocation_ack_and_recovery() {
         assert_eq!(AgentEvent::find(tx.conn(),e.id)?.unwrap().outcome.as_deref(),Some("suppressed"));
         let n:i64=tx.conn().query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='delivery_suppressed_revoked'",[],|r|r.get(0))?;assert_eq!(n,1);
         let ack=AgentEvent::create(tx,new())?;
+        tx.conn().execute("UPDATE agent_grants SET revoked_at=NULL WHERE agent_id=?",[e.agent_id])?;
         tx.conn().execute("UPDATE agent_events SET outcome='acknowledged' WHERE id=?",[ack.id])?;
         d::perform_delivery(tx,ack.id)?;d::perform_delivery(tx,ack.id)?;
         let ack=AgentEvent::find(tx.conn(),ack.id)?.unwrap();assert_eq!(ack.webhook_status,"pending");assert_eq!(ack.outcome.as_deref(),Some("acknowledged"));

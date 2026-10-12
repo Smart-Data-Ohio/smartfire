@@ -5,7 +5,7 @@ use super::agent_payloads::{RepositoryAccess, compact, json_time};
 use crate::sql::{query_all, query_one};
 use crate::{ChannelThread, Connection, Message, Result, Timestamp};
 use serde_json::{Value, json};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub fn poll(
     conn: &Connection,
@@ -57,10 +57,6 @@ struct PollContext<'a> {
     owner_id: Option<i64>,
     now: Timestamp,
     access: &'a RepositoryAccess,
-    active: bool,
-    legacy: bool,
-    members: HashSet<i64>,
-    grants: HashSet<Option<i64>>,
     rooms: HashMap<i64, Value>,
     actors: HashMap<i64, Value>,
     work: HashMap<i64, Value>,
@@ -73,17 +69,9 @@ impl<'a> PollContext<'a> {
         access: &'a RepositoryAccess,
         events: &[AgentEvent],
     ) -> Result<Self> {
-        let (user,owner_id,active,legacy):(i64,Option<i64>,bool,bool)=conn.query_row(
-            "SELECT a.user_id,a.owner_id,(a.suspended_at IS NULL AND u.status=0),NOT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=a.id) FROM agents a JOIN users u ON u.id=a.user_id WHERE a.id=?",[agent_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)))?;
-        let members = query_all(
-            conn,
-            "SELECT room_id FROM memberships WHERE user_id=?",
-            [user],
-            |r| r.get(0),
-        )?
-        .into_iter()
-        .collect();
-        let grants=query_all(conn,"SELECT room_id FROM agent_grants WHERE agent_id=? AND capability='read_messages' AND revoked_at IS NULL",[agent_id],|r|r.get(0))?.into_iter().collect();
+        let owner_id =conn.query_row(
+            "SELECT owner_id FROM agents WHERE id=?",[agent_id],|row| row.get::<_, Option<i64>>(0),
+        )?;
         let names = |table: &str, ids: Vec<i64>| -> Result<HashMap<i64, Value>> {
             if ids.is_empty() {
                 return Ok(HashMap::new());
@@ -159,23 +147,10 @@ impl<'a> PollContext<'a> {
             owner_id,
             now,
             access,
-            active,
-            legacy,
-            members,
-            grants,
             rooms,
             actors,
             work,
         })
-    }
-    fn readable(&self, room: &Value) -> bool {
-        let Some(id) = room.get("id").and_then(Value::as_i64) else {
-            return false;
-        };
-        // Rails' preloaded poll check deliberately does not inspect deleted_at.
-        self.active
-            && self.members.contains(&id)
-            && (self.legacy || self.grants.contains(&None) || self.grants.contains(&Some(id)))
     }
     fn common(&self, e: &AgentEvent) -> Result<Value> {
         let room = e.room_id.and_then(|id| self.rooms.get(&id));
@@ -209,9 +184,6 @@ impl<'a> PollContext<'a> {
             };
             payload["approval"] = approval;
         } else if WORK_TYPES.contains(&e.event_type.as_str()) {
-            if !self.readable(&payload["room"]) {
-                return Ok(None);
-            };
             let mut thread_deleted = false;
             let work = if let Some(work) = self.work.get(&e.id) {
                 work.clone()
@@ -249,9 +221,6 @@ impl<'a> PollContext<'a> {
                 payload["handoff"] = Value::Object(sliced);
             }
         } else if e.event_type == "slash_command" {
-            if !self.readable(&payload["room"]) {
-                return Ok(None);
-            };
             if let Some(id) = e.metadata.get("thread_id").filter(|v| !v.is_null()) {
                 payload["thread_id"] = id.clone();
             }
@@ -261,9 +230,7 @@ impl<'a> PollContext<'a> {
                 payload["command"]["options"] = options.clone();
             }
         } else {
-            if !self.readable(&payload["room"]) {
-                return Ok(None);
-            };
+            if e.room_id.is_none() { return Ok(None); }
             let Some(message) = e
                 .message_id
                 .map(|id| Message::find_by_id(self.conn, id))
@@ -272,6 +239,7 @@ impl<'a> PollContext<'a> {
             else {
                 return Ok(None);
             };
+            payload["room"] = query_one(self.conn,"SELECT id,name FROM rooms WHERE id=?",[message.room_id],|row| Ok(json!({"id":row.get::<_,i64>(0)?,"name":row.get::<_,Option<String>>(1)?})))?.unwrap_or(Value::Null);
             // Rails emits hop before room/actor for message events. Preserve that wire order.
             let fields = payload.as_object_mut().expect("event object");
             let room = fields.shift_remove("room").expect("readable event room");
@@ -296,7 +264,7 @@ impl<'a> PollContext<'a> {
         Ok(Some(payload))
     }
     fn approval(&self, e: &AgentEvent) -> Result<Option<Value>> {
-        let Some(id) = e.metadata.get("approval_id").map(ruby_i64) else {
+        let Some(id) = e.agent_approval_id.or_else(|| e.metadata.get("approval_id").map(ruby_i64)) else {
             return Ok(None);
         };
         query_one(
@@ -313,7 +281,9 @@ impl<'a> PollContext<'a> {
                 };
                 let decider = r
                     .get::<_, Option<i64>>("decider_id")?
-                    .map(|_| crate::User::from_prefixed_row(r, "decider_").map(|user| user.display_name().to_owned())).transpose()?
+                    .map(|_| {
+                        crate::User::from_prefixed_row(r, "decider_").map(|user| user.display_name().to_owned())
+                    }).transpose()?
                     .map(Value::String)
                     .or_else(|| e.metadata.get("decided_by").cloned());
                 let note = r
