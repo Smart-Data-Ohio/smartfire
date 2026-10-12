@@ -1129,3 +1129,188 @@ async fn a_stage_goes_live_at_1080p60_and_every_viewer_reads_it_back() {
     );
     server.abort();
 }
+
+#[tokio::test]
+async fn voice_user_limit_gateway_refuses_a_delayed_token_after_another_member_takes_the_slot() {
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
+    ));
+    let a = TestApp::boot_with_settings(configured(), clock.clone(), &[])
+        .await
+        .expect("frozen seeds required");
+    let room = voice(&a).await;
+    a.db()
+        .write(move |tx| {
+            tx.conn()
+                .execute_cached("UPDATE users SET role=0 WHERE id=?", [JASON])?;
+            Room::find(tx.conn(), room.id)?.update_voice_user_limit(tx, Some(1))
+        })
+        .await
+        .unwrap();
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut jason = a.sign_in(JASON).await;
+    let delayed = join(&mut kevin, room.id).await;
+    clock.advance(jiff::SignedDuration::from_secs(21));
+    let joined = join(&mut jason, room.id).await;
+    let authorize = |token: &str| {
+        empty(Method::POST, "/internal/huddle/authorize")
+            .header("x-huddle-gateway-secret", "ws13-fixture-gateway-secret")
+            .header("authorization", &format!("Bearer {token}"))
+    };
+    assert_eq!(
+        jason.send(authorize(&joined.token)).await.status,
+        StatusCode::OK
+    );
+    let refused = kevin.send(authorize(&delayed.token)).await;
+    assert_eq!(refused.status, StatusCode::CONFLICT);
+    assert_eq!(
+        refused.json(),
+        json!({"error":"HuddleRoomFull", "message":"This voice room is full"})
+    );
+    let heartbeat = kevin
+        .send(
+            get(&format!("/internal/huddle/grants/{}", delayed.grant_id))
+                .header("x-huddle-gateway-secret", "ws13-fixture-gateway-secret"),
+        )
+        .await;
+    assert_eq!(heartbeat.status, StatusCode::CONFLICT);
+    // A read-only grace-period check must not acquire a slot or record presence.
+    let check = kevin
+        .send(
+            get(&format!(
+                "/internal/huddle/grants/{}?record_seen=0",
+                delayed.grant_id
+            ))
+            .header("x-huddle-gateway-secret", "ws13-fixture-gateway-secret"),
+        )
+        .await;
+    assert_eq!(check.status, StatusCode::OK);
+    let path = format!("/api/v1/rooms/{}/huddle", room.id);
+    let fresh = kevin.write(empty(Method::POST, &path)).await;
+    assert_eq!(
+        denial(&fresh),
+        denied(
+            StatusCode::CONFLICT,
+            "HuddleRoomFull",
+            "This voice room is full"
+        )
+    );
+    let detail: api::HuddleDetail = parse(&jason.send(get(&path)).await);
+    assert_eq!(
+        detail
+            .presence
+            .participants
+            .iter()
+            .map(|user| user.user_id)
+            .collect::<Vec<_>>(),
+        [JASON]
+    );
+    let unchanged = a
+        .db()
+        .read(move |conn| HuddleGrant::find_by_id(conn, delayed.grant_id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(unchanged.last_seen_at, None);
+    assert!(!unchanged.revoked());
+}
+
+#[tokio::test]
+async fn voice_user_limit_gateway_reacquires_free_slots_and_preserves_reconnects_and_admins() {
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
+    ));
+    let a = TestApp::boot_with_settings(configured(), clock.clone(), &[])
+        .await
+        .expect("frozen seeds required");
+    let room = voice(&a).await;
+    a.db()
+        .write(move |tx| Room::find(tx.conn(), room.id)?.update_voice_user_limit(tx, Some(1)))
+        .await
+        .unwrap();
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut david = a.sign_in(DAVID).await;
+    let member = join(&mut kevin, room.id).await;
+    let authorize = |token: &str| {
+        empty(Method::POST, "/internal/huddle/authorize")
+            .header("x-huddle-gateway-secret", "ws13-fixture-gateway-secret")
+            .header("authorization", &format!("Bearer {token}"))
+    };
+    clock.advance(jiff::SignedDuration::from_secs(21));
+    assert_eq!(
+        kevin.send(authorize(&member.token)).await.status,
+        StatusCode::OK
+    );
+    clock.advance(jiff::SignedDuration::from_secs(11));
+    assert_eq!(
+        kevin.send(authorize(&member.token)).await.status,
+        StatusCode::OK
+    );
+    let mut device = a.sign_in(KEVIN).await;
+    let second = join(&mut device, room.id).await;
+    assert_ne!(second.grant_id, member.grant_id);
+    assert_eq!(
+        device.send(authorize(&second.token)).await.status,
+        StatusCode::OK
+    );
+    let admin = join(&mut david, room.id).await;
+    clock.advance(jiff::SignedDuration::from_secs(21));
+    assert_eq!(
+        kevin.send(authorize(&member.token)).await.status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        david.send(authorize(&admin.token)).await.status,
+        StatusCode::OK
+    );
+    let detail: api::HuddleDetail = parse(
+        &kevin
+            .send(get(&format!("/api/v1/rooms/{}/huddle", room.id)))
+            .await,
+    );
+    assert_eq!(
+        detail
+            .presence
+            .participants
+            .iter()
+            .map(|user| user.user_id)
+            .collect::<Vec<_>>(),
+        [DAVID, KEVIN]
+    );
+}
+
+#[tokio::test]
+async fn voice_user_limit_refuses_full_joins_with_a_typed_conflict_and_allows_rejoin_and_admin() {
+    let a = app(true).await.expect("frozen seeds required");
+    let room = voice(&a).await;
+    a.db().write(move |tx| {
+        tx.conn().execute_cached("UPDATE users SET role=0 WHERE id=?", [JASON])?;
+        Room::find(tx.conn(), room.id)?.update_voice_user_limit(tx, Some(1))
+    }).await.unwrap();
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{}/huddle", room.id);
+    let first = join(&mut kevin, room.id).await;
+    // The grant holds the last slot even before the gateway's first sighting.
+    let refused = jason.write(empty(Method::POST, &path)).await;
+    assert_eq!(denial(&refused), (StatusCode::CONFLICT, "HuddleRoomFull".into(), "This voice room is full".into()));
+    seen(&a, first.grant_id).await;
+    assert_eq!(join(&mut kevin, room.id).await.grant_id, first.grant_id);
+    let mut device = a.sign_in(KEVIN).await;
+    assert_ne!(join(&mut device, room.id).await.grant_id, first.grant_id);
+    let admin = join(&mut david, room.id).await;
+    seen(&a, admin.grant_id).await;
+    let detail: api::HuddleDetail = parse(&kevin.send(get(&path)).await);
+    assert_eq!(detail.presence.participants.len(), 2);
+    let room_detail = kevin.send(get(&format!("/api/v1/rooms/{}", room.id))).await.json();
+    assert_eq!(room_detail["room"]["voiceUserLimit"], json!(1));
+    let cleared = david.write(send_json(Method::PATCH, &format!("/api/v1/rooms/{}", room.id),
+        &json!({"type":"voice","userIds":[DAVID,JASON,KEVIN],"voiceUserLimit":null}))).await;
+    assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+    join(&mut jason, room.id).await;
+}

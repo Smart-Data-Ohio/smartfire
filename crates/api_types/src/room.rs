@@ -19,6 +19,8 @@ pub struct Room {
     pub topic: Option<String>,
     /// Configured audio target in bits per second; null uses the current huddle default.
     pub voice_bitrate: Option<i64>,
+    /// Maximum distinct huddle users; null means unlimited. Room administrators bypass it.
+    pub voice_user_limit: Option<i64>,
     #[serde(default)]
     #[ts(as = "Option<bool>", optional)]
     pub announcement: bool,

@@ -1,3 +1,4 @@
+import * as LiveKit from "livekit-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../../api/testing.ts";
 import type { HuddleCredentials } from "../../gen/HuddleCredentials.ts";
@@ -13,6 +14,7 @@ import {
 import { callStore, initialCallState } from "./call-store.ts";
 import { EMPTY_DEVICE_LISTS } from "./engine/devices.ts";
 import { FakeTransport } from "./engine/fake.ts";
+import { liveKitTransport } from "./engine/livekit.ts";
 
 const ROOM = 8;
 
@@ -256,6 +258,21 @@ describe("joining", () => {
     await controller.leave();
   });
 
+  it("explains that a voice room is full without starting a transport", async () => {
+    const { controller, transports } = harness({
+      join: async () => {
+        throw new ActionError("HuddleRoomFull", "This voice room is full");
+      },
+    });
+
+    await controller.join(ROOM, "Lounge", null);
+    expect(callStore.getState().phase).toBe("failed");
+    expect(callStore.getState().notice).toBe(
+      "This voice room is full. Try again when someone leaves.",
+    );
+    expect(transports).toHaveLength(0);
+  });
+
   it("says why a join failed", async () => {
     const { controller } = harness({
       join: async () => {
@@ -270,6 +287,25 @@ describe("joining", () => {
     expect(state.phase).toBe("failed");
     expect(state.failureTitle).toBe("Couldn’t join huddle");
     expect(state.notice).not.toBeNull();
+  });
+
+  it("shows the same full-room message when the gateway refuses issued credentials", async () => {
+    class RefusedRoom extends LiveKit.Room {
+      override connect = async () => {
+        throw LiveKit.ConnectionError.notAllowed("This voice room is full\n", 403);
+      };
+
+      override disconnect = async () => undefined;
+    }
+
+    const transport = liveKitTransport({ ...LiveKit, Room: RefusedRoom });
+    const { controller, calls } = harness({ transport: async () => transport });
+    await controller.join(ROOM, "Lounge", null);
+    expect(calls).toContain(`join ${ROOM}`);
+    expect(callStore.getState().phase).toBe("failed");
+    expect(callStore.getState().notice).toBe(
+      "This voice room is full. Try again when someone leaves.",
+    );
   });
 });
 

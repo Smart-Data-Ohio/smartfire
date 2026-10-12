@@ -16,6 +16,115 @@ const RITA: i64 = 773523954;
 const LOU: i64 = 773523958;
 
 #[tokio::test]
+async fn spa_api_room_management_voice_user_limit_reads_updates_and_reuses_settings_permissions() {
+    let a = app().await.expect("frozen seeds required");
+    let mut admin = a.sign_in(DAVID).await;
+    let mut creator = a.sign_in(KEVIN).await;
+    let mut member = a.sign_in(LOU).await;
+    let mut outsider = a.sign_in(RITA).await;
+    for kind in ["open", "closed", "board", "voice", "stage"] {
+        let created = created(&mut creator, kind, &[KEVIN, LOU, DAVID]).await;
+        let path = format!("/api/v1/rooms/{}", created.room.id);
+        assert_eq!(created.room.voice_user_limit, None);
+        let edit = format!("{path}/edit");
+        assert_eq!(
+            parse::<Value>(&creator.send(get(&edit)).await)["voiceUserLimit"],
+            json!(null)
+        );
+        let mut body = json!({"type":kind,"voiceUserLimit":99});
+        if kind != "open" {
+            body["userIds"] = json!([KEVIN, LOU, DAVID]);
+        }
+        let before = dump(&a).await;
+        let denied = write(&mut member, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(denied.status, StatusCode::FORBIDDEN, "{}", denied.text());
+        if kind != "open" {
+            let denied = write(&mut outsider, Method::PATCH, &path, body.clone()).await;
+            assert_eq!(denied.status, StatusCode::NOT_FOUND, "{}", denied.text());
+            assert_eq!(
+                outsider.send(get(&edit)).await.status,
+                StatusCode::NOT_FOUND
+            );
+        }
+        assert_eq!(dump(&a).await, before);
+        for limit in [1, 5, 99] {
+            body["voiceUserLimit"] = json!(limit);
+            let saved = write(&mut creator, Method::PATCH, &path, body.clone()).await;
+            assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+            assert_eq!(
+                parse::<api::RoomMutation>(&saved).room.voice_user_limit,
+                Some(limit)
+            );
+            assert_eq!(
+                parse::<Value>(&member.send(get(&edit)).await)["voiceUserLimit"],
+                json!(limit)
+            );
+            assert_eq!(
+                parse::<Value>(&creator.send(get(&path)).await)["room"]["voiceUserLimit"],
+                json!(limit)
+            );
+        }
+        body.as_object_mut().unwrap().remove("voiceUserLimit");
+        let retained = write(&mut creator, Method::PATCH, &path, body.clone()).await;
+        assert_eq!(retained.status, StatusCode::OK, "{}", retained.text());
+        assert_eq!(
+            parse::<api::RoomMutation>(&retained).room.voice_user_limit,
+            Some(99)
+        );
+        body["voiceUserLimit"] = json!(null);
+        let cleared = write(&mut admin, Method::PATCH, &path, body).await;
+        assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+        assert_eq!(
+            parse::<api::RoomMutation>(&cleared).room.voice_user_limit,
+            None
+        );
+    }
+}
+
+#[tokio::test]
+async fn spa_api_room_management_voice_user_limit_validation_is_atomic() {
+    let a = app().await.expect("frozen seeds required");
+    let mut creator = a.sign_in(KEVIN).await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    for kind in ["open", "closed", "board", "voice", "stage"] {
+        let created = created(&mut creator, kind, &[KEVIN, DAVID]).await;
+        let path = format!("/api/v1/rooms/{}", created.room.id);
+        super::admin_tests::settle(&capture).await;
+        let before = dump(&a).await;
+        for limit in [
+            json!(-1),
+            json!(0),
+            json!(100),
+            json!("5"),
+            json!(1.5),
+        ] {
+            let mut body = json!({"type":kind,"name":"Must not persist","voiceUserLimit":limit});
+            if kind != "open" {
+                body["userIds"] = json!([KEVIN]);
+            }
+            let invalid = write(&mut creator, Method::PATCH, &path, body).await;
+            assert_eq!(
+                invalid.status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{}",
+                invalid.text()
+            );
+            assert_eq!(error(&invalid)["_tag"], json!("Validation"));
+            if limit.is_i64() {
+                assert_eq!(
+                    error(&invalid)["fields"]["voiceUserLimit"],
+                    json!(["must be between 1 and 99"])
+                );
+            }
+            assert_eq!(dump(&a).await, before);
+            assert!(super::admin_tests::settle(&capture).await.is_empty());
+        }
+    }
+}
+
+
+
+#[tokio::test]
 async fn spa_api_room_management_voice_bitrate_reads_updates_and_reuses_settings_permissions() {
     let a = app().await.expect("frozen seeds required");
     let mut admin = a.sign_in(DAVID).await;

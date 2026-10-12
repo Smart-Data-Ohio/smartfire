@@ -255,3 +255,47 @@ describe("stages", () => {
     expect(events.some((event) => event.type === "stage.stream.stopped")).toBe(true);
   });
 });
+
+describe("voice user limit", () => {
+  it("refuses a new member when full, but permits administrators and second devices", async () => {
+    const { server } = harness();
+    const form = await get<{ userIds: number[] }>(server, `/api/v1/rooms/${lounge}/edit`);
+    await expectStatus(
+      server,
+      "PATCH",
+      `/api/v1/rooms/${lounge}`,
+      { type: "voice", userIds: form.userIds, voiceUserLimit: 2 },
+      200,
+    );
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    const refused = await send(server, "POST", `/api/v1/rooms/${lounge}/huddle`, {});
+    expect(refused.status).toBe(409);
+    expect(errorOf(refused.json)).toEqual({
+      tag: "HuddleRoomFull",
+      message: "This voice room is full",
+    });
+    await send(server, "POST", "/__mock/viewer-role", { role: "administrator" });
+
+    const first = await expectStatus<HuddleCredentials>(
+      server,
+      "POST",
+      `/api/v1/rooms/${lounge}/huddle`,
+      {},
+      201,
+    );
+
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+
+    const device = await expectStatus<HuddleCredentials>(
+      server,
+      "POST",
+      `/api/v1/rooms/${lounge}/huddle`,
+      {},
+      201,
+    );
+
+    expect(device.identity).not.toBe(first.identity);
+    const detail = await get<HuddleDetail>(server, `/api/v1/rooms/${lounge}/huddle`);
+    expect(detail.presence.participants).toHaveLength(3);
+  });
+});

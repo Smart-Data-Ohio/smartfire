@@ -62,6 +62,7 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
       updatedAt: options.updatedAt ?? "2026-10-01T00:00:00.000Z",
       topic: null,
       voiceBitrate: null,
+      voiceUserLimit: null,
     },
     membership: {
       id: id * 10,

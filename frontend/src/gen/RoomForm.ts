@@ -32,4 +32,8 @@ allowedTypes: Array<RoomKind>, conversionTypes: Array<RoomKind>, canSubmit: bool
 /**
  * Configured audio target in bits per second; null uses the current huddle default.
  */
-voiceBitrate: number | null, };
+voiceBitrate: number | null,
+/**
+ * Maximum distinct huddle users; null means unlimited. Room administrators bypass it.
+ */
+voiceUserLimit: number | null, };

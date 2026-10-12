@@ -26,6 +26,7 @@ export const Room = Schema.Struct({
   updatedAt: Timestamp,
   topic: Schema.NullOr(Schema.String),
   voiceBitrate: Schema.NullOr(Schema.Int),
+  voiceUserLimit: Schema.NullOr(Schema.Int),
   announcement: Schema.optionalKey(Schema.Boolean),
 });
 

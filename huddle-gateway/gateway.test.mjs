@@ -205,6 +205,36 @@ test("rejects a saved token before opening an upstream socket", async (t) => {
   assert.deepEqual(harness.state.seenAuthorization, [`Bearer ${TOKEN}`]);
 });
 
+for (const path of ["/rtc", "/rtc/v1"]) {
+  test(`reports a full room through ${path}'s SDK validation path`, async (t) => {
+    const harness = await createHarness();
+    t.after(() => harness.close());
+    harness.state.authorizeStatus = 409;
+
+    const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}${path}?access_token=${TOKEN}`);
+    assert.equal(result.status, 403);
+    const validation = await fetch(`http://127.0.0.1:${harness.gatewayPort}${path}/validate?access_token=${TOKEN}`);
+    assert.equal(validation.status, 403);
+    assert.equal(await validation.text(), "This voice room is full\n");
+    assert.equal(validation.headers.get("cache-control"), "no-store");
+    assert.equal(harness.state.upstreamConnections, 0);
+  });
+}
+
+test("removes a participant if capacity is refused after the upstream signal", async (t) => {
+  const harness = await createHarness();
+  t.after(() => harness.close());
+  harness.state.authorizeHook = async (call) => ({ status: call === 1 ? 200 : 409, body: GRANT });
+
+  const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}/rtc?access_token=${TOKEN}`);
+  assert.equal(result.status, 403);
+  assert.equal(harness.state.upstreamConnections, 1);
+  await waitFor(() => harness.state.removals.length === 1);
+  const validation = await fetch(`http://127.0.0.1:${harness.gatewayPort}/rtc/validate?access_token=${TOKEN}`);
+  assert.equal(validation.status, 403);
+  assert.equal(await validation.text(), "This voice room is full\n");
+});
+
 test("reauthorizes after the first upstream signal and removes a revoked participant before upgrade", async (t) => {
   const harness = await createHarness({ requestTimeoutMs: 500 });
   t.after(() => harness.close());

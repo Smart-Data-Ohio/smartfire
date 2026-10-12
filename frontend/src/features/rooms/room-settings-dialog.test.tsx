@@ -49,6 +49,7 @@ function boardForm(patch: Partial<RoomForm> = {}): RoomForm {
     stageRoles: [],
     topic: null,
     voiceBitrate: null,
+    voiceUserLimit: null,
     ...patch,
   };
 }
@@ -171,6 +172,7 @@ describe("board settings", () => {
         updatedAt: "2026-03-02T16:00:00Z",
         topic: null,
         voiceBitrate: null,
+        voiceUserLimit: null,
       },
       detail: null,
       row: null,
@@ -256,6 +258,7 @@ function savedRoom(name: string) {
       updatedAt: "2026-03-02T16:00:00Z",
       topic: null,
       voiceBitrate: null,
+      voiceUserLimit: null,
     },
     detail: null,
     row: null,
@@ -849,5 +852,61 @@ describe("webhook settings", () => {
     expect(await screen.findByText("No webhooks yet.")).toBeTruthy();
     expect(document.body.textContent).not.toContain("one-time-token");
     expect(JSON.stringify(store.getState())).not.toContain("one-time-token");
+  });
+});
+
+describe("voice user limit settings", () => {
+  it.each([1, 5, 99])("saves a limit of %s without changing other settings", async (limit) => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(
+      closedForm({ type: "voice", conversionTypes: [] }),
+    );
+
+    const update = vi
+      .spyOn(actions.rooms, "update")
+      .mockRejectedValue(new ActionError("ServerError", "held"));
+
+    const user = userEvent.setup();
+    await mount(CLOSED);
+    const field = await screen.findByRole("combobox", { name: "Voice user limit" });
+    expect(field).toHaveProperty("value", "");
+    expect(screen.getByRole("combobox", { name: "Voice bitrate" })).toHaveProperty("value", "");
+    await user.selectOptions(field, String(limit));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(update).toHaveBeenCalledWith(CLOSED, {
+      type: "voice",
+      userIds: [1, 2],
+      voiceUserLimit: limit,
+    });
+  });
+
+  it("loads a limit and clears it with No limit", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(closedForm({ voiceUserLimit: 5 }));
+
+    const update = vi
+      .spyOn(actions.rooms, "update")
+      .mockRejectedValue(new ActionError("ServerError", "held"));
+
+    const user = userEvent.setup();
+    await mount(CLOSED);
+    const field = await screen.findByRole("combobox", { name: "Voice user limit" });
+    expect(field).toHaveProperty("value", "5");
+    expect(within(field).getAllByRole("option")).toHaveLength(100);
+    await user.selectOptions(field, "");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(update).toHaveBeenCalledWith(CLOSED, {
+      type: "closed",
+      userIds: [1, 2],
+      voiceUserLimit: null,
+    });
+  });
+
+  it("hides voice controls for a viewer who cannot administer the room", async () => {
+    vi.spyOn(actions.rooms, "editForm").mockResolvedValue(
+      closedForm({ canSubmit: false, voiceUserLimit: 5 }),
+    );
+    await mount(CLOSED);
+    await screen.findByRole("textbox", { name: "Name" });
+    expect(screen.queryByRole("combobox", { name: "Voice user limit" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Voice bitrate" })).toBeNull();
   });
 });

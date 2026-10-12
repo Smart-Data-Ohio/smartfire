@@ -114,6 +114,7 @@ export function createDirects(ctx: S2Context): Directs {
         updatedAt: createdAt,
         topic: null,
         voiceBitrate: null,
+        voiceUserLimit: null,
       },
       memberIds: [VIEWER_ID, ...others],
       membership: {

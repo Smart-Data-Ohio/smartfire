@@ -236,6 +236,11 @@ async fn create_huddle(c: &mut Ctx) -> Result {
         .await
     {
         Ok(grant) => grant,
+        Err(campfire_db::Error::HuddleRoomFull) => {
+            return Err(fail(c, api::ApiError::HuddleRoomFull {
+                message: "This voice room is full".into(),
+            }));
+        }
         Err(campfire_db::Error::Other(message)) if message == "HuddleGrant::Ineligible" => {
             return Err(room_not_found(c));
         }

@@ -382,6 +382,7 @@ pub fn room(room: &Room) -> api::Room {
         updated_at: time(room.updated_at),
         topic: room.topic.clone(),
         voice_bitrate: room.voice_bitrate,
+        voice_user_limit: room.voice_user_limit,
         announcement: room.announcement,
     }
 }

@@ -129,6 +129,7 @@ export default function RoomSettingsDialog({
   const panelId = useId();
   const topicId = useId();
   const bitrateId = useId();
+  const limitId = useId();
   const nameRef = useRef<HTMLInputElement | null>(null);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? 0);
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -215,6 +216,7 @@ export default function RoomSettingsDialog({
           userIds: form.userIds,
           topic: form.topic ?? "",
           voiceBitrate: form.voiceBitrate,
+          voiceUserLimit: form.voiceUserLimit,
         });
       },
       (failure: Error) => {
@@ -540,33 +542,61 @@ export default function RoomSettingsDialog({
           ) : null}
         </div>
         {bitrateEditable ? (
-          <div className="field">
-            <label className="field-label" htmlFor={bitrateId}>
-              Voice bitrate
-            </label>
-            <select
-              id={bitrateId}
-              className="input"
-              value={`${draft.voiceBitrate ?? ""}`}
-              aria-describedby={`${bitrateId}-hint`}
-              onChange={(event) => {
-                const value = event.target.value;
+          <>
+            <div className="field">
+              <label className="field-label" htmlFor={bitrateId}>
+                Voice bitrate
+              </label>
+              <select
+                id={bitrateId}
+                className="input"
+                value={`${draft.voiceBitrate ?? ""}`}
+                aria-describedby={`${bitrateId}-hint`}
+                onChange={(event) => {
+                  const value = event.target.value;
 
-                edit({ voiceBitrate: value === "" ? null : Number(value) });
-              }}
-            >
-              <option value="">Default ({kbps(DEFAULT_VOICE_BITRATE)})</option>
-              {VOICE_BITRATES.map((bitrate) => (
-                <option key={bitrate} value={`${bitrate}`}>
-                  {kbps(bitrate)}
-                </option>
-              ))}
-            </select>
-            <p className="field-hint" id={`${bitrateId}-hint`}>
-              Higher bitrates sound better in calls here but use more bandwidth. Takes effect the
-              next time someone joins.
-            </p>
-          </div>
+                  edit({ voiceBitrate: value === "" ? null : Number(value) });
+                }}
+              >
+                <option value="">Default ({kbps(DEFAULT_VOICE_BITRATE)})</option>
+                {VOICE_BITRATES.map((bitrate) => (
+                  <option key={bitrate} value={`${bitrate}`}>
+                    {kbps(bitrate)}
+                  </option>
+                ))}
+              </select>
+              <p className="field-hint" id={`${bitrateId}-hint`}>
+                Higher bitrates sound better in calls here but use more bandwidth. Takes effect the
+                next time someone joins.
+              </p>
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor={limitId}>
+                Voice user limit
+              </label>
+              <select
+                id={limitId}
+                className="input"
+                value={`${draft.voiceUserLimit ?? ""}`}
+                aria-describedby={`${limitId}-hint`}
+                onChange={(event) =>
+                  edit({
+                    voiceUserLimit: event.target.value === "" ? null : Number(event.target.value),
+                  })
+                }
+              >
+                <option value="">No limit</option>
+                {Array.from({ length: 99 }, (_, index) => index + 1).map((limit) => (
+                  <option key={limit} value={limit}>
+                    {limit}
+                  </option>
+                ))}
+              </select>
+              <p className="field-hint" id={`${limitId}-hint`}>
+                Room administrators can join even when the room is full.
+              </p>
+            </div>
+          </>
         ) : null}
         {canConvert ? (
           <div className="room-privacy">

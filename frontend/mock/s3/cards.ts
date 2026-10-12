@@ -630,6 +630,7 @@ export function seedCards(world: World, now: number): void {
       updatedAt: timestamp(welcomeAt),
       topic: null,
       voiceBitrate: null,
+      voiceUserLimit: null,
     },
     memberIds: [...HUMANS, BOT_ID],
     membership: {
