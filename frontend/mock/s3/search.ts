@@ -24,6 +24,7 @@ import { filesOf } from "../s2/posting.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
 import { zonedTime } from "../s2/when.ts";
 import { ROOM_IDS, type RoomRecord, timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { messageText } from "./model.ts";
 
 /** Messages a page (`Message::PAGE_SIZE`). */
 export const SEARCH_PAGE_SIZE = 40;
@@ -300,14 +301,6 @@ export function plainText(html: string): string {
     .replace(/&(?:amp|lt|gt|quot|#39|nbsp);/gu, (entity) => ENTITIES.get(entity) ?? entity);
 }
 
-function messageText(message: MessageDTO): string {
-  const text = plainText(message.bodyHtml);
-
-  return text.trim() === "" && message.sticker !== undefined
-    ? `Sticker: ${message.sticker.name}`
-    : text;
-}
-
 /** The instant a day in the viewer's zone starts, `offset` days after `date`. */
 function midnight(date: string, offset = 0): string {
   const [year = 0, month = 0, day = 0] = date.split("-").map(Number);
@@ -507,7 +500,9 @@ export function createSearch(ctx: S2Context): Search {
 
       if (stems.length === 0) return true;
 
-      const words = new Set(textTokens(messageText(message)).map(stem));
+      const words = new Set(
+        textTokens(messageText(message, plainText(message.bodyHtml))).map(stem),
+      );
 
       return stems.every((word) => words.has(word));
     };
@@ -710,7 +705,7 @@ export function createSearch(ctx: S2Context): Search {
 
     const ranks = new Map(
       matched.map((message) => {
-        const words = textTokens(messageText(message)).map(stem);
+        const words = textTokens(messageText(message, plainText(message.bodyHtml))).map(stem);
         const count = words.filter((word) => terms.includes(word)).length;
 
         return [message.id, count];

@@ -66,13 +66,17 @@ pub(crate) fn message_sticker(
     conn: &campfire_db::Connection,
     message: &Message,
 ) -> campfire_db::Result<Option<api::MessageSticker>> {
-    let Some(id) = message.sticker_id else {
-        return Ok(message
-            .sticker_name
-            .clone()
-            .map(|name| api::MessageSticker::Deleted { name }));
+    let sticker = match message.sticker_id.map(|id| Sticker::find(conn, id)).transpose() {
+        Ok(Some(sticker)) => sticker,
+        Ok(None) | Err(campfire_db::Error::RecordNotFound("Sticker")) => {
+            return Ok(message
+                .sticker_name
+                .clone()
+                .map(|name| api::MessageSticker::Deleted { name }));
+        }
+        Err(error) => return Err(error),
     };
-    let sticker = Sticker::find(conn, id)?;
+    let id = sticker.id;
     let blob = attachments::attached_blob(conn, "Sticker", id, "image")?
         .ok_or(campfire_db::Error::RecordNotFound("sticker image"))?;
     let animated = campfire_storage::workspace_icon::animated(&blob);
@@ -374,4 +378,31 @@ async fn media(c: &mut Ctx) -> Result {
         SendOptions::inline(blob.content_type()),
     )
     .map_err(|_| Error::NotFound)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sticker_deleted_after_message_load_serializes_the_retained_name() {
+        let mut conn = campfire_db::Connection::open_in_memory().unwrap();
+        campfire_db::schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
+        conn.execute_batch(
+            "INSERT INTO users(id,name,created_at,updated_at) VALUES(1,'David','2026-10-12 00:00:00','2026-10-12 00:00:00');
+             INSERT INTO rooms(id,type,creator_id,created_at,updated_at) VALUES(1,'Rooms::Open',1,'2026-10-12 00:00:00','2026-10-12 00:00:00');
+             INSERT INTO stickers(id,name,name_key,uploader_id,created_at,updated_at) VALUES(1,'Hello','hello',1,'2026-10-12 00:00:00','2026-10-12 00:00:00');
+             INSERT INTO messages(id,room_id,creator_id,client_message_id,sticker_id,sticker_name,created_at,updated_at) VALUES(1,1,1,'stale-sticker',1,'Hello','2026-10-12 00:00:00','2026-10-12 00:00:00');",
+        ).unwrap();
+        let loaded = Message::find(&conn, 1).unwrap();
+        assert_eq!(loaded.sticker_id, Some(1));
+        conn.execute("DELETE FROM stickers WHERE id=1", []).unwrap();
+        let reloaded = Message::find(&conn, 1).unwrap();
+        assert_eq!(reloaded.sticker_id, None);
+        let placeholder = Some(api::MessageSticker::Deleted {
+            name: "Hello".into(),
+        });
+        assert_eq!(message_sticker(&conn, &loaded).unwrap(), placeholder);
+        assert_eq!(message_sticker(&conn, &reloaded).unwrap(), placeholder);
+    }
 }

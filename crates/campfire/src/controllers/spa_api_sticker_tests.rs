@@ -5,7 +5,7 @@ use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use super::admin_tests::{app, error, get, parse, write};
-use crate::controllers::presenters::test_support::{ALL_TALK, Browser, DAVID, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER_KEY, Browser, DAVID, KEVIN, Req, TestApp};
 
 const CATALOG: &str = "/api/v1/stickers";
 const ADMIN: &str = "/api/v1/admin/stickers";
@@ -561,4 +561,96 @@ async fn sticker_messages_sync_search_notifications_and_deleted_placeholders() {
         .unwrap();
     assert!(hits.iter().any(|message| message.id == old.id));
     cable.abort();
+}
+
+async fn sticker_history_preserves_display_text(mcp: bool) {
+    let a = crate::controllers::agent_http_tests::setup()
+        .await
+        .without_job_runner()
+        .await;
+    let mut b = a.sign_in(DAVID).await;
+    let sticker = create(&mut b, "Hello", PNG).await;
+    let reply = write(
+        &mut b,
+        Method::POST,
+        &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        json!({"clientMessageId":"history-sticker","markdownSource":"Caption","stickerId":sticker.id}),
+    ).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let created: api::MessageDTO = parse(&reply);
+    let edited = write(
+        &mut b,
+        Method::PATCH,
+        &format!("/api/v1/messages/{}", created.id),
+        json!({"markdownSource":""}),
+    )
+    .await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    let mut texts = Vec::new();
+    for deleted in [false, true] {
+        if deleted {
+            assert_eq!(
+                write(
+                    &mut b,
+                    Method::DELETE,
+                    &format!("{ADMIN}/{}", sticker.id),
+                    Value::Null
+                )
+                .await
+                .status,
+                StatusCode::OK
+            );
+        }
+        let request = if mcp {
+            Req::new(Method::POST, "/agents/mcp")
+                .header("content-type", "application/json")
+                .body(json!({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"read_messages","arguments":{"room_id":ALL_TALK}}}).to_string())
+        } else {
+            Req::new(
+                Method::GET,
+                &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages"),
+            )
+        };
+        let request = if mcp {
+            request.header(
+                "authorization",
+                &format!("Bearer {}", crate::controllers::agent_http_tests::SECRET),
+            )
+        } else {
+            request
+        };
+        let reply = a
+            .anonymous()
+            .send(request.header("accept", "application/json"))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let payload = reply.json();
+        let messages = if mcp {
+            &payload["result"]["structuredContent"]["messages"]
+        } else {
+            &payload
+        };
+        let message = messages
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|message| message["id"] == created.id)
+            .unwrap();
+        texts.push(message["body"]["plain_text"].clone());
+    }
+    assert_eq!(
+        texts,
+        vec![json!("Sticker: Hello"), json!("Sticker: Hello")],
+        "mcp={mcp}: live and deleted sticker text"
+    );
+}
+
+#[tokio::test]
+async fn sticker_agent_read_messages_preserves_blank_and_deleted_sticker_text() {
+    sticker_history_preserves_display_text(true).await;
+}
+
+#[tokio::test]
+async fn sticker_bot_history_preserves_blank_and_deleted_sticker_text() {
+    sticker_history_preserves_display_text(false).await;
 }

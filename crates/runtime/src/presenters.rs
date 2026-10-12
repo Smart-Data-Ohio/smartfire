@@ -474,21 +474,11 @@ impl<'a> Presenter<'a> {
         )
         .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
         // Message#plain_text_body applies these after Markdown.plain_text, including
-        // attachment-only Markdown and a forward note. forwarded_markdown is not markdown?.
+        // attachment-only Markdown, stickers and a forward note. forwarded_markdown is not markdown?.
         if campfire_presentation::helpers::is_blank(&text) {
             text = message.attachment_summary(self.conn)?;
         }
-        Ok(
-            match message
-                .forward_note
-                .as_deref()
-                .filter(|note| !campfire_presentation::helpers::is_blank(note))
-            {
-                Some(note) if campfire_presentation::helpers::is_blank(&text) => note.to_string(),
-                Some(note) => format!("{note}\n\n{text}"),
-                None => text,
-            },
-        )
+        Ok(message.display_text(text))
     }
 
     /// `message.boosts.ordered`.

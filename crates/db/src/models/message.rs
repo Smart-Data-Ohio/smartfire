@@ -1511,20 +1511,19 @@ impl Message {
                 None => self.attachment_summary(conn)?,
             };
         }
+        Ok(self.display_text(text))
+    }
+
+    /// Apply the retained sticker name and forward note after rendering text and filenames.
+    pub fn display_text(&self, mut text: String) -> String {
         if text.trim().is_empty() && let Some(name) = &self.sticker_name {
             text = format!("Sticker: {name}");
         }
-        Ok(
-            match self
-                .forward_note
-                .as_deref()
-                .filter(|note| !note.trim().is_empty())
-            {
-                Some(note) if text.trim().is_empty() => note.to_string(),
-                Some(note) => format!("{note}\n\n{text}"),
-                None => text,
-            },
-        )
+        match self.forward_note.as_deref().filter(|note| !note.trim().is_empty()) {
+            Some(note) if text.trim().is_empty() => note.to_string(),
+            Some(note) => format!("{note}\n\n{text}"),
+            None => text,
+        }
     }
 
     /// `markdown?`
