@@ -1,6 +1,7 @@
 /* The composer card and the typing line under it. */
 @layer app {
   .composer {
+    container: composer / inline-size;
     position: relative;
     /* Above the timeline's floating chips (the jump button), so its menus cover them. */
     z-index: 4;
@@ -294,6 +295,19 @@
 
     30% {
       opacity: 1;
+    }
+  }
+
+  /* A narrow column (a thread pane, theater mode's chat) can't hold the whole toolbar: it keeps
+     what a phone's does, so Send stays in the card. */
+  @container composer (width < 500px) {
+    .composer-hint,
+    .composer-formats,
+    .composer-mention,
+    .composer-formats + .composer-divider,
+    .composer-toolbar > .composer-divider,
+    .composer-usage-text {
+      display: none;
     }
   }
 
