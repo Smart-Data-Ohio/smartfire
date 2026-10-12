@@ -469,6 +469,11 @@
     overflow: hidden;
   }
 
+  /* A sticker under its caption, as the timeline shows it. */
+  .search-hit-sticker {
+    margin-top: var(--space-1-5);
+  }
+
   .search-mark {
     padding: 0 1px;
     border-radius: 3px;

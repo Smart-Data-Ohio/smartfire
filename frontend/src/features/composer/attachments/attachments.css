@@ -44,6 +44,12 @@
     padding: 0;
   }
 
+  .tray-chip[data-kind="sticker"] {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+  }
+
   .tray-chip[data-phase="failed"] {
     box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--danger), transparent 40%);
   }
@@ -61,6 +67,11 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* A held sticker keeps its shape in the tray instead of filling the square. */
+  .tray-chip[data-kind="sticker"] .tray-thumb img {
+    object-fit: contain;
   }
 
   .tray-thumb-veil {

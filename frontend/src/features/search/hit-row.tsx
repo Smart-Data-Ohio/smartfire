@@ -10,6 +10,7 @@ import { FileSpoiler } from "../messages/file-spoiler.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
 import { messageFiles } from "../messages/message-files.ts";
 import { useSpoilerReveal } from "../messages/spoilers.ts";
+import { StickerMessage } from "../messages/sticker-message.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
@@ -198,6 +199,11 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
             // biome-ignore lint/security/noDangerouslySetInnerHtml: the server's sanitized body; the marks are added as DOM nodes, never as markup text
             dangerouslySetInnerHTML={{ __html: html }}
           />
+        )}
+        {message.sticker === undefined ? null : (
+          <div className="search-hit-sticker">
+            <StickerMessage sticker={message.sticker} />
+          </div>
         )}
         <HitAttachment message={message} />
       </div>

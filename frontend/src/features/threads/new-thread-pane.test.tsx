@@ -4,11 +4,14 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import type { StickerCatalog } from "../../gen/StickerCatalog.ts";
 import { initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
+import { composerActions } from "../../sync/composer-actions.ts";
 import { actions } from "../../sync/runtime.ts";
+import { resetStickers } from "../composer/sticker-store.ts";
 import { NewThreadPane } from "./new-thread-pane.tsx";
 import { messageFixture } from "./test-fixtures.ts";
 
@@ -245,5 +248,104 @@ it("starts a public thread by default", async () => {
       "Everyone",
       expect.objectContaining({ visibility: "public" }),
     ),
+  );
+});
+
+const STICKERS: StickerCatalog = {
+  stickers: [
+    {
+      id: 1,
+      name: "Wave",
+      description: "Wave sticker",
+      tags: "👋 hello",
+      imageUrl: "/stickers/1",
+      stillUrl: "/stickers/1",
+      animated: false,
+      uploaderId: 1,
+      createdAt: "2026-10-12T12:00:00Z",
+      updatedAt: "2026-10-12T12:00:00Z",
+    },
+    {
+      id: 2,
+      name: "Dance",
+      description: "Dance sticker",
+      tags: "party 🎉",
+      imageUrl: "/stickers/2",
+      stillUrl: "/stickers/2?still=1",
+      animated: true,
+      uploaderId: 1,
+      createdAt: "2026-10-12T12:00:00Z",
+      updatedAt: "2026-10-12T12:00:00Z",
+    },
+  ],
+  capacity: 60,
+};
+
+/** Renders the pane with its parent loaded and a sticker catalog to pick from. */
+async function renderPane() {
+  resetStickers();
+  store.setState({ messages: { 1: messageFixture(1) } });
+  const create = vi.spyOn(actions.threads, "create").mockRejectedValue(new Error("Keep the draft"));
+
+  vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(STICKERS);
+  vi.spyOn(actions, "noteActivity").mockImplementation(() => undefined);
+  vi.spyOn(actions, "setTyping").mockImplementation(() => undefined);
+  vi.stubGlobal("matchMedia", (query: string) =>
+    Object.assign(new EventTarget(), { matches: false, media: query, onchange: null }),
+  );
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+
+  const root = createRootRoute({ component: () => <NewThreadPane roomId={4} parentId={1} /> });
+
+  const router = createRouter({
+    routeTree: root,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+
+  render(<RouterProvider router={router} />);
+  await act(() => router.load());
+
+  return create;
+}
+
+/** Picks `name` in the pane composer's sticker picker. */
+async function pickSticker(name: string) {
+  fireEvent.click(await screen.findByRole("button", { name: "Sticker" }));
+  const picker = await screen.findByRole("dialog", { name: "Send a sticker" });
+
+  fireEvent.click(within(picker).getByRole("option", { name }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+}
+
+it("starts a thread with a sticker alone", async () => {
+  const create = await renderPane();
+
+  await pickSticker("Wave");
+  expect(create).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+  await waitFor(() =>
+    expect(create).toHaveBeenCalledWith(4, 1, "", expect.objectContaining({ stickerId: 1 })),
+  );
+});
+
+it("starts a thread with a sticker under its text", async () => {
+  const create = await renderPane();
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Reply…" }), {
+    target: { value: "hi all" },
+  });
+  await pickSticker("Dance");
+  fireEvent.keyDown(screen.getByRole("textbox", { name: "Reply…" }), { key: "Enter" });
+
+  await waitFor(() =>
+    expect(create).toHaveBeenCalledWith(4, 1, "hi all", expect.objectContaining({ stickerId: 2 })),
   );
 });

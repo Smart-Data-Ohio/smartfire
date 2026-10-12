@@ -398,19 +398,70 @@ describe("sending a sticker from the composer", () => {
     );
   });
 
-  it("isn't offered for a new thread's first reply, nor while a command is filled in", async () => {
+  it("is offered for a new thread's first reply, as in a reply composer", async () => {
     vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(CATALOG);
     replaceStickerCatalog(CATALOG);
 
-    const { unmount } = render(
-      <Composer roomId={ROOM} onSubmit={async () => {}} placeholder="Reply…" />,
-    );
+    render(<Composer roomId={ROOM} onSubmit={async () => {}} placeholder="Reply…" />);
 
     expect(screen.getByRole("button", { name: "Emoji" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Sticker" })).toBeNull();
-    unmount();
-
-    render(<Composer roomId={ROOM} />);
     expect(screen.getByRole("button", { name: "Sticker" })).toBeTruthy();
+  });
+
+  it("waits for Send in a new thread's composer, carrying the text with it", async () => {
+    vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(CATALOG);
+
+    const submit = vi.fn(async () => {});
+
+    render(<Composer roomId={ROOM} onSubmit={submit} placeholder="Reply…" />);
+
+    const input = screen.getByRole("textbox", { name: "Reply…" });
+
+    fireEvent.change(input, { target: { value: "hi all" } });
+    fireEvent.click(within(await openPicker()).getByRole("option", { name: "Wave" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    // Picking holds the sticker with the draft; nothing is sent yet.
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByRole("img", { name: "Sticker: Wave" })).toBeTruthy();
+
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          markdown: "hi all",
+          stickerId: 1,
+        }),
+      ),
+    );
+  });
+
+  it("starts a thread with a sticker alone, and a picked sticker can be taken back", async () => {
+    vi.spyOn(composerActions, "stickerCatalog").mockResolvedValue(CATALOG);
+
+    const submit = vi.fn(async () => {});
+
+    render(<Composer roomId={ROOM} onSubmit={submit} placeholder="Reply…" />);
+
+    expect(screen.getByRole("button", { name: "Send message" })).toHaveProperty("disabled", true);
+    fireEvent.click(within(await openPicker()).getByRole("option", { name: "Dance" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Remove Dance sticker" }));
+    expect(screen.queryByRole("img", { name: "Sticker: Dance" })).toBeNull();
+
+    fireEvent.click(within(await openPicker()).getByRole("option", { name: "Wave" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("button", { name: "Send message" })).toHaveProperty("disabled", false);
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() =>
+      expect(submit).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          markdown: "",
+          stickerId: 1,
+        }),
+      ),
+    );
   });
 });

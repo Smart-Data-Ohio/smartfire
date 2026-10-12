@@ -465,6 +465,7 @@ describe("Drive submissions", () => {
       attachmentSignedIds: [],
       attachmentSpoilers: [],
       driveFileIds: ["roadmap"],
+      stickerId: null,
     });
     await attachDrive("Budget");
     await act(async () => sent.resolve());
@@ -583,6 +584,7 @@ describe("several files in one send", () => {
         attachmentSignedIds: ["signed-one.txt", "signed-two.txt", "signed-three.txt"],
         attachmentSpoilers: [false, false, false],
         driveFileIds: [],
+        stickerId: null,
       }),
     );
   });

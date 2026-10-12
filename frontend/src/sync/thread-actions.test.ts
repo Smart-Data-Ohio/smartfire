@@ -40,6 +40,24 @@ describe("thread reply paging", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("carries a sticker in a new thread's first reply, with or without text", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply(`POST /rooms/${ROOM}/threads`, {
+        detail: threadDetailFixture(THREAD, null, null),
+        message: reply(91),
+      });
+      yield* threads.create(ROOM, 1, "", { stickerId: 2 });
+      expect((yield* fake.requests).at(-1)?.body).toMatchObject({
+        message: { markdownSource: "", stickerId: 2 },
+      });
+      yield* threads.create(ROOM, 1, "hi all", { stickerId: 1 });
+      expect((yield* fake.requests).at(-1)?.body).toMatchObject({
+        message: { markdownSource: "hi all", stickerId: 1 },
+      });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("pages forward after a window replaced around an older reply", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
