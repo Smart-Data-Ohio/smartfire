@@ -561,6 +561,7 @@ export function landActivityPage(
       .map((item) => item.id),
     cursor,
     mode,
+    start?.generation,
   );
 
   return {

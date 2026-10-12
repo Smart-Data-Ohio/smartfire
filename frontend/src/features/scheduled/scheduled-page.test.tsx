@@ -181,29 +181,39 @@ const removed: SyncEvent = {
 
 const granted: SyncEvent = { seq: 2, topic: "user", type: "thread.updated", data: secret };
 
+/**
+ * `actions.scheduled.load` as the server answers it: the reply sendable and quoting its message,
+ * as it lists it again once access returns, unless `down` says the server answers 503.
+ */
+function serveScheduled(down: () => boolean) {
+  return vi.spyOn(actions.scheduled, "load").mockImplementation(async (key: ScheduledListKey) => {
+    mutations.setScheduledListLoading(key, false);
+
+    const { generation } = scheduledListOf(store.getState(), key);
+
+    if (down()) {
+      mutations.setScheduledListFailed(key, "Service unavailable", generation);
+
+      return;
+    }
+
+    const page = {
+      scheduledMessages: key === "pending" ? [reply] : [],
+      conversations: [],
+      nextCursor: null,
+    };
+
+    mutations.landScheduledPage(key, page, "replace", generation);
+  });
+}
+
 it.each([
   ["separate batches", [[removed], [granted]]],
   ["one batch", [[removed, granted]]],
 ] as const)(
   "sends a reply now again once the viewer is added back (%s)",
   async (_delivery, batches) => {
-    // The server's copy: sendable, quoting the reply, as it lists it again once access returns.
-    const load = vi
-      .spyOn(actions.scheduled, "load")
-      .mockImplementation(async (key: ScheduledListKey) => {
-        mutations.setScheduledListLoading(key, false);
-
-        const { generation } = scheduledListOf(store.getState(), key);
-
-        const page = {
-          scheduledMessages: key === "pending" ? [reply] : [],
-          conversations: [],
-          nextCursor: null,
-        };
-
-        mutations.landScheduledPage(key, page, "replace", generation);
-      });
-
+    const load = serveScheduled(() => false);
     const router = renderPage();
     const sendNow = () => screen.getByRole("button", { name: "Send now" }).hasAttribute("disabled");
 
@@ -226,3 +236,38 @@ it.each([
     expect(store.getState().scheduled.items[5]?.replyTarget?.excerpt).toBe("Only us");
   },
 );
+
+it.each([
+  ["Try again", "retry"],
+  ["reopening the page", "reopen"],
+] as const)("recovers from a failed reload after the re-add by %s", async (_way, recovery) => {
+  let down = false;
+  const load = serveScheduled(() => down);
+  const first = renderPage();
+  const sendNow = () => screen.getByRole("button", { name: "Send now" }).hasAttribute("disabled");
+
+  await act(() => first.load());
+  await waitFor(() => expect(sendNow()).toBe(false));
+  act(() => mutations.applyEvents([removed], Date.now()));
+
+  // The reload the re-add asks for fails, once: nothing asks again by itself.
+  down = true;
+  load.mockClear();
+  act(() => mutations.applyEvents([granted], Date.now()));
+  await screen.findByText("Service unavailable");
+  expect(load.mock.calls.filter(([key]) => key === "pending")).toHaveLength(1);
+  expect(sendNow()).toBe(true);
+  down = false;
+  load.mockClear();
+
+  if (recovery === "retry") {
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  } else {
+    cleanup();
+    await act(() => renderPage().load());
+  }
+
+  await waitFor(() => expect(sendNow()).toBe(false));
+  expect(load).toHaveBeenCalledWith("pending");
+  expect(store.getState().scheduled.items[5]?.replyTarget?.excerpt).toBe("Only us");
+});

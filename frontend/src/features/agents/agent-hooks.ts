@@ -74,6 +74,7 @@ function pagedState(list: PagedList, loadMore: () => void, reload: () => void): 
     error: list.error,
     loadMore,
     reload,
+    retry: list.firstPageFailed ? reload : loadMore,
   };
 }
 

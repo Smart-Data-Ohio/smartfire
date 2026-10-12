@@ -27,8 +27,15 @@ export interface PagedList {
   readonly error: string | null;
   /** Something happened the list can't place without the server: reload it when next shown. */
   readonly stale: boolean;
+  /**
+   * The `generation` the list was last made stale in. A reload answers only what made it stale
+   * before the reload started (an older generation); a failed one leaves it stale.
+   */
+  readonly staleGeneration: number;
   /** Bumped by every first-page load; a load lands only in the generation it started in. */
   readonly generation: number;
+  /** The last failure was the first page's (a reload), so a retry asks for it again. */
+  readonly firstPageFailed: boolean;
 }
 
 export const emptyPagedList: PagedList = {
@@ -38,7 +45,9 @@ export const emptyPagedList: PagedList = {
   loadingMore: false,
   error: null,
   stale: false,
+  staleGeneration: 0,
   generation: 0,
+  firstPageFailed: false,
 };
 
 /** Sorts two ids in the list's order: negative when `left` comes first. */
@@ -46,16 +55,15 @@ export type IdOrder = (left: number, right: number) => number;
 
 /**
  * The first page (or a reload) is on its way, in a new generation: a next page still on its way
- * won't land. What's shown stays until the reload lands. The reload answers what made the list
- * stale so far; a list made stale while it's on its way stays stale once it lands.
+ * won't land. What's shown stays until the reload lands.
  */
 export function pagedLoading(list: PagedList): PagedList {
   return {
     ...list,
     status: list.status === "ready" ? "ready" : "loading",
     error: null,
-    stale: false,
     generation: list.generation + 1,
+    firstPageFailed: false,
   };
 }
 
@@ -66,7 +74,7 @@ export function pagedCurrent(list: PagedList, generation: number | undefined): b
 
 /** The next page is on its way. */
 export function pagedLoadingMore(list: PagedList): PagedList {
-  return { ...list, loadingMore: true, error: null };
+  return { ...list, loadingMore: true, error: null, firstPageFailed: false };
 }
 
 /**
@@ -83,14 +91,16 @@ export function pagedFailed(list: PagedList, error: string, generation?: number)
     status: list.status === "ready" ? "ready" : "error",
     loadingMore: false,
     error,
+    // A next page fails while it's on its way; otherwise it was the first page.
+    firstPageFailed: !list.loadingMore,
   };
 }
 
 /**
  * A page landed: `replace` makes it the list (a first load or a reload); `more` adds it at the
  * end, skipping ids already held (one may have moved in live meanwhile). A page from an older
- * `generation` changes nothing. Staleness is cleared when a reload starts (`pagedLoading`), so a
- * page sent before the list went stale leaves it stale.
+ * `generation` changes nothing. A reload clears `stale`, unless the list was made stale again
+ * while it was on its way (in its own `generation`); a page landed without one clears it.
  */
 export function pagedLanded(
   list: PagedList,
@@ -111,8 +121,13 @@ export function pagedLanded(
     status: "ready",
     loadingMore: false,
     error: null,
-    stale: list.stale,
+    stale:
+      mode === "replace"
+        ? generation !== undefined && list.stale && list.staleGeneration >= generation
+        : list.stale,
+    staleGeneration: list.staleGeneration,
     generation: list.generation,
+    firstPageFailed: false,
   };
 }
 
@@ -153,9 +168,13 @@ export function pagedPlaced(
     : { ...list, ids };
 }
 
-/** Marks a loaded list for a reload when next shown. */
+/** Marks a loaded list for a reload when next shown, including one whose reload is on its way. */
 export function pagedStale(list: PagedList): PagedList {
-  return list.status === "idle" || list.stale ? list : { ...list, stale: true };
+  if (list.status === "idle" || (list.stale && list.staleGeneration === list.generation)) {
+    return list;
+  }
+
+  return { ...list, stale: true, staleGeneration: list.generation };
 }
 
 /** Each list in `lists` changed by `change`, keeping the same record when none changed. */

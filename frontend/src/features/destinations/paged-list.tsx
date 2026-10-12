@@ -21,6 +21,8 @@ export interface PagedState {
   readonly error: string | null;
   readonly loadMore: () => void;
   readonly reload: () => void;
+  /** The footer's Try again: the failed first page after a reload, else the next page. */
+  readonly retry: () => void;
 }
 
 interface PagedListProps {
@@ -48,7 +50,7 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
   const rootRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<VListHandle | null>(null);
   const edgeFrame = useRef<number | undefined>(undefined);
-  const { status, loadingMore, hasMore, error, loadMore } = state;
+  const { status, loadingMore, hasMore, error, loadMore, retry } = state;
   const canLoad = status === "ready" && hasMore && !loadingMore && error === null;
   // Rows handled or removed here can empty the loaded window while more wait on the server: that
   // is still loading, not "all caught up".
@@ -157,7 +159,7 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
       <div className="page-more">
         <span className="page-more-error" role="alert">
           {error}
-          <Button variant="ghost" size="sm" icon="rotate-ccw" onClick={loadMore}>
+          <Button variant="ghost" size="sm" icon="rotate-ccw" onClick={retry}>
             Try again
           </Button>
         </span>

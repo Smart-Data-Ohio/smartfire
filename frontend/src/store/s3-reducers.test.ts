@@ -34,6 +34,7 @@ import {
   pagedFailed,
   pagedLanded,
   pagedLoading,
+  pagedLoadingMore,
   pagedPlaced,
   pagedStale,
 } from "./paged-list.ts";
@@ -341,14 +342,25 @@ describe("a keyset-paged list", () => {
     const more = pagedLanded(stale, [4, 6], null, "more");
 
     expect(more).toMatchObject({ ids: [2, 4, 6], nextCursor: null, stale: true });
-
-    const reloading = pagedLoading(stale);
-
-    expect(reloading.stale).toBe(false);
-    expect(pagedLanded(reloading, [2], null, "replace").stale).toBe(false);
-    // Made stale again while the reload was on its way: its page doesn't answer that.
-    expect(pagedLanded(pagedStale(reloading), [2], null, "replace").stale).toBe(true);
+    expect(pagedLanded(stale, [2], null, "replace").stale).toBe(false);
     expect(pagedStale(emptyPagedList)).toBe(emptyPagedList);
+  });
+
+  it("stays stale through a failed reload, or one sent before it went stale again", () => {
+    const reloading = pagedLoading(pagedStale(ready([2, 4], "c")));
+    const { generation } = reloading;
+
+    expect(pagedLanded(reloading, [2], null, "replace", generation).stale).toBe(false);
+    // Made stale again while the reload was on its way: its page doesn't answer that.
+    expect(pagedLanded(pagedStale(reloading), [2], null, "replace", generation).stale).toBe(true);
+
+    // A failed reload keeps it stale (reopening loads it) and says the first page failed.
+    expect(pagedFailed(reloading, "Down", generation)).toMatchObject({
+      stale: true,
+      firstPageFailed: true,
+    });
+    // A failed next page isn't the first page's.
+    expect(pagedFailed(pagedLoadingMore(ready([2], "c")), "Down").firstPageFailed).toBe(false);
   });
 
   it("lands a page or failure only in the generation its load started in", () => {
@@ -831,13 +843,11 @@ describe("the activity inbox", () => {
   });
 
   it("marks only loaded lists stale, and keeps the rows shown while one reloads", () => {
-    const stale = markActivityStale(inbox());
-    const loading = setActivityListLoading(stale, "all", "unread", false);
+    const loading = setActivityListLoading(markActivityStale(inbox()), "all", "unread", false);
 
-    expect(activityListOf(stale, "all", "unread").stale).toBe(true);
     expect(activityListOf(loading, "all", "unread")).toMatchObject({
       status: "ready",
-      stale: false,
+      stale: true,
       ids: [5, 4, 3],
     });
     expect(activityListOf(loading, "huddles", "unread")).toBe(emptyPagedList);

@@ -75,6 +75,7 @@ export function WorkPage({ filter, onFilterChange }: WorkPageProps) {
     error: null,
     loadMore: () => undefined,
     reload: () => void actions.work.loadList(filter),
+    retry: () => void actions.work.loadList(filter),
   };
 
   const open = (row: WorkListRow) => {

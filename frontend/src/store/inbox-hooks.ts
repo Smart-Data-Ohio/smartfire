@@ -34,6 +34,8 @@ export interface PagedView {
   readonly loadMore: () => void;
   /** Loads the first page again (a Retry, or pull to refresh). */
   readonly reload: () => void;
+  /** Asks again for what failed: the first page after a failed reload, else the next page. */
+  readonly retry: () => void;
 }
 
 /** Loads a list's first page when shown while it's never loaded or stale. */
@@ -55,6 +57,7 @@ function pagedView(list: PagedList, loadMore: () => void, reload: () => void): P
     error: list.error,
     loadMore,
     reload,
+    retry: list.firstPageFailed ? reload : loadMore,
   };
 }
 

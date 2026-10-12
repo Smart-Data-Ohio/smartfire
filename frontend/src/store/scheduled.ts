@@ -162,6 +162,7 @@ export function landScheduledPage(
           page.scheduledMessages.map((message) => message.id),
           cursor,
           mode,
+          generation,
         ),
       },
     },

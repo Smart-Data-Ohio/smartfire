@@ -167,6 +167,7 @@ export function landSavedPage(
           page.items.map((item) => item.id),
           cursor,
           mode,
+          generation,
         ),
       },
     },
