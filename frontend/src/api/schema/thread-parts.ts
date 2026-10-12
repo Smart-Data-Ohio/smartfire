@@ -26,7 +26,6 @@ export type ThreadVisibilityPin = Assert<
   Pinned<typeof ThreadVisibility, GeneratedThreadVisibility>
 >;
 
-/** A root message's reply indicator: visibility, count, last reply, up to 3 recent repliers. */
 export const ThreadIndicator = Schema.Struct({
   threadId: ThreadId,
   visibility: ThreadVisibility,

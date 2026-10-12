@@ -1,15 +1,9 @@
-/**
- * A private update on `user` restores access after a recorded removal or a rejected pane load.
- * A reload while removed has no tombstone, but the denied pane still records its failed load.
- * The final batch state decides whether a grant survives a later removal in the same replay.
- */
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { State } from "../store/state.ts";
 
 export interface ThreadAccessChanges {
   /** Threads the viewer can no longer read. */
   readonly lost: readonly number[];
-  /** Threads this page couldn't read before the batch that the viewer can read again. */
   readonly regained: readonly number[];
 }
 

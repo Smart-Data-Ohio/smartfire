@@ -16,8 +16,7 @@ const NO_IDS: readonly number[] = [];
  * Under a message that started a thread: the last repliers' faces, the reply count, "Last reply
  * 2 hours ago" and, on hover, "View thread"; a dot when the thread is unread for the viewer. It
  * follows `thread.indicator` events (the message's `thread` changes) and the viewer's membership,
- * and opens the thread in the right pane. A tracked thread's status, owner and links follow it,
- * and a private thread shows its lock from the summary's visibility.
+ * and opens the thread in the right pane. A tracked thread's status, owner and links follow it.
  */
 export function ThreadIndicator({ message }: { readonly message: MessageDTO }) {
   const navigate = useNavigate();

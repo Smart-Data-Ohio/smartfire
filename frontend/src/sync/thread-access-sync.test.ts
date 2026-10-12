@@ -88,6 +88,7 @@ describe("threadAccessChanges", () => {
 
   it("recovers a failed pane without a tombstone, but not an ordinary private update", () => {
     const after = { removedThreads: {} };
+
     const failed = {
       status: "error" as const,
       error: "gone",

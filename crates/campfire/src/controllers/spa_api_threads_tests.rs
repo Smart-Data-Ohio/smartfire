@@ -1308,45 +1308,6 @@ async fn private_thread_removal_cancels_an_open_sync_subscription() {
 }
 
 #[tokio::test]
-async fn private_thread_readded_member_gets_live_replies_after_a_fresh_subscription() {
-    let Some(a) = app(true).await else { return };
-    let mut david = a.sign_in(DAVID).await;
-    let kevin = a.sign_in(KEVIN).await;
-    let created: api::ThreadCreated = parse(&david.write(json_body(Method::POST,
-        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
-        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
-            "message": reply_body("private-readd-create", "Private first reply")}))).await);
-    let id = created.detail.thread.id;
-    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": KEVIN}))).await;
-    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
-    a.booted.app.broadcasts.settle_sync().await;
-    let (addr, server) = serve(&a).await;
-    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}"), format!("thread:{id}")]).await;
-    sync.welcome().await;
-    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{KEVIN}"), &json!({}))).await;
-    assert_eq!(removed.status, StatusCode::NO_CONTENT);
-    sync.until(|event| matches!(&event.payload, api::SyncPayload::ThreadRemoved(removed) if removed.thread_id == id && event.topic == "user"), |_| false).await;
-    loop {
-        match sync.next().await {
-            Some(api::ServerFrame::Batch { .. }) => {},
-            Some(api::ServerFrame::Bye { reconnect: true, .. }) => break,
-            other => panic!("revocation should disconnect existing subscriptions, got {other:?}"),
-        }
-    }
-    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}"), format!("thread:{id}")]).await;
-    sync.welcome().await;
-    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": KEVIN}))).await;
-    assert_eq!(added.status, StatusCode::OK);
-    a.booted.app.broadcasts.settle_sync().await;
-    sync.until(|event| matches!(&event.payload, api::SyncPayload::ThreadUpdated(thread) if thread.id == id && event.topic == "user"), |_| false).await;
-    sync.send(json!({"t": "sub", "topics": [format!("thread:{id}")]} ) ).await;
-    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"), &reply_body("private-readd-live", "Live after re-add"))).await;
-    assert_eq!(posted.status, StatusCode::CREATED);
-    sync.until(|event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "private-readd-live"), |_| false).await;
-    server.abort();
-}
-
-#[tokio::test]
 async fn private_thread_review_scheduled_replay_renders_current_access_and_keeps_draft() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;

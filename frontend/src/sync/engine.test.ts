@@ -2246,10 +2246,12 @@ describe("resync", () => {
         const release = yield* Deferred.make<void>();
 
         const original = threadDetail("active", true);
+
         const secret: ThreadDetail = {
           ...original,
           thread: { ...original.thread, visibility: "private" },
         };
+
         const replies = (ids: readonly number[]) =>
           pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
 

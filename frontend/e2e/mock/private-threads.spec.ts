@@ -239,6 +239,7 @@ for (const size of SIZES) {
 
     test("a closed thread's reply summary shows its lock before opening it", async ({ page }) => {
       await control(page.request, "viewer-role", { role: "member" });
+
       const started: PrivateThreadStarted = await (
         await control(page.request, "private-thread", {
           roomId: GENERAL,
@@ -247,7 +248,9 @@ for (const size of SIZES) {
           markdown: "A reply in a closed private thread.",
         })
       ).json();
+
       const state = await (await page.request.get("/__mock/state")).json();
+
       const closed = await page.request.patch(`/api/v1/threads/${started.threadId}`, {
         headers: { "X-CSRF-Token": state.csrfToken },
         data: { status: "closed" },
@@ -268,11 +271,13 @@ for (const size of SIZES) {
 
     test("a removed member who reloads gets live replies as soon as re-added", async ({ page }) => {
       await control(page.request, "viewer-role", { role: "member" });
+
       const threadId = await mayaStartsPrivate(page.request, {
         name: "Re-added after reload",
         markdown: "The original private reply.",
         withViewer: true,
       });
+
       const welcomed = syncWelcomed(page);
 
       await openAsMember(page, `r/${GENERAL}/t/${threadId}`);

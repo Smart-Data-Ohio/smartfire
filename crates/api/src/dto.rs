@@ -883,17 +883,17 @@ fn thread_indicators(
         .filter(|message| message.thread_id.is_none())
         .map(|message| message.id)
         .collect();
-    let threads: Vec<(i64, i64, i64, Timestamp)> = ids_query(
+    let threads: Vec<(i64, i64, i64, Timestamp, campfire_db::channel_thread::ThreadVisibility)> = ids_query(
         conn,
-        r#"SELECT "channel_threads"."parent_message_id", "channel_threads"."id", "channel_threads"."messages_count", "channel_threads"."last_activity_at" FROM "channel_threads" WHERE "channel_threads"."parent_message_id" IN ({})"#,
+        r#"SELECT "channel_threads"."parent_message_id", "channel_threads"."id", "channel_threads"."messages_count", "channel_threads"."last_activity_at", "channel_threads"."visibility" FROM "channel_threads" WHERE "channel_threads"."parent_message_id" IN ({})"#,
         &roots,
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
     )?;
     let mut repliers = conn.prepare_cached(
         r#"SELECT "messages"."creator_id" FROM "messages" WHERE "messages"."thread_id" = ? AND "messages"."system_note" = 0 AND "messages"."streaming" = 0 GROUP BY "messages"."creator_id" ORDER BY MAX("messages"."created_at") DESC, MAX("messages"."id") DESC LIMIT 3"#,
     )?;
     let mut indicators = HashMap::new();
-    for (parent_id, thread_id, reply_count, last_activity_at) in threads {
+    for (parent_id, thread_id, reply_count, last_activity_at, visibility) in threads {
         let replier_ids = repliers
             .query_map([thread_id], |row| row.get(0))?
             .collect::<rusqlite::Result<_>>()?;
@@ -901,6 +901,7 @@ fn thread_indicators(
             parent_id,
             api::ThreadIndicator {
                 thread_id,
+                visibility: thread_visibility(visibility),
                 reply_count,
                 last_reply_at: time(last_activity_at),
                 replier_ids,
@@ -1579,6 +1580,14 @@ pub fn forward_destinations(
     Ok(api::ForwardDestinationList { destinations })
 }
 
+fn thread_visibility(visibility: campfire_db::channel_thread::ThreadVisibility) -> api::ThreadVisibility {
+    use campfire_db::channel_thread::ThreadVisibility as Db;
+    match visibility {
+        Db::Public => api::ThreadVisibility::Public,
+        Db::Private => api::ThreadVisibility::Private,
+    }
+}
+
 /// A thread as every member of its room sees it, with its work facts ([`crate::work::facts`])
 /// when it's tracked.
 pub fn thread(
@@ -1594,7 +1603,7 @@ pub fn thread(
         creator_id: thread.creator_id,
         name: thread.name.clone(),
         status: thread_status(thread.status_in_room(room, now)),
-        visibility: match thread.visibility { campfire_db::channel_thread::ThreadVisibility::Public => api::ThreadVisibility::Public, campfire_db::channel_thread::ThreadVisibility::Private => api::ThreadVisibility::Private },
+        visibility: thread_visibility(thread.visibility),
         reply_count: thread.messages_count,
         last_activity_at: time(thread.last_activity_at),
         auto_archive_after_minutes: thread.auto_archive_after_minutes,
