@@ -311,6 +311,7 @@ describe("threads", () => {
       replyCount: 3,
       lastReplyAt: "2026-10-06T10:00:00.000Z",
       replierIds: [3, 2],
+      visibility: "public" as const,
     };
 
     const state = events(opened([message(1, 1)]), {
@@ -586,7 +587,13 @@ describe("threads", () => {
 
   it("keep a lost thread's replies and indicator out of pages sent before the loss", () => {
     const parent = message(500, 10, {
-      thread: { threadId: THREAD, replyCount: 1, lastReplyAt: "", replierIds: [3] },
+      thread: {
+        threadId: THREAD,
+        replyCount: 1,
+        lastReplyAt: "",
+        replierIds: [3],
+        visibility: "private",
+      },
     });
 
     const lost = events(setThreadPageReplacing(initialState, THREAD), {

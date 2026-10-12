@@ -9,6 +9,7 @@ import { FizzyCardOverlay } from "../fizzy/fizzy-card-overlay.tsx";
 import { JoinBanner } from "../huddle/call-alerts.tsx";
 import { CallView } from "../huddle/call-view.tsx";
 import { useCallViewCovers } from "../huddle/call-view-cover.ts";
+import { useTheaterChat } from "../huddle/theater-chat.ts";
 import { RightPane } from "../panes/right-pane.tsx";
 import { usePhoneLayout, useRightPaneView, useRoomPaneLifecycle } from "../panes/use-right-pane.ts";
 import { RoomSettingsHost } from "../rooms/room-settings-host.tsx";
@@ -128,6 +129,8 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   const covered = phone && paneOpen;
   // On a phone the open call view covers the conversation: what's under it can't take focus.
   const callCovers = useCallViewCovers(roomId);
+  // ...except its chat, when that shows beside the call's theater mode.
+  const chatBeside = useTheaterChat(roomId);
 
   // Learn which of the room's threads the viewer follows, so reply indicators can show unread.
   useEffect(() => {
@@ -175,7 +178,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
           <RoomHeader roomId={roomId} />
         </div>
         <CallView roomId={roomId} />
-        <div className="room-part" inert={callCovers}>
+        <div className="room-part" inert={callCovers && !chatBeside}>
           <JoinBanner roomId={roomId} />
           {kind === "board" ? (
             <BoardView roomId={roomId} />
