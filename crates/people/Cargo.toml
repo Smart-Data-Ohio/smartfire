@@ -25,7 +25,6 @@ serde.workspace = true
 serde_json.workspace = true
 jiff.workspace = true
 tracing.workspace = true
-askama.workspace = true
 rusqlite.workspace = true
 tokio.workspace = true
 tempfile.workspace = true

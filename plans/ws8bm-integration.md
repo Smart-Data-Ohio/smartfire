@@ -1,5 +1,10 @@
 # Merged message list and composer contract
 
+This is a historical classic HTML contract. Its renderer and templates were removed
+in #421 and #435. Slice 81 removes the unused `campfire_presentation::messages::composer`
+facts, including `DriveFlow`. Current composer reads are in `crates/api/src/composer.rs`.
+The instructions below describe the former implementation.
+
 Pinned Rails: `d7c7de92`, plus the approved #163 application layout/assets drift.
 The real WS8b-r room shell, M2 schedule/poll/message-link providers, WS15g GitHub
 renderer and WS14e event callbacks are now merged. Public presenter and view inputs
