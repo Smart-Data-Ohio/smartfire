@@ -639,13 +639,18 @@ export function Composer({
     }
 
     void toPresent();
-    await gifActions.send({
+
+    const sent = await gifActions.send({
       roomId,
       threadId: threadId ?? undefined,
       slug: item.slug,
       clientMessageId: uuid7(Date.now()),
       markdownSource: markdown === "" ? undefined : markdown,
     });
+
+    // No pending row leads the list to a GIF (the server saved it whole): note it, as a
+    // slash command's post is noted, and the list follows down to it.
+    notePosted(threadId === null ? `room:${roomId}` : `thread:${threadId}`, sent.id);
     actions.setTyping(roomId, false, threadId);
     clearSubmitted(submitted);
     focusInput();
