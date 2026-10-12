@@ -113,8 +113,7 @@
   .sidebar-workspace-logo {
     display: none;
     flex-shrink: 0;
-    border-radius: var(--radius-xs);
-    object-fit: cover;
+    object-fit: contain;
   }
 
   @media (width < 720px) {
