@@ -161,3 +161,7 @@ mod api_announcements_tests;
 #[cfg(test)]
 #[path = "spa_welcome_tests.rs"]
 mod welcome_tests;
+
+#[cfg(test)]
+#[path = "spa_api_soundboard_tests.rs"]
+mod api_soundboard_tests;

@@ -52,6 +52,8 @@ describe("the screen map and the router", () => {
       "/app/admin/invites",
       // The server guide (Discord's) is new with the SPA; classic had no guide page.
       "/app/guide",
+      // Ignoring people (Discord's) is new with the SPA; classic had no ignore list.
+      "/app/settings/ignored",
       // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
       "/app/r/:id/t/:id/links",

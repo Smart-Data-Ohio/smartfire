@@ -64,6 +64,8 @@ pub struct PersonProfile {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct BlockList {
+    /// Whose list this is: the signed-in viewer the server answered for.
+    pub viewer_id: i64,
     pub people: Vec<BlockedPerson>,
     pub revision: i64,
 }
@@ -81,6 +83,8 @@ pub struct BlockedPerson {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct BlockState {
+    /// Whose ignore list changed: the signed-in viewer who made the change.
+    pub viewer_id: i64,
     pub user_id: i64,
     pub ignored_by_me: bool,
     /// Orders concurrent changes and the viewer's notification badge refresh.

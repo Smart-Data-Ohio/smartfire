@@ -74,6 +74,7 @@ describe("hello and resume", () => {
         seq: server.syncState().seq,
         resumed: false,
         replayThrough: server.syncState().seq,
+        viewerId: SEED_IDS.viewer,
       },
     ]);
   });
@@ -97,6 +98,7 @@ describe("hello and resume", () => {
       seq: first.events().at(-1)?.seq,
       resumed: true,
       replayThrough: server.syncState().seq,
+      viewerId: SEED_IDS.viewer,
     });
     expect(replay?.t).toBe("batch");
 

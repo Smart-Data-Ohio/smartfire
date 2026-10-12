@@ -57,7 +57,7 @@ async fn list_blocks(c: &mut Ctx) -> Result {
         let records = UserBlock::for_viewer(conn, viewer)?;
         let users = dto::users(conn, &secrets, records.iter().map(|record| record.blocked_id), now)?;
         let revision = conn.query_row("SELECT activity_revision FROM users WHERE id=?", [viewer], |row| row.get(0))?;
-        Ok(api::BlockList { revision, people: records.into_iter().filter_map(|record| {
+        Ok(api::BlockList { viewer_id: viewer, revision, people: records.into_iter().filter_map(|record| {
             users.iter().find(|user| user.id == record.blocked_id).cloned().map(|user| api::BlockedPerson {
                 user, ignored_by_me: true, created_at: dto::time(record.created_at),
             })
@@ -74,7 +74,7 @@ async fn change_block(c: &mut Ctx, ignored: bool) -> Result {
     let person = find_user(c, "id").await?.id;
     let state = c.app().db.write(move |tx| {
         let revision = UserBlock::set(tx, viewer, person, ignored)?;
-        Ok(api::BlockState { user_id: person, ignored_by_me: ignored, revision })
+        Ok(api::BlockState { viewer_id: viewer, user_id: person, ignored_by_me: ignored, revision })
     }).await.map_err(campfire_runtime::context::db_error)?;
     campfire_app::cable::sync::blocks_updated(&c.app().cable, viewer, state.clone());
     c.json(StatusCode::OK, &state)

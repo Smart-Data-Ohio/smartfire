@@ -3,6 +3,7 @@ import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import type * as HttpClientResponse from "effect/http/HttpClientResponse";
+import { gatedFetch } from "../lib/network-gate.ts";
 import {
   ApiErrorResponse,
   type ApiFailure,
@@ -214,14 +215,18 @@ export class ApiClient extends Context.Service<
     );
 }
 
-/** `fetch` with the session cookie (same origin only). */
+/**
+ * `fetch` with the session cookie (same origin only), each send behind the network gate: the
+ * first try, CSRF token reads and every retry all stop once another account answered the page.
+ */
 const sameOriginFetch = Layer.effect(
   HttpClient.HttpClient,
   Effect.map(HttpClient.HttpClient, (client) =>
     HttpClient.transform(client, (response) =>
-      Effect.provideService(response, FetchHttpClient.RequestInit, {
-        credentials: "same-origin",
-      }),
+      response.pipe(
+        Effect.provideService(FetchHttpClient.RequestInit, { credentials: "same-origin" }),
+        Effect.provideService(FetchHttpClient.Fetch, gatedFetch),
+      ),
     ),
   ),
 ).pipe(Layer.provide(FetchHttpClient.layer));

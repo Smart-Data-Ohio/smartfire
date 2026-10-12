@@ -9,6 +9,7 @@ import type { StageRole } from "../gen/StageRole.ts";
 import type { StageState } from "../gen/StageState.ts";
 import type { StageStream } from "../gen/StageStream.ts";
 import type { StreamQuality } from "../gen/StreamQuality.ts";
+import { gatedFetch } from "../lib/network-gate.ts";
 import { call, get, noContent } from "./call.ts";
 import { ApiClient, ApiConfig } from "./client.ts";
 import {
@@ -180,7 +181,7 @@ export const sendOnUnload = Effect.fn("api.sendOnUnload")(function* (
   }
 
   yield* Effect.sync(() => {
-    void fetch(`${baseUrl}${path}`, init).catch(() => undefined);
+    void gatedFetch(`${baseUrl}${path}`, init).catch(() => undefined);
   });
 });
 
