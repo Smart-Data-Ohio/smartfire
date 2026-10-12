@@ -44,6 +44,11 @@ interface Listing {
   readonly loadingMore: boolean;
 }
 
+interface FileRefresh {
+  pending: boolean;
+  readonly schedule: () => void;
+}
+
 const LOADING: Listing = { status: "loading", files: [], nextPage: null, loadingMore: false };
 
 /**
@@ -211,6 +216,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   const [query, setQuery] = useState("");
   const [listing, setListing] = useState<Listing>(LOADING);
   const request = useRef(0);
+  const refreshRequest = useRef<FileRefresh | null>(null);
   const loadedPage = useRef(1);
   const removedThreads = useRef(new Set<number>());
   const liveFiles = useRef(new Map<number, readonly RoomFile[]>());
@@ -220,6 +226,12 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
 
     return () => window.clearTimeout(timer);
   }, [search]);
+
+  const schedulePendingRefresh = () => {
+    const refresh = refreshRequest.current;
+
+    if (refresh?.pending === true) refresh.schedule();
+  };
 
   const loadPage = (page: number) => {
     const ticket = ++request.current;
@@ -250,12 +262,14 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
           nextPage,
           loadingMore: false,
         }));
+        schedulePendingRefresh();
       },
       () => {
         if (ticket === request.current) {
           setListing((held) =>
             page === 1 ? { ...LOADING, status: "error" } : { ...held, loadingMore: false },
           );
+          schedulePendingRefresh();
         }
       },
     );
@@ -266,8 +280,18 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
     liveFiles.current = new Map();
     let refreshTimer: number | undefined;
 
+    const refreshState: FileRefresh = {
+      pending: false,
+      schedule: () => {
+        window.clearTimeout(refreshTimer);
+        refreshTimer = window.setTimeout(() => void refresh(), FILES_REFRESH_DELAY_MS);
+      },
+    };
+
     const refresh = async () => {
       const ticket = ++request.current;
+
+      refreshState.pending = true;
       const pages = loadedPage.current;
       let files: RoomFile[] = [];
       let nextPage: number | null = 1;
@@ -286,6 +310,8 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
 
         setListing((held) => {
           if (ticket !== request.current) return held;
+
+          refreshState.pending = false;
 
           return {
             status: "ready",
@@ -312,9 +338,11 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       }
     };
 
+    refreshRequest.current = refreshState;
+
     const stopFiles = panes.onFilesChanged(roomId, () => {
-      window.clearTimeout(refreshTimer);
-      refreshTimer = window.setTimeout(() => void refresh(), FILES_REFRESH_DELAY_MS);
+      refreshState.pending = true;
+      refreshState.schedule();
     });
 
     const stopThread = panes.onThreadRemoved(roomId, (threadId) => {
@@ -325,8 +353,10 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       }));
     });
 
-    const applyLive = () =>
+    const applyRemoval = (messageId: number) =>
       setListing((held) => {
+        liveFiles.current.set(messageId, []);
+
         const files = reconcileFiles(
           held.files,
           liveFiles.current,
@@ -365,10 +395,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       });
     });
 
-    const stopRemoved = panes.onMessageRemoved(roomId, (messageId) => {
-      liveFiles.current.set(messageId, []);
-      applyLive();
-    });
+    const stopRemoved = panes.onMessageRemoved(roomId, applyRemoval);
 
     loadPage(1);
 
@@ -378,6 +405,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       stopFiles();
       stopThread();
       window.clearTimeout(refreshTimer);
+      refreshRequest.current = null;
       request.current += 1;
     };
   }, [roomId, type, query]);

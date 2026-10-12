@@ -620,6 +620,7 @@ it("keeps deleted files out after creation, editing and removal arrive in one re
   vi.spyOn(panes, "files").mockResolvedValue(publicList);
   await mount();
   await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+
   const events = [
     {
       seq: 1,
@@ -665,11 +666,13 @@ it.each(["upload", "delete"])(
     const pending = Promise.withResolvers<FileList>();
 
     files.mockImplementationOnce(() => pending.promise);
+
     if (change === "upload") {
       entries.unshift({ ...file, messageId: 1000, threadId: 8, attachment: freshAttachment });
     } else {
       entries.shift();
     }
+
     vi.useFakeTimers();
     act(filesChanged);
     await act(() => vi.advanceTimersByTimeAsync(100));
@@ -678,6 +681,7 @@ it.each(["upload", "delete"])(
       pending.resolve({ ...publicList, files: entries.slice(0, 30), nextPage: 2 }),
     );
     await act(() => vi.advanceTimersByTimeAsync(100));
+
     if (change === "upload") {
       expect(screen.getByText("fresh.png")).toBeTruthy();
     } else {
