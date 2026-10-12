@@ -1034,3 +1034,104 @@ describe("the scheduled lists", () => {
     expect(scheduledQueryOf(roomScheduledKey(12))).toEqual({ status: "pending", roomId: 12 });
   });
 });
+
+describe("a private thread the viewer loses while a read is on its way", () => {
+  const SECRET = 88;
+
+  const lose = (state: State): State =>
+    events(state, {
+      topic: "user",
+      type: "thread.removed",
+      data: { threadId: SECRET, roomId: ROOM },
+    });
+
+  const inSecret = (activity: ActivityItem): ActivityItem => ({
+    ...activity,
+    source: { ...activity.source, threadId: SECRET, title: "general · Layoffs" },
+  });
+
+  it("keeps its inbox items out of a late page, and the list stale", () => {
+    const loading = setActivityListLoading(markActivityStale(inbox()), "all", "unread", false);
+    const start = activityLoadStart(loading, "all", "unread");
+    const lost = lose(loading);
+
+    const landed = landActivityPage(
+      lost,
+      "all",
+      "unread",
+      activityPage([inSecret(item(7, 55)), item(5, 50)], 2),
+      "replace",
+      start,
+    );
+
+    expect(landed.activity.items[7]).toBeUndefined();
+    expect(ids(landed, "all", "unread")).toEqual([5]);
+    expect(activityListOf(landed, "all", "unread").stale).toBe(true);
+
+    // A late reply to a change on one of its items doesn't bring it back either.
+    expect(applyActivityItem(lost, inSecret(item(7, 56)), null).activity.items[7]).toBeUndefined();
+  });
+
+  it("keeps its saved replies and its name out of a late page", () => {
+    const lost = lose(initialState);
+    const page = savedPage([savedItem(2, 102, 20), savedItem(1, 101, 10)]);
+
+    const landed = landSavedPage(
+      lost,
+      "all",
+      {
+        ...page,
+        messages: [message(102, ROOM, SECRET), message(101)],
+        conversations: [
+          ...page.conversations,
+          {
+            roomId: ROOM,
+            threadId: SECRET,
+            roomKind: "open",
+            roomName: "general",
+            roomIconName: null,
+            threadName: "Layoffs",
+          },
+        ],
+      },
+      "replace",
+    );
+
+    expect(savedListOf(landed, "all").ids).toEqual([1]);
+    expect(landed.messages[102]).toBeUndefined();
+    expect(landed.saved[102]).toBeUndefined();
+    expect(landed.conversationNames[`${ROOM}:${SECRET}`]).toBeUndefined();
+  });
+
+  it("keeps a scheduled reply's own text but not what it quotes, and stops it sending", () => {
+    const quote = {
+      messageId: 500,
+      roomId: ROOM,
+      threadId: SECRET,
+      creatorId: 2,
+      authorName: "Person 2",
+      roomLabel: "general",
+      excerpt: "Only us",
+      createdAt: at(1),
+    };
+
+    const reply = scheduled(1, 10, ROOM, {
+      threadId: SECRET,
+      replyToMessageId: 500,
+      replyTarget: quote,
+    });
+
+    const held = landScheduledPage(initialState, "pending", scheduledPage([reply]), "replace");
+    const lost = lose(held);
+
+    expect(lost.scheduled.items[1]).toEqual({ ...reply, replyTarget: null, sendable: false });
+
+    // A page or a change that was on its way says the same.
+    const late = landScheduledPage(lost, "pending", scheduledPage([reply]), "replace");
+
+    expect(late.scheduled.items[1]?.replyTarget).toBeNull();
+    expect(late.scheduled.items[1]?.sendable).toBe(false);
+    expect(late.scheduled.items[1]?.markdownSource).toBe("Later 1");
+    expect(applyScheduled(lost, reply).scheduled.items[1]?.replyTarget).toBeNull();
+  });
+});

@@ -117,6 +117,35 @@ describe("private-thread access", () => {
     connection.close();
   });
 
+  it("drops a scheduled reply whose thread the viewer lost when it falls due, without a reason", async () => {
+    const { server, created, path } = await privateThread();
+
+    const draft = await expectStatus<ScheduledMessage>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/scheduled_messages`,
+      {
+        markdownSource: "Still mine",
+        sendAt: new Date(NOW + 60_000).toISOString(),
+        threadId: created.detail.thread.id,
+        replyToMessageId: created.message.id,
+      },
+      201,
+    );
+
+    expect((await send(server, "DELETE", `${path}/members/${viewer}`)).status).toBe(204);
+    server.fireScheduled(true);
+
+    const past = await get<ScheduledMessageList>(server, "/api/v1/scheduled_messages?status=past");
+    const dropped = past.scheduledMessages.find((message) => message.id === draft.id);
+
+    // `ScheduledMessage::dispatch` drops it unsendable; only a deleted room gives a reason.
+    expect(dropped?.state).toBe("dropped");
+    expect(dropped?.dropReason).toBeNull();
+    expect(dropped?.replyTarget).toBeNull();
+    expect(dropped?.markdownSource).toBe("Still mine");
+  });
+
   it("defaults old create requests to public and refuses visibility edits atomically", async () => {
     const { server } = harness();
 

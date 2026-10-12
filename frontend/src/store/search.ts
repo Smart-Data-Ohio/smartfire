@@ -138,6 +138,29 @@ function conversationsOf(results: SearchResults, held: SearchResultList["convers
   ]);
 }
 
+/**
+ * `results` without what's in a thread `removed` says the viewer lost or saw deleted: its
+ * replies, its name and its rows in the board-post and work-thread sections. A search sent before
+ * that still lists them.
+ */
+export function withoutThreads(
+  results: SearchResults,
+  removed: (threadId: number) => boolean,
+): SearchResults {
+  const gone = (threadId: number | null) => threadId !== null && removed(threadId);
+
+  return {
+    ...results,
+    messages: results.messages.filter((message) => !gone(message.threadId)),
+    conversations: results.conversations.filter((name) => !gone(name.threadId)),
+    sections: results.sections.map((section) =>
+      section.kind === "events"
+        ? section
+        : { ...section, rows: section.rows.filter((row) => !gone(row.id)) },
+    ),
+  };
+}
+
 /** The first page landed (ignored when a later load superseded the one it answers). */
 export function applyFirstPage(
   state: SearchState,

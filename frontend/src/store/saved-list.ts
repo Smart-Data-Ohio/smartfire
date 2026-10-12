@@ -7,7 +7,7 @@
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedItemList } from "../gen/SavedItemList.ts";
-import { mergeConversationNames } from "./conversations.ts";
+import { isRemovedThread, mergeConversationNames } from "./conversations.ts";
 import { setSavedMark } from "./message-extras.ts";
 import type { MessageDTO } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
@@ -126,18 +126,21 @@ function mergeMessages(state: State, messages: readonly MessageDTO[]): State {
 /**
  * A page of one filter landed: the items, their messages, the messages' authors and the
  * conversation names join the store, and each message's saved mark follows its item. A page
- * from a load the list has since restarted (`generation`) changes nothing.
+ * from a load the list has since restarted (`generation`) changes nothing, and replies in a
+ * thread removed meanwhile (`isRemovedThread`) stay out.
  */
 export function landSavedPage(
   state: State,
   filter: SavedFilter,
-  page: SavedItemList,
+  listed: SavedItemList,
   mode: "replace" | "more",
   generation?: number,
 ): State {
   if (!pagedCurrent(savedListOf(state, filter), generation)) {
     return state;
   }
+
+  const page = withoutRemovedThreads(state, listed);
 
   const items = { ...state.savedList.items };
   const saved = { ...state.saved };
@@ -167,6 +170,25 @@ export function landSavedPage(
         ),
       },
     },
+  };
+}
+
+/** `page` without the items whose message is a reply in a removed thread. */
+function withoutRemovedThreads(state: State, page: SavedItemList): SavedItemList {
+  const gone = new Set(
+    page.messages
+      .filter((message) => isRemovedThread(state, message.threadId))
+      .map((message) => message.id),
+  );
+
+  if (gone.size === 0) {
+    return page;
+  }
+
+  return {
+    ...page,
+    items: page.items.filter((item) => !gone.has(item.messageId)),
+    messages: page.messages.filter((message) => !gone.has(message.id)),
   };
 }
 

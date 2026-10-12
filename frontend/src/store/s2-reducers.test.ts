@@ -580,6 +580,32 @@ describe("threads", () => {
     expect(regained.threadPanes[THREAD]?.error).toBeNull();
   });
 
+  it("keep a lost thread's replies and indicator out of pages sent before the loss", () => {
+    const parent = message(500, 10, {
+      thread: { threadId: THREAD, replyCount: 1, lastReplyAt: "", replierIds: [3] },
+    });
+
+    const lost = events(setThreadPageReplacing(initialState, THREAD), {
+      topic: "user",
+      type: "thread.removed",
+      data: { threadId: THREAD, roomId: ROOM },
+    });
+
+    const replies = applyThreadPage(
+      lost,
+      THREAD,
+      page([message(501, 20, { threadId: THREAD, markdownSource: "Only us" })]),
+      "replace",
+    );
+
+    expect(replies.messages[501]).toBeUndefined();
+    expect(replies.threadTimelines[THREAD]).toBeUndefined();
+
+    const room = applyPage(lost, ROOM, page([parent]), "replace");
+
+    expect(room.messages[500]?.thread).toBeNull();
+  });
+
   it("track the viewer's unread state from thread.unread and thread.read", () => {
     const listed = loadThreadList(
       initialState,

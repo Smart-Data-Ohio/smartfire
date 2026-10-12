@@ -10,6 +10,7 @@ import { setSavedMark } from "./message-extras.ts";
 import type { Thread, ThreadFilter, ThreadMembership } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
 import { dropSavedForMessage } from "./saved-list.ts";
+import { forgetScheduledThread } from "./scheduled.ts";
 import type { State } from "./state.ts";
 
 function matches(filter: ThreadFilter, thread: Thread): boolean {
@@ -149,15 +150,16 @@ export function removeThread(
 /**
  * What the viewer could read of a private thread they lost, wherever the store keeps it: its
  * replies and their window, the viewer's following and unread mark, its inbox items, saved replies,
- * its name for cross-room lists, and who was typing there. The server stops listing all of it, so
- * nothing of the thread stays on screen. The viewer's own replies still on their way stay.
+ * its name for cross-room lists, who was typing there, and what the viewer's scheduled replies
+ * there quote. The server stops listing all of it, so nothing of the thread stays on screen. The
+ * viewer's own replies still on their way, and their scheduled text, stay.
  */
 function forgetThreadContent(state: State, threadId: number, roomId: number): State {
   const replies = Object.values(state.messages).filter((message) => message.threadId === threadId);
 
   const unsaved = replies.reduce(
     (held, { id }) => setSavedMark(dropSavedForMessage(held, id), id, null),
-    forgetActivityThread(state, threadId),
+    forgetScheduledThread(forgetActivityThread(state, threadId), threadId),
   );
 
   const gone = new Set(replies.map(({ id }) => id));

@@ -19,6 +19,7 @@ import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
+import { isRemovedThread } from "./conversations.ts";
 import { isIgnored } from "./ignores.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
@@ -479,6 +480,8 @@ export interface ActivityLoadStart {
   readonly generation: number;
   readonly activityGeneration: number;
   readonly requestSequence?: number;
+  /** The state's `removalCount` when the load started. */
+  readonly removals?: number;
 }
 
 /** What a load of `tab` in `status` started from; pass it back to `landActivityPage`. */
@@ -490,25 +493,37 @@ export function activityLoadStart(
   return {
     generation: activityListOf(state, tab, status).generation,
     activityGeneration: state.activity.generation,
+    removals: state.removalCount,
   };
 }
 
 /**
  * A page of one tab and state landed: its items join the store where newer than the copy held,
  * its people too, and the badge takes the page's count only if its revision is newer. A
- * page from a load the list has since restarted contributes only its count snapshot.
+ * page from a load the list has since restarted contributes only its count snapshot. Items from
+ * a thread removed meanwhile stay out, and a list a removal made stale while the load was on its
+ * way stays stale, so it loads again when next shown.
  */
 export function landActivityPage(
   state: State,
   tab: ActivityTab,
   status: ActivityState,
-  page: ActivityList,
+  listed: ActivityList,
   mode: "replace" | "more",
   start?: ActivityLoadStart,
 ): State {
   if (start !== undefined && start.activityGeneration !== state.activity.generation) {
     return state;
   }
+
+  const page = {
+    ...listed,
+    items: listed.items.filter((item) => !isRemovedThread(state, item.source.threadId)),
+  };
+
+  const outdated =
+    page.items.length < listed.items.length ||
+    (start?.removals !== undefined && state.removalCount > start.removals);
 
   const counted = withCounts(
     state.activity,
@@ -534,6 +549,20 @@ export function landActivityPage(
   const cursor: Cursor | null = page.nextCursor;
   const key = activityListKey(tab, status);
 
+  const landed = pagedLanded(
+    activityListOf(state, tab, status),
+    // A row whose newer copy (an event's) has left this list meanwhile stays out.
+    page.items
+      .filter((item) => {
+        const held = items[item.id] ?? item;
+
+        return held.state === status && inActivityTab(tab, held.eventType);
+      })
+      .map((item) => item.id),
+    cursor,
+    mode,
+  );
+
   return {
     ...state,
     users: mergeUserList(state.users, page.users),
@@ -541,22 +570,7 @@ export function landActivityPage(
       ...counted,
       items,
       versions,
-      lists: {
-        ...state.activity.lists,
-        [key]: pagedLanded(
-          activityListOf(state, tab, status),
-          // A row whose newer copy (an event's) has left this list meanwhile stays out.
-          page.items
-            .filter((item) => {
-              const held = items[item.id] ?? item;
-
-              return held.state === status && inActivityTab(tab, held.eventType);
-            })
-            .map((item) => item.id),
-          cursor,
-          mode,
-        ),
-      },
+      lists: { ...state.activity.lists, [key]: outdated ? pagedStale(landed) : landed },
     },
   };
 }
@@ -615,7 +629,10 @@ export function applyActivityItem(
   unread: ActivityUnreadCount | null,
 ): State {
   const next = withCounts(
-    serverCopy(state.activity, item),
+    // A reply about a thread removed meanwhile (a change sent before) doesn't bring it back.
+    isRemovedThread(state, item.source.threadId)
+      ? state.activity
+      : serverCopy(state.activity, item),
     unread,
     confirmedUnread(state.activity, unread, [item]),
   );
@@ -720,7 +737,7 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
   let activity: ActivitySlice = state.activity;
   const settled = change?.serverItem?.item ?? end.settled;
 
-  if (settled !== null && !removed) {
+  if (settled !== null && !removed && !isRemovedThread(state, settled.source.threadId)) {
     const id = settled.id;
     const stillShown = end.optimistic !== null && activity.items[id] === end.optimistic;
 
