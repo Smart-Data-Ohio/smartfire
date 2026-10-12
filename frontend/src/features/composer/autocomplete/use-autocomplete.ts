@@ -4,6 +4,7 @@ import {
   commandSuggestions,
   emojiSuggestions,
   loadCommands,
+  type MenuKind,
   mentionSuggestions,
   roomSuggestions,
   type Suggestion,
@@ -22,7 +23,7 @@ interface Results {
 
 export interface Autocomplete {
   readonly open: boolean;
-  readonly kind: TriggerKind | null;
+  readonly kind: MenuKind | null;
   readonly items: readonly Suggestion[];
   readonly activeIndex: number;
   readonly listboxId: string;

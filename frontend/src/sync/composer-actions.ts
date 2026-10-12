@@ -11,6 +11,7 @@ import {
   suggestIcons,
   suggestUsers,
 } from "../api/composer-endpoints.ts";
+import type { CommandValues } from "../gen/CommandValues.ts";
 import type { Icon } from "../gen/Icon.ts";
 import type { SlashCommand } from "../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../gen/SlashCommandResult.ts";
@@ -38,7 +39,8 @@ export const composerActions = {
     roomId: number,
     text: string,
     threadId: number | null,
-  ): Promise<SlashCommandResult> => runAction(runSlashCommand(roomId, text, threadId)),
+    options: CommandValues | null = null,
+  ): Promise<SlashCommandResult> => runAction(runSlashCommand(roomId, text, threadId, options)),
 
   /** The server's sanitized rendering of a draft. */
   preview: async (roomId: number, markdown: string): Promise<string> =>

@@ -3,6 +3,7 @@
  * `#` room links complete from the sidebar, so they have no endpoint.
  */
 import { Effect } from "effect";
+import type { CommandValues } from "../gen/CommandValues.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { IconList } from "../gen/IconList.ts";
 import type { MessagePreview } from "../gen/MessagePreview.ts";
@@ -60,14 +61,20 @@ export const slashCommands = Effect.fn("api.slashCommands")(function* (
   );
 });
 
-/** `POST /rooms/:id/slash_commands`: runs `/name args`; the result says what happened. */
+/**
+ * `POST /rooms/:id/slash_commands`: runs `/name args`; the result says what happened. A typed
+ * command sends its values as `options` (a 422 `Validation` names the fields it refused).
+ */
 export const runSlashCommand = Effect.fn("api.runSlashCommand")(function* (
   roomId: number,
   text: string,
   threadId: number | null,
+  options: CommandValues | null = null,
 ) {
+  const body = options === null ? { text, threadId } : { text, threadId, options };
+
   return yield* call(
-    { method: "POST", path: `/rooms/${roomId}/slash_commands`, body: { text, threadId } },
+    { method: "POST", path: `/rooms/${roomId}/slash_commands`, body },
     wire<SlashCommandResult>(SlashCommandResultSchema),
   );
 });
