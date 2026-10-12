@@ -27,6 +27,7 @@ import {
   isFileType,
   LAST_FILE_PAGE,
   reconcileFiles,
+  retireFileUpdates,
   showsAsGrid,
 } from "./files.ts";
 import { PaneFrame, RoomName } from "./pane-frame.tsx";
@@ -46,29 +47,35 @@ interface Listing {
 
 interface FileRefresh {
   pending: boolean;
+  active: boolean;
   readonly schedule: () => void;
 }
 
 const LOADING: Listing = { status: "loading", files: [], nextPage: null, loadingMore: false };
 
-/**
- * A live message as pane rows. A file already known keeps the time it was first seen; a file
- * first seen now was attached when the message was posted, or when the edit that added it landed.
- */
+/** An edit with unknown attach times needs an authoritative read before it can be sorted. */
 function liveEntry(
   message: MessageDTO,
   created: boolean,
   known: ReadonlyMap<string, string>,
-): RoomFile[] {
-  const attachedAt = created ? message.createdAt : message.updatedAt;
+): RoomFile[] | null {
+  const files: RoomFile[] = [];
 
-  return messageFiles(message).map((attachment) => ({
-    messageId: message.id,
-    threadId: message.threadId,
-    creatorId: message.creatorId,
-    attachment,
-    createdAt: known.get(attachment.url) ?? attachedAt,
-  }));
+  for (const attachment of messageFiles(message)) {
+    const createdAt =
+      known.get(`${message.id}:${attachment.url}`) ?? (created ? message.createdAt : undefined);
+
+    if (createdAt === undefined) return null;
+    files.push({
+      messageId: message.id,
+      threadId: message.threadId,
+      creatorId: message.creatorId,
+      attachment,
+      createdAt,
+    });
+  }
+
+  return files;
 }
 
 /** Starts a download of `url` (the `?disposition=attachment` link) without leaving the page. */
@@ -218,6 +225,10 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   const request = useRef(0);
   const refreshRequest = useRef<FileRefresh | null>(null);
   const loadedPage = useRef(1);
+  const pageLoading = useRef(false);
+  const deletedMessages = useRef(new Set<number>());
+  const knownTimes = useRef(new Map<string, string>());
+  const pendingEdits = useRef(new Map<number, MessageDTO>());
   const removedThreads = useRef(new Set<number>());
   const liveFiles = useRef(new Map<number, readonly RoomFile[]>());
 
@@ -233,8 +244,35 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
     if (refresh?.pending === true) refresh.schedule();
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: deletion history belongs to the room, across filters
+  useEffect(() => {
+    deletedMessages.current.clear();
+  }, [roomId]);
+
+  const applyPendingEdits = (snapshot: ReadonlyMap<number, MessageDTO>) => {
+    for (const [id, message] of snapshot) {
+      if (pendingEdits.current.get(id) === message) pendingEdits.current.delete(id);
+    }
+
+    for (const [id, message] of pendingEdits.current) {
+      const entry = liveEntry(message, false, knownTimes.current);
+
+      if (entry !== null) {
+        liveFiles.current.set(id, entry);
+        pendingEdits.current.delete(id);
+      }
+    }
+  };
+
   const loadPage = (page: number) => {
     const ticket = ++request.current;
+    const snapshot = new Map(liveFiles.current);
+    const edits = new Map(pendingEdits.current);
+    const upperBound = page === 1 ? undefined : listing.files.at(-1);
+
+    pageLoading.current = true;
+
+    if (refreshRequest.current?.active === true) refreshRequest.current.pending = true;
 
     loadedPage.current = page;
     removedThreads.current.clear();
@@ -249,11 +287,23 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
         const nextPage =
           list.nextPage !== null && list.nextPage <= LAST_FILE_PAGE ? list.nextPage : null;
 
+        pageLoading.current = false;
+
+        for (const file of list.files) knownTimes.current.set(fileKey(file), file.createdAt);
+        retireFileUpdates(liveFiles.current, snapshot, {
+          files: list.files,
+          filter: { type, search: query },
+          complete: nextPage === null,
+          upperBound,
+        });
+        applyPendingEdits(edits);
         setListing((held) => ({
           status: "ready",
           files: reconcileFiles(
             (page === 1 ? list.files : appendFiles(held.files, list.files)).filter(
-              (file) => file.threadId === null || !removedThreads.current.has(file.threadId),
+              (file) =>
+                !deletedMessages.current.has(file.messageId) &&
+                (file.threadId === null || !removedThreads.current.has(file.threadId)),
             ),
             liveFiles.current,
             { type, search: query },
@@ -266,6 +316,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       },
       () => {
         if (ticket === request.current) {
+          pageLoading.current = false;
           setListing((held) =>
             page === 1 ? { ...LOADING, status: "error" } : { ...held, loadingMore: false },
           );
@@ -278,20 +329,32 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new room, type or search starts over at page 1
   useEffect(() => {
     liveFiles.current = new Map();
+    knownTimes.current.clear();
+    pendingEdits.current.clear();
     let refreshTimer: number | undefined;
 
     const refreshState: FileRefresh = {
       pending: false,
+      active: false,
       schedule: () => {
+        refreshState.pending = true;
+
+        if (refreshState.active || pageLoading.current) return;
         window.clearTimeout(refreshTimer);
         refreshTimer = window.setTimeout(() => void refresh(), FILES_REFRESH_DELAY_MS);
       },
     };
 
-    const refresh = async () => {
-      const ticket = ++request.current;
+    let stopped = false;
 
-      refreshState.pending = true;
+    const refresh = async () => {
+      if (stopped || refreshState.active || pageLoading.current) return;
+      const ticket = ++request.current;
+      const snapshot = new Map(liveFiles.current);
+      const edits = new Map(pendingEdits.current);
+
+      refreshState.active = true;
+      refreshState.pending = false;
       const pages = loadedPage.current;
       let files: RoomFile[] = [];
       let nextPage: number | null = 1;
@@ -308,16 +371,23 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
             list.nextPage !== null && list.nextPage <= LAST_FILE_PAGE ? list.nextPage : null;
         }
 
+        for (const file of files) knownTimes.current.set(fileKey(file), file.createdAt);
+        retireFileUpdates(liveFiles.current, snapshot, {
+          files,
+          filter: { type, search: query },
+          complete: nextPage === null,
+        });
+        applyPendingEdits(edits);
         setListing((held) => {
           if (ticket !== request.current) return held;
-
-          refreshState.pending = false;
 
           return {
             status: "ready",
             files: reconcileFiles(
               files.filter(
-                (file) => file.threadId === null || !removedThreads.current.has(file.threadId),
+                (file) =>
+                  !deletedMessages.current.has(file.messageId) &&
+                  (file.threadId === null || !removedThreads.current.has(file.threadId)),
               ),
               liveFiles.current,
               { type, search: query },
@@ -335,6 +405,10 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
               : { ...held, loadingMore: false },
           );
         }
+      } finally {
+        refreshState.active = false;
+
+        if (!stopped && refreshState.pending) refreshState.schedule();
       }
     };
 
@@ -353,37 +427,32 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
       }));
     });
 
-    const applyRemoval = (messageId: number) =>
-      setListing((held) => {
-        liveFiles.current.set(messageId, []);
-
-        const files = reconcileFiles(
-          held.files,
-          liveFiles.current,
-          { type, search: query },
-          held.nextPage === null,
-        );
-
-        return files === held.files ? held : { ...held, files };
-      });
+    const applyRemoval = (messageId: number) => {
+      deletedMessages.current.add(messageId);
+      liveFiles.current.delete(messageId);
+      pendingEdits.current.delete(messageId);
+      setListing((held) => ({
+        ...held,
+        files: held.files.filter((file) => file.messageId !== messageId),
+      }));
+    };
 
     const stopChange = panes.onMessageChange(roomId, (message, created) => {
-      if (message.threadId !== null) return;
+      if (message.threadId !== null || deletedMessages.current.has(message.id)) return;
+      const entry = liveEntry(message, created, knownTimes.current);
+
+      if (entry === null) {
+        pendingEdits.current.set(message.id, message);
+        refreshState.schedule();
+
+        return;
+      }
+
+      pendingEdits.current.delete(message.id);
+
+      for (const file of entry) knownTimes.current.set(fileKey(file), file.createdAt);
+      liveFiles.current.set(message.id, entry);
       setListing((held) => {
-        const known = new Map<string, string>();
-
-        for (const file of held.files) {
-          if (file.messageId === message.id) {
-            known.set(file.attachment.url, file.createdAt);
-          }
-        }
-
-        for (const file of liveFiles.current.get(message.id) ?? []) {
-          known.set(file.attachment.url, file.createdAt);
-        }
-
-        liveFiles.current.set(message.id, liveEntry(message, created, known));
-
         const files = reconcileFiles(
           held.files,
           liveFiles.current,
@@ -400,6 +469,7 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
     loadPage(1);
 
     return () => {
+      stopped = true;
       stopChange();
       stopRemoved();
       stopFiles();

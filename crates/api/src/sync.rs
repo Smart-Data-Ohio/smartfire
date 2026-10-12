@@ -527,6 +527,7 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
         api::SyncPayload::ThreadCreated(thread) | api::SyncPayload::ThreadUpdated(thread) => Some(thread.id),
         api::SyncPayload::ThreadIndicator(change) => change.thread.as_ref().map(|thread| thread.thread_id),
         api::SyncPayload::ThreadUnread(change) => Some(change.thread_id),
+        api::SyncPayload::RoomFilesChanged(change) => Some(change.thread_id),
         api::SyncPayload::ThreadRead(change) => Some(change.thread_id),
         api::SyncPayload::ThreadGithubUpdated(change) => Some(change.thread_id),
         api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => message.thread_id,
@@ -558,7 +559,6 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
         | api::SyncPayload::SidebarCategoryUpserted(_)
         | api::SyncPayload::SidebarCategoryRemoved(_)
         | api::SyncPayload::EventsChanged(_)
-        | api::SyncPayload::RoomFilesChanged(_)
         | api::SyncPayload::AgentStatus(_)
         | api::SyncPayload::ApprovalUpdated(_)
         | api::SyncPayload::HuddleAfkMoved(_)
@@ -584,6 +584,12 @@ impl SyncSession for Session {
                     .map(|event| (*wire, event))
             })
             .collect();
+        #[cfg(feature = "test-support")]
+        if events.iter().any(|(_, event)| matches!(event.payload, api::SyncPayload::RoomFilesChanged(_)))
+            && let Some(app) = self.app.upgrade()
+        {
+            crate::test_hooks::before_sync_delivery(app.db.path(), self.user.id).await;
+        }
         let mut room_ids = BTreeSet::new();
         let mut message_ids = BTreeSet::new();
         let mut thread_ids = BTreeSet::new();

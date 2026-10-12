@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import type { ScheduledMessageList } from "../../src/gen/ScheduledMessageList.ts";
+import type { ServerFrame } from "../../src/gen/ServerFrame.ts";
 import type { SyncEvent } from "../../src/gen/SyncEvent.ts";
 import type { ThreadAccessMembers } from "../../src/gen/ThreadAccessMembers.ts";
 import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
@@ -528,6 +529,8 @@ it("sends file changes only to a private thread's readers", async () => {
     },
     200,
   );
+  const cursor = server.syncState();
+
   server.threadPost(hidden.threadId, users.maya, "Shared reply");
   expect(
     events
@@ -536,7 +539,7 @@ it("sends file changes only to a private thread's readers", async () => {
         topic: event.topic,
         data: event.data,
       })),
-  ).toEqual([{ topic: "user", data: { roomId: rooms.general } }]);
+  ).toEqual([{ topic: "user", data: { roomId: rooms.general, threadId: hidden.threadId } }]);
   await expectStatus(
     server,
     "POST",
@@ -550,4 +553,13 @@ it("sends file changes only to a private thread's readers", async () => {
   );
   server.threadPost(hidden.threadId, users.maya, "Hidden again");
   expect(events.filter((event) => event.type === "room.files.changed")).toHaveLength(1);
+  const frames: ServerFrame[] = [];
+  const replay = server.connect((frame) => frames.push(frame));
+
+  replay.receive({ t: "hello", v: 1, topics: [`room:${rooms.general}`], resume: cursor });
+  const replayed = frames.flatMap((frame) => (frame.t === "batch" ? frame.events : []));
+
+  expect(replayed.some((event) => event.type === "thread.removed")).toBe(true);
+  expect(replayed.filter((event) => event.type === "room.files.changed")).toHaveLength(0);
+  replay.close();
 });

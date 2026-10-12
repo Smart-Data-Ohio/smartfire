@@ -5,4 +5,8 @@
  * Reply events stay on the thread topic, so the room Files pane reloads its loaded pages.
  * Private-thread changes are sent only to current readers.
  */
-export type RoomFilesChanged = { roomId: number, };
+export type RoomFilesChanged = { roomId: number,
+/**
+ * Source conversation, retained so delivery and replay check current thread and room access.
+ */
+threadId: number, };

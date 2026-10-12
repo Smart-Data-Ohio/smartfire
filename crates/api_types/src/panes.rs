@@ -80,6 +80,8 @@ pub struct FileList {
 #[ts(export)]
 pub struct RoomFilesChanged {
     pub room_id: i64,
+    /// Source conversation, retained so delivery and replay check current thread and room access.
+    pub thread_id: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -102,8 +104,8 @@ mod tests {
 
     #[test]
     fn room_files_changed_names_the_room() {
-        let payload = crate::SyncPayload::RoomFilesChanged(super::RoomFilesChanged { room_id: 12 });
-        let wire = json!({"type": "room.files.changed", "data": {"roomId": 12}});
+        let payload = crate::SyncPayload::RoomFilesChanged(super::RoomFilesChanged { room_id: 12, thread_id: 8 });
+        let wire = json!({"type": "room.files.changed", "data": {"roomId": 12, "threadId": 8}});
         assert_eq!(serde_json::to_value(&payload).unwrap(), wire);
         assert_eq!(
             serde_json::from_value::<crate::SyncPayload>(wire).unwrap(),

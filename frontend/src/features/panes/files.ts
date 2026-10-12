@@ -151,6 +151,34 @@ export function reconcileFiles(
   return changed ? files : held;
 }
 
+/** Retire updates covered by a read, keeping any event received after that read began. */
+export function retireFileUpdates(
+  updates: Map<number, readonly RoomFile[]>,
+  snapshot: ReadonlyMap<number, readonly RoomFile[]>,
+  read: {
+    readonly files: readonly RoomFile[];
+    readonly filter: FileFilter;
+    readonly complete: boolean;
+    readonly upperBound?: RoomFile | undefined;
+  },
+): void {
+  const last = read.files.at(-1);
+
+  for (const [id, files] of snapshot) {
+    if (
+      updates.get(id) === files &&
+      files.every(
+        (file) =>
+          matchesFileFilter(file.attachment, read.filter) &&
+          (read.upperBound === undefined || !isNewer(file, read.upperBound)) &&
+          (read.complete || (last !== undefined && !isNewer(last, file))),
+      )
+    ) {
+      updates.delete(id);
+    }
+  }
+}
+
 /** Images and videos show as tiles; everything else as rows. */
 export function showsAsGrid(type: FileType): boolean {
   return type === "images" || type === "videos";

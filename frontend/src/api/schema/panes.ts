@@ -70,7 +70,7 @@ export type FileList = typeof FileList.Type;
 
 export type FileListPin = Assert<Pinned<typeof FileList, GeneratedFileList>>;
 
-export const RoomFilesChanged = Schema.Struct({ roomId: RoomId });
+export const RoomFilesChanged = Schema.Struct({ roomId: RoomId, threadId: ThreadId });
 
 export type RoomFilesChangedPin = Assert<
   Pinned<typeof RoomFilesChanged, GeneratedRoomFilesChanged>

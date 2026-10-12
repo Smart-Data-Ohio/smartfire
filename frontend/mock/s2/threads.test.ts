@@ -328,7 +328,7 @@ it("publishes reply creation, editing and deletion to room file viewers", async 
   ).toEqual(
     Array.from({ length: 3 }, () => ({
       topic: `room:${rooms.general}`,
-      data: { roomId: rooms.general },
+      data: { roomId: rooms.general, threadId: threads.generalActive },
     })),
   );
   expect(events.some((event) => event.type === "message.created")).toBe(false);

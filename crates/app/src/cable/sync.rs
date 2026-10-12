@@ -1125,6 +1125,7 @@ fn room_files_changed(server: &Cable, conn: &Connection, thread_id: i64) {
     };
     let payload = SyncPayload::RoomFilesChanged(campfire_api_types::RoomFilesChanged {
         room_id: thread.room_id,
+        thread_id: thread.id,
     });
     if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private {
         match thread_readers(conn, &thread) {

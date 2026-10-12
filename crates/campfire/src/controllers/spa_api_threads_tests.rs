@@ -1618,8 +1618,7 @@ async fn upload_file(browser: &mut crate::controllers::presenters::test_support:
 }
 
 fn files_changed(event: &api::SyncEvent) -> bool {
-    let wire = serde_json::to_value(&event.payload).unwrap();
-    wire == json!({"type": "room.files.changed", "data": {"roomId": DESIGNERS}})
+    matches!(&event.payload, api::SyncPayload::RoomFilesChanged(change) if change.room_id == DESIGNERS)
 }
 
 async fn watch_room_files(addr: std::net::SocketAddr, cookie: &str) -> Sync {
@@ -1718,4 +1717,108 @@ async fn thread_reply_uploads_reach_room_files_viewers_live() {
         files_changed,
     ).await;
     server.abort();
+}
+
+#[tokio::test]
+async fn private_files_notifications_reauthorize_delivery() {
+    private_files_notifications_after_revocation(false).await;
+}
+
+#[tokio::test]
+async fn private_files_notifications_reauthorize_replay() {
+    private_files_notifications_after_revocation(true).await;
+}
+
+async fn private_files_notifications_after_revocation(replay_only: bool) {
+    for revoke_room in [false, true] {
+        let a = app(true).await.expect("the restored frozen default seed");
+        let mut david = a.sign_in(DAVID).await;
+        let kevin = a.sign_in(KEVIN).await;
+        let id = a
+            .db()
+            .write(|tx| {
+                let thread = campfire_db::ChannelThread::create(
+                    tx,
+                    campfire_db::NewChannelThread {
+                        room_id: DESIGNERS,
+                        creator_id: DAVID,
+                        name: Some("Private files".into()),
+                        visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                        ..Default::default()
+                    },
+                )?;
+                thread.add_access_member(tx, DAVID, KEVIN)?;
+                Ok(thread.id)
+            })
+            .await
+            .unwrap();
+        a.booted.app.broadcasts.settle_sync().await;
+        let (addr, server) = serve(&a).await;
+        let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+        let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+            panic!("welcome")
+        };
+        let hold = campfire_api::test_hooks::hold_before_sync_delivery(a.db().path(), KEVIN);
+        let signed_id = upload_file(&mut david, "private-revocation.txt", b"private").await;
+        let response = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"),
+            &json!({"clientMessageId":"private-files-revoke", "markdownSource":"Private file", "attachmentSignedId":signed_id}))).await;
+        assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+        tokio::time::timeout(std::time::Duration::from_secs(10), hold.reached.wait())
+            .await
+            .expect("queued file event");
+        a.db()
+            .write(move |tx| {
+                if revoke_room {
+                    campfire_db::Room::find(tx.conn(), DESIGNERS)?.revoke_from(tx, &[KEVIN])
+                } else {
+                    campfire_db::ChannelThread::find(tx.conn(), id)?
+                        .remove_access_member(tx, DAVID, KEVIN)
+                }
+            })
+            .await
+            .unwrap();
+        hold.release.wait().await;
+        a.booted.app.broadcasts.settle_sync().await;
+        a.booted
+            .app
+            .cable
+            .sync_publish(campfire_cable::sync::SyncPublication::new(
+                campfire_cable::sync::Audience::User(KEVIN),
+                serde_json::to_string(&api::SyncPayload::WorkspaceStylesUpdated(
+                    api::CustomStyles {
+                        css: Some("delivery-marker".into()),
+                    },
+                ))
+                .unwrap(),
+            ));
+        if !replay_only {
+            loop {
+                match sync.next().await {
+                    Some(api::ServerFrame::Batch { events }) => {
+                        assert!(
+                            !events.iter().any(files_changed),
+                            "revoked file notification: {events:?}"
+                        );
+                        if events.iter().any(|event| matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("delivery-marker"))) { break; }
+                    }
+                    Some(api::ServerFrame::Bye { .. }) => break,
+                    Some(api::ServerFrame::Ping) => {}
+                    other => panic!("expected marker or revocation, got {other:?}"),
+                }
+            }
+        }
+        let mut replay = Sync::open(
+            addr,
+            &kevin.cookie_header(),
+            &[],
+            json!({"epoch":epoch,"seq":seq}),
+        )
+        .await;
+        assert!(matches!(
+            replay.next().await,
+            Some(api::ServerFrame::Welcome { resumed: true, .. })
+        ));
+        replay.until(|event| matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("delivery-marker")), files_changed).await;
+        server.abort();
+    }
 }

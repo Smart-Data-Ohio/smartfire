@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { emitSyncEvents, messageFixture } from "../../api/testing.ts";
+import { emitResync, emitSyncEvents, messageFixture } from "../../api/testing.ts";
 import type { FileList } from "../../gen/FileList.ts";
 import type { MessageDTO } from "../../gen/MessageDTO.ts";
 import type { RoomFile } from "../../gen/RoomFile.ts";
@@ -314,13 +314,21 @@ it("shows a file uploaded while the pane is open, newest first, without refetchi
   expect(files).toHaveBeenCalledTimes(1);
 });
 
-it("shows an attachment added by an edit to a message that had no file", async () => {
+it("reads the attach time when an edit adds a file to a message", async () => {
   const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
   const { container } = await mount();
 
   await waitFor(() =>
     expect(container.querySelector('img[src="/thumbs/image.png"]')).not.toBeNull(),
   );
+  files.mockResolvedValue({
+    ...publicList,
+    files: [
+      { ...file, messageId: 2, attachment: freshAttachment, createdAt: "2026-10-06T00:00:09.000Z" },
+      file,
+    ],
+  });
+  vi.useFakeTimers();
   act(() =>
     updated(
       messageFixture(2, ROOM, {
@@ -330,9 +338,10 @@ it("shows an attachment added by an edit to a message that had no file", async (
     ),
   );
 
+  await act(() => vi.advanceTimersByTimeAsync(100));
   expect(screen.getAllByRole("listitem")).toHaveLength(2);
   expect(container.querySelector('img[src="/thumbs/fresh.png"]')).not.toBeNull();
-  expect(files).toHaveBeenCalledTimes(1);
+  expect(files).toHaveBeenCalledTimes(2);
 });
 
 it("drops every file of a message deleted while the pane is open, without refetching", async () => {
@@ -434,7 +443,7 @@ it("rejects a pending response from the previous file filter", async () => {
 });
 
 function filesChanged(roomId = ROOM, topic = `room:${roomId}`) {
-  emitSyncEvents([{ seq: 1, topic, type: "room.files.changed", data: { roomId } }]);
+  emitSyncEvents([{ seq: 1, topic, type: "room.files.changed", data: { roomId, threadId: 8 } }]);
 }
 
 function threadRemoved(threadId: number) {
@@ -482,7 +491,7 @@ it("debounces reply changes and silently refreshes both loaded pages without mov
   expect(files).toHaveBeenCalledTimes(4);
 });
 
-it("ignores an older refresh after a newer private reply change", async () => {
+it("follows an active refresh with a read for a newer private reply change", async () => {
   const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
   await mount();
   await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
@@ -495,8 +504,9 @@ it("ignores an older refresh after a newer private reply change", async () => {
   files.mockResolvedValue({ ...publicList, files: [] });
   act(() => filesChanged(ROOM, "user"));
   await act(() => vi.advanceTimersByTimeAsync(100));
-  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  expect(files).toHaveBeenCalledTimes(2);
   await act(async () => stale.resolve(publicList));
+  await act(() => vi.advanceTimersByTimeAsync(100));
   expect(screen.queryAllByRole("listitem")).toHaveLength(0);
   expect(files).toHaveBeenCalledTimes(3);
 });
@@ -581,7 +591,7 @@ it("uses refreshed thread rows instead of retaining an older thread message over
   expect(screen.queryAllByRole("listitem")).toHaveLength(0);
 });
 
-it("shows an error if a reply refresh supersedes an initial read and fails", async () => {
+it("retains an initial read's error when a pending reply refresh also fails", async () => {
   const stale = Promise.withResolvers<FileList>();
   const files = vi.spyOn(panes, "files").mockImplementationOnce(() => stale.promise);
 
@@ -591,9 +601,11 @@ it("shows an error if a reply refresh supersedes an initial read and fails", asy
   vi.useFakeTimers();
   act(filesChanged);
   await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(files).toHaveBeenCalledTimes(1);
+  await act(async () => stale.reject(new Error("Offline")));
+  await act(() => vi.advanceTimersByTimeAsync(100));
   expect(screen.getByText("The files couldn't be loaded.")).toBeTruthy();
-  await act(async () => stale.resolve(publicList));
-  expect(screen.getByText("The files couldn't be loaded.")).toBeTruthy();
+  expect(files).toHaveBeenCalledTimes(2);
 });
 
 it("keeps a room upload that arrives while reply files are being refreshed", async () => {
@@ -689,3 +701,98 @@ it.each(["upload", "delete"])(
     }
   },
 );
+
+it("review regression: rejects a deleted message update in a later batch", async () => {
+  vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  act(() => removed(file.messageId));
+  act(() => updated(messageFixture(file.messageId, ROOM, { attachment: file.attachment })));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+});
+
+it.each([`room:${ROOM}`, "user", "reply refresh"])(
+  "review regression: retires covered overlays on %s resync and keeps concurrent uploads",
+  async (topic) => {
+    const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+    await mount();
+    await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+    act(() => created(messageFixture(2, ROOM, { attachment: freshAttachment })));
+    const pending = Promise.withResolvers<FileList>();
+
+    files.mockImplementationOnce(() => pending.promise);
+    vi.useFakeTimers();
+    act(() => (topic === "reply refresh" ? filesChanged() : emitResync([topic])));
+    await act(() => vi.advanceTimersByTimeAsync(100));
+    expect(files).toHaveBeenCalledTimes(2);
+    act(() =>
+      created(
+        messageFixture(3, ROOM, {
+          attachment: {
+            ...freshAttachment,
+            filename: "concurrent.png",
+            url: "/files/concurrent.png",
+          },
+        }),
+      ),
+    );
+    await act(async () => pending.resolve(publicList));
+    expect(screen.queryByText("fresh.png")).toBeNull();
+    expect(screen.getByText("concurrent.png")).toBeTruthy();
+  },
+);
+
+it("review regression: coalesces changes while a refresh is active", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue(publicList);
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+  const first = Promise.withResolvers<FileList>();
+  const followup = Promise.withResolvers<FileList>();
+
+  files.mockImplementationOnce(() => first.promise).mockImplementationOnce(() => followup.promise);
+  vi.useFakeTimers();
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(150));
+  act(filesChanged);
+  await act(() => vi.advanceTimersByTimeAsync(150));
+  expect(files).toHaveBeenCalledTimes(2);
+  await act(async () => first.resolve({ ...publicList, files: [] }));
+  expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(files).toHaveBeenCalledTimes(3);
+  await act(async () => followup.resolve(publicList));
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+});
+
+it("review regression: refreshes unknown attachment times on an older text edit", async () => {
+  const files = vi.spyOn(panes, "files").mockResolvedValue({ ...publicList, nextPage: 2 });
+  await mount();
+  await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(1));
+
+  const old = {
+    ...file,
+    messageId: 2,
+    attachment: freshAttachment,
+    createdAt: "2025-01-01T00:00:00.000Z",
+  };
+
+  files.mockResolvedValue({ ...publicList, files: [file, old], nextPage: null });
+  vi.useFakeTimers();
+  act(() =>
+    updated(
+      messageFixture(2, ROOM, {
+        attachment: freshAttachment,
+        createdAt: old.createdAt,
+        updatedAt: "2026-10-10T00:00:00.000Z",
+      }),
+    ),
+  );
+  expect(screen.queryByText("fresh.png")).toBeNull();
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(files).toHaveBeenCalledTimes(2);
+  expect(
+    screen.getAllByRole("listitem").map((item) => item.querySelector("time")?.dateTime),
+  ).toEqual([file.createdAt, old.createdAt]);
+});

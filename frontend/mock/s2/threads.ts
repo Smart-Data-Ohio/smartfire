@@ -459,7 +459,7 @@ export function createThreads(
           {
             topic: thread.visibility === "private" ? "user" : `room:${thread.roomId}`,
             type: "room.files.changed",
-            data: { roomId: thread.roomId },
+            data: { roomId: thread.roomId, threadId: thread.id },
           },
         ]
       : [];
