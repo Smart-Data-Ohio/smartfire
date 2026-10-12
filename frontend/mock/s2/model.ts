@@ -309,6 +309,7 @@ export function inviteThreadMentionees(
   if (
     thread.visibility !== "private" ||
     message.systemNote ||
+    message.streaming ||
     !canAccessThread(world, thread, actorId)
   )
     return;
@@ -350,9 +351,9 @@ export function visibleMessage(world: World, message: MessageDTO): MessageDTO {
   if (message.thread === null) return message;
   const thread = world.threads.get(message.thread.threadId);
 
-  return thread !== undefined && !canAccessThread(world, thread)
-    ? { ...message, thread: null }
-    : message;
+  return thread !== undefined && canAccessThread(world, thread)
+    ? message
+    : { ...message, thread: null };
 }
 
 /** The thread's wire DTO. */
@@ -424,7 +425,11 @@ export interface MessageLocation {
 }
 
 /** Finds a message anywhere in the world; `null` when there's none with that id. */
-export function locate(world: World, messageId: number): MessageLocation | null {
+export function locate(
+  world: World,
+  messageId: number,
+  userId = VIEWER_ID,
+): MessageLocation | null {
   for (const room of world.rooms.values()) {
     const index = room.messages.findIndex((message) => message.id === messageId);
     const message = room.messages[index];
@@ -433,7 +438,7 @@ export function locate(world: World, messageId: number): MessageLocation | null 
   }
 
   for (const thread of world.threads.values()) {
-    if (!canAccessThread(world, thread)) continue;
+    if (!canAccessThread(world, thread, userId)) continue;
 
     const index = thread.messages.findIndex((message) => message.id === messageId);
     const message = thread.messages[index];
@@ -457,7 +462,7 @@ export function pinCount(world: World, roomId: number): number {
   let count = 0;
 
   for (const record of world.pins.values()) {
-    if (record.roomId === roomId) count += 1;
+    if (record.roomId === roomId && locate(world, record.pin.messageId) !== null) count += 1;
   }
 
   return count;

@@ -260,6 +260,7 @@ const COMMAND = /^\/([a-zA-Z][a-zA-Z0-9_-]*)(?:\s+([\s\S]*))?$/;
 /** The composer module. */
 export interface Composer {
   readonly routes: readonly Route[];
+  scheduledMessage(id: number): ScheduledMessage | null;
   /** Posts every pending scheduled message that's due (or every pending one, with `all`). */
   fireScheduled(all: boolean): ScheduledMessage[];
   /** Cancels the timers and arms one per pending scheduled message in the current world. */
@@ -1089,6 +1090,11 @@ export function createComposer(
     },
     stop() {
       for (const id of [...timers.keys()]) disarm(id);
+    },
+    scheduledMessage(id) {
+      const message = ctx.world().scheduled.get(id);
+
+      return message === undefined ? null : shown(message);
     },
     markSending(id, on) {
       const current = scheduledOr404(id);

@@ -528,13 +528,46 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
         api::SyncPayload::ThreadIndicator(change) => change.thread.as_ref().map(|thread| thread.thread_id),
         api::SyncPayload::ThreadUnread(change) => Some(change.thread_id),
         api::SyncPayload::ThreadRead(change) => Some(change.thread_id),
+        api::SyncPayload::ThreadGithubUpdated(change) => Some(change.thread_id),
         api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => message.thread_id,
+        api::SyncPayload::MessageRemoved(message) => message.thread_id,
+        api::SyncPayload::MessageReactions(reactions) => reactions.thread_id,
         api::SyncPayload::MessageCards(cards) => cards.thread_id,
         api::SyncPayload::PollUpdated(poll) => poll.thread_id,
         api::SyncPayload::PollBallot(ballot) => ballot.thread_id,
         api::SyncPayload::AgentSteps(steps) => steps.thread_id,
         api::SyncPayload::ActivityItem(change) => change.item.as_ref().and_then(|item| item.source.thread_id),
-        _ => None,
+        api::SyncPayload::BlocksUpdated(_)
+        | api::SyncPayload::SettingsUpdated(_)
+        | api::SyncPayload::UserUpdated(_)
+        | api::SyncPayload::WorkspaceUpdated(_)
+        | api::SyncPayload::WorkspaceStylesUpdated(_)
+        | api::SyncPayload::Typing(_)
+        | api::SyncPayload::RoomUnread(_)
+        | api::SyncPayload::RoomRead(_)
+        | api::SyncPayload::SidebarRowUpserted(_)
+        | api::SyncPayload::SidebarRowRemoved(_)
+        | api::SyncPayload::Presence(_)
+        | api::SyncPayload::MessagePinned(_)
+        | api::SyncPayload::ThreadRemoved(_)
+        | api::SyncPayload::BoardAutomationsChanged(_)
+        | api::SyncPayload::SavedChanged(_)
+        | api::SyncPayload::ActivityRemoved(_)
+        | api::SyncPayload::ScheduledChanged(_)
+        | api::SyncPayload::ScheduledRemoved(_)
+        | api::SyncPayload::SidebarCategoryUpserted(_)
+        | api::SyncPayload::SidebarCategoryRemoved(_)
+        | api::SyncPayload::EventsChanged(_)
+        | api::SyncPayload::AgentStatus(_)
+        | api::SyncPayload::ApprovalUpdated(_)
+        | api::SyncPayload::HuddlePresence(_)
+        | api::SyncPayload::HuddleRole(_)
+        | api::SyncPayload::HuddleNotice(_)
+        | api::SyncPayload::HuddleRing(_)
+        | api::SyncPayload::HuddleSoundboard(_)
+        | api::SyncPayload::StageUpdated(_)
+        | api::SyncPayload::StageStreamStopped(_)
+        | api::SyncPayload::WorkspaceLayoutUpdated(_) => None,
     }
 }
 
@@ -553,7 +586,11 @@ impl SyncSession for Session {
         let mut message_ids = BTreeSet::new();
         let mut thread_ids = BTreeSet::new();
         let mut pin_ids = BTreeSet::new();
+        let mut scheduled_ids = BTreeSet::new();
         for (_, event) in &events {
+            if let api::SyncPayload::ScheduledChanged(message) = &event.payload {
+                scheduled_ids.insert(message.id);
+            }
             if let api::SyncPayload::MessagePinned(state) = &event.payload {
                 pin_ids.insert(state.message_id);
             }
@@ -570,11 +607,12 @@ impl SyncSession for Session {
                 }
             }
         }
-        if message_ids.is_empty() && thread_ids.is_empty() && pin_ids.is_empty() {
+        if message_ids.is_empty() && thread_ids.is_empty() && pin_ids.is_empty() && scheduled_ids.is_empty() {
             return events.into_iter().map(|(wire, _)| wire.to_owned()).collect();
         }
         let viewer = self.user.id;
         let access = if let Some(app) = self.app.upgrade() {
+            let render_app = app.clone();
             app.db.read_snapshot(move |conn| {
                 let messages = campfire_db::models::announcement::replay_access(
                     conn, viewer, room_ids, message_ids,
@@ -608,7 +646,16 @@ impl SyncSession for Session {
                     };
                     pins.insert(message_id, (room_id, count));
                 }
-                Ok((messages, readable, pins))
+                let mut scheduled_rows = Vec::new();
+                for id in scheduled_ids {
+                    if let Some(row) = campfire_db::ScheduledMessage::find_by_id(conn, id)?
+                        && row.user_id == viewer {
+                        scheduled_rows.push(row);
+                    }
+                }
+                let scheduled = crate::composer::scheduled_rows(conn, &scheduled_rows, render_app.db.env().now(), &render_app)?
+                    .into_iter().map(|message| (message.id, message)).collect::<std::collections::HashMap<_, _>>();
+                Ok((messages, readable, pins, scheduled))
             }).await.unwrap_or_else(|error| {
                 tracing::warn!(%error, "sync: batch delivery not authorized");
                 app.cable.sync_skipped_for(viewer);
@@ -625,6 +672,10 @@ impl SyncSession for Session {
                 return None;
             }
             match &mut event.payload {
+                api::SyncPayload::ScheduledChanged(message) => {
+                    *message = access.3.get(&message.id)?.clone();
+                    serde_json::to_string(&event).ok()
+                }
                 api::SyncPayload::MessagePinned(state) => {
                     let (room_id, count) = access.2.get(&state.message_id)?;
                     state.room_id = *room_id;

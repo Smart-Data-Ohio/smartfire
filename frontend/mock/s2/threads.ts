@@ -67,6 +67,7 @@ export interface Threads {
   threadOr404(threadId: number): ThreadRecord;
   /** Posts a reply with everything that follows: indicator, thread events, unread. */
   postReply(thread: ThreadRecord, draft: MessageDraft, fresh?: boolean): MessageDTO;
+  finalizeReply(thread: ThreadRecord, message: MessageDTO): void;
   /** After a reply was deleted: the recount and the refresh events. */
   replyRemoved(thread: ThreadRecord): void;
   /** After a root message was deleted: a thread it started stays, with no parent. */
@@ -211,34 +212,42 @@ export function createThreads(
       ctx.mentionables(),
     );
 
-    inviteThreadMentionees(world, thread, message, draft.creatorId, createdAt);
     thread.messages.push(message);
+    const notifications = receiveReply(thread, message);
 
     const events: Outgoing[] = [
       { topic: `thread:${thread.id}`, type: "message.created", data: message },
       ...syncIndicator(thread),
       ...(fresh ? [] : updated(thread)),
+      ...notifications,
     ];
-
-    const membership = thread.viewerMembership;
-
-    if (
-      draft.creatorId !== VIEWER_ID &&
-      membership !== null &&
-      !draft.systemNote &&
-      canAccessThread(world, thread)
-    ) {
-      thread.viewerMembership = { ...membership, unreadAt: createdAt };
-      events.push({
-        topic: "user",
-        type: "thread.unread",
-        data: { threadId: thread.id, roomId: thread.roomId, refreshOnly: false },
-      });
-    }
 
     ctx.publish(events);
 
     return message;
+  };
+
+  const receiveReply = (thread: ThreadRecord, message: MessageDTO): Outgoing[] => {
+    inviteThreadMentionees(ctx.world(), thread, message, message.creatorId, message.updatedAt);
+    const membership = thread.viewerMembership;
+
+    if (
+      message.streaming ||
+      message.systemNote ||
+      message.creatorId === VIEWER_ID ||
+      membership === null ||
+      !canAccessThread(ctx.world(), thread)
+    )
+      return [];
+    thread.viewerMembership = { ...membership, unreadAt: message.updatedAt };
+
+    return [
+      {
+        topic: "user",
+        type: "thread.unread",
+        data: { threadId: thread.id, roomId: thread.roomId, refreshOnly: false },
+      },
+    ];
   };
 
   const refresh = (thread: ThreadRecord): Outgoing => ({
@@ -653,6 +662,16 @@ export function createThreads(
   });
 
   return {
+    finalizeReply(thread, message) {
+      const notifications = receiveReply(thread, message);
+
+      ctx.publish([
+        ...notifications,
+        { topic: `thread:${thread.id}`, type: "message.updated", data: message },
+        ...syncIndicator(thread),
+        ...updated(thread),
+      ]);
+    },
     routes: [
       route("GET", /^\/rooms\/(\d+)\/threads$/, (request) =>
         ok(list(firstId(request), request.query)),

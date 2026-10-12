@@ -401,13 +401,18 @@ async fn confirmed_room_query(
             return Ok(none);
         }
         let thread = match thread_id {
-            Some(id) => campfire_db::ChannelThread::find_by_id(conn, id)?
-                .filter(|thread| thread.room_id == room_id)
-                .map(|thread| thread.id as u64),
+            Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
+                Some(thread) if thread.room_id == room_id && thread.readable_by(conn, user_id)? => Some(thread.id as u64),
+                _ => None,
+            },
             None => None,
         };
         let message = match message_id {
-            Some(id) => campfire_db::Message::find_by_id(conn, id)?.and_then(|message| {
+            Some(id) => match campfire_db::Message::find_reachable(conn, user_id, id) {
+                Ok(message) => Some(message),
+                Err(campfire_db::Error::RecordNotFound(_)) => None,
+                Err(error) => return Err(error),
+            }.and_then(|message| {
                 if message.room_id != room_id {
                     return None;
                 }

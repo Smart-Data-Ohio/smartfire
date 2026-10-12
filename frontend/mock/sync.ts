@@ -79,11 +79,11 @@ export interface SyncHubOptions {
    */
   readonly memberOf?: (roomId: number) => boolean;
   readonly threadAccess?: (threadId: number) => boolean;
-  readonly canReadEvent?: (event: SyncEvent) => boolean;
+  readonly eventForViewer?: (event: SyncEvent) => SyncEvent | null;
 }
 
 export function createSyncHub(options: SyncHubOptions): SyncHub {
-  const { scheduler, viewerId, memberOf, threadAccess, canReadEvent } = options;
+  const { scheduler, viewerId, memberOf, threadAccess, eventForViewer } = options;
   const connections = new Set<Connection>();
   let epoch = options.epoch;
   let seq = 0;
@@ -129,13 +129,18 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
     for (const connection of connections) {
       if (connection === except) continue;
 
-      const mine = events.filter(
-        (event) => connection.topics.has(event.topic) && (canReadEvent?.(event) ?? true),
-      );
+      const mine = forViewer(events.filter((event) => connection.topics.has(event.topic)));
 
       if (mine.length > 0) transmit(connection, { t: "batch", events: mine });
     }
   };
+
+  const forViewer = (events: readonly SyncEvent[]): SyncEvent[] =>
+    events.flatMap((event) => {
+      const shown = eventForViewer === undefined ? event : eventForViewer(event);
+
+      return shown === null ? [] : [shown];
+    });
 
   const roomIdOf = (topic: string): number | null => {
     const match = /^room:(\d+)$/.exec(topic);
@@ -194,12 +199,11 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
       viewerId,
     });
 
-    const missed = ring.filter(
-      (event) =>
-        event.seq > resume.seq &&
-        event.type !== "typing" &&
-        connection.topics.has(event.topic) &&
-        (canReadEvent?.(event) ?? true),
+    const missed = forViewer(
+      ring.filter(
+        (event) =>
+          event.seq > resume.seq && event.type !== "typing" && connection.topics.has(event.topic),
+      ),
     );
 
     if (missed.length > 0) transmit(connection, { t: "batch", events: missed });

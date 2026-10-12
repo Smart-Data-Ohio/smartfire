@@ -1268,6 +1268,208 @@ async fn private_thread_removal_cancels_an_open_sync_subscription() {
     server.abort();
 }
 
+#[tokio::test]
+async fn private_thread_review_scheduled_replay_renders_current_access_and_keeps_draft() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let created: api::ThreadCreated = parse(
+        &david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+                &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("private-replay-create", "Confidential reply target")}),
+            ))
+            .await,
+    );
+    let id = created.detail.thread.id;
+    assert_eq!(
+        david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/threads/{id}/members"),
+                &json!({"userId": KEVIN})
+            ))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    a.booted.app.broadcasts.settle_sync().await;
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+        panic!("welcome");
+    };
+    let draft: api::ScheduledMessage = parse(&kevin.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages"),
+        &json!({"markdownSource": "My retained draft", "sendAt": "2099-01-01T12:00:00Z", "threadId": id, "replyToMessageId": created.message.id}))).await);
+    assert_eq!(
+        draft.reply_target.as_ref().unwrap().excerpt,
+        "Confidential reply target"
+    );
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::ScheduledChanged(message) if message.id == draft.id), |_| false).await;
+    assert_eq!(
+        david
+            .write(json_body(
+                Method::DELETE,
+                &format!("/api/v1/threads/{id}/members/{KEVIN}"),
+                &json!({})
+            ))
+            .await
+            .status,
+        StatusCode::NO_CONTENT
+    );
+    a.booted.app.broadcasts.settle_sync().await;
+    let mut replay = Sync::open(
+        addr,
+        &kevin.cookie_header(),
+        &[],
+        json!({"epoch": epoch, "seq": seq}),
+    )
+    .await;
+    assert!(matches!(
+        replay.next().await,
+        Some(api::ServerFrame::Welcome { resumed: true, .. })
+    ));
+    let event = replay.until(|event| matches!(&event.payload, api::SyncPayload::ScheduledChanged(message) if message.id == draft.id), |_| false).await;
+    let api::SyncPayload::ScheduledChanged(shown) = event.payload else {
+        unreachable!()
+    };
+    assert!(
+        shown.reply_target.is_none(),
+        "revoked reply content: {:?}",
+        shown.reply_target
+    );
+    assert!(!shown.sendable);
+    assert_eq!(shown.markdown_source, "My retained draft");
+    let list: api::ScheduledMessageList =
+        parse(&kevin.send(get("/api/v1/scheduled_messages")).await);
+    assert_eq!(
+        list.scheduled_messages
+            .iter()
+            .find(|message| message.id == draft.id),
+        Some(&shown)
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn private_thread_review_classic_links_treat_hidden_ids_as_missing() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let created: api::ThreadCreated = parse(
+        &david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+                &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("private-classic-create", "Hidden reply")}),
+            ))
+            .await,
+    );
+    let id = created.detail.thread.id;
+    let message = created.message.id;
+    let visible = david
+        .get(&format!(
+            "/rooms/{DESIGNERS}?thread={id}&message_id={message}"
+        ))
+        .await;
+    assert_eq!(
+        visible.location(),
+        Some(format!("http://campfire.test/app/r/{DESIGNERS}/t/{id}?m={message}").as_str())
+    );
+    for (hidden, missing) in [
+        (
+            format!("/rooms/{DESIGNERS}?thread={id}"),
+            format!("/rooms/{DESIGNERS}?thread=9999999999"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}?thread={id}&message_id={message}"),
+            format!("/rooms/{DESIGNERS}?thread=9999999999&message_id=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}?message_id={message}"),
+            format!("/rooms/{DESIGNERS}?message_id=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}/messages?message_id={message}"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999/messages?message_id=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}/messages/{message}"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999/messages/9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/@{message}"),
+            format!("/rooms/{DESIGNERS}/@9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/messages/{message}/fizzy_cards/new"),
+            format!("/rooms/{DESIGNERS}/messages/9999999998/fizzy_cards/new"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/threads/{id}/messages/{message}/fizzy_cards/new"),
+            format!("/rooms/{DESIGNERS}/threads/9999999999/messages/9999999998/fizzy_cards/new"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/messages?before={message}"),
+            format!("/rooms/{DESIGNERS}/messages?before=9999999998"),
+        ),
+        (
+            format!("/rooms/{DESIGNERS}/messages?after={message}"),
+            format!("/rooms/{DESIGNERS}/messages?after=9999999998"),
+        ),
+        (
+            format!("/messages/{message}/boosts/new"),
+            "/messages/9999999998/boosts/new".into(),
+        ),
+        (
+            format!("/threads/{id}/work/handoff/new"),
+            "/threads/9999999999/work/handoff/new".into(),
+        ),
+        (
+            format!("/threads/{id}/work/links"),
+            "/threads/9999999999/work/links".into(),
+        ),
+    ] {
+        for method in [Method::GET, Method::HEAD] {
+            for accept in ["text/html", "application/json"] {
+                let hidden_reply = kevin
+                    .send(Req::new(method.clone(), &hidden).header("accept", accept))
+                    .await;
+                let missing_reply = kevin
+                    .send(Req::new(method.clone(), &missing).header("accept", accept))
+                    .await;
+                assert_eq!(hidden_reply.status, missing_reply.status, "{hidden}");
+                let normalize = |location: Option<&str>| {
+                    location.map(|location| {
+                        location
+                            .replace("9999999998", "MESSAGE")
+                            .replace(&message.to_string(), "MESSAGE")
+                            .replace("9999999999", "THREAD")
+                            .replace(&id.to_string(), "THREAD")
+                    })
+                };
+                assert_eq!(
+                    normalize(hidden_reply.location()),
+                    normalize(missing_reply.location()),
+                    "{hidden}"
+                );
+                assert_eq!(
+                    normalize(Some(&hidden_reply.text())),
+                    normalize(Some(&missing_reply.text())),
+                    "{hidden} response body"
+                );
+            }
+        }
+    }
+}
 
 #[tokio::test]
 async fn private_thread_unfollow_keeps_creator_access_until_members_self_delete() {

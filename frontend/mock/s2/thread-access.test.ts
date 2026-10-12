@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
+import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
+import type { ScheduledMessageList } from "../../src/gen/ScheduledMessageList.ts";
+import type { SyncEvent } from "../../src/gen/SyncEvent.ts";
 import type { ThreadAccessMembers } from "../../src/gen/ThreadAccessMembers.ts";
 import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { ThreadList } from "../../src/gen/ThreadList.ts";
 import { field, stringField } from "../json.ts";
 import { SEED_IDS } from "../server.ts";
-import { collect, expectStatus, get, harness, messageBody, send } from "./testing.ts";
+import { collect, expectStatus, get, harness, messageBody, NOW, send } from "./testing.ts";
 
 const { rooms, messages, users, viewer } = SEED_IDS;
 
@@ -42,6 +45,78 @@ function reason(json: Parameters<typeof field>[0]): string | null {
 }
 
 describe("private-thread access", () => {
+  it("grants streamed mentions at finalization before notifying the newly invited viewer", async () => {
+    const { server, created, path } = await privateThread(rooms.engineering);
+    await expectStatus(server, "POST", `${path}/members`, { userId: users.ember }, 200);
+    await expectStatus(server, "DELETE", `${path}/members/${viewer}`, null, 204);
+    const events = collect(server);
+    const stream = server.threadPost(created.detail.thread.id, users.ember, "Draft", true);
+    server.updateMessage(stream.id, `Draft <@${viewer}>`, true);
+    expect((await server.handle({ method: "GET", path })).status).toBe(404);
+    expect(events.some((event) => event.type === "thread.unread")).toBe(false);
+    server.updateMessage(stream.id, `Draft <@${viewer}>`, false);
+    const detail = await get<ThreadCreated["detail"]>(server, path);
+    expect(detail.membership?.unreadAt).not.toBeNull();
+    expect(
+      events.some(
+        (event) =>
+          event.type === "thread.unread" && event.data.threadId === created.detail.thread.id,
+      ),
+    ).toBe(true);
+    const members = await get<ThreadAccessMembers>(server, `${path}/members`);
+    expect(members.members.find((member) => member.userId === viewer)?.addedById).toBe(users.ember);
+    const count = events.filter((event) => event.type === "thread.unread").length;
+    server.updateMessage(stream.id, `Draft <@${viewer}>`, false);
+    expect(events.filter((event) => event.type === "thread.unread")).toHaveLength(count);
+  });
+
+  it("re-renders scheduled replay against revoked access and preserves the author's draft", async () => {
+    const { server, created, path } = await privateThread();
+    const live = collect(server, [`room:${rooms.general}`]);
+    const resume = server.syncState();
+    server.pin(created.message.id, viewer);
+
+    const draft = await expectStatus<ScheduledMessage>(
+      server,
+      "POST",
+      `/api/v1/rooms/${rooms.general}/scheduled_messages`,
+      {
+        markdownSource: "My retained draft",
+        sendAt: new Date(NOW + 3_600_000).toISOString(),
+        threadId: created.detail.thread.id,
+        replyToMessageId: created.message.id,
+      },
+      201,
+    );
+
+    expect(draft.replyTarget?.excerpt).toBe("Private discussion");
+    expect(
+      live.some((event) => event.type === "scheduled.changed" && event.data.replyTarget !== null),
+    ).toBe(true);
+    expect((await send(server, "DELETE", `${path}/members/${viewer}`)).status).toBe(204);
+    const replayed: SyncEvent[] = [];
+
+    const connection = server.connect((frame) => {
+      if (frame.t === "batch") replayed.push(...frame.events);
+    });
+
+    connection.receive({ t: "hello", v: 1, topics: [`room:${rooms.general}`], resume });
+
+    const event = replayed.find(
+      (event) => event.type === "scheduled.changed" && event.data.id === draft.id,
+    );
+
+    if (event?.type !== "scheduled.changed") throw new Error("Expected retained scheduled draft");
+    expect(event.data.replyTarget).toBeNull();
+    expect(event.data.sendable).toBe(false);
+    expect(event.data.markdownSource).toBe("My retained draft");
+    expect(replayed.some((event) => event.type === "message.pinned")).toBe(false);
+    const list = await get<ScheduledMessageList>(server, "/api/v1/scheduled_messages");
+
+    expect(list.scheduledMessages.find((message) => message.id === draft.id)).toEqual(event.data);
+    connection.close();
+  });
+
   it("defaults old create requests to public and refuses visibility edits atomically", async () => {
     const { server } = harness();
 

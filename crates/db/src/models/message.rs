@@ -627,8 +627,8 @@ impl Message {
             Room::touch(tx, message.room_id)?;
         }
 
-        if !importing { message.invite_mentionees(tx, message.creator_id)?; }
         if !message.streaming {
+            if !importing { message.invite_mentionees(tx, message.creator_id)?; }
             // Bookkeeping commits with the message (lead decision, round 2). Receive only
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
@@ -1722,6 +1722,7 @@ impl Message {
             if !agent.as_ref().map(|a| a.active(tx.conn())).transpose()?.unwrap_or(false) {
                 return self.finalize_claimed_stream_quietly(tx);
             }
+            self.invite_mentionees(tx, self.creator_id)?;
             self.create_in_index(tx)?;
             self.receive_in_conversation(tx)?;
             self.push_later_in_conversation(tx);
