@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import type { DirectUpload } from "../../src/gen/DirectUpload.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
+import type { Poll } from "../../src/gen/Poll.ts";
 import type { ScheduledMessage } from "../../src/gen/ScheduledMessage.ts";
 import type { ScheduledMessageList } from "../../src/gen/ScheduledMessageList.ts";
 import { onboardingMockupPng, utf8 } from "../s2/assets.ts";
@@ -312,6 +313,52 @@ it("rejects scheduling a signed id already posted to a room", async () => {
     },
     422,
   );
+});
+
+it("refuses scheduling a signed id already published as poll media", async () => {
+  const { server } = harness();
+  const signedId = await upload(server, "poll.png", onboardingMockupPng(), "image/png");
+
+  const created = await expectStatus<{ poll?: Poll }>(
+    server,
+    "POST",
+    `/api/v1/rooms/${ROOM}/polls`,
+    {
+      clientMessageId: "published-poll-image",
+      question: "Publish image?",
+      options: ["Yes", "No"],
+      optionMedia: [{ signedId }, null],
+    },
+    201,
+  );
+
+  const media = created.poll?.options[0]?.media;
+  const imagePath = media?.kind === "image" ? media.url : "";
+  expect(imagePath).not.toBe("");
+  const image = () => server.handleBinary({ method: "GET", path: imagePath, bytes: null });
+
+  expect((await image()).status).toBe(200);
+
+  const reuse = await send(server, "POST", `/api/v1/rooms/${ROOM}/scheduled_messages`, {
+    markdownSource: "",
+    sendAt: new Date(NOW + 3600000).toISOString(),
+    attachmentSignedIds: [signedId],
+  });
+
+  if (reuse.status === 201) {
+    const pending = await get<ScheduledMessageList>(server, "/api/v1/scheduled_messages");
+
+    const reused = pending.scheduledMessages.find((message) =>
+      message.attachments.some((file) => file.signedId === signedId),
+    );
+
+    if (reused === undefined) throw new Error("reused scheduled message is missing");
+
+    await expectStatus(server, "DELETE", `/api/v1/scheduled_messages/${reused.id}`, {}, 204);
+  }
+
+  expect(reuse.status).toBe(422);
+  expect((await image()).status).toBe(200);
 });
 
 it("allows an unassigned upload as a poll image", async () => {

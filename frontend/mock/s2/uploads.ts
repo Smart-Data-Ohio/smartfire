@@ -14,6 +14,7 @@ import {
   validation,
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
+import { pollsOf } from "../s3/cards.ts";
 import { animatedIconGif, iconSvg, imageSize } from "./assets.ts";
 import { type Route, route, type S2Context } from "./context.ts";
 import { base64, md5Base64 } from "./digest.ts";
@@ -262,13 +263,21 @@ export function createUploads(
     });
   };
 
+  /** Published as a message's file or as a poll option's image, which share the blob. */
   const attachedToMessage = (blob: BlobRecord): boolean => {
     const url = attachmentOf(blob).url;
     const world = ctx.world();
     const conversations = [...world.rooms.values(), ...world.threads.values()];
 
-    return conversations.some((conversation) =>
+    const inMessage = conversations.some((conversation) =>
       conversation.messages.some((message) => filesOf(message).some((file) => file.url === url)),
+    );
+
+    return (
+      inMessage ||
+      pollsOf(world, ctx.now()).some((poll) =>
+        poll.options.some((option) => option.media?.kind === "image" && option.media.url === url),
+      )
     );
   };
 
