@@ -34,6 +34,7 @@
 
   .message-sticker-deleted {
     display: inline-flex;
+    max-width: 100%;
     align-items: center;
     gap: var(--space-1-5);
     padding: var(--space-1) var(--space-2);
@@ -44,6 +45,8 @@
   }
 
   .message-sticker-deleted-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
     color: var(--text-muted);
   }
 

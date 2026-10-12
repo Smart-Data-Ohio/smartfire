@@ -3,7 +3,7 @@ import type { Sticker } from "../../gen/Sticker.ts";
 import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { moveActive } from "../../lib/emoji/picker-layout.ts";
 import { useActionSheet } from "../../ui/action-sheet.tsx";
-import { IconButton } from "../../ui/icon-button.tsx";
+import { IconButton, type IconButtonProps } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Popover } from "../../ui/popover.tsx";
 import {
@@ -18,7 +18,6 @@ import "./sticker-picker.css";
 export const STICKER_COLUMNS = 4;
 
 interface StickerPickerProps {
-  /** Called with the chosen sticker; the caller sends it. */
   readonly onPick: (sticker: Sticker) => void;
 }
 
@@ -173,13 +172,16 @@ export function StickerPicker({ onPick }: StickerPickerProps) {
 
 /**
  * The composer's sticker button: shown once the workspace has stickers, it opens the picker above
- * the toolbar (a bottom sheet on a touch phone), and a pick is sent at once as its own message.
+ * the toolbar (a bottom sheet on a touch phone).
  *
  * It mounts again for each conversation (the composer keys it by room), and the window regaining
  * focus counts too: either refetches a catalog older than `STICKER_CATALOG_MAX_AGE_MS`, so a
  * workspace's first sticker shows without the picker it unlocks.
  */
-export function ComposerStickerButton({ onPick }: StickerPickerProps) {
+export function ComposerStickerButton({
+  onPick,
+  disabled = false,
+}: StickerPickerProps & Pick<IconButtonProps, "disabled">) {
   const count = useHeldStickers().length;
 
   useEffect(() => {
@@ -206,6 +208,7 @@ export function ComposerStickerButton({ onPick }: StickerPickerProps) {
           {...props}
           icon="sticker"
           label="Sticker"
+          disabled={disabled}
           size="sm"
           onMouseDown={(event) => event.preventDefault()}
         />
