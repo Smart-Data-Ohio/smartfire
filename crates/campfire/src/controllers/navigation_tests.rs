@@ -1,6 +1,6 @@
 use axum::http::{Method, StatusCode};
 
-use crate::controllers::presenters::test_support::{DAVID, Req, TestApp};
+use crate::controllers::presenters::test_support::{DAVID, KEVIN, Req, TestApp};
 
 const COLLECTIONS: [&str; 6] = ["opens", "closeds", "directs", "boards", "voices", "stages"];
 const ORIGIN: &str = "http://campfire.test";
@@ -169,4 +169,50 @@ async fn stored_message_links_keep_navigation_context_and_the_fragment_response(
     }
     let reply = browser.classic_page(path).await;
     assert_eq!((reply.status, reply.location()), (StatusCode::FOUND, Some(destination)));
+}
+
+#[tokio::test]
+async fn room_aliases_drop_threads_in_rooms_the_viewer_cannot_open() {
+    let app = TestApp::boot_frozen().await.expect("restored seed required");
+    app.db().read(|conn| {
+        assert!(campfire_db::Room::find_for_user(conn, KEVIN, 201306877)?.is_some());
+        let thread = campfire_db::ChannelThread::find(conn, 4)?;
+        assert_eq!(thread.room_id, 699448332);
+        assert!(!thread.readable_by(conn, KEVIN)?);
+        Ok(())
+    }).await.unwrap();
+    let mut browser = app.sign_in(KEVIN).await;
+    for path in ["/rooms/opens/201306877", "/rooms/201306877", "/rooms/201306877/messages"] {
+        for method in [Method::GET, Method::HEAD] {
+            let reply = browser.send(Req::new(method.clone(), &format!("{path}?thread=4"))).await;
+            assert_eq!(
+                (reply.status, reply.location()),
+                (StatusCode::MOVED_PERMANENTLY, Some("http://campfire.test/app/r/201306877")),
+                "{method} {path}"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn room_aliases_drop_rejected_messages_and_keep_unrelated_query_pairs() {
+    let app = TestApp::boot_frozen().await.expect("restored seed required");
+    let message_id = app.db().read(|conn| {
+        assert!(campfire_db::Room::find_for_user(conn, KEVIN, 201306877)?.is_some());
+        assert!(campfire_db::Room::find_for_user(conn, KEVIN, 699448332)?.is_none());
+        let messages = campfire_db::Message::last_page(conn, campfire_db::Timeline::Thread(4))?;
+        Ok(messages.first().expect("seeded board message").id)
+    }).await.unwrap();
+    let mut browser = app.sign_in(KEVIN).await;
+    for path in ["/rooms/opens/201306877", "/rooms/201306877", "/rooms/201306877/messages"] {
+        for method in [Method::GET, Method::HEAD] {
+            let query = format!("source=mail&message_id={message_id}&note=a%20b&source=push");
+            let reply = browser.send(Req::new(method.clone(), &format!("{path}?{query}"))).await;
+            assert_eq!(
+                (reply.status, reply.location()),
+                (StatusCode::MOVED_PERMANENTLY, Some("http://campfire.test/app/r/201306877?source=mail&note=a%20b&source=push")),
+                "{method} {path}"
+            );
+        }
+    }
 }

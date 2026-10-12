@@ -143,14 +143,14 @@
       "bookmarks": true,
       "notifications": true,
       "known_bug": null,
-      "notes": "A thread query becomes /app/r/:id/t/:thread, with m when message_id is also present, only when that thread (and message) belongs to this room and the viewer can see it. A cross-room, inaccessible or deleted id stays on the plain room route, as a value that isn't an id does. Names and values are percent-decoded first (thread=%39 is 9). The first well-formed id wins; a later duplicate is ignored. Other query parameters are kept.",
+      "notes": "A thread query becomes /app/r/:id/t/:thread, with m when message_id is also present, only when that thread (and message) belongs to this room and the viewer can see it. Rejected record parameters are removed from the plain room route; unrelated query pairs are kept. Names and values are percent-decoded first (thread=%39 is 9). The first well-formed id wins; a later duplicate is ignored. Other query parameters are kept.",
       "bookmark_notes": "Primary bookmark family. Old /rooms/:id links must keep working indefinitely.",
       "notification_notes": "Push payloads and huddle/board notices emit /rooms/:id; queued notifications must open after cutover.",
       "cases": [
         {"id": "room.query.thread_copied", "method": "GET", "path": "/rooms/{DESIGNERS}?thread={THREAD_DESIGNERS}&message_id={THREAD_MSG}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{DESIGNERS}/t/{THREAD_DESIGNERS}?m={THREAD_MSG}"}},
         {"id": "room.query.thread_only", "method": "GET", "path": "/rooms/{DESIGNERS}?thread={THREAD_DESIGNERS}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{DESIGNERS}/t/{THREAD_DESIGNERS}"}},
-        {"id": "room.query.thread_cross_room", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}"}},
-        {"id": "room.query.thread_inaccessible", "method": "GET", "path": "/rooms/{DESIGNERS}?thread={BOARD_THREAD}", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{DESIGNERS}?thread={BOARD_THREAD}"}}
+        {"id": "room.query.thread_cross_room", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{CLOSED_ROOM}"}},
+        {"id": "room.query.thread_inaccessible", "method": "GET", "path": "/rooms/{DESIGNERS}?thread={BOARD_THREAD}", "auth": "kevin", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{DESIGNERS}"}}
       ]
     },
     {
@@ -164,12 +164,12 @@
       "bookmarks": true,
       "notifications": true,
       "known_bug": null,
-      "notes": "A message_id query with no thread becomes /app/r/:id/m/:message_id when that message is a timeline message of this room and the viewer can see it. A cross-room, inaccessible, deleted or thread-reply id stays on the plain room route. Percent-decoding and duplicate handling match the thread query.",
+      "notes": "A message_id query with no thread becomes /app/r/:id/m/:message_id when that message is a timeline message of this room and the viewer can see it. A cross-room, inaccessible, deleted or thread-reply id is removed from the plain room route; unrelated query pairs are kept. Percent-decoding and duplicate handling match the thread query.",
       "bookmark_notes": "Primary bookmark family. Old /rooms/:id links must keep working indefinitely.",
       "notification_notes": "Push payloads and huddle/board notices emit /rooms/:id; queued notifications must open after cutover.",
       "cases": [
         {"id": "room.query.message", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?message_id={MSG_DAVID}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}},
-        {"id": "room.query.message_cross_room", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?message_id={THREAD_MSG}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{CLOSED_ROOM}?message_id={THREAD_MSG}"}}
+        {"id": "room.query.message_cross_room", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?message_id={THREAD_MSG}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 301, "location": "/app/r/{CLOSED_ROOM}"}}
       ]
     },
     {
