@@ -104,13 +104,14 @@ class GoogleConfigurationTest(unittest.TestCase):
         self.assertEqual("PRIVATE-OLD-KLIPY", settings["env"]["KLIPY_API_KEY"])
         self.assertNotIn("PRIVATE-", stdout + stderr)
 
-    def test_klipy_secret_reaches_persistent_and_runtime_environment_without_output(self):
+    def test_klipy_configuration_uses_once_env_interface_without_log_output(self):
         self.environ["KLIPY_API_KEY"] = "PRIVATE-NEW-KLIPY"
         self.assertEqual("PRIVATE-NEW-KLIPY", self.payload()["environment"]["KLIPY_API_KEY"])
         code, stdout, stderr, commands, settings = self.host_run(self.payload())
         self.assertEqual(0, code, stderr)
         self.assertEqual("PRIVATE-NEW-KLIPY", settings["env"]["KLIPY_API_KEY"])
         update = next(c for c in commands if c[:2] == ["once", "update"])
+        # Document ONCE 0.3.2's --env interface, including its transient argv visibility.
         self.assertIn("KLIPY_API_KEY=PRIVATE-NEW-KLIPY", update)
         self.assertTrue(json.loads(stdout)["existing_environment_preserved"])
         self.assertNotIn("PRIVATE-", stdout + stderr)

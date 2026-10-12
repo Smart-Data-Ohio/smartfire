@@ -1101,6 +1101,21 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
     Ok(c.render_as(StatusCode::OK, campfire_kit::response::JSON_UTF8, json))
 }
 
+pub const KLIPY_MARK_KEY: &str = "klipy_mark";
+const KLIPY_MARK_PURPOSE: &str = "klipy_import";
+
+pub fn klipy_import_mark(verifier: &dyn campfire_storage::Verifier, blob_key: &str) -> String {
+    verifier.generate(&Json::String(blob_key.into()).encode(), KLIPY_MARK_PURPOSE, None)
+}
+
+pub fn verified_klipy_image_import(verifier: &dyn campfire_storage::Verifier, blob: &Blob, now: jiff::Timestamp) -> bool {
+    matches!(blob.content_type.as_deref(), Some("image/gif" | "image/webp"))
+        && blob.metadata.get(KLIPY_MARK_KEY).and_then(Json::as_str).is_some_and(|mark| {
+            verifier.verified(mark, KLIPY_MARK_PURPOSE, now)
+                .is_some_and(|data| data == Json::String(blob.key.clone()).encode())
+        })
+}
+
 /// A blob [`create_direct_upload`] made, waiting for its bytes.
 pub struct DirectUpload {
     pub blob: Blob,
@@ -1128,7 +1143,7 @@ pub async fn create_direct_upload(
         return halt(upload_limit_response(c, limit)?);
     }
     if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
+        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_") && !key.starts_with("klipy_"));
     }
     metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();
@@ -1392,6 +1407,33 @@ fn random_hex(bytes: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn klipy_import_provenance_is_bound_to_the_blob_purpose_and_image_type() {
+        let verifier = campfire_storage::AppMessageVerifier::new(vec![7; 64]);
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        conn.execute_batch(campfire_db::schema::SCHEMA_SQL).unwrap();
+        let now = jiff::Timestamp::now();
+        let mut blob = campfire_storage::NewBlob::unfurl(b"image", Filename::new("image.gif"), Some("image/gif"), "local", false).insert(&conn, now).unwrap();
+        blob.metadata.set("klipy_id", Json::String("anything".into()));
+        assert!(!verified_klipy_image_import(&verifier, &blob, now));
+        blob.metadata.set(KLIPY_MARK_KEY, Json::String("forged".into()));
+        assert!(!verified_klipy_image_import(&verifier, &blob, now));
+        let wrong_purpose = campfire_storage::Verifier::generate(&verifier, &Json::String(blob.key.clone()).encode(), "blob_key", None);
+        blob.metadata.set(KLIPY_MARK_KEY, Json::String(wrong_purpose));
+        assert!(!verified_klipy_image_import(&verifier, &blob, now));
+        blob.metadata.set(KLIPY_MARK_KEY, Json::String(klipy_import_mark(&verifier, "another-blob")));
+        assert!(!verified_klipy_image_import(&verifier, &blob, now));
+        blob.metadata.set(KLIPY_MARK_KEY, Json::String(klipy_import_mark(&verifier, &blob.key)));
+        for content_type in ["image/gif", "image/webp"] {
+            blob.content_type = Some(content_type.into());
+            assert!(verified_klipy_image_import(&verifier, &blob, now));
+        }
+        for content_type in ["image/png", "image/jpeg", "video/mp4", "application/octet-stream"] {
+            blob.content_type = Some(content_type.into());
+            assert!(!verified_klipy_image_import(&verifier, &blob, now));
+        }
+    }
 
     #[test]
     fn branding_analysis_rejects_client_metadata() {

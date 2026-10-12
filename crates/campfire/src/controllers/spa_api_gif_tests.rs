@@ -970,3 +970,40 @@ async fn gifs_image_previews_use_animated_originals() {
         assert_eq!(file.body, bytes);
     }
 }
+
+
+#[tokio::test]
+async fn gifs_client_upload_metadata_cannot_forge_animated_previews() {
+    for classic in [true, false] {
+        let (app, server) = klipy_app().await;
+        let mut b = app.sign_in(DAVID).await;
+        let metadata = json!({"klipy_id":"anything","klipy_mark":"forged","klipy_imported":true,"klipy_slug":"fake","klipy_title":"Fake","klipy_attribution":"Fake","klipy_future_field":true,"client_note":"keep me"});
+        let checksum = campfire_storage::key::checksum(GIF_BYTES);
+        let (signed_id, upload_url) = if classic {
+            let created = post_json(&mut b, "/rails/active_storage/direct_uploads", &json!({"blob":{"filename":"ordinary.gif","byte_size":GIF_BYTES.len(),"checksum":checksum,"content_type":"image/gif","metadata":metadata}})).await;
+            assert_eq!(created.status, StatusCode::OK, "{}", created.text());
+            let upload: Value = parse(&created);
+            (upload["signed_id"].as_str().unwrap().to_owned(), upload["direct_upload"]["url"].as_str().unwrap().to_owned())
+        } else {
+            let created = post_json(&mut b, "/api/v1/uploads", &json!({"filename":"ordinary.gif","byteSize":GIF_BYTES.len(),"checksum":checksum,"contentType":"image/gif","metadata":metadata})).await;
+            assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+            let upload: api::DirectUpload = parse(&created);
+            (upload.signed_id, upload.upload_url)
+        };
+        let put = b.send(Req::new(Method::PUT, &upload_url).header("content-type", "image/gif").header("content-length", &GIF_BYTES.len().to_string()).body(GIF_BYTES)).await;
+        assert_eq!(put.status, StatusCode::NO_CONTENT, "{}", put.text());
+        let reply = post_json(&mut b, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &json!({"clientMessageId":"ordinary-upload","markdownSource":"Uploaded GIF","attachmentSignedId":signed_id})).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let message: api::MessageDTO = parse(&reply);
+        let attachment = message.attachment.as_ref().or_else(|| message.attachments.as_ref().and_then(|files| files.first())).expect("the ordinary uploaded GIF");
+        assert_ne!(attachment.thumbnail_url.as_deref(), Some(attachment.url.as_str()), "client metadata must not opt ordinary uploads into animated originals");
+        assert!(attachment.thumbnail_url.as_ref().unwrap().contains("/representations/redirect/"));
+        let id = message.id;
+        let stored: String = app.db().read(move |conn| Ok(conn.query_row("SELECT b.metadata FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.record_id=? LIMIT 1", [id], |row| row.get(0))?)).await.unwrap();
+        let stored: Value = serde_json::from_str(&stored).unwrap();
+        assert!(stored.as_object().unwrap().keys().all(|key| !key.starts_with("klipy_")), "{stored}");
+        assert_eq!(stored["uploader_id"], DAVID);
+        if classic { assert_eq!(stored["client_note"], "keep me"); }
+        assert!(server.received().is_empty(), "ordinary uploads do not contact KLIPY");
+    }
+}

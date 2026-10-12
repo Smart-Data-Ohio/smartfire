@@ -30,7 +30,8 @@ accompany the legacy `attachmentSignedId`. The server resolves the slug,
 downloads a rendition, and commits its blob with the message. Rejected model
 writes and concurrent duplicate sends do not retain unused imported blobs.
 Image GIF attachments use the stored animated original as their thumbnail URL.
-The mock uses the same contract.
+The mock uses the same contract. Client uploads cannot set reserved `klipy_`
+metadata; GIF/WebP imports require a blob-bound server signature for animated previews.
 The stored blob keeps `uploader_id`, `klipy_id`, `klipy_slug`, `klipy_title`,
 and `klipy_attribution` in existing metadata. No schema migration is needed.
 
