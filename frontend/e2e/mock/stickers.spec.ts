@@ -7,6 +7,7 @@ import {
   expectTouchTargets,
   matrix,
   openApp,
+  PHONE,
   PHONE_TOUCH,
   ROOM_IDS,
   test,
@@ -276,6 +277,42 @@ for (const caption of ["", "A sticker caption"]) {
     },
   );
 }
+
+test("a deleted sticker's unbroken 30-character name stays inside a phone Saved row", async ({
+  page,
+}) => {
+  const name = "W".repeat(30);
+
+  await page.setViewportSize(PHONE);
+  await openApp(page, `r/${GENERAL}`);
+  const picker = await openPicker(page);
+  await picker.getByRole("option", { name: "Dance" }).click();
+  const row = timeline(page).last();
+  await expect(row.getByRole("img", { name: "Sticker: Dance" })).toBeVisible();
+  await messageAction(row, "Save for later", true);
+
+  // The sticker is renamed to the long name, then deleted: the message keeps the name it had.
+  const state = await (await page.request.get("/__mock/state")).json();
+  const headers = { "X-CSRF-Token": state.csrfToken };
+  const renamed = await page.request.patch("/api/v1/admin/stickers/2", {
+    headers,
+    data: { name },
+  });
+  expect(renamed.ok()).toBe(true);
+  const deleted = await page.request.delete("/api/v1/admin/stickers/2", { headers });
+  expect(deleted.ok()).toBe(true);
+
+  await page.goto("/app/saved");
+  const saved = page.locator(".saved-row").filter({ hasText: `${name} · Sticker deleted` });
+  await expect(saved).toHaveCount(1);
+  const savedRow = await saved.boundingBox();
+  const savedPlaceholder = await saved.locator(".message-sticker-deleted").boundingBox();
+  expect(savedPlaceholder).not.toBeNull();
+  expect((savedPlaceholder?.x ?? 0) + (savedPlaceholder?.width ?? 0)).toBeLessThanOrEqual(
+    (savedRow?.x ?? 0) + (savedRow?.width ?? 0) + 1,
+  );
+  await expectNoHorizontalOverflow(page);
+});
 
 test.describe("on a touch phone", () => {
   test.use(PHONE_TOUCH);
