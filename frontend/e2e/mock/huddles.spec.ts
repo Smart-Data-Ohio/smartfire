@@ -1,12 +1,15 @@
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { seededReplyId, THREAD_IDS } from "../../mock/s2/seed.ts";
 import {
   expect,
   expectTouchTargets,
   matrix,
   PHONE_TOUCH,
+  postMessage,
   ROOM_IDS,
   shot,
+  simulateKeyboard,
+  TABLET,
   type Theme,
   test,
   USER_IDS,
@@ -56,6 +59,33 @@ function dock(page: Page, phone = false) {
 async function join(page: Page, phone = false): Promise<void> {
   await launcher(page).click();
   await expect(dock(page, phone).getByRole("status")).toContainText("Huddle active");
+}
+
+type Box = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
+async function box(locator: Locator): Promise<Box> {
+  const found = await locator.boundingBox();
+
+  expect(found, "the element is laid out").not.toBeNull();
+
+  return found ?? { x: 0, y: 0, width: 0, height: 0 };
+}
+
+/** `inner` lies wholly inside `outer`, give or take a pixel's rounding. */
+function expectInside(inner: Box, outer: Box, what: string): void {
+  expect(inner.x, `${what}: left edge`).toBeGreaterThanOrEqual(outer.x - 1);
+  expect(inner.y, `${what}: top edge`).toBeGreaterThanOrEqual(outer.y - 1);
+  expect(inner.x + inner.width, `${what}: right edge`).toBeLessThanOrEqual(
+    outer.x + outer.width + 1,
+  );
+  expect(inner.y + inner.height, `${what}: bottom edge`).toBeLessThanOrEqual(
+    outer.y + outer.height + 1,
+  );
 }
 
 /** Calls a hook on the fake transport. */
@@ -287,6 +317,158 @@ test("a remote screen share opens in theater mode", async ({ page }) => {
   await expect(page.locator(".call-view[data-theater]")).toHaveCount(0);
 });
 
+test("theater mode keeps the room's chat beside the share", async ({ page, request }) => {
+  await open(page, LOUNGE);
+  await join(page);
+  await hook(page, `window.__smartfireHuddle.remoteScreen(${USER_IDS.jonah}, true)`);
+  await page.locator(".call-share").getByRole("button", { name: "Theater mode" }).click();
+
+  const view = page.locator("section.call-view[data-theater]");
+  const composer = page.getByRole("textbox", { name: /^Message/ });
+
+  await expect(view).toHaveAttribute("data-chat", "true");
+  await expect(composer).toBeVisible();
+
+  // The chat is a column beside the stage, not under it.
+  const stage = await view.boundingBox();
+  const field = await composer.boundingBox();
+
+  expect(field?.x ?? 0, "the composer sits right of the stage").toBeGreaterThanOrEqual(
+    (stage?.x ?? 0) + (stage?.width ?? 0) - 1,
+  );
+
+  await composer.fill("Watching along in theater mode");
+  await composer.press("Enter");
+  await expect(
+    page.locator("[data-message-row]", { hasText: "Watching along in theater mode" }),
+  ).toHaveAttribute("data-message-id", /^\d+$/);
+
+  // Someone else's message arrives live beside the share.
+  await postMessage(request, {
+    roomId: LOUNGE,
+    userId: USER_IDS.maya,
+    markdown: "Nice stream, Jonah",
+  });
+  await expect(page.locator("[data-message-row]", { hasText: "Nice stream, Jonah" })).toBeVisible();
+  await expect(view.locator(".call-share[data-expanded] video")).toBeVisible();
+  await page.mouse.move(0, 0);
+  await shot(page, "huddle-theater-chat", "dark");
+
+  // Hidden, the stage covers the room again; the choice holds when the share expands again.
+  await view.getByRole("button", { name: "Hide chat" }).click();
+  await expect(view).not.toHaveAttribute("data-chat");
+  await view.getByRole("button", { name: "Exit theater mode" }).click();
+  await page.locator(".call-share").getByRole("button", { name: "Theater mode" }).click();
+  await expect(view).toBeVisible();
+  await expect(view).not.toHaveAttribute("data-chat");
+  await view.getByRole("button", { name: "Show chat" }).click();
+  await expect(view).toHaveAttribute("data-chat", "true");
+});
+
+test("on a tablet, theater mode stacks the share over the room's chat", async ({ page }) => {
+  await page.setViewportSize(TABLET);
+  await open(page, LOUNGE);
+  await join(page);
+  await hook(page, `window.__smartfireHuddle.remoteScreen(${USER_IDS.jonah}, true)`);
+  await page.locator(".call-share").getByRole("button", { name: "Theater mode" }).click();
+
+  const view = page.locator("section.call-view[data-theater]");
+  const share = view.locator(".call-share[data-expanded]");
+  const composer = page.getByRole("textbox", { name: /^Message/ });
+
+  await expect(view).toHaveAttribute("data-chat", "true");
+
+  const video = await share.boundingBox();
+  const field = await composer.boundingBox();
+
+  expect(field?.y ?? 0, "the composer sits under the share").toBeGreaterThanOrEqual(
+    (video?.y ?? 0) + (video?.height ?? 0),
+  );
+  await expect(page.locator(".timeline")).toBeVisible();
+});
+
+test("beside an open thread, theater mode still fits the share and the chat", async ({
+  page,
+  request,
+}) => {
+  // 1100 px leaves the room under 400 px once the thread pane is open.
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await postMessage(request, {
+    roomId: LOUNGE,
+    userId: USER_IDS.maya,
+    markdown: "A thread about the stream",
+  });
+  await open(page, LOUNGE);
+  await join(page);
+  await hook(page, `window.__smartfireHuddle.remoteScreen(${USER_IDS.jonah}, true)`);
+  await page.locator(".call-share").getByRole("button", { name: "Theater mode" }).click();
+
+  const view = page.locator("section.call-view[data-theater]");
+  const chat = page.locator(".room > .room-part").last();
+  const message = chat.locator("[data-message-row]", { hasText: "A thread about the stream" });
+  const actions = message.getByRole("toolbar", { name: "Message actions" });
+
+  await expect(view).toHaveAttribute("data-chat", "true");
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await message.hover();
+    await expect(actions).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await actions.getByRole("button", { name: "Reply in thread" }).click();
+  await expect(page.locator("aside.right-pane")).toBeVisible();
+  await expect(view).toHaveAttribute("data-chat", "true");
+
+  const room = await box(page.locator(".room"));
+  const video = await box(view.locator(".call-share[data-expanded] video"));
+
+  expect(video.width, "the share keeps a usable width").toBeGreaterThanOrEqual(240);
+  expectInside(video, room, "the share");
+  expectInside(
+    await box(view.getByRole("button", { name: "Exit theater mode" })),
+    room,
+    "the share's controls",
+  );
+
+  const composer = chat.getByRole("textbox", { name: /^Message/ });
+  const send = chat.getByRole("button", { name: "Send message", exact: true });
+
+  await composer.fill("Sent with the button beside a thread");
+  expectInside(await box(send), await box(chat), "the send button");
+  await send.click({ timeout: 5000 });
+  await expect(
+    chat.locator("[data-message-row]", { hasText: "Sent with the button beside a thread" }),
+  ).toHaveAttribute("data-message-id", /^\d+$/);
+});
+
+test("stacked theater mode keeps the composer's suggestions over the share", async ({ page }) => {
+  // A short landscape window: the share and the composer leave the timeline little room.
+  await page.setViewportSize({ width: 1024, height: 480 });
+  await open(page, LOUNGE);
+  await join(page);
+  await hook(page, `window.__smartfireHuddle.remoteScreen(${USER_IDS.jonah}, true)`);
+  await page.locator(".call-share").getByRole("button", { name: "Theater mode" }).click();
+
+  const view = page.locator("section.call-view[data-theater]");
+  const chat = page.locator(".room > .room-part").last();
+  const composer = chat.getByRole("textbox", { name: /^Message/ });
+
+  await expect(view).toHaveAttribute("data-chat", "true");
+  await composer.click();
+  await composer.pressSequentially("Over to @ma");
+
+  const option = page.getByRole("listbox").getByRole("option", { name: /Maya Okafor/ });
+
+  await expect(option).toBeVisible();
+
+  // The list reaches up over the share, where the call used to cover it.
+  const list = await box(page.getByRole("listbox"));
+  const share = await box(view.locator(".call-share[data-expanded]"));
+
+  expect(list.y, "the suggestions overlap the share").toBeLessThan(share.y + share.height);
+  await option.click({ timeout: 5000 });
+  await expect(composer).toHaveValue(`Over to <@${USER_IDS.maya}> `);
+});
+
 test("Smartfire's motion setting overrides the system one in a call", async ({ page }) => {
   await open(page, LOUNGE);
   await join(page);
@@ -348,6 +530,100 @@ test.describe("on a touch phone", () => {
 
     await bar.getByRole("button", { name: "Hide call" }).click();
     await expect(view).toHaveCount(0);
+  });
+
+  test("theater mode on a phone: the share on top, the chat under it", async ({ page }) => {
+    await open(page, LOUNGE);
+    await join(page, true);
+    await hook(page, `window.__smartfireHuddle.remoteScreen(${USER_IDS.jonah}, true)`);
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await page.locator(".call-share").getByRole("button", { name: "Theater mode" }).click();
+
+    const view = page.locator("section.call-view[data-theater]");
+    const share = view.locator(".call-share[data-expanded]");
+    const chat = page.locator(".room-part").last();
+    const composer = page.getByRole("textbox", { name: /^Message/ });
+
+    await expect(view).toHaveAttribute("data-chat", "true");
+    await expect(chat).not.toHaveAttribute("inert");
+    await expect(composer).toBeVisible();
+
+    const video = await share.boundingBox();
+    const field = await composer.boundingBox();
+
+    expect(video?.height ?? 0, "the share keeps a usable size").toBeGreaterThanOrEqual(150);
+    expect(field?.y ?? 0, "the composer sits under the share").toBeGreaterThanOrEqual(
+      (video?.y ?? 0) + (video?.height ?? 0),
+    );
+
+    await composer.fill("Sent from the phone's theater");
+    await page.getByRole("button", { name: "Send message", exact: true }).tap();
+    await expect(
+      page.locator("[data-message-row]", { hasText: "Sent from the phone's theater" }),
+    ).toHaveAttribute("data-message-id", /^\d+$/);
+    await expect(share.locator("video")).toBeVisible();
+    await shot(page, "huddle-theater-chat-phone", "light");
+
+    // Hidden, the share has the screen to itself and the covered chat is out of reach again.
+    await share.getByRole("button", { name: "Hide chat" }).tap();
+    await expect(view).not.toHaveAttribute("data-chat");
+    await expect(chat).toHaveAttribute("inert", "");
+
+    const viewBox = await view.boundingBox();
+    const room = await page.locator(".room").boundingBox();
+
+    expect(viewBox?.height ?? 0, "the call fills the room").toBeGreaterThanOrEqual(
+      (room?.height ?? 999) - 1,
+    );
+  });
+
+  test("theater mode on a phone keeps the composer above an overlaid keyboard", async ({
+    page,
+  }) => {
+    // An iPhone SE whose keyboard leaves 350 px of the page visible.
+    const visible = 350;
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await open(page, LOUNGE);
+    await join(page, true);
+    await hook(page, `window.__smartfireHuddle.remoteScreen(${USER_IDS.jonah}, true)`);
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await page.locator(".call-share").getByRole("button", { name: "Theater mode" }).click();
+
+    const view = page.locator("section.call-view[data-theater]");
+    const chat = page.locator(".room > .room-part").last();
+    const composer = chat.getByRole("textbox", { name: /^Message/ });
+    const card = chat.locator(".composer-card");
+
+    await expect(view).toHaveAttribute("data-chat", "true");
+    await composer.focus();
+    await simulateKeyboard(page, 667 - visible);
+    await expect(page.locator("html")).toHaveAttribute("data-keyboard", "open");
+
+    // A draft of a few lines grows the composer; it still ends above the keyboard.
+    for (const draft of [
+      "Watching on the bus",
+      "Watching on the bus\nwith the sound off\nfor now",
+    ]) {
+      await composer.fill(draft);
+
+      const field = await box(card);
+      const send = await box(chat.getByRole("button", { name: "Send message", exact: true }));
+      const share = await view.locator(".call-share[data-expanded]").boundingBox();
+
+      expect(field.y + field.height, "the composer ends above the keyboard").toBeLessThanOrEqual(
+        visible,
+      );
+      expect(send.y + send.height, "the send button is above the keyboard").toBeLessThanOrEqual(
+        visible,
+      );
+
+      if (share !== null && share.height > 0) {
+        expect(share.y + share.height, "the share stays above the chat").toBeLessThanOrEqual(
+          field.y,
+        );
+      }
+    }
   });
 
   test("the full-screen call is a page: it takes focus, Escape and Back close it", async ({

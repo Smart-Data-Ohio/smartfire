@@ -79,13 +79,13 @@
     text-align: center;
   }
 
+  /* The whole logo, as wide as a wordmark needs. */
   .auth-view-logo {
-    width: 48px;
+    width: auto;
+    max-width: min(100%, 240px);
     height: 48px;
     margin-block-end: var(--space-2);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 0 0 1px var(--shadow-ring);
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .auth-view-title {
@@ -333,11 +333,13 @@
     text-align: center;
   }
 
-  /* ── A dead invite: the workspace's logo marked with why ── */
+  /* ── A dead invite: the workspace's logo, with a badge beside it saying why ── */
 
+  /* Room for the badge on both sides, so it never covers the logo and the logo stays centred. */
   .auth-view-invite-mark {
     position: relative;
     display: inline-grid;
+    padding-inline: calc(24px + var(--space-1));
     margin-block-end: var(--space-2);
   }
 
@@ -354,16 +356,14 @@
 
   .auth-view-invite-badge {
     position: absolute;
-    inset-block-end: -6px;
-    inset-inline-end: -6px;
+    inset-block-end: 0;
+    inset-inline-end: 0;
     display: grid;
     place-items: center;
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    /* Opaque over the logo's corner, ringed in the card's colour so it reads as cut out. */
     background: color-mix(in oklch, var(--text-muted) 16%, var(--bg-pane));
-    box-shadow: 0 0 0 3px var(--bg-pane);
     color: var(--text-muted);
   }
 
