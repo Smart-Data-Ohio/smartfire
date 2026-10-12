@@ -1,18 +1,30 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
+import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
-import { expect, ROOM_IDS, shot, THEMES, type Theme, test, USER_IDS } from "./support.ts";
+import type { PinList } from "../../src/gen/PinList.ts";
+import type { SearchResults } from "../../src/gen/SearchResults.ts";
+import {
+  expect,
+  openHeaderTool,
+  ROOM_IDS,
+  shot,
+  THEMES,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 /**
  * A Markdown document pasted into a message (headings, a rule, lists) reads with a chat-sized
  * rhythm: more room above a heading than below it, a visible rule with space on both sides, and
  * list items a step apart, while ordinary paragraphs keep their 4 px step so a short message
- * doesn't change.
+ * doesn't change. Clamped previews (pins, search hits) still show whole lines.
  */
 
 const VIEWPORT = { width: 1280, height: 1200 } as const;
 
-/** What crates/richtext renders for the document the person pasted (abridged). */
-const DOCUMENT_BODY =
+/** The blocks of the document the person pasted (abridged). */
+const DOCUMENT_BLOCKS =
   "<h1>Smartfire: What It Can Do</h1>" +
   "<p>Smartfire is Smart Data's team workspace, where people and AI agents work side by side. " +
   "It brings chat, voice and video, project tracking, and the tools we already use into one place.</p>" +
@@ -33,6 +45,21 @@ const DOCUMENT_BODY =
   "</ul>" +
   "<h3>Emoji and fun</h3>" +
   "<p>Custom emoji, stickers and GIFs.</p>";
+
+/** A message body as production renders it: the blocks in a `trix-content` wrapper (content.rs). */
+function wrapped(blocks: string): string {
+  return `<div class="trix-content">\n  ${blocks}\n</div>\n`;
+}
+
+/** Ten one-line list items, as production renders them. */
+const LIST_BODY = wrapped(
+  `<ul>${Array.from({ length: 10 }, (_, index) => `<li>Item ${index + 1}</li>`).join("")}</ul>`,
+);
+
+/** `messages` with message `id`'s body swapped for `bodyHtml`. */
+function swapBody(messages: MessageDTO[], id: number, bodyHtml: string): MessageDTO[] {
+  return messages.map((message) => (message.id === id ? { ...message, bodyHtml } : message));
+}
 
 function row(page: Page, messageId: number): Locator {
   return page.locator(`[data-message-row][data-message-id="${messageId}"]`).first();
@@ -97,77 +124,158 @@ function resolveToken(page: Page, property: "font-size" | "color", token: string
   );
 }
 
-for (const theme of THEMES) {
-  test(`a pasted Markdown document keeps a compact rhythm (${theme})`, async ({
-    page,
-    request,
-  }) => {
-    const id = await post(request, "The document");
+/** Production's wrapped body, and the bare blocks the mock and some other producers emit. */
+const RENDERINGS = [
+  { name: "wrapped", html: wrapped(DOCUMENT_BLOCKS), container: ":scope > .trix-content" },
+  { name: "bare", html: DOCUMENT_BLOCKS, container: ":scope" },
+] as const;
 
-    await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages*`, async (route) => {
-      const response = await route.fetch();
-      const reply: MessagePage = await response.json();
+for (const rendering of RENDERINGS) {
+  for (const theme of rendering.name === "wrapped" ? THEMES : (["light"] as const)) {
+    test(`a pasted Markdown document keeps a compact rhythm (${rendering.name}, ${theme})`, async ({
+      page,
+      request,
+    }) => {
+      const id = await post(request, "The document");
 
-      await route.fulfill({
-        response,
-        json: {
-          ...reply,
-          messages: reply.messages.map((message) =>
-            message.id === id ? { ...message, bodyHtml: DOCUMENT_BODY } : message,
-          ),
-        },
+      await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages*`, async (route) => {
+        const response = await route.fetch();
+        const reply: MessagePage = await response.json();
+
+        await route.fulfill({
+          response,
+          json: { ...reply, messages: swapBody(reply.messages, id, rendering.html) },
+        });
       });
+
+      await openOn(page, id, theme);
+
+      const body = row(page, id).locator(".message-body");
+      const blocks = body.locator(rendering.container);
+
+      await expect(body.locator("h1")).toBeVisible();
+      await row(page, id).scrollIntoViewIfNeeded();
+
+      if (rendering.name === "wrapped") {
+        await shot(page, "message-markdown", theme);
+      }
+
+      const h1 = await metrics(blocks.locator(":scope > h1"));
+      const intro = await metrics(blocks.locator(":scope > p").first());
+      const rule = await metrics(blocks.locator(":scope > hr"));
+      const h2 = await metrics(blocks.locator(":scope > h2").first());
+      const list = await metrics(blocks.locator(":scope > ul").first());
+      const secondH2 = await metrics(blocks.locator(":scope > h2").nth(1));
+      const h3 = await metrics(blocks.locator(":scope > h3"));
+      const last = await metrics(blocks.locator(":scope > :last-child"));
+      const outer = await metrics(body);
+
+      // The first block sits on the body's top edge; the last adds nothing below.
+      expect(h1.marginTop).toBe(0);
+      expect(h1.top).toBeCloseTo(outer.top, 0);
+      expect(last.marginBottom).toBe(0);
+      expect(last.bottom).toBeCloseTo(outer.bottom, 0);
+
+      // Chat-sized headings from the type scale, semibold.
+      expect(`${h1.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-page"));
+      expect(`${h2.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-title"));
+      expect(`${h3.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-body"));
+      expect(h1.fontWeight).toBe("600");
+
+      // The rule is visible, in the strong border colour, with room on both sides.
+      expect(rule.borderTopWidth).toBe(1);
+      expect(rule.borderTopStyle).toBe("solid");
+      expect(rule.borderTopColor).toBe(await resolveToken(page, "color", "--border-strong"));
+      expect(rule.top - intro.bottom).toBeGreaterThanOrEqual(12);
+      expect(h2.top - rule.bottom).toBeGreaterThanOrEqual(12);
+
+      // A heading keeps more space above it than below: it belongs to what follows.
+      const aboveH2 = secondH2.top - list.bottom;
+      const belowH2 = list.top - h2.bottom;
+
+      expect(aboveH2).toBeGreaterThanOrEqual(16);
+      expect(belowH2).toBeGreaterThanOrEqual(3.5);
+      expect(belowH2).toBeLessThanOrEqual(4.5);
+
+      // List items and nested lists sit a small step apart.
+      const items = blocks.locator(":scope > ul").first().locator(":scope > li");
+
+      expect((await metrics(items.nth(1))).marginTop).toBe(2);
+      expect((await metrics(blocks.locator("li > ul"))).marginTop).toBe(2);
     });
-
-    await openOn(page, id, theme);
-
-    const body = row(page, id).locator(".message-body");
-
-    await expect(body.locator("h1")).toBeVisible();
-    await row(page, id).scrollIntoViewIfNeeded();
-    await shot(page, "message-markdown", theme);
-
-    const h1 = await metrics(body.locator(":scope > h1"));
-    const intro = await metrics(body.locator(":scope > p").first());
-    const rule = await metrics(body.locator(":scope > hr"));
-    const h2 = await metrics(body.locator(":scope > h2").first());
-    const list = await metrics(body.locator(":scope > ul").first());
-    const secondH2 = await metrics(body.locator(":scope > h2").nth(1));
-    const h3 = await metrics(body.locator(":scope > h3"));
-    const last = await metrics(body.locator(":scope > :last-child"));
-
-    // The first block sits on the body's top edge; the last adds nothing below.
-    expect(h1.marginTop).toBe(0);
-    expect(last.marginBottom).toBe(0);
-
-    // Chat-sized headings from the type scale, semibold.
-    expect(`${h1.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-page"));
-    expect(`${h2.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-title"));
-    expect(`${h3.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-body"));
-    expect(h1.fontWeight).toBe("600");
-
-    // The rule is visible, in the strong border colour, with room on both sides.
-    expect(rule.borderTopWidth).toBe(1);
-    expect(rule.borderTopStyle).toBe("solid");
-    expect(rule.borderTopColor).toBe(await resolveToken(page, "color", "--border-strong"));
-    expect(rule.top - intro.bottom).toBeGreaterThanOrEqual(12);
-    expect(h2.top - rule.bottom).toBeGreaterThanOrEqual(12);
-
-    // A heading keeps more space above it than below: it belongs to what follows.
-    const aboveH2 = secondH2.top - list.bottom;
-    const belowH2 = list.top - h2.bottom;
-
-    expect(aboveH2).toBeGreaterThanOrEqual(16);
-    expect(belowH2).toBeLessThanOrEqual(4.5);
-    expect(aboveH2).toBeGreaterThan(belowH2 * 2);
-
-    // List items and nested lists sit a small step apart.
-    const items = body.locator(":scope > ul").first().locator(":scope > li");
-
-    expect((await metrics(items.nth(1))).marginTop).toBe(2);
-    expect((await metrics(body.locator("li > ul"))).marginTop).toBe(2);
-  });
+  }
 }
+
+/** Every one of the first `count` list items in `body` shows whole: none is cut by its bottom. */
+async function expectWholeLines(body: Locator, count: number): Promise<void> {
+  const box = await metrics(body);
+  const items = body.locator("li");
+
+  for (let index = 0; index < count; index += 1) {
+    const item = await metrics(items.nth(index));
+
+    expect(item.bottom, `item ${index + 1} ends inside the preview`).toBeLessThanOrEqual(
+      box.bottom + 0.5,
+    );
+  }
+}
+
+test("a pinned list shows eight whole lines", async ({ page }) => {
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/pins*`, async (route) => {
+    const response = await route.fetch();
+    const reply: PinList = await response.json();
+
+    await route.fulfill({
+      response,
+      json: {
+        ...reply,
+        messages: reply.messages.map((message) => ({ ...message, bodyHtml: LIST_BODY })),
+      },
+    });
+  });
+
+  await page.setViewportSize(VIEWPORT);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`/app/r/${ROOM_IDS.general}`);
+  await openHeaderTool(page, /^Pinned messages/);
+
+  const body = page.locator("aside.right-pane .pin-card-body").first();
+
+  await expect(body.locator("li").first()).toHaveText("Item 1");
+
+  // Eight 22 px lines, no step between them, and the eighth whole under the cap.
+  expect((await metrics(body.locator("li").nth(1))).marginTop).toBe(0);
+  expect((await metrics(body)).height).toBeCloseTo(8 * 22, 0);
+  await expectWholeLines(body, 8);
+});
+
+test("a search hit's list shows five whole lines", async ({ page, request }) => {
+  const id = await post(request, "pasteddocument list");
+
+  await page.route("**/api/v1/search*", async (route) => {
+    const response = await route.fetch();
+    const reply: SearchResults = await response.json();
+
+    await route.fulfill({
+      response,
+      json: { ...reply, messages: swapBody(reply.messages, id, LIST_BODY) },
+    });
+  });
+
+  await page.setViewportSize(VIEWPORT);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/app/search?q=pasteddocument");
+
+  const body = page.locator("[data-search-hit] .search-hit-body").first();
+
+  await expect(body.locator("li").first()).toHaveText("Item 1");
+
+  // The clamp ends the box on the fifth line, whatever the step between items.
+  await expectWholeLines(body, 5);
+  expect((await metrics(body.locator("li").nth(5))).top).toBeGreaterThanOrEqual(
+    (await metrics(body)).bottom - 0.5,
+  );
+});
 
 test("ordinary short messages keep their height", async ({ page, request }) => {
   await post(request, "Are we still on for the demo at three?");

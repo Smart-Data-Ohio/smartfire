@@ -693,6 +693,22 @@
     -webkit-line-clamp: 8;
   }
 
+  /* Eight whole lines under the cap: a pasted document's headings, paragraph and list steps and
+     rule (room.css) flatten to the body's own lines, as the saved list's preview does. */
+  .pin-card-body.message-body :is(p, ul, ol, li, blockquote, h1, h2, h3, h4, h5, h6) {
+    margin: 0;
+  }
+
+  .pin-card-body.message-body :is(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+  }
+
+  .pin-card-body.message-body hr {
+    display: none;
+  }
+
   .pin-card-file {
     color: var(--text-muted);
     font-size: var(--text-sidebar);
