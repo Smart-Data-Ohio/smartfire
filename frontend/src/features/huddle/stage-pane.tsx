@@ -5,6 +5,7 @@
  * with an announcement. The roster stays live over the room's `stage.updated` events.
  */
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import type { StageState } from "../../gen/StageState.ts";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
 import { store, useStore } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
@@ -363,6 +364,19 @@ function useHandAnnouncements(roomId: number, manage: boolean): string {
   return announcement;
 }
 
+export function StageAudienceStatus({
+  stage,
+}: {
+  readonly stage: Pick<StageState, "audienceCount" | "audienceBudget" | "audienceAvailability">;
+}) {
+  return (
+    <p role="status">
+      {stage.audienceCount} / {stage.audienceBudget} listening ·{" "}
+      {stage.audienceAvailability === "full" ? "Full" : "Open"}
+    </p>
+  );
+}
+
 export function StagePane({ roomId }: { readonly roomId: number }) {
   const kind = useStore((state) => state.sidebar.rows[roomId]?.room.kind ?? null);
   const stage = useStore((state) => state.stages[roomId] ?? null);
@@ -461,6 +475,7 @@ export function StagePane({ roomId }: { readonly roomId: number }) {
   return (
     <PaneFrame title="Stage" subtitle={<RoomName roomId={roomId} />}>
       <div className="stage-pane">
+        <StageAudienceStatus stage={stage} />
         <StageControls roomId={roomId} viewer={viewer} />
         <p className="visually-hidden" aria-live="polite">
           {announcement}

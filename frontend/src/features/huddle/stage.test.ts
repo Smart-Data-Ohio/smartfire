@@ -39,6 +39,9 @@ const NAMES = new Map([
 const groups = stageGroups(
   {
     roomId: 12,
+    audienceCount: 0,
+    audienceBudget: 300,
+    audienceAvailability: "open",
     live: null,
     members: [
       member(1, "host"),
@@ -124,7 +127,14 @@ describe("a manager's actions", () => {
 
   it("lets a muted administrator lift their own mute", () => {
     const self = stageGroups(
-      { roomId: 12, live: null, members: [member(2, "speaker", { serverMuted: true })] },
+      {
+        roomId: 12,
+        audienceCount: 0,
+        audienceBudget: 300,
+        audienceAvailability: "open",
+        live: null,
+        members: [member(2, "speaker", { serverMuted: true })],
+      },
       () => ({ name: "Adam", administrator: true }),
     ).speakers[0];
 

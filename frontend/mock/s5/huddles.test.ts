@@ -172,6 +172,61 @@ describe("huddles", () => {
 });
 
 describe("stages", () => {
+  it("publishes stage audience availability and refuses full listeners", async () => {
+    const { server } = harness();
+    const initial = await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`);
+    expect(initial.stage).toMatchObject({
+      audienceCount: 0,
+      audienceBudget: 300,
+      audienceAvailability: "open",
+    });
+    await expectStatus(server, "PATCH", "/api/v1/admin/workspace", { stageAudienceBudget: 1 }, 200);
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: users.priya,
+      role: "host",
+    });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: viewer,
+      role: "listener",
+    });
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    await send(server, "POST", "/__mock/huddle-join", { roomId: townHall, userId: users.jonah });
+    const full = await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`);
+    expect(full.stage).toMatchObject({
+      audienceCount: 1,
+      audienceBudget: 1,
+      audienceAvailability: "full",
+    });
+    const refused = await send(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {});
+    expect(refused.status).toBe(409);
+    expect(errorOf(refused.json)).toEqual({
+      tag: "StageAudienceFull",
+      message: "This stage is full",
+    });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: viewer,
+      role: "speaker",
+    });
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    expect(
+      (await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage.audienceCount,
+    ).toBe(1);
+    await send(server, "POST", "/__mock/huddle-leave", { roomId: townHall, userId: users.jonah });
+    await send(server, "POST", "/__mock/stage-role", {
+      roomId: townHall,
+      userId: viewer,
+      role: "listener",
+    });
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    await expectStatus(server, "POST", `/api/v1/rooms/${townHall}/huddle`, {}, 201);
+    expect(
+      (await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`)).stage.audienceCount,
+    ).toBe(1);
+  });
+
   it("serves the roster with the viewer as host", async () => {
     const { server } = harness();
     const detail = await get<StageDetail>(server, `/api/v1/rooms/${townHall}/stage`);

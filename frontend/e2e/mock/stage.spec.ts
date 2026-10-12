@@ -91,6 +91,38 @@ if (SHOTS) {
   });
 }
 
+test("the stage shows its audience budget and explains full admission", async ({
+  page,
+  request,
+}) => {
+  await open(page, TOWN_HALL);
+  await openStage(page);
+  await expect(stagePane(page).getByRole("status")).toHaveText("0 / 300 listening · Open");
+  const state = await (await request.get("/__mock/state")).json();
+
+  const saved = await request.patch("/api/v1/admin/workspace", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { stageAudienceBudget: 1 },
+  });
+
+  expect(saved.ok()).toBe(true);
+  await control(request, "stage-role", { roomId: TOWN_HALL, userId: USER_IDS.priya, role: "host" });
+  await control(request, "stage-role", {
+    roomId: TOWN_HALL,
+    userId: USER_IDS.riel,
+    role: "listener",
+  });
+  await control(request, "viewer-role", { role: "member" });
+  await control(request, "huddle-join", { roomId: TOWN_HALL, userId: USER_IDS.jonah });
+  await expect(stagePane(page).getByRole("status")).toHaveText("1 / 1 listening · Full");
+  await page.locator(".room-header .huddle-launcher").click();
+  await expect(
+    page.getByText("This stage is full. Try again when someone leaves.").first(),
+  ).toBeVisible();
+  await control(request, "huddle-leave", { roomId: TOWN_HALL, userId: USER_IDS.jonah });
+  await expect(stagePane(page).getByRole("status")).toHaveText("0 / 1 listening · Open");
+});
+
 test("a host invites a raised hand to speak and moves people around", async ({ page, request }) => {
   await open(page, TOWN_HALL);
   await openStage(page);

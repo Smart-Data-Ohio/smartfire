@@ -7,7 +7,7 @@ use campfire_api_types::{
     StageStreamStopped, StreamQuality, SyncPayload,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
-use campfire_db::models::huddle_grant::IN_CALL_WINDOW;
+use campfire_db::models::huddle_grant::{HuddleGrant, IN_CALL_WINDOW};
 use campfire_db::models::stream::Stream;
 use campfire_db::{Connection, Membership, Room, Timestamp};
 use jiff::SignedDuration;
@@ -94,7 +94,7 @@ pub fn presence(
 }
 
 /// The stage's roster and stream (`presenters::calls::stage_model`, without the viewer).
-pub fn stage(conn: &Connection, room_id: i64) -> campfire_db::Result<StageState> {
+pub fn stage(conn: &Connection, room_id: i64, now: Timestamp) -> campfire_db::Result<StageState> {
     let members = Membership::for_room(conn, room_id)?
         .into_iter()
         .filter_map(|m| {
@@ -111,8 +111,17 @@ pub fn stage(conn: &Connection, room_id: i64) -> campfire_db::Result<StageState>
         Some(stream) => self::stream(conn, &stream)?,
         None => None,
     };
+    let (audience_count, occupied, _) = HuddleGrant::stage_audience_usage(conn, room_id, 0, now)?;
+    let audience_budget = HuddleGrant::stage_audience_budget(conn)?;
     Ok(StageState {
         room_id,
+        audience_count,
+        audience_budget,
+        audience_availability: if occupied >= audience_budget {
+            campfire_api_types::StageAudienceAvailability::Full
+        } else {
+            campfire_api_types::StageAudienceAvailability::Open
+        },
         members,
         live,
     })
@@ -175,11 +184,11 @@ pub fn publish_presence(server: &Cable, conn: &Connection, room: &Room, now: Tim
 
 /// `stage.updated` on the room's topic, latest per room in a batch: the twin of the roster, the
 /// panel and the stream's panel replace.
-pub fn publish_stage(server: &Cable, conn: &Connection, room_id: i64) {
+pub fn publish_stage(server: &Cable, conn: &Connection, room_id: i64, now: Timestamp) {
     if !server.sync_wanted() {
         return;
     }
-    match stage(conn, room_id) {
+    match stage(conn, room_id, now) {
         Ok(stage) => send(
             server,
             Audience::Topic(room_topic(room_id)),

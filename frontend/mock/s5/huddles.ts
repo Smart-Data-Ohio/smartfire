@@ -108,6 +108,7 @@ export function createHuddles(
   ctx: S2Context,
   simulate: boolean,
   hasSound: (soundId: number) => boolean = () => true,
+  audienceBudget: () => number = () => 300,
 ): Huddles {
   const worlds = new WeakMap<World, CallWorld>();
 
@@ -220,6 +221,14 @@ export function createHuddles(
   const roleOf = (record: RoomRecord, userId: number): StageRole | null =>
     record.room.kind === "stage" ? (stageOf(record).roles.get(userId) ?? "listener") : null;
 
+  const audienceCount = (record: RoomRecord): number =>
+    [...(calls().calls.get(record.room.id)?.keys() ?? [])].filter(
+      (userId) =>
+        roleOf(record, userId) === "listener" &&
+        !isAdmin(userId) &&
+        userId !== record.room.creatorId,
+    ).length;
+
   const stageState = (record: RoomRecord): StageState => {
     const stage = stageOf(record);
     const muted = calls().muted;
@@ -249,6 +258,9 @@ export function createHuddles(
 
     return {
       roomId: record.room.id,
+      audienceCount: audienceCount(record),
+      audienceBudget: audienceBudget(),
+      audienceAvailability: audienceCount(record) >= audienceBudget() ? "full" : "open",
       members: members.map(
         (userId): StageMember => ({
           membershipId: membershipId(record, userId),
@@ -373,6 +385,8 @@ export function createHuddles(
     endStreamIfOrphaned(record, events);
     events.unshift(presenceEvent(record));
 
+    if (record.room.kind === "stage") events.push(stageEvent(record));
+
     if (userId !== VIEWER_ID) {
       events.push({
         topic: "user",
@@ -456,6 +470,7 @@ export function createHuddles(
     const limit = record.room.voiceUserLimit;
 
     if (
+      record.room.kind !== "stage" &&
       limit !== null &&
       (entries?.size ?? 0) >= limit &&
       !entries?.has(VIEWER_ID) &&
@@ -463,6 +478,17 @@ export function createHuddles(
       record.room.creatorId !== VIEWER_ID
     ) {
       throw plainError(409, "HuddleRoomFull", "This voice room is full");
+    }
+
+    if (
+      record.room.kind === "stage" &&
+      roleOf(record, VIEWER_ID) === "listener" &&
+      !isAdmin(VIEWER_ID) &&
+      record.room.creatorId !== VIEWER_ID &&
+      !entries?.has(VIEWER_ID) &&
+      audienceCount(record) >= audienceBudget()
+    ) {
+      throw plainError(409, "StageAudienceFull", "This stage is full");
     }
 
     const grantId = state.nextGrantId++;
