@@ -239,7 +239,12 @@ for (const caption of ["", "A sticker caption"]) {
 
       await messageAction(row, "Save for later", phone);
 
-      for (const destination of ["/app/search?q=Dance", "/app/saved"]) {
+      const destinations = [
+        `/app/search?q=${encodeURIComponent(caption === "" ? "Dance" : caption)}`,
+        "/app/saved",
+      ];
+
+      for (const destination of destinations) {
         await page.goto(destination);
         const image = page.getByRole("img", { name: "Sticker: Dance" });
         await expect(image).toBeVisible();
@@ -261,7 +266,7 @@ for (const caption of ["", "A sticker caption"]) {
       await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
       await expect(page.getByRole("button", { name: "Delete Dance" })).toHaveCount(0);
 
-      for (const destination of ["/app/search?q=Dance", "/app/saved"]) {
+      for (const destination of destinations) {
         await page.goto(destination);
         await expect(page.getByText("Dance · Sticker deleted")).toBeVisible();
         await expect(page.getByRole("img", { name: "Sticker: Dance" })).toHaveCount(0);
