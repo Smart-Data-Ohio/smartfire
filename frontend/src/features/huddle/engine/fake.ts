@@ -22,7 +22,6 @@ import {
   type DisconnectReason,
   EMPTY_SNAPSHOT,
   type TransportEvent,
-  type VideoSize,
   type ViewerQuality,
 } from "./transport.ts";
 
@@ -406,7 +405,7 @@ export class FakeTransport implements CallTransport {
 
   setViewerQuality(_videoId: string, _quality: ViewerQuality): void {}
 
-  showScreen(_videoId: string, _size: VideoSize | null): void {}
+  showScreen(_videoId: string, _focused: boolean): void {}
 
   async sampleStats(_fresh: boolean): Promise<ConnectionStats | null> {
     if (!this.#connected) {

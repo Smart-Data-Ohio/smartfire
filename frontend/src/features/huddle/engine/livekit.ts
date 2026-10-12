@@ -48,9 +48,9 @@ import {
   EMPTY_SNAPSHOT,
   type NoiseOutcome,
   type TransportEvent,
-  type VideoSize,
   type ViewerQuality,
 } from "./transport.ts";
+import { focusScreenPublication, VIDEO_ADAPTIVE_STREAM } from "./video-quality.ts";
 
 type LiveKit = typeof import("livekit-client");
 
@@ -153,6 +153,7 @@ class LiveKitTransport implements CallTransport {
   readonly #captured = new Map<number, LocalTrack[]>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
+  readonly #focusedScreens = new Map<RemoteTrackPublication, () => void>();
   /** The microphone's encoding target, from the grant this connection joined with. */
   #microphonePublish: TrackPublishOptions = microphonePublishOptions(undefined);
   /** Soundboard clips started or playing now, each with its stop: run on leaving or deafening. */
@@ -200,6 +201,12 @@ class LiveKitTransport implements CallTransport {
     const room = this.#room;
 
     this.#room = null;
+
+    for (const restore of this.#focusedScreens.values()) {
+      restore();
+    }
+
+    this.#focusedScreens.clear();
 
     for (const unbind of this.#unbind.splice(0)) {
       unbind();
@@ -545,6 +552,8 @@ class LiveKitTransport implements CallTransport {
     }
 
     try {
+      this.#focusScreen(publication, viewerQuality === "high");
+
       if (viewerQuality === "low") {
         publication.setVideoQuality(this.#lk.VideoQuality.LOW);
       } else if (viewerQuality === "high") {
@@ -554,19 +563,16 @@ class LiveKitTransport implements CallTransport {
           requestedMaxQuality: undefined,
           requestedVideoDimensions: undefined,
         });
-        publication.emitTrackUpdate();
       }
+
+      publication.emitTrackUpdate();
     } catch {
       // Quality is a hint; a rejected hint must not break the view.
     }
   }
 
-  /**
-   * Adaptive streaming sizes a subscription from the rendered element and takes the smaller of
-   * that and any manual request, so this only matters once the element has actually grown: it
-   * asks for the full layer at once instead of waiting for the next resize observation.
-   */
-  showScreen(videoId: string, size: VideoSize | null): void {
+  /** A focused share requests HIGH; collapse returns to the current adaptive dimensions. */
+  showScreen(videoId: string, focused: boolean): void {
     const publication = this.#remotePublication(videoId);
 
     if (publication === null) {
@@ -574,13 +580,21 @@ class LiveKitTransport implements CallTransport {
     }
 
     try {
+      this.#focusScreen(publication, focused);
       publication.setVideoQuality(this.#lk.VideoQuality.HIGH);
-
-      if (size !== null) {
-        publication.setVideoDimensions(size);
-      }
+      // The setter skips identical quality values, including a collapse from focused HIGH.
+      publication.emitTrackUpdate();
     } catch {
       // A rejected hint leaves the current layer in place.
+    }
+  }
+
+  #focusScreen(publication: RemoteTrackPublication, focused: boolean): void {
+    if (focused && !this.#focusedScreens.has(publication)) {
+      this.#focusedScreens.set(publication, focusScreenPublication(publication));
+    } else if (!focused) {
+      this.#focusedScreens.get(publication)?.();
+      this.#focusedScreens.delete(publication);
     }
   }
 
@@ -700,7 +714,7 @@ class LiveKitTransport implements CallTransport {
     const camera = loadDevicePreferences().videoinput;
 
     return {
-      adaptiveStream: true,
+      adaptiveStream: VIDEO_ADAPTIVE_STREAM,
       dynacast: true,
       // Spelled out rather than inherited so an SDK upgrade can't quietly change what the call
       // asks the browser to do with a microphone.
@@ -787,14 +801,22 @@ class LiveKitTransport implements CallTransport {
       RoomEvent.TrackMuted,
       RoomEvent.TrackUnmuted,
       RoomEvent.TrackPublished,
-      RoomEvent.TrackUnpublished,
       RoomEvent.LocalTrackPublished,
       RoomEvent.AudioPlaybackStatusChanged,
     ]) {
       on(event, changed);
     }
 
+    on(RoomEvent.TrackUnpublished, (publication: RemoteTrackPublication) => {
+      this.#focusScreen(publication, false);
+      changed();
+    });
+
     on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+      for (const publication of participant.trackPublications.values()) {
+        this.#focusScreen(publication, false);
+      }
+
       this.#boosted.delete(participant.identity);
       changed();
     });

@@ -41,8 +41,10 @@ into theater mode automatically, on joining late as well as when the
 stream starts mid-call. The expanded share carries an "N watching" count:
 everyone in the call minus the presenter. A viewer quality control offers
 `Auto`, `Low`, and `High`, applied to the presenter's screen-share
-subscription; `Auto` clears the explicit request so adaptive streaming
-sizes the share from the rendered element again. The choice is remembered
+subscription. `Auto` requests the top layer while the share is expanded
+and otherwise adapts to its rendered device pixels. `High` requests the top
+layer at any size, while `Low` keeps its limit even in theater mode.
+The choice is remembered
 per browser in `localStorage` under `campfire.huddle.streamQuality`.
 
 ## Quality presets

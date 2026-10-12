@@ -703,6 +703,76 @@ describe("the microphone", () => {
 });
 
 describe("call state", () => {
+  it("keeps an already expanded share focused when delayed stage metadata arrives", async () => {
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+    if (transport === undefined) throw new Error("no transport");
+    const original = transport.snapshot();
+    let speaking = false;
+    const snapshot = vi.spyOn(transport, "snapshot").mockImplementation(() => ({
+      ...original,
+      participants: [
+        ...original.participants,
+        {
+          identity: "presenter",
+          name: "Presenter",
+          local: false,
+          speaking,
+          audioLevel: 0,
+          microphoneMuted: false,
+          quality: "good",
+          cameraId: null,
+          screenId: "screen",
+        },
+      ],
+    }));
+    const shown = vi.spyOn(transport, "showScreen");
+    const preference = vi.spyOn(transport, "setViewerQuality");
+
+    try {
+      await transport.setMicrophone(false);
+      controller.expand("screen");
+      controller.screenShown("screen", true);
+      shown.mockClear();
+      store.setState({
+        stages: {
+          [ROOM]: {
+            roomId: ROOM,
+            audienceCount: 1,
+            audienceBudget: 300,
+            audienceAvailability: "open",
+            members: [],
+            live: {
+              id: 41,
+              membershipId: 42,
+              userId: 42,
+              identity: "presenter",
+              quality: "1080p15",
+              startedAt: "2026-10-12T12:00:00Z",
+            },
+          },
+        },
+      });
+      speaking = true;
+      await transport.setMicrophone(true);
+      expect(callStore.getState().expandedVideoId).toBe("screen");
+      expect(shown).toHaveBeenLastCalledWith("screen", true);
+      expect(preference).not.toHaveBeenCalledWith("screen", "auto");
+
+      controller.setViewerQuality("low");
+      shown.mockClear();
+      controller.screenShown("screen", true);
+      expect(preference).toHaveBeenLastCalledWith("screen", "low");
+      expect(shown).not.toHaveBeenCalled();
+    } finally {
+      snapshot.mockRestore();
+      shown.mockRestore();
+      preference.mockRestore();
+      await controller.leave();
+    }
+  });
+
   it("a double click on Go live posts one stream", async () => {
     const started: number[] = [];
 

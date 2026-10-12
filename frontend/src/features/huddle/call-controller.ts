@@ -2070,11 +2070,11 @@ export class CallController {
     }
 
     this.#autoExpanded = videoId;
-    this.#transport?.setViewerQuality(videoId, loadStreamQuality());
-
     if (state.expandedVideoId === null) {
       this.#set({ expandedVideoId: videoId, viewOpen: true });
     }
+
+    this.screenShown(videoId, this.#state.expandedVideoId === videoId);
   }
 
   /** Expands a share (theater mode), or collapses with `null`. */
@@ -2082,8 +2082,8 @@ export class CallController {
     this.#set({ expandedVideoId: videoId });
   }
 
-  /** The shown size of a share changed: ask for a matching layer (streams follow the viewer's choice). */
-  screenShown(videoId: string, width: number, height: number, expanded: boolean): void {
+  /** Focused shares request the top layer, unless a stream viewer chose Low. */
+  screenShown(videoId: string, expanded: boolean): void {
     const transport = this.#transport;
 
     if (transport === null) {
@@ -2091,12 +2091,16 @@ export class CallController {
     }
 
     if (videoId === this.streamVideoId()) {
-      transport.setViewerQuality(videoId, loadStreamQuality());
+      const preference = loadStreamQuality();
 
-      return;
+      if (preference !== "auto") {
+        transport.setViewerQuality(videoId, preference);
+
+        return;
+      }
     }
 
-    transport.showScreen(videoId, expanded ? { width, height } : null);
+    transport.showScreen(videoId, expanded);
   }
 
   /**
@@ -2115,7 +2119,11 @@ export class CallController {
     const videoId = this.streamVideoId();
 
     if (videoId !== null) {
-      this.#transport?.setViewerQuality(videoId, quality);
+      if (quality === "auto") {
+        this.#transport?.showScreen(videoId, this.#state.expandedVideoId === videoId);
+      } else {
+        this.#transport?.setViewerQuality(videoId, quality);
+      }
     }
   }
 

@@ -66,12 +66,6 @@ export const EMPTY_SNAPSHOT: CallSnapshot = {
   boostCapped: false,
 };
 
-/** Device pixels, for asking a screen share's layer. */
-export interface VideoSize {
-  readonly width: number;
-  readonly height: number;
-}
-
 /** What the connection details panel shows (sampled on demand, never sent anywhere). */
 export interface ConnectionStats {
   readonly rttMs: number | null;
@@ -172,8 +166,8 @@ export interface CallTransport {
   microphoneLevel(): number;
   /** Pins (or frees) the layer a watched stream arrives at. */
   setViewerQuality(videoId: string, quality: ViewerQuality): void;
-  /** Asks for an ordinary screen share's top layer, sized to where it shows when expanded. */
-  showScreen(videoId: string, size: VideoSize | null): void;
+  /** A focused share requests the top layer; otherwise its rendered device pixels decide. */
+  showScreen(videoId: string, focused: boolean): void;
   /**
    * One sample of the connection's statistics, `null` while there is nothing to sample. `fresh`
    * starts a new bitrate baseline (a reopened panel shouldn't average over the closed time).
