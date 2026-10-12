@@ -4,9 +4,10 @@ import {
   CAMERA_QUALITIES,
   cameraCaptureOptions,
   cameraPublishOptions,
+  supportedCameraQualities,
+  cameraQualityFromSettings,
   DEFAULT_CAMERA_QUALITY,
   knownCameraQuality,
-  supportedCameraQualities,
 } from "./camera-quality.ts";
 import {
   CAMERA_QUALITY_STORAGE_KEY,
@@ -15,6 +16,7 @@ import {
 } from "./preferences.ts";
 
 beforeEach(() => localStorage.clear());
+
 afterEach(() => vi.restoreAllMocks());
 
 describe("camera capture profiles", () => {
@@ -69,7 +71,9 @@ describe("camera encoding profiles", () => {
 
     if (first.videoEncoding !== undefined) first.videoEncoding.maxBitrate = 1;
     const layer = first.videoSimulcastLayers?.[1];
+
     if (layer !== undefined) layer.encoding.maxBitrate = 1;
+
     if (firstCapture.resolution !== undefined) firstCapture.resolution.width = 1;
 
     expect(cameraPublishOptions("1080p60", VideoPreset).videoEncoding?.maxBitrate).toBe(6_000_000);
@@ -81,6 +85,15 @@ describe("camera encoding profiles", () => {
 });
 
 describe("camera capability bounds", () => {
+  it.each([
+    [{ width: 1920, height: 1080, frameRate: 30 }, "1080p30"],
+    [{ width: 1280, height: 720, frameRate: 60 }, "720p30"],
+    [{ width: 1920, height: 1080, frameRate: 59.94 }, "1080p60"],
+    [{}, "720p30"],
+  ] as const)("checks width, height and fps together from %j", (settings, quality) => {
+    expect(cameraQualityFromSettings("1080p60", settings)).toBe(quality);
+  });
+
   it("keeps 720p as the fallback for unknown and smaller cameras", () => {
     expect(supportedCameraQualities(null)).toEqual(["720p30"]);
     expect(supportedCameraQualities({})).toEqual(["720p30"]);

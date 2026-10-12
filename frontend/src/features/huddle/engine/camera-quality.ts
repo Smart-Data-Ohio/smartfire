@@ -63,7 +63,7 @@ export function knownCameraQuality(value: string | null): CameraQuality | null {
   return CAMERA_QUALITIES.find((quality) => quality === value) ?? null;
 }
 
-/** Higher modes need all reported bounds; ranges cannot prove a combined capture mode. */
+/** Bounds exclude impossible targets; every remaining candidate needs capture verification. */
 export function supportedCameraQualities(
   capabilities: CameraCapabilities | null,
 ): readonly CameraQuality[] {
@@ -83,12 +83,64 @@ export function supportedCameraQualities(
   });
 }
 
+export function cameraQualityFromSettings(
+  requested: CameraQuality,
+  settings: MediaTrackSettings,
+): CameraQuality {
+  return (
+    CAMERA_QUALITIES.slice(0, CAMERA_QUALITIES.indexOf(requested) + 1)
+      .toReversed()
+      .find((quality) => {
+        if (quality === DEFAULT_CAMERA_QUALITY) return true;
+        const target = PROFILES[quality].capture;
+
+        return (
+          (settings.width ?? 0) >= target.width &&
+          (settings.height ?? 0) >= target.height &&
+          (settings.frameRate ?? 0) + 0.1 >= target.frameRate
+        );
+      }) ?? DEFAULT_CAMERA_QUALITY
+  );
+}
+
+/** Recapture at a lower profile so native constraints, encoding, and the selection agree. */
+export async function verifiedCameraCapture<T>(
+  requested: CameraQuality,
+  acquire: (quality: CameraQuality) => Promise<{
+    track: T;
+    getSettings: () => MediaTrackSettings;
+    stop: () => void;
+  }>,
+): Promise<{ track: T; quality: CameraQuality }> {
+  let candidate = requested;
+
+  for (;;) {
+    const capture = await acquire(candidate);
+    let retained = false;
+
+    try {
+      const applied = cameraQualityFromSettings(candidate, capture.getSettings());
+
+      if (applied === candidate) {
+        retained = true;
+
+        return { track: capture.track, quality: applied };
+      }
+
+      candidate = applied;
+    } finally {
+      if (!retained) capture.stop();
+    }
+  }
+}
+
 /** Numeric size constraints and an ideal frame rate let the browser choose a supported mode. */
 export function cameraCaptureOptions(
   quality: CameraQuality,
   deviceId?: string,
 ): VideoCaptureOptions {
   const capture = PROFILES[quality].capture;
+
   const options: VideoCaptureOptions = {
     resolution: { ...capture },
     frameRate: { ideal: capture.frameRate },
