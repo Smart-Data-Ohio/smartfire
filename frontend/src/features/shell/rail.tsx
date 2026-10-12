@@ -66,7 +66,8 @@ interface WorkspaceTileProps {
 
 /**
  * The workspace's tile at the top of the rail: its logo when one is uploaded (and loads), else
- * its initials. Round at rest, it squares off under the pointer, as a Discord server does. An
+ * its initials. Initials are round at rest and square off under the pointer, as a Discord server
+ * does; a logo sits whole in a rounded square, never cropped to a circle. An
  * animated logo rests on its first frame and plays only while pointed at or focused (never under
  * reduced motion), starting from the top each time.
  */

@@ -47,13 +47,13 @@
     flex-shrink: 0;
     width: 40px;
     height: 40px;
-    border-radius: var(--radius-md);
-    object-fit: cover;
+    object-fit: contain;
   }
 
   .welcome-card-monogram {
     display: grid;
     place-items: center;
+    border-radius: var(--radius-md);
     background: var(--accent-soft);
     color: var(--accent);
     font-size: var(--text-title);

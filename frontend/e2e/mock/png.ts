@@ -59,3 +59,30 @@ export function gradientPng(width: number, height: number, from: Rgb, to: Rgb): 
     chunk("IEND", Buffer.alloc(0)),
   ]);
 }
+
+/** A `width` × `height` RGBA PNG whose pixel at (x, y) is `paint(x, y)`, for transparent logos. */
+export function rgbaPng(
+  width: number,
+  height: number,
+  paint: (x: number, y: number) => readonly [number, number, number, number],
+): Buffer {
+  const header = Buffer.alloc(13);
+  const rows = Buffer.alloc((width * 4 + 1) * height);
+
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 6, 0, 0, 0], 8);
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      rows.set(paint(x, y), y * (width * 4 + 1) + 1 + x * 4);
+    }
+  }
+
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(rows)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}

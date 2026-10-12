@@ -37,9 +37,12 @@
     overflow-wrap: anywhere;
   }
 
+  /* As the join page shows it: whole, as wide as it needs. */
   .profile-invite-card img {
-    border-radius: var(--radius-sm);
-    object-fit: cover;
+    width: auto;
+    max-width: 100%;
+    height: 32px;
+    object-fit: contain;
   }
 
   .profile-slots {
@@ -87,6 +90,15 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* The icon shows whole, inset from the thumbnail's rounded corners. */
+  .profile-slot[data-kind="logo"] .profile-slot-thumb {
+    padding: var(--space-1);
+  }
+
+  .profile-slot[data-kind="logo"] .profile-slot-thumb img {
+    object-fit: contain;
   }
 
   .profile-slot-body {
