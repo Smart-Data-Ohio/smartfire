@@ -11,7 +11,13 @@ import { Tooltip } from "../../ui/tooltip.tsx";
 import { AgentProfileLink } from "../agents/agent-link.tsx";
 import { MessageSteps } from "../agents/message-steps.tsx";
 import { PendingAttachmentView, PendingGallery } from "../messages/attachments.tsx";
-import { MessageContent, MessageFlags, ReplyQuote } from "../messages/message-content.tsx";
+import {
+  AnnouncementOrigin,
+  MessageContent,
+  MessageFlags,
+  PublishedMark,
+  ReplyQuote,
+} from "../messages/message-content.tsx";
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
 import { useViewerId } from "../messages/use-message.ts";
@@ -34,6 +40,7 @@ interface HeaderProps {
   readonly creatorId: number;
   readonly createdAt: string;
   readonly edited: boolean;
+  readonly published?: boolean | undefined;
   /** Set when a room webhook posted it: the name it posted under replaces the author's. */
   readonly webhook?: MessageWebhook | null;
 }
@@ -42,7 +49,7 @@ interface HeaderProps {
  * Name (an agent's opens its profile), agent badge and time: the first row of a group. A webhook's
  * message shows the webhook's name and Discord's APP tag instead, with no profile to open.
  */
-function MessageHeader({ creatorId, createdAt, edited, webhook = null }: HeaderProps) {
+function MessageHeader({ creatorId, createdAt, edited, published, webhook = null }: HeaderProps) {
   const user = useUser(creatorId);
 
   return (
@@ -66,6 +73,7 @@ function MessageHeader({ creatorId, createdAt, edited, webhook = null }: HeaderP
         </time>
       </Tooltip>
       {edited ? <span className="message-edited">(edited)</span> : null}
+      <PublishedMark published={published} />
     </header>
   );
 }
@@ -143,8 +151,10 @@ export function MessageRow({
   const webhook = author.kind === "webhook" ? author.webhook : null;
   const name = author.kind === "webhook" ? author.name : (creator?.name ?? UNKNOWN_NAME);
 
-  // A pinned message or a reply always shows who wrote it, under its flag or quote line.
-  const header = groupStart || message.pinned || message.replyToMessageId !== null;
+  // A pinned message, a reply or an announcement copy always shows who wrote it, under its flag,
+  // quote or source line.
+  const copy = message.announcementSource != null;
+  const header = groupStart || message.pinned || message.replyToMessageId !== null || copy;
 
   const style =
     row.removingHeight === null ? undefined : { "--row-height": `${row.removingHeight}px` };
@@ -175,12 +185,14 @@ export function MessageRow({
       />
       <div className="message-main">
         <MessageFlags pinned={message.pinned} saved={row.saved} />
+        <AnnouncementOrigin source={message.announcementSource} />
         <ReplyQuote message={message} />
         {header ? (
           <MessageHeader
             creatorId={message.creatorId}
             createdAt={message.createdAt}
             edited={edited}
+            published={message.published}
             webhook={webhook}
           />
         ) : null}
@@ -207,7 +219,14 @@ export function MessageRow({
           <MessageContent
             message={message}
             inThread={inThread}
-            trailing={!header && edited ? <span className="message-edited">(edited)</span> : null}
+            trailing={
+              header || (!edited && message.published !== true) ? null : (
+                <>
+                  {edited ? <span className="message-edited">(edited)</span> : null}
+                  <PublishedMark published={message.published} />
+                </>
+              )
+            }
           />
         )}
         <MessageSteps steps={message.steps} />

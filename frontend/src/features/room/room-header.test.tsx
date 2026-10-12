@@ -15,7 +15,7 @@ import { DetailsPane } from "../panes/details-pane.tsx";
 import { openPane, useOpenPane } from "../panes/pane-store.ts";
 import { RoomHeader } from "./room-header.tsx";
 
-async function mount(topic: string | null, phone = false) {
+async function mount(topic: string | null, phone = false, announcement = false) {
   vi.stubGlobal("matchMedia", (media: string) =>
     Object.assign(new EventTarget(), {
       matches: phone,
@@ -27,6 +27,7 @@ async function mount(topic: string | null, phone = false) {
   );
   const detail = roomDetailFixture(5);
   detail.room.topic = topic;
+  detail.room.announcement = announcement;
   mutations.setRoomDetail(detail, beginRoomRequest());
 
   function Harness() {
@@ -87,5 +88,30 @@ describe("channel topic header", () => {
   it("omits the topic button when no topic is set", async () => {
     await mount(null);
     expect(screen.queryByRole("button", { name: "Channel topic, About" })).toBeNull();
+  });
+});
+
+describe("announcement room header", () => {
+  const megaphone = (root: ParentNode) =>
+    root.querySelector('.room-title-icon path[d^="M11 6a13"]') !== null;
+
+  it("draws the megaphone and the Announcement tag on wide screens", async () => {
+    await mount(null, false, true);
+    const title = screen.getByRole("link", { name: "room-5, room settings" });
+    expect(megaphone(title)).toBe(true);
+    expect(screen.getByText("Announcement").classList.contains("room-announcement-tag")).toBe(true);
+  });
+
+  it("says so under the name on phones", async () => {
+    await mount(null, true, true);
+    const title = screen.getByRole("button", { name: "room-5, details" });
+    expect(megaphone(title)).toBe(true);
+    expect(title.textContent).toContain("Announcements · 3 members");
+  });
+
+  it("keeps the kind's glyph and no tag on an ordinary channel", async () => {
+    await mount(null);
+    expect(megaphone(document)).toBe(false);
+    expect(screen.queryByText("Announcement")).toBeNull();
   });
 });

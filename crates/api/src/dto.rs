@@ -450,18 +450,21 @@ fn messages_and_fetches_inner(
     let mut polls = crate::cards::polls(conn, &ids, now, &*app.storage.verifier)?;
     let mut fetches = crate::cards::Fetches::default();
     let mut cards = crate::cards::cards(&presenter, conn, messages, now, &mut fetches)?;
-    // Publication state shares the pin batch; ordinary dispatches add no read statements.
-    let flags: Vec<(i64, bool, bool)> = ids_query(
+    // Publication and delivery state share the pin batch; ordinary dispatches add no read
+    // statements. Each join is on a unique key, so a message stays one row.
+    let flags: Vec<(i64, bool, bool, bool)> = ids_query(
         conn,
-        r#"SELECT m.id, pin.message_id IS NOT NULL, publication.id IS NOT NULL FROM messages m
+        r#"SELECT m.id, pin.message_id IS NOT NULL, publication.id IS NOT NULL, delivery.message_id IS NOT NULL FROM messages m
            LEFT JOIN message_pins pin ON pin.message_id=m.id
            LEFT JOIN announcement_publications publication ON publication.source_message_id=m.id
+           LEFT JOIN announcement_deliveries delivery ON delivery.message_id=m.id
            WHERE m.id IN ({})"#,
         &ids,
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
     )?;
-    let pinned: BTreeSet<i64> = flags.iter().filter(|(_, pinned, _)| *pinned).map(|(id, _, _)| *id).collect();
-    let published: BTreeSet<i64> = flags.iter().filter(|(_, _, published)| *published).map(|(id, _, _)| *id).collect();
+    let pinned: BTreeSet<i64> = flags.iter().filter(|flag| flag.1).map(|flag| flag.0).collect();
+    let published: BTreeSet<i64> = flags.iter().filter(|flag| flag.2).map(|flag| flag.0).collect();
+    let copies: BTreeSet<i64> = flags.iter().filter(|flag| flag.3).map(|flag| flag.0).collect();
     let file_rows: Vec<(i64, String, i64)> = ids_query(
         conn,
         r#"SELECT record_id, name, blob_id FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
@@ -531,6 +534,7 @@ fn messages_and_fetches_inner(
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
                 published: published.contains(&message.id),
+                announcement_copy: copies.contains(&message.id),
                 announcement_source: None,
                 embeds,
                 webhook,

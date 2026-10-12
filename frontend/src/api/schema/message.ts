@@ -98,6 +98,8 @@ export const MessageDTO = Schema.Struct({
   createdAt: Timestamp,
   updatedAt: Timestamp,
   published: Schema.optionalKey(Schema.Boolean),
+  /** A delivered announcement copy, even when `announcementSource` is hidden from the viewer. */
+  announcementCopy: Schema.optionalKey(Schema.Boolean),
   announcementSource: Schema.optionalKey(
     Schema.NullOr(
       Schema.Struct({

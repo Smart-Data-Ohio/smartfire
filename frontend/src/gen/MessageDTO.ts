@@ -140,6 +140,11 @@ steps: Array<AgentStep>, createdAt: string,
  */
 updatedAt: string, published?: boolean,
 /**
+ * A delivered announcement copy, whether or not the viewer can see its source. Copies can't
+ * be published again; `announcementSource` alone can't say so, since it's viewer-relative.
+ */
+announcementCopy?: boolean,
+/**
  * Null when this is not a delivered copy or the viewer cannot see the source room.
  */
 announcementSource?: AnnouncementSource | null, embeds: Array<WebhookEmbed> | null, webhook: MessageWebhook | null, };
