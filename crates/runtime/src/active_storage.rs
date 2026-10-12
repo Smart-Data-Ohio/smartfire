@@ -683,10 +683,11 @@ pub(crate) fn touch_attachment_records(
                 record_id,
                 tx.now(),
             )?,
-            "Account" | "WorkspaceIcon" | "SoundboardSound" => {
+            "Account" | "WorkspaceIcon" | "SoundboardSound" | "Sticker" => {
                 let table = match record_type.as_str() {
                     "Account" => "accounts",
                     "WorkspaceIcon" => "workspace_icons",
+                    "Sticker" => "stickers",
                     _ => "soundboard_sounds",
                 };
                 tx.conn().execute_cached(

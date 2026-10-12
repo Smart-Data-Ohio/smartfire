@@ -126,6 +126,8 @@ pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
 /// row oracles never have them, so the tests comparing whole rows with those oracles leave them
 /// out of the Rust side.
 pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
+    ("messages", "sticker_id"),
+    ("messages", "sticker_name"),
     ("channel_threads", "client_post_id"),
     ("rooms", "client_room_id"),
     ("rooms", "tags_required"),

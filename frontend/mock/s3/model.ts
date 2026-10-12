@@ -5,6 +5,7 @@
  */
 import type { ActivityItem } from "../../src/gen/ActivityItem.ts";
 import type { ActivityState } from "../../src/gen/ActivityState.ts";
+import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import { validation } from "../http.ts";
 
 /** The S3 part of the world, mutated in place by the S3 modules. */
@@ -137,4 +138,17 @@ export function plainText(markdown: string | null): string {
     .replace(/^>\s?/gm, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function messageText(message: MessageDTO, text = plainText(message.markdownSource)): string {
+  const body =
+    text.trim() === "" && message.sticker !== undefined ? `Sticker: ${message.sticker.name}` : text;
+
+  const note = message.forwardNote;
+
+  return note === null || note.trim() === ""
+    ? body
+    : body.trim() === ""
+      ? note
+      : `${note}\n\n${body}`;
 }

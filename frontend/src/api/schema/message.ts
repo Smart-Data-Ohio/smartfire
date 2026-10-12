@@ -15,6 +15,7 @@ import { ConversationName } from "./conversation.ts";
 import { MessageId, RoomId, SavedItemId, ThreadId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Boost, Reaction } from "./reaction.ts";
+import { MessageSticker, StickerId } from "./sticker.ts";
 import { ThreadIndicator } from "./thread-parts.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
@@ -73,6 +74,7 @@ export const MessageDTO = Schema.Struct({
   clientMessageId: Schema.String,
   bodyHtml: Schema.String,
   sound: Schema.NullOr(MessageSound),
+  sticker: Schema.optionalKey(MessageSticker),
   markdownSource: Schema.NullOr(Schema.String),
   systemNote: Schema.Boolean,
   action: Schema.Boolean,
@@ -170,6 +172,7 @@ export type MessageReadPin = Assert<Pinned<typeof MessageRead, GeneratedMessageR
 
 /** The body of `POST /api/v1/rooms/:id/messages`. Idempotent on `clientMessageId`. */
 export const CreateMessage = Schema.Struct({
+  stickerId: Schema.optionalKey(StickerId),
   clientMessageId: Schema.String,
   markdownSource: Schema.String,
   replyToMessageId: Schema.NullOr(MessageId),

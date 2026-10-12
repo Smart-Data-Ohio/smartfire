@@ -118,6 +118,7 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
                     && !(table == "rooms" && matches!(name.as_str(), "tags_required" | "default_board_tag_id"))
             })
             .filter(|(_, name)| !(table == "rooms" && matches!(name.as_str(), "topic" | "announcement" | "voice_bitrate" | "voice_user_limit")))
+            .filter(|(_, name)| !(table == "messages" && matches!(name.as_str(), "sticker_id" | "sticker_name")))
             .filter(|(_, name)| !(table == "agent_slash_commands" && name.as_str() == "option_schema"))
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
@@ -142,7 +143,7 @@ fn tables(conn: &Connection) -> Vec<String> {
     // These port-only tables have no table in the frozen Rails schema.
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'user_blocks', 'workspace_categories', 'workspace_invites', 'channel_webhooks', 'channel_webhook_messages', 'announcement_follows', 'announcement_publications', 'announcement_deliveries', 'soundboard_sounds') ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'user_blocks', 'workspace_categories', 'workspace_invites', 'channel_webhooks', 'channel_webhook_messages', 'announcement_follows', 'announcement_publications', 'announcement_deliveries', 'soundboard_sounds', 'stickers') ORDER BY name",
         [],
         |r| r.get(0),
     )

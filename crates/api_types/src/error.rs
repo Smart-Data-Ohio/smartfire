@@ -32,6 +32,8 @@ pub enum ApiError {
     HuddleRoomFull { message: String },
     /// 409: this stage has no audience slot for another listener.
     StageAudienceFull { message: String },
+    /// 422: all 60 sticker slots are occupied.
+    StickerLimitReached { message: String, capacity: i64 },
     /// 422: the request's `X-CSRF-Token` header was missing or stale. The client fetches a fresh
     /// token (`GET /api/v1/boot`'s `csrfToken`) and retries once.
     InvalidAuthenticityToken { message: String },
@@ -79,6 +81,7 @@ impl ApiError {
             | ApiError::StageAudienceFull { .. }
             | ApiError::FizzyThreadLocked { .. } => 409,
             ApiError::InvalidAuthenticityToken { .. }
+            | ApiError::StickerLimitReached { .. }
             | ApiError::Validation { .. }
             | ApiError::FizzyNotConnected { .. }
             | ApiError::FizzyTokenRejected { .. }

@@ -76,6 +76,7 @@ async-trait  = "0.1"
 libc         = "0.2"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 tokio-tungstenite = "0.29"
+png          = "0.18.1"
 crc32fast    = "1"
 memchr       = "2"
 indexmap     = "2"

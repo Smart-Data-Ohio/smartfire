@@ -19,6 +19,7 @@ import type { ThreadStatus } from "../../src/gen/ThreadStatus.ts";
 import type { User } from "../../src/gen/User.ts";
 import { notFound, validation } from "../http.ts";
 import { escapeHtml, type Mentionable, renderMarkdown } from "../markdown.ts";
+import { messageText } from "../s3/model.ts";
 import { type WorkRecord, workFacts } from "../s4/work-model.ts";
 import type { RoomRecord, World } from "../seed.ts";
 import { mockSound } from "../sounds.ts";
@@ -169,6 +170,7 @@ export interface ForwardOrigin {
 
 /** Everything needed to make a message, before it has an id. */
 export interface MessageDraft {
+  readonly sticker?: MessageDTO["sticker"];
   readonly creatorId: number;
   readonly markdown: string;
   readonly clientMessageId: string;
@@ -252,6 +254,8 @@ export function buildMessage(
     announcementSource: null,
   };
 
+  if (draft.sticker !== undefined) message.sticker = draft.sticker;
+
   return draft.attachments === undefined
     ? message
     : { ...message, attachments: [...draft.attachments] };
@@ -323,10 +327,12 @@ export function indicatorOf(thread: ThreadRecord): ThreadIndicator {
 
 /** The first line of a message's text, for a thread's default name. */
 export function defaultThreadName(parent: MessageDTO | null): string {
-  const text = (parent?.markdownSource ?? "")
+  const body = (parent?.markdownSource ?? "")
     .replace(/[*_`]/g, "")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/@\[([^\]]+)\]/g, "@$1");
+
+  const text = parent === null ? body : messageText(parent, body);
 
   const firstLine = (text.split("\n")[0] ?? "").trim();
   const chars = [...firstLine];
