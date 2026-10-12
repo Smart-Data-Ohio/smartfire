@@ -1,0 +1,193 @@
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
+import type { MessagePage } from "../../src/gen/MessagePage.ts";
+import { expect, ROOM_IDS, shot, THEMES, type Theme, test, USER_IDS } from "./support.ts";
+
+/**
+ * A Markdown document pasted into a message (headings, a rule, lists) reads with a chat-sized
+ * rhythm: more room above a heading than below it, a visible rule with space on both sides, and
+ * list items a step apart, while ordinary paragraphs keep their 4 px step so a short message
+ * doesn't change.
+ */
+
+const VIEWPORT = { width: 1280, height: 1200 } as const;
+
+/** What crates/richtext renders for the document the person pasted (abridged). */
+const DOCUMENT_BODY =
+  "<h1>Smartfire: What It Can Do</h1>" +
+  "<p>Smartfire is Smart Data's team workspace, where people and AI agents work side by side. " +
+  "It brings chat, voice and video, project tracking, and the tools we already use into one place.</p>" +
+  "<hr>" +
+  "<h2>Conversations</h2>" +
+  "<ul>" +
+  "<li><strong>Channels</strong> for teams, projects, and topics.</li>" +
+  "<li><strong>Direct messages and group DMs</strong> for one-on-one or small-group conversations.</li>" +
+  "<li><strong>Threads</strong> keep side conversations organized without cluttering the main channel. " +
+  "Private threads are visible only to the people invited into them.</li>" +
+  "</ul>" +
+  "<h2>Files and Media</h2>" +
+  "<ul>" +
+  "<li><strong>File sharing up to 100 MB</strong> with previews.</li>" +
+  "<li><strong>Link previews</strong> for websites:<ul>" +
+  "<li>X (Twitter) posts</li><li>GitHub pull requests</li></ul></li>" +
+  "<li><strong>Google Drive:</strong> pick Drive files right from the message box.</li>" +
+  "</ul>" +
+  "<h3>Emoji and fun</h3>" +
+  "<p>Custom emoji, stickers and GIFs.</p>";
+
+function row(page: Page, messageId: number): Locator {
+  return page.locator(`[data-message-row][data-message-id="${messageId}"]`).first();
+}
+
+/** Has Jonah post `markdown` in #general and returns the message id. */
+async function post(request: APIRequestContext, markdown: string): Promise<number> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const response = await request.post("/__mock/post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { roomId: ROOM_IDS.general, userId: USER_IDS.jonah, markdown },
+  });
+
+  return (await response.json()).id;
+}
+
+async function openOn(page: Page, messageId: number, theme: Theme): Promise<void> {
+  await page.setViewportSize(VIEWPORT);
+  await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+  await page.goto(`/app/r/${ROOM_IDS.general}/m/${messageId}`);
+  await expect(row(page, messageId)).toBeVisible();
+}
+
+/** Computed box metrics for `locator`, in px. */
+function metrics(locator: Locator) {
+  return locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+
+    return {
+      top: rect.top,
+      bottom: rect.bottom,
+      height: rect.height,
+      marginTop: Number.parseFloat(style.marginTop),
+      marginBottom: Number.parseFloat(style.marginBottom),
+      fontSize: Number.parseFloat(style.fontSize),
+      fontWeight: style.fontWeight,
+      borderTopWidth: Number.parseFloat(style.borderTopWidth),
+      borderTopStyle: style.borderTopStyle,
+      borderTopColor: style.borderTopColor,
+    };
+  });
+}
+
+/** The px value of a length token, or the colour of a colour token, resolved on the page. */
+function resolveToken(page: Page, property: "font-size" | "color", token: string): Promise<string> {
+  return page.evaluate(
+    ([prop, name]) => {
+      const probe = document.createElement("span");
+
+      probe.style.setProperty(prop, `var(${name})`);
+      document.body.append(probe);
+
+      const value = getComputedStyle(probe).getPropertyValue(prop);
+
+      probe.remove();
+
+      return value;
+    },
+    [property, token] as const,
+  );
+}
+
+for (const theme of THEMES) {
+  test(`a pasted Markdown document keeps a compact rhythm (${theme})`, async ({
+    page,
+    request,
+  }) => {
+    const id = await post(request, "The document");
+
+    await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages*`, async (route) => {
+      const response = await route.fetch();
+      const reply: MessagePage = await response.json();
+
+      await route.fulfill({
+        response,
+        json: {
+          ...reply,
+          messages: reply.messages.map((message) =>
+            message.id === id ? { ...message, bodyHtml: DOCUMENT_BODY } : message,
+          ),
+        },
+      });
+    });
+
+    await openOn(page, id, theme);
+
+    const body = row(page, id).locator(".message-body");
+
+    await expect(body.locator("h1")).toBeVisible();
+    await row(page, id).scrollIntoViewIfNeeded();
+    await shot(page, "message-markdown", theme);
+
+    const h1 = await metrics(body.locator(":scope > h1"));
+    const intro = await metrics(body.locator(":scope > p").first());
+    const rule = await metrics(body.locator(":scope > hr"));
+    const h2 = await metrics(body.locator(":scope > h2").first());
+    const list = await metrics(body.locator(":scope > ul").first());
+    const secondH2 = await metrics(body.locator(":scope > h2").nth(1));
+    const h3 = await metrics(body.locator(":scope > h3"));
+    const last = await metrics(body.locator(":scope > :last-child"));
+
+    // The first block sits on the body's top edge; the last adds nothing below.
+    expect(h1.marginTop).toBe(0);
+    expect(last.marginBottom).toBe(0);
+
+    // Chat-sized headings from the type scale, semibold.
+    expect(`${h1.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-page"));
+    expect(`${h2.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-title"));
+    expect(`${h3.fontSize}px`).toBe(await resolveToken(page, "font-size", "--text-body"));
+    expect(h1.fontWeight).toBe("600");
+
+    // The rule is visible, in the strong border colour, with room on both sides.
+    expect(rule.borderTopWidth).toBe(1);
+    expect(rule.borderTopStyle).toBe("solid");
+    expect(rule.borderTopColor).toBe(await resolveToken(page, "color", "--border-strong"));
+    expect(rule.top - intro.bottom).toBeGreaterThanOrEqual(12);
+    expect(h2.top - rule.bottom).toBeGreaterThanOrEqual(12);
+
+    // A heading keeps more space above it than below: it belongs to what follows.
+    const aboveH2 = secondH2.top - list.bottom;
+    const belowH2 = list.top - h2.bottom;
+
+    expect(aboveH2).toBeGreaterThanOrEqual(16);
+    expect(belowH2).toBeLessThanOrEqual(4.5);
+    expect(aboveH2).toBeGreaterThan(belowH2 * 2);
+
+    // List items and nested lists sit a small step apart.
+    const items = body.locator(":scope > ul").first().locator(":scope > li");
+
+    expect((await metrics(items.nth(1))).marginTop).toBe(2);
+    expect((await metrics(body.locator("li > ul"))).marginTop).toBe(2);
+  });
+}
+
+test("ordinary short messages keep their height", async ({ page, request }) => {
+  await post(request, "Are we still on for the demo at three?");
+
+  const id = await post(request, "Yes, room B.\n\nI'll bring the projector adapter.");
+
+  await openOn(page, id, "light");
+
+  const body = row(page, id).locator(".message-body");
+  const paragraphs = body.locator(":scope > p");
+
+  await expect(paragraphs).toHaveCount(2);
+  await shot(page, "message-markdown-short", "light");
+
+  // Two 22 px lines and the 4 px paragraph step, exactly as before.
+  const first = await metrics(paragraphs.first());
+  const second = await metrics(paragraphs.nth(1));
+
+  expect(first.marginTop).toBe(0);
+  expect(second.marginTop).toBe(4);
+  expect((await metrics(body)).height).toBeCloseTo(first.height + 4 + second.height, 0);
+  expect(first.height).toBeCloseTo(22, 0);
+});
