@@ -112,6 +112,16 @@ async fn grant_agent(app: &TestApp, agent: i64, capabilities: &[&str]) {
         .unwrap();
 }
 
+async fn revoked_post_grant(app: &TestApp) {
+    app.db().write(|tx| {
+        tx.conn().execute(
+            "INSERT INTO agent_grants(agent_id,capability,granted_by_id,revoked_at,created_at,updated_at) VALUES(?,'post_messages',127326141,?,?,?)",
+            rusqlite::params![AGENT, tx.now(), tx.now(), tx.now()],
+        )?;
+        Ok(())
+    }).await.unwrap();
+}
+
 async fn bender_agent_id(app: &TestApp) -> i64 {
     app.db()
         .read(|conn| {
@@ -341,6 +351,7 @@ async fn mcp_post_message_advertises_sticker_input() {
 async fn mcp_post_message_accepts_a_sticker_and_reads_it_back() {
     let a = agent_setup().await.without_job_runner().await;
     let sticker_id = db_sticker(&a, "WaveMcp").await;
+    revoked_post_grant(&a).await;
     let denied = mcp_call(
         &a,
         "post_message",
@@ -461,6 +472,7 @@ async fn mcp_post_message_accepts_a_sticker_and_reads_it_back() {
 async fn bot_sending_accepts_a_sticker_id_as_json() {
     let a = agent_setup().await.without_job_runner().await;
     let sticker_id = db_sticker(&a, "WaveSend").await;
+    revoked_post_grant(&a).await;
     let path = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages");
     let denied = bot_post(
         &a,
@@ -707,9 +719,11 @@ async fn deliver_to_receiver(
         let outcome =
             campfire_channels::jobs::agent_jobs::post_event(&a.booted.app, &event, net).await;
         match outcome {
-            campfire_db::models::agent_delivery::AttemptOutcome::Delivered => {},
+            campfire_db::models::agent_delivery::AttemptOutcome::Delivered => {}
             campfire_db::models::agent_delivery::AttemptOutcome::Permanent(error)
-            | campfire_db::models::agent_delivery::AttemptOutcome::Retry(error, _) => panic!("{error}"),
+            | campfire_db::models::agent_delivery::AttemptOutcome::Retry(error, _) => {
+                panic!("{error}")
+            }
         }
     } else {
         campfire_channels::jobs::integrations::deliver_webhook_with_network(
