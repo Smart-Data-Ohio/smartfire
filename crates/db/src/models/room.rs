@@ -76,6 +76,9 @@ impl FromSql for RoomType {
     }
 }
 
+#[derive(Clone, Copy)]
+enum OpenRoomGrants { AfterCommit, InTransaction }
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Room {
     pub id: i64,
@@ -291,7 +294,7 @@ impl Room {
         name: Option<&str>,
         creator_id: i64,
     ) -> Result<Self> {
-        Self::insert(tx, room_type, name, creator_id, None)
+        Self::insert(tx, room_type, name, creator_id, None, OpenRoomGrants::AfterCommit)
     }
 
     fn insert(
@@ -300,6 +303,7 @@ impl Room {
         name: Option<&str>,
         creator_id: i64,
         direct_member_key: Option<&str>,
+        grants: OpenRoomGrants,
     ) -> Result<Self> {
         if room_type == RoomType::Direct {
             crate::models::direct_room::validate_name(name)?;
@@ -311,7 +315,10 @@ impl Room {
             |r| r.get(0),
         )?;
         if room_type == RoomType::Open {
-            tx.after_commit(move |tx| grant_to_active_users(tx, id));
+            match grants {
+                OpenRoomGrants::AfterCommit => tx.after_commit(move |tx| grant_to_active_users(tx, id)),
+                OpenRoomGrants::InTransaction => grant_to_active_users(tx, id)?,
+            }
         }
         Self::find(tx.conn(), id)
     }
@@ -326,9 +333,22 @@ impl Room {
         creator_id: i64,
         user_ids: &[i64],
     ) -> Result<Self> {
+        Self::create_for_with_grants(tx, room_type, name, creator_id, user_ids, OpenRoomGrants::AfterCommit)
+    }
+
+    /// Bulk structure creation keeps default open-room grants in the caller's transaction.
+    pub fn create_for_atomically(
+        tx: &mut Tx<'_>, room_type: RoomType, name: Option<&str>, creator_id: i64, user_ids: &[i64],
+    ) -> Result<Self> {
+        Self::create_for_with_grants(tx, room_type, name, creator_id, user_ids, OpenRoomGrants::InTransaction)
+    }
+
+    fn create_for_with_grants(
+        tx: &mut Tx<'_>, room_type: RoomType, name: Option<&str>, creator_id: i64, user_ids: &[i64], grants: OpenRoomGrants,
+    ) -> Result<Self> {
         if room_type == RoomType::Direct { super::ignore_policy::require_contact(tx.conn(), creator_id, user_ids)?; }
         let key = (room_type == RoomType::Direct).then(|| Self::direct_member_key_for(user_ids));
-        let mut room = Self::insert(tx, room_type, name, creator_id, key.as_deref())?;
+        let mut room = Self::insert(tx, room_type, name, creator_id, key.as_deref(), grants)?;
         room.grant_to(tx, user_ids)?;
         if room_type == RoomType::Stage {
             room.make_creator_the_host(tx)?;

@@ -120,6 +120,7 @@ async function serveHttp(mock: MockServer, request: IncomingMessage, response: S
     headers: headersOf(request),
   });
 
+  for (const [name, value] of Object.entries(result.headers ?? {})) response.setHeader(name, value);
   sendJson(response, result.status, result.json);
 }
 

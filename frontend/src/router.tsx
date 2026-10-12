@@ -21,6 +21,7 @@ import { PeopleSection } from "./features/admin/people-section.tsx";
 import { SoundsSection } from "./features/admin/sounds-section.tsx";
 import { StickersSection } from "./features/admin/stickers-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
+import { TemplatesSection } from "./features/admin/templates-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { parseSignInSearch } from "./features/auth/auth-navigation.ts";
@@ -504,6 +505,7 @@ const adminSections = [
   createRoute({ getParentRoute: () => adminRoute, path: "/", component: WorkspaceSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "workspace", component: WorkspaceSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "invites", component: InvitesSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "templates", component: TemplatesSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "sounds", component: SoundsSection }),

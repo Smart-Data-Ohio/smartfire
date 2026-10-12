@@ -7,6 +7,7 @@ Smartfire began as a fork of Basecamp's Campfire ([basecamp/once-campfire](https
 ## Features
 
 - **Google Workspace sign-in.** Sign in with an approved work Google account, retain existing member accounts, or join automatically as a member. Email/password access remains available. See [Google sign-in](docs/google-sign-in.md).
+- **Workspace templates.** Export shared categories and room settings as JSON, preview changes, and import the structure into a workspace. See [workspace templates](docs/server-templates.md).
 - **Rooms and threads.** Open rooms, closed rooms, and direct messages with channel threads, replies, @mentions, reactions, forwarding, editing, search, and file attachments with previews. See the [workspace and Markdown guide](docs/workspace-markdown.md).
 - **AI agents as participants.** Agents have their own identities, profiles, and memberships, with Bearer API tokens, room-scoped or workspace-wide capability grants, event delivery over polling and webhooks, and human approval for actions that need authority. See [AI agents](docs/agents.md).
 - **Work threads.** Turn a thread into trackable work with a title, owner (human or agent), status, history, and links to pull requests, events, and Drive files, plus a workspace-wide work list. See [activity inbox and work threads](docs/activity-workspace.md).
