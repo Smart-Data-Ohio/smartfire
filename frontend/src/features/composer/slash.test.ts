@@ -491,3 +491,53 @@ describe("typed lines, as the server reads their values", () => {
     });
   });
 });
+
+describe("choice values through the text form", () => {
+  const VERBATIM: CommandSchema = {
+    options: [
+      {
+        name: "env",
+        description: "Env",
+        type: "string",
+        required: false,
+        choices: [
+          { name: "Padded", value: " prod " },
+          { name: "Plain", value: "prod" },
+          { name: "Empty", value: "" },
+          { name: "Spaced", value: "eu west: 2" },
+        ],
+      },
+    ],
+  };
+
+  const pick = (label: string, value: string) =>
+    editOption(startEntry(DEPLOY, VERBATIM), "env", { text: label, picked: { label, value } });
+
+  it.each([
+    ["Padded", " prod ", '/deploy env:" prod "'],
+    ["Plain", "prod", "/deploy env:prod"],
+    ["Empty", "", '/deploy env:""'],
+    ["Spaced", "eu west: 2", '/deploy env:"eu west: 2"'],
+  ])("keeps %s's value verbatim, there and back", (label, value, line) => {
+    const picked = pick(label, value);
+
+    expect(entryText(picked)).toBe(line);
+    expect(commandText(picked)).toBe(line);
+    expect(commandValues(picked).values).toEqual({ env: value });
+
+    const parsed = parseEntry(DEPLOY, VERBATIM, lineArguments(line));
+
+    expect(parsed.inputs.env).toEqual({ text: label, picked: { label, value } });
+    expect(commandValues(parsed).values).toEqual({ env: value });
+    expect(entryText(parsed)).toBe(line);
+  });
+
+  it("tells an empty value apart from no value", () => {
+    const blank = editOption(startEntry(DEPLOY, VERBATIM), "env", { text: "", picked: null });
+
+    expect(entryText(blank)).toBe("/deploy");
+    expect(commandValues(blank).values).toEqual({});
+    expect(commandValues(parseEntry(DEPLOY, VERBATIM, "env:")).values).toEqual({});
+    expect(commandValues(parseEntry(DEPLOY, VERBATIM, 'env:""')).values).toEqual({ env: "" });
+  });
+});

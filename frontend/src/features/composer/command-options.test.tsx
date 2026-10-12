@@ -493,3 +493,100 @@ describe("a typed command's fields across time", () => {
     expect(lists).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("a choice's value through a saved draft and plain text", () => {
+  const TAG: SlashCommand = {
+    name: "tag",
+    description: "Tag a deploy",
+    argHint: "",
+    takesArguments: true,
+    agentName: "Ember",
+    optionSchema: {
+      options: [
+        {
+          name: "env",
+          description: "Which one",
+          type: "string",
+          required: true,
+          choices: [
+            { name: "Padded", value: " prod " },
+            { name: "Plain", value: "prod" },
+            { name: "Empty", value: "" },
+            { name: "Spaced", value: "eu west: 2" },
+          ],
+        },
+      ],
+    },
+  };
+
+  const CASES = [
+    ["Padded", " prod ", 0],
+    ["Empty", "", 2],
+    ["Spaced", "eu west: 2", 3],
+  ] as const;
+
+  /** Opens /tag and picks the choice `index` rows down. */
+  async function pickTag(index: number): Promise<void> {
+    vi.spyOn(composerActions, "slashCommands").mockResolvedValue([TAG]);
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    fireEvent.focus(textbox());
+    fireEvent.change(textbox(), { target: { value: "/ta" } });
+    await screen.findByRole("option", { name: /\/tag/ });
+    fireEvent.keyDown(textbox(), { key: "Enter" });
+
+    const env = await screen.findByRole("combobox", { name: "env" });
+
+    await waitFor(() => expect(document.activeElement).toBe(env));
+
+    for (let step = 0; step < index; step += 1) {
+      fireEvent.keyDown(env, { key: "ArrowDown" });
+    }
+
+    fireEvent.keyDown(env, { key: "Enter" });
+  }
+
+  it.each(CASES)("sends %s's value verbatim after a remount", async (label, value, index) => {
+    const run = vi
+      .spyOn(composerActions, "runSlashCommand")
+      .mockResolvedValue({ status: "ephemeral", message: "Sent to Ember" });
+
+    await pickTag(index);
+    expect(screen.getByRole("combobox", { name: "env" })).toHaveProperty("value", label);
+
+    cleanup();
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "env" })).toHaveProperty("value", label),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() =>
+      expect(run).toHaveBeenCalledWith(ROOM, `/tag env:${JSON.stringify(value)}`, null, {
+        subcommand: null,
+        values: { env: value },
+      }),
+    );
+  });
+
+  it.each(CASES)("sends %s's value verbatim after Escape and back", async (label, value, index) => {
+    const run = vi
+      .spyOn(composerActions, "runSlashCommand")
+      .mockResolvedValue({ status: "ephemeral", message: "Sent to Ember" });
+
+    await pickTag(index);
+    expect(screen.getByRole("combobox", { name: "env" })).toHaveProperty("value", label);
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "env" }), { key: "Escape" });
+    await waitFor(() =>
+      expect(textbox()).toHaveProperty("value", `/tag env:${JSON.stringify(value)} `),
+    );
+
+    // Back again: the line opens as the same pick, untouched by trimming.
+    fireEvent.keyDown(textbox(), { key: "Enter" });
+    await waitFor(() =>
+      expect(run).toHaveBeenCalledWith(ROOM, `/tag env:${JSON.stringify(value)}`, null, {
+        subcommand: null,
+        values: { env: value },
+      }),
+    );
+  });
+});

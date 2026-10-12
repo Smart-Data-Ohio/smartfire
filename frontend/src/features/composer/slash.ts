@@ -360,6 +360,18 @@ function typedChoice(option: CommandOption, text: string): PickedValue | null {
   }
 }
 
+/**
+ * The choice whose value is exactly `text`, untrimmed: what a line `entryText` wrote holds, so a
+ * value with spaces around it (` prod `) or an empty one (`""`) comes back as that choice.
+ */
+function exactChoice(option: CommandOption, text: string): PickedValue | null {
+  if (option.type !== "string" && option.type !== "integer" && option.type !== "number") {
+    return null;
+  }
+
+  return optionChoices(option)?.find((choice) => String(choice.value) === text) ?? null;
+}
+
 function between(min: number | undefined, max: number | undefined, unit: string): string {
   if (min !== undefined && max !== undefined) {
     return `Must be ${min} to ${max}${unit}.`;
@@ -546,8 +558,12 @@ function token(value: string): string {
   return value === "" || /[\s"]/.test(value) ? JSON.stringify(value) : value;
 }
 
-/** The line itself: `/deploy run service:api replicas:2`, from what each field holds. */
-function lineFor(entry: CommandEntry, read: (option: CommandOption) => string): string {
+/**
+ * The line itself: `/deploy run service:api replicas:2`, from what each field holds. `read` gives
+ * an option's value verbatim, or `null` when it has none: an empty choice is `name:""`, and only
+ * an option with no value is left out.
+ */
+function lineFor(entry: CommandEntry, read: (option: CommandOption) => string | null): string {
   const words = [`/${entry.command.name}`];
   const subcommand = entry.subcommand ?? entry.subcommandText.trim();
 
@@ -558,7 +574,7 @@ function lineFor(entry: CommandEntry, read: (option: CommandOption) => string): 
   for (const option of entryOptions(entry) ?? []) {
     const value = read(option);
 
-    if (value !== "") {
+    if (value !== null) {
       words.push(`${option.name}:${token(value)}`);
     }
   }
@@ -571,7 +587,7 @@ export function commandText(entry: CommandEntry): string {
   return lineFor(entry, (option) => {
     const { value } = readOption(option, entry.inputs[option.name]);
 
-    return value === null ? "" : String(value);
+    return value === null ? null : String(value);
   });
 }
 
@@ -583,9 +599,13 @@ export function entryText(entry: CommandEntry): string {
   const line = lineFor(entry, (option) => {
     const input = entry.inputs[option.name];
 
-    return input?.picked === null || input?.picked === undefined
-      ? (input?.text.trim() ?? "")
-      : String(input.picked.value);
+    if (input?.picked !== null && input?.picked !== undefined) {
+      return String(input.picked.value);
+    }
+
+    const typed = input?.text.trim() ?? "";
+
+    return typed === "" ? null : typed;
   });
 
   return [line, ...entry.extra].join(" ");
@@ -667,7 +687,9 @@ export function parseEntry(
     }
 
     const text = unquote(raw ?? "");
-    const picked = typedChoice(option, text);
+    // `name:` alone is a field left empty; only a quoted `""` is the empty value.
+    const exact = raw === undefined || raw === "" ? null : exactChoice(option, text);
+    const picked = exact ?? typedChoice(option, text);
 
     entry = editOption(showOption(entry, key), key, {
       text: picked === null ? text : pickLabel(option, picked, nameOf),
