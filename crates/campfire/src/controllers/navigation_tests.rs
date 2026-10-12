@@ -46,7 +46,7 @@ async fn room_collections_redirect_users_without_rooms() {
                     .send(Req::new(method.clone(), &path).header("accept", accept))
                     .await;
                 let location = format!("{ORIGIN}{target}");
-                let status = if target == "/app/" { StatusCode::MOVED_PERMANENTLY } else { StatusCode::FOUND };
+                let status = StatusCode::FOUND;
                 if reply.status != status || reply.location() != Some(location.as_str())
                 {
                     failures.push(format!(
@@ -94,7 +94,7 @@ async fn typed_room_collections_keep_machine_redirects_for_users_with_rooms() {
 }
 
 #[tokio::test]
-async fn typed_bookmarks_redirect_permanently_with_message_queries_and_keep_machine_urls() {
+async fn typed_bookmarks_preserve_message_queries_and_keep_machine_urls() {
     use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage, Room, RoomType};
     let app = TestApp::boot_frozen().await.expect("restored seed required");
     let mut browser = app.sign_in(DAVID).await;
@@ -130,12 +130,14 @@ async fn typed_bookmarks_redirect_permanently_with_message_queries_and_keep_mach
         let query = format!("{thread_query}message_id={message}&source=mail&source=push&note=a%20b&classic=1");
         let path = format!("/rooms/{namespace}/{room}");
         for method in [Method::GET, Method::HEAD] {
+            let plain = browser.send(Req::new(method.clone(), &path)).await;
+            assert_eq!((plain.status, plain.location()), (StatusCode::FOUND, Some(format!("{ORIGIN}/rooms/{room}").as_str())), "{method} {path}");
             let reply = browser.send(Req::new(method.clone(), &format!("{path}?{query}"))).await;
             let target = thread.map_or_else(
                 || format!("{ORIGIN}/app/r/{room}/m/{message}?source=mail&source=push&note=a%20b"),
                 |id| format!("{ORIGIN}/app/r/{room}/t/{id}?m={message}&source=mail&source=push&note=a%20b"),
             );
-            assert_eq!((reply.status, reply.location()), (StatusCode::MOVED_PERMANENTLY, Some(target.as_str())), "{method} {path}");
+            assert_eq!((reply.status, reply.location()), (StatusCode::FOUND, Some(target.as_str())), "{method} {path}");
         }
         for header in [("accept", "application/json"), ("x-requested-with", "XMLHttpRequest"), ("turbo-frame", "room")] {
             let reply = browser.send(Req::new(Method::GET, &path).header(header.0, header.1)).await;
@@ -150,7 +152,7 @@ async fn room_collections_preserve_query_context_and_refresh_keeps_its_protocol_
     let mut browser = app.sign_in(DAVID).await;
     for path in COLLECTIONS.map(|kind| format!("/rooms/{kind}")).into_iter().chain(["/rooms".into()]) {
         let reply = browser.get(&format!("{path}?source=mail&source=push&classic=1")).await;
-        assert_eq!((reply.status, reply.location()), (StatusCode::MOVED_PERMANENTLY, Some("http://campfire.test/app/?source=mail&source=push")), "{path}");
+        assert_eq!((reply.status, reply.location()), (StatusCode::FOUND, Some("http://campfire.test/app/?source=mail&source=push")), "{path}");
     }
     let room = app.db().read(|conn| campfire_db::Room::last_for_user(conn, DAVID)).await.unwrap().unwrap();
     let reply = browser.get(&format!("/rooms/{}/refresh", room.id)).await;
@@ -165,7 +167,7 @@ async fn stored_message_links_keep_navigation_context_and_the_fragment_response(
     let destination = "http://campfire.test/app/r/104393281/m/935962045";
     for method in [Method::GET, Method::HEAD] {
         let reply = browser.send(Req::new(method.clone(), path)).await;
-        assert_eq!((reply.status, reply.location()), (StatusCode::MOVED_PERMANENTLY, Some(format!("{destination}?source=mail&source=push").as_str())), "{method}");
+        assert_eq!((reply.status, reply.location()), (StatusCode::FOUND, Some(format!("{destination}?source=mail&source=push").as_str())), "{method}");
     }
     let reply = browser.classic_page(path).await;
     assert_eq!((reply.status, reply.location()), (StatusCode::FOUND, Some(destination)));
@@ -187,7 +189,7 @@ async fn room_aliases_drop_threads_in_rooms_the_viewer_cannot_open() {
             let reply = browser.send(Req::new(method.clone(), &format!("{path}?thread=4"))).await;
             assert_eq!(
                 (reply.status, reply.location()),
-                (StatusCode::MOVED_PERMANENTLY, Some("http://campfire.test/app/r/201306877")),
+                (StatusCode::FOUND, Some("http://campfire.test/app/r/201306877")),
                 "{method} {path}"
             );
         }
@@ -210,7 +212,7 @@ async fn room_aliases_drop_rejected_messages_and_keep_unrelated_query_pairs() {
             let reply = browser.send(Req::new(method.clone(), &format!("{path}?{query}"))).await;
             assert_eq!(
                 (reply.status, reply.location()),
-                (StatusCode::MOVED_PERMANENTLY, Some("http://campfire.test/app/r/201306877?source=mail&note=a%20b&source=push")),
+                (StatusCode::FOUND, Some("http://campfire.test/app/r/201306877?source=mail&note=a%20b&source=push")),
                 "{method} {path}"
             );
         }

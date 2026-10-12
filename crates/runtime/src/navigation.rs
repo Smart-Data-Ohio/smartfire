@@ -1,6 +1,6 @@
 //! Redirect retired HTML pages to their supported SPA destination.
 use crate::concerns;
-use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, format};
+use campfire_kit::{Ctx, Error, Result, format};
 use regex::Regex;
 use std::sync::LazyLock;
 
@@ -29,14 +29,9 @@ pub async fn redirect(c: &mut Ctx) -> Result {
     redirect_alias(c, &url)
 }
 
-/// Permanent for browser navigation; fetches and frames retain their temporary redirect.
+/// Alias destinations depend on the viewer, so they retain Rails' temporary redirect.
 pub fn redirect_alias(c: &mut Ctx, path: &str) -> Result {
-    let status = if alias_navigation(c)? {
-        StatusCode::MOVED_PERMANENTLY
-    } else {
-        StatusCode::FOUND
-    };
-    c.redirect_to_with(&c.url_for(path), Redirect { status: Some(status), ..Default::default() })
+    c.redirect_to(&c.url_for(path))
 }
 
 pub fn alias_navigation(c: &mut Ctx) -> Result<bool> {
