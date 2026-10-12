@@ -373,7 +373,7 @@ matrix("boards get their own section after Channels", async ({ page, theme, phon
   const list = sidebar(page);
 
   await expect(heading(page, "boards")).toHaveText("Boards");
-  expect(await names(page, "boards")).toEqual(["Roadmap"]);
+  await expect.poll(() => names(page, "boards")).toEqual(["Product roadmap", "Roadmap"]);
   expect(await names(page, "channels")).not.toContain("Roadmap");
 
   const keys = await list
@@ -381,11 +381,15 @@ matrix("boards get their own section after Channels", async ({ page, theme, phon
     .evaluateAll((all) => all.map((element) => element.getAttribute("data-drop-section")));
 
   expect(keys.slice(keys.indexOf("channels"))).toEqual(["channels", "boards", "voice", "direct"]);
+  await section(page, "boards").scrollIntoViewIfNeeded();
   await settledShot(page, "boards-section", theme);
 
   // Folding is remembered across a reload, like Channels.
   await heading(page, "boards").click();
   await expect(section(page, "boards")).toHaveAttribute("data-open", "false");
+  // Folded, it still shows its unread board and says so on its heading.
+  await expect(section(page, "boards")).toHaveAttribute("data-unread", "true");
+  await settledShot(page, "boards-folded", theme);
   await page.reload();
   await expect(section(page, "boards")).toHaveAttribute("data-open", "false");
   await heading(page, "boards").click();

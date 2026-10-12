@@ -1,5 +1,5 @@
 import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
-import type { RoomCategory, SidebarRow } from "../../store/model.ts";
+import type { RoomCategory, RoomKind, SidebarRow } from "../../store/model.ts";
 import { byFavoritePosition, organizedSidebar } from "../../store/organize.ts";
 import type { SidebarState } from "../../store/state.ts";
 import { sharedCategories, sharedLayout } from "../../store/workspace-layout.ts";
@@ -10,14 +10,31 @@ export type SidebarSectionKind =
   | "category"
   | "shared"
   | "channels"
+  | "boards"
   | "voice"
   | "direct";
+
+/** The built-in section each kind of room lives in when nothing else places it. */
+const HOME_SECTIONS = {
+  open: "channels",
+  closed: "channels",
+  board: "boards",
+  voice: "voice",
+  stage: "voice",
+  direct: "direct",
+} as const satisfies Record<RoomKind, SidebarSectionKind>;
+
+export type HomeSectionKind = (typeof HOME_SECTIONS)[RoomKind];
+
+export function homeSection(row: Pick<SidebarRow, "room">): HomeSectionKind {
+  return HOME_SECTIONS[row.room.kind];
+}
 
 /** One collapsible group of sidebar rows. */
 export interface SidebarSection {
   /**
    * Stable across renders: "favorites", "category-3" (yours), "shared-4" (the workspace's),
-   * "channels", "voice", "direct".
+   * "channels", "boards", "voice", "direct".
    */
   readonly key: string;
   readonly kind: SidebarSectionKind;
@@ -80,12 +97,13 @@ function sharedSection(category: WorkspaceCategory, rows: readonly SidebarRow[])
  * Groups the sidebar. Personal organisation comes first and wins: Favourites by position, then
  * every user category (empty ones too, so there is somewhere to drop). Every other room follows
  * the workspace's shared layout: the shared categories in the administrators' order, each room in
- * its shared position, then Channels and Voice for the rooms in no shared category (in their
- * shared order too, rooms never organized after the rest by name), and Direct messages newest
- * first. A shared category with nothing left to show is dropped, except for administrators (a
- * drag shows the dragged room's own again: `dragSections` in organize-model.ts).
- * Pending organising changes are drawn in, and invisible rooms stay out. Empty Favourites and
- * Voice are dropped; Channels and Direct messages always show (they hold the "add" affordances).
+ * its shared position, then Channels, Boards and Voice for the rooms in no shared category (in
+ * their shared order too, rooms never organized after the rest by name), and Direct messages
+ * newest first. A shared category with nothing left to show is dropped, except for administrators
+ * (a drag shows the dragged room's own again: `dragSections` in organize-model.ts).
+ * Pending organising changes are drawn in, and invisible rooms stay out. Empty Favourites, Boards
+ * and Voice are dropped; Channels and Direct messages always show (they hold the "add"
+ * affordances).
  */
 export function sidebarSections(
   sidebar: SidebarState,
@@ -97,12 +115,16 @@ export function sidebarSections(
   const sharedIds = new Set(shared.map((category) => category.id));
   const places = new Map(layout.rooms.map((place) => [place.roomId, place]));
   const favorites: SidebarRow[] = [];
-  const channels: SidebarRow[] = [];
-  const voice: SidebarRow[] = [];
-  const direct: SidebarRow[] = [];
   const categorized = new Map<number, SidebarRow[]>();
   const placed = new Map<number, SidebarRow[]>();
   const categoryIds = new Set(view.categories.map((category) => category.id));
+
+  const homes: Record<HomeSectionKind, SidebarRow[]> = {
+    channels: [],
+    boards: [],
+    voice: [],
+    direct: [],
+  };
 
   for (const roomId of view.order) {
     const row = view.rows[roomId];
@@ -121,17 +143,13 @@ export function sidebarSections(
 
       list.push(row);
       categorized.set(membership.roomCategoryId, list);
-    } else if (room.kind === "direct") {
-      direct.push(row);
-    } else if (sharedId !== null && sharedIds.has(sharedId)) {
+    } else if (room.kind !== "direct" && sharedId !== null && sharedIds.has(sharedId)) {
       const list = placed.get(sharedId) ?? [];
 
       list.push(row);
       placed.set(sharedId, list);
-    } else if (room.kind === "voice" || room.kind === "stage") {
-      voice.push(row);
     } else {
-      channels.push(row);
+      homes[homeSection(row)].push(row);
     }
   }
 
@@ -147,9 +165,10 @@ export function sidebarSections(
   };
 
   favorites.sort(byFavoritePosition);
-  channels.sort(bySharedPosition);
-  voice.sort(bySharedPosition);
-  direct.sort(byNewest);
+  homes.channels.sort(bySharedPosition);
+  homes.boards.sort(bySharedPosition);
+  homes.voice.sort(bySharedPosition);
+  homes.direct.sort(byNewest);
 
   const sections: SidebarSection[] = [];
 
@@ -169,13 +188,17 @@ export function sidebarSections(
     }
   }
 
-  sections.push(builtIn("channels", "Channels", channels));
+  sections.push(builtIn("channels", "Channels", homes.channels));
 
-  if (voice.length > 0) {
-    sections.push(builtIn("voice", "Voice", voice));
+  if (homes.boards.length > 0) {
+    sections.push(builtIn("boards", "Boards", homes.boards));
   }
 
-  sections.push(builtIn("direct", "Direct messages", direct));
+  if (homes.voice.length > 0) {
+    sections.push(builtIn("voice", "Voice", homes.voice));
+  }
+
+  sections.push(builtIn("direct", "Direct messages", homes.direct));
 
   return sections;
 }
