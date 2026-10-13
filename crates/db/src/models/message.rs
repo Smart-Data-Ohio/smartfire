@@ -552,7 +552,7 @@ impl Message {
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate_with_associations(tx.conn(), &attributes, true, loaded_associations)?.into_result()?;
         for blob_id in attributes.attachment_blob_id.iter().chain(&attributes.attachment_blob_ids) {
-            if !Blob::reusable_by(tx.conn(), *blob_id, attributes.creator_id)? {
+            if !Blob::reusable_by(tx.conn(), *blob_id, attributes.creator_id, "Message")? {
                 let mut errors = Errors::default();
                 errors.add("attachment", "is inaccessible");
                 return Err(crate::Error::RecordInvalid(errors));
@@ -1263,7 +1263,7 @@ impl Message {
     }
 
     pub fn replace_attachment_for(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>, actor_id: i64) -> Result<()> {
-        if let Some(blob_id) = blob_id && !Blob::reusable_by(tx.conn(), blob_id, actor_id)? {
+        if let Some(blob_id) = blob_id && !Blob::reusable_by(tx.conn(), blob_id, actor_id, "Message")? {
             let mut errors = Errors::default();
             errors.add("attachment", "is inaccessible");
             return Err(crate::Error::RecordInvalid(errors));

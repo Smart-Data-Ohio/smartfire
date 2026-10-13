@@ -878,7 +878,7 @@ async fn post_poll(c: &mut Ctx) -> Result {
             // Claim only fresh uploads. Reusing a room's attachment would share its signed URL.
             for image in &media {
                 if let PreparedPollMedia::Image(prepared) = image {
-                    if !campfire_db::Blob::reusable_by(tx.conn(), prepared.blob.id, creator_id)? {
+                    if !campfire_db::Blob::reusable_by(tx.conn(), prepared.blob.id, creator_id, "PollOption")? {
                         return Ok(Err(validation("optionMedia", "must be an accessible uploaded image")));
                     }
                     let attached: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)", [prepared.blob.id], |r| r.get(0))?;

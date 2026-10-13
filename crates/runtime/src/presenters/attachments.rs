@@ -303,7 +303,7 @@ pub fn attach_existing(
         "ActionText::RichText" => tx.conn().query_row("SELECT m.creator_id FROM action_text_rich_texts rt JOIN messages m ON m.id=rt.record_id WHERE rt.id=? AND rt.record_type='Message'", [record.id], |row| row.get(0))?,
         _ => 0,
     };
-    if !campfire_db::Blob::reusable_by(tx.conn(), blob.id, actor_id)? {
+    if !campfire_db::Blob::reusable_by(tx.conn(), blob.id, actor_id, record.record_type)? {
         let mut errors = campfire_db::Errors::default();
         errors.add("attachment", "is inaccessible");
         return Err(campfire_db::Error::RecordInvalid(errors));
