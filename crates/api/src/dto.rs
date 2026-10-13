@@ -1186,7 +1186,6 @@ fn sidebar_row_with(
     members: Option<&[(i64, String)]>,
     counts: RoomCounts,
     last_message: Option<api::SidebarLastMessage>,
-    note_to_self: bool,
     (revision, now): (i64, Timestamp),
 ) -> api::SidebarRow {
     let (display_name, direct_member_ids) = match members {
@@ -1213,7 +1212,7 @@ fn sidebar_row_with(
         thread_notification_count: counts.thread_notifications,
         last_message,
         refresh_room: None,
-        note_to_self: note_to_self.then_some(true),
+        note_to_self: None,
     }
 }
 
@@ -1254,16 +1253,18 @@ pub fn membership_row(
     } else {
         None
     };
-    Ok(sidebar_row_with(
+    let mut row = sidebar_row_with(
         room,
         &membership,
         viewer.display_name(),
         members.as_deref(),
         counts,
         last_message,
-        room.direct() && Room::is_note_to_self_of(conn, room.id, membership.user_id)?,
         (campfire_db::models::notification_policy::NotificationPreferences::load(conn, membership.user_id)?.settings_revision, now),
-    ))
+    );
+    row.note_to_self = (room.direct() && Room::is_note_to_self_of(conn, room.id, membership.user_id)?)
+        .then_some(true);
+    Ok(row)
 }
 
 /// The person's whole sidebar, from one snapshot: the memberships it lists, their counts (one
@@ -1296,16 +1297,16 @@ pub fn sidebar(
         } else {
             None
         };
-        let row = sidebar_row_with(
+        let mut row = sidebar_row_with(
             room,
             membership,
             viewer.display_name(),
             members.as_deref(),
             counts.get(&room.id).copied().unwrap_or_default(),
             last_messages.remove(&room.id),
-            note_to_self == Some(room.id),
             (revision, now),
         );
+        row.note_to_self = (note_to_self == Some(room.id)).then_some(true);
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);
     }
