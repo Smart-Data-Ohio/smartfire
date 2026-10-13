@@ -201,6 +201,8 @@ async fn oauth_data_registered_periodic_sweep_preserves_live_then_cleans_dead_to
     let app = setup().await;
     app.db()
         .write(|tx| {
+            let old = tx.now().ago(jiff::SignedDuration::from_hours(24));
+            tx.conn().execute("INSERT INTO oauth_clients(client_id,registration,client_name,redirect_uris,created_at,updated_at) VALUES('unused-dcr','dcr','Unused registration','[]',?,?)", params![old, old])?;
             tx.conn()
                 .execute("UPDATE oauth_tokens SET expires_at=?", [tx.now()])?;
             Ok(())
@@ -217,6 +219,9 @@ async fn oauth_data_registered_periodic_sweep_preserves_live_then_cleans_dead_to
         periodic.tick(app.booted.app.clone(), now).await,
         ["OAuth sweep"]
     );
+    assert_eq!(app.db().read(|conn| {
+        Ok(conn.query_row("SELECT COUNT(*) FROM oauth_clients WHERE client_id='unused-dcr'", [], |r| r.get::<_, i64>(0))?)
+    }).await.unwrap(), 0, "the scheduled sweep also cleans unused registrations");
     let count = |conn: &campfire_db::Connection| {
         Ok(
             conn.query_row("SELECT COUNT(*) FROM oauth_tokens", [], |r| {

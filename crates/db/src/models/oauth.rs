@@ -5,6 +5,7 @@ use jiff::SignedDuration;
 use rand::RngCore;
 use rusqlite::{Row, params};
 
+pub const DCR_UNUSED_LIFETIME: SignedDuration = SignedDuration::from_hours(24);
 pub const CONNECTION_LIFETIME: SignedDuration = SignedDuration::from_hours(180 * 24);
 pub const ACCESS_LIFETIME: SignedDuration = SignedDuration::from_hours(1);
 pub const REFRESH_LIFETIME: SignedDuration = SignedDuration::from_hours(30 * 24);
@@ -294,6 +295,11 @@ pub fn sweep(tx: &Tx<'_>) -> Result<()> {
     tx.conn().execute(
         &format!("DELETE FROM oauth_authorizations WHERE expires_at<=?1 AND (oauth_connection_id IS NULL OR oauth_connection_id IN (SELECT connection.id FROM oauth_connections connection WHERE {dead} AND NOT EXISTS (SELECT 1 FROM oauth_tokens family WHERE family.oauth_connection_id=connection.id AND family.expires_at>?1)))"),
         [tx.now()],
+    )?;
+    // Leave time to complete first consent, and preserve every linked connection/tombstone.
+    tx.conn().execute(
+        "DELETE FROM oauth_clients WHERE registration='dcr' AND created_at<=?1 AND NOT EXISTS (SELECT 1 FROM oauth_connections connection WHERE connection.oauth_client_id=oauth_clients.id) AND NOT EXISTS (SELECT 1 FROM oauth_authorizations authorization WHERE authorization.oauth_client_id=oauth_clients.id AND authorization.status='pending' AND authorization.expires_at>?2)",
+        params![tx.now().ago(DCR_UNUSED_LIFETIME), tx.now()],
     )?;
     Ok(())
 }
