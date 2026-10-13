@@ -22,8 +22,11 @@ fn document() -> Value {
     value
 }
 fn key_route(value: &Value) -> Route {
+    key_route_with_type(value, "application/json")
+}
+fn key_route_with_type(value: &Value, media_type: &str) -> Route {
     Route::new("GET", "client.example", "/jwks.json", 200)
-        .header("Content-Type", "application/json")
+        .header("Content-Type", media_type)
         .header("Cache-Control", "max-age=600")
         .body(serde_json::to_vec(value).unwrap())
 }
@@ -36,6 +39,9 @@ async fn jwt_fixture(alg: &str) -> Fixture {
             .remove("token_endpoint_auth_methods_supported");
         doc["token_endpoint_auth_method"] = json!("private_key_jwt");
     }
+    jwt_fixture_with_document(alg, doc).await
+}
+async fn jwt_fixture_with_document(alg: &str, doc: Value) -> Fixture {
     let f = fixture(doc).await;
     // Fetch CIMD first; all subsequent network requests in these cases are JWKS.
     campfire_app::oauth::client::identify(&f.app.booted.app, CLIENT, || Ok(()))
@@ -121,18 +127,24 @@ fn refresh_form(token: &str) -> Vec<(&str, &str)> {
     ]
 }
 async fn send(app: &TestApp, form: &[(&str, &str)], jwt: &str) -> Reply {
+    send_to(app, "/oauth/token", form, jwt).await
+}
+async fn send_to(app: &TestApp, path: &str, form: &[(&str, &str)], jwt: &str) -> Reply {
     let mut form = form.to_vec();
     form.extend([
         ("client_assertion_type", assertion::TYPE),
         ("client_assertion", jwt),
     ]);
     app.anonymous()
-        .send(Req::new(Method::POST, "/oauth/token").form(&form))
+        .send(Req::new(Method::POST, path).form(&form))
         .await
 }
 fn invalid_client(reply: Reply) {
+    auth_error(reply, "invalid_client");
+}
+fn auth_error(reply: Reply, error: &str) {
     assert_eq!(reply.status.as_u16(), 400, "{}", reply.text());
-    assert_eq!(reply.json()["error"], "invalid_client");
+    assert_eq!(reply.json()["error"], error);
     assert_eq!(reply.header("cache-control"), Some("no-store"));
 }
 fn key_fetches(f: &Fixture) -> usize {
@@ -283,29 +295,9 @@ async fn oauth_jwt_header_claim_and_mechanism_refusals_leave_code_unconsumed() {
         invalid_client(reply);
     }
     let jwt = sign("RS256", &header("RS256"), &claims(&f, "mechanisms"));
-    for (field, value) in [
-        ("client_secret", "secret"),
-        ("token_endpoint_auth_method", "none"),
-    ] {
-        let mut form = code_form(&code);
-        form.push((field, value));
-        invalid_client(send(&f.app, &form, &jwt).await);
-    }
     let mut form = code_form(&code);
-    form.extend([
-        ("client_assertion_type", assertion::TYPE),
-        ("client_assertion", &jwt),
-    ]);
-    invalid_client(
-        f.app
-            .anonymous()
-            .send(
-                Req::new(Method::POST, "/oauth/token")
-                    .form(&form)
-                    .header("authorization", "Basic dGVzdDpzZWNyZXQ="),
-            )
-            .await,
-    );
+    form.push(("token_endpoint_auth_method", "none"));
+    invalid_client(send(&f.app, &form, &jwt).await);
     for ty in [None, Some("wrong")] {
         let mut form = code_form(&code);
         form.push(("client_assertion", &jwt));
@@ -463,10 +455,13 @@ async fn oauth_jwt_replay_survives_a_new_app_on_the_same_database() {
     let pair = pair.json();
     let token = pair["refresh_token"].as_str().unwrap();
     invalid_client(send(&f.app, &refresh_form(token), &jwt).await);
+    let fresh_jwt = sign("RS256", &header("RS256"), &claims(&f, "after restart"));
+    let network = f.app.booted.app.subscription_network.clone();
     let app = f
         .app
-        .restart(
+        .restart_with_network(
             f.clock,
+            network,
             &[("APP_URL", ISSUER), ("SMARTFIRE_MCP_OAUTH", "1")],
         )
         .await
@@ -476,8 +471,12 @@ async fn oauth_jwt_replay_survives_a_new_app_on_the_same_database() {
         app.booted.app.json_cache.is_empty(),
         "new process has no JWKS cache"
     );
-    invalid_client(send(&app, &refresh_form(token), &jwt).await);
-    let secret = token.to_string();
+    let fresh = send(&app, &refresh_form(token), &fresh_jwt).await;
+    assert_eq!(fresh.status.as_u16(), 200, "{}", fresh.text());
+    let fresh = fresh.json();
+    let fresh_token = fresh["refresh_token"].as_str().unwrap();
+    invalid_client(send(&app, &refresh_form(fresh_token), &jwt).await);
+    let secret = fresh_token.to_string();
     app.db()
         .read(move |conn| {
             assert!(
@@ -489,7 +488,7 @@ async fn oauth_jwt_replay_survives_a_new_app_on_the_same_database() {
             assert_eq!(
                 conn.query_row("SELECT COUNT(*) FROM oauth_assertion_jtis", [], |r| r
                     .get::<_, i64>(0))?,
-                1
+                2
             );
             Ok(())
         })
@@ -611,4 +610,268 @@ async fn oauth_jwt_key_constraints_and_missing_kid_selection() {
         let reply = send(&f.app, &code_form(&code), &sign(alg, &head, &claim)).await;
         assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
     }
+}
+
+#[tokio::test]
+async fn oauth_jwt_review_private_key_only_client_revokes_access_and_refresh() {
+    for alg in ["RS256", "ES256"] {
+        let mut doc = document();
+        doc.as_object_mut()
+            .unwrap()
+            .remove("token_endpoint_auth_methods_supported");
+        doc["token_endpoint_auth_method"] = json!("private_key_jwt");
+        let f = jwt_fixture_with_document(alg, doc).await;
+        let code = code(&f).await;
+        let exchange_jwt = sign(alg, &header(alg), &claims(&f, "exchange"));
+        let pair = send(&f.app, &code_form(&code), &exchange_jwt).await;
+        assert_eq!(pair.status.as_u16(), 200, "{}", pair.text());
+        let pair = pair.json();
+        let access = pair["access_token"].as_str().unwrap();
+        let form = [("client_id", CLIENT), ("token", access)];
+        assert_eq!(
+            f.app
+                .anonymous()
+                .send(Req::new(Method::POST, "/oauth/revoke").form(&form))
+                .await
+                .status
+                .as_u16(),
+            200
+        );
+        assert_eq!(
+            mcp(&f.app, access).await.status.as_u16(),
+            200,
+            "none cannot revoke a JWT connection"
+        );
+        let revoke_jwt = sign(alg, &header(alg), &claims(&f, "revoke access"));
+        // The assertion identifies this client without a client_id form field.
+        let reply = send_to(&f.app, "/oauth/revoke", &[("token", access)], &revoke_jwt).await;
+        assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+        assert_eq!(
+            mcp(&f.app, access).await.status.as_u16(),
+            401,
+            "revoked access token must stop authenticating"
+        );
+        let renewed = send(
+            &f.app,
+            &refresh_form(pair["refresh_token"].as_str().unwrap()),
+            &sign(alg, &header(alg), &claims(&f, "refresh")),
+        )
+        .await;
+        assert_eq!(renewed.status.as_u16(), 200, "{}", renewed.text());
+        let renewed = renewed.json();
+        let access = renewed["access_token"].as_str().unwrap();
+        invalid_client(
+            send_to(
+                &f.app,
+                "/oauth/revoke",
+                &[("client_id", CLIENT), ("token", access)],
+                &sign(
+                    "HS256",
+                    &header("HS256"),
+                    &claims(&f, "bad revoke signature"),
+                ),
+            )
+            .await,
+        );
+        for used in [&exchange_jwt, &revoke_jwt] {
+            invalid_client(
+                send_to(
+                    &f.app,
+                    "/oauth/revoke",
+                    &[("client_id", CLIENT), ("token", access)],
+                    used,
+                )
+                .await,
+            );
+        }
+        assert_eq!(
+            mcp(&f.app, access).await.status.as_u16(),
+            200,
+            "replayed revocation assertion cannot revoke another token"
+        );
+        let refresh = renewed["refresh_token"].as_str().unwrap();
+        let reply = send_to(
+            &f.app,
+            "/oauth/revoke",
+            &[("client_id", CLIENT), ("token", refresh)],
+            &sign(alg, &header(alg), &claims(&f, "revoke refresh")),
+        )
+        .await;
+        assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+        assert_eq!(
+            mcp(&f.app, access).await.status.as_u16(),
+            401,
+            "revoking refresh revokes the connection"
+        );
+        invalid(
+            send(
+                &f.app,
+                &refresh_form(refresh),
+                &sign(alg, &header(alg), &claims(&f, "after revocation")),
+            )
+            .await,
+        );
+    }
+}
+
+#[tokio::test]
+async fn oauth_jwt_review_revocation_requires_recorded_method_even_when_both_are_allowed() {
+    for method in ["none", "private_key_jwt"] {
+        let f = jwt_fixture("RS256").await;
+        let code = code(&f).await;
+        let pair = if method == "none" {
+            exchange(&f.app, &code, CLIENT, REDIRECT, VERIFIER, RESOURCE).await
+        } else {
+            send(
+                &f.app,
+                &code_form(&code),
+                &sign("RS256", &header("RS256"), &claims(&f, "exchange")),
+            )
+            .await
+        };
+        assert_eq!(pair.status.as_u16(), 200, "{}", pair.text());
+        let pair = pair.json();
+        let access = pair["access_token"].as_str().unwrap();
+        let form = [("client_id", CLIENT), ("token", access)];
+        let wrong = if method == "none" {
+            send_to(
+                &f.app,
+                "/oauth/revoke",
+                &form,
+                &sign("RS256", &header("RS256"), &claims(&f, "wrong method")),
+            )
+            .await
+        } else {
+            f.app
+                .anonymous()
+                .send(Req::new(Method::POST, "/oauth/revoke").form(&form))
+                .await
+        };
+        assert_eq!(wrong.status.as_u16(), 200);
+        assert_eq!(
+            mcp(&f.app, access).await.status.as_u16(),
+            200,
+            "wrong method must not revoke"
+        );
+        let correct = if method == "none" {
+            f.app
+                .anonymous()
+                .send(Req::new(Method::POST, "/oauth/revoke").form(&form))
+                .await
+        } else {
+            send_to(
+                &f.app,
+                "/oauth/revoke",
+                &form,
+                &sign("RS256", &header("RS256"), &claims(&f, "correct method")),
+            )
+            .await
+        };
+        assert_eq!(correct.status.as_u16(), 200);
+        assert_eq!(mcp(&f.app, access).await.status.as_u16(), 401);
+    }
+}
+
+#[tokio::test]
+async fn oauth_jwt_review_jwks_accepts_registered_media_type() {
+    for media_type in [
+        "application/json",
+        "application/jwk-set+json",
+        "Application/JWK-Set+JSON; charset=utf-8",
+    ] {
+        let f = jwt_fixture("RS256").await;
+        f.server
+            .replace_routes(vec![key_route_with_type(&keys("RS256"), media_type)]);
+        let code = code(&f).await;
+        let pair = send(
+            &f.app,
+            &code_form(&code),
+            &sign("RS256", &header("RS256"), &claims(&f, "media type")),
+        )
+        .await;
+        assert_eq!(pair.status.as_u16(), 200, "{media_type}: {}", pair.text());
+        assert_eq!(
+            mcp(&f.app, pair.json()["access_token"].as_str().unwrap())
+                .await
+                .status
+                .as_u16(),
+            200
+        );
+    }
+}
+
+#[tokio::test]
+async fn oauth_jwt_review_cimd_remains_json_only() {
+    let f = fixture(document()).await;
+    f.server.replace_routes(vec![
+        Route::new("GET", "client.example", "/metadata.json", 200)
+            .header("Content-Type", "application/jwk-set+json")
+            .body(serde_json::to_vec(&document()).unwrap()),
+    ]);
+    let reply = f
+        .app
+        .anonymous()
+        .get(&authorize_url(CLIENT, REDIRECT))
+        .await;
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/app/oauth/error?error=invalid_client")
+    );
+}
+
+#[tokio::test]
+async fn oauth_jwt_review_mixed_mechanisms_return_invalid_request_without_consuming_assertion() {
+    let f = jwt_fixture("RS256").await;
+    let code = code(&f).await;
+    for path in ["/oauth/token", "/oauth/revoke"] {
+        let jwt = sign("RS256", &header("RS256"), &claims(&f, path));
+        for basic in [false, true] {
+            let mut form = if path == "/oauth/token" {
+                code_form(&code)
+            } else {
+                vec![("client_id", CLIENT), ("token", "unknown")]
+            };
+            form.extend([
+                ("client_assertion", jwt.as_str()),
+                ("client_assertion_type", assertion::TYPE),
+            ]);
+            if !basic {
+                form.push(("client_secret", "secret"));
+            }
+            let mut req = Req::new(Method::POST, path).form(&form);
+            if basic {
+                req = req.header("authorization", "Basic dGVzdDpzZWNyZXQ=");
+            }
+            auth_error(f.app.anonymous().send(req).await, "invalid_request");
+        }
+        let reply = f
+            .app
+            .anonymous()
+            .send(
+                Req::new(Method::POST, path)
+                    .form(&[
+                        ("client_id", CLIENT),
+                        ("client_secret", "secret"),
+                        ("token", "unknown"),
+                    ])
+                    .header("authorization", "Basic dGVzdDpzZWNyZXQ="),
+            )
+            .await;
+        auth_error(reply, "invalid_request");
+    }
+    let jwt = sign("RS256", &header("RS256"), &claims(&f, "/oauth/token"));
+    let reply = send(&f.app, &code_form(&code), &jwt).await;
+    assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+    let pair = reply.json();
+    let access = pair["access_token"].as_str().unwrap();
+    let jwt = sign("RS256", &header("RS256"), &claims(&f, "/oauth/revoke"));
+    let reply = send_to(
+        &f.app,
+        "/oauth/revoke",
+        &[("client_id", CLIENT), ("token", access)],
+        &jwt,
+    )
+    .await;
+    assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+    assert_eq!(mcp(&f.app, access).await.status.as_u16(), 401);
 }

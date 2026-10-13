@@ -352,14 +352,22 @@ pub fn refresh(
     }
 }
 
-pub fn revoke(tx: &mut Tx<'_>, secret: &str, client_id: &str, method_none: bool) -> Result<()> {
+pub fn revoke(
+    tx: &mut Tx<'_>,
+    secret: &str,
+    client_id: &str,
+    method: Option<AuthMethod>,
+) -> Result<()> {
     let Some(token) = OAuthToken::find_by_secret(tx.conn(), secret)? else {
         return Ok(());
     };
     let Some(connection) = OAuthConnection::find(tx.conn(), token.oauth_connection_id)? else {
         return Ok(());
     };
-    if !method_none || !client_valid(tx, &connection, client_id, AuthMethod::None)? {
+    let Some(method) = method else { return Ok(()) };
+    if connection.auth_method.as_deref() != Some(method.as_str())
+        || !client_valid(tx, &connection, client_id, method)?
+    {
         return Ok(());
     }
     if token.kind == TokenKind::Access {

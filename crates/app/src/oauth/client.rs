@@ -114,12 +114,16 @@ pub struct Document {
 /// Includes DNS, TLS, headers and the bounded body in one total deadline.
 pub async fn fetch(network: &Network, client_id: &str) -> anyhow::Result<Document> {
     let url = metadata_url(client_id)?;
-    let (value, cache_seconds) = fetch_json(network, &url).await?;
+    let (value, cache_seconds) = fetch_json(network, &url, &["application/json"]).await?;
     parse_document(value, cache_seconds, client_id)
 }
 
 /// CIMD and JWKS share public DNS pinning, no redirects, and the same body/deadline limits.
-pub async fn fetch_json(network: &Network, url: &Url) -> anyhow::Result<(Value, i64)> {
+pub async fn fetch_json(
+    network: &Network,
+    url: &Url,
+    media_types: &[&str],
+) -> anyhow::Result<(Value, i64)> {
     tokio::time::timeout(DEADLINE, async {
         let host = url.host_str().expect("validated host");
         let pinned_ip =
@@ -140,7 +144,7 @@ pub async fn fetch_json(network: &Network, url: &Url) -> anyhow::Result<(Value, 
             target,
             Some(endpoint.host_header()),
             vec![
-                ("Accept".into(), "application/json".into()),
+                ("Accept".into(), media_types.join(", ")),
                 ("Accept-Encoding".into(), "identity".into()),
             ],
         );
@@ -157,10 +161,10 @@ pub async fn fetch_json(network: &Network, url: &Url) -> anyhow::Result<(Value, 
         .await?;
         anyhow::ensure!(
             response.status == 200
-                && response
-                    .content_type()
-                    .is_some_and(|t| t.eq_ignore_ascii_case("application/json")),
-            "Client metadata must be a JSON 200 response"
+                && response.content_type().is_some_and(|t| media_types
+                    .iter()
+                    .any(|media_type| t.eq_ignore_ascii_case(media_type))),
+            "OAuth document must have an accepted JSON media type and a 200 response"
         );
         let cache_seconds = cache_seconds(response.header("cache-control").as_deref());
         anyhow::ensure!(

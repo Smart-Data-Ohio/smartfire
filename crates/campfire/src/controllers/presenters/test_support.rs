@@ -647,9 +647,15 @@ impl TestApp {
 
     /// Boots a new app on this one's database and files, as a restart does: nothing the old
     /// process held in memory carries over.
-    pub async fn restart(
+    pub async fn restart(self, clock: campfire_kit::SharedClock, extra: &[(&str, &str)]) -> TestApp {
+        self.restart_with_network(clock, crate::net::Network::system(), extra)
+            .await
+    }
+
+    pub async fn restart_with_network(
         self,
         clock: campfire_kit::SharedClock,
+        network: crate::net::Network,
         extra: &[(&str, &str)],
     ) -> TestApp {
         let (app, dir) = self.stop_jobs().await;
@@ -658,14 +664,9 @@ impl TestApp {
             periodic: None,
             huddle: None,
         };
-        let booted = boot_with_services(
-            Self::config_for(&dir, extra),
-            clock,
-            crate::net::Network::system(),
-            intervals,
-        )
-        .await
-        .unwrap();
+        let booted = boot_with_services(Self::config_for(&dir, extra), clock, network, intervals)
+            .await
+            .unwrap();
         TestApp {
             booted,
             _dir: dir,

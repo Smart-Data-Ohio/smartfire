@@ -248,9 +248,13 @@ async fn fetch_keys(
     may_fetch: &mut impl FnMut() -> Result<()>,
 ) -> Result<Keys> {
     may_fetch()?;
-    let (value, seconds) = client::fetch_json(&app.subscription_network, url)
-        .await
-        .map_err(|_| Error::NotFound)?;
+    let (value, seconds) = client::fetch_json(
+        &app.subscription_network,
+        url,
+        &["application/jwk-set+json", "application/json"],
+    )
+    .await
+    .map_err(|_| Error::NotFound)?;
     let values = value
         .get("keys")
         .and_then(Value::as_array)

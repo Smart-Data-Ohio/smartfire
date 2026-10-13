@@ -83,7 +83,7 @@ async fn preflight(c: &mut Ctx) -> Result {
 async fn metadata(c: &mut Ctx) -> Result {
     public(c);
     let issuer = issuer(c);
-    c.json(StatusCode::OK,&json!({"issuer":issuer,"authorization_endpoint":format!("{issuer}/oauth/authorize"),"token_endpoint":format!("{issuer}/oauth/token"),"revocation_endpoint":format!("{issuer}/oauth/revoke"),"registration_endpoint":format!("{issuer}/oauth/register"),"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none","private_key_jwt"],"token_endpoint_auth_signing_alg_values_supported":["RS256","ES256"],"revocation_endpoint_auth_methods_supported":["none"],"client_id_metadata_document_supported":true,"authorization_response_iss_parameter_supported":true,"scopes_supported":["agent"]}))
+    c.json(StatusCode::OK,&json!({"issuer":issuer,"authorization_endpoint":format!("{issuer}/oauth/authorize"),"token_endpoint":format!("{issuer}/oauth/token"),"revocation_endpoint":format!("{issuer}/oauth/revoke"),"registration_endpoint":format!("{issuer}/oauth/register"),"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none","private_key_jwt"],"token_endpoint_auth_signing_alg_values_supported":["RS256","ES256"],"revocation_endpoint_auth_methods_supported":["none","private_key_jwt"],"revocation_endpoint_auth_signing_alg_values_supported":["RS256","ES256"],"client_id_metadata_document_supported":true,"authorization_response_iss_parameter_supported":true,"scopes_supported":["agent"]}))
 }
 async fn resource_metadata(c: &mut Ctx) -> Result {
     public(c);
@@ -459,43 +459,59 @@ fn none_method(c: &Ctx, input: &BTreeMap<String, String>) -> bool {
             .get("token_endpoint_auth_method")
             .is_none_or(|method| method == "none")
 }
-async fn token(c: &mut Ctx) -> Result {
-    public(c);
-    let Some(input) = form(c).await? else {
-        return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_request"}));
-    };
+struct ClientAuthentication {
+    client_id: String,
+    method: Option<client::AuthMethod>,
+    verified: Option<assertion::Verified>,
+}
+
+async fn client_authentication(
+    c: &mut Ctx,
+    input: &BTreeMap<String, String>,
+) -> Result<ClientAuthentication> {
     let mut client_id = input.get("client_id").cloned().unwrap_or_default();
     let ip = c.request.remote_ip()?.to_string();
-    let assertion =
-        if input.contains_key("client_assertion") || input.contains_key("client_assertion_type") {
-            if c.request.header("authorization").is_some()
-                || input.contains_key("client_secret")
-                || input.get("client_assertion_type").map(String::as_str) != Some(assertion::TYPE)
-                || input
-                    .get("token_endpoint_auth_method")
-                    .is_some_and(|method| method != "private_key_jwt")
-            {
-                throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
-                return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}));
-            }
-            let parsed = assertion::parse(
-                input
-                    .get("client_assertion")
-                    .map(String::as_str)
-                    .unwrap_or_default(),
-                input.get("client_id").map(String::as_str),
-                &issuer(c),
-                Timestamp::from_jiff(c.now()),
+    let has_assertion =
+        input.contains_key("client_assertion") || input.contains_key("client_assertion_type");
+    let has_header = c.request.header("authorization").is_some();
+    let has_secret = input.contains_key("client_secret");
+    if (has_assertion && (has_header || has_secret)) || (has_header && has_secret) {
+        throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
+        return campfire_kit::halt(
+            c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_request"}))?,
+        );
+    }
+    let assertion = if has_assertion {
+        if input.get("client_assertion_type").map(String::as_str) != Some(assertion::TYPE)
+            || input
+                .get("token_endpoint_auth_method")
+                .is_some_and(|method| method != "private_key_jwt")
+        {
+            throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
+            return campfire_kit::halt(
+                c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}))?,
             );
-            let Ok(parsed) = parsed else {
-                throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
-                return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}));
-            };
-            client_id = parsed.client_id().to_owned();
-            Some(parsed)
-        } else {
-            None
+        }
+        let parsed = assertion::parse(
+            input
+                .get("client_assertion")
+                .map(String::as_str)
+                .unwrap_or_default(),
+            input.get("client_id").map(String::as_str),
+            &issuer(c),
+            Timestamp::from_jiff(c.now()),
+        );
+        let Ok(parsed) = parsed else {
+            throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
+            return campfire_kit::halt(
+                c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}))?,
+            );
         };
+        client_id = parsed.client_id().to_owned();
+        Some(parsed)
+    } else {
+        None
+    };
     throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
     let app = c.app().clone();
     let verified = if let Some(assertion) = assertion {
@@ -503,18 +519,39 @@ async fn token(c: &mut Ctx) -> Result {
             Ok(verified) => Some(verified),
             Err(Error::Halt(response)) => return Err(Error::Halt(response)),
             Err(Error::Internal(error)) => return Err(Error::Internal(error)),
-            Err(_) => return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"})),
+            Err(_) => {
+                return campfire_kit::halt(
+                    c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}))?,
+                );
+            }
         }
     } else {
         None
     };
     let method = if verified.is_some() {
         Some(client::AuthMethod::PrivateKeyJwt)
-    } else if none_method(c, &input) {
+    } else if none_method(c, input) {
         Some(client::AuthMethod::None)
     } else {
         None
     };
+    Ok(ClientAuthentication {
+        client_id,
+        method,
+        verified,
+    })
+}
+
+async fn token(c: &mut Ctx) -> Result {
+    public(c);
+    let Some(input) = form(c).await? else {
+        return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_request"}));
+    };
+    let ClientAuthentication {
+        client_id,
+        method,
+        verified,
+    } = client_authentication(c, &input).await?;
     let result = c
         .app()
         .db
@@ -561,22 +598,33 @@ async fn token(c: &mut Ctx) -> Result {
 async fn revoke(c: &mut Ctx) -> Result {
     public(c);
     if let Some(input) = form(c).await? {
-        let method_none = none_method(c, &input);
-        c.app()
+        let ClientAuthentication {
+            client_id,
+            method,
+            verified,
+        } = client_authentication(c, &input).await?;
+        let accepted = c
+            .app()
             .db
             .write(move |tx| {
+                if let Some(verified) = verified
+                    && !verified.consume(tx)?
+                {
+                    return Ok(false);
+                }
                 oauth::revoke(
                     tx,
                     input.get("token").map(String::as_str).unwrap_or_default(),
-                    input
-                        .get("client_id")
-                        .map(String::as_str)
-                        .unwrap_or_default(),
-                    method_none,
-                )
+                    &client_id,
+                    method,
+                )?;
+                Ok(true)
             })
             .await
             .map_err(Error::internal)?;
+        if !accepted {
+            return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}));
+        }
     }
     Ok(c.head(StatusCode::OK))
 }
