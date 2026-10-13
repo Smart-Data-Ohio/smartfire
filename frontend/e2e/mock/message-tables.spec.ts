@@ -451,32 +451,82 @@ test("a wide table stays inside the thread pane", async ({ page }) => {
   await expectNoHorizontalOverflow(page);
 });
 
-test("a wide table stays inside its search hit", async ({ page }) => {
+/**
+ * A table in a preview (a search hit, a saved item): cut at the card's edge rather than scrolled,
+ * since the card opens the message, and faded toward that edge only when it is cut.
+ */
+function previewTable(tableLocator: Locator) {
+  return tableLocator.evaluate((element) => {
+    const style = getComputedStyle(element);
+
+    return {
+      overflowX: style.overflowX,
+      cut: element.scrollWidth > element.clientWidth + 1,
+      faded: style.maskImage !== "none",
+    };
+  });
+}
+
+/** Clicks the middle of the part of `tableLocator` its `card` shows, as a pointer would. */
+async function clickShownPart(page: Page, tableLocator: Locator, card: string): Promise<void> {
+  const point = await tableLocator.evaluate((element, selector) => {
+    const box = element.getBoundingClientRect();
+    const outer = element.closest(selector)?.getBoundingClientRect() ?? box;
+    const top = Math.max(box.top, outer.top);
+    const bottom = Math.min(box.bottom, outer.bottom);
+
+    return { x: (box.left + Math.min(box.right, outer.right)) / 2, y: (top + bottom) / 2 };
+  }, card);
+
+  await page.mouse.click(point.x, point.y);
+}
+
+test("a wide table in a search hit is cut with a fade, and clicking it opens the message", async ({
+  page,
+}) => {
   const id = await post(page, "quarterlytable revenue");
+  const narrow = await post(page, "quarterlytable narrow");
 
   await page.route("**/api/v1/search*", async (route) => {
     const response = await route.fetch();
     const reply: SearchResults = await response.json();
+    const messages = swapBody(swapBody(reply.messages, WIDE, id), ALIGNED, narrow);
 
-    await route.fulfill({
-      response,
-      json: { ...reply, messages: swapBody(reply.messages, WIDE, id) },
-    });
+    await route.fulfill({ response, json: { ...reply, messages } });
   });
 
   for (const size of [DESKTOP, PHONE]) {
     await page.setViewportSize(size);
     await openApp(page, "search?q=quarterlytable");
 
-    const tableLocator = page.locator("[data-search-hit] .search-hit-body table").first();
+    const hits = page.locator("[data-search-hit]");
+    const wide = hits.filter({ hasText: "Region" }).locator(".search-hit-body table");
+    const fits = hits.filter({ hasText: "Center" }).locator(".search-hit-body table");
 
-    await expect(tableLocator).toBeVisible();
-    await expectContained(tableLocator, "[data-search-hit]");
+    await expect(wide).toBeVisible();
+    await shot(page, "message-table-search-hit", "light");
+    await expectContained(wide, "[data-search-hit]");
     await expectNoHorizontalOverflow(page);
+    expect(await previewTable(wide)).toEqual({ overflowX: "hidden", cut: true, faded: true });
+
+    if (size === DESKTOP) {
+      // A table the card shows whole has no fade.
+      await expect(fits).toBeVisible();
+      expect(await previewTable(fits)).toEqual({ overflowX: "hidden", cut: false, faded: false });
+    }
   }
+
+  await clickShownPart(
+    page,
+    page.locator("[data-search-hit]").filter({ hasText: "Region" }).locator("table"),
+    "[data-search-hit]",
+  );
+  await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}/m/${id}`));
 });
 
-test("a wide table stays inside its saved item", async ({ page }) => {
+test("a wide table in a saved item is cut with a fade, and clicking it opens the message", async ({
+  page,
+}) => {
   await page.route("**/api/v1/saved*", async (route) => {
     const response = await route.fetch();
     const reply: SavedItemList = await response.json();
@@ -493,7 +543,22 @@ test("a wide table stays inside its saved item", async ({ page }) => {
     await expect(tableLocator).toBeAttached();
     await expectContained(tableLocator, ".saved-body");
     await expectNoHorizontalOverflow(page);
+    expect(await previewTable(tableLocator)).toEqual({
+      overflowX: "hidden",
+      cut: true,
+      faded: true,
+    });
   }
+
+  const tableLocator = page.locator(".saved-body.message-body table").first();
+
+  const messageId = await tableLocator.evaluate(
+    (element) => element.closest("[data-message-id]")?.getAttribute("data-message-id") ?? "",
+  );
+
+  await clickShownPart(page, tableLocator, ".saved-body");
+  // The message itself, or its thread with the message picked out.
+  await expect(page).toHaveURL(new RegExp(`/m/${messageId}$|/t/\\d+\\?m=${messageId}$`));
 });
 
 test("a wide table stays inside its pinned card", async ({ page }) => {

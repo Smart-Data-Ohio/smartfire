@@ -386,6 +386,7 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                     embeds_suppressed: Some(source.embeds_suppressed),
                     drive_file_ids: Some(drive_ids.clone()),
                     forward_note: Some(source.forward_note.clone()),
+                    forwarded_markdown: Some(source.forwarded_markdown),
                     ..Default::default()
                 },
             )?;

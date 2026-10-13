@@ -122,6 +122,10 @@ pub struct MessageChanges {
     /// The whole Drive set (`apply_drive_file_ids!`): ids missing from it are destroyed, new
     /// ones built, the rest kept.
     pub drive_file_ids: Option<Vec<String>>,
+    /// Whether the body is a forwarded Markdown snapshot. Left `None`, a save that writes a new
+    /// body ends it, as that body never came from the Markdown renderer's snapshot; an
+    /// announcement copy takes its source's.
+    pub forwarded_markdown: Option<bool>,
 }
 
 /// The message list a page is cut from.
@@ -962,6 +966,11 @@ impl Message {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
             }
         }
+        // The new body replaces a forwarded Markdown snapshot (`save_changes`).
+        if self.forwarded_markdown {
+            tx.conn().execute_cached(r#"UPDATE "messages" SET "forwarded_markdown" = ? WHERE "messages"."id" = ?"#, params![false, self.id])?;
+            self.forwarded_markdown = false;
+        }
         self.touch(tx)?;
         if !self.streaming {
             self.sync_external_references(tx, true)?;
@@ -1072,6 +1081,10 @@ impl Message {
         let (current_body, publication) = self.body_with_publication(conn)?;
         let current_body = current_body.and_then(|record| record.body);
         let body = body.filter(|body| current_body.as_deref() != Some(body.as_str()));
+        // A forward of a Markdown message renders as Markdown (tables, task lists) only while its
+        // body is the forwarded snapshot. Any body written here, HTML from an edit endpoint or a
+        // bot, or a new Markdown source, replaces the snapshot, so it no longer counts as one.
+        let forwarded_markdown = changes.forwarded_markdown.unwrap_or(self.forwarded_markdown && body.is_none());
         let references_changed =
             !self.streaming && (markdown_source != self.markdown_source || body.is_some());
         let current_drive_ids = drive_file_ids(conn, self.id)?;
@@ -1122,7 +1135,7 @@ impl Message {
             forwarded_from_message_id: self.forwarded_from_message_id,
             forwarded_at: self.forwarded_at,
             forward_note: forward_note.clone(),
-            forwarded_markdown: self.forwarded_markdown,
+            forwarded_markdown,
             drive_file_ids: drive_file_ids.clone(),
             webhook: crate::models::channel_webhook::ChannelWebhook::message_snapshot(conn, self.id)?,
         };
@@ -1140,6 +1153,7 @@ impl Message {
             || reply_notify_author != self.reply_notify_author
             || forward_note != self.forward_note
             || embeds_suppressed != self.embeds_suppressed
+            || forwarded_markdown != self.forwarded_markdown
             || edited_at != self.edited_at;
         let drive_changed = drive_file_ids != current_drive_ids;
         if !(columns_changed || body.is_some() || drive_changed || spoilers_changed || self.streaming) {
@@ -1164,8 +1178,8 @@ impl Message {
             self.streaming_updated_at
         };
         tx.conn().execute_cached(
-            r#"UPDATE "messages" SET "markdown_source" = ?, "client_message_id" = ?, "reply_to_message_id" = ?, "reply_notify_author" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
-            params![markdown_source, client_message_id, reply_to_message_id, reply_notify_author, forward_note, embeds_suppressed, edited_at, streaming_updated_at, now, self.id],
+            r#"UPDATE "messages" SET "markdown_source" = ?, "client_message_id" = ?, "reply_to_message_id" = ?, "reply_notify_author" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "forwarded_markdown" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
+            params![markdown_source, client_message_id, reply_to_message_id, reply_notify_author, forward_note, embeds_suppressed, forwarded_markdown, edited_at, streaming_updated_at, now, self.id],
         )?;
         if let Some(body) = &body {
             match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {

@@ -1335,3 +1335,86 @@ async fn scheduled_private_drafts_keep_own_source_and_hide_current_parent_facts(
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
     assert!(a.db().read(move |conn| campfire_db::ScheduledMessage::find(conn, pending_id)).await.unwrap().dropped());
 }
+
+/// A forward of a Markdown message shows its snapshot as Markdown: the SPA's body keeps its table
+/// and task list. A body written over the snapshot through an edit endpoint, the human one with
+/// `message[body]` and no `markdown_source`, or a bot's raw body, never went through the Markdown
+/// renderer, so it shows as any HTML body does: no table, no checkbox. The SPA's own edit sends
+/// Markdown source and keeps every Markdown tag.
+#[tokio::test]
+async fn an_html_body_written_over_a_forwarded_markdown_snapshot_shows_as_html() {
+    use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY, Req};
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let html = "<table><tr><td>cell</td></tr></table><ul><li><input type=\"checkbox\" disabled>task</li></ul>";
+    for path in ["human", "bot", "spa"] {
+        let creator = if path == "bot" { BENDER } else { DAVID };
+        let id = a
+            .db()
+            .write(move |tx| {
+                let source = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        markdown_source: Some("| a |\n|---|\n| 1 |\n\n- [ ] todo".into()),
+                        ..Default::default()
+                    },
+                )?;
+                let forward = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: creator,
+                        body: source.body_html(tx.conn())?,
+                        forwarded_from_message_id: Some(source.id),
+                        forwarded_at: Some(tx.now()),
+                        forwarded_markdown: true,
+                        ..Default::default()
+                    },
+                )?;
+                Ok(forward.id)
+            })
+            .await
+            .unwrap();
+        let read = format!("/api/v1/messages/{id}");
+        let before = parse::<api::MessageRead>(&david.send(get(&read)).await).message.body_html;
+        assert!(before.contains("<table>") && before.contains("type=\"checkbox\""), "{path}: {before}");
+
+        let reply = match path {
+            "human" => {
+                david
+                    .write(json_body(Method::PATCH, &format!("/rooms/{ALL_TALK}/messages/{id}.json"), &json!({"message": {"body": html}})))
+                    .await
+            }
+            "bot" => {
+                a.anonymous()
+                    .send(
+                        Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}"))
+                            .header("content-type", "text/plain")
+                            .body(html.to_owned()),
+                    )
+                    .await
+            }
+            _ => {
+                david
+                    .write(json_body(Method::PATCH, &read, &json!({"markdownSource": "| b |\n|---|\n| 2 |\n\n- [x] done"})))
+                    .await
+            }
+        };
+        assert!(reply.status.is_success(), "{path}: {} {}", reply.status, reply.text());
+
+        let after = parse::<api::MessageRead>(&david.send(get(&read)).await).message.body_html;
+        let message = a.db().read(move |conn| Message::find(conn, id)).await.unwrap();
+        assert!(!message.forwarded_markdown, "{path}");
+        if path == "spa" {
+            assert!(message.markdown(), "{path}");
+            assert!(after.contains("<td>2</td>") && after.contains("checked"), "{path}: {after}");
+        } else {
+            assert!(!after.contains("<table") && !after.contains("<td") && !after.contains("<input"), "{path}: {after}");
+            assert!(after.contains("cell") && after.contains("task"), "{path}: {after}");
+        }
+    }
+}

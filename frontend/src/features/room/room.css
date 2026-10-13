@@ -965,6 +965,36 @@
     text-align: right;
   }
 
+  /* In a preview (a search hit, a saved item) the whole card opens the message, so a wide table
+     doesn't scroll there: it is cut at the card's edge, as a hit's code block is, and fades out
+     toward that edge to show there are more columns. The fade shows only on a table that is cut:
+     the inline scroll timeline of a table with nothing hidden is inactive, so the animation that
+     applies it has no effect. Where scroll timelines aren't supported, the table is cut unfaded.
+     The fade's mask stacks the table above a search hit's stretched link, so a click on the table
+     passes through to the card, except on a link or a spoiler in a cell. */
+  .message-body:is(.search-hit-body, .saved-body) table {
+    overflow-x: hidden;
+    pointer-events: none;
+  }
+
+  .message-body:is(.search-hit-body, .saved-body) table :is(a, span[data-spoiler]) {
+    pointer-events: auto;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .message-body:is(.search-hit-body, .saved-body) table {
+      animation: message-table-cut linear both;
+      animation-timeline: scroll(self inline);
+    }
+  }
+
+  @keyframes message-table-cut {
+    from,
+    to {
+      mask-image: linear-gradient(to right, #000 calc(100% - var(--space-8)), transparent);
+    }
+  }
+
   /* A picture in the body (a rich-text paste's remote images) is bounded like a Slack preview,
      whatever its natural size or width/height attributes, keeping its aspect ratio. The quiet
      checkerboard shows only through transparent pixels. */
