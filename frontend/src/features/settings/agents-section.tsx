@@ -19,12 +19,14 @@ import { AccessFields, ExpiryField, IdentityFields, SecretBlock } from "./agent-
 import { AgentWizard, WIZARD_DRAFT_KEY } from "./agent-wizard.tsx";
 import {
   type AgentCache,
+  isUnconfirmed,
   nextSequence,
   withAgent,
   withCreated,
   withList,
   withRemoved,
   withTokens,
+  withUnconfirmed,
 } from "./agents-cache.ts";
 import {
   abilityLabel,
@@ -156,6 +158,8 @@ function AgentCard({
   agent,
   list,
   busy,
+  unconfirmed,
+  onReload,
   onEdit,
   onRemove,
   onIssue,
@@ -165,6 +169,9 @@ function AgentCard({
   readonly agent: PersonalAgent;
   readonly list: PersonalAgentList;
   readonly busy: (key: string) => boolean;
+  /** A save for it went unanswered: it may or may not have landed. */
+  readonly unconfirmed: boolean;
+  readonly onReload: () => void;
   readonly onEdit: () => void;
   readonly onRemove: () => void;
   readonly onIssue: () => void;
@@ -217,6 +224,20 @@ function AgentCard({
           </dd>
         </div>
       </dl>
+      {unconfirmed ? (
+        <p className="agents-unconfirmed text-muted" role="status">
+          Couldn't confirm the last save.{" "}
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={busy("recheck")}
+            onClick={onReload}
+            aria-label={`Reload ${agent.name}`}
+          >
+            Reload
+          </Button>
+        </p>
+      ) : null}
       <section className="agents-tokens" aria-label={`${agent.name}'s tokens`}>
         <h4 className="settings-label">Tokens</h4>
         {agent.credentials.length === 0 ? (
@@ -285,12 +306,10 @@ function TokenDialog({
   readonly onClose: () => void;
   /** The workspace turned personal agents off since the list loaded: load it again. */
   readonly onTurnedOff: () => void;
-  /** `at`: the request's number (agents-cache.ts), taken when it was sent. */
   readonly onIssued: (
     agent: PersonalAgent,
     credential: PersonalAgentCredential,
     secret: string,
-    at: number,
   ) => void;
 }) {
   const [name, setName] = useState("");
@@ -322,8 +341,6 @@ function TokenDialog({
       return;
     }
 
-    const at = nextSequence();
-
     const write =
       replacing === null
         ? meAgents.issueToken(agent.id, name.trim(), expiresAtOf(expiry))
@@ -332,7 +349,7 @@ function TokenDialog({
     void track(
       "token",
       write.then(
-        ({ credential, secret }) => onIssued(agent, credential, secret, at),
+        ({ credential, secret }) => onIssued(agent, credential, secret),
         (failure: Error) => {
           const named = fieldsOf(failure);
 
@@ -442,6 +459,7 @@ function formOf(agent: PersonalAgent | null, offered: readonly string[]): EditFo
  */
 function EditDialog({
   agent,
+  unconfirmed,
   list,
   writes,
   onClose,
@@ -449,6 +467,11 @@ function EditDialog({
 }: {
   /** The cached agent, live; `null` while closed. */
   readonly agent: PersonalAgent | null;
+  /**
+   * A save for it went unanswered and nothing sent since has answered (kept in the cache, so any
+   * opening knows): the cached agent can't tell what needs sending.
+   */
+  readonly unconfirmed: boolean;
   readonly list: PersonalAgentList;
   readonly writes: AgentWrites;
   readonly onClose: () => void;
@@ -462,9 +485,6 @@ function EditDialog({
   const [recovery, setRecovery] = useState<"none" | "pending" | "arrived">("none");
   // Whether the form was changed since the last save was sent.
   const [changedSinceSave, setChangedSinceSave] = useState(false);
-  // An unanswered save may have landed and no reload has said since: the cache can't be trusted
-  // to tell what needs sending.
-  const [unconfirmed, setUnconfirmed] = useState(false);
   const { busy, track } = useBusy();
   // Whether this opening is still showing: false once closed, by anyone, or unmounted.
   const live = useRef(agent !== null);
@@ -479,8 +499,6 @@ function EditDialog({
 
   useEffect(() => {
     if (recovery !== "arrived") return;
-
-    setUnconfirmed(false);
 
     if (agent !== null && !changedSinceSave) {
       setForm(formOf(agent, list.capabilities));
@@ -578,7 +596,6 @@ function EditDialog({
           // It may have landed: load what the server holds before saving again.
           if (saveUnconfirmed(failure)) {
             setError(failure.message);
-            setUnconfirmed(true);
             setRecovery("pending");
             writes.reload().then(
               () => {
@@ -760,27 +777,37 @@ export function AgentsSection() {
       current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
     );
 
+  // An agent write, numbered when sent. Its answer lands in the cache; no answer in time marks
+  // the agent unconfirmed there, so whichever opening of its dialog comes next knows.
+  const write = (agentId: number, send: () => Promise<PersonalAgent>): Promise<PersonalAgent> => {
+    const at = nextSequence();
+
+    return send().then(
+      (agent) => {
+        replace((current) => withAgent(current, agent, at));
+
+        return agent;
+      },
+      (failure: Error) => {
+        if (saveUnconfirmed(failure)) replace((current) => withUnconfirmed(current, agentId, at));
+
+        throw failure;
+      },
+    );
+  };
+
   const writes: AgentWrites = {
-    rename: (agentId, change) => {
-      const at = nextSequence();
-
-      return meAgents.update(agentId, change).then((agent) => {
-        replace((current) => withAgent(current, agent, at));
-
-        return agent;
-      });
-    },
-    setAccess: (agentId, access) => {
-      const at = nextSequence();
-
-      return meAgents.setAccess(agentId, access).then((agent) => {
-        replace((current) => withAgent(current, agent, at));
-
-        return agent;
-      });
-    },
+    rename: (agentId, change) => write(agentId, () => meAgents.update(agentId, change)),
+    setAccess: (agentId, access) => write(agentId, () => meAgents.setAccess(agentId, access)),
     reload: loadList,
   };
+
+  // The card's Reload after an unanswered save: it answers for what the server holds.
+  const recheck = () =>
+    void track(
+      "recheck",
+      loadList().catch((error: Error) => toastFailure("Couldn't reload your agents", error)),
+    );
 
   const revoke = (agent: PersonalAgent, credential: PersonalAgentCredential) =>
     setAsk({
@@ -789,13 +816,11 @@ export function AgentsSection() {
       label: "Revoke",
       danger: true,
       run: () => {
-        const at = nextSequence();
-
         void track(
           `token-${credential.id}`,
           meAgents.revokeToken(agent.id, credential.id).then(
             ({ credentials }) => {
-              replace((current) => withTokens(current, agent.id, credentials, at));
+              replace((current) => withTokens(current, agent.id, credentials));
               toast({ title: `${credential.name} was revoked`, tone: "success" });
             },
             (error: Error) => toastFailure(`Couldn't revoke ${credential.name}`, error),
@@ -827,12 +852,7 @@ export function AgentsSection() {
       },
     });
 
-  const issued = (
-    agent: PersonalAgent,
-    credential: PersonalAgentCredential,
-    secret: string,
-    at: number,
-  ) => {
+  const issued = (agent: PersonalAgent, credential: PersonalAgentCredential, secret: string) => {
     const replaced = tokenAsk?.replacing;
 
     // A rotation revokes the token it replaces, in the same request.
@@ -841,7 +861,7 @@ export function AgentsSection() {
         ? [credential]
         : [credential, { ...replaced, state: "revoked" as const }];
 
-    replace((current) => withTokens(current, agent.id, changed, at));
+    replace((current) => withTokens(current, agent.id, changed));
     setTokenAsk(null);
     setShown({ agent, secret });
   };
@@ -916,6 +936,8 @@ export function AgentsSection() {
                     agent={agent}
                     list={list}
                     busy={busy}
+                    unconfirmed={load.status === "ready" && isUnconfirmed(load.cache, agent.id)}
+                    onReload={recheck}
                     onEdit={() => {
                       setEditing(agent.id);
                       setOpening((count) => count + 1);
@@ -936,6 +958,9 @@ export function AgentsSection() {
           <EditDialog
             key={opening}
             agent={editing === null ? null : (list.agents.find((a) => a.id === editing) ?? null)}
+            unconfirmed={
+              editing !== null && load.status === "ready" && isUnconfirmed(load.cache, editing)
+            }
             list={list}
             writes={writes}
             onClose={() => setEditing(null)}

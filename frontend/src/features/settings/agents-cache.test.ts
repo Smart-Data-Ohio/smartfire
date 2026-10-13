@@ -3,12 +3,15 @@ import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import {
+  type AgentCache,
+  isUnconfirmed,
   nextSequence,
   withAgent,
   withCreated,
   withList,
   withRemoved,
   withTokens,
+  withUnconfirmed,
 } from "./agents-cache.ts";
 
 const TOKEN: PersonalAgentCredential = {
@@ -53,7 +56,11 @@ function list(agents: readonly PersonalAgent[]): PersonalAgentList {
   };
 }
 
-const names = (cache: { list: PersonalAgentList }) => cache.list.agents.map((a) => a.name);
+const names = (cache: AgentCache) => cache.list.agents.map((a) => a.name);
+
+/** The first agent's tokens as `id:state`, in id order. */
+const states = (cache: AgentCache) =>
+  (cache.list.agents[0]?.credentials ?? []).map((c) => `${c.id}:${c.state}`).sort();
 
 describe("the agents cache", () => {
   it("keeps a save that landed after a reload was sent, when the reload answers last", () => {
@@ -104,57 +111,71 @@ describe("the agents cache", () => {
     expect(names(withList(made, list([AGENT]), reload))).toEqual(["Helper", "New"]);
   });
 
-  it("keeps a newer token change under an older reload's profile", () => {
+  it("keeps a token revoked under an older reload that shows it active", () => {
     const first = withList(null, list([AGENT]), nextSequence());
     const reload = nextSequence();
-
-    const revoked = withTokens(first, AGENT.id, [{ ...TOKEN, state: "revoked" }], nextSequence());
-
+    const revoked = withTokens(first, AGENT.id, [{ ...TOKEN, state: "revoked" }]);
     const after = withList(revoked, list([{ ...AGENT, name: "Renamed" }]), reload);
 
     expect(after.list.agents[0]?.name).toBe("Renamed");
     expect(after.list.agents[0]?.credentials[0]?.state).toBe("revoked");
   });
 
-  it("never lets an older revocation's list show a token a newer one revoked as active", () => {
+  // Revoke A is sent, then revoke B, but the server carries out B first: B's answer still shows A
+  // active, and A's answer shows both revoked. Neither order of answers brings A back.
+  describe("when a revocation sent second is carried out first", () => {
     const second = { ...TOKEN, id: 12, name: "Laptop" };
-    const both = [TOKEN, second];
-    const first = withList(null, list([{ ...AGENT, credentials: both }]), nextSequence());
-    const revokeFirst = nextSequence();
-    const revokeSecond = nextSequence();
 
-    // The second revocation answers first: both gone by then.
-    const ended = withTokens(
-      first,
-      AGENT.id,
-      [
-        { ...TOKEN, state: "revoked" },
-        { ...second, state: "revoked" },
-      ],
-      revokeSecond,
-    );
+    const start = () =>
+      withList(null, list([{ ...AGENT, credentials: [TOKEN, second] }]), nextSequence());
 
-    // The first answers last, from before the second: only its own token revoked.
-    const after = withTokens(
-      ended,
-      AGENT.id,
-      [{ ...TOKEN, state: "revoked" }, second],
-      revokeFirst,
-    );
+    const answerToA = [
+      { ...TOKEN, state: "revoked" as const },
+      { ...second, state: "revoked" as const },
+    ];
 
-    const states = after.list.agents[0]?.credentials.map((c) => `${c.id}:${c.state}`);
+    const answerToB = [TOKEN, { ...second, state: "revoked" as const }];
 
-    expect(states?.sort()).toEqual(["11:revoked", "12:revoked"]);
+    it("keeps both revoked when A answers first", () => {
+      const after = withTokens(withTokens(start(), AGENT.id, answerToA), AGENT.id, answerToB);
+
+      expect(states(after)).toEqual(["11:revoked", "12:revoked"]);
+    });
+
+    it("keeps both revoked when B answers first", () => {
+      const after = withTokens(withTokens(start(), AGENT.id, answerToB), AGENT.id, answerToA);
+
+      expect(states(after)).toEqual(["11:revoked", "12:revoked"]);
+    });
+
+    it("keeps both revoked under a newer reload that still shows A active", () => {
+      const revoked = withTokens(start(), AGENT.id, answerToA);
+      const after = withList(revoked, list([{ ...AGENT, credentials: answerToB }]), nextSequence());
+
+      expect(states(after)).toEqual(["11:revoked", "12:revoked"]);
+    });
   });
 
-  it("adds a token issued while an older answer was out", () => {
+  it("adds a token issued while another answer was out", () => {
     const first = withList(null, list([AGENT]), nextSequence());
-    const revoke = nextSequence();
     const issued = { ...TOKEN, id: 13, name: "New" };
-    const issue = withTokens(first, AGENT.id, [issued], nextSequence());
-    const after = withTokens(issue, AGENT.id, [{ ...TOKEN, state: "revoked" }], revoke);
+    const issue = withTokens(first, AGENT.id, [issued]);
+    const after = withTokens(issue, AGENT.id, [{ ...TOKEN, state: "revoked" }]);
 
-    expect(after.list.agents[0]?.credentials.map((c) => c.id).sort()).toEqual([11, 13]);
-    expect(after.list.agents[0]?.credentials.find((c) => c.id === 11)?.state).toBe("revoked");
+    expect(states(after)).toEqual(["11:revoked", "13:active"]);
+  });
+
+  it("keeps an agent unconfirmed until an answer to a request sent after its save lands", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const olderReload = nextSequence();
+    const unanswered = withUnconfirmed(first, AGENT.id, nextSequence());
+
+    expect(isUnconfirmed(unanswered, AGENT.id)).toBe(true);
+    expect(isUnconfirmed(withList(unanswered, list([AGENT]), olderReload), AGENT.id)).toBe(true);
+    expect(isUnconfirmed(withList(unanswered, list([AGENT]), nextSequence()), AGENT.id)).toBe(
+      false,
+    );
+    expect(isUnconfirmed(withAgent(unanswered, AGENT, nextSequence()), AGENT.id)).toBe(false);
+    expect(isUnconfirmed(withRemoved(unanswered, AGENT.id, nextSequence()), AGENT.id)).toBe(false);
   });
 });

@@ -425,6 +425,7 @@ describe("editing an agent", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
   });
+
   it("sends a name typed back after an unanswered save whose reload failed", async () => {
     await mount(list());
 
@@ -441,6 +442,56 @@ describe("editing an agent", () => {
     fireEvent.click(button("Save"));
     await waitFor(() => expect(update).toHaveBeenCalledWith(7, { name: "Helper", iconName: null }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("still sends a name typed back after closing and reopening, until a later answer lands", async () => {
+    await mount(list());
+
+    const reload = deferred<PersonalAgentList>();
+
+    await timeOutRename(reload.promise);
+    await act(async () => reload.settle.reject(new Error("offline")));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+
+    // Closed and reopened: the card, and the new opening, still know the save went unanswered.
+    fireEvent.click(button("Cancel"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    const card = screen.getByRole("article", { name: "Helper" });
+
+    expect(within(card).getByText(/Couldn't confirm the last save/)).toBeTruthy();
+    expect(within(card).getByRole("button", { name: "Reload Helper" })).toBeTruthy();
+
+    const update = vi.spyOn(meAgents, "update").mockResolvedValue(AGENT);
+
+    // Typed over and back: the cache already says Helper, yet the server may hold Renamed.
+    fireEvent.click(within(card).getByRole("button", { name: "Edit Helper" }));
+    rename("Helpe");
+    rename("Helper");
+    fireEvent.click(button("Save"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(7, { name: "Helper", iconName: null }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    // That answer says what the server holds: the note goes.
+    expect(within(card).queryByText(/Couldn't confirm the last save/)).toBeNull();
+  });
+
+  it("drops the unconfirmed note once the card's Reload answers", async () => {
+    await mount(list());
+
+    const reload = deferred<PersonalAgentList>();
+
+    await timeOutRename(reload.promise);
+    await act(async () => reload.settle.reject(new Error("offline")));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+    fireEvent.click(button("Cancel"));
+
+    vi.spyOn(meAgents, "list").mockResolvedValue(list({ agents: [{ ...AGENT, name: "Renamed" }] }));
+    fireEvent.click(screen.getByRole("button", { name: "Reload Helper" }));
+
+    const card = await screen.findByRole("article", { name: "Renamed" });
+
+    expect(within(card).queryByText(/Couldn't confirm the last save/)).toBeNull();
   });
 
   it("never lets a late answer from a closed opening close another agent's dialog", async () => {
