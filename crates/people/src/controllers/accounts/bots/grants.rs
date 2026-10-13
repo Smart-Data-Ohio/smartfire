@@ -58,14 +58,16 @@ pub async fn grant(
             .db
             .write(move |tx| {
                 use rusqlite::OptionalExtension;
+                let requested = NewGrant {
+                    agent_id, capability, room_id, granted_by_id: actor, ..Default::default()
+                };
+                AgentGrant::validate_request_shape(tx.conn(), &requested)?.into_result()?;
                 let existing: Option<i64> = tx.conn().query_row(
                     "SELECT id FROM agent_grants WHERE agent_id=? AND capability=? AND room_id IS ? AND revoked_at IS NULL LIMIT 1",
-                    rusqlite::params![agent_id, capability, room_id], |r| r.get(0)
+                    rusqlite::params![agent_id, requested.capability, room_id], |r| r.get(0)
                 ).optional()?;
                 if existing.is_none() {
-                    let grant = AgentGrant::create(tx, NewGrant {
-                        agent_id, capability, room_id, granted_by_id: actor, ..Default::default()
-                    })?;
+                    let grant = AgentGrant::create(tx, requested)?;
                     let room = grant.room_id.map(|id| campfire_db::Room::find_by_id(tx.conn(), id)).transpose()?.flatten().and_then(|r| r.name);
                     return Ok(Some(NewAuditLog {
                         action: "agent.grant.create".into(),

@@ -47,6 +47,7 @@ async fn fixture(case: &Value) -> Fresh {
         if c["member"]!=false {tx.conn().execute("INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES (815,813,?,?)",params![now,now])?;}
         if c["other_member"]==true {tx.conn().execute("INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES (825,813,?,?)",params![now,now])?;}
         if c["mapping"]==false {tx.conn().execute("DELETE FROM github_pull_request_threads WHERE room_id=815",[])?;}
+        tx.conn().execute("UPDATE agents SET kind='workspace' WHERE id=881",[])?;
         tx.conn().execute("INSERT INTO agent_grants(agent_id,room_id,granted_by_id,capability,created_at,updated_at) VALUES (881,?,811,?,?,?)",params![c["grant_room"].as_i64().unwrap_or(815),c["grant"].as_str().unwrap_or("external_action"),now,now])?;
         if c["linked"]!=false {
             let a=Account::create(tx,&crypto(),&AccountInput{user_id:813,github_login:"machine",access_token:"fixture-agent-token",refresh_token:None,token_expires_at:None,token_source:"pat"})?;

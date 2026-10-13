@@ -31,7 +31,33 @@ pub struct GrantChanges {
     pub granted_by_id: Option<i64>,
     pub revoked_at: Option<Option<Timestamp>>,
 }
+/// Grant-row compatibility under the personal-agent policy. SQL expressions are supplied
+/// by code, never requests; workspace grants retain their existing interpretation.
+pub fn compatible_sql(grant: &str) -> String {
+    let capabilities = super::agent_access::PERSONAL_CAPABILITIES
+        .map(|capability| format!("'{capability}'"))
+        .join(",");
+    format!(
+        "NOT EXISTS (SELECT 1 FROM agents grant_agent WHERE grant_agent.id={grant}.agent_id AND grant_agent.kind='personal') OR ({grant}.capability IN ({capabilities}) AND EXISTS (SELECT 1 FROM rooms grant_room WHERE grant_room.id={grant}.room_id AND grant_room.type!='Rooms::Direct'))"
+    )
+}
+
+/// Effective personal grants use the same live policy as authorization. Direct-room
+/// grants remain incompatible even when the owner DM has implicit access.
+pub fn effective_active_sql(grant: &str) -> String {
+    let capability = super::agent_access::capability_sql(
+        &format!("{grant}.agent_id"),
+        &format!("{grant}.room_id"),
+        &format!("{grant}.capability"),
+    );
+    let compatible = compatible_sql(grant);
+    format!(
+        "{grant}.revoked_at IS NULL AND ({compatible}) AND (NOT EXISTS (SELECT 1 FROM agents grant_agent WHERE grant_agent.id={grant}.agent_id AND grant_agent.kind='personal') OR ({capability}))"
+    )
+}
+
 impl AgentGrant {
+    /// Persisted revocation state; effective access also requires the live agent policy.
     pub fn active(&self) -> bool {
         self.revoked_at.is_none()
     }
@@ -44,7 +70,10 @@ impl AgentGrant {
     pub fn all_active(conn: &Connection) -> Result<Vec<Self>> {
         query_all(
             conn,
-            "SELECT * FROM agent_grants WHERE revoked_at IS NULL ORDER BY id",
+            &format!(
+                "SELECT g.* FROM agent_grants g WHERE {} ORDER BY g.id",
+                effective_active_sql("g")
+            ),
             [],
             Self::from_row,
         )
@@ -85,20 +114,15 @@ impl AgentGrant {
         if !exists(conn, "SELECT 1 FROM users WHERE id=?", [a.granted_by_id])? {
             errors.add("granted_by", "must exist");
         }
+        let shape_changed = !exists(
+            conn,
+            "SELECT 1 FROM agent_grants WHERE id=? AND agent_id=? AND room_id IS ? AND capability=?",
+            params![exclude, a.agent_id, a.room_id, a.capability],
+        )?;
+        if shape_changed {
+            Self::validate_shape(conn, a, &mut errors)?;
+        }
         let blank = campfire_richtext::ruby::is_blank(&a.capability);
-        if blank {
-            errors.add("capability", "can't be blank");
-        }
-        if !CAPABILITIES.contains(&a.capability.as_str()) {
-            errors.add("capability", "is not included in the list");
-        }
-        // Rails room_id? queries an integer attribute: zero is false.
-        if let Some(id) = a.room_id
-            && id != 0
-            && !exists(conn, "SELECT 1 FROM rooms WHERE id=?", [id])?
-        {
-            errors.add("room", "must be an existing room");
-        }
         if a.revoked_at.is_none()
             && !blank
             && exists(
@@ -109,13 +133,55 @@ impl AgentGrant {
         {
             errors.add("capability", "has already been granted");
         }
+        Ok(errors)
+    }
+    /// Validate a requested shape before an idempotent duplicate lookup. Existing rows may
+    /// still be revoked or suspended without revalidating their legacy shape.
+    pub fn validate_request_shape(conn: &Connection, a: &NewGrant) -> Result<Errors> {
+        let mut errors = Errors::default();
+        Self::validate_shape(conn, a, &mut errors)?;
+        Ok(errors)
+    }
+    fn validate_shape(conn: &Connection, a: &NewGrant, errors: &mut Errors) -> Result<()> {
+        let blank = campfire_richtext::ruby::is_blank(&a.capability);
+        if blank {
+            errors.add("capability", "can't be blank");
+        }
+        if !CAPABILITIES.contains(&a.capability.as_str()) {
+            errors.add("capability", "is not included in the list");
+        }
+        if exists(
+            conn,
+            "SELECT 1 FROM agents WHERE id=? AND kind='personal'",
+            [a.agent_id],
+        )? {
+            if !super::agent_access::PERSONAL_CAPABILITIES.contains(&a.capability.as_str()) {
+                errors.add("capability", "is not available to personal agents");
+            }
+            if a.room_id.is_none()
+                || !exists(
+                    conn,
+                    "SELECT 1 FROM rooms WHERE id=? AND type!='Rooms::Direct'",
+                    [a.room_id],
+                )?
+            {
+                errors.add("room", "must be a non-direct room for a personal agent");
+            }
+        }
+        // Rails room_id? queries an integer attribute: zero is false.
+        if let Some(id) = a.room_id
+            && id != 0
+            && !exists(conn, "SELECT 1 FROM rooms WHERE id=?", [id])?
+        {
+            errors.add("room", "must be an existing room");
+        }
         if a.capability == "dm_anyone" && a.room_id.is_some() {
             errors.add(
                 "room",
                 "must be blank: dm_anyone is granted workspace-wide only",
             );
         }
-        Ok(errors)
+        Ok(())
     }
     pub fn create(tx: &Tx<'_>, a: NewGrant) -> Result<Self> {
         Self::validate(tx.conn(), &a, None)?.into_result()?;
@@ -172,18 +238,6 @@ impl AgentGrant {
         if self.revoked_at.is_some() {
             return Ok(());
         }
-        Self::validate(
-            tx.conn(),
-            &NewGrant {
-                agent_id: self.agent_id,
-                room_id: self.room_id,
-                capability: self.capability.clone(),
-                granted_by_id: self.granted_by_id,
-                revoked_at: Some(tx.now()),
-            },
-            Some(self.id),
-        )?
-        .into_result()?;
         tx.conn().execute(
             "UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE id=?",
             params![tx.now(), tx.now(), self.id],
@@ -199,7 +253,7 @@ impl AgentGrant {
         Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE agent_id IN (SELECT id FROM agents WHERE user_id=?) AND revoked_at IS NULL",params![tx.now(),tx.now(),user_id])?)
     }
     pub fn revoke_for_membership(tx: &Tx<'_>, user_id: i64, room_id: i64) -> Result<usize> {
-        Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE agent_id IN (SELECT id FROM agents WHERE user_id=?) AND room_id=? AND revoked_at IS NULL",params![tx.now(),tx.now(),user_id,room_id])?)
+        Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE agent_id IN (SELECT id FROM agents WHERE user_id=? OR (kind='personal' AND owner_id=?)) AND room_id=? AND revoked_at IS NULL",params![tx.now(),tx.now(),user_id,user_id,room_id])?)
     }
     pub fn revoke_for_room(tx: &Tx<'_>, room_id: i64) -> Result<usize> {
         Ok(tx.conn().execute("UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE room_id=? AND revoked_at IS NULL",params![tx.now(),tx.now(),room_id])?)

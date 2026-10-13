@@ -235,6 +235,7 @@ fn credentials_and_grants() {
                 granted_by: "Grace Hopper".into(),
                 created_at: "2026-03-02T16:00:00.000Z".into(),
                 revoked: true,
+                status: GrantStatus::Revoked,
             }],
             capabilities: vec!["read_messages".into(), "react".into()],
             rooms: vec![GrantRoom {
@@ -253,7 +254,8 @@ fn credentials_and_grants() {
                 "roomName": "Workspace-wide",
                 "grantedBy": "Grace Hopper",
                 "createdAt": "2026-03-02T16:00:00.000Z",
-                "revoked": true
+                "revoked": true,
+                "status": "revoked"
             }],
             "capabilities": ["read_messages", "react"],
             "rooms": [{"id": 3, "name": "Ops"}]

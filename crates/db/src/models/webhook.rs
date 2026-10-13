@@ -49,6 +49,11 @@ impl Webhook {
 
     /// `create_webhook!(url:)`
     pub fn create(tx: &Tx<'_>, user_id: i64, url: Option<&str>) -> Result<Self> {
+        if super::agent_access::is_personal_user(tx.conn(), user_id)? {
+            let mut errors = crate::Errors::default();
+            errors.add("webhook_url", "is not available to personal agents");
+            errors.into_result()?;
+        }
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "webhooks" ("created_at", "updated_at", "url", "user_id") VALUES (?, ?, ?, ?) RETURNING "id""#,
@@ -67,6 +72,11 @@ impl Webhook {
 
     /// `webhook.update!(url:)`
     pub fn update_url(&mut self, tx: &Tx<'_>, url: &str) -> Result<()> {
+        if super::agent_access::is_personal_user(tx.conn(), self.user_id)? {
+            let mut errors = crate::Errors::default();
+            errors.add("webhook_url", "is not available to personal agents");
+            errors.into_result()?;
+        }
         if self.url.as_deref() == Some(url) {
             return Ok(());
         }

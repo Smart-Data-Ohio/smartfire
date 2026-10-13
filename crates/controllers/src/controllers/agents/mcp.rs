@@ -14,6 +14,59 @@ use crate::concerns::agent_api;
 static METADATA: LazyLock<Value> = LazyLock::new(|| {
     serde_json::from_str(include_str!("mcp_metadata.json")).expect("vendored MCP metadata")
 });
+pub const PERSONAL_TOOLS: [&str; 24] = [
+    "list_rooms",
+    "read_messages",
+    "post_message",
+    "react",
+    "poll_events",
+    "ack_events",
+    "list_board_posts",
+    "create_board_post",
+    "update_board_post",
+    "set_result",
+    "list_work",
+    "update_work",
+    "get_context",
+    "open_dm",
+    "pin_message",
+    "unpin_message",
+    "create_poll",
+    "get_poll",
+    "start_stream",
+    "append_stream",
+    "finalize_stream",
+    "set_presence",
+    "add_step",
+    "update_step",
+];
+pub const PERSONAL_DENIED_TOOLS: [&str; 14] = [
+    "request_approval",
+    "get_approval",
+    "list_fizzy_boards",
+    "get_fizzy_board",
+    "search_fizzy_cards",
+    "get_fizzy_card",
+    "create_fizzy_card",
+    "comment_on_fizzy_card",
+    "move_fizzy_card",
+    "close_fizzy_card",
+    "reopen_fizzy_card",
+    "register_slash_command",
+    "unregister_slash_command",
+    "handoff_work",
+];
+async fn personal(c: &Ctx, agent_id: i64) -> Result<bool> {
+    c.app()
+        .db
+        .read(move |conn| {
+            Ok(campfire_db::Agent::find(conn, agent_id)?
+                .is_some_and(|agent| agent.kind == campfire_db::AgentKind::Personal))
+        })
+        .await
+        .map_err(super::super::presenters::page::db_error)
+}
+
 const MODERN: &str = "2026-07-28";
 const VERSION_KEY: &str = "io.modelcontextprotocol/protocolVersion";
 
@@ -149,7 +202,8 @@ pub async fn create(c: &mut Ctx) -> Result {
             ),
         )),
         "tools/list" => {
-            let tools:Vec<_>=METADATA["tools"].as_array().unwrap().iter().map(|tool|json!({"name":tool["name"],"description":tool["description"],"inputSchema":tool["inputSchema"]})).collect();
+            let is_personal = personal(c, identity.agent_id).await?;
+            let tools:Vec<_>=METADATA["tools"].as_array().unwrap().iter().filter(|tool|!is_personal || PERSONAL_TOOLS.contains(&tool["name"].as_str().unwrap())).map(|tool|json!({"name":tool["name"],"description":tool["description"],"inputSchema":tool["inputSchema"]})).collect();
             Ok(rpc_result(
                 c,
                 id,
@@ -438,6 +492,9 @@ async fn execute(
     args: Value,
 ) -> std::result::Result<ServiceResult, ToolError> {
     use super::super::presenters::page::db_error;
+    if PERSONAL_DENIED_TOOLS.contains(&name) && personal(c, agent_id).await? {
+        return Ok(ServiceResult::fail("Not available to personal agents", 403));
+    }
     let args = super::id_args::normalize_request(c, agent_id, name, args).await?;
     match name {
         "request_approval" => {
@@ -849,4 +906,27 @@ fn rpc_error(
         &format::JSON,
         json!({"jsonrpc":"2.0","id":id,"error":error}).to_string(),
     )
+}
+
+#[cfg(test)]
+mod personal_tool_inventory {
+    #[test]
+    fn every_mcp_tool_is_classified_for_personal_agents() {
+        let metadata = super::METADATA["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|tool| tool["name"].as_str().unwrap())
+            .collect::<std::collections::HashSet<_>>();
+        let allowed = super::PERSONAL_TOOLS
+            .into_iter()
+            .collect::<std::collections::HashSet<_>>();
+        let denied = super::PERSONAL_DENIED_TOOLS
+            .into_iter()
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(allowed.len(), super::PERSONAL_TOOLS.len());
+        assert_eq!(denied.len(), super::PERSONAL_DENIED_TOOLS.len());
+        assert!(allowed.is_disjoint(&denied));
+        assert_eq!(metadata, allowed.union(&denied).copied().collect());
+    }
 }

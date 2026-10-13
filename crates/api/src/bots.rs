@@ -19,7 +19,7 @@ use campfire_people::controllers::accounts::bots::{
     self as classic, BotUpdate, NewBot, credentials, github_connections, grants, keys,
     webhook_secrets,
 };
-use campfire_presentation::accounts::bot_access::{CAPABILITIES, CredentialExpiry};
+use campfire_presentation::accounts::bot_access::{CAPABILITIES, CredentialExpiry, GrantStatus};
 use campfire_presentation::helpers::AvatarIcon;
 use campfire_runtime::concerns;
 use campfire_runtime::presenters::attachments::Assignment;
@@ -600,6 +600,12 @@ async fn grant_list(c: &Ctx, bot: &User, agent_id: i64) -> Result<api::GrantList
                 granted_by: row.granted_by,
                 created_at: time(Timestamp::from_jiff(row.created_at)),
                 revoked: row.revoked,
+                status: match row.status {
+                    GrantStatus::Active => api::GrantStatus::Active,
+                    GrantStatus::Inactive => api::GrantStatus::Inactive,
+                    GrantStatus::Incompatible => api::GrantStatus::Incompatible,
+                    GrantStatus::Revoked => api::GrantStatus::Revoked,
+                },
             })
             .collect(),
         capabilities: CAPABILITIES.iter().map(|name| name.to_string()).collect(),

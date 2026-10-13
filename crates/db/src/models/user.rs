@@ -416,6 +416,7 @@ impl User {
         else {
             return Ok(None);
         };
+        if super::agent_access::is_personal_user(conn, bot.id)? { return Ok(None); }
         let Some(digest) = bot.bot_token_digest.as_deref().filter(|d| !is_blank(d)) else {
             return Ok(None);
         };
@@ -461,7 +462,7 @@ impl User {
         }, false)
     }
 
-    fn create_with_open_room_grant(tx: &mut Tx<'_>, mut attributes: NewUser, grant: bool) -> Result<Self> {
+    pub(crate) fn create_with_open_room_grant(tx: &mut Tx<'_>, mut attributes: NewUser, grant: bool) -> Result<Self> {
         attributes.pronouns = profile_text(attributes.pronouns, "pronouns", 40)?;
         attributes.nickname = profile_text(attributes.nickname, "nickname", 32)?;
         attributes.icon_name = icon::normalize_name(attributes.icon_name.as_deref());
@@ -692,6 +693,11 @@ impl User {
         webhook_url: Option<&str>,
     ) -> Result<()> {
         Self::find(tx.conn(), self.id)?.ensure_account_user()?;
+        if webhook_url.is_some_and(|url| !url.trim().is_empty()) && super::agent_access::is_personal_user(tx.conn(), self.id)? {
+            let mut errors = crate::Errors::default();
+            errors.add("webhook_url","is not available to personal agents");
+            errors.into_result()?;
+        }
         let webhook = Webhook::find_by_user(tx.conn(), self.id)?;
         match (webhook_url.filter(|u| !u.trim().is_empty()), webhook) {
             (Some(url), Some(mut webhook)) => webhook.update_url(tx, url)?,
@@ -709,6 +715,11 @@ impl User {
     /// is known on `self` afterwards.
     pub fn reset_bot_key(&mut self, tx: &mut Tx<'_>) -> Result<String> {
         Self::find(tx.conn(), self.id)?.ensure_account_user()?;
+        if super::agent_access::is_personal_user(tx.conn(), self.id)? {
+            let mut errors = crate::Errors::default();
+            errors.add("bot_key","is not available to personal agents");
+            errors.into_result()?;
+        }
         let token = generate_bot_token();
         let digest = digest_bot_token(&token);
         let now = tx.now();
@@ -1069,6 +1080,7 @@ const DUMMY_DIGEST: &str = "$2a$12$FiKmSp4UhLvSB4Sd/ZUjQunyKP6.NjDRHdr5LnKUVk.BU
 
 /// `after_create_commit :grant_membership_to_open_rooms`: `Rooms::Open.alive` (`app/models/user.rb`).
 fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
+    if super::agent_access::is_personal_user(tx.conn(), user_id)? { return Ok(()); }
     let sqlite_now = tx.env().sqlite_now_sql();
     let room_ids: Vec<i64> = query_all(
         tx.conn(),

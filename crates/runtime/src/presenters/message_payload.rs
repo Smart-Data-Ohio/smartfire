@@ -45,7 +45,7 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
             Some(data)=>message.reply_to_message_id.and_then(|id|data.records.sources.get(&id)).cloned(),
             None=>message.reply_to_message_id.map(|id|Message::find_by_id(p.conn,id)).transpose()?.flatten(),
         };
-        let source = source.map(|source| campfire_db::message_quote::visible(p.conn, &source, viewer.id).map(|visible| visible.then_some(source))).transpose()?.flatten();
+        let source = source.map(|source| campfire_db::message_quote::content_visible(p.conn, &source, viewer.id).map(|visible| visible.then_some(source))).transpose()?.flatten();
         let mut reply = match &source {
             Some(source) => json!({"id": source.id, "url": permalink(source, base), "deleted": false, "creator": user(p, &p.user(source.creator_id)?, base)?,
                 "body": {"plain_text": p.plain_text_body(source)?, "html": html(p, source)?}}),

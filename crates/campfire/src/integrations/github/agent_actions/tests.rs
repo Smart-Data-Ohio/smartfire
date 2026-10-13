@@ -66,6 +66,7 @@ async fn seed(db: &Database, case: &Value) {
         tx.conn().execute("INSERT INTO channel_threads (id,creator_id,room_id,parent_message_id,name,last_activity_at,created_at,updated_at) VALUES (817,811,815,818,'Discussion',?,?,?)", params![now,now,now])?;
         tx.conn().execute("INSERT INTO github_pull_requests (id,owner,repo,number,created_at,updated_at) VALUES (816,'rails','rails',12,?,?)", params![now,now])?;
         tx.conn().execute("INSERT INTO github_pull_request_threads (github_pull_request_id,room_id,channel_thread_id,created_at,updated_at) VALUES (816,815,817,?,?)", params![now,now])?;
+        tx.conn().execute("UPDATE agents SET kind='workspace' WHERE id=812",[])?;
         tx.conn().execute("INSERT INTO agent_grants (id,agent_id,room_id,granted_by_id,capability,created_at,updated_at) VALUES (820,812,815,811,'external_action',?,?)", params![now,now])?;
         let access=crypto().encrypt("fixture-agent-token");
         tx.conn().execute("INSERT INTO github_connected_accounts (id,user_id,github_login,access_token,token_source,created_at,updated_at) VALUES (819,810,'machine',?,'pat',?,?)", params![access,now,now])?;

@@ -12,6 +12,14 @@ pub fn visible(conn: &Connection, source: &Message, viewer: i64) -> Result<bool>
     }
 }
 
+/// A write grant may name a source without granting disclosure of its content.
+pub fn content_visible(conn:&Connection,source:&Message,viewer:i64) -> Result<bool> {
+    if super::agent_access::is_personal_user(conn,viewer)? && super::agent_access::capability_for_user(conn,viewer,"read_messages",source.room_id)? == Some(false) {
+        return Ok(false);
+    }
+    visible(conn,source,viewer)
+}
+
 /// Both the holder and its quoted source must be readable by this viewer.
 pub fn source_for_viewer(conn: &Connection, room_id: i64, reference_id: i64, viewer: i64) -> Result<Message> {
     let holder = crate::sql::query_one(conn, "SELECT message_id FROM message_references WHERE id=?", [reference_id], |row| row.get::<_, i64>(0))?

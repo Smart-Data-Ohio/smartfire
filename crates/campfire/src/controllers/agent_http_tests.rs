@@ -63,6 +63,12 @@ async fn check(name: &str) {
         .find(|c| c["name"] == name)
         .unwrap();
     app.db().write({let name=name.to_string(); move |tx| {
+        if name.starts_with("event_") {
+            let approval=campfire_db::AgentApproval::create(tx,campfire_db::NewApproval{agent_id:AGENT,action:"github.comment".into(),summary:"Authorized wire completion".into(),..Default::default()})?;
+            for cap in ["read_messages","post_messages","react","external_action"] {campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:AGENT,capability:cap.into(),granted_by_id:127326141,..Default::default()})?;}
+            tx.conn().execute("UPDATE agent_events SET agent_approval_id=? WHERE id=900000001",[approval.id])?;
+            tx.conn().execute("UPDATE agent_events SET event_type='mention',message_id=136976342,metadata='{}' WHERE id=900000002",[])?;
+        }
         if ["profile_invalid","profile_clear","profile_boolean_note"].contains(&name.as_str()) {
             tx.conn().execute("UPDATE agents SET status='working',status_note='Tests',status_changed_at=?,working_presence='Thinking',working_presence_expires_at=? WHERE id=?",rusqlite::params![tx.now(),tx.now().since(jiff::SignedDuration::from_mins(5)),AGENT])?;
         }

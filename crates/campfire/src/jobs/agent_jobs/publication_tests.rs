@@ -46,6 +46,8 @@ async fn ws11_publication_concurrent_poller_resumes_after_interleaved_commits() 
                 "UPDATE channel_threads SET work_owner_id=? WHERE id=?",
                 rusqlite::params![BENDER, thread.id],
             )?;
+            for cap in ["read_messages","external_action"] {campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:agent.id,capability:cap.into(),granted_by_id:DAVID,..Default::default()})?;}
+            tx.conn().execute("INSERT INTO agent_approvals(id,agent_id,room_id,action,summary,status,expires_at,created_at,updated_at) VALUES(991000010,?,?,'github.comment','Publication','approved',?,?,?)",rusqlite::params![agent.id,ALL_TALK,tx.now().since(jiff::SignedDuration::from_hours(1)),tx.now(),tx.now()])?;
             Ok((
                 agent.id,
                 thread.id,
@@ -75,6 +77,7 @@ async fn ws11_publication_concurrent_poller_resumes_after_interleaved_commits() 
                 NewEvent {
                     agent_id,
                     room_id: Some(ALL_TALK),
+                    agent_approval_id:Some(991000010),
                     event_type: "github_action_completed".into(),
                     outcome: Some("delivered".into()),
                     metadata: json!({"status":"completed"}),
@@ -115,6 +118,7 @@ async fn ws11_publication_concurrent_poller_resumes_after_interleaved_commits() 
                 NewEvent {
                     agent_id,
                     room_id: Some(ALL_TALK),
+                    agent_approval_id:Some(991000010),
                     event_type: "fizzy_action_completed".into(),
                     outcome: Some("delivered".into()),
                     metadata: json!({"status":"completed"}),

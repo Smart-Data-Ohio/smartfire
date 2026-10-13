@@ -5,7 +5,7 @@ use super::{
     agent_posting::{DriveInput, PostResult},
     agent_service::ServiceResult,
 };
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::sql::exists;
 use crate::{Agent, Message, NewMessage, Result, Room, Tx, User};
 use rusqlite::params;
@@ -21,6 +21,9 @@ pub enum DirectMessageResult {
 }
 
 pub fn allowed(tx: &Tx<'_>, agent: &Agent, target_id: i64) -> Result<bool> {
+    if agent.kind == crate::AgentKind::Personal {
+        return Ok(agent.owner_id == Some(target_id));
+    }
     if agent.owner_id == Some(target_id)
         || agent_access::capability_for_agent(tx.conn(), agent.id, "dm_anyone", None)?
     {
@@ -44,6 +47,13 @@ pub fn open_and_post(
 ) -> Result<DirectMessageResult> {
     let fail =
         |error: &str, status| DirectMessageResult::Denied(ServiceResult::fail(error, status));
+    let agent = Agent::find(tx.conn(), agent_id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
+    if agent.kind == crate::AgentKind::Personal
+        && (agent.owner_id != Some(target_id)
+            || User::find_by_id(tx.conn(), target_id)?.is_none_or(|user| !user.is_active()))
+    {
+        return Ok(fail("Personal agents may only DM their active owner", 403));
+    }
     let Some(target) = User::find_by_id(tx.conn(), target_id)? else {
         return Ok(fail("User not found", 404));
     };
@@ -53,7 +63,9 @@ pub fn open_and_post(
     if !target.is_active() {
         return Ok(fail("Cannot open a DM with an inactive account", 422));
     }
-    let agent = Agent::find(tx.conn(), agent_id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
+    if agent.kind == crate::AgentKind::Personal && !agent.active(tx.conn())? {
+        return Ok(fail("Forbidden: agent lacks post_messages capability", 403));
+    }
     let members = [agent.user_id, target.id];
     let existing = Room::find_direct_for(tx.conn(), &members)?;
     if existing.is_none() {
@@ -63,7 +75,8 @@ pub fn open_and_post(
             Err(error) => return Err(error),
         }
     }
-    if !agent_access::has_capability_anywhere(tx.conn(), agent.id, "post_messages")? {
+    if agent.kind != crate::AgentKind::Personal
+        && !agent_access::has_capability_anywhere(tx.conn(), agent.id, "post_messages")? {
         return Ok(fail("Forbidden: agent lacks post_messages capability", 403));
     }
     if !allowed(tx, &agent, target.id)? {
@@ -78,14 +91,15 @@ pub fn open_and_post(
     } else {
         Room::find_or_create_direct_for(tx, &members, agent.user_id)?
     };
-    if !new_room
+    if (!new_room || agent.kind == crate::AgentKind::Personal)
         && !agent_access::capability_for_agent(tx.conn(), agent.id, "post_messages", Some(room.id))?
     {
         return Ok(fail("Forbidden: agent lacks post_messages capability", 403));
     }
     if new_room {
         for membership in room.memberships(tx.conn())? {
-            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MembershipChanged { membership_id: membership.id }));
+            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MembershipChanged { membership_id: membership.id,
+            }));
         }
         let user = User::find(tx.conn(), agent.user_id)?;
         AuditLog::record(

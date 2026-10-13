@@ -44,7 +44,13 @@ async fn seed(db: &Database, integration: Integration, age: i64, webhook: bool) 
         let now = tx.now();
         tx.conn().execute("INSERT INTO users (id, name, role, status, bot_token_digest, created_at, updated_at) VALUES (810, 'Machine', 2, 0, ?, ?, ?)", rusqlite::params![campfire_db::user::digest_bot_token("fixture-machine-token"), now, now])?;
         tx.conn().execute("INSERT INTO users (id, name, email_address, role, status, password_digest, created_at, updated_at) SELECT 811, 'Oracle', 'oracle@example.test', 1, 0, password_digest, ?, ? FROM users WHERE id = ?", rusqlite::params![now, now, TestDb::id("david")])?;
-        tx.conn().execute("INSERT INTO agents (id, user_id, owner_id, created_at, updated_at) VALUES (812, 810, 811, ?, ?)", rusqlite::params![now, now])?;
+        tx.conn().execute("INSERT INTO agents (id, user_id, owner_id, kind, created_at, updated_at) VALUES (812, 810, 811, 'workspace', ?, ?)", rusqlite::params![now, now])?;
+        campfire_db::AgentGrant::create(tx, campfire_db::NewGrant {
+            agent_id: 812,
+            granted_by_id: 811,
+            capability: "external_action".into(),
+            ..Default::default()
+        })?;
         let action = if integration.event_type == GITHUB.event_type { "github.comment" } else { "fizzy.comment" };
         tx.conn().execute("INSERT INTO agent_approvals (id, action, agent_id, summary, status, expires_at, decided_by_id, created_at, updated_at) VALUES (813, ?, 812, 'Approved fixture', 'approved', ?, 811, ?, ?)", rusqlite::params![action, now.since(jiff::SignedDuration::from_hours(24)), now, now])?;
         tx.conn().execute("INSERT INTO agent_events (id, agent_id, agent_approval_id, actor_id, event_type, outcome, webhook_attempts, created_at, metadata) VALUES (814, 812, 813, 811, ?, 'delivered', 2, ?, ?)", rusqlite::params![integration.event_type, now.ago(jiff::SignedDuration::from_secs(age)), json!({"approval_id": 813,"action":action,"status":"running","extra":"preserved"}).to_string()])?;
