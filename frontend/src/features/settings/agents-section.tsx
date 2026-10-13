@@ -491,24 +491,29 @@ function EditDialog({
     );
   };
 
+  // While a save is out the dialog stays open: its rename and access writes, and what it learns the
+  // server holds, belong to this opening alone, never to a later one's form.
+  const saving = busy("edit");
+
   return (
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !saving) onClose();
       }}
+      dirty={saving}
       title={`Edit ${agent.name}`}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
           <Button
             type="submit"
             form="agents-edit-form"
             variant="primary"
-            loading={busy("edit")}
-            disabled={busy("edit")}
+            loading={saving}
+            disabled={saving}
           >
             Save
           </Button>

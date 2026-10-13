@@ -207,6 +207,57 @@ describe("the cards", () => {
     expect(screen.queryByRole("article", { name: "Helper" })).toBeNull();
   });
 
+  it("can't be closed while a rename is out, so a retry never undoes it", async () => {
+    await mount(list());
+
+    let answer: (agent: PersonalAgent) => void = () => undefined;
+
+    const update = vi.spyOn(meAgents, "update").mockReturnValue(
+      new Promise<PersonalAgent>((resolve) => {
+        answer = resolve;
+      }),
+    );
+
+    const setAccess = vi
+      .spyOn(meAgents, "setAccess")
+      .mockRejectedValueOnce(
+        new ActionError("Validation", "Invalid", { roomIds: ["includes a room you're not in"] }),
+      )
+      .mockResolvedValueOnce({ ...AGENT, name: "Renamed", roomIds: [], capabilities: [] });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Helper" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
+
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Name" }), {
+      target: { value: "Renamed" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+
+    // The rename is out: neither Cancel nor Escape closes this opening for a fresh one.
+    const cancel = within(dialog).getByRole("button", { name: "Cancel" });
+
+    expect(cancel.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(cancel);
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Edit Helper" })).toBe(dialog);
+
+    // The rename lands, the access save is refused, and the corrected retry keeps the name.
+    await act(async () => answer({ ...AGENT, name: "Renamed" }));
+    expect(await within(dialog).findByText("includes a room you're not in")).toBeTruthy();
+    expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Design" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(setAccess).toHaveBeenCalledTimes(2));
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(7, { name: "Renamed", iconName: "owl" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
+  });
+
   it("rotates a token, showing the new one once with its client's setup", async () => {
     await mount(list());
 
