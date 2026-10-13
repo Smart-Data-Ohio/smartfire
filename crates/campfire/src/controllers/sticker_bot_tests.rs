@@ -288,7 +288,7 @@ async fn mcp_call(app: &TestApp, name: &str, arguments: Value) -> Reply {
     app.anonymous()
         .send(
             Req::new(Method::POST, "/agents/mcp")
-                .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
+                .header("authorization", &["Bearer", SECRET].join(" "))
                 .header("accept", "application/json")
                 .header("content-type", "application/json")
                 .body(body.to_string()),
@@ -317,7 +317,7 @@ async fn mcp_post_message_advertises_sticker_input() {
         .anonymous()
         .send(
             Req::new(Method::POST, "/agents/mcp")
-                .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
+                .header("authorization", &["Bearer", SECRET].join(" "))
                 .header("accept", "application/json")
                 .header("content-type", "application/json")
                 .body(json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}).to_string()),

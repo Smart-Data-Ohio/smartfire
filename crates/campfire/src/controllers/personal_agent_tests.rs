@@ -53,7 +53,7 @@ async fn request(a: &TestApp, method: Method, path: &str, body: Value) -> Reply 
     a.anonymous()
         .send(
             Req::new(method, path)
-                .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
+                .header("authorization", &["Bearer", SECRET].join(" "))
                 .header("accept", "application/json")
                 .json_body(&body),
         )

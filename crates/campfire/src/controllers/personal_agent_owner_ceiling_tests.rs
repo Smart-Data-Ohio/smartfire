@@ -44,7 +44,7 @@ async fn review_s1_owner_ceiling_rejects_authenticated_endpoints_after_live_owne
             .anonymous()
             .send(
                 Req::new(method.clone(), path)
-                    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
+                    .header("authorization", &["Bearer", SECRET].join(" "))
                     .header("accept", "application/json")
                     .json_body(body),
             )
@@ -75,7 +75,7 @@ async fn review_s1_owner_ceiling_rejects_authenticated_endpoints_after_live_owne
             .anonymous()
             .send(
                 Req::new(method, path)
-                    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
+                    .header("authorization", &["Bearer", SECRET].join(" "))
                     .header("accept", "application/json")
                     .json_body(&body),
             )

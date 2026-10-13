@@ -29,7 +29,7 @@ async fn ignore_dm_rest_and_mcp_return_the_same_missing_user_refusal() {
                         Method::POST,
                         if mcp { "/agents/mcp" } else { "/agents/dms" },
                     )
-                    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
+                    .header("authorization", &["Bearer", SECRET].join(" "))
                     .header("accept", "application/json")
                     .header("content-type", "application/json")
                     .body(body.to_string()),
@@ -60,7 +60,7 @@ async fn request(app: &TestApp, case: &Value) -> super::presenters::test_support
         Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
         "/agents/mcp",
     )
-    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
+    .header("authorization", &["Bearer", SECRET].join(" "))
     .header("accept", "application/json")
     .header(
         "content-type",
@@ -258,7 +258,7 @@ async fn mcp_shares_rest_buckets_and_counts_endpoint_before_origin() {
             .anonymous()
             .send(
                 Req::new(Method::GET, "/agents/events")
-                    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" ")),
+                    .header("authorization", &["Bearer", SECRET].join(" ")),
             )
             .await;
         assert_eq!(reply.status.as_u16(), 200);
