@@ -1,5 +1,6 @@
 /** The people and rooms search suggests, from the switcher's data. */
 import { useStore } from "../../store/store.ts";
+import { namesWithYou } from "../directs/note-to-self.ts";
 import { localItems, mergeItems, remoteItems, type SwitcherItem } from "../switcher/ranking.ts";
 import { useCatalogue } from "../switcher/use-catalogue.ts";
 
@@ -18,6 +19,6 @@ export function useSuggestible(active: boolean, includeViewer = false): readonly
   return mergeItems(
     localItems(sidebar, viewerId),
     [...(catalogue === null ? [] : remoteItems(catalogue)), ...self],
-    (userId) => users[userId]?.name,
+    namesWithYou(users, viewerId),
   ).filter((item) => includeViewer || item.userId !== viewerId);
 }

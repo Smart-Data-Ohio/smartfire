@@ -326,8 +326,11 @@ test.describe("the tab bar and the list on a 360 px touch phone", () => {
     await openApp(page, "");
     await tabBar(page).getByRole("button", { name: "DMs" }).tap();
 
-    const row = sidebar(page).locator(".sidebar-row[data-preview]").first();
+    // The first conversation with messages: your unused note-to-self leads with its prompt.
+    const offer = sidebar(page).locator("[data-note-to-self-offer] .sidebar-row[data-preview]");
+    const row = sidebar(page).locator("a.sidebar-row[data-preview]").first();
 
+    await expect(offer.locator(".sidebar-row-preview")).toHaveText("Jot something down");
     await expect(row.locator(".sidebar-row-preview")).toHaveText(/\S/);
     await expect(row.locator(".sidebar-row-time")).toBeVisible();
     await expect(row.locator(".sidebar-row-time")).toHaveAttribute("datetime", /^\d{4}-/);
@@ -340,7 +343,7 @@ test.describe("the tab bar and the list on a 360 px touch phone", () => {
     await page.keyboard.press("Enter");
     await page.goBack();
     await tabBar(page).getByRole("button", { name: "DMs" }).tap();
-    await expect(sidebar(page).locator(".sidebar-row-preview").first()).toContainText(
+    await expect(sidebar(page).locator("a.sidebar-row .sidebar-row-preview").first()).toContainText(
       "Previewed on the DMs tab",
     );
   });

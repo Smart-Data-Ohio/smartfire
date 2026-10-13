@@ -5,7 +5,7 @@ matrix("the user menu has no way back to classic", async ({ page, theme, phone }
   await openApp(page, "", theme);
 
   // A phone has it under the tab bar's You, the sidebar's foot on wider screens.
-  await page.getByRole("button", { name: phone ? "You" : "Your account" }).click();
+  await page.getByRole("button", { name: phone ? "You" : "Your account", exact: true }).click();
 
   const menu = page.getByRole("menu", { name: "Your account" });
 

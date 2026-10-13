@@ -179,6 +179,11 @@
     white-space: nowrap;
   }
 
+  .picker-you {
+    color: var(--text-faint);
+    font-weight: var(--weight-regular);
+  }
+
   .picker-option-name {
     color: var(--text);
     font-size: var(--text-ui);

@@ -584,6 +584,7 @@ pub(crate) fn row() -> SidebarRow {
         thread_notification_count: 0,
         last_message: None,
         refresh_room: None,
+        note_to_self: None,
     }
 }
 
@@ -602,6 +603,7 @@ fn room_detail_round_trips() {
             first_unread_message_id: 9000,
             count: 4,
         }),
+        note_to_self: None,
     };
     let wire = serde_json::to_value(&detail).unwrap();
     assert_eq!(wire["room"], serde_json::to_value(room()).unwrap());
@@ -717,6 +719,7 @@ fn sidebar_round_trips() {
         direct_placeholder_user_ids: vec![7],
         can_create_rooms: true,
         workspace_layout: crate::WorkspaceLayout { categories: vec![], rooms: vec![] },
+        note_to_self_room_id: None,
     };
     let wire = serde_json::to_value(&sidebar).unwrap();
     assert_eq!(

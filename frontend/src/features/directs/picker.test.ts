@@ -5,6 +5,7 @@ import {
   addPlan,
   directIntent,
   MAX_OTHERS,
+  otherIds,
   pickerOptions,
   removeLast,
   toggleSelected,
@@ -74,6 +75,20 @@ describe("chip selection", () => {
     expect(directIntent([])).toBe("none");
     expect(directIntent([3])).toBe("direct");
     expect(directIntent([3, 2])).toBe("group");
+  });
+
+  it("opens your note-to-self for only you, and leaves you out beside others", () => {
+    expect(directIntent([7], 7)).toBe("self");
+    expect(directIntent([7, 3], 7)).toBe("direct");
+    expect(directIntent([3, 7, 2], 7)).toBe("group");
+    expect(otherIds([7], 7)).toEqual([]);
+    expect(otherIds([3, 7, 2], 7)).toEqual([3, 2]);
+  });
+
+  it("marks you among the options", () => {
+    const options = pickerOptions(CANDIDATES, USERS, "", new Set(), 3);
+
+    expect(options.filter((option) => option.you).map((option) => option.userId)).toEqual([3]);
   });
 });
 

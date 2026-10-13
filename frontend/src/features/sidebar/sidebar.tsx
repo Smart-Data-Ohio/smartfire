@@ -30,6 +30,7 @@ import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
+import { offersNoteToSelf } from "../directs/note-to-self.ts";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -64,6 +65,7 @@ import {
 } from "./sections.ts";
 import {
   type DropEdge,
+  NoteToSelfOffer,
   type RowActions,
   RowActionsContext,
   RowGlyph,
@@ -216,6 +218,8 @@ interface SectionProps {
   readonly onHeadingPointerDown?: ((event: PointerEvent<HTMLElement>) => void) | undefined;
   /** Direct rows show their newest message (the DMs tab). */
   readonly preview?: boolean;
+  /** Before the rows: your note-to-self, offered before it exists. */
+  readonly lead?: ReactNode;
 }
 
 /**
@@ -234,6 +238,7 @@ function Section({
   drop,
   onHeadingPointerDown,
   preview = false,
+  lead = null,
 }: SectionProps) {
   const id = useId();
 
@@ -298,6 +303,7 @@ function Section({
       >
         <div className="t-acc-panel-inner">
           <ul className="sidebar-rows" data-list="main">
+            {lead}
             {section.rows.map((row) => (
               <SidebarRow
                 key={row.room.id}
@@ -821,6 +827,7 @@ export function Sidebar() {
     sharedCategories: shared,
   };
 
+  const offerNoteToSelf = useStore(offersNoteToSelf);
   const all = sidebarSections(sidebar, { admin });
   const flip = useFlip(scrollRef);
   const focusAfterRender = useFocusAfterRender();
@@ -1338,6 +1345,11 @@ export function Sidebar() {
                       context,
                     )}
                     preview={destination === "dms"}
+                    lead={
+                      section.kind === "direct" && offerNoteToSelf ? (
+                        <NoteToSelfOffer preview={destination === "dms"} />
+                      ) : null
+                    }
                     onHeadingPointerDown={headingDrag(section)}
                   />
                 </SectionWithField>

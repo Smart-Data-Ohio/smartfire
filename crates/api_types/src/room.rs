@@ -106,6 +106,10 @@ pub struct RoomDetail {
     pub users: Vec<User>,
     /// Where the unread divider goes (`unread_divider`); `null` when the room is read.
     pub unread: Option<UnreadDivider>,
+    /// `true` for the viewer's note-to-self, as on its sidebar row; absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub note_to_self: Option<bool>,
 }
 
 /// The first unread root message and how many root messages follow it, as the classic room page

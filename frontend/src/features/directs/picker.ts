@@ -17,6 +17,8 @@ export interface PickerOption {
   readonly name: string;
   readonly agent: boolean;
   readonly starred: boolean;
+  /** The viewer: picked alone, it opens their note-to-self. */
+  readonly you: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export function pickerOptions(
   users: Readonly<Record<number, User>>,
   query: string,
   hidden: ReadonlySet<number>,
+  viewerId: number | null = null,
 ): readonly PickerOption[] {
   const needle = normalizeQuery(query);
 
@@ -50,6 +53,7 @@ export function pickerOptions(
               name: user.name,
               agent: candidate.agent,
               starred: candidate.starred,
+              you: candidate.userId === viewerId,
             },
             score: score + (candidate.starred ? 5 : 0),
           },
@@ -79,15 +83,32 @@ export function removeLast(selected: readonly number[]): readonly number[] {
   return selected.slice(0, -1);
 }
 
-/** What creating with these chips makes: nothing yet, a one-to-one DM, or a group DM. */
-export type DirectIntent = "none" | "direct" | "group";
+/**
+ * What creating with these chips makes: nothing yet, your note-to-self (only you), a one-to-one
+ * DM, or a group DM. You beside others add nothing: the room is theirs and yours either way.
+ */
+export type DirectIntent = "none" | "self" | "direct" | "group";
 
-export function directIntent(selected: readonly number[]): DirectIntent {
+export function directIntent(
+  selected: readonly number[],
+  viewerId: number | null = null,
+): DirectIntent {
+  const others = selected.filter((id) => id !== viewerId);
+
   if (selected.length === 0) {
     return "none";
   }
 
-  return selected.length === 1 ? "direct" : "group";
+  if (others.length === 0) {
+    return "self";
+  }
+
+  return others.length === 1 ? "direct" : "group";
+}
+
+/** The people to open a conversation with: the chips without you (the server adds you). */
+export function otherIds(selected: readonly number[], viewerId: number | null): readonly number[] {
+  return selected.filter((id) => id !== viewerId);
 }
 
 /**

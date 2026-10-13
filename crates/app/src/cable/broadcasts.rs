@@ -298,7 +298,10 @@ impl Broadcasts {
                 .map(|user| user.id)
                 .collect();
             let blockers = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
-            for &user_id in &user_ids {
+            // The author's own message never makes the room unread for them (`unread_memberships`
+            // leaves them out), so their other devices hear nothing either; the classic stream
+            // above keeps every member, as `broadcast_unread_room` did.
+            for &user_id in user_ids.iter().filter(|id| **id != message.creator_id) {
                 sync::room_unread_with_policy(
                     &self.server,
                     user_id,

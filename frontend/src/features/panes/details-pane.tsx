@@ -6,7 +6,10 @@ import { Badge } from "../../ui/badge.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Menu } from "../../ui/menu.tsx";
 import { useDirectActions } from "../directs/direct-header-actions.tsx";
+import { NOTE_TO_SELF_LINE, useNoteToSelf, useViewerName } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { raisedHandsLabel, useRaisedHands } from "../huddle/stage-button.tsx";
+import { useViewerId } from "../messages/use-message.ts";
 import { identityOf } from "../people/agent-identity.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { ProfileHero } from "../people/profile-banner.tsx";
@@ -149,7 +152,7 @@ function DirectHero({ userId }: { readonly userId: number }) {
  * and the stage open their panes over this one (Back returns here); the notification level opens
  * the bell's menu, events the room's calendar, and settings the room's settings dialog. A DM has
  * its people actions instead of members, threads and settings, and a 1:1 DM the other side's
- * profile.
+ * profile. Your note-to-self is you, with nothing to notify you of and nobody to add.
  */
 export function DetailsPane({ roomId }: { readonly roomId: number }) {
   const aboutId = useId();
@@ -157,6 +160,9 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
   const { push } = usePaneNavigation(roomId);
   const direct = useDirectActions(roomId);
   const hands = useRaisedHands(roomId);
+  const self = useNoteToSelf(roomId);
+  const viewerId = useViewerId();
+  const viewerName = useViewerName();
 
   if (detail === null) {
     return (
@@ -169,8 +175,13 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
   const kind = detail.room.kind;
   const isDirect = kind === "direct";
 
+  // A group everyone else left lists only you, but it's still the group, not your profile.
+  const [only] = detail.directMemberIds;
+
   const otherId =
-    isDirect && detail.directMemberIds.length === 1 ? detail.directMemberIds[0] : undefined;
+    isDirect && detail.directMemberIds.length === 1 && (only !== viewerId || self)
+      ? only
+      : undefined;
 
   const members = `${detail.memberCount} ${detail.memberCount === 1 ? "member" : "members"}`;
   const pins = detail.pinsCount;
@@ -186,10 +197,21 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
           ) : (
             <DirectHero userId={otherId} />
           )}
-          <h3 className="details-name">{detail.displayName}</h3>
-          <p className="details-kind">
-            {isDirect ? KIND_LABELS[kind] : `${KIND_LABELS[kind]} · ${members}`}
-          </p>
+          {self ? (
+            <>
+              <h3 className="details-name">
+                <YouLabel name={viewerName ?? detail.displayName} tagClassName="details-you" />
+              </h3>
+              <p className="details-kind">{NOTE_TO_SELF_LINE}</p>
+            </>
+          ) : (
+            <>
+              <h3 className="details-name">{detail.displayName}</h3>
+              <p className="details-kind">
+                {isDirect ? KIND_LABELS[kind] : `${KIND_LABELS[kind]} · ${members}`}
+              </p>
+            </>
+          )}
         </div>
         {isDirect || detail.room.topic === null ? null : (
           <section className="details-about" aria-labelledby={aboutId}>
@@ -201,7 +223,7 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
         )}
         <ul className="details-rows" aria-label="About this conversation">
           {otherId === undefined ? null : <ProfileRow userId={otherId} />}
-          <NotificationsRow roomId={roomId} />
+          {self ? null : <NotificationsRow roomId={roomId} />}
           {kind === "stage" ? (
             <PaneRow
               icon="radio"

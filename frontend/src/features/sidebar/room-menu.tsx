@@ -25,6 +25,7 @@ import {
   type MenuTriggerProps,
   SubMenu,
 } from "../../ui/menu.tsx";
+import { isNoteToSelf } from "../directs/note-to-self.ts";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import { toastFailure } from "../settings/settings-parts.tsx";
@@ -284,6 +285,8 @@ export function RoomMenuItems({
   const starred = favoritePosition !== null;
   const favorite = useFavoritePlace(row.room.id);
   const { kind } = row.room;
+  // Nothing in your note-to-self notifies you, so it has no levels to choose.
+  const self = isNoteToSelf(row);
   const sharedHome = shared.categories.find((category) => category.id === shared.home) ?? null;
 
   const openSettings = () => {
@@ -355,9 +358,11 @@ export function RoomMenuItems({
         </SubMenu>
       ) : null}
       {shared.admin && kind !== "direct" ? <SharedItems row={row} shared={shared} /> : null}
-      <SubMenu label="Notifications" icon={involvementChoice(involvement).icon}>
-        <NotificationItems row={row} level={involvement} />
-      </SubMenu>
+      {self ? null : (
+        <SubMenu label="Notifications" icon={involvementChoice(involvement).icon}>
+          <NotificationItems row={row} level={involvement} />
+        </SubMenu>
+      )}
       {involvement === "muted" || timedMute ? (
         <MenuItem
           icon="bell"

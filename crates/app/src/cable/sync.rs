@@ -636,7 +636,8 @@ pub fn unread_room(
     match facts {
         Ok(facts) => {
             let (blockers, mentioned) = facts.unwrap_or_default();
-            for &user_id in user_ids {
+            // Never the author: their own message leaves the room read for them.
+            for &user_id in user_ids.iter().filter(|id| **id != author_id) {
                 room_unread_with_policy(server, user_id, room_id, message_id, mentioned.contains(&user_id), blockers.contains(&user_id));
             }
         }

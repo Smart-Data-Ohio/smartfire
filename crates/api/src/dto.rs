@@ -1212,6 +1212,7 @@ fn sidebar_row_with(
         thread_notification_count: counts.thread_notifications,
         last_message,
         refresh_room: None,
+        note_to_self: None,
     }
 }
 
@@ -1252,7 +1253,7 @@ pub fn membership_row(
     } else {
         None
     };
-    Ok(sidebar_row_with(
+    let mut row = sidebar_row_with(
         room,
         &membership,
         viewer.display_name(),
@@ -1260,7 +1261,10 @@ pub fn membership_row(
         counts,
         last_message,
         (campfire_db::models::notification_policy::NotificationPreferences::load(conn, membership.user_id)?.settings_revision, now),
-    ))
+    );
+    row.note_to_self = (room.direct() && Room::is_note_to_self_of(conn, room.id, membership.user_id)?)
+        .then_some(true);
+    Ok(row)
 }
 
 /// The person's whole sidebar, from one snapshot: the memberships it lists, their counts (one
@@ -1284,6 +1288,7 @@ pub fn sidebar(
         .map(|(_, room)| room.id)
         .collect();
     let mut last_messages = last_direct_messages(conn, &direct_ids)?;
+    let note_to_self = Room::note_to_self_for(conn, viewer.id)?.map(|room| room.id);
     let mut user_ids = BTreeSet::new();
     let mut rows = Vec::with_capacity(all.len());
     for (membership, room) in &all {
@@ -1292,7 +1297,7 @@ pub fn sidebar(
         } else {
             None
         };
-        let row = sidebar_row_with(
+        let mut row = sidebar_row_with(
             room,
             membership,
             viewer.display_name(),
@@ -1301,13 +1306,17 @@ pub fn sidebar(
             last_messages.remove(&room.id),
             (revision, now),
         );
+        row.note_to_self = (note_to_self == Some(room.id)).then_some(true);
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);
     }
-    let placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, viewer)?
+    let mut placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, viewer)?
         .iter()
         .map(|user| user.id)
         .collect();
+    if !rows.iter().any(|row| row.note_to_self == Some(true)) {
+        placeholders.insert(0, viewer.id);
+    }
     user_ids.extend(placeholders.iter().copied());
     let categories = campfire_db::RoomCategory::ordered_for_user(conn, viewer.id)?
         .into_iter()
@@ -1318,6 +1327,7 @@ pub fn sidebar(
         categories,
         users: users(conn, secrets, user_ids, now)?,
         direct_placeholder_user_ids: placeholders,
+        note_to_self_room_id: note_to_self,
         can_create_rooms,
         workspace_layout: crate::sync::workspace_layout(conn, viewer.id)?,
     })
@@ -1378,6 +1388,8 @@ pub fn room_detail(
         direct_member_ids,
         member_preview_ids,
         unread,
+        note_to_self: (room.direct() && Room::is_note_to_self_of(conn, room.id, viewer.id)?)
+            .then_some(true),
     })
 }
 

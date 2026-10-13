@@ -50,7 +50,8 @@ async fn direct_candidates_and_stars() {
     let list: api::DirectCandidateList =
         parse(&david.send(get("/api/v1/directs/candidates")).await);
     let ids: Vec<i64> = list.candidates.iter().map(|c| c.user_id).collect();
-    assert!(!ids.contains(&DAVID) && !ids.contains(&RITA), "{ids:?}");
+    assert_eq!(ids[0], DAVID, "the viewer leads, for their note-to-self");
+    assert!(!ids.contains(&RITA), "{ids:?}");
     for id in [JASON, KEVIN, JZ, BENDER, DEPLOY_BOT, LONELY_LOU, NEW_MEMBER] {
         assert!(ids.contains(&id), "{id}: {ids:?}");
     }
@@ -81,8 +82,8 @@ async fn direct_candidates_and_stars() {
     }
     let list: api::DirectCandidateList =
         parse(&david.send(get("/api/v1/directs/candidates")).await);
-    assert_eq!(list.candidates[0].user_id, KEVIN, "starred first");
-    assert!(list.candidates[0].starred);
+    assert_eq!(list.candidates[1].user_id, KEVIN, "starred next");
+    assert!(list.candidates[1].starred);
     let members: api::MemberList = parse(
         &david
             .send(get(&format!("/api/v1/rooms/{DESIGNERS}/members")))
@@ -462,5 +463,212 @@ async fn a_new_message_upserts_each_unread_members_row() {
         upserted(false, DESIGNERS),
     )
     .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn the_note_to_self_is_offered_first_and_never_goes_unread() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    // David's other device.
+    let phone = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &phone.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    // Before it exists, the sidebar offers it first, and so does the picker.
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    assert_eq!(sidebar.direct_placeholder_user_ids.first(), Some(&DAVID));
+    assert!(sidebar.users.iter().any(|user| user.id == DAVID));
+    assert!(!sidebar.rows.iter().any(|row| row.direct_member_ids == [DAVID]));
+    let list: api::DirectCandidateList =
+        parse(&david.send(get("/api/v1/directs/candidates")).await);
+    assert_eq!(list.candidates[0].user_id, DAVID);
+
+    // Opening it with nobody creates it; naming only yourself opens the same room.
+    let open = |ids: serde_json::Value| json_body(Method::POST, "/api/v1/directs", &json!({"userIds": ids}));
+    let reply = david.write(open(json!([]))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let row: api::SidebarRow = parse(&reply);
+    let room = row.room.id;
+    assert_eq!(row.direct_member_ids, [DAVID]);
+    assert_eq!(row.note_to_self, Some(true));
+    let detail: api::RoomDetail = parse(&david.send(get(&format!("/api/v1/rooms/{room}"))).await);
+    assert_eq!(detail.note_to_self, Some(true));
+    let event = sync.until(upserted(true, room), |_| false).await;
+    assert_eq!(row_of(&event).direct_member_ids, [DAVID]);
+    let reply = david.write(open(json!([DAVID]))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(parse::<api::SidebarRow>(&reply).room.id, room);
+    // Yourself and someone else is just the conversation with them.
+    let reply = david.write(open(json!([DAVID, JASON]))).await;
+    assert_eq!(parse::<api::SidebarRow>(&reply).room.id, DIRECT_DAVID_JASON);
+
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    assert!(!sidebar.direct_placeholder_user_ids.contains(&DAVID), "{sidebar:?}");
+    assert!(sidebar.rows.iter().any(|row| row.room.id == room));
+    assert_eq!(sidebar.note_to_self_room_id, Some(room));
+    let others: Vec<_> = sidebar.rows.iter().filter(|row| row.note_to_self.is_some()).collect();
+    assert_eq!(others.len(), 1, "{others:?}");
+
+    // Your own messages, a mention of yourself included, never make it unread or notify you on
+    // any device, and push nothing.
+    let posts = format!("/api/v1/rooms/{room}/messages");
+    for (n, text) in ["Buy milk".to_owned(), format!("Remind <@{DAVID}> about the report")]
+        .into_iter()
+        .enumerate()
+    {
+        let body = json!({"clientMessageId": format!("note-{n}"), "markdownSource": text});
+        let reply = david.write(json_body(Method::POST, &posts, &body)).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        let message: api::MessageDTO = parse(&reply);
+        let rich_text = a.booted.app.db.env().rich_text.clone();
+        let now = a.booted.app.db.env().now();
+        let pushes = a
+            .db()
+            .read(move |conn| {
+                let message = campfire_db::Message::find(conn, message.id)?;
+                Ok(campfire_db::PushSubscription::pushes_for(conn, &*rich_text, &message, now)?.1)
+            })
+            .await
+            .unwrap();
+        assert!(pushes.is_empty(), "{pushes:?}");
+    }
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == room).unwrap();
+    assert_eq!(row.membership.unread_at, None, "{row:?}");
+    assert_eq!(
+        (row.unread_count, row.mention_count, row.notification_count, row.thread_notification_count),
+        (0, 0, 0, 0),
+        "{row:?}"
+    );
+    assert_eq!(row.last_message.as_ref().map(|last| last.creator_id), Some(DAVID));
+    // The other device hears no unread for it; a removal published at once marks the end.
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    a.booted.app.broadcasts.sync_row_removed(DAVID, 1);
+    sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(removed) if removed.room_id == 1),
+        |event| match &event.payload {
+            api::SyncPayload::RoomUnread(unread) => unread.room_id == room,
+            api::SyncPayload::SidebarRowUpserted(row) => {
+                row.room.id == room && (row.membership.unread_at.is_some() || row.notification_count > 0)
+            }
+            _ => false,
+        },
+    )
+    .await;
+
+    // Hidden, it's offered again, and opening it shows it again.
+    let reply = david
+        .write(json_body(
+            Method::PUT,
+            &format!("/api/v1/rooms/{room}/involvement"),
+            &json!({"involvement": "invisible"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    assert_eq!(sidebar.direct_placeholder_user_ids.first(), Some(&DAVID));
+    // Hidden, it is still known, so its labels elsewhere still say "(you)".
+    assert_eq!(sidebar.note_to_self_room_id, Some(room));
+    let reply = david.write(open(json!([]))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let row: api::SidebarRow = parse(&reply);
+    assert_eq!((row.room.id, row.membership.involvement), (room, api::Involvement::Everything));
+    server.abort();
+}
+
+/// A group whose other members all left keeps its own key, so it is never the note-to-self:
+/// the sidebar still offers that, opening it makes a separate room, and the group keeps its name.
+#[tokio::test]
+async fn a_group_everyone_else_left_is_not_the_note_to_self() {
+    let Some(a) = app(true).await else { return };
+    let (_addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let open = |ids: serde_json::Value| json_body(Method::POST, "/api/v1/directs", &json!({"userIds": ids}));
+
+    // A named group, then an unnamed one, that both empty out around David.
+    let reply = david.write(open(json!([JASON, KEVIN, NEW_MEMBER]))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let named = parse::<api::SidebarRow>(&reply).room.id;
+    let reply = david
+        .write(json_body(Method::PATCH, &format!("/api/v1/directs/{named}"), &json!({"name": "Road trip"})))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let reply = david.write(open(json!([JASON, KEVIN]))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let unnamed = parse::<api::SidebarRow>(&reply).room.id;
+    let leave = |room: i64| json_body(Method::DELETE, &format!("/api/v1/rooms/{room}/membership"), &json!({}));
+    for room in [named, unnamed] {
+        for person in [&mut jason, &mut kevin] {
+            let reply = person.write(leave(room)).await;
+            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        }
+    }
+    let reply = a.sign_in(NEW_MEMBER).await.write(leave(named)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+
+    // The named group is David's alone now, but it is still the group.
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == named).unwrap();
+    assert_eq!((row.direct_member_ids.as_slice(), row.note_to_self), (&[DAVID][..], None));
+    assert_eq!(row.display_name, "Road trip");
+    let detail: api::RoomDetail = parse(&david.send(get(&format!("/api/v1/rooms/{named}"))).await);
+    assert_eq!(detail.note_to_self, None);
+    // The unnamed one emptied first, so it took the key for just David: that's what opening
+    // the note-to-self finds, so it is the note-to-self, and the sidebar stops offering one.
+    let row = sidebar.rows.iter().find(|row| row.room.id == unnamed).unwrap();
+    assert_eq!(row.note_to_self, Some(true));
+    assert_eq!(sidebar.note_to_self_room_id, Some(unnamed));
+    assert!(!sidebar.direct_placeholder_user_ids.contains(&DAVID), "{sidebar:?}");
+    let reply = david.write(open(json!([]))).await;
+    assert_eq!((reply.status, parse::<api::SidebarRow>(&reply).room.id), (StatusCode::OK, unnamed));
+    server.abort();
+}
+
+/// With the note-to-self already open, a named group that empties out stays a group: the
+/// sidebar marks only the real one, and opening "only you" never lands in the group.
+#[tokio::test]
+async fn an_emptied_named_group_beside_the_note_to_self_stays_a_group() {
+    let Some(a) = app(true).await else { return };
+    let (_addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let open = |ids: serde_json::Value| json_body(Method::POST, "/api/v1/directs", &json!({"userIds": ids}));
+
+    let reply = david.write(open(json!([JASON, KEVIN]))).await;
+    let group = parse::<api::SidebarRow>(&reply).room.id;
+    let reply = david
+        .write(json_body(Method::PATCH, &format!("/api/v1/directs/{group}"), &json!({"name": "Ops"})))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let leave = json_body(Method::DELETE, &format!("/api/v1/rooms/{group}/membership"), &json!({}));
+    assert_eq!(jason.write(leave).await.status, StatusCode::OK);
+    let leave = json_body(Method::DELETE, &format!("/api/v1/rooms/{group}/membership"), &json!({}));
+    assert_eq!(a.sign_in(KEVIN).await.write(leave).await.status, StatusCode::OK);
+
+    // Emptied before any note-to-self existed, the named group still isn't one.
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    assert_eq!(sidebar.direct_placeholder_user_ids.first(), Some(&DAVID));
+    assert_eq!(sidebar.note_to_self_room_id, None);
+    let reply = david.write(open(json!([]))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let notes: api::SidebarRow = parse(&reply);
+    assert_ne!(notes.room.id, group);
+    assert_eq!(notes.note_to_self, Some(true));
+
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    let marked: Vec<i64> = sidebar
+        .rows
+        .iter()
+        .filter(|row| row.note_to_self == Some(true))
+        .map(|row| row.room.id)
+        .collect();
+    assert_eq!(marked, [notes.room.id]);
+    assert_eq!(sidebar.note_to_self_room_id, Some(notes.room.id));
+    let group_row = sidebar.rows.iter().find(|row| row.room.id == group).unwrap();
+    assert_eq!(group_row.display_name, "Ops");
     server.abort();
 }

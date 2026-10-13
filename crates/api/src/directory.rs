@@ -9,9 +9,9 @@ use campfire_app::app::AppCtx;
 use campfire_db::models::direct_room::MAX_MEMBERS;
 use campfire_db::models::room_members;
 use campfire_db::models::workspace_presence_lease::Presence as LeasePresence;
-use campfire_db::{Membership, Room, User, UserStar};
+use campfire_db::{Involvement, Membership, Room, User, UserStar};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
-use campfire_rooms::controllers::rooms::{audit_room, directs};
+use campfire_rooms::controllers::rooms::{audit_room, directs, involvements};
 use campfire_runtime::concerns;
 use campfire_runtime::context::db_error;
 
@@ -66,10 +66,7 @@ async fn index_direct_candidates(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            let people: Vec<User> = User::active_ordered(conn)?
-                .into_iter()
-                .filter(|user| user.id != viewer.id)
-                .collect();
+            let people: Vec<User> = User::active_ordered(conn)?;
             let ids: Vec<i64> = people.iter().map(|user| user.id).collect();
             let starred = viewer.starred_ids_among(conn, &ids)?;
             let agents: BTreeSet<i64> = campfire_db::Agent::for_users(conn, &ids)?
@@ -84,8 +81,9 @@ async fn index_direct_candidates(c: &mut Ctx) -> Result {
                     starred: starred.contains(&user.id),
                 })
                 .collect();
-            // `rooms/directs#new`: a stable partition keeps `User.ordered` within each half.
-            candidates.sort_by_key(|candidate| !candidate.starred);
+            // `rooms/directs#new`: a stable partition keeps `User.ordered` within each half. The
+            // viewer (their note-to-self) leads, as Slack lists you first.
+            candidates.sort_by_key(|candidate| (candidate.user_id != viewer.id, !candidate.starred));
             Ok(api::DirectCandidateList {
                 candidates,
                 users: dto::users(conn, &secrets, ids, now)?,
@@ -117,11 +115,17 @@ fn contact_user_ids(conn: &campfire_db::Connection, ids: &[i64]) -> campfire_db:
 }
 
 /// `rooms/directs#create`: the first [`MAX_MEMBERS`] ids and the viewer, active people only.
+/// Naming the viewer adds nothing, so naming only them is the note-to-self.
 async fn post_direct(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let viewer = concerns::require_current_user(c)?.id;
     let input: api::CreateDirect = body(c).await?;
-    let mut ids: Vec<i64> = input.user_ids.into_iter().take(MAX_MEMBERS).collect();
+    let mut ids: Vec<i64> = input
+        .user_ids
+        .into_iter()
+        .filter(|id| *id != viewer)
+        .take(MAX_MEMBERS)
+        .collect();
     ids.push(viewer);
     let result = c
         .app()
@@ -164,6 +168,8 @@ async fn post_direct(c: &mut Ctx) -> Result {
         )
         .await?;
         directs::broadcast_create_room(c, &room).await?;
+    } else {
+        reveal(c, &room, viewer).await?;
     }
     let now = crate::endpoints::now(c);
     let row = c
@@ -185,6 +191,22 @@ async fn post_direct(c: &mut Ctx) -> Result {
         StatusCode::OK
     };
     c.json(status, &row)
+}
+
+/// Opening a direct room the viewer hid shows it again (at the direct default, `everything`), so
+/// the conversation they asked for, a note-to-self included, has a row to answer.
+async fn reveal(c: &Ctx, room: &Room, viewer: i64) -> Result<()> {
+    let room_id = room.id;
+    let membership = c
+        .app()
+        .db
+        .read(move |conn| Membership::find_by_room_and_user(conn, room_id, viewer))
+        .await
+        .map_err(db_error)?;
+    if let Some(membership) = membership.filter(|m| m.involvement == Some(Involvement::Invisible)) {
+        involvements::change(c, room, membership.id, Some(Involvement::Everything)).await?;
+    }
+    Ok(())
 }
 
 /// The direct room `:room_id` names, among the viewer's (`Current.user.rooms.directs`).

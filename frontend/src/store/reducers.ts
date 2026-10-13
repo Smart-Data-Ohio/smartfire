@@ -39,6 +39,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import { isNoteToSelf } from "./note-to-self.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
 import { removeCategory, replyCategories, upsertCategory } from "./organize.ts";
 import {
@@ -168,6 +169,7 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
           ? state.sidebar.workspaceLayout
           : sidebar.workspaceLayout,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
+      noteToSelfRoomId: sidebar.noteToSelfRoomId ?? state.sidebar.noteToSelfRoomId,
       canCreateRooms: sidebar.canCreateRooms,
       overlay: state.sidebar.overlay,
     },
@@ -282,6 +284,9 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
     {
       ...state,
       users: mergeUserList(state.users, detail.users),
+      sidebar: isNoteToSelf(detail)
+        ? { ...state.sidebar, noteToSelfRoomId: roomId }
+        : state.sidebar,
       rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
       timelines: {
         ...state.timelines,
@@ -1018,6 +1023,7 @@ function upsertRow(state: State, row: SidebarRow): State {
           ...state.sidebar,
           rows,
           order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+          noteToSelfRoomId: isNoteToSelf(row) ? row.room.id : state.sidebar.noteToSelfRoomId,
         },
       },
       {

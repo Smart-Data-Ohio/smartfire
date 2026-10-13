@@ -41,6 +41,11 @@
     white-space: nowrap;
   }
 
+  .details-you {
+    color: var(--text-faint);
+    font-weight: var(--weight-regular);
+  }
+
   .details-kind {
     color: var(--text-muted);
     font-size: var(--text-sidebar);
