@@ -112,14 +112,25 @@ impl SafeList {
         SafeList { tags, attributes }
     }
 
-    /// `action_text` for a Markdown body, or a forwarded snapshot of one: also the GFM table
-    /// tags and their `align`, which `markdown::render` stores. Rails' timeline rendered these
-    /// bodies through `markdown::presentation`; the SPA's rendered body goes through Action Text's
-    /// allowlist, which drops the table and leaves its cells' text run together.
+    /// `action_text` for a Markdown body, or a forwarded snapshot of one, plus every tag and
+    /// attribute `markdown::render` stores (`MARKDOWN_TAGS`, `MARKDOWN_ATTRIBUTES`): tables and
+    /// their `align`, task-list checkboxes, an ordered list's `start`, a link's `target` and `rel`.
+    /// Rails' timeline rendered these bodies through `markdown::presentation`, which keeps the
+    /// same tags, so the composer preview and the sent message show the same markup. The
+    /// attributes only Markdown adds are then held to what it emits
+    /// (`markdown::constrain_body_markup`).
     pub fn markdown_body() -> Self {
         let mut list = Self::action_text();
-        list.tags.extend(["table", "thead", "tbody", "tr", "th", "td"]);
-        list.attributes.push("align");
+        for &tag in crate::markdown::MARKDOWN_TAGS {
+            if !list.tags.contains(&tag) {
+                list.tags.push(tag);
+            }
+        }
+        for &attribute in crate::markdown::MARKDOWN_ATTRIBUTES {
+            if !list.attributes.contains(&attribute) {
+                list.attributes.push(attribute);
+            }
+        }
         list
     }
 

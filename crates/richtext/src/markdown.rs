@@ -395,9 +395,54 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
                     dom.remove_attr(node, "href");
                 } else if !in_app_href(&href) {
                     dom.set_attr(node, "target", "_blank");
-                    dom.set_attr(node, "rel", "nofollow noopener noreferrer");
+                    dom.set_attr(node, "rel", NEW_TAB_REL);
                 }
             }
+        }
+    }
+}
+
+/// The safe `rel` of a link that opens in a new tab.
+const NEW_TAB_REL: &str = "nofollow noopener noreferrer";
+
+/// Text a rendered Markdown body holds only if it has markup `constrain_body_markup` checks.
+pub(crate) const BODY_ONLY_MARKUP: &[&str] = &["<input", "checked", "disabled", "type=", "start=", "target=", "rel="];
+
+/// A Markdown body as the SPA shows it (`Content::to_rendered_markdown_html_with_layout`), held to
+/// the markup `render` emits for the attributes Action Text's allowlist lacks: a task item's
+/// disabled checkbox (`type`, `disabled`, `checked`, nothing else; any other input goes), an
+/// ordered list's numeric `start`, and `target` only as `_blank` on an off-site link, with the
+/// safe `rel`. An in-app link opens in place, as in the presentation (`sanitize_presentation`).
+pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
+    for node in dom.descendants(root) {
+        let Some(name) = dom.local_name(node).map(str::to_owned) else { continue };
+        if name == "input" {
+            if dom.attr(node, "type") != Some("checkbox") {
+                dom.detach(node);
+                continue;
+            }
+            for (attribute, _) in dom.attrs(node) {
+                if !matches!(attribute.as_str(), "type" | "checked" | "disabled") {
+                    dom.remove_attr(node, &attribute);
+                }
+            }
+            dom.set_attr(node, "disabled", "disabled");
+        } else {
+            for attribute in ["type", "checked", "disabled"] {
+                dom.remove_attr(node, attribute);
+            }
+        }
+        let numeric = dom.attr(node, "start").is_some_and(|start| !start.is_empty() && start.bytes().all(|b| b.is_ascii_digit()));
+        if name != "ol" || !numeric {
+            dom.remove_attr(node, "start");
+        }
+        let off_site = name == "a" && dom.attr(node, "href").is_some_and(|href| !is_blank(href) && !in_app_href(href));
+        if off_site && dom.has_attr(node, "target") {
+            dom.set_attr(node, "target", "_blank");
+            dom.set_attr(node, "rel", NEW_TAB_REL);
+        } else {
+            dom.remove_attr(node, "target");
+            dom.remove_attr(node, "rel");
         }
     }
 }

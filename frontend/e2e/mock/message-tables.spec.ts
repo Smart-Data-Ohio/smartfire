@@ -22,6 +22,7 @@ import {
  * A Markdown table in a message shows as a table wherever message bodies do: a header row, cell
  * padding and borders from the design tokens, each column's `:---:` alignment, and a wide table
  * scrolling sideways inside the message rather than widening the timeline, a pane or the page.
+ * A task list shows its read-only checkboxes, and a numbered list its start.
  *
  * The bodies are what the server sends for a GFM table (crates/richtext): comrak's markup inside
  * the `trix-content` wrapper. The mock's own Markdown renderer has no tables, so the specs swap
@@ -313,7 +314,38 @@ for (const viewport of [
       });
 
       expect(scrolled).toBeGreaterThan(0);
+      await shot(page, "message-table-wide-scrolled", "light");
     }
+
+    // Every cell is at least 12 characters wide: a column of prose stays readable, and the
+    // table scrolls instead of squeezing it into a tall strip.
+    const narrowest = await tableLocator.locator("th, td").evaluateAll((cells) =>
+      Math.min(
+        ...cells.map((cell) => {
+          const probe = document.createElement("span");
+
+          probe.style.cssText = "display: inline-block; width: 12ch";
+          cell.append(probe);
+
+          const twelve = probe.getBoundingClientRect().width;
+
+          probe.remove();
+
+          const style = getComputedStyle(cell);
+
+          const content =
+            cell.getBoundingClientRect().width -
+            Number.parseFloat(style.paddingLeft) -
+            Number.parseFloat(style.paddingRight) -
+            Number.parseFloat(style.borderLeftWidth) -
+            Number.parseFloat(style.borderRightWidth);
+
+          return content - twelve;
+        }),
+      ),
+    );
+
+    expect(narrowest, "no cell narrower than 12ch").toBeGreaterThanOrEqual(-1);
 
     // Cells wrap at words, never mid-word: no header is broken inside a word.
     const headers = await tableLocator.locator("th").evaluateAll((cells) =>
@@ -335,6 +367,68 @@ for (const viewport of [
     }
   });
 }
+
+/** `- [ ] Draft` / `- [x] Review` and `3. three` as the server renders them (crates/richtext). */
+const TASKS = wrapped(
+  '<ul>\n<li><input type="checkbox" disabled="disabled"> Draft the plan</li>\n' +
+    '<li><input type="checkbox" checked="" disabled="disabled"> Review it</li>\n</ul>\n' +
+    '<ol start="3">\n<li>three</li>\n<li>four</li>\n</ol>',
+);
+
+test("a task list shows read-only checkboxes in place of bullets, and a list keeps its start", async ({
+  page,
+}) => {
+  const id = await post(page, "The task list");
+
+  await swapRoomBody(page, id, TASKS);
+  await openApp(page, `r/${ROOM_IDS.general}/m/${id}`);
+
+  const body = row(page, id).locator(".message-body");
+  const boxes = body.locator('li > input[type="checkbox"]');
+
+  await expect(boxes).toHaveCount(2);
+  await row(page, id).scrollIntoViewIfNeeded();
+  await shot(page, "message-task-list", "light");
+  await expect(boxes.nth(0)).not.toBeChecked();
+  await expect(boxes.nth(1)).toBeChecked();
+
+  for (const box of [boxes.nth(0), boxes.nth(1)]) {
+    await expect(box).toBeDisabled();
+  }
+
+  await expect(body.locator("ul > li").first()).toHaveCSS("list-style-type", "none");
+  await expect(body.locator("ol")).toHaveAttribute("start", "3");
+  await expect(body.locator("ol > li").first()).toHaveCSS("list-style-type", "decimal");
+
+  // The checkbox sits inside the item's box, where the bullet was, and before its text.
+  const placement = await body
+    .locator("ul > li")
+    .first()
+    .evaluate((item) => {
+      const input = item.querySelector("input");
+
+      if (input === null || item.parentElement === null) {
+        throw new Error("no checkbox in the task item");
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(item);
+      range.setStartAfter(input);
+
+      return {
+        box: input.getBoundingClientRect().toJSON(),
+        list: item.parentElement.getBoundingClientRect().toJSON(),
+        text: range.getBoundingClientRect().toJSON(),
+      };
+    });
+
+  expect(placement.box.left).toBeGreaterThanOrEqual(placement.list.left - 0.5);
+  expect(placement.box.right).toBeLessThanOrEqual(placement.text.left + 0.5);
+
+  await boxes.nth(0).click({ force: true });
+  await expect(boxes.nth(0)).not.toBeChecked();
+});
 
 test("a wide table stays inside the thread pane", async ({ page }) => {
   await page.route(`**/api/v1/threads/${THREAD_IDS.generalActive}/messages*`, async (route) => {

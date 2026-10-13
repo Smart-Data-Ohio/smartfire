@@ -81,10 +81,17 @@ impl Content {
         Ok(format!("<div class=\"trix-content\">\n  {}\n</div>\n", self.render(ctx)?))
     }
 
-    /// `to_rendered_html_with_layout` for a Markdown body, or a forwarded snapshot of one: its
-    /// tables survive (`SafeList::markdown_body`).
+    /// `to_rendered_html_with_layout` for a Markdown body, or a forwarded snapshot of one: the
+    /// markup `markdown::render` stores survives (`SafeList::markdown_body`), held to what it
+    /// emits (`markdown::constrain_body_markup`).
     pub fn to_rendered_markdown_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
-        let html = self.render_nested(ctx, 0, false, &SafeList::markdown_body())?;
+        let mut html = self.render_nested(ctx, 0, false, &SafeList::markdown_body())?;
+        if crate::markdown::BODY_ONLY_MARKUP.iter().any(|marker| html.contains(marker)) {
+            let mut dom = Dom::new();
+            let root = dom.parse_fragment(&html).map_err(Error::Parse)?;
+            crate::markdown::constrain_body_markup(&mut dom, root);
+            html = dom.to_html(root);
+        }
         Ok(format!("<div class=\"trix-content\">\n  {html}\n</div>\n"))
     }
 
