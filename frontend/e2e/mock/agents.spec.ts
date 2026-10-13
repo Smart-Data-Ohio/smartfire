@@ -162,6 +162,19 @@ matrix("steps and working presence in the Ember DM", async ({ page, theme, phone
   await expect(page.locator(".steps-list").first().locator(".step").first()).toBeVisible();
   await shot(page, "agents-steps-open", theme);
 
+  // Opening old steps can unmount the newest reply on a phone. Return before its live update.
+  await page.getByRole("article").first().press("End");
+
+  const latestReply = page.getByRole("article").filter({
+    hasText: "Anytime. Ping me here or mention me in any room.",
+  });
+
+  await expect(latestReply).toBeInViewport();
+  await expect(page.getByRole("log", { name: "Messages" })).toHaveAttribute(
+    "data-scroll-settled",
+    "true",
+  );
+
   await control(request(page), "agent-status", {
     agentId: EMBER,
     status: "working",
@@ -174,7 +187,7 @@ matrix("steps and working presence in the Ember DM", async ({ page, theme, phone
     "data-beam",
     "static",
   );
-  await expect(page.locator(".steps-current").last()).toContainText("Run the test suite");
+  await expect(latestReply.locator(".steps-current")).toContainText("Run the test suite");
 
   await expect(page.locator(".typing-line[data-working]")).toContainText(
     "Summarising #engineering",
