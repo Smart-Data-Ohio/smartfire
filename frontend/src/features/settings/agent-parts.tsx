@@ -313,7 +313,7 @@ export function SignInSetup({
 
 /**
  * Reconnecting a connection: the app has to sign in again, from its own settings, so this says
- * how, with the connector URL. A web app the wizard knows gets its own steps.
+ * how, with the connector URL. A product known by its exact client id gets its own steps.
  */
 export function ReconnectSetup({
   client,
@@ -321,7 +321,7 @@ export function ReconnectSetup({
   agentName,
   mcpUrl,
 }: {
-  /** The web app it is, when its host says so; else it's named only by `clientName`. */
+  /** The product it is, when its client id says so; else it's named only by `clientName`. */
   readonly client: AgentClient | null;
   readonly clientName: string;
   readonly agentName: string;
@@ -333,9 +333,11 @@ export function ReconnectSetup({
     client === null
       ? {
           steps: [{ label: "Connector URL", code: mcpUrl }],
-          note: `In ${clientName}, connect to Smartfire again with this URL (or sign in again where it lists its MCP servers).`,
+          note: `Sign in again from the app you connected (${clientName}): reconnect Smartfire where it lists its connectors or MCP servers, or add it again with this URL.`,
         }
-      : agentSnippet(client, { agentName, mcpUrl });
+      : canSignIn(client)
+        ? signInSnippet(client, mcpUrl)
+        : agentSnippet(client, { agentName, mcpUrl });
 
   return (
     <div className="agents-secret">

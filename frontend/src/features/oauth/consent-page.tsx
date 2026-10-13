@@ -26,6 +26,8 @@ import {
   firstPick,
   formFor,
   pickedAgent,
+  type RoomChange,
+  roomChangeText,
   unchanged,
 } from "./oauth-format.ts";
 import "../settings/settings.css";
@@ -251,10 +253,19 @@ function AgentPicker({
 }
 
 /** One line of the diff: a label and the names, or nothing when there are none. */
-function DiffLine({ label, names }: { readonly label: string; readonly names: readonly string[] }) {
-  return names.length === 0 ? null : (
+/** How a room's change line starts. */
+const CHANGE_LABELS: Readonly<Record<RoomChange["change"], string>> = {
+  joins: "Joins",
+  leaves: "Leaves",
+  abilities: "In",
+};
+
+/** One room's change: what happens to the agent there. */
+function DiffLine({ change }: { readonly change: RoomChange }) {
+  return (
     <li>
-      <span className="oauth-diff-label">{label}</span> {names.join(", ")}
+      <span className="oauth-diff-label">{CHANGE_LABELS[change.change]}</span> {change.room}:{" "}
+      {roomChangeText(change)}
     </li>
   );
 }
@@ -276,10 +287,9 @@ function DiffSummary({
         <p className="text-muted">No change: it keeps the rooms and abilities it has.</p>
       ) : (
         <ul className="oauth-diff-list">
-          <DiffLine label="Joins" names={diff.joins} />
-          <DiffLine label="Leaves" names={diff.leaves} />
-          <DiffLine label="Can now" names={diff.gains} />
-          <DiffLine label="Can no longer" names={diff.loses} />
+          {diff.map((change) => (
+            <DiffLine key={change.roomId} change={change} />
+          ))}
         </ul>
       )}
       {everywhere && agent.credentials.some((credential) => credential.state === "active") ? (

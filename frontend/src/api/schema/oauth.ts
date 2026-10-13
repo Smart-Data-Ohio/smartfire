@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import type { AdminOAuthClient as GeneratedAdminOAuthClient } from "../../gen/AdminOAuthClient.ts";
 import type { AdminOAuthClientList as GeneratedAdminOAuthClientList } from "../../gen/AdminOAuthClientList.ts";
 import type { ApproveOAuthAuthorization as GeneratedApproveOAuthAuthorization } from "../../gen/ApproveOAuthAuthorization.ts";
+import type { OAuthAgentRoomAccess as GeneratedOAuthAgentRoomAccess } from "../../gen/OAuthAgentRoomAccess.ts";
 import type { OAuthClientBadge as GeneratedOAuthClientBadge } from "../../gen/OAuthClientBadge.ts";
 import type { OAuthConsent as GeneratedOAuthConsent } from "../../gen/OAuthConsent.ts";
 import type { OAuthRedirect as GeneratedOAuthRedirect } from "../../gen/OAuthRedirect.ts";
@@ -15,6 +16,18 @@ export const OAuthClientBadge = Schema.Literals(["unverifiedApp", "appOnThisComp
 
 export type OAuthClientBadgePin = Assert<
   Pinned<typeof OAuthClientBadge, GeneratedOAuthClientBadge>
+>;
+
+/** What an existing agent can do in one room now (no abilities: it's only a member there). */
+export const OAuthAgentRoomAccess = Schema.Struct({
+  agentId: AgentId,
+  roomId: RoomId,
+  roomName: Schema.String,
+  capabilities: Schema.Array(Schema.String),
+});
+
+export type OAuthAgentRoomAccessPin = Assert<
+  Pinned<typeof OAuthAgentRoomAccess, GeneratedOAuthAgentRoomAccess>
 >;
 
 /**
@@ -32,6 +45,7 @@ export const OAuthConsent = Schema.Struct({
   enabled: Schema.Boolean,
   limit: Schema.NullOr(Schema.Number),
   accessAppliesToAllConnections: Schema.Boolean,
+  roomAccess: Schema.Array(OAuthAgentRoomAccess),
 });
 
 export type OAuthConsentPin = Assert<Pinned<typeof OAuthConsent, GeneratedOAuthConsent>>;

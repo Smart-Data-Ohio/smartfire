@@ -1,4 +1,5 @@
 import type { BotSummary } from "../../src/gen/BotSummary.ts";
+import type { OAuthAgentRoomAccess } from "../../src/gen/OAuthAgentRoomAccess.ts";
 import type { PersonalAgent } from "../../src/gen/PersonalAgent.ts";
 import type { PersonalAgentConnection } from "../../src/gen/PersonalAgentConnection.ts";
 import type { PersonalAgentCredential } from "../../src/gen/PersonalAgentCredential.ts";
@@ -23,6 +24,8 @@ const CONNECTION_DAYS = 180;
 export interface ConnectingClient {
   readonly clientName: string;
   readonly clientHost: string;
+  /** Its identity (the URL of its metadata document): clients on one host can differ. */
+  readonly clientId: string;
 }
 
 /** What the OAuth mock (mock/s2/oauth.ts) needs from the personal agents it connects. */
@@ -48,10 +51,12 @@ export interface AgentConnections {
   ) => { agentId: number; credentialId: number };
   /** Ends a connection as the server does when a used sign-in token comes back. */
   readonly revokeForReuse: (credentialId: number) => boolean;
-  /** Marks every connection through the client at `clientHost` blocked or not. */
-  readonly setBlocked: (clientHost: string, blocked: boolean) => void;
-  /** The live connections through the client at `clientHost`. */
-  readonly liveConnections: (clientHost: string) => number;
+  /** Marks every connection through the client `clientId` blocked or not. */
+  readonly setBlocked: (clientId: string, blocked: boolean) => void;
+  /** The live connections through the client `clientId`. */
+  readonly liveConnections: (clientId: string) => number;
+  /** What each agent can do in each of its rooms, as the consent page compares it. */
+  readonly roomAccess: () => OAuthAgentRoomAccess[];
 }
 
 interface AgentRecord {
@@ -272,6 +277,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       const connection: PersonalAgentConnection = {
         clientName: client.clientName,
         clientHost: client.clientHost,
+        clientId: client.clientId,
         clientBlocked: false,
         revokedReason: null,
       };
@@ -302,15 +308,29 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
       return true;
     },
-    setBlocked: (clientHost, blocked) => {
+    setBlocked: (clientId, blocked) => {
       for (const credential of connections()) {
-        if (credential.connection?.clientHost === clientHost)
+        if (credential.connection?.clientId === clientId)
           credential.connection = { ...credential.connection, clientBlocked: blocked };
       }
     },
-    liveConnections: (clientHost) =>
-      connections().filter((c) => c.state === "active" && c.connection?.clientHost === clientHost)
+    liveConnections: (clientId) =>
+      connections().filter((c) => c.state === "active" && c.connection?.clientId === clientId)
         .length,
+    roomAccess: () =>
+      [...current().values()].flatMap((record) => {
+        const agent = present(record);
+        const offered = rooms();
+        // Suspended, or agents turned off: it can do nothing anywhere, as `present` says.
+        const off = record.profile.suspended || !admin.memberAgentPolicy().enabled;
+
+        return agent.roomIds.map((roomId) => ({
+          agentId: agent.id,
+          roomId,
+          roomName: offered.find((room) => room.id === roomId)?.name ?? "",
+          capabilities: off ? [] : [...(record.grants.get(roomId) ?? [])].sort(),
+        }));
+      }),
   };
 
   const summaries = (): BotSummary[] =>

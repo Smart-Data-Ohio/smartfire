@@ -4,7 +4,12 @@ import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import { ActionError } from "../../sync/run.ts";
-import { type AgentClient, canSignIn, type WebConnector } from "./agent-snippets.ts";
+import {
+  type AgentClient,
+  canSignIn,
+  type SignInClient,
+  type WebConnector,
+} from "./agent-snippets.ts";
 
 export interface ClientChoice {
   readonly value: AgentClient;
@@ -269,6 +274,24 @@ export function canCreate(list: PersonalAgentList): boolean {
   return list.enabled && (list.limit === null || list.agents.length < list.limit);
 }
 
+/**
+ * Whether Connect an agent opens: it can make an agent, or (at the limit) an app can still sign in
+ * and connect as one the person already has, which the approval page then offers.
+ */
+export function canConnect(list: PersonalAgentList): boolean {
+  return list.enabled && (canCreate(list) || (list.oauthAvailable && list.agents.length > 0));
+}
+
+/**
+ * The clients the wizard offers for `list`: every one while it can make an agent, else (at the
+ * limit) only those that sign in, since they connect as an existing agent and make nothing.
+ */
+export function connectChoices(list: PersonalAgentList): readonly ClientChoice[] {
+  return canCreate(list)
+    ? clientChoices(list.oauthAvailable)
+    : [...WEB_CONNECTORS, ...TOKEN_CLIENTS.filter((choice) => canSignIn(choice.value))];
+}
+
 /** "2 of 3 agents", or `null` for administrators, who have no limit. */
 export function usage(list: PersonalAgentList): string | null {
   return list.limit === null ? null : `${list.agents.length} of ${list.limit} agents`;
@@ -389,16 +412,23 @@ export function canReconnect(
   );
 }
 
-/** The web app a connection's client is, by its host, when it's one the wizard knows. */
-export function connectedWebApp(credential: PersonalAgentCredential): WebConnector | null {
-  const host = credential.connection?.clientHost ?? "";
-  const under = (domain: string) => host === domain || host.endsWith(`.${domain}`);
+/**
+ * The OAuth clients whose identity we know exactly, by client id (the URL of the client's metadata
+ * document). A host alone doesn't say which product it is: one company can publish several.
+ */
+const KNOWN_CLIENTS = new Map<string, WebConnector | SignInClient>([
+  // Published in Anthropic's connector docs.
+  ["https://claude.ai/oauth/claude-code-client-metadata", "claude-code"],
+  ["https://chatgpt.com/oauth/client.json", "chatgpt"],
+]);
 
-  if (under("claude.ai") || under("claude.com")) return "claude-ai";
+/** The product a connection's client is, by its exact client id; `null` for any other. */
+export function connectedProduct(
+  credential: PersonalAgentCredential,
+): WebConnector | SignInClient | null {
+  const clientId = credential.connection?.clientId;
 
-  if (under("chatgpt.com") || under("openai.com")) return "chatgpt";
-
-  return under("grok.com") || under("x.ai") ? "grok" : null;
+  return clientId === undefined ? null : (KNOWN_CLIENTS.get(clientId) ?? null);
 }
 
 export const TOKEN_STATE: Readonly<Record<PersonalAgentCredential["state"], string>> = {

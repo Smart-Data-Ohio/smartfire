@@ -153,6 +153,38 @@ describe("the cards", () => {
     expect(screen.getByText(/Remove one to connect another/)).toBeTruthy();
   });
 
+  it("still connects an app that signs in at the limit, and offers nothing that makes an agent", async () => {
+    await mount(list({ limit: 1, oauthAvailable: true }));
+
+    const create = vi.spyOn(meAgents, "create");
+    const connect = await screen.findByRole("button", { name: "Connect an agent" });
+
+    expect(connect.hasAttribute("disabled")).toBe(false);
+    expect(screen.getByText(/Apps that sign in can still connect as one of them/)).toBeTruthy();
+
+    fireEvent.click(connect);
+
+    expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("value"))).toEqual([
+      "claude-ai",
+      "chatgpt",
+      "grok",
+      "claude-code",
+      "codex",
+    ]);
+    expect(screen.getByText(/only apps that sign in are listed/)).toBeTruthy();
+
+    // Claude Code can only sign in here: no token choice, and no naming or access steps.
+    fireEvent.click(screen.getByRole("radio", { name: /Claude Code/ }));
+    expect(screen.queryByRole("radio", { name: "With a token" })).toBeNull();
+    next();
+
+    expect(await screen.findByRole("heading", { name: "Connect Claude Code" })).toBeTruthy();
+    expect(screen.getByText("/mcp")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("drops the removed agent by its own id, not the bot user id the answer names", async () => {
     await mount(list({ agents: [AGENT, { ...AGENT, id: 70, userId: 700, name: "Other" }] }));
 
@@ -202,6 +234,7 @@ const CONNECTION: PersonalAgentCredential = {
   connection: {
     clientName: "Claude",
     clientHost: "claude.ai",
+    clientId: "https://claude.ai/oauth/mcp-client",
     clientBlocked: false,
     revokedReason: null,
   },
@@ -215,6 +248,7 @@ const REUSED: PersonalAgentCredential = {
   connection: {
     clientName: "Codex",
     clientHost: "openai.com",
+    clientId: "https://openai.com/codex/client.json",
     clientBlocked: false,
     revokedReason: "tokenReused",
   },
@@ -268,7 +302,31 @@ describe("connections", () => {
     expect(within(dialog).getByText(/choose Helper/)).toBeTruthy();
   });
 
-  it("gives a web app's own steps when reconnecting it", async () => {
+  it("gives a product known by its exact client id its own steps when reconnecting it", async () => {
+    const chatgpt: PersonalAgentCredential = {
+      ...CONNECTION,
+      name: "ChatGPT",
+      state: "expired",
+      connection: {
+        clientName: "ChatGPT",
+        clientHost: "chatgpt.com",
+        clientId: "https://chatgpt.com/oauth/client.json",
+        clientBlocked: false,
+        revokedReason: null,
+      },
+    };
+
+    await mount(list({ oauthAvailable: true, agents: [{ ...AGENT, credentials: [chatgpt] }] }));
+
+    expect(await screen.findByText(/Connections last 180 days/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Reconnect ChatGPT" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Reconnect ChatGPT" });
+
+    expect(within(dialog).getByText(/In ChatGPT, open Settings → Apps & Connectors/)).toBeTruthy();
+  });
+
+  it("gives general steps for a client it doesn't know exactly, even on a known host", async () => {
     await mount(
       list({
         oauthAvailable: true,
@@ -276,12 +334,15 @@ describe("connections", () => {
       }),
     );
 
-    expect(await screen.findByText(/Connections last 180 days/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Reconnect Claude" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Reconnect Claude" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Reconnect Claude" });
 
-    expect(within(dialog).getByText(/Settings → Connectors/)).toBeTruthy();
+    expect(
+      within(dialog).getByText(/Sign in again from the app you connected \(Claude\)/),
+    ).toBeTruthy();
+    expect(within(dialog).queryByText(/Settings → Connectors/)).toBeNull();
+    expect(within(dialog).getByText("https://chat.example.com/agents/mcp")).toBeTruthy();
   });
 
   it("offers no Reconnect without OAuth, or for an app an administrator blocked", async () => {
@@ -291,6 +352,7 @@ describe("connections", () => {
       connection: {
         clientName: "Grok",
         clientHost: "grok.com",
+        clientId: "https://grok.com/oauth/client.json",
         clientBlocked: true,
         revokedReason: null,
       },

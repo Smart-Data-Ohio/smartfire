@@ -90,8 +90,13 @@ matrix("approving an app as an existing agent shows what changes", async ({ page
   await expect(diff).toContainText("No change");
   await page.getByRole("checkbox", { name: "design" }).check();
   await page.getByRole("checkbox", { name: /React/ }).check();
-  await expect(diff.getByRole("listitem").filter({ hasText: "Joins" })).toHaveText("Joins design");
-  await expect(diff.getByRole("listitem").filter({ hasText: "Can now" })).toContainText("React");
+  // Room by room: design is new, and general (where it only read) gains reacting.
+  await expect(diff.getByRole("listitem").filter({ hasText: "Joins" })).toHaveText(
+    "Joins design: can read messages, react",
+  );
+  await expect(diff.getByRole("listitem").filter({ hasText: /^In / })).toHaveText(
+    "In general: can now react",
+  );
   await expectNoHorizontalOverflow(page);
   await shot(page, "oauth-consent-diff", theme);
 
@@ -136,11 +141,9 @@ matrix("denying an app sends it back with its refusal", async ({ page, theme }) 
   const diff = page.getByRole("region", { name: "Changes to Helper's access" });
 
   await expect(diff.getByRole("listitem").filter({ hasText: "Leaves" })).toHaveText(
-    "Leaves general",
+    "Leaves general: can no longer read messages",
   );
-  await expect(diff.getByRole("listitem").filter({ hasText: "Can no longer" })).toContainText(
-    "Read messages",
-  );
+  await expect(diff.getByRole("listitem")).toHaveCount(1);
   await expectNoHorizontalOverflow(page);
   await shot(page, "oauth-consent-deny", theme);
 

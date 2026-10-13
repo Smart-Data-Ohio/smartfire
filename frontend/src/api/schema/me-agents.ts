@@ -29,6 +29,7 @@ export type ConnectionRevokedReasonPin = Assert<
 export const PersonalAgentConnection = Schema.Struct({
   clientName: Schema.String,
   clientHost: Schema.String,
+  clientId: Schema.String,
   clientBlocked: Schema.Boolean,
   revokedReason: Schema.NullOr(ConnectionRevokedReason),
 });

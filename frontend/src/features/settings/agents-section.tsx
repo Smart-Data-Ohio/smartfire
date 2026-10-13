@@ -37,10 +37,11 @@ import {
 import {
   abilityLabel,
   agentIcon,
+  canConnect,
   canCreate,
   canReconnect,
   clientOf,
-  connectedWebApp,
+  connectedProduct,
   connectionBadge,
   connectionClient,
   connectionMeta,
@@ -804,7 +805,7 @@ function ReconnectDialog({
     >
       {ask === null ? null : (
         <ReconnectSetup
-          client={connectedWebApp(ask.connection)}
+          client={connectedProduct(ask.connection)}
           clientName={client}
           agentName={ask.agent.name}
           mcpUrl={mcpUrl}
@@ -969,11 +970,13 @@ export function AgentsSection() {
       label: "Revoke",
       danger: true,
       run: () => {
+        const at = nextSequence();
+
         void track(
           `token-${credential.id}`,
           meAgents.revokeToken(agent.id, credential.id).then(
             ({ credentials }) => {
-              replace((current) => withTokens(current, agent.id, credentials));
+              replace((current) => withTokens(current, agent.id, credentials, at));
               toast({
                 title: connection ? `${name} was disconnected` : `${name} was revoked`,
                 tone: "success",
@@ -1018,7 +1021,7 @@ export function AgentsSection() {
         ? [credential]
         : [credential, { ...replaced, state: "revoked" as const }];
 
-    replace((current) => withTokens(current, agent.id, changed));
+    replace((current) => withTokens(current, agent.id, changed, null));
     setTokenAsk(null);
     setShown({ agent, secret });
   };
@@ -1068,7 +1071,7 @@ export function AgentsSection() {
               <Button
                 variant="primary"
                 icon="bot"
-                disabled={!canCreate(list)}
+                disabled={!canConnect(list)}
                 onClick={() =>
                   setWizard({
                     draft: emptyDraft(list.capabilities, list.oauthAvailable),
@@ -1081,7 +1084,11 @@ export function AgentsSection() {
               {usage(list) === null ? null : (
                 <span className="text-faint">
                   {usage(list)}
-                  {canCreate(list) ? "" : ". Remove one to connect another."}
+                  {canCreate(list)
+                    ? ""
+                    : canConnect(list)
+                      ? ". Apps that sign in can still connect as one of them."
+                      : ". Remove one to connect another."}
                 </span>
               )}
             </div>

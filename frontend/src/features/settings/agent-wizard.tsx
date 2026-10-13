@@ -15,7 +15,9 @@ import {
 import { canSignIn } from "./agent-snippets.ts";
 import {
   baseProblem,
+  canCreate,
   clientChoices,
+  connectChoices,
   connectsBySignIn,
   expiresAtOf,
   STEP_LABELS,
@@ -81,7 +83,7 @@ function ClientStep({
   return (
     <fieldset className="agents-clients">
       <legend className="settings-label">Where will you use it?</legend>
-      {clientChoices(list.oauthAvailable).map((choice) => (
+      {connectChoices(list).map((choice) => (
         <label key={choice.value} className="agents-client">
           <input
             type="radio"
@@ -96,7 +98,13 @@ function ClientStep({
           </span>
         </label>
       ))}
-      {list.oauthAvailable && canSignIn(draft.client) ? (
+      {canCreate(list) ? null : (
+        <p className="settings-hint text-faint">
+          You have as many agents as this workspace allows, so only apps that sign in are listed.
+          You'll connect one as an agent you already have.
+        </p>
+      )}
+      {list.oauthAvailable && canSignIn(draft.client) && canCreate(list) ? (
         <SettingsRadios
           label="How it connects"
           value={draft.signIn ? "sign-in" : "token"}
@@ -148,8 +156,10 @@ export function AgentWizard({
     shown.current = view;
   }, [view]);
 
-  const steps = stepsFor(draft, list.oauthAvailable);
-  const signingIn = connectsBySignIn(draft, list.oauthAvailable);
+  // At the limit Claude Code and Codex can only sign in: a token would need a new agent.
+  const how = canCreate(list) ? draft : { ...draft, signIn: true };
+  const steps = stepsFor(how, list.oauthAvailable);
+  const signingIn = connectsBySignIn(how, list.oauthAvailable);
   const at = steps.indexOf(step);
   const edit = (change: Partial<WizardDraft>) => setDraft((current) => ({ ...current, ...change }));
 
@@ -212,7 +222,11 @@ export function AgentWizard({
   const next = (event: FormEvent) => {
     event.preventDefault();
 
-    const blocked = stepProblem(step, draft);
+    // At the limit only signing in connects anything: it makes no agent.
+    const blocked =
+      draft.client !== null && !canCreate(list) && !signingIn
+        ? "You have as many agents as this workspace allows. Choose an app that signs in."
+        : stepProblem(step, draft);
 
     if (blocked !== null) {
       setProblem(blocked);

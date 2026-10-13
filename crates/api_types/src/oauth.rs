@@ -18,6 +18,22 @@ pub struct OAuthConsent {
     pub limit: Option<i64>,
     /// Existing agents expose their current rooms and capabilities for the consent diff.
     pub access_applies_to_all_connections: bool,
+    /// What each existing agent can do in each room it's in now, so the page can show exactly
+    /// what approval changes room by room. Approval replaces all of it with the chosen rooms,
+    /// each getting the chosen capabilities.
+    pub room_access: Vec<OAuthAgentRoomAccess>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct OAuthAgentRoomAccess {
+    pub agent_id: i64,
+    pub room_id: i64,
+    /// Named here because the owner may no longer be in the room (it's then not in `rooms`).
+    pub room_name: String,
+    /// Empty when the agent is in the room without any capability there.
+    pub capabilities: Vec<String>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

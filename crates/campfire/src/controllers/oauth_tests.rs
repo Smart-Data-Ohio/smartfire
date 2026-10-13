@@ -1257,7 +1257,7 @@ async fn oauth_connections_list_with_client_and_explain_a_reuse_revocation() {
     assert_eq!(listed["expiresAt"], "2027-04-11T16:00:00.000Z");
     assert_eq!(
         listed["connection"],
-        json!({"clientName":"Test client","clientHost":"client.example","clientBlocked":false,"revokedReason":null})
+        json!({"clientName":"Test client","clientHost":"client.example","clientId":CLIENT,"clientBlocked":false,"revokedReason":null})
     );
     let agent_id = owner.get("/api/v1/me/agents").await.json()["agents"][0]["id"]
         .as_i64()
@@ -1668,4 +1668,81 @@ async fn oauth_review_disabled_personal_agents_redirect_access_denied_to_trusted
             .unwrap(),
         0
     );
+}
+
+fn room_access(consent: &Value) -> Vec<(i64, Vec<String>)> {
+    consent["roomAccess"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| {
+            let capabilities = entry["capabilities"].as_array().unwrap();
+            (
+                entry["roomId"].as_i64().unwrap(),
+                capabilities.iter().map(|c| c.as_str().unwrap().to_string()).collect(),
+            )
+        })
+        .collect()
+}
+#[tokio::test]
+async fn oauth_consent_shows_per_room_access_and_approval_replaces_it_room_by_room() {
+    use super::presenters::test_support::{ALL_TALK, HQ};
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let consent = owner.get(&path).await.json();
+    let agent_id = consent["selectedAgentId"].as_i64().unwrap();
+    let offered = consent["rooms"].as_array().unwrap();
+    for room in [ALL_TALK, HQ] {
+        assert!(offered.iter().any(|r| r["id"] == room), "{consent}");
+    }
+    assert_eq!(room_access(&consent), vec![], "a new connection's agent has no rooms yet");
+    owner.grant_sudo().await;
+    let both = json!({"agentId":agent_id,"roomIds":[ALL_TALK,HQ],"capabilities":["read_messages","post_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    // It reads both rooms but posts only in All Talk.
+    f.app.db().write(move |tx| {
+        tx.conn().execute("UPDATE agent_grants SET revoked_at=CURRENT_TIMESTAMP WHERE agent_id=? AND room_id=? AND capability='post_messages'", rusqlite::params![agent_id, HQ])?;
+        Ok(())
+    }).await.unwrap();
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let consent = owner.get(&path).await.json();
+    let read = |caps: &[&str]| caps.iter().map(|c| c.to_string()).collect::<Vec<_>>();
+    let mut shown = room_access(&consent);
+    shown.sort();
+    let mut expected = vec![
+        (ALL_TALK, read(&["post_messages", "read_messages"])),
+        (HQ, read(&["read_messages"])),
+    ];
+    expected.sort();
+    assert_eq!(shown, expected);
+    assert!(consent["roomAccess"].as_array().unwrap().iter().all(|entry| entry["agentId"] == agent_id
+        && !entry["roomName"].as_str().unwrap().is_empty()));
+    // Approving the same rooms and abilities gives posting in HQ too: every chosen room gets
+    // every chosen ability, which is what the page shows as a change.
+    owner.grant_sudo().await;
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let mut shown = room_access(&owner.get(&path).await.json());
+    shown.sort();
+    let mut expected = vec![
+        (ALL_TALK, read(&["post_messages", "read_messages"])),
+        (HQ, read(&["post_messages", "read_messages"])),
+    ];
+    expected.sort();
+    assert_eq!(shown, expected);
+    // Leaving a room drops it and everything the agent could do there.
+    owner.grant_sudo().await;
+    let one = json!({"agentId":agent_id,"roomIds":[ALL_TALK],"capabilities":["read_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let shown = room_access(&owner.get(&consent_path(&next)).await.json());
+    assert_eq!(shown, vec![(ALL_TALK, read(&["read_messages"]))]);
 }

@@ -140,6 +140,7 @@ fn connections(
             api::PersonalAgentConnection {
                 client_name: r.get(1)?,
                 client_host: client::client_host(&client_id),
+                client_id,
                 client_blocked: r.get(3)?,
                 revoked_reason: r
                     .get::<_, bool>(4)?

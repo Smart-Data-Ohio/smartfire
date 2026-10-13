@@ -159,6 +159,86 @@ describe("connecting an app (OAuth)", () => {
     expect((await send(server, "PUT", `${CLIENTS}/999/block`)).status).toBe(404);
   });
 
+  it("tells two clients on one host apart: blocking, counts and the agent picked first", async () => {
+    const { server } = harness();
+    const redirectUri = "https://apps.example/callback";
+
+    const first = await send(server, "POST", "/__mock/oauth-connection", {
+      clientName: "Writer",
+      clientId: "https://apps.example/writer.json",
+      redirectUri,
+      name: "Writer agent",
+    });
+
+    const second = await send(server, "POST", "/__mock/oauth-connection", {
+      clientName: "Reader",
+      clientId: "https://apps.example/reader.json",
+      redirectUri,
+      name: "Reader agent",
+    });
+
+    const writer = intField(first.json, "clientId");
+    const reader = intField(second.json, "clientId");
+
+    expect(writer).not.toBe(reader);
+
+    const listed = await get<ClientList>(server, CLIENTS);
+
+    expect(listed.clients.map((client) => [client.clientHost, client.liveConnections])).toEqual([
+      ["apps.example", 1],
+      ["apps.example", 1],
+    ]);
+
+    await send(server, "PUT", `${CLIENTS}/${writer}/block`);
+
+    const blocked = (await get<AgentList>(server, AGENTS)).agents.map((agent) => [
+      agent.name,
+      agent.credentials[0]?.connection?.clientBlocked,
+    ]);
+
+    expect(blocked).toEqual([
+      ["Writer agent", true],
+      ["Reader agent", false],
+    ]);
+
+    // Each app's next request picks the agent it connected as, not the other app's.
+    const readerAgent = intField(second.json, "agentId");
+
+    const again = await get<Consent>(
+      server,
+      await authorize(server, {
+        clientName: "Reader",
+        clientId: "https://apps.example/reader.json",
+        redirectUri,
+      }),
+    );
+
+    expect(again.selectedAgentId).toBe(readerAgent);
+  });
+
+  it("gives the consent page each agent's abilities room by room", async () => {
+    const { server } = harness();
+
+    const connected = await send(server, "POST", "/__mock/oauth-connection", {
+      name: "Helper",
+      roomIds: [ROOM_IDS.general],
+      capabilities: ["read_messages", "post_messages"],
+    });
+
+    const agentId = intField(connected.json, "agentId");
+    const consent = await get<Consent>(server, await authorize(server));
+
+    expect(() => Schema.decodeUnknownSync(OAuthConsent)(consent)).not.toThrow();
+    expect(consent.roomAccess).toEqual([
+      {
+        agentId,
+        roomId: ROOM_IDS.general,
+        roomName: consent.rooms.find((room) => room.id === ROOM_IDS.general)?.name,
+        capabilities: ["post_messages", "read_messages"],
+      },
+    ]);
+  });
+
   it("ends a connection for a reused sign-in token, with the reason", async () => {
     const { server } = harness();
     const connected = await send(server, "POST", "/__mock/oauth-connection", { name: "Helper" });

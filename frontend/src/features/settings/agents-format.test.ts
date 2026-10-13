@@ -7,10 +7,12 @@ import {
   abilityLabel,
   agentIcon,
   baseProblem,
+  canConnect,
   canCreate,
   canReconnect,
   clientChoices,
-  connectedWebApp,
+  connectChoices,
+  connectedProduct,
   connectionBadge,
   connectionMeta,
   connectionProblem,
@@ -183,6 +185,25 @@ describe("the cards", () => {
     expect(canCreate(list({ enabled: false }))).toBe(false);
   });
 
+  it("still connects an app that signs in at the limit, as an agent the person has", () => {
+    const full = list({ limit: 1, agents: [AGENT] });
+    const signing = { ...full, oauthAvailable: true };
+
+    expect(canConnect(full)).toBe(false);
+    expect(canConnect(signing)).toBe(true);
+    // With no agent to connect as, there's nothing an app could sign in to.
+    expect(canConnect(list({ limit: 0, oauthAvailable: true }))).toBe(false);
+    expect(canConnect(list({ ...signing, enabled: false }))).toBe(false);
+    expect(connectChoices(signing).map((choice) => choice.value)).toEqual([
+      "claude-ai",
+      "chatgpt",
+      "grok",
+      "claude-code",
+      "codex",
+    ]);
+    expect(connectChoices(list({ oauthAvailable: true }))).toEqual(clientChoices(true));
+  });
+
   it("names an agent's rooms, dropping any it can no longer reach", () => {
     expect(roomNames(list(), [2, 1, 99])).toEqual(["General", "Design"]);
   });
@@ -278,6 +299,7 @@ describe("connections", () => {
       connection: {
         clientName: "Claude",
         clientHost: "claude.ai",
+        clientId: "https://claude.ai/oauth/claude-code-client-metadata",
         clientBlocked: false,
         revokedReason: null,
       },
@@ -302,6 +324,7 @@ describe("connections", () => {
       connection: {
         clientName: "Claude",
         clientHost: "claude.ai",
+        clientId: "https://claude.ai/oauth/claude-code-client-metadata",
         clientBlocked: false,
         revokedReason: "tokenReused",
       },
@@ -322,6 +345,7 @@ describe("connections", () => {
       connection: {
         clientName: "Claude",
         clientHost: "claude.ai",
+        clientId: "https://claude.ai/oauth/claude-code-client-metadata",
         clientBlocked: true,
         revokedReason: null,
       },
@@ -339,19 +363,27 @@ describe("connections", () => {
     expect(canReconnect(connection({ state: "revoked" }), false)).toBe(false);
   });
 
-  it("knows the web apps by host", () => {
-    expect(connectedWebApp(connection())).toBe("claude-ai");
+  it("knows a product only by its exact client id, never by its host", () => {
+    expect(connectedProduct(connection())).toBe("claude-code");
 
-    const at = (clientHost: string) =>
-      connectedWebApp(
+    const by = (clientId: string) =>
+      connectedProduct(
         connection({
-          connection: { clientName: "x", clientHost, clientBlocked: false, revokedReason: null },
+          connection: {
+            clientName: "x",
+            clientHost: new URL(clientId).hostname,
+            clientId,
+            clientBlocked: false,
+            revokedReason: null,
+          },
         }),
       );
 
-    expect(at("chatgpt.com")).toBe("chatgpt");
-    expect(at("grok.com")).toBe("grok");
-    expect(at("notclaude.ai")).toBeNull();
-    expect(at("127.0.0.1")).toBeNull();
+    expect(by("https://chatgpt.com/oauth/client.json")).toBe("chatgpt");
+    // Another client from the same host isn't that product.
+    expect(by("https://claude.ai/oauth/some-other-client")).toBeNull();
+    expect(by("https://chatgpt.com/oauth/other.json")).toBeNull();
+    expect(by("https://grok.com/oauth/client.json")).toBeNull();
+    expect(connectedProduct(token({}))).toBeNull();
   });
 });

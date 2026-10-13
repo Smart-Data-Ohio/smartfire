@@ -10,6 +10,11 @@ export type PersonalAgentConnection = { clientName: string,
  */
 clientHost: string,
 /**
+ * The client's id: the exact URL of its metadata document. It identifies the product; the
+ * host alone doesn't.
+ */
+clientId: string,
+/**
  * An administrator blocked the client: the connection doesn't work until they unblock it.
  */
 clientBlocked: boolean, revokedReason: ConnectionRevokedReason | null, };

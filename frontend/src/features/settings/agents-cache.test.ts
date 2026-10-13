@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
+import type { PersonalAgentConnection } from "../../gen/PersonalAgentConnection.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import {
@@ -115,7 +116,7 @@ describe("the agents cache", () => {
   it("keeps a token revoked under an older reload that shows it active", () => {
     const first = withList(null, list([AGENT]), nextSequence());
     const reload = nextSequence();
-    const revoked = withTokens(first, AGENT.id, [{ ...TOKEN, state: "revoked" }]);
+    const revoked = withTokens(first, AGENT.id, [{ ...TOKEN, state: "revoked" }], nextSequence());
     const after = withList(revoked, list([{ ...AGENT, name: "Renamed" }]), reload);
 
     expect(after.list.agents[0]?.name).toBe("Renamed");
@@ -138,19 +139,25 @@ describe("the agents cache", () => {
     const answerToB = [TOKEN, { ...second, state: "revoked" as const }];
 
     it("keeps both revoked when A answers first", () => {
-      const after = withTokens(withTokens(start(), AGENT.id, answerToA), AGENT.id, answerToB);
+      const cache = start();
+      const a = nextSequence();
+      const b = nextSequence();
+      const after = withTokens(withTokens(cache, AGENT.id, answerToA, a), AGENT.id, answerToB, b);
 
       expect(states(after)).toEqual(["11:revoked", "12:revoked"]);
     });
 
     it("keeps both revoked when B answers first", () => {
-      const after = withTokens(withTokens(start(), AGENT.id, answerToB), AGENT.id, answerToA);
+      const cache = start();
+      const a = nextSequence();
+      const b = nextSequence();
+      const after = withTokens(withTokens(cache, AGENT.id, answerToB, b), AGENT.id, answerToA, a);
 
       expect(states(after)).toEqual(["11:revoked", "12:revoked"]);
     });
 
     it("keeps both revoked under a newer reload that still shows A active", () => {
-      const revoked = withTokens(start(), AGENT.id, answerToA);
+      const revoked = withTokens(start(), AGENT.id, answerToA, nextSequence());
       const after = withList(revoked, list([{ ...AGENT, credentials: answerToB }]), nextSequence());
 
       expect(states(after)).toEqual(["11:revoked", "12:revoked"]);
@@ -160,10 +167,112 @@ describe("the agents cache", () => {
   it("adds a token issued while another answer was out", () => {
     const first = withList(null, list([AGENT]), nextSequence());
     const issued = { ...TOKEN, id: 13, name: "New" };
-    const issue = withTokens(first, AGENT.id, [issued]);
-    const after = withTokens(issue, AGENT.id, [{ ...TOKEN, state: "revoked" }]);
+    const issue = withTokens(first, AGENT.id, [issued], null);
+    const after = withTokens(issue, AGENT.id, [{ ...TOKEN, state: "revoked" }], nextSequence());
 
     expect(states(after)).toEqual(["11:revoked", "13:active"]);
+  });
+
+  describe("a connection's details", () => {
+    const DETAILS: PersonalAgentConnection = {
+      clientName: "Example Assistant",
+      clientHost: "client.example",
+      clientId: "https://client.example/oauth/client.json",
+      clientBlocked: false,
+      revokedReason: null,
+    };
+
+    const CONNECTION: PersonalAgentCredential = {
+      ...TOKEN,
+      id: 21,
+      kind: "oauth",
+      name: "Example Assistant",
+      lastFour: "oauth",
+      connection: DETAILS,
+    };
+
+    const connected = (details: Partial<PersonalAgentConnection>): PersonalAgentCredential => ({
+      ...CONNECTION,
+      connection: { ...DETAILS, ...details },
+    });
+
+    const start = () =>
+      withList(null, list([{ ...AGENT, credentials: [CONNECTION] }]), nextSequence());
+
+    const first = (cache: AgentCache) => cache.list.agents[0]?.credentials[0];
+
+    it("keeps a block a later-sent load showed when an older one answers last, both active", () => {
+      const cache = start();
+      const older = nextSequence();
+      const newer = nextSequence();
+
+      const blocked = withList(
+        cache,
+        list([{ ...AGENT, credentials: [connected({ clientBlocked: true })] }]),
+        newer,
+      );
+
+      const after = withList(
+        blocked,
+        list([{ ...AGENT, credentials: [connected({ clientBlocked: false })] }]),
+        older,
+      );
+
+      // A whole-list load older than the one held is dropped; an agent answer isn't.
+      const answered = withAgent(
+        blocked,
+        { ...AGENT, credentials: [connected({ clientBlocked: false })] },
+        older,
+      );
+
+      expect(first(after)?.connection?.clientBlocked).toBe(true);
+      expect(first(answered)?.connection?.clientBlocked).toBe(true);
+      expect(first(answered)?.state).toBe("active");
+    });
+
+    it("takes an unblock and last use from a later-sent answer", () => {
+      const blocked = withAgent(
+        start(),
+        { ...AGENT, credentials: [connected({ clientBlocked: true })] },
+        nextSequence(),
+      );
+
+      const used = {
+        ...connected({ clientBlocked: false }),
+        lastUsedAt: "2026-10-13T15:00:00.000Z",
+      };
+
+      const after = withAgent(blocked, { ...AGENT, credentials: [used] }, nextSequence());
+
+      expect(first(after)?.connection?.clientBlocked).toBe(false);
+      expect(first(after)?.lastUsedAt).toBe("2026-10-13T15:00:00.000Z");
+    });
+
+    it("keeps an older answer's revocation, with its reason, under newer active details", () => {
+      const cache = start();
+      const older = nextSequence();
+      const newer = nextSequence();
+
+      const used = withAgent(
+        cache,
+        {
+          ...AGENT,
+          credentials: [{ ...CONNECTION, lastUsedAt: "2026-10-13T15:00:00.000Z" }],
+        },
+        newer,
+      );
+
+      const reused = {
+        ...connected({ revokedReason: "tokenReused" }),
+        state: "revoked" as const,
+      };
+
+      const after = withTokens(used, AGENT.id, [reused], older);
+
+      expect(first(after)?.state).toBe("revoked");
+      expect(first(after)?.connection?.revokedReason).toBe("tokenReused");
+      expect(first(after)?.lastUsedAt).toBe("2026-10-13T15:00:00.000Z");
+    });
   });
 
   it("keeps an agent unconfirmed until an answer to a request sent after its save lands", () => {

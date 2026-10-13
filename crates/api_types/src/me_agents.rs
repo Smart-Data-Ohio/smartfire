@@ -69,6 +69,9 @@ pub struct PersonalAgentConnection {
     pub client_name: String,
     /// The host of the client's id (its metadata document URL).
     pub client_host: String,
+    /// The client's id: the exact URL of its metadata document. It identifies the product; the
+    /// host alone doesn't.
+    pub client_id: String,
     /// An administrator blocked the client: the connection doesn't work until they unblock it.
     pub client_blocked: bool,
     pub revoked_reason: Option<ConnectionRevokedReason>,

@@ -69,47 +69,120 @@ function effective(roomIds: readonly number[], capabilities: readonly string[]):
   return roomIds.length === 0 ? [] : capabilities;
 }
 
-/** How approving changes an existing agent's access, in names. */
-export interface AccessDiff {
-  readonly joins: readonly string[];
-  readonly leaves: readonly string[];
+/** How approving changes an existing agent's access in one room, in names. */
+export interface RoomChange {
+  readonly roomId: number;
+  readonly room: string;
+  readonly change: "joins" | "leaves" | "abilities";
+  /** What it can newly do there: everything it'll have when it joins. */
   readonly gains: readonly string[];
+  /** What it can no longer do there: everything it had when it leaves. */
   readonly loses: readonly string[];
 }
 
-/** A room's name, or what it is when the person can't see it any more. */
-function roomName(consent: OAuthConsent, id: number): string {
-  return consent.rooms.find((room) => room.id === id)?.name ?? "A room you're no longer in";
+/** How approving changes an existing agent's access, room by room. */
+export type AccessDiff = readonly RoomChange[];
+
+/** `capabilities` in the server's order (any it doesn't offer any more last), named for a sentence. */
+function labels(consent: OAuthConsent, capabilities: readonly string[]): readonly string[] {
+  const known = consent.capabilities.filter((capability) => capabilities.includes(capability));
+  const other = capabilities.filter((capability) => !consent.capabilities.includes(capability));
+
+  return [...known, ...other].map((capability) => abilityLabel(capability).toLowerCase());
 }
 
-/** What approving `form` changes about `agent`'s rooms and abilities. */
+/**
+ * What approving `form` changes about `agent`'s access in each room. Approval gives every chosen
+ * room every chosen ability and takes the agent out of every other room, so a room it only reads
+ * in today gains posting when posting is chosen for another room.
+ */
 export function accessDiff(
   consent: OAuthConsent,
   agent: PersonalAgent,
   form: ConsentForm,
 ): AccessDiff {
-  const before = effective(agent.roomIds, agent.capabilities);
+  const now = new Map(
+    consent.roomAccess
+      .filter((access) => access.agentId === agent.id)
+      .map((access) => [access.roomId, access]),
+  );
+
   const after = effective(form.roomIds, form.capabilities);
 
-  return {
-    joins: form.roomIds
-      .filter((id) => !agent.roomIds.includes(id))
-      .map((id) => roomName(consent, id)),
-    leaves: agent.roomIds
-      .filter((id) => !form.roomIds.includes(id))
-      .map((id) => roomName(consent, id)),
-    gains: consent.capabilities
-      .filter((capability) => after.includes(capability) && !before.includes(capability))
-      .map(abilityLabel),
-    loses: consent.capabilities
-      .filter((capability) => before.includes(capability) && !after.includes(capability))
-      .map(abilityLabel),
-  };
+  // The rooms in the order the page lists them, then any the person isn't in any more.
+  const roomIds = [
+    ...consent.rooms
+      .map((room) => room.id)
+      .filter((id) => now.has(id) || form.roomIds.includes(id)),
+    ...[...now.keys()].filter((id) => !consent.rooms.some((room) => room.id === id)),
+  ];
+
+  return roomIds.flatMap((id): RoomChange[] => {
+    const current = now.get(id);
+    const chosen = form.roomIds.includes(id);
+
+    const room =
+      consent.rooms.find((offered) => offered.id === id)?.name ??
+      (current?.roomName || "A room you're no longer in");
+
+    if (current === undefined) {
+      return chosen
+        ? [{ roomId: id, room, change: "joins", gains: labels(consent, after), loses: [] }]
+        : [];
+    }
+
+    if (!chosen) {
+      return [
+        {
+          roomId: id,
+          room,
+          change: "leaves",
+          gains: [],
+          loses: labels(consent, current.capabilities),
+        },
+      ];
+    }
+
+    const gains = after.filter((capability) => !current.capabilities.includes(capability));
+    const loses = current.capabilities.filter((capability) => !after.includes(capability));
+
+    return gains.length + loses.length === 0
+      ? []
+      : [
+          {
+            roomId: id,
+            room,
+            change: "abilities",
+            gains: labels(consent, gains),
+            loses: labels(consent, loses),
+          },
+        ];
+  });
 }
 
 /** Whether a diff changes nothing. */
 export function unchanged(diff: AccessDiff): boolean {
-  return diff.joins.length + diff.leaves.length + diff.gains.length + diff.loses.length === 0;
+  return diff.length === 0;
+}
+
+/** One room's change as a sentence: "can now Post messages; can no longer React". */
+export function roomChangeText(change: RoomChange): string {
+  if (change.change === "joins") {
+    return change.gains.length === 0 ? "with no abilities" : `can ${change.gains.join(", ")}`;
+  }
+
+  if (change.change === "leaves") {
+    return change.loses.length === 0
+      ? "it couldn't do anything there"
+      : `can no longer ${change.loses.join(", ")}`;
+  }
+
+  return [
+    change.gains.length === 0 ? null : `can now ${change.gains.join(", ")}`,
+    change.loses.length === 0 ? null : `can no longer ${change.loses.join(", ")}`,
+  ]
+    .filter((part) => part !== null)
+    .join("; ");
 }
 
 /** Why the form can't be approved yet, or `null` when it can. */

@@ -5,7 +5,6 @@
  * authorize call would, and the approve and deny answers name the app's callback.
  */
 import type { AdminOAuthClient } from "../../src/gen/AdminOAuthClient.ts";
-import type { OAuthClientBadge } from "../../src/gen/OAuthClientBadge.ts";
 import type { OAuthConsent } from "../../src/gen/OAuthConsent.ts";
 import { forbidden, type MockResponse, notFound, ok } from "../http.ts";
 import { field, intField, isNumber, type Json, stringField } from "../json.ts";
@@ -26,13 +25,14 @@ interface ClientRecord {
   readonly clientId: string;
   readonly clientHost: string;
   readonly redirectUri: string;
-  readonly badge: OAuthClientBadge;
   lastConnectedAt: number | null;
   blockedAt: number | null;
 }
 
 interface AuthorizationRecord {
   readonly clientId: number;
+  /** Where this request sends the browser back: one of the client's addresses. */
+  readonly redirectUri: string;
   readonly state: string | null;
   readonly expiresAt: number;
   status: "pending" | "approved" | "denied";
@@ -45,6 +45,11 @@ function hostOf(clientId: string): string {
   } catch {
     return clientId;
   }
+}
+
+/** Whether `redirectUri` is an app on this computer: a loopback address, any port. */
+function loopback(redirectUri: string): boolean {
+  return /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\//.test(redirectUri);
 }
 
 /** The callback with its query, as the server's `oauth::callback`. */
@@ -77,20 +82,26 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
     if (ctx.world().users.get(VIEWER_ID)?.role !== "administrator") throw forbidden();
   };
 
-  /** The client named so (made on first use), at `redirectUri`. */
-  const clientFor = (clientName: string, redirectUri: string): ClientRecord => {
+  /**
+   * The client `body` names (made on first use): by its `clientId` when given, else one made up
+   * from its name and `redirectUri`. Clients are told apart by id, as the server's are, so two on
+   * one host stay two.
+   */
+  const clientFor = (body: Json | undefined): ClientRecord => {
     current();
+    const clientName = stringField(body, "clientName") ?? "Example Assistant";
+    const redirectUri = stringField(body, "redirectUri") ?? "https://client.example/callback";
+    const slug = clientName.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-");
 
-    const existing = [...clients.values()].find(
-      (client) => client.clientName === clientName && client.redirectUri === redirectUri,
-    );
+    const clientId =
+      stringField(body, "clientId") ??
+      (loopback(redirectUri)
+        ? `https://apps.example/${slug}.json`
+        : `${new URL(redirectUri).origin}/oauth/${slug}.json`);
+
+    const existing = [...clients.values()].find((client) => client.clientId === clientId);
 
     if (existing !== undefined) return existing;
-    const loopback = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\//.test(redirectUri);
-
-    const clientId = loopback
-      ? `https://apps.example/${clientName.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}.json`
-      : `${new URL(redirectUri).origin}/oauth/client.json`;
 
     const client: ClientRecord = {
       id: nextClientId++,
@@ -98,7 +109,6 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
       clientId,
       clientHost: hostOf(clientId),
       redirectUri,
-      badge: loopback ? "appOnThisComputer" : "unverifiedApp",
       lastConnectedAt: null,
       blockedAt: null,
     };
@@ -128,19 +138,17 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
   };
 
   const consent = (path: string): OAuthConsent => {
-    const { client } = pending(path);
+    const { authorization, client } = pending(path);
     const listed = agents.agents();
 
     const last = listed.find((agent) =>
-      agent.credentials.some(
-        (credential) => credential.connection?.clientHost === client.clientHost,
-      ),
+      agent.credentials.some((credential) => credential.connection?.clientId === client.clientId),
     );
 
     return {
       clientName: client.clientName,
-      redirectHostname: new URL(client.redirectUri).hostname,
-      badge: client.badge,
+      redirectHostname: new URL(authorization.redirectUri).hostname,
+      badge: loopback(authorization.redirectUri) ? "appOnThisComputer" : "unverifiedApp",
       agents: listed,
       selectedAgentId: last?.id ?? null,
       rooms: agents.rooms(),
@@ -148,6 +156,7 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
       enabled: agents.enabled(),
       limit: agents.limit(),
       accessAppliesToAllConnections: true,
+      roomAccess: agents.roomAccess(),
     };
   };
 
@@ -156,7 +165,7 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
     clientName: client.clientName,
     clientId: client.clientId,
     clientHost: client.clientHost,
-    liveConnections: agents.liveConnections(client.clientHost),
+    liveConnections: agents.liveConnections(client.clientId),
     lastConnectedAt: client.lastConnectedAt === null ? null : timestamp(client.lastConnectedAt),
     blockedAt: client.blockedAt === null ? null : timestamp(client.blockedAt),
   });
@@ -168,15 +177,15 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
 
     if (client === undefined) throw notFound();
     client.blockedAt = blocked ? (client.blockedAt ?? ctx.now()) : null;
-    agents.setBlocked(client.clientHost, blocked);
+    agents.setBlocked(client.clientId, blocked);
 
     return ok(present(client));
   };
 
   /**
-   * The controls: `oauth-available` ({on}); `oauth-authorization` ({clientName, redirectUri,
-   * state}) makes a pending request and answers its `publicId` and approval `path`;
-   * `oauth-connection` ({clientName, redirectUri, agentId | name, roomIds, capabilities})
+   * The controls: `oauth-available` ({on}); `oauth-authorization` ({clientName, clientId,
+   * redirectUri, state}) makes a pending request and answers its `publicId` and approval `path`;
+   * `oauth-connection` ({clientName, clientId, redirectUri, agentId | name, roomIds, capabilities})
    * connects an agent as approving would; `oauth-reuse` ({credentialId}) ends a connection for a
    * reused sign-in token. `null` for any other control.
    */
@@ -191,15 +200,12 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
       }
 
       case "oauth-authorization": {
-        const client = clientFor(
-          stringField(body, "clientName") ?? "Example Assistant",
-          stringField(body, "redirectUri") ?? "https://client.example/callback",
-        );
-
+        const client = clientFor(body);
         const publicId = ctx.hex(32);
 
         authorizations.set(publicId, {
           clientId: client.id,
+          redirectUri: stringField(body, "redirectUri") ?? client.redirectUri,
           state: stringField(body, "state"),
           expiresAt: ctx.now() + PENDING_MS,
           status: "pending",
@@ -209,10 +215,7 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
       }
 
       case "oauth-connection": {
-        const client = clientFor(
-          stringField(body, "clientName") ?? "Example Assistant",
-          stringField(body, "redirectUri") ?? "https://client.example/callback",
-        );
+        const client = clientFor(body);
 
         const agentId = intField(body, "agentId");
 
@@ -256,7 +259,7 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
         client.lastConnectedAt = ctx.now();
 
         return ok({
-          redirectTo: callback(client.redirectUri, {
+          redirectTo: callback(authorization.redirectUri, {
             code: `mock_code_${ctx.hex(16)}`,
             state: authorization.state,
             iss: ISSUER,
@@ -264,12 +267,12 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
         });
       }),
       route("POST", /^\/oauth\/authorizations\/[^/]+\/deny$/, ({ path }) => {
-        const { authorization, client } = pending(path);
+        const { authorization } = pending(path);
 
         authorization.status = "denied";
 
         return ok({
-          redirectTo: callback(client.redirectUri, {
+          redirectTo: callback(authorization.redirectUri, {
             error: "access_denied",
             state: authorization.state,
             iss: ISSUER,

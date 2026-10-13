@@ -66,6 +66,14 @@ function consent(change: Partial<OAuthConsent> = {}): OAuthConsent {
     enabled: true,
     limit: 3,
     accessAppliesToAllConnections: true,
+    roomAccess: [
+      {
+        agentId: 7,
+        roomId: 2,
+        roomName: "Design",
+        capabilities: ["post_messages", "read_messages"],
+      },
+    ],
     ...change,
   };
 }
@@ -128,14 +136,17 @@ describe("the approval page", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /Post messages/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /React/ }));
 
-    expect(within(diff).getByText("Joins").parentElement?.textContent).toBe("Joins General");
-    expect(within(diff).getByText("Can now").parentElement?.textContent).toBe("Can now React");
-    expect(within(diff).getByText("Can no longer").parentElement?.textContent).toBe(
-      "Can no longer Post messages",
+    expect(within(diff).getByText("Joins").parentElement?.textContent).toBe(
+      "Joins General: can read messages, react",
+    );
+    expect(within(diff).getByText("In").parentElement?.textContent).toBe(
+      "In Design: can now react; can no longer post messages",
     );
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Design" }));
-    expect(within(diff).getByText("Leaves").parentElement?.textContent).toBe("Leaves Design");
+    expect(within(diff).getByText("Leaves").parentElement?.textContent).toBe(
+      "Leaves Design: can no longer read messages, post messages",
+    );
 
     fireEvent.click(approveButton());
 
@@ -148,6 +159,76 @@ describe("the approval page", () => {
       capabilities: ["read_messages", "react"],
     });
     expect(await screen.findByText("Taking you back to the app…")).toBeTruthy();
+  });
+
+  it("compares each room, so posting in one room isn't shown as no change for another", async () => {
+    const approve = vi.spyOn(oauth, "approve").mockResolvedValue({ redirectTo: CALLBACK });
+    // Helper reads General and Design but posts only in General.
+    const reader = { ...HELPER, roomIds: [1, 2] };
+
+    const { leave } = await mount(
+      Promise.resolve(
+        consent({
+          agents: [reader],
+          roomAccess: [
+            {
+              agentId: 7,
+              roomId: 1,
+              roomName: "General",
+              capabilities: ["post_messages", "read_messages"],
+            },
+            { agentId: 7, roomId: 2, roomName: "Design", capabilities: ["read_messages"] },
+          ],
+        }),
+      ),
+    );
+
+    const diff = await screen.findByRole("region", { name: "Changes to Helper's access" });
+
+    // The untouched form gives every chosen room every chosen ability: Design gains posting.
+    expect(within(diff).queryByText(/No change/)).toBeNull();
+    expect(
+      within(diff)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(["In Design: can now post messages"]);
+
+    fireEvent.click(approveButton());
+
+    await waitFor(() => expect(leave).toHaveBeenCalledWith(CALLBACK));
+    expect(approve).toHaveBeenCalledWith("abc", {
+      agentId: 7,
+      name: null,
+      iconName: null,
+      roomIds: [1, 2],
+      capabilities: ["post_messages", "read_messages"],
+    });
+  });
+
+  it("names a room the person has left, which approval takes the agent out of", async () => {
+    await mount(
+      Promise.resolve(
+        consent({
+          roomAccess: [
+            {
+              agentId: 7,
+              roomId: 2,
+              roomName: "Design",
+              capabilities: ["post_messages", "read_messages"],
+            },
+            { agentId: 7, roomId: 9, roomName: "Old project", capabilities: [] },
+          ],
+        }),
+      ),
+    );
+
+    const diff = await screen.findByRole("region", { name: "Changes to Helper's access" });
+
+    expect(
+      within(diff)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual(["Leaves Old project: it couldn't do anything there"]);
   });
 
   it("makes a new agent, which needs a name", async () => {
