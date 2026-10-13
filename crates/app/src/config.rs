@@ -31,6 +31,8 @@ use anyhow::{Context, bail};
 
 #[derive(Debug, Clone)]
 pub struct Config {
+    /// SMARTFIRE_MCP_OAUTH; opt-in until the complete consent UI ships.
+    pub mcp_oauth: bool,
     pub secret_key_base: String,
     /// `GITHUB_WEBHOOK_SECRET`; blank disables inbound GitHub deliveries.
     pub github_webhook_secret: Option<String>,
@@ -103,6 +105,14 @@ impl StoragePaths {
 }
 
 impl Config {
+    /// OAuth's issuer comes only from a configured origin, never a request header.
+    pub fn oauth_issuer(&self) -> Option<String> {
+        if !self.mcp_oauth {return None;}
+        let origin = self.mail.validated_app_url()?;
+        let url = url::Url::parse(&origin).ok()?;
+        (url.scheme()=="https" || (self.environment=="development" && url.scheme()=="http" && url.host_str()==Some("localhost"))).then_some(origin)
+    }
+
     pub fn from_env() -> anyhow::Result<Self> {
         Self::from_lookup(|name| std::env::var(name).ok())
     }
@@ -145,6 +155,7 @@ impl Config {
         } else { Vec::new() };
 
         Ok(Self {
+            mcp_oauth: present("SMARTFIRE_MCP_OAUTH").is_some_and(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "on" | "yes")),
             mail: campfire_mail::config::Config::from_map(&[
                 "SMTP_ADDRESS", "SMTP_PORT", "SMTP_DOMAIN", "SMTP_USER_NAME", "SMTP_PASSWORD",
                 "SMTP_AUTHENTICATION", "SMTP_ENABLE_STARTTLS", "MAILER_FROM", "APP_URL",
@@ -308,5 +319,24 @@ mod tests {
         .unwrap();
         assert_eq!(config.storage.database, PathBuf::from("/rails/storage/db/production.sqlite3"));
         assert_eq!(config.storage.files, PathBuf::from("/seed/storage"));
+    }
+}
+
+#[cfg(test)]
+mod oauth_tests {
+    use super::*;
+    #[test]
+    fn oauth_availability_requires_switch_and_configured_https_or_development_localhost() {
+        let config=|url:Option<&str>,switch:Option<&str>,environment:&str|Config::from_lookup(|key|match key {
+            "SECRET_KEY_BASE"=>Some("fixture".into()),"APP_URL"=>url.map(str::to_owned),"SMARTFIRE_MCP_OAUTH"=>switch.map(str::to_owned),"RAILS_ENV"=>Some(environment.into()),_=>None
+        }).unwrap();
+        assert!(config(None,Some("1"),"production").oauth_issuer().is_none());
+        for switch in [None,Some("0"),Some("off"),Some("false"),Some("")] {
+            assert!(config(Some("https://smartfire.example"),switch,"production").oauth_issuer().is_none());
+        }
+        assert_eq!(config(Some("https://smartfire.example/"),Some("1"),"production").oauth_issuer().as_deref(),Some("https://smartfire.example"));
+        assert!(config(Some("http://smartfire.example"),Some("1"),"development").oauth_issuer().is_none());
+        assert!(config(Some("http://localhost:4305"),Some("1"),"production").oauth_issuer().is_none());
+        assert_eq!(config(Some("http://localhost:4305"),Some("1"),"development").oauth_issuer().as_deref(),Some("http://localhost:4305"));
     }
 }

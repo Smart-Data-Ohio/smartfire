@@ -1078,3 +1078,97 @@ async fn disk_multipart_opening_preamble_requires_crlf() {
     disk_multipart_initial_close_case(format!("preamble\r\n{multipart}").into_bytes(), StatusCode::NO_CONTENT).await;
     disk_multipart_initial_close_case(format!("preamble{multipart}").into_bytes(), StatusCode::BAD_REQUEST).await;
 }
+
+async fn oauth_cookie_overflow_fixture(c: &mut Ctx) -> Result {
+    let kind = c.param_str("kind").map(str::to_owned);
+    c.session().insert("return_to_after_authenticating", "/oauth/authorize");
+    c.form_authenticity_token();
+    if kind.is_none() {
+        return Ok(c.head(StatusCode::OK));
+    }
+    assert!(c.session_cookie_fits_with_headroom(1024));
+    if c.param_str("fallback") == Some("1") {
+        let target = if c.param_str("trusted") == Some("1") {
+            "https://client.example/callback?error=invalid_request&state=kept&iss=https%3A%2F%2Fchat.example.com"
+        } else {
+            "/app/oauth/error?error=invalid_request"
+        };
+        let refusal = c.redirect_to_with(target, Redirect {
+            allow_other_host: true,
+            ..Default::default()
+        })?;
+        c.on_session_cookie_overflow(refusal);
+    }
+    // The preview fits. These writes happen later, including flash at finish().
+    match kind.as_deref() {
+        Some("flash") => c.flash().set_notice("&".repeat(5000)),
+        Some("wire") => c.session().insert("large", "ÿ".repeat(1200)),
+        _ => unreachable!(),
+    }
+    c.redirect_to("/sign_in")
+}
+
+#[tokio::test]
+async fn oauth_cookie_overflow_final_write_recovers_raw_and_wire_overflows() {
+    let app = campfire_kit::app(
+        Router::new()
+            .route("/overflow", campfire_kit::get(oauth_cookie_overflow_fixture))
+            .route("/session", campfire_kit::get(session_get)),
+        kit_with(KitConfig::default()),
+    );
+    for kind in ["flash", "wire"] {
+        for trusted in ["0", "1"] {
+            let seed = send(&app, get("/overflow").body(AxumBody::empty()).unwrap()).await;
+            assert_eq!(seed.status, StatusCode::OK);
+            let response = send(&app, get(&format!("/overflow?kind={kind}&fallback=1&trusted={trusted}"))
+                .header(header::COOKIE, seed.cookie_jar())
+                .body(AxumBody::empty()).unwrap()).await;
+            assert_eq!(response.status, StatusCode::FOUND, "{}", response.text());
+            let location = response.header("location").unwrap();
+            let expected = if trusted == "1" {
+                "https://client.example/callback?error=invalid_request&state=kept&iss=https%3A%2F%2Fchat.example.com"
+            } else {
+                "http://chat.example.com/app/oauth/error?error=invalid_request"
+            };
+            assert_eq!(location, expected);
+            let cookies = response.cookies();
+            assert!(!cookies.is_empty(), "recovery clears the original session cookie");
+            assert!(cookies.iter().all(|cookie| cookie.len() < 4096));
+            let cleared = send(&app, get("/session")
+                .header(header::COOKIE, response.cookie_jar())
+                .body(AxumBody::empty()).unwrap()).await;
+            assert_eq!(cleared.status, StatusCode::OK);
+            assert_eq!(cleared.json()["value"], serde_json::Value::Null);
+        }
+    }
+    let unchanged = send(&app, get("/overflow?kind=flash")
+        .body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(unchanged.status, StatusCode::INTERNAL_SERVER_ERROR,
+        "recovery only applies when a protocol endpoint opts in");
+}
+
+async fn oauth_cookie_budget_preview(c: &mut Ctx) -> Result {
+    if c.param_str("seed") == Some("1") {
+        c.session().insert("existing", "a".repeat(2400));
+    }
+    let fits = c.session_cookie_fits_with_headroom(1024);
+    c.json(StatusCode::OK, &json!({"fits": fits}))
+}
+
+#[tokio::test]
+async fn oauth_cookie_budget_preview_includes_an_unchanged_session() {
+    let app = campfire_kit::app(
+        Router::new().route("/preview", campfire_kit::get(oauth_cookie_budget_preview)),
+        kit_with(KitConfig::default()),
+    );
+    let seed = send(&app, get("/preview?seed=1").body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(seed.status, StatusCode::OK);
+    assert_eq!(seed.json()["fits"], false);
+    assert!(seed.cookies().iter().all(|cookie| cookie.len() < 4096));
+    let unchanged = send(&app, get("/preview")
+        .header(header::COOKIE, seed.cookie_jar())
+        .body(AxumBody::empty()).unwrap()).await;
+    assert_eq!(unchanged.status, StatusCode::OK);
+    assert_eq!(unchanged.json()["fits"], false);
+    assert!(unchanged.cookies().is_empty(), "preview never commits its cookies");
+}

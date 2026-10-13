@@ -59,6 +59,10 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
         return Ok(Outcome::Done);
     };
     let message = match job.notification {
+        Notification::OAuthRefreshReuse { user_id } => {
+            let user = app.db.read(move |conn|User::find(conn,user_id)).await.map_err(crate::queue::discard_missing)?;
+            outbound::oauth_refresh_reuse(&app.mail.config,&outbound::User {name:user.name,email:user.email_address.unwrap_or_default()})
+        }
         Notification::Lockout { user_id } => {
             let user = app
                 .db

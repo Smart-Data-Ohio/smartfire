@@ -45,6 +45,7 @@ pub mod sudo;
 pub mod two_factor;
 pub mod user_agent;
 pub mod agent_api;
+mod oauth;
 
 #[derive(Clone, Copy)]
 pub struct CurrentAgent {
@@ -652,7 +653,7 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
         })?)
     } else if html {
         if c.request.is_get() {
-            let url = c.request.url();
+            let url = authentication_return_url(c);
             c.session().insert(session_keys::RETURN_TO_KEY, url);
         }
         halt(c.redirect_to(&c.url_for(&format!("{TWO_FACTOR_SETUP_PAGE}?required=true")))?)
@@ -800,6 +801,15 @@ fn ruby_space(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
 }
 
+/// A validated replay URL supplied by a protocol endpoint instead of its raw query string.
+#[derive(Clone)]
+pub struct AuthenticationReturnUrl(pub String);
+
+fn authentication_return_url(c: &Ctx) -> String {
+    c.current::<AuthenticationReturnUrl>()
+        .map_or_else(|| c.request.url(), |url| url.0.clone())
+}
+
 /// `request_authentication`: someone waiting on their second factor goes back to the challenge;
 /// anyone else to sign in, remembering the page they were after. A page navigation goes to the
 /// SPA's pages; any other request to the retained routes, which answer it as before (a JSON
@@ -812,7 +822,7 @@ pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
     // Only page navigations bounce back after sign in: not background polls (JSON) or form
     // submissions.
     if bounce_back_after_sign_in(c)? {
-        let url = c.request.url();
+        let url = authentication_return_url(c);
         c.session().insert(session_keys::RETURN_TO_KEY, url);
     }
     let location = auth_page_url(c, "/app/session/new", &campfire_routes::new_session());

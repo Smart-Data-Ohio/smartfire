@@ -158,6 +158,13 @@ impl Session {
         let key = self.config.key.clone();
         jar.set_encrypted(&key, &Value::Object(data), cookie)
     }
+
+    /// Serialize an owned preview even when the current session is unchanged: a later
+    /// request may extend it. The caller supplies a cloned cookie jar as well.
+    pub(crate) fn preview_commit(mut self, jar: &mut CookieJar, now: jiff::Timestamp) -> crate::Result<()> {
+        self.changed = true;
+        self.commit(jar, now)
+    }
 }
 
 /// `ActionDispatch::Session::Compatibility#generate_sid`: `SecureRandom.hex(16)`.

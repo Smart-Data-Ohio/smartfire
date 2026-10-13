@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Notification {
+    OAuthRefreshReuse { user_id: i64 },
     NewSignIn { activity_item_id: i64 },
     Lockout { user_id: i64 },
 }
