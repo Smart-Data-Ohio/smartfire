@@ -503,8 +503,15 @@
       display: block;
     }
 
+    /* Production bodies wrap their blocks in a `trix-content` div (crates/richtext content.rs),
+       which runs inline too; bare bodies (the mock, some other producers) have none. */
     .message-body-row:has(> .message-edited, > .message-published) > .message-body,
+    .message-body-row:has(> .message-edited, > .message-published) > .message-body > .trix-content,
     .message-body-row:has(> .message-edited, > .message-published) > .message-body > p:last-child,
+    .message-body-row:has(> .message-edited, > .message-published)
+      > .message-body
+      > .trix-content
+      > p:last-child,
     .message-body-row:has(> .message-edited, > .message-published) > .message-forward-note {
       display: inline;
     }
@@ -512,6 +519,10 @@
     /* The inline last paragraph drops its top margin, so the block before it keeps the gap. */
     .message-body-row:has(> .message-edited, > .message-published)
       > .message-body
+      > :nth-last-child(2),
+    .message-body-row:has(> .message-edited, > .message-published)
+      > .message-body
+      > .trix-content
       > :nth-last-child(2) {
       margin-bottom: var(--space-1);
     }
@@ -591,8 +602,70 @@
     white-space: pre-wrap;
   }
 
-  .message-body > * + * {
+  /* The blocks' container: the body itself, or the `trix-content` wrapper a message's production
+     HTML puts them in (crates/richtext content.rs; the mock and some other producers leave it
+     out). :where keeps these at the lowest specificity, so a block's own margins (pre, a code
+     block) and the clamped previews' flattening (saved, pins) still win.
+
+     A pasted Markdown document reads with a compact chat rhythm: headings get more room above
+     than below, so each reads with what follows; a rule has room on both sides; list items sit a
+     small step apart. Paragraphs keep the 4 px step, so ordinary messages are unchanged. The first
+     block sits on the body's top edge, and the last adds nothing below. */
+  :where(.message-body, .message-body > .trix-content) > * + * {
     margin-top: var(--space-1);
+  }
+
+  /* Any rule, a top-level one or one inside a quote or list item; after the step, so it wins. */
+  :where(.message-body hr) {
+    margin-block: var(--space-3);
+  }
+
+  :where(.message-body, .message-body > .trix-content) > :is(h1, h2) {
+    margin-top: var(--space-4);
+  }
+
+  :where(.message-body, .message-body > .trix-content) > :is(h3, h4, h5, h6) {
+    margin-top: var(--space-3);
+  }
+
+  :where(.message-body li + li, .message-body li > :is(ul, ol), .message-body li > p + p) {
+    margin-top: var(--space-0-5);
+  }
+
+  :where(.message-body, .message-body > .trix-content) > :first-child {
+    margin-top: 0;
+  }
+
+  :where(.message-body, .message-body > .trix-content) > :last-child {
+    margin-bottom: 0;
+  }
+
+  /* Chat-sized headings: Discord's three steps, from the type scale. */
+  .message-body :is(h1, h2, h3, h4, h5, h6) {
+    font-weight: var(--weight-semibold);
+  }
+
+  .message-body h1 {
+    font-size: var(--text-page);
+    line-height: var(--leading-page);
+    letter-spacing: var(--tracking-title);
+  }
+
+  .message-body h2 {
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+    letter-spacing: var(--tracking-title);
+  }
+
+  .message-body :is(h3, h4, h5, h6) {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .message-body hr {
+    height: 0;
+    border: 0;
+    border-top: 1px solid var(--border-strong);
   }
 
   .message-body a {
