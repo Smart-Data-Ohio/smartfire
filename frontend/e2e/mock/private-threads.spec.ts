@@ -110,6 +110,45 @@ function pane(page: Page) {
   return page.locator("aside.right-pane");
 }
 
+/** Holds the denied header and replies until a grant has started a fresh load. */
+async function holdDeniedThread(page: Page, threadId: number) {
+  const answered = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  const held = new Set<string>();
+  const deliveries: Promise<void>[] = [];
+
+  await page.route(
+    new RegExp(`/api/v1/threads/${threadId}(/messages)?(\\?.*)?$`),
+    async (route) => {
+      const path = new URL(route.request().url()).pathname;
+
+      const response = await route.fetch();
+
+      if (response.ok()) return route.fulfill({ response });
+      expect(response.status()).toBe(404);
+      held.add(path);
+
+      const delivered = Promise.withResolvers<void>();
+
+      deliveries.push(delivered.promise);
+
+      if (held.size === 2) answered.resolve();
+      await released.promise;
+      await route.fulfill({ response });
+      delivered.resolve();
+    },
+  );
+
+  return {
+    answered: answered.promise,
+    release: () => {
+      released.resolve();
+
+      return Promise.all(deliveries);
+    },
+  };
+}
+
 const SIZES = [
   { label: "desktop", use: { viewport: DESKTOP } },
   { label: "phone", use: PHONE_TOUCH },
@@ -236,6 +275,100 @@ for (const size of SIZES) {
       ).toBeVisible();
       expect(await readable(page.request, shared, USER_IDS.riel)).toBe(false);
     });
+
+    test("a closed thread's reply summary shows its lock before opening it", async ({ page }) => {
+      await control(page.request, "viewer-role", { role: "member" });
+
+      const started: PrivateThreadStarted = await (
+        await control(page.request, "private-thread", {
+          roomId: GENERAL,
+          creatorId: USER_IDS.riel,
+          name: "Closed private discussion",
+          markdown: "A reply in a closed private thread.",
+        })
+      ).json();
+
+      const state = await (await page.request.get("/__mock/state")).json();
+
+      const closed = await page.request.patch(`/api/v1/threads/${started.threadId}`, {
+        headers: { "X-CSRF-Token": state.csrfToken },
+        data: { status: "closed" },
+      });
+
+      expect(closed.ok()).toBe(true);
+      await openAsMember(page, `r/${GENERAL}`);
+      await page.getByRole("button", { name: /^Jump to present$|new messages?$/ }).click();
+
+      const summary = page.getByRole("button", { name: /^Private thread\. 1 reply/ });
+
+      await expect(summary).toHaveCount(1);
+      await summary.evaluate((element) =>
+        element.scrollIntoView({ block: "center", behavior: "instant" }),
+      );
+      await expect(summary.getByRole("img", { name: "Private" })).toBeVisible();
+    });
+
+    for (const retry of [false, true]) {
+      test(`a removed member gets live replies when re-added during ${retry ? "Try again" : "reload"}`, async ({
+        page,
+      }) => {
+        await control(page.request, "viewer-role", { role: "member" });
+
+        const threadId = await mayaStartsPrivate(page.request, {
+          name: "Re-added after reload",
+          markdown: "The original private reply.",
+          withViewer: true,
+        });
+
+        const welcomed = syncWelcomed(page);
+
+        await openAsMember(page, `r/${GENERAL}/t/${threadId}`);
+        await expect(
+          pane(page).getByRole("heading", { name: "Re-added after reload" }),
+        ).toBeVisible();
+        await welcomed;
+        await mayaShares(page.request, threadId, false);
+        await expect(
+          pane(page).getByText("You no longer have access to this private thread."),
+        ).toBeVisible();
+
+        const reconnected = syncWelcomed(page);
+
+        if (retry) {
+          await page.reload();
+          await expect(pane(page).getByRole("alert")).toBeVisible();
+        }
+
+        const denied = await holdDeniedThread(page, threadId);
+
+        if (retry) {
+          await pane(page).getByRole("button", { name: "Try again" }).click();
+        } else {
+          await page.reload();
+        }
+
+        await denied.answered;
+        await reconnected;
+        await expect(pane(page).getByRole("alert")).toHaveCount(0);
+        await mayaShares(page.request, threadId, true);
+        await expect(
+          pane(page).getByRole("heading", { name: "Re-added after reload" }),
+        ).toBeVisible();
+        await expect(pane(page).getByText("The original private reply.")).toBeVisible();
+        await denied.release();
+        await expect(
+          pane(page).getByRole("heading", { name: "Re-added after reload" }),
+        ).toBeVisible();
+        await control(page.request, "thread-post", {
+          threadId,
+          userId: USER_IDS.maya,
+          markdown: "A live reply after re-add, without another reload.",
+        });
+        await expect(
+          pane(page).getByText("A live reply after re-add, without another reload."),
+        ).toBeVisible();
+      });
+    }
 
     test("someone removed and added back gets the open thread back live", async ({ page }) => {
       await control(page.request, "viewer-role", { role: "member" });

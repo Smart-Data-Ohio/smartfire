@@ -106,6 +106,7 @@ fn indicator() -> ThreadIndicator {
         reply_count: 3,
         last_reply_at: "2026-10-06T10:00:00.000Z".into(),
         replier_ids: vec![8, 7],
+        visibility: ThreadVisibility::Public,
     }
 }
 
@@ -150,7 +151,7 @@ fn a_message_carries_its_attachment_reactions_boosts_pin_and_thread() {
     assert_eq!(wire["pinned"], true);
     assert_eq!(
         wire["thread"],
-        json!({"threadId": 88, "replyCount": 3, "lastReplyAt": "2026-10-06T10:00:00.000Z", "replierIds": [8, 7]})
+        json!({"threadId": 88, "replyCount": 3, "lastReplyAt": "2026-10-06T10:00:00.000Z", "replierIds": [8, 7], "visibility": "public"})
     );
     assert_wire(&full, wire);
 }
@@ -929,7 +930,7 @@ fn s2_events_match_the_protocol() {
             json!({"type": "thread.indicator", "data": {
                 "roomId": 12,
                 "parentMessageId": 9001,
-                "thread": {"threadId": 88, "replyCount": 3, "lastReplyAt": "2026-10-06T10:00:00.000Z", "replierIds": [8, 7]},
+                "thread": {"threadId": 88, "replyCount": 3, "lastReplyAt": "2026-10-06T10:00:00.000Z", "replierIds": [8, 7], "visibility": "public"},
             }}),
         ),
         (

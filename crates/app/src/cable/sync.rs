@@ -222,7 +222,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("sync::blocks_updated", &["blocks.updated"]),
     (
         "Broadcasts::message_create",
-        &["message.created", "room.unread", "sidebar.row.upserted"],
+        &["message.created", "room.files.changed", "room.unread", "sidebar.row.upserted"],
     ),
     (
         "Broadcasts::unread_room",
@@ -234,11 +234,11 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     (
         "Broadcasts::message_remove",
-        &["message.removed", "sidebar.row.upserted"],
+        &["message.removed", "room.files.changed", "sidebar.row.upserted"],
     ),
     (
         "Broadcasts::message_replace",
-        &["message.updated", "sidebar.row.upserted"],
+        &["message.updated", "room.files.changed", "sidebar.row.upserted"],
     ),
     (
         "Broadcasts::message_reactions_replace",
@@ -312,6 +312,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "message.created",
             "message.updated",
             "room.unread",
+            "room.files.changed",
             "room.read",
             "message.pinned",
             "thread.unread",
@@ -408,13 +409,14 @@ pub fn message(
         return;
     };
     match campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) {
-        Ok(blockers) => publish_message(server, message, dto, created, &blockers),
+        Ok(blockers) => publish_message(server, conn, message, dto, created, &blockers),
         Err(error) => tracing::warn!(%error, message_id = message.id, "sync: ignore policy not read"),
     }
 }
 
 fn publish_message(
     server: &Cable,
+    conn: &Connection,
     message: &Message,
     mut dto: MessageDTO,
     created: bool,
@@ -438,6 +440,9 @@ fn publish_message(
         ));
     }
     server.sync_publish(publication);
+    if let Some(thread_id) = message.thread_id {
+        room_files_changed(server, conn, thread_id);
+    }
 }
 
 /// Validate publication even without subscribers, before claims or held jobs are released.
@@ -445,7 +450,7 @@ pub fn checked_message(server: &Cable, slot: &RendererSlot, conn: &Connection, m
     let Some(renderer) = slot.0.renderer.get() else { return false; };
     let Some(dto) = renderer.message(conn, message) else { return false; };
     let Ok(blockers) = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) else { return false; };
-    publish_message(server, message, dto, created, &blockers);
+    publish_message(server, conn, message, dto, created, &blockers);
     true
 }
 
@@ -456,7 +461,7 @@ pub fn checked_messages(server: &Cable, slot: &RendererSlot, conn: &Connection, 
     if dtos.len() != messages.len() { return None; }
     let blockers = campfire_db::models::ignore_policy::blockers_for_authors(conn, messages.iter().map(|message| message.creator_id)).ok()?;
     for (message, dto) in messages.iter().zip(dtos) {
-        publish_message(server, message, dto, true, blockers.get(&message.creator_id).map_or(&[], Vec::as_slice));
+        publish_message(server, conn, message, dto, true, blockers.get(&message.creator_id).map_or(&[], Vec::as_slice));
     }
     Some(messages.iter().map(|message| message.id).collect())
 }
@@ -1107,6 +1112,45 @@ fn thread_readers(conn: &Connection, thread: &ChannelThread) -> campfire_db::Res
     ))?;
     Ok(statement.query_map([thread.id, thread.room_id], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?)
+}
+
+fn room_files_changed(server: &Cable, conn: &Connection, thread_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let thread = match ChannelThread::find_by_id(conn, thread_id) {
+        Ok(Some(thread)) => thread,
+        Ok(None) => return,
+        Err(error) => return tracing::warn!(%error, thread_id, "sync: files thread not read"),
+    };
+    let payload = SyncPayload::RoomFilesChanged(campfire_api_types::RoomFilesChanged {
+        room_id: thread.room_id,
+        thread_id: thread.id,
+    });
+    if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private {
+        match thread_readers(conn, &thread) {
+            Ok(readers) => for user_id in readers {
+                send(server, Audience::User(user_id), &payload, |publication| publication);
+            },
+            Err(error) => tracing::warn!(%error, thread_id, "sync: private files readers not resolved"),
+        }
+    } else {
+        send(server, Audience::Topic(room_topic(thread.room_id)), &payload, |publication| publication);
+    }
+}
+
+/// A deleted reply has no message left to render. Resolve its thread's current readers later.
+pub fn room_files_changed_later(server: &Cable, slot: &RendererSlot, thread_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let server = server.downgrade();
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        room_files_changed(&server, conn, thread_id);
+    }));
 }
 
 /// Public metadata follows room/thread topics; private metadata is addressed to current readers.

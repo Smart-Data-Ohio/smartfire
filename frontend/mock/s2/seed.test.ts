@@ -130,6 +130,7 @@ describe("the S2 seed", () => {
       replyCount: 6,
       lastReplyAt: detail.thread.lastActivityAt,
       replierIds: [users.jonah, users.priya, viewer],
+      visibility: "public",
     });
   });
 

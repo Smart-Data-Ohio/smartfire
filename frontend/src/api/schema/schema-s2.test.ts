@@ -73,6 +73,7 @@ const indicatorJson = {
   replyCount: 3,
   lastReplyAt: "2026-10-06T10:00:00.000Z",
   replierIds: [8, 7],
+  visibility: "public",
 } as const;
 
 const messageJson = {

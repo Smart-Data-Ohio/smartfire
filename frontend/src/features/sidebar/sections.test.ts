@@ -120,6 +120,30 @@ describe("sidebarSections", () => {
     ]);
   });
 
+  it("gives boards their own section after Channels, and leaves boards placed by you or starred", () => {
+    const sections = sidebarSections(
+      sidebarOf([
+        row(1, "alpha"),
+        row(2, "roadmap", { kind: "board" }),
+        row(3, "lounge", { kind: "voice" }),
+        row(4, "ideas", { kind: "board" }),
+        row(5, "bugs", { kind: "board", favorite: 0 }),
+        row(6, "launch-board", { kind: "board", category: 7 }),
+      ]),
+    );
+
+    expect(
+      sections.map((section) => [section.key, section.title, section.rows.map((r) => r.room.id)]),
+    ).toEqual([
+      ["favorites", "Favourites", [5]],
+      ["category-7", "Projects", [6]],
+      ["channels", "Channels", [1]],
+      ["boards", "Boards", [2, 4]],
+      ["voice", "Voice", [3]],
+      ["direct", "Direct messages", []],
+    ]);
+  });
+
   it("keeps every category, Channels and Direct messages even when empty", () => {
     expect(sidebarSections(sidebarOf([])).map((section) => section.key)).toEqual([
       "category-7",
@@ -184,6 +208,8 @@ describe("sidebarSections with the shared layout", () => {
         { roomId: 7, workspaceCategoryId: 30, position: 2 },
         { roomId: 8, workspaceCategoryId: 31, position: 1 },
         { roomId: 9, workspaceCategoryId: null, position: 0 },
+        { roomId: 10, workspaceCategoryId: 30, position: 3 },
+        { roomId: 11, workspaceCategoryId: null, position: 0 },
       ],
     };
 
@@ -211,6 +237,8 @@ describe("sidebarSections with the shared layout", () => {
     row(7, "stage", { kind: "stage" }),
     row(8, "Ada", { kind: "direct" }),
     row(9, "lounge", { kind: "voice" }),
+    row(10, "roadmap", { kind: "board" }),
+    row(11, "ideas", { kind: "board" }),
   ];
 
   const layoutOf = (sections: ReturnType<typeof sidebarSections>) =>
@@ -222,8 +250,10 @@ describe("sidebarSections with the shared layout", () => {
       ["category-7", [6]],
       // Support (position 0) before Product; Support's room 6 is in a personal category and a
       // direct message never takes a shared place, so it has nothing left to show.
-      ["shared-30", [4, 7]],
+      // A board the administrators put in a shared category stays there; the rest get Boards.
+      ["shared-30", [4, 7, 10]],
       ["channels", [2, 1, 3]],
+      ["boards", [11]],
       ["voice", [9]],
       ["direct", [8]],
     ]);
@@ -237,6 +267,7 @@ describe("sidebarSections with the shared layout", () => {
       "shared-30",
       "shared-32",
       "channels",
+      "boards",
       "voice",
       "direct",
     ]);
