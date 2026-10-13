@@ -92,6 +92,22 @@ pub fn callback(
     url.into()
 }
 
+pub fn error_callback(
+    redirect: &str,
+    state: Option<&str>,
+    issuer: &str,
+    error: &str,
+    description: Option<&str>,
+) -> String {
+    let mut url = url::Url::parse(&callback(redirect, state, issuer, "error", error))
+        .expect("validated redirect");
+    if let Some(description) = description {
+        url.query_pairs_mut()
+            .append_pair("error_description", description);
+    }
+    url.into()
+}
+
 #[derive(Serialize)]
 pub struct TokenPair {
     pub access_token: String,
@@ -173,7 +189,9 @@ pub fn audit(
 pub struct CodeExchange<'a> {
     pub code: &'a str,
     pub client_id: &'a str,
-    pub redirect_uri: &'a str,
+    /// OAuth 2.1 section 10.2 omits this token-request parameter.
+    /// A supplied value still matches exactly for OAuth 2.0 compatibility.
+    pub redirect_uri: Option<&'a str>,
     pub verifier: &'a str,
     pub resource: &'a str,
     pub method_none: bool,
@@ -203,7 +221,9 @@ pub fn exchange_code(tx: &mut Tx<'_>, input: CodeExchange<'_>) -> Result<Option<
         && bool::from(challenge.as_bytes().ct_eq(auth.code_challenge.as_bytes()));
     if !input.method_none
         || !client_valid(tx, &connection, input.client_id)?
-        || auth.redirect_uri != input.redirect_uri
+        || input
+            .redirect_uri
+            .is_some_and(|uri| uri != auth.redirect_uri)
         || auth.resource != input.resource
         || !verifier_valid
     {

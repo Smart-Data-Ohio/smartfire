@@ -84,8 +84,8 @@ async fn owned(c: &Ctx, owner_id: i64) -> Result<Agent> {
         .await
         .map_err(saved_error)
 }
-const DISABLED: &str = "MemberAgentsDisabled";
-const DISABLED_MESSAGE: &str = "Personal agents are turned off for this workspace.";
+pub(crate) const DISABLED: &str = "MemberAgentsDisabled";
+pub(crate) const DISABLED_MESSAGE: &str = "Personal agents are turned off for this workspace.";
 pub(crate) const LIMIT: &str = "MemberAgentLimitReached";
 const LIMIT_MESSAGE: &str = "personal agent limit reached";
 pub(crate) fn enabled(conn: &Connection) -> campfire_db::Result<()> {

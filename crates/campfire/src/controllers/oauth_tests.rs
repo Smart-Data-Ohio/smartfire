@@ -1220,3 +1220,186 @@ async fn oauth_consent_obeys_workspace_switch_even_for_existing_agent() {
         1
     );
 }
+
+fn authorize_with_state(redirect: &str, state: &str) -> String {
+    let mut url = url::Url::parse(&format!(
+        "http://campfire.test{}",
+        authorize_url(CLIENT, redirect)
+    ))
+    .unwrap();
+    let pairs = url
+        .query_pairs()
+        .into_owned()
+        .map(|(key, value)| {
+            let value = if key == "state" {
+                state.to_string()
+            } else {
+                value
+            };
+            (key, value)
+        })
+        .collect::<Vec<_>>();
+    url.set_query(None);
+    url.query_pairs_mut().extend_pairs(pairs);
+    format!("/oauth/authorize?{}", url.query().unwrap())
+}
+
+#[tokio::test]
+async fn oauth_review_long_encoded_return_url_redirects_without_overflowing_signed_out_cookie() {
+    let f = fixture(metadata()).await;
+    let state = "/".repeat(1400);
+    let path = authorize_with_state(REDIRECT, &state);
+    assert!(path.len() > 4500);
+    let mut browser = f.app.anonymous();
+    let reply = browser.get(&path).await;
+    assert_eq!(
+        reply.status.as_u16(),
+        302,
+        "long state must return an OAuth error, not a cookie overflow: {}",
+        reply.text()
+    );
+    let callback = url::Url::parse(reply.location().unwrap()).unwrap();
+    assert_eq!(callback.host_str(), Some("client.example"));
+    assert_eq!(callback.path(), "/callback");
+    let query = callback
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(query.get("error").unwrap(), "invalid_request");
+    assert_eq!(query.get("state").unwrap(), &state);
+    assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+    assert!(browser.cookie_header().len() < 4096);
+    assert_eq!(
+        f.app
+            .db()
+            .read(|conn| Ok(conn.query_row(
+                "SELECT COUNT(*) FROM oauth_authorizations",
+                [],
+                |r| r.get::<_, i64>(0)
+            )?))
+            .await
+            .unwrap(),
+        0
+    );
+    let untrusted = browser
+        .get(&authorize_with_state(
+            "https://attacker.example/callback",
+            &state,
+        ))
+        .await;
+    assert_eq!(untrusted.status.as_u16(), 302);
+    assert!(
+        url::Url::parse(untrusted.location().unwrap())
+            .unwrap()
+            .path()
+            .starts_with("/app/oauth/error")
+    );
+    let shorter = browser
+        .get(&authorize_with_state(REDIRECT, &"/".repeat(400)))
+        .await;
+    assert_eq!(shorter.status.as_u16(), 302);
+    assert!(shorter.location().unwrap().contains("/app/session/new"));
+    assert_eq!(browser.get("/app/session/new").await.status.as_u16(), 200);
+}
+
+#[tokio::test]
+async fn oauth_review_code_exchange_allows_omitted_redirect_uri_and_binds_present_values() {
+    let f = fixture(metadata()).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    for redirect in [None, Some(REDIRECT)] {
+        let code = approve(&mut owner, CLIENT, REDIRECT).await;
+        // Supplied redirects still match exactly, including a supplied empty value.
+        for wrong in ["", "https://client.example/wrong"] {
+            invalid(exchange(&f.app, &code, CLIENT, wrong, VERIFIER, RESOURCE).await);
+        }
+        let mut pairs = vec![
+            ("grant_type", "authorization_code"),
+            ("code", &code),
+            ("client_id", CLIENT),
+            ("code_verifier", VERIFIER),
+            ("resource", RESOURCE),
+        ];
+        if let Some(redirect) = redirect {
+            pairs.push(("redirect_uri", redirect));
+        }
+        for (field, value) in [
+            ("code", "unknown"),
+            ("client_id", "https://wrong.example/client.json"),
+            ("resource", "https://wrong.example/agents/mcp"),
+            ("code_verifier", "wrong"),
+        ] {
+            let mut invalid_pairs = pairs.clone();
+            for (key, parameter) in &mut invalid_pairs {
+                if *key == field {
+                    *parameter = value;
+                }
+            }
+            invalid(
+                f.app
+                    .anonymous()
+                    .send(Req::new(Method::POST, "/oauth/token").form(&invalid_pairs))
+                    .await,
+            );
+        }
+        let reply = f
+            .app
+            .anonymous()
+            .send(Req::new(Method::POST, "/oauth/token").form(&pairs))
+            .await;
+        assert_eq!(
+            reply.status.as_u16(),
+            200,
+            "omitted or matching redirect_uri must exchange the code: {}",
+            reply.text()
+        );
+        assert_eq!(reply.json()["token_type"], "Bearer");
+        assert_eq!(
+            mcp(&f.app, reply.json()["access_token"].as_str().unwrap())
+                .await
+                .status
+                .as_u16(),
+            200
+        );
+    }
+}
+
+#[tokio::test]
+async fn oauth_review_disabled_personal_agents_redirect_access_denied_to_trusted_client() {
+    let f = fixture(metadata()).await;
+    f.app.db().write(|tx| {
+        tx.conn().execute("UPDATE accounts SET settings=json_set(COALESCE(settings,'{}'),'$.member_agents_enabled',json('false'))", [])?;
+        Ok(())
+    }).await.unwrap();
+    let mut owner = f.app.sign_in(DAVID).await;
+    let reply = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    assert_eq!(
+        reply.status.as_u16(),
+        302,
+        "workspace refusal must complete the OAuth callback: {}",
+        reply.text()
+    );
+    let callback = url::Url::parse(reply.location().unwrap()).unwrap();
+    assert_eq!(callback.host_str(), Some("client.example"));
+    assert_eq!(callback.path(), "/callback");
+    let query = callback
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(query.get("error").unwrap(), "access_denied");
+    assert_eq!(
+        query.get("error_description").unwrap(),
+        "Personal agents are turned off for this workspace."
+    );
+    assert_eq!(query.get("state").unwrap(), "opaque state & value");
+    assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+    assert_eq!(
+        f.app
+            .db()
+            .read(|conn| Ok(conn.query_row(
+                "SELECT COUNT(*) FROM oauth_authorizations",
+                [],
+                |r| r.get::<_, i64>(0)
+            )?))
+            .await
+            .unwrap(),
+        0
+    );
+}

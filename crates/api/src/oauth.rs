@@ -115,9 +115,15 @@ fn error_page(c: &mut Ctx, error: &str) -> Result {
     // Only a server-owned error code enters this URL; no untrusted redirect or remote logo.
     c.redirect_to(&format!("/app/oauth/error?error={error}"))
 }
-fn authorization_error(c: &mut Ctx, redirect: &str, state: Option<&str>, error: &str) -> Result {
+fn authorization_error(
+    c: &mut Ctx,
+    redirect: &str,
+    state: Option<&str>,
+    error: &str,
+    description: Option<&str>,
+) -> Result {
     c.redirect_to_with(
-        &oauth::callback(redirect, state, &issuer(c), "error", error),
+        &oauth::error_callback(redirect, state, &issuer(c), error, description),
         campfire_kit::Redirect {
             allow_other_host: true,
             ..Default::default()
@@ -155,7 +161,9 @@ async fn authorize(c: &mut Ctx) -> Result {
         Some("unsupported_response_type")
     } else if c.param_str("code_challenge_method") != Some("S256")
         || !oauth::valid_challenge(&challenge)
-        || state.as_ref().is_some_and(|s| s.len() > 2048)
+        // Leave room for encryption metadata and the other sign-in session keys.
+        // The saved return URL includes percent encoding, not just decoded state.
+        || c.request.url().len() > 2048
     {
         Some("invalid_request")
     } else if c
@@ -172,22 +180,38 @@ async fn authorize(c: &mut Ctx) -> Result {
         None
     };
     if let Some(error) = bad {
-        return authorization_error(c, &redirect, state.as_deref(), error);
+        return authorization_error(c, &redirect, state.as_deref(), error, None);
     }
     concerns::before_actions(c, Before::default()).await?;
     let owner = concerns::require_current_user(c)?.clone();
     if !owner.is_active() || owner.is_bot() {
-        return authorization_error(c, &redirect, state.as_deref(), "access_denied");
+        return authorization_error(c, &redirect, state.as_deref(), "access_denied", None);
     }
     throttle(c, &format!("authorize:{}", owner.id), 30)?;
     let public_id = oauth::secret();
     let id = public_id.clone();
-    c.app().db.write(move |tx|{
+    let error_redirect = redirect.clone();
+    let error_state = state.clone();
+    let authorization = c.app().db.write(move |tx|{
         crate::me_agents::enabled(tx.conn())?;
         let client=OAuthClient::find(tx.conn(),client.id)?.filter(|client|client.blocked_at.is_none()).ok_or(campfire_db::Error::RecordNotFound("OAuthClient"))?;
         let sql = "INSERT INTO oauth_authorizations(public_id,oauth_client_id,user_id,redirect_uri,state,code_challenge,scope,resource,expires_at,created_at,updated_at) VALUES(?,?,?,?,?,?,'agent',?,?,?,?)";
         tx.conn().execute(sql, params![id,client.id,owner.id,redirect,state,challenge,resource,tx.now().since(jiff::SignedDuration::from_secs(600)),tx.now(),tx.now()])?;Ok(())
-    }).await.map_err(crate::me_agents::saved_error)?;
+    }).await;
+    match authorization {
+        Ok(()) => {}
+        Err(campfire_db::Error::Other(message)) if message == crate::me_agents::DISABLED => {
+            return authorization_error(
+                c,
+                &error_redirect,
+                error_state.as_deref(),
+                "access_denied",
+                Some(crate::me_agents::DISABLED_MESSAGE),
+            );
+        }
+        Err(error) => return Err(crate::me_agents::saved_error(error)),
+    }
+
     c.redirect_to(&format!("/app/oauth/consent/{public_id}"))
 }
 fn public_id(c: &Ctx) -> String {
@@ -382,7 +406,7 @@ async fn token(c: &mut Ctx) -> Result {
                     oauth::CodeExchange {
                         code: value("code"),
                         client_id: value("client_id"),
-                        redirect_uri: value("redirect_uri"),
+                        redirect_uri: input.get("redirect_uri").map(String::as_str),
                         verifier: value("code_verifier"),
                         resource: value("resource"),
                         method_none,
