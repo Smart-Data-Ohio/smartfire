@@ -268,7 +268,7 @@ impl Agent {
         if a.kind == AgentKind::Personal
             && exists(
                 conn,
-                "SELECT 1 FROM agent_grants g LEFT JOIN rooms r ON r.id=g.room_id WHERE g.agent_id=? AND (g.capability NOT IN ('read_messages','post_messages','react','manage_threads') OR g.room_id IS NULL OR r.type='Rooms::Direct')",
+                "SELECT 1 FROM agents previous_agent JOIN agent_grants g ON g.agent_id=previous_agent.id LEFT JOIN rooms r ON r.id=g.room_id WHERE previous_agent.id=? AND previous_agent.kind!='personal' AND (g.capability NOT IN ('read_messages','post_messages','react','manage_threads') OR g.room_id IS NULL OR r.type='Rooms::Direct')",
                 [exclude],
             )?
         {

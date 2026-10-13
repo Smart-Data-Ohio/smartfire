@@ -63,6 +63,9 @@ pub fn open_and_post(
     if !target.is_active() {
         return Ok(fail("Cannot open a DM with an inactive account", 422));
     }
+    if agent.kind == crate::AgentKind::Personal && !agent.active(tx.conn())? {
+        return Ok(fail("Forbidden: agent lacks post_messages capability", 403));
+    }
     let members = [agent.user_id, target.id];
     let existing = Room::find_direct_for(tx.conn(), &members)?;
     if existing.is_none() {
@@ -88,7 +91,7 @@ pub fn open_and_post(
     } else {
         Room::find_or_create_direct_for(tx, &members, agent.user_id)?
     };
-    if !new_room
+    if (!new_room || agent.kind == crate::AgentKind::Personal)
         && !agent_access::capability_for_agent(tx.conn(), agent.id, "post_messages", Some(room.id))?
     {
         return Ok(fail("Forbidden: agent lacks post_messages capability", 403));

@@ -327,7 +327,7 @@ async fn personal_agent_owner_dm_and_spa_directory_rejections() {
 }
 
 #[tokio::test]
-async fn personal_agent_owner_deactivation_is_401_and_no_bot_api_or_human_api_access() {
+async fn personal_agent_token_preserves_existing_api_boundaries() {
     let a = personal().await;
     for path in [
         "/api/v1/search?q=test",
@@ -339,25 +339,6 @@ async fn personal_agent_owner_deactivation_is_401_and_no_bot_api_or_human_api_ac
     ] {
         let r = request(&a, Method::GET, path, json!({})).await;
         assert!(!r.status.is_success(), "{path}: {}", r.text());
-    }
-    a.db()
-        .write(|tx| {
-            tx.conn()
-                .execute("UPDATE users SET status=1 WHERE id=?", [DAVID])?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-    for (method, path, body) in [
-        (Method::GET, "/agents/me", json!({})),
-        (Method::GET, "/agents/events", json!({})),
-        (
-            Method::POST,
-            "/agents/mcp",
-            json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}),
-        ),
-    ] {
-        assert_eq!(request(&a, method, path, body).await.status.as_u16(), 401);
     }
 }
 

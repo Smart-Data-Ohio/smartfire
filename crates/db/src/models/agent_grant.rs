@@ -85,14 +85,19 @@ impl AgentGrant {
         if !exists(conn, "SELECT 1 FROM users WHERE id=?", [a.granted_by_id])? {
             errors.add("granted_by", "must exist");
         }
+        let shape_changed = !exists(
+            conn,
+            "SELECT 1 FROM agent_grants WHERE id=? AND agent_id=? AND room_id IS ? AND capability=?",
+            params![exclude, a.agent_id, a.room_id, a.capability],
+        )?;
         let blank = campfire_richtext::ruby::is_blank(&a.capability);
-        if blank {
+        if shape_changed && blank {
             errors.add("capability", "can't be blank");
         }
-        if !CAPABILITIES.contains(&a.capability.as_str()) {
+        if shape_changed && !CAPABILITIES.contains(&a.capability.as_str()) {
             errors.add("capability", "is not included in the list");
         }
-        if exists(
+        if shape_changed && exists(
             conn,
             "SELECT 1 FROM agents WHERE id=? AND kind='personal'",
             [a.agent_id],
@@ -111,7 +116,7 @@ impl AgentGrant {
             }
         }
         // Rails room_id? queries an integer attribute: zero is false.
-        if let Some(id) = a.room_id
+        if shape_changed && let Some(id) = a.room_id
             && id != 0
             && !exists(conn, "SELECT 1 FROM rooms WHERE id=?", [id])?
         {
@@ -127,7 +132,7 @@ impl AgentGrant {
         {
             errors.add("capability", "has already been granted");
         }
-        if a.capability == "dm_anyone" && a.room_id.is_some() {
+        if shape_changed && a.capability == "dm_anyone" && a.room_id.is_some() {
             errors.add(
                 "room",
                 "must be blank: dm_anyone is granted workspace-wide only",
@@ -190,18 +195,6 @@ impl AgentGrant {
         if self.revoked_at.is_some() {
             return Ok(());
         }
-        Self::validate(
-            tx.conn(),
-            &NewGrant {
-                agent_id: self.agent_id,
-                room_id: self.room_id,
-                capability: self.capability.clone(),
-                granted_by_id: self.granted_by_id,
-                revoked_at: Some(tx.now()),
-            },
-            Some(self.id),
-        )?
-        .into_result()?;
         tx.conn().execute(
             "UPDATE agent_grants SET revoked_at=?,updated_at=? WHERE id=?",
             params![tx.now(), tx.now(), self.id],

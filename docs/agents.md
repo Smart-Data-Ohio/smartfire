@@ -139,17 +139,19 @@ array with the message payload resolved at query time. The last
 scanned row id travels in the `X-Smartfire-Next-Since` response
 header, which the client passes back as `since` to page forward; pass
 `?envelope=1` for the `{ events: [...], next_since: <id> }` object
-form instead. Rows for messages the agent can no longer read
-(membership or grant revoked, message deleted) are omitted, and so are
-work rows whose thread is gone without a snapshot — but every scanned
-row still advances the cursor, so a fully dropped page returns no rows
-with a cursor that moves past them. A deleted thread's
+form instead. The live event policy filters unauthorized rows before
+pagination. A selected row whose payload is unavailable still advances
+the cursor, so a fully dropped payload page can return no rows with a
+cursor that moves past them. A deleted thread's
 `work_unassigned` row is the exception: it returns its pre-destroy
 snapshot marked `thread_deleted: true`.
 `POST /agents/events/:id/ack` marks a row `acknowledged` and is
-idempotent. Both require `read_messages`
-(`Agent#has_capability_anywhere?` at the endpoint, per-room `Agent#can?`
-per row and per ack).
+idempotent. The polling endpoint and MCP `poll_events` require
+`read_messages` in at least one accessible room as an entry check.
+Polling, acknowledgment, and webhook attempts use the same live
+authorization for each row. Message and work events require
+`read_messages` in their room. Approval decisions and action completions
+require `external_action` in the approval's scope, as described below.
 
 Message event rows carry a `pull_request` key: the PR context object when
 the message lives in a pull-request discussion thread, explicit null
@@ -400,8 +402,23 @@ to 24 hours after creation; the agent may request 5 minutes to 7 days via
 
 Every endpoint requires the `external_action` capability: in the request's
 room when a room is given, workspace-wide when none is. A missing grant is
-403 with the same error shape as event polling. Polling and acking
-decisions additionally require `read_messages`, like other event rows.
+403. Seeds and workspace-agent creation do not grant `external_action`
+automatically. An administrator must issue the grant explicitly.
+
+The `approval_decided`, `github_action_completed`, and
+`fizzy_action_completed` events require a live `external_action` grant
+for the approval's room. A workspace-wide grant also covers that room.
+Polling retains its separate `read_messages` entry check described above.
+Acknowledgment and webhook delivery use the per-event authorization.
+Room-scoped actions require current room membership and thread access.
+An approval without a room requires a workspace-wide grant, including
+Fizzy action approvals.
+
+Revoking the effective grant hides these events from polling, refuses
+acknowledgment, and prevents queued or retried webhook delivery. This
+also applies to decisions and completions for actions already requested
+or started before revocation. The stored approval and event rows remain
+in the ledger. Personal agents cannot hold `external_action`.
 
 - `POST /agents/approvals` creates a request (201 with `id`, `status`,
   `expires_at`). A repeated `external_id` returns the existing row with
@@ -457,7 +474,8 @@ A human decision appends an `agent_events` row of deliverable type
 `approval_decided` with `metadata: { approval_id, status, decided_by,
 note }`, `outcome: delivered`, and no `message_id`. `GET /agents/events`
 returns it with an `approval` payload instead of `message`, and `ack`
-works on it. The decision enqueues a webhook POST when configured,
+works on it while the approval's grant remains live. The decision
+enqueues a webhook POST when configured and currently authorized,
 after the decision transaction commits so the decider's request never
 waits on it, with the same additive `agent` key plus an `approval` key
 carrying the same fields. Agent cancellation appends no event. Rate
@@ -475,7 +493,8 @@ identity, endpoint, gates, and execution rules.
 When a `github.*` request is approved, the server performs the action
 with the agent's own linked GitHub account and appends a
 `github_action_completed` event to the agent's ledger: non-message,
-room-scoped, `outcome: delivered`, always readable by its own agent,
+room-scoped, `outcome: delivered`, readable while its own agent holds
+`external_action` for the approval's room,
 with `metadata` carrying `approval_id`, `action`, `status` (`completed`
 or `failed`), the GitHub `url` when completed, or a `message` when
 failed. `GET /agents/events` returns it with a `github_action` key
@@ -540,8 +559,9 @@ rejects writes from read tokens with 401; only a truly rejected token
 disconnects it.
 
 Every outcome appends a `fizzy_action_completed` event to the agent's
-ledger: non-message, `outcome: delivered`, always readable by its own
-agent, with `metadata` carrying `approval_id`, `action`, `status`
+ledger: non-message, `outcome: delivered`, readable while its own agent
+holds workspace-wide `external_action`, with `metadata` carrying
+`approval_id`, `action`, `status`
 (`completed` or `failed`), the Fizzy `url` when completed, or a
 `message` when failed. `GET /agents/events` returns it with a
 `fizzy_action` key instead of `message`, `ack` works on it, the
