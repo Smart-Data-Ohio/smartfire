@@ -50,7 +50,7 @@
     },
     {
       "name": "post_message",
-      "description": "Post a message to a room, or a reply inside a thread (thread_id). One of body or markdown_source is required; reply_to_message_id targets a message in the same conversation. Requires post_messages.",
+      "description": "Post a message to a room, or a reply inside a thread (thread_id). One of body, markdown_source or sticker_id is required; reply_to_message_id targets a message in the same conversation. Requires post_messages.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -61,6 +61,10 @@
           "thread_id": {
             "type": "integer",
             "description": "Thread to reply inside."
+          },
+          "sticker_id": {
+            "type": "integer",
+            "description": "Catalog sticker id, with or without a text caption."
           },
           "body": {
             "type": "string",

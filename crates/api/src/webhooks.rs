@@ -312,6 +312,7 @@ async fn test_webhook(c: &mut Ctx) -> Result {
         None,
         api::ExecuteWebhook {
             content: Some("This is a test webhook message.".into()),
+            sticker_id: None,
             username: None,
             embeds: Vec::new(),
         },
@@ -485,6 +486,7 @@ fn validate(c: &mut Ctx, input: &mut api::ExecuteWebhook, files: usize) -> Resul
     if input.content.as_ref().is_none_or(|s| s.trim().is_empty())
         && input.embeds.is_empty()
         && files == 0
+        && input.sticker_id.is_none()
     {
         return invalid(c, "content", "requires content, embeds or files");
     }
@@ -518,6 +520,7 @@ async fn deliver(
     c.set_current(concerns::CurrentUser(author));
     let parameters = MessageParams {
         markdown_source: Some(input.content.unwrap_or_default()),
+        sticker_id: input.sticker_id,
         attachments: files,
         webhook: Some(WebhookMessage::Post {
             webhook_id: hook.id,
