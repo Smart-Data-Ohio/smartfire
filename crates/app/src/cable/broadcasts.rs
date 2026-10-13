@@ -322,6 +322,9 @@ impl Broadcasts {
     /// MessagesController#destroy and `User#remove_banned_content`.
     pub fn message_remove(&self, room: &Room, message: &Message) {
         sync::message_removed(&self.server, message);
+        if let Some(thread_id) = message.thread_id {
+            sync::room_files_changed_later(&self.server, &self.sync, thread_id);
+        }
         // Its unread count and pings, and their inbox items, went with it; every member's row
         // is read afresh, which also moves a direct row's preview back to the message before.
         sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);

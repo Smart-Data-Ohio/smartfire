@@ -23,6 +23,7 @@ import {
 import { RoomId, ThreadId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
 import { RoomCategoryRemoved } from "./organize.ts";
+import { RoomFilesChanged } from "./panes.ts";
 import { BlockState } from "./people.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { UserPresence } from "./presence.ts";
@@ -119,6 +120,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ type: Schema.Literal("message.cards"), data: MessageCards }),
   Schema.Struct({ type: Schema.Literal("events.changed"), data: EventsChanged }),
+  Schema.Struct({ type: Schema.Literal("room.files.changed"), data: RoomFilesChanged }),
   Schema.Struct({ type: Schema.Literal("agent.status"), data: AgentStatusChanged }),
   Schema.Struct({ type: Schema.Literal("agent.steps"), data: AgentStepsChanged }),
   Schema.Struct({ type: Schema.Literal("approval.updated"), data: ApprovalUpdated }),
@@ -223,6 +225,11 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.cards"), data: MessageCards }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("events.changed"), data: EventsChanged }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("room.files.changed"),
+    data: RoomFilesChanged,
+  }),
   Schema.Struct({
     ...eventFields,
     type: Schema.Literal("agent.status"),

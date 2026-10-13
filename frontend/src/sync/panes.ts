@@ -10,19 +10,64 @@ import type { StarState } from "../gen/StarState.ts";
 import { mutations } from "../store/store.ts";
 import { onRoomRefresh } from "./room-refresh.ts";
 import { runAction } from "./runtime.ts";
-import { onSyncEvents } from "./signals.ts";
+import { onResync, onSyncEvents } from "./signals.ts";
 
 export type { FileQuery };
 
 export const panes = {
   /** Mounted member readers reload only after a room-management change. */
   onRoomRefresh,
-  /** Includes edits outside loaded timelines, with the message's complete attachment list. */
-  onMessageUpdate: (roomId: number, listener: (message: MessageDTO) => void): (() => void) =>
+  /**
+   * A room message posted or changed, with its complete attachment list. Includes posts and
+   * edits outside loaded timelines; `created` tells a fresh post from an edit.
+   */
+  onMessageChange: (
+    roomId: number,
+    listener: (message: MessageDTO, created: boolean) => void,
+  ): (() => void) =>
     onSyncEvents((events) => {
       for (const event of events) {
-        if (event.type === "message.updated" && event.data.roomId === roomId) {
-          listener(event.data);
+        if (
+          (event.type === "message.created" || event.type === "message.updated") &&
+          event.data.roomId === roomId
+        ) {
+          listener(event.data, event.type === "message.created");
+        }
+      }
+    }),
+  /** A room message deleted, by id. Its files go with it. */
+  onMessageRemoved: (roomId: number, listener: (messageId: number) => void): (() => void) =>
+    onSyncEvents((events) => {
+      for (const event of events) {
+        if (event.type === "message.removed" && event.data.roomId === roomId) {
+          listener(event.data.id);
+        }
+      }
+    }),
+  /** A reply changed files without publishing its message on the room topic. */
+  onFilesChanged: (roomId: number, listener: () => void): (() => void) => {
+    const stopEvents = onSyncEvents((events) => {
+      if (
+        events.some((event) => event.type === "room.files.changed" && event.data.roomId === roomId)
+      ) {
+        listener();
+      }
+    });
+
+    const stopResync = onResync((topics) => {
+      if (topics.includes("user") || topics.includes(`room:${roomId}`)) listener();
+    });
+
+    return () => {
+      stopEvents();
+      stopResync();
+    };
+  },
+  onThreadRemoved: (roomId: number, listener: (threadId: number) => void): (() => void) =>
+    onSyncEvents((events) => {
+      for (const event of events) {
+        if (event.type === "thread.removed" && event.data.roomId === roomId) {
+          listener(event.data.threadId);
         }
       }
     }),
