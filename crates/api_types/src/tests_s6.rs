@@ -170,6 +170,7 @@ fn the_new_post_form_and_create_round_trip() {
                 attachment_signed_ids: None,
             attachment_spoilers: None,
                 drive_file_ids: None,
+            gif_slug: None,
             }),
         },
         json!({

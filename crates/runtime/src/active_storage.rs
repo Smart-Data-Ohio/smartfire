@@ -1128,7 +1128,7 @@ pub async fn create_direct_upload(
         return halt(upload_limit_response(c, limit)?);
     }
     if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_"));
+        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_") && !key.starts_with("klipy_"));
     }
     metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();
@@ -1392,6 +1392,34 @@ fn random_hex(bytes: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use campfire_storage::klipy::{MARK_KEY, import_mark, verified_image_import};
+
+    #[test]
+    fn klipy_import_provenance_is_bound_to_the_blob_purpose_and_image_type() {
+        let verifier = campfire_storage::AppMessageVerifier::new(vec![7; 64]);
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        conn.execute_batch(campfire_db::schema::SCHEMA_SQL).unwrap();
+        let now = jiff::Timestamp::now();
+        let mut blob = campfire_storage::NewBlob::unfurl(b"image", Filename::new("image.gif"), Some("image/gif"), "local", false).insert(&conn, now).unwrap();
+        blob.metadata.set("klipy_id", Json::String("anything".into()));
+        assert!(!verified_image_import(&verifier, &blob, now));
+        blob.metadata.set(MARK_KEY, Json::String("forged".into()));
+        assert!(!verified_image_import(&verifier, &blob, now));
+        let wrong_purpose = campfire_storage::Verifier::generate(&verifier, &Json::String(blob.key.clone()).encode(), "blob_key", None);
+        blob.metadata.set(MARK_KEY, Json::String(wrong_purpose));
+        assert!(!verified_image_import(&verifier, &blob, now));
+        blob.metadata.set(MARK_KEY, Json::String(import_mark(&verifier, "another-blob")));
+        assert!(!verified_image_import(&verifier, &blob, now));
+        blob.metadata.set(MARK_KEY, Json::String(import_mark(&verifier, &blob.key)));
+        for content_type in ["image/gif", "image/webp"] {
+            blob.content_type = Some(content_type.into());
+            assert!(verified_image_import(&verifier, &blob, now));
+        }
+        for content_type in ["image/png", "image/jpeg", "video/mp4", "application/octet-stream"] {
+            blob.content_type = Some(content_type.into());
+            assert!(!verified_image_import(&verifier, &blob, now));
+        }
+    }
 
     #[test]
     fn branding_analysis_rejects_client_metadata() {

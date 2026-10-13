@@ -222,7 +222,7 @@ impl Default for AttachmentPolicy {
 }
 
 /// What `create_with_attachment!`/`update!` receive.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct MessageParams {
     pub clear_markdown_source: bool,
     pub sticker_id: Option<i64>,
@@ -232,6 +232,7 @@ pub struct MessageParams {
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub attachments: Vec<Assignment>,
+    pub staged_attachments: Vec<Staged>,
     pub attachment_spoilers: Vec<bool>,
     pub attachment_policy: AttachmentPolicy,
     pub client_message_id: Option<String>,
@@ -526,12 +527,15 @@ pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64,
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
-    let files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    let mut files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    let recheck_access = !attributes.staged_attachments.is_empty();
+    files.extend(attributes.staged_attachments.into_iter().map(Assignment::Create));
     let storage = c.app().storage.clone();
     let outcome = c
         .app()
         .db
         .write(move |tx| {
+            if recheck_access { require_current_posting_access(tx, room_id, creator_id)?; }
             if let Some(client_message_id) = attributes.client_message_id.as_deref()
                 && let Some(duplicate) = Message::find_duplicate(tx.conn(), room_id, creator_id, client_message_id)?
             {
@@ -614,7 +618,9 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
     if matches!(attachment, Assignment::Invalid) {
         return Err(invalid_attachment());
     }
-    let files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    let mut files = attachments::stage_many(c.app(), attributes.attachments, concerns::require_current_user(c)?.id).await?;
+    let recheck_access = !attributes.staged_attachments.is_empty();
+    files.extend(attributes.staged_attachments.into_iter().map(Assignment::Create));
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
@@ -624,6 +630,17 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
         .app()
         .db
         .write(move |tx| {
+            let room = if recheck_access { require_current_posting_access(tx, room_id, creator_id)? } else { room };
+            let thread = if recheck_access {
+                thread.map(|thread| {
+                    let thread = campfire_db::ChannelThread::find(tx.conn(), thread.id)?;
+                    if thread.room_id != room_id || !thread.readable_by(tx.conn(), creator_id)? {
+                        return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+                    }
+                    Ok(thread)
+                }).transpose()?
+            } else { thread };
+
             if replay_duplicate
                 && let Some(client_message_id) = attributes.client_message_id.as_deref()
                 && let Some(duplicate) = Message::find_duplicate(tx.conn(), room_id, creator_id, client_message_id)?
@@ -637,6 +654,9 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
                     Some(PostingCheck::Allowed) => {},
                     None => attributes.client_message_id = None,
                 }
+            }
+            if recheck_access && thread.as_ref().is_some_and(|thread| thread.locked_at.is_some()) {
+                return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
             }
             let blob = attachment_blob(tx, attachment, attributes.attachment_policy, "attachment_signed_id")?;
             let mut files = attachment_blobs(tx, files, attributes.attachment_policy)?;
@@ -683,6 +703,17 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
         }
         outcome => Ok(outcome),
     }
+}
+
+pub fn require_current_posting_access(tx: &campfire_db::Tx<'_>, room_id: i64, creator_id: i64) -> campfire_db::Result<Room> {
+    let room = Room::find(tx.conn(), room_id)?;
+    if room.deleted_at.is_some()
+        || campfire_db::Membership::find_by_room_and_user(tx.conn(), room_id, creator_id)?.is_none()
+        || !campfire_db::User::find(tx.conn(), creator_id)?.is_active()
+    {
+        return Err(campfire_db::Error::RecordNotFound("Room"));
+    }
+    Ok(room)
 }
 
 /// Resolve and claim an upload inside the same writer transaction that attaches it.

@@ -112,9 +112,14 @@ in a dry run), then calls `configure-google.py` after successful cutover and bef
 `finish` removes the read-only registry credential. This second ONCE update keeps
 the same pinned image and storage and merges the complete existing environment.
 It verifies all old runtime values and non-environment settings, with only the
-six declared Google/URL values allowed to change. Automatic image updates remain
-disabled. See [Google setup](../../docs/google-workspace-setup.md) for the secret
+six declared Google/URL values and optional `KLIPY_API_KEY` allowed to change.
+Automatic image updates remain disabled. See [Google setup](../../docs/google-workspace-setup.md) for the secret
 and variable names; no domain or company defaults are built into the scripts.
+
+ONCE 0.3.2 accepts environment changes only through `--env KEY=value`
+arguments. These values are visible in the VM's process list for the duration
+of `once update`, as for all ONCE environment values. ONCE 0.3.2 offers no
+file or stdin alternative for environment changes.
 
 The configuration step takes the same release lock, saves private settings and
 diagnostics in a root-only `/var/backups/smartfire-google-config-<timestamp>/`

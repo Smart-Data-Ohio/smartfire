@@ -172,6 +172,7 @@ export type MessageReadPin = Assert<Pinned<typeof MessageRead, GeneratedMessageR
 
 /** The body of `POST /api/v1/rooms/:id/messages`. Idempotent on `clientMessageId`. */
 export const CreateMessage = Schema.Struct({
+  gifSlug: Schema.optionalKey(Schema.String),
   stickerId: Schema.optionalKey(StickerId),
   clientMessageId: Schema.String,
   markdownSource: Schema.String,

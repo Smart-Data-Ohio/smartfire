@@ -174,5 +174,9 @@ mod api_soundboard_tests;
 mod api_sticker_tests;
 
 #[cfg(test)]
+#[path = "spa_api_gif_tests.rs"]
+mod api_gif_tests;
+
+#[cfg(test)]
 #[path = "spa_template_tests.rs"]
 mod template_tests;
