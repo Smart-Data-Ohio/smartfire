@@ -425,6 +425,57 @@ describe("editing an agent", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
   });
+  it("sends a name typed back after an unanswered save whose reload failed", async () => {
+    await mount(list());
+
+    const reload = deferred<PersonalAgentList>();
+
+    await timeOutRename(reload.promise);
+    await act(async () => reload.settle.reject(new Error("offline")));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+
+    // The cache still says Helper, but the server may hold Renamed: Helper is sent, not skipped.
+    const update = vi.spyOn(meAgents, "update").mockResolvedValue(AGENT);
+
+    rename("Helper");
+    fireEvent.click(button("Save"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(7, { name: "Helper", iconName: null }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("never lets a late answer from a closed opening close another agent's dialog", async () => {
+    const other = { ...AGENT, id: 8, userId: 80, name: "Other" };
+
+    await mount(list({ agents: [AGENT, other] }));
+
+    const removal = deferred<{ id: number }>();
+    const renamed = deferred<PersonalAgent>();
+
+    vi.spyOn(meAgents, "remove").mockReturnValue(removal.promise);
+    vi.spyOn(meAgents, "update").mockReturnValue(renamed.promise);
+
+    // Helper's removal is out when its rename is saved.
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Helper" }));
+    fireEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remove agent" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit Helper" }));
+    rename("Renamed");
+    fireEvent.click(button("Save"));
+
+    // The removal answers first: Helper's card and dialog go. Other's dialog opens and is typed in.
+    await act(async () => removal.settle.resolve({ id: AGENT.userId }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: "Edit Other" }));
+    rename("Typed");
+
+    // Helper's rename answers last: it changes nothing on screen.
+    await act(async () => renamed.settle.resolve({ ...AGENT, name: "Renamed" }));
+    expect(screen.getByRole("dialog", { name: "Edit Other" })).toBeTruthy();
+    expect(nameField()).toHaveProperty("value", "Typed");
+    expect(screen.queryByRole("article", { name: "Renamed" })).toBeNull();
+    expect(screen.queryByRole("article", { name: "Helper" })).toBeNull();
+  });
 });
 
 describe("the wizard", () => {

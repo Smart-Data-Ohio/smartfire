@@ -83,14 +83,6 @@ function saveUnconfirmed(error: Error): boolean {
   return error instanceof ActionError && error.tag === SAVE_UNCONFIRMED;
 }
 
-/** `held` with the tokens in `incoming` in place of their old copies, and any new ones first. */
-function mergedTokens(
-  held: readonly PersonalAgentCredential[],
-  incoming: readonly PersonalAgentCredential[],
-): PersonalAgentCredential[] {
-  return [...incoming, ...held.filter((h) => !incoming.some((i) => i.id === h.id))];
-}
-
 /**
  * The edit dialog's writes and reload, each landing in the section's cache in the order they were
  * sent (see agents-cache.ts), and answering what the server said.
@@ -444,7 +436,9 @@ function formOf(agent: PersonalAgent | null, offered: readonly string[]): EditFo
  * Its name, icon, rooms and abilities. One mount is one opening (the section keys it): the form is
  * seeded from the cached agent once, and only an unanswered save starts it over, from the reloaded
  * cache, and only if nothing was changed since that save was sent. What the server holds is only
- * ever the cached `agent`: a save sends just the parts the person changed that differ from it.
+ * ever the cached `agent`: a save sends just the parts the person changed that differ from it, or
+ * every part they changed while an unanswered save leaves the cache unconfirmed. Answers that come
+ * after this opening has closed (or another has begun) only land in the cache.
  */
 function EditDialog({
   agent,
@@ -468,10 +462,25 @@ function EditDialog({
   const [recovery, setRecovery] = useState<"none" | "pending" | "arrived">("none");
   // Whether the form was changed since the last save was sent.
   const [changedSinceSave, setChangedSinceSave] = useState(false);
+  // An unanswered save may have landed and no reload has said since: the cache can't be trusted
+  // to tell what needs sending.
+  const [unconfirmed, setUnconfirmed] = useState(false);
   const { busy, track } = useBusy();
+  // Whether this opening is still showing: false once closed, by anyone, or unmounted.
+  const live = useRef(agent !== null);
+
+  useEffect(() => {
+    live.current = agent !== null;
+
+    return () => {
+      live.current = false;
+    };
+  }, [agent]);
 
   useEffect(() => {
     if (recovery !== "arrived") return;
+
+    setUnconfirmed(false);
 
     if (agent !== null && !changedSinceSave) {
       setForm(formOf(agent, list.capabilities));
@@ -509,9 +518,10 @@ function EditDialog({
     }
 
     // Compared with the cache as it stands now: a rename that already took isn't sent again, and
-    // a field the person left alone is never sent back over a newer value.
-    const rename = touched.name && name !== agent.name;
-    const reicon = touched.icon && form.iconName !== agent.iconName;
+    // a field the person left alone is never sent back over a newer value. While the cache is
+    // unconfirmed, whatever they changed is sent as it stands.
+    const rename = touched.name && (unconfirmed || name !== agent.name);
+    const reicon = touched.icon && (unconfirmed || form.iconName !== agent.iconName);
 
     if (!rename && !reicon && !touched.access) {
       onClose();
@@ -546,10 +556,16 @@ function EditDialog({
       "edit",
       save().then(
         (next) => {
+          if (!live.current) return;
+
           onClose();
           toast({ title: `${next.name} saved`, tone: "success" });
         },
         (failure: Error) => {
+          if (turnedOff(failure)) onTurnedOff();
+
+          if (!live.current) return;
+
           const named = fieldsOf(failure);
           const messages = Object.values(named).flat();
 
@@ -562,19 +578,21 @@ function EditDialog({
           // It may have landed: load what the server holds before saving again.
           if (saveUnconfirmed(failure)) {
             setError(failure.message);
+            setUnconfirmed(true);
             setRecovery("pending");
             writes.reload().then(
-              () => setRecovery("arrived"),
-              () => setRecovery("none"),
+              () => {
+                if (live.current) setRecovery("arrived");
+              },
+              () => {
+                if (live.current) setRecovery("none");
+              },
             );
 
             return;
           }
 
-          if (turnedOff(failure)) {
-            onClose();
-            onTurnedOff();
-          }
+          if (turnedOff(failure)) onClose();
 
           toastFailure("Couldn't save the agent", failure);
         },
@@ -777,9 +795,7 @@ export function AgentsSection() {
           `token-${credential.id}`,
           meAgents.revokeToken(agent.id, credential.id).then(
             ({ credentials }) => {
-              replace((current) =>
-                withTokens(current, agent.id, (held) => mergedTokens(held, credentials), at),
-              );
+              replace((current) => withTokens(current, agent.id, credentials, at));
               toast({ title: `${credential.name} was revoked`, tone: "success" });
             },
             (error: Error) => toastFailure(`Couldn't revoke ${credential.name}`, error),
@@ -817,19 +833,15 @@ export function AgentsSection() {
     secret: string,
     at: number,
   ) => {
-    const replaced = tokenAsk?.replacing?.id;
+    const replaced = tokenAsk?.replacing;
 
-    replace((current) =>
-      withTokens(
-        current,
-        agent.id,
-        (credentials) => [
-          credential,
-          ...credentials.map((c) => (c.id === replaced ? { ...c, state: "revoked" as const } : c)),
-        ],
-        at,
-      ),
-    );
+    // A rotation revokes the token it replaces, in the same request.
+    const changed =
+      replaced === null || replaced === undefined
+        ? [credential]
+        : [credential, { ...replaced, state: "revoked" as const }];
+
+    replace((current) => withTokens(current, agent.id, changed, at));
     setTokenAsk(null);
     setShown({ agent, secret });
   };

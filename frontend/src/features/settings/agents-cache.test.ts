@@ -108,16 +108,53 @@ describe("the agents cache", () => {
     const first = withList(null, list([AGENT]), nextSequence());
     const reload = nextSequence();
 
-    const revoked = withTokens(
-      first,
-      AGENT.id,
-      (held) => held.map((c) => ({ ...c, state: "revoked" as const })),
-      nextSequence(),
-    );
+    const revoked = withTokens(first, AGENT.id, [{ ...TOKEN, state: "revoked" }], nextSequence());
 
     const after = withList(revoked, list([{ ...AGENT, name: "Renamed" }]), reload);
 
     expect(after.list.agents[0]?.name).toBe("Renamed");
     expect(after.list.agents[0]?.credentials[0]?.state).toBe("revoked");
+  });
+
+  it("never lets an older revocation's list show a token a newer one revoked as active", () => {
+    const second = { ...TOKEN, id: 12, name: "Laptop" };
+    const both = [TOKEN, second];
+    const first = withList(null, list([{ ...AGENT, credentials: both }]), nextSequence());
+    const revokeFirst = nextSequence();
+    const revokeSecond = nextSequence();
+
+    // The second revocation answers first: both gone by then.
+    const ended = withTokens(
+      first,
+      AGENT.id,
+      [
+        { ...TOKEN, state: "revoked" },
+        { ...second, state: "revoked" },
+      ],
+      revokeSecond,
+    );
+
+    // The first answers last, from before the second: only its own token revoked.
+    const after = withTokens(
+      ended,
+      AGENT.id,
+      [{ ...TOKEN, state: "revoked" }, second],
+      revokeFirst,
+    );
+
+    const states = after.list.agents[0]?.credentials.map((c) => `${c.id}:${c.state}`);
+
+    expect(states?.sort()).toEqual(["11:revoked", "12:revoked"]);
+  });
+
+  it("adds a token issued while an older answer was out", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const revoke = nextSequence();
+    const issued = { ...TOKEN, id: 13, name: "New" };
+    const issue = withTokens(first, AGENT.id, [issued], nextSequence());
+    const after = withTokens(issue, AGENT.id, [{ ...TOKEN, state: "revoked" }], revoke);
+
+    expect(after.list.agents[0]?.credentials.map((c) => c.id).sort()).toEqual([11, 13]);
+    expect(after.list.agents[0]?.credentials.find((c) => c.id === 11)?.state).toBe("revoked");
   });
 });
