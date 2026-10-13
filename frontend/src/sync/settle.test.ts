@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Deferred, Effect, Fiber, type Schema } from "effect";
+import { Deferred, Effect, Fiber, Layer, type Schema } from "effect";
 import { NotFound } from "../api/errors.ts";
 import { FakeApi, pageFixture } from "../api/testing.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
@@ -9,8 +9,14 @@ import { mutations, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS, THREAD_DELETED } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as boards from "./board-actions.ts";
+import { SyncLink } from "./link.ts";
 import { MAX_SETTLE_ATTEMPTS, UNAVAILABLE } from "./settle.ts";
 import * as threads from "./thread-actions.ts";
+import { Topics } from "./topics.ts";
+
+const apiLayer = Topics.layer.pipe(
+  Layer.provideMerge(Layer.mergeAll(SyncLink.layer, FakeApi.layerClient)),
+);
 
 afterEach(() => mutations.reset());
 
@@ -87,7 +93,7 @@ describe("replies that can't tell whether a thread was removed", () => {
       expect(store.getState().threadPanes[1]?.status).toBe("ready");
       expect(store.getState().threads[1]?.name).toBe("Post 1");
       expect(detail.calls()).toBe(2);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("installs the pane's header as it lands, before removals during the replies", () =>
@@ -125,7 +131,7 @@ describe("replies that can't tell whether a thread was removed", () => {
       expect(store.getState().threadPanes[1]?.status).toBe("ready");
       expect(store.getState().threads[1]?.name).toBe("Post 1");
       expect(details).toBe(1);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("keeps a 404 on asking again retryable: it may be lost access, not a deletion", () =>
@@ -165,7 +171,7 @@ describe("replies that can't tell whether a thread was removed", () => {
       yield* fake.reply("GET /threads/1", boardDetail());
       yield* threads.reload(1);
       expect(store.getState().threadPanes[1]?.status).toBe("ready");
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("keeps a deletion that lands while asking again over the 404 that follows it", () =>
@@ -203,7 +209,7 @@ describe("replies that can't tell whether a thread was removed", () => {
         status: "error",
         error: THREAD_DELETED,
       });
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("keeps a deletion that lands while the replies load over an earlier 404", () =>
@@ -244,7 +250,7 @@ describe("replies that can't tell whether a thread was removed", () => {
         status: "error",
         error: THREAD_DELETED,
       });
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("still lists a thread after 501 unrelated removals while the listing was out", () =>
@@ -316,7 +322,7 @@ describe("replies that can't tell whether a thread was removed", () => {
       expect(store.getState().threads[1]).toBeUndefined();
       expect(store.getState().threadPanes[1]?.error).toBe("This thread was deleted.");
       expect(detail.calls()).toBe(1);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("gives up on the pane, with an error, when removals outrun every attempt", () =>
@@ -345,7 +351,7 @@ describe("replies that can't tell whether a thread was removed", () => {
         error: threads.UNSETTLED,
       });
       expect(store.getState().threads[1]).toBeUndefined();
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+    }).pipe(Effect.provide(apiLayer)),
   );
 
   it.effect("gives up on the listing, as failed, when removals outrun every attempt", () =>

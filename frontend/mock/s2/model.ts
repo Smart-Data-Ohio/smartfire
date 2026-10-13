@@ -398,6 +398,7 @@ export function indicatorOf(thread: ThreadRecord): ThreadIndicator {
     replyCount: countedReplies(thread).length,
     lastReplyAt: thread.lastActivityAt,
     replierIds: replierIds(thread),
+    visibility: thread.visibility,
   };
 }
 

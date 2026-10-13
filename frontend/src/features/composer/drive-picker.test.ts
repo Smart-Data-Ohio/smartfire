@@ -145,6 +145,7 @@ describe("editor removal payload", () => {
         removedIds: [],
         remainingDrive: 1,
         hasAttachment: false,
+        hasSticker: false,
       }),
     ).toEqual({ kind: "close" });
 
@@ -155,6 +156,7 @@ describe("editor removal payload", () => {
         removedIds: ["1AbcDefGhIjKlMnOpQrSt"],
         remainingDrive: 0,
         hasAttachment: false,
+        hasSticker: false,
       }),
     ).toEqual({
       kind: "save",
@@ -171,6 +173,7 @@ describe("editor removal payload", () => {
         removedIds: [],
         remainingDrive: 0,
         hasAttachment: false,
+        hasSticker: false,
       }),
     ).toEqual({ kind: "delete" });
 
@@ -181,6 +184,7 @@ describe("editor removal payload", () => {
         removedIds: ["abc"],
         remainingDrive: 1,
         hasAttachment: false,
+        hasSticker: false,
       }),
     ).toEqual({
       kind: "save",

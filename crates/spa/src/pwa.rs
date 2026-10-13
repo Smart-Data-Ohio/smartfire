@@ -227,8 +227,15 @@ mod tests {
             include_str!("../../../vectors/users_pwa_first_run.json"),
         ] {
             let vectors: serde_json::Value = serde_json::from_str(vectors).unwrap();
-            let body = vectors["responses"][0]["body"].as_str().unwrap();
-            let manifest: serde_json::Value = serde_json::from_str(body).unwrap();
+            let recorded = vectors["responses"][0]["body"].as_str().unwrap();
+            let manifest: serde_json::Value = serde_json::from_str(recorded).unwrap();
+            // Unlike Rails, no icon is maskable: the launcher's mask cropped the workspace logo.
+            let maskable = format!(
+                ",\n    {{\n      \"src\": \"{}\",\n      \"type\": \"image/png\",\n      \"sizes\": \"512x512\",\n      \"purpose\": \"maskable\"\n    }}",
+                manifest["icons"][2]["src"].as_str().unwrap()
+            );
+            assert!(recorded.contains(&maskable));
+            let body = recorded.replace(&maskable, "");
             // Preserve the frozen renderer receipt without depending on classic asset digesting.
             let assets = |path: &str| {
                 let index = match path {

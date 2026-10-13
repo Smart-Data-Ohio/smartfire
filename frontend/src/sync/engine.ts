@@ -429,10 +429,10 @@ export class Engine extends Context.Service<
       });
 
       /** As `resyncRoom` for a thread's replies, plus its header: status, permissions, membership. */
-      const resyncThread = Effect.fnUntraced(function* (threadId: number) {
+      const resyncThread = Effect.fnUntraced(function* (threadId: number, ticket?: number) {
         // A permalink's load this supersedes still wants its reply: open around it instead.
         const focus = pendingThreadFocus(threadId);
-        const load = beginThreadLoad(threadId, focus);
+        const load = ticket ?? beginThreadLoad(threadId, focus);
 
         mutations.setThreadPageReplacing(threadId);
 
@@ -733,6 +733,8 @@ export class Engine extends Context.Service<
         );
       });
 
+      const threadRecoveries = new Map<number, number>();
+
       /**
        * After a batch changed the viewer's access to private threads: a lost thread leaves the
        * cached search results, and the inbox (which no longer lists it, or lists it again) reloads
@@ -746,13 +748,19 @@ export class Engine extends Context.Service<
         open: ReadonlySet<string>,
         scope: Scope.Scope,
       ) {
-        const { lost, regained } = threadAccessChanges(before, store.getState(), events);
+        const { lost, regained } = threadAccessChanges(
+          before,
+          store.getState(),
+          events,
+          threadRecoveries,
+        );
 
         if (lost.length === 0 && regained.length === 0) {
           return;
         }
 
         for (const threadId of lost) {
+          threadRecoveries.delete(threadId);
           searchMutations.forgetThread(threadId);
         }
 
@@ -761,18 +769,30 @@ export class Engine extends Context.Service<
 
         for (const threadId of regained) {
           const topic = threadTopic(threadId);
+          // Supersede the pre-grant requests before resubscribing can yield to their answers.
+          const load = beginThreadLoad(threadId, pendingThreadFocus(threadId));
+
+          threadRecoveries.set(threadId, load);
+
+          const finishRecovery = Effect.sync(() => {
+            if (threadRecoveries.get(threadId) === load) threadRecoveries.delete(threadId);
+          });
 
           if (open.has(topic)) {
+            mutations.setThreadPaneLoading(threadId);
             yield* topics.forgetRejected(topic);
             yield* Effect.forkIn(
-              resyncThread(threadId).pipe(
+              resyncThread(threadId, load).pipe(
                 Effect.catch((error) =>
-                  Effect.sync(() => mutations.setThreadPageFailed(threadId)).pipe(
+                  Effect.sync(() => {
+                    if (isLatestThreadLoad(threadId, load)) mutations.setThreadPageFailed(threadId);
+                  }).pipe(
                     Effect.andThen(
                       Effect.logWarning(`sync: ${topic} reload failed`, error.message),
                     ),
                   ),
                 ),
+                Effect.ensuring(finishRecovery),
                 Effect.provideContext(api),
               ),
               scope,
@@ -790,6 +810,7 @@ export class Engine extends Context.Service<
                 Effect.catch((error) =>
                   Effect.logWarning(`sync: ${topic} reload failed`, error.message),
                 ),
+                Effect.ensuring(finishRecovery),
                 Effect.provideContext(api),
               ),
               scope,
