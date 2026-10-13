@@ -15,6 +15,7 @@ pub mod file_server;
 pub mod filename;
 pub mod json;
 pub mod key;
+pub mod klipy;
 pub mod marcel;
 pub mod marshal;
 pub mod paths;

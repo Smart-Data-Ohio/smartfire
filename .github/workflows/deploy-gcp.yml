@@ -480,6 +480,7 @@ jobs:
         if: inputs.configure_google
         env:
           GOOGLE_OAUTH_CLIENT_JSON: ${{ secrets.GOOGLE_OAUTH_CLIENT_JSON }}
+          KLIPY_API_KEY: ${{ secrets.KLIPY_API_KEY }}
           GOOGLE_PICKER_API_KEY: ${{ secrets.GOOGLE_PICKER_API_KEY }}
           GOOGLE_SIGN_IN_DOMAINS: ${{ vars.GOOGLE_SIGN_IN_DOMAINS }}
           GOOGLE_CLOUD_PROJECT_NUMBER: ${{ vars.GOOGLE_CLOUD_PROJECT_NUMBER }}
@@ -698,6 +699,7 @@ jobs:
         shell: bash
         env:
           GOOGLE_OAUTH_CLIENT_JSON: ${{ secrets.GOOGLE_OAUTH_CLIENT_JSON }}
+          KLIPY_API_KEY: ${{ secrets.KLIPY_API_KEY }}
           GOOGLE_PICKER_API_KEY: ${{ secrets.GOOGLE_PICKER_API_KEY }}
           GOOGLE_SIGN_IN_DOMAINS: ${{ vars.GOOGLE_SIGN_IN_DOMAINS }}
           GOOGLE_CLOUD_PROJECT_NUMBER: ${{ vars.GOOGLE_CLOUD_PROJECT_NUMBER }}
