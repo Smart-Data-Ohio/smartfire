@@ -288,6 +288,7 @@ async fn ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox() {
                 [BENDER],
                 |r| r.get(0),
             )?;
+            campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id,capability:"external_action".into(),granted_by_id:DAVID,..Default::default()})?;
             AgentApproval::create(
                 tx,
                 NewApproval {

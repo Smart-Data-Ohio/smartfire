@@ -254,6 +254,11 @@ fn ws11_approval_validation_defaults_boundaries_and_uniqueness_match_rails() {
 #[test]
 fn ws11_approval_decision_expiry_cancellation_and_inbox_match_rails() {
     let t = setup();
+    t.write(|tx| {
+        crate::Room::find(tx.conn(),id("watercooler"))?.grant_to(tx,&[id("bender")])?;
+        crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:"external_action".into(),granted_by_id:id("david"),..Default::default()})?;
+        Ok(())
+    });
     t.write(|tx|AgentApproval::create(tx,NewApproval {external_id:Some("repeat".into()),..base()}));
     let mut approval=t.write(|tx|AgentApproval::create(tx,NewApproval {room_id:Some(id("watercooler")),payload:Some("{\"key\":\"<>&\"}".into()),external_id:Some("stable".into()),..base()}));
     t.write(move |tx| {

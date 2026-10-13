@@ -257,8 +257,11 @@ posted.
 ### Result event
 
 Every outcome appends a `github_action_completed` event to the agent's
-ledger (`outcome: delivered`, room-scoped, always readable by its own
-agent), polled through `GET /agents/events` with a `github_action` key
+ledger (`outcome: delivered`, room-scoped). Polling, acknowledgment, and
+webhook delivery require the agent's live `external_action` grant for
+the approval's room, current room membership, and thread access. A
+workspace-wide grant also covers that room. `GET /agents/events`
+returns an authorized event with a `github_action` key
 (`approval_id`, `action`, `status`, plus the GitHub `url` when completed
 or a `message` when failed), posted to the webhook the same way, and
 listed on the ledger page with its status. See [AI
@@ -269,7 +272,11 @@ agents](agents.md#github-write-actions).
 Without a usable linked account the request endpoint answers 422; with
 the grant revoked it answers 403. Revocation between request and
 decision — or between decision and execution — stops the action, and the
-agent learns why through the failed completion event.
+server records a failed completion event. Revoking the effective grant
+also hides decisions and completions for actions already started from
+polling, refuses acknowledgment, and stops queued or retried webhook
+delivery. The ledger retains the rows. See the
+[approval grant policy](agents.md#agent-api-bearer-only-json).
 
 ## Configuration
 

@@ -1,6 +1,8 @@
 //! Public credential/grant page facts; plaintext secrets never enter these records.
 use campfire_db::{Agent, Connection, Result, Room, User};
-use campfire_presentation::accounts::bot_access::{Credential, CredentialExpiry, Grant};
+use campfire_presentation::accounts::bot_access::{
+    Credential, CredentialExpiry, Grant, GrantStatus,
+};
 pub fn credentials(
     conn: &Connection,
     agent_id: i64,
@@ -35,7 +37,9 @@ pub fn credentials(
 type GrantPage = (bool, Vec<Grant>, Vec<(String, String)>);
 pub fn grants(conn: &Connection, agent_id: i64, bot_id: i64, viewer: &User) -> Result<GrantPage> {
     let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-    let mut statement=conn.prepare("SELECT u.*,g.id AS grant_id,g.capability,g.room_id,g.created_at AS grant_created_at,g.revoked_at IS NOT NULL AS revoked FROM agent_grants g JOIN users u ON u.id=g.granted_by_id WHERE g.agent_id=? ORDER BY g.revoked_at,g.capability,g.room_id")?;
+    let effective = campfire_db::agent_grant::effective_active_sql("g");
+    let compatible = campfire_db::agent_grant::compatible_sql("g");
+    let mut statement=conn.prepare(&format!("SELECT u.*,g.id AS grant_id,g.capability,g.room_id,g.created_at AS grant_created_at,g.revoked_at IS NOT NULL AS revoked,({compatible}) AS compatible,({effective}) AS effective FROM agent_grants g JOIN users u ON u.id=g.granted_by_id WHERE g.agent_id=? ORDER BY g.revoked_at,g.capability,g.room_id"))?;
     let mut grants = Vec::new();
     let rows = statement
         .query_map([agent_id], |r| {
@@ -46,6 +50,8 @@ pub fn grants(conn: &Connection, agent_id: i64, bot_id: i64, viewer: &User) -> R
                 User::from_row(r)?.display_name().to_owned(),
                 r.get::<_, campfire_db::Timestamp>("grant_created_at")?,
                 r.get::<_, bool>("revoked")?,
+                r.get::<_, bool>("compatible")?,
+                r.get::<_, bool>("effective")?,
             ))
         })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -56,7 +62,7 @@ pub fn grants(conn: &Connection, agent_id: i64, bot_id: i64, viewer: &User) -> R
         .iter()
         .map(|room| Ok((room.id, super::room_display_name(conn, room, viewer)?)))
         .collect::<Result<_>>()?;
-    for (id, capability, room_id, granted_by, created_at, revoked) in rows {
+    for (id, capability, room_id, granted_by, created_at, revoked, compatible, effective) in rows {
         let room_name = match room_id {
             None => "Workspace-wide".into(),
             Some(id) => names
@@ -71,6 +77,15 @@ pub fn grants(conn: &Connection, agent_id: i64, bot_id: i64, viewer: &User) -> R
             granted_by,
             created_at: created_at.jiff(),
             revoked,
+            status: if revoked {
+                GrantStatus::Revoked
+            } else if !compatible {
+                GrantStatus::Incompatible
+            } else if effective {
+                GrantStatus::Active
+            } else {
+                GrantStatus::Inactive
+            },
         });
     }
     let mut rooms = Room::for_user(conn, bot_id)?;

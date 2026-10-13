@@ -70,7 +70,7 @@ async fn agent_polling_public_thread_in_deleted_room_serializes_and_revoked_priv
     }).await.unwrap();
     let deleted = page(&app, private_event - 1).await;
     assert_eq!(deleted.status.as_u16(), 200, "{}", deleted.text());
-    assert_eq!(deleted.json(), expected, "soft deletion retains the complete public message payload");
+    assert_eq!(deleted.json(), expected, "public workspace history survives room archival");
     assert_eq!(deleted.json()["next_since"], public_event);
     assert_eq!(deleted.header("x-smartfire-next-since"), Some(public_event.to_string().as_str()));
     let next = page(&app, public_event).await;
@@ -79,7 +79,10 @@ async fn agent_polling_public_thread_in_deleted_room_serializes_and_revoked_priv
     let following = app.db().write(move |tx| {
         Message::find(tx.conn(), public_message)?.destroy(tx)?;
         assert!(AgentEvent::find(tx.conn(), public_event)?.is_some());
+        let approval=campfire_db::AgentApproval::create(tx,campfire_db::NewApproval{agent_id:AGENT,action:"github.comment".into(),summary:"Live completion".into(),..Default::default()})?;
+        AgentGrant::create(tx,NewGrant{agent_id:AGENT,granted_by_id:DAVID,capability:"external_action".into(),..Default::default()})?;
         Ok(AgentEvent::create(tx, NewEvent {
+            agent_approval_id:Some(approval.id),
             agent_id: AGENT, event_type: "github_action_completed".into(), outcome: Some("delivered".into()),
             metadata: json!({"action": "github.comment", "status": "done"}), ..Default::default()
         })?.id)

@@ -457,6 +457,7 @@ export function createBots(ctx: S2Context, uploads: Uploads, requireSudo: () => 
         grantedBy: viewerName(),
         createdAt: timestamp(ctx.now()),
         revoked: false,
+        status: "active",
       });
       agent.everGranted = true;
     }
@@ -475,7 +476,7 @@ export function createBots(ctx: S2Context, uploads: Uploads, requireSudo: () => 
 
     if (found === undefined) throw notFound();
 
-    agent.grants[at] = { ...found, revoked: true };
+    agent.grants[at] = { ...found, revoked: true, status: "revoked" };
 
     return ok(grantList(record, agent));
   };

@@ -377,7 +377,10 @@ fn ws11_approval_case_ownerless_admin_deciders() {
 #[test]
 fn ws11_approval_case_decision_enqueues_after_commit() {
     let t = setup();
-    let aid = t.write(|tx| Ok(create(tx)?.id));
+    let aid = t.write(|tx| {
+        crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:"external_action".into(),granted_by_id:id("david"),..Default::default()})?;
+        Ok(create(tx)?.id)
+    });
     t.sink.take();
     t.write(move |tx| {
         AgentApproval::find(tx.conn(), aid)?.unwrap().decide(
@@ -398,7 +401,10 @@ fn ws11_approval_case_decision_enqueues_after_commit() {
 #[test]
 fn ws11_approval_case_decision_waits_for_outer_transaction() {
     let t = setup();
-    let aid = t.write(|tx| Ok(create(tx)?.id));
+    let aid = t.write(|tx| {
+        crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:"external_action".into(),granted_by_id:id("david"),..Default::default()})?;
+        Ok(create(tx)?.id)
+    });
     t.sink.take();
     let sink = t.sink.clone();
     t.write(move |tx| {

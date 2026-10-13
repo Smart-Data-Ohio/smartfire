@@ -21,6 +21,13 @@ type Load =
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly list: GrantList };
 
+const GRANT_STATUS: Record<Grant["status"], string | null> = {
+  active: null,
+  inactive: "Inactive",
+  incompatible: "Inactive · incompatible with personal agent policy",
+  revoked: "Revoked",
+};
+
 /** The grant form: a capability, workspace-wide or in one of the bot's rooms. */
 function NewGrant({
   list,
@@ -124,7 +131,9 @@ function GrantRow({
       <span className="settings-list-main">
         <strong>
           <code className="admin-code">{grant.capability}</code> · {grant.roomName}
-          {grant.revoked ? <span className="settings-badge">Revoked</span> : null}
+          {GRANT_STATUS[grant.status] === null ? null : (
+            <span className="settings-badge">{GRANT_STATUS[grant.status]}</span>
+          )}
         </strong>
         <span className="text-faint">
           By {grant.grantedBy}, {auditTime(grant.createdAt)}

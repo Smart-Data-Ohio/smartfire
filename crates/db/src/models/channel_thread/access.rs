@@ -69,9 +69,17 @@ impl crate::events::Broadcast for ThreadAccessChange {
 
 /// The SQL form of `readable_by`, also used before pagination and aggregate counts.
 /// Expressions come from source code, never request input.
-pub fn readable_by_sql(thread_id: &str, user_id: &str) -> String {
+fn member_readable_by_sql(thread_id: &str, user_id: &str) -> String {
     format!(
         "EXISTS (SELECT 1 FROM channel_threads access_thread JOIN rooms access_room ON access_room.id=access_thread.room_id JOIN memberships access_parent ON access_parent.room_id=access_room.id JOIN users access_user ON access_user.id=access_parent.user_id WHERE access_thread.id=({thread_id}) AND access_user.id=({user_id}) AND access_room.deleted_at IS NULL AND access_user.status=0 AND access_user.role!=3 AND (access_thread.visibility='public' OR access_user.role=1 OR EXISTS (SELECT 1 FROM thread_access_memberships access_member WHERE access_member.thread_id=access_thread.id AND access_member.user_id=access_user.id)))"
+    )
+}
+
+pub fn readable_by_sql(thread_id: &str, user_id: &str) -> String {
+    let member = member_readable_by_sql(thread_id, user_id);
+    let owner = member_readable_by_sql(thread_id, "personal_thread_agent.owner_id");
+    format!(
+        "({member}) AND NOT EXISTS (SELECT 1 FROM agents personal_thread_agent WHERE personal_thread_agent.user_id=({user_id}) AND personal_thread_agent.kind='personal' AND NOT ({owner}))"
     )
 }
 

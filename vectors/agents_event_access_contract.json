@@ -4,9 +4,6 @@
     "scoped": [
       "granted_message",
       "missing_event_room",
-      "approval",
-      "github",
-      "fizzy",
       "granted_work",
       "slash"
     ],
@@ -16,18 +13,11 @@
     "second_page": [
       "missing_event_room"
     ],
-    "revoked": [
-      "approval",
-      "github",
-      "fizzy"
-    ],
+    "revoked": [],
     "workspace": [
       "blocked_message",
       "granted_message",
       "missing_event_room",
-      "approval",
-      "github",
-      "fizzy",
       "granted_work",
       "blocked_work",
       "slash"
@@ -36,30 +26,17 @@
       "blocked_message",
       "granted_message",
       "missing_event_room",
-      "approval",
-      "github",
-      "fizzy",
       "granted_work",
       "blocked_work",
       "slash"
     ],
     "removed_membership": [
       "blocked_message",
-      "approval",
-      "github",
-      "fizzy",
       "blocked_work"
     ],
-    "suspended": [
-      "approval",
-      "github",
-      "fizzy"
-    ],
+    "suspended": [],
     "legacy": [
       "blocked_message",
-      "approval",
-      "github",
-      "fizzy",
       "blocked_work"
     ]
   },
@@ -86,23 +63,23 @@
       "webhook_attempts": 0
     },
     "missing_message_3": {
-      "status": "not_found",
-      "error": "Event not found",
-      "outcome": "pending",
-      "webhook_status": "none",
-      "webhook_attempts": 0
-    },
-    "missing_event_room_4": {
       "status": "forbidden",
       "error": "Forbidden: agent lacks read_messages capability",
       "outcome": "pending",
       "webhook_status": "none",
       "webhook_attempts": 0
     },
-    "blocked_work_5": {
+    "missing_event_room_4": {
       "status": "ok",
       "error": null,
       "outcome": "acknowledged",
+      "webhook_status": "none",
+      "webhook_attempts": 0
+    },
+    "blocked_work_5": {
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
+      "outcome": "pending",
       "webhook_status": "none",
       "webhook_attempts": 0
     },
@@ -149,16 +126,16 @@
       "webhook_attempts": 0
     },
     "removed_message": {
-      "status": "not_found",
-      "error": "Event not found",
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
       "outcome": "acknowledged",
       "webhook_status": "pending",
       "webhook_attempts": 2
     },
     "removed_work": {
-      "status": "ok",
-      "error": null,
-      "outcome": "acknowledged",
+      "status": "forbidden",
+      "error": "Forbidden: agent lacks read_messages capability",
+      "outcome": "pending",
       "webhook_status": "none",
       "webhook_attempts": 0
     },
@@ -178,5 +155,6 @@
     "inactive_user": false,
     "suspended": false,
     "deleted_room": false
-  }
+  },
+  "policy_revision": "S1: polling, acknowledgment and enqueue share live room, thread and capability authorization."
 }

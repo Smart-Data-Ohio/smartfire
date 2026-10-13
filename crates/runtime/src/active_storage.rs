@@ -283,7 +283,7 @@ pub async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> 
     } else {
         None
     };
-    let allowed = c.app().db.read(move |conn| {
+    let allowed = c.app().db.read_snapshot(move |conn| {
         let user = campfire_db::User::find(conn, user_id)?;
         if !user.is_active() || (!verified && user.requires_two_factor()) { return Ok(false); }
         if schedulers.iter().any(|scheduler| *scheduler != user_id) { return Ok(false); }

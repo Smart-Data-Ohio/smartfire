@@ -42,6 +42,10 @@ async fn capture(
     let crypto = app.ar_encryption.clone();
     let (e,legacy)=app.db.write(move|tx| {
         let aid=Agent::for_user(tx.conn(),BENDER)?.unwrap().id;
+        tx.conn().execute("DELETE FROM agent_events",[])?;
+        tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[aid])?;
+        for cap in ["read_messages","post_messages","react","external_action"] {campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:aid,capability:cap.into(),granted_by_id:127326141,..Default::default()})?;}
+
         tx.conn().execute("UPDATE agents SET webhook_signing_secret=?,owner_id=? WHERE id=?",params![crypto.encrypt(&secret),if name=="ownerless" {None} else {Some(127326141)},aid])?;
         tx.conn().execute("UPDATE webhooks SET url='http://bots.example:8080/hook',signing_secret=NULL WHERE user_id=?",[BENDER])?;
         let legacy=name=="legacy"||name=="without_context";
@@ -70,6 +74,7 @@ async fn capture(
         };
         let mut e=AgentEvent::create(tx,domain::NewEvent {agent_id:aid,event_type:kind.into(),outcome:Some("delivered".into()),room_id:Some(ALL_TALK),message_id:message,agent_approval_id:approval,metadata,..Default::default()})?;
         // Webhook#deliver accepts a supplied delivery id independently of the ledger.
+        tx.conn().execute("UPDATE agent_events SET id=? WHERE id=?",params![delivery,e.id])?;
         e.id=delivery;
         Ok((Some(e),legacy))
     }).await.unwrap();

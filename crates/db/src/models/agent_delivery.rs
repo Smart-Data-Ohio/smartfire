@@ -316,7 +316,9 @@ pub fn record_delivered(tx: &mut Tx<'_>, mut attributes: NewEvent) -> Result<Age
 pub fn create_delivered(tx: &Tx<'_>, mut attributes: NewEvent) -> Result<AgentEvent> {
     attributes.outcome = Some("delivered".into());
     let mut event = AgentEvent::create(tx, attributes)?;
-    if has_webhook(tx, event.agent_id)? {
+    if has_webhook(tx, event.agent_id)?
+        && super::agent_event_access::delivery_authorized(tx.conn(), event.id)?
+    {
         let next_attempt_at = tx.now();
         tx.conn().execute(
             "UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=?",
@@ -380,7 +382,10 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     }
     let members = query_all(
         tx.conn(),
-        "SELECT agents.id,agents.user_id FROM agents JOIN memberships ON memberships.user_id=agents.user_id WHERE memberships.room_id=? ORDER BY agents.id",
+        &format!(
+            "SELECT agents.id,agents.user_id FROM agents JOIN memberships ON memberships.user_id=agents.user_id WHERE memberships.room_id=?1 AND (agents.kind!='personal' OR ({})) ORDER BY agents.id",
+            super::agent_access::capability_sql("agents.id", "?1", "'read_messages'")
+        ),
         [room.id],
         |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
     )?;
@@ -477,7 +482,7 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
         return Ok(());
     }
     if e.outcome.as_deref() == Some("acknowledged") {
-        if has_webhook(tx,e.agent_id)? && tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND outcome='acknowledged' AND webhook_status='none'",params![tx.now(),e.id])?==1 {enqueue_webhook(tx,&e,Duration::ZERO);}
+        if has_webhook(tx,e.agent_id)? && super::agent_event_access::delivery_authorized(tx.conn(),e.id)? && tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND outcome='acknowledged' AND webhook_status='none'",params![tx.now(),e.id])?==1 {enqueue_webhook(tx,&e,Duration::ZERO);}
         return Ok(());
     }
     if e.outcome.as_deref() != Some("pending") {
@@ -504,27 +509,7 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
         return Ok(());
     }
     let room = e.room_id.unwrap();
-    let user: i64 =
-        tx.conn()
-            .query_row_cached("SELECT user_id FROM agents WHERE id=?", [e.agent_id], |r| {
-                r.get(0)
-            })?;
-    let thread_id = e.message_id.map(|id| Message::find_by_id(tx.conn(), id)).transpose()?.flatten().and_then(|message| message.thread_id)
-        .or_else(|| e.metadata.get("thread_id").and_then(serde_json::Value::as_i64));
-    let thread_readable = match thread_id {
-        Some(id) => match crate::ChannelThread::find_by_id(tx.conn(), id)? {
-            Some(thread) => thread.readable_by(tx.conn(), user)?,
-            None => false,
-        },
-        None => true,
-    };
-    let revoked = !thread_readable ||
-        !exists(
-            tx.conn(),
-            "SELECT 1 FROM memberships WHERE user_id=? AND room_id=?",
-            params![user, room],
-        )? || super::agent_access::capability_for_user(tx.conn(), user, "read_messages", room)?
-            != Some(true);
+    let revoked = !super::agent_event_access::delivery_authorized(tx.conn(), e.id)?;
     let suppressed = if revoked {
         Some((
             "delivery_suppressed_revoked",

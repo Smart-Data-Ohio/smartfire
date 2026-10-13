@@ -6,7 +6,7 @@ use crate::{
     controllers::{message_features as features, messages, presenters::page::db_error},
 };
 use campfire_db::models::agent_service::ServiceResult;
-use campfire_db::{Agent, Message, NewMessage, NewPoll, Poll};
+use campfire_db::{Agent, Message, NewPoll, Poll};
 use campfire_kit::{Ctx, Error, Param, Result};
 use serde_json::Value;
 
@@ -22,7 +22,7 @@ pub(super) async fn operation(
         let poll_id = args.get("poll_id").map_or(0, ruby_i64);
         c.app()
             .db
-            .read(move |conn| {
+            .read_snapshot(move |conn| {
                 let poll = Poll::find_in_room(conn, room_id, poll_id)?;
                 let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
                 let message = Message::find_reachable(conn, agent.user_id, poll.message_id)?;
@@ -111,34 +111,15 @@ pub(super) async fn operation(
             .app()
             .db
             .write(move |tx| {
-                let agent = Agent::find(tx.conn(), agent_id)?
-                    .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-                let room = campfire_db::Room::find(tx.conn(), room_id)?;
-                let message = Message::create(
-                    tx,
-                    NewMessage {
-                        room_id,
-                        creator_id: agent.user_id,
-                        markdown_source: Some(question),
-                        ..Default::default()
-                    },
-                )?;
-                let poll = Poll::create_for_message(
-                    tx,
-                    &message,
-                    NewPoll {
-                        labels,
-                        multiple,
-                        anonymous,
-                        closes_at,
-                    },
-                )?;
+                let result=campfire_db::models::agent_polls::create(tx,agent_id,room_id,question,NewPoll{labels,multiple,anonymous,closes_at})?;
+                let (poll,room,message)=match result {Ok(created)=>created,Err(denial)=>return Ok(Err(denial))};
                 messages::deliver_webhooks_to_bots(tx, &room, &message)?;
-                Ok((poll, room, message))
+                Ok(Ok((poll, room, message)))
             })
             .await;
         let (poll, room, message) = match result {
-            Ok(result) => result,
+            Ok(Ok(result)) => result,
+            Ok(Err(policy)) => return Ok(policy),
             Err(campfire_db::Error::RecordInvalid(errors)) => {
                 return Ok(ServiceResult::fail(features::sentence(&errors), 422));
             }
@@ -152,14 +133,26 @@ pub(super) async fn operation(
     let rich_text = c.app().db.env().rich_text.clone();
     let now = campfire_db::Timestamp::from_jiff(c.now());
     let verifier = c.app().storage.verifier.clone();
+    let op_is_get = op == "get_poll";
     let payload = c
         .app()
         .db
-        .read(move |conn| poll.results_payload(conn, &*rich_text, now, Some(viewer), &*verifier))
+        .read_snapshot(move |conn| {
+            let agent =
+                Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            let message = Message::find_reachable(conn, agent.user_id, poll.message_id)?;
+            if !agent.can(conn, "post_messages", Some(message.room_id))? {
+                return Ok(ServiceResult::fail(
+                    "Forbidden: agent lacks post_messages capability",
+                    403,
+                ));
+            }
+            Ok(ServiceResult::ok(
+                poll.results_payload(conn, &*rich_text, now, Some(viewer), &*verifier)?,
+                if op_is_get { 200 } else { 201 },
+            ))
+        })
         .await
         .map_err(db_error)?;
-    Ok(ServiceResult::ok(
-        payload,
-        if op == "get_poll" { 200 } else { 201 },
-    ))
+    Ok(payload)
 }

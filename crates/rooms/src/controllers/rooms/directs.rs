@@ -9,6 +9,20 @@ use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::presenters::page::db_error;
 
+fn direct_error(error: campfire_db::Error) -> campfire_kit::Error {
+    match error {
+        campfire_db::Error::Other(kind) if kind == "PersonalAgentDirect" => {
+            let mut errors = campfire_db::Errors::default();
+            errors.add(
+                "userIds",
+                "must contain only a personal agent and its owner",
+            );
+            db_error(campfire_db::Error::RecordInvalid(errors))
+        }
+        error => db_error(error),
+    }
+}
+
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let user_id = require_current_user(c)?.id;
@@ -29,7 +43,7 @@ pub async fn create(c: &mut Ctx) -> Result {
             Ok(Some((room, created)))
         })
         .await
-        .map_err(db_error)?;
+        .map_err(direct_error)?;
     let Some((room, created)) = result else {
         let location = c.url_for(&campfire_routes::new_rooms_direct());
         return c.redirect_to_with(
@@ -77,6 +91,9 @@ pub async fn update(c: &mut Ctx) -> Result {
         .await
     {
         Ok(()) => redirect_edit(c, room.id, Some("Group renamed.".into()), None),
+        Err(campfire_db::Error::Other(kind)) if kind == "PersonalAgentDirect" => {
+            Err(direct_error(campfire_db::Error::Other(kind)))
+        }
         Err(campfire_db::Error::Other(kind)) if kind == "NotAGroup" => redirect_edit(
             c,
             room.id,
@@ -128,6 +145,9 @@ pub async fn add_members(c: &mut Ctx) -> Result {
                 Some(format!("Added {} to the group.", sentence(&names))),
                 None,
             )
+        }
+        Err(campfire_db::Error::Other(kind)) if kind == "PersonalAgentDirect" => {
+            Err(direct_error(campfire_db::Error::Other(kind)))
         }
         Err(campfire_db::Error::Other(kind)) if kind == "NotAGroup" => redirect_edit(
             c,

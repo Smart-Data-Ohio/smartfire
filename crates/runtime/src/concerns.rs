@@ -744,6 +744,7 @@ pub fn authenticate_bot_reply_token(
         Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
         Err(error) => return Err(error),
     };
+    if campfire_db::models::agent_access::is_personal_user(conn, bot.id)? { return Ok(None); }
     Ok(Membership::find_by_room_and_user(conn, room_id, bot.id)?.map(|_| bot))
 }
 

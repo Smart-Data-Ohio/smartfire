@@ -346,7 +346,7 @@ impl Room {
     fn create_for_with_grants(
         tx: &mut Tx<'_>, room_type: RoomType, name: Option<&str>, creator_id: i64, user_ids: &[i64], grants: OpenRoomGrants,
     ) -> Result<Self> {
-        if room_type == RoomType::Direct { super::ignore_policy::require_contact(tx.conn(), creator_id, user_ids)?; }
+        if room_type == RoomType::Direct { super::agent_access::check_direct_members(tx.conn(),user_ids)?; super::ignore_policy::require_contact(tx.conn(), creator_id, user_ids)?; }
         let key = (room_type == RoomType::Direct).then(|| Self::direct_member_key_for(user_ids));
         let mut room = Self::insert(tx, room_type, name, creator_id, key.as_deref(), grants)?;
         room.grant_to(tx, user_ids)?;
@@ -422,6 +422,7 @@ impl Room {
         user_ids: &[i64],
         creator_id: i64,
     ) -> Result<Self> {
+        super::agent_access::check_direct_members(tx.conn(), user_ids)?;
         if let Some(room) = Self::find_direct_for(tx.conn(), user_ids)? {
             return Ok(room);
         }
@@ -971,7 +972,7 @@ fn validate_icon(conn: &Connection, name: Option<&str>, resolves: impl FnOnce(&C
 fn grant_to_active_users(tx: &mut Tx<'_>, room_id: i64) -> Result<()> {
     let user_ids: Vec<i64> = query_all(
         tx.conn(),
-        r#"SELECT "users"."id" FROM "users" WHERE "users"."status" = ?"#,
+        r#"SELECT "users"."id" FROM "users" WHERE "users"."status" = ? AND NOT EXISTS (SELECT 1 FROM agents WHERE agents.user_id=users.id AND agents.kind='personal')"#,
         [0],
         |r| r.get(0),
     )?;

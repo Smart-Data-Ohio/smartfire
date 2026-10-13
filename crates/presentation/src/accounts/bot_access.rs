@@ -22,6 +22,14 @@ pub struct Credential {
 }
 
 #[derive(Clone, Debug)]
+pub enum GrantStatus {
+    Active,
+    Inactive,
+    Incompatible,
+    Revoked,
+}
+
+#[derive(Clone, Debug)]
 pub struct Grant {
     pub id: i64,
     pub capability: String,
@@ -29,6 +37,7 @@ pub struct Grant {
     pub granted_by: String,
     pub created_at: jiff::Timestamp,
     pub revoked: bool,
+    pub status: GrantStatus,
 }
 /// The capabilities the grant form offers, in its order.
 pub const CAPABILITIES: [&str; 7] = [

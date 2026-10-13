@@ -142,7 +142,16 @@ async fn post_direct(c: &mut Ctx) -> Result {
             Ok(Some((room, created)))
         })
         .await
-        .map_err(db_error)?;
+        .map_err(|error| match error {
+            campfire_db::Error::Other(kind) if kind == "PersonalAgentDirect" => fail(
+                c,
+                validation(
+                    "userIds",
+                    "must contain only a personal agent and its owner",
+                ),
+            ),
+            error => db_error(error),
+        })?;
     let Some((room, created)) = result else {
         return Err(capacity(c));
     };
@@ -251,6 +260,13 @@ async fn post_direct_members(c: &mut Ctx) -> Result {
             let detail = room_detail(c, room.id).await?;
             c.json(StatusCode::OK, &detail)
         }
+        Err(campfire_db::Error::Other(kind)) if kind == "PersonalAgentDirect" => Err(fail(
+            c,
+            validation(
+                "userIds",
+                "must contain only a personal agent and its owner",
+            ),
+        )),
         Err(campfire_db::Error::Other(kind)) if kind == "NotAGroup" => {
             Err(not_a_group(c, "userIds", "add members"))
         }

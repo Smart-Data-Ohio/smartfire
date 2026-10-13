@@ -253,6 +253,9 @@ pub fn handoff_work(
     package: HandoffPackage,
     context: &audit_log::Context,
 ) -> Result<Outcome<HandedOffWork>> {
+    if Agent::find(tx.conn(),agent.id)?.is_some_and(|agent| agent.kind == crate::AgentKind::Personal) {
+        return Ok(Outcome::fail("Not available to personal agents",403));
+    }
     let mut thread = match writable(tx.conn(), agent, id)? {
         Outcome::Success { payload, .. } => payload,
         Outcome::Denied(denial) => return Ok(Outcome::Denied(denial)),
