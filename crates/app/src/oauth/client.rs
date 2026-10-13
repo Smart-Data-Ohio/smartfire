@@ -29,6 +29,14 @@ pub fn metadata_url(value: &str) -> anyhow::Result<Url> {
     Ok(url)
 }
 
+/// The host a client is known by: its metadata URL's, or the whole id if that isn't a URL.
+pub fn client_host(client_id: &str) -> String {
+    Url::parse(client_id)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_owned))
+        .unwrap_or_else(|| client_id.to_owned())
+}
+
 pub fn redirect_url(value: &str) -> Option<Url> {
     let url = Url::parse(value).ok()?;
     (value.len() <= 2048

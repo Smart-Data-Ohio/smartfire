@@ -31,9 +31,13 @@ pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
 }
 
 /// About, Privacy and Terms, which anyone may read: the signed-out shell draws them for everyone,
-/// as the retained pages show a member and a visitor the same page.
+/// as the retained pages show a member and a visitor the same page. So does the OAuth error page,
+/// which `/oauth/authorize` sends a client's visitor to before anyone signs in.
 pub fn is_public_page(path: &str) -> bool {
-    matches!(path, "/app/about" | "/app/privacy" | "/app/terms")
+    matches!(
+        path,
+        "/app/about" | "/app/privacy" | "/app/terms" | "/app/oauth/error"
+    )
 }
 
 #[cfg(test)]
@@ -85,11 +89,19 @@ mod tests {
 
     #[test]
     fn public_pages_are_a_fixed_allow_list() {
-        for path in ["/app/about", "/app/privacy", "/app/terms"] {
+        for path in ["/app/about", "/app/privacy", "/app/terms", "/app/oauth/error"] {
             assert!(is_public_page(path), "{path}");
             assert_eq!(signed_out_route(path), None, "{path}");
         }
-        for path in ["/about", "/app/about/", "/app/terms/extra", "/app/privacy.json", "/app/"] {
+        for path in [
+            "/about",
+            "/app/about/",
+            "/app/terms/extra",
+            "/app/privacy.json",
+            "/app/",
+            "/app/oauth/error/extra",
+            "/app/oauth/consent/abc",
+        ] {
             assert!(!is_public_page(path), "{path}");
         }
     }

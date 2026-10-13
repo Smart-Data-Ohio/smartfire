@@ -5,21 +5,31 @@ import { meAgents } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { keepDraft } from "../admin/admin-parts.tsx";
 import { leftToConfirm } from "../auth/confirmation.ts";
-import { AccessFields, ExpiryField, IdentityFields, SecretBlock } from "./agent-parts.tsx";
+import {
+  AccessFields,
+  ExpiryField,
+  IdentityFields,
+  SecretBlock,
+  SignInSetup,
+} from "./agent-parts.tsx";
+import { canSignIn } from "./agent-snippets.ts";
 import {
   baseProblem,
+  canCreate,
   clientChoices,
+  connectChoices,
+  connectsBySignIn,
   expiresAtOf,
   STEP_LABELS,
-  STEPS,
   type Step,
   serializeDraft,
   stepProblem,
+  stepsFor,
   turnedOff,
   type WizardDraft,
   withClient,
 } from "./agents-format.ts";
-import { FieldError, fieldsOf, toastFailure, useBusy } from "./settings-parts.tsx";
+import { FieldError, fieldsOf, SettingsRadios, toastFailure, useBusy } from "./settings-parts.tsx";
 
 /** Where the wizard waits while a Google confirmation leaves the page (never the token). */
 export const WIZARD_DRAFT_KEY = "smartfire.draft.me-agent";
@@ -33,12 +43,12 @@ const FIELD_STEP = new Map<string, Step>([
 ]);
 
 /** The steps as a list, the current one marked. */
-function StepList({ current }: { readonly current: Step }) {
-  const at = STEPS.indexOf(current);
+function StepList({ steps, current }: { readonly steps: readonly Step[]; readonly current: Step }) {
+  const at = steps.indexOf(current);
 
   return (
     <ol className="agents-steps" aria-label="Steps">
-      {STEPS.map((step, index) => (
+      {steps.map((step, index) => (
         <li
           key={step}
           className="agents-step"
@@ -55,6 +65,11 @@ function StepList({ current }: { readonly current: Step }) {
   );
 }
 
+const SIGN_IN_CHOICES = [
+  { value: "sign-in", label: "Sign in, no token" },
+  { value: "token", label: "With a token" },
+] as const;
+
 /** The first step: where the agent will run. */
 function ClientStep({
   list,
@@ -68,7 +83,7 @@ function ClientStep({
   return (
     <fieldset className="agents-clients">
       <legend className="settings-label">Where will you use it?</legend>
-      {clientChoices(list.oauthAvailable).map((choice) => (
+      {connectChoices(list).map((choice) => (
         <label key={choice.value} className="agents-client">
           <input
             type="radio"
@@ -83,13 +98,29 @@ function ClientStep({
           </span>
         </label>
       ))}
+      {canCreate(list) ? null : (
+        <p className="settings-hint text-faint">
+          You have as many agents as this workspace allows, so only apps that sign in are listed.
+          You'll connect one as an agent you already have.
+        </p>
+      )}
+      {list.oauthAvailable && canSignIn(draft.client) && canCreate(list) ? (
+        <SettingsRadios
+          label="How it connects"
+          value={draft.signIn ? "sign-in" : "token"}
+          choices={SIGN_IN_CHOICES}
+          onChange={(how) => onPick({ ...draft, signIn: how === "sign-in" })}
+        />
+      ) : null}
     </fieldset>
   );
 }
 
 /**
  * Connect an agent: the client it runs in, its name and icon, the rooms and abilities it gets,
- * then its token (after the password confirmation), shown once with that client's setup.
+ * then its token (after the password confirmation), shown once with that client's setup. A client
+ * that signs in (the web apps, or Claude Code and Codex without a token, while the server has
+ * OAuth) goes straight to its setup: the agent is chosen on the approval page it opens.
  */
 export function AgentWizard({
   list,
@@ -125,7 +156,11 @@ export function AgentWizard({
     shown.current = view;
   }, [view]);
 
-  const at = STEPS.indexOf(step);
+  // At the limit Claude Code and Codex can only sign in: a token would need a new agent.
+  const how = canCreate(list) ? draft : { ...draft, signIn: true };
+  const steps = stepsFor(how, list.oauthAvailable);
+  const signingIn = connectsBySignIn(how, list.oauthAvailable);
+  const at = steps.indexOf(step);
   const edit = (change: Partial<WizardDraft>) => setDraft((current) => ({ ...current, ...change }));
 
   const go = (next: Step) => {
@@ -187,7 +222,11 @@ export function AgentWizard({
   const next = (event: FormEvent) => {
     event.preventDefault();
 
-    const blocked = stepProblem(step, draft);
+    // At the limit only signing in connects anything: it makes no agent.
+    const blocked =
+      draft.client !== null && !canCreate(list) && !signingIn
+        ? "You have as many agents as this workspace allows. Choose an app that signs in."
+        : stepProblem(step, draft);
 
     if (blocked !== null) {
       setProblem(blocked);
@@ -195,12 +234,14 @@ export function AgentWizard({
       return;
     }
 
-    const following = STEPS[at + 1];
+    const following = steps[at + 1];
 
-    if (following === undefined) {
-      create();
-    } else {
+    if (following !== undefined) {
       go(following);
+    } else if (signingIn) {
+      onClose();
+    } else {
+      create();
     }
   };
 
@@ -213,7 +254,7 @@ export function AgentWizard({
   if (created !== null) {
     return (
       <section className="agents-wizard" aria-labelledby="agents-wizard-title">
-        <StepList current="connect" />
+        <StepList steps={steps} current="connect" />
         <h2
           key="created"
           id="agents-wizard-title"
@@ -238,16 +279,18 @@ export function AgentWizard({
     );
   }
 
+  const chosen = clientChoices(true).find((choice) => choice.value === draft.client);
+
   const titles: Readonly<Record<Step, string>> = {
     client: "Connect an agent",
     identity: "Name your agent",
     access: "Choose what it can reach",
-    connect: "Create its token",
+    connect: signingIn ? `Connect ${chosen?.label ?? "the app"}` : "Create its token",
   };
 
   return (
     <section className="agents-wizard" aria-labelledby="agents-wizard-title">
-      <StepList current={step} />
+      <StepList steps={steps} current={step} />
       <h2 key={step} id="agents-wizard-title" ref={heading} tabIndex={-1} className="text-title">
         {titles[step]}
       </h2>
@@ -275,7 +318,10 @@ export function AgentWizard({
             <FieldError message={fieldError("roomIds") ?? fieldError("capabilities")} />
           </>
         ) : null}
-        {step === "connect" ? (
+        {step === "connect" && signingIn && draft.client !== null ? (
+          <SignInSetup client={draft.client} mcpUrl={list.mcpUrl} />
+        ) : null}
+        {step === "connect" && !signingIn ? (
           <>
             <ExpiryField value={draft.expiry} onChange={(expiry) => edit({ expiry })} />
             <p className="settings-hint text-faint">
@@ -293,7 +339,7 @@ export function AgentWizard({
               variant="secondary"
               icon="chevron-left"
               disabled={busy("create")}
-              onClick={() => go(STEPS[at - 1] ?? "client")}
+              onClick={() => go(steps[at - 1] ?? "client")}
             >
               Back
             </Button>
@@ -305,7 +351,7 @@ export function AgentWizard({
             disabled={busy("create")}
             {...(step === "connect" ? {} : { trailingIcon: "chevron-right" as const })}
           >
-            {step === "connect" ? "Create agent" : "Next"}
+            {step !== "connect" ? "Next" : signingIn ? "Done" : "Create agent"}
           </Button>
         </div>
       </form>

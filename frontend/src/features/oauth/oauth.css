@@ -1,0 +1,105 @@
+/*
+ * The OAuth pages: the approval page in the main pane (one readable column, its buttons full
+ * width on phones) and the details under the error page's message.
+ */
+@layer app {
+  .oauth-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    width: 100%;
+    max-width: 38rem;
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5) var(--space-8);
+    overflow-y: auto;
+  }
+
+  .oauth-client {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .oauth-client p,
+  .oauth-notice p {
+    margin: 0;
+  }
+
+  .oauth-host {
+    overflow-wrap: anywhere;
+    color: var(--text);
+  }
+
+  .oauth-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklch, var(--warning) 14%, transparent);
+    color: var(--text);
+  }
+
+  .oauth-warning > svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--warning-text);
+  }
+
+  .oauth-notice {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .oauth-diff {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+  }
+
+  .oauth-diff p {
+    margin: 0;
+  }
+
+  .oauth-diff-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .oauth-diff-label {
+    font-weight: var(--weight-medium);
+  }
+
+  .oauth-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .oauth-error-detail {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: var(--text-sidebar);
+  }
+
+  @media (width < 720px) {
+    .oauth-page {
+      max-width: none;
+      padding: var(--space-4) var(--space-4) var(--space-6);
+    }
+
+    .oauth-actions > .button {
+      flex: 1;
+      min-height: var(--touch-target);
+    }
+  }
+}

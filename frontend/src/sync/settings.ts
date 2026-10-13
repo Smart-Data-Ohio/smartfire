@@ -17,6 +17,7 @@ import {
   updateMeAgent,
   updateMeAgentAccess,
 } from "../api/me-agent-endpoints.ts";
+import { approveOAuth, denyOAuth, oauthConsent } from "../api/oauth-endpoints.ts";
 import { personalAppearance } from "../api/schema/appearance.ts";
 import {
   accountSettings,
@@ -48,11 +49,14 @@ import {
 } from "../api/settings-endpoints.ts";
 import { completeTour as stampTour } from "../api/tour-endpoints.ts";
 import type { AccountSettings } from "../gen/AccountSettings.ts";
+import type { ApproveOAuthAuthorization } from "../gen/ApproveOAuthAuthorization.ts";
 import type { BackupCodes } from "../gen/BackupCodes.ts";
 import type { BotRemoved } from "../gen/BotRemoved.ts";
 import type { CreatePersonalAgent } from "../gen/CreatePersonalAgent.ts";
 import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
+import type { OAuthConsent } from "../gen/OAuthConsent.ts";
+import type { OAuthRedirect } from "../gen/OAuthRedirect.ts";
 import type { PersonalAgent } from "../gen/PersonalAgent.ts";
 import type { PersonalAgentAccess } from "../gen/PersonalAgentAccess.ts";
 import type { PersonalAgentCreated } from "../gen/PersonalAgentCreated.ts";
@@ -517,4 +521,20 @@ export const meAgents = {
 
   revokeToken: (agentId: number, credentialId: number): Promise<PersonalCredentialList> =>
     runAction(revokeMeAgentToken(agentId, credentialId)),
+};
+
+/**
+ * The approval page for an app connecting as a personal agent (`/api/v1/oauth/authorizations/*`).
+ * Approving may wait on the password confirmation: closing it rejects with
+ * `ConfirmationCancelled`, leaving for Google with `SudoRequired` (the answer carries a code, so
+ * the write isn't kept). A request that expired, was answered or isn't yours rejects with
+ * `NotFound`.
+ */
+export const oauth = {
+  consent: (publicId: string): Promise<OAuthConsent> => runAction(oauthConsent(publicId)),
+
+  approve: (publicId: string, body: ApproveOAuthAuthorization): Promise<OAuthRedirect> =>
+    runAction(approveOAuth(publicId, body)),
+
+  deny: (publicId: string): Promise<OAuthRedirect> => runAction(denyOAuth(publicId)),
 };

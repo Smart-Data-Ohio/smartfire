@@ -48,6 +48,7 @@ import {
   suspendBot,
   updateBot,
 } from "../api/bot-endpoints.ts";
+import { oauthClients as listOAuthClients, setOAuthClientBlocked } from "../api/oauth-endpoints.ts";
 import {
   blocks,
   peopleDirectory,
@@ -76,6 +77,8 @@ import {
 import { createSticker, destroySticker, updateSticker } from "../api/sticker-endpoints.ts";
 import { exportTemplate, importTemplate, previewTemplate } from "../api/template-endpoints.ts";
 import { adminWelcome, updateWelcome } from "../api/welcome-endpoints.ts";
+import type { AdminOAuthClient } from "../gen/AdminOAuthClient.ts";
+import type { AdminOAuthClientList } from "../gen/AdminOAuthClientList.ts";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../gen/AuditLogPage.ts";
 import type { BlockList } from "../gen/BlockList.ts";
@@ -392,4 +395,12 @@ export const templates = {
   preview: (contents: string) => runAction(previewTemplate(contents)),
   import: (contents: string, expected: WorkspaceTemplate) =>
     runAction(importTemplate({ contents, expected })),
+};
+
+/** Chat bots → Connected apps: the apps agents connected through, and blocking one. */
+export const oauthClients = {
+  list: (): Promise<AdminOAuthClientList> => runAction(listOAuthClients()),
+
+  setBlocked: (clientId: number, blocked: boolean): Promise<AdminOAuthClient> =>
+    runAction(setOAuthClientBlocked(clientId, blocked)),
 };

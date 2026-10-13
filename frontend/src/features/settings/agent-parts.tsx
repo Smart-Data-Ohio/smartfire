@@ -4,7 +4,13 @@ import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { copy } from "../admin/admin-parts.tsx";
-import { type AgentClient, agentSnippet } from "./agent-snippets.ts";
+import {
+  type AgentClient,
+  agentSnippet,
+  canSignIn,
+  type Snippet,
+  signInSnippet,
+} from "./agent-snippets.ts";
 import {
   abilityHint,
   abilityLabel,
@@ -249,6 +255,97 @@ export function SecretBlock({
           <p className="settings-hint text-faint">{snippet.note}</p>
         </>
       )}
+    </div>
+  );
+}
+
+/** Said where the connector URL would be: signing in needs the server's public address. */
+function NoSignInUrl() {
+  return (
+    <p className="settings-callout text-muted" role="note">
+      This server's public address isn't configured yet, so apps can't sign in to it. An
+      administrator needs to set it (APP_URL).
+    </p>
+  );
+}
+
+/** A snippet's things to copy, then its note. */
+function SnippetSteps({ snippet }: { readonly snippet: Snippet }) {
+  return (
+    <>
+      {snippet.steps.map((step) => (
+        <CodeBlock key={step.label} label={step.label} code={step.code} what="Setup" />
+      ))}
+      <p className="settings-hint text-faint">{snippet.note}</p>
+    </>
+  );
+}
+
+/**
+ * How a client that signs in connects: the connector URL and where it goes (a web app), or the
+ * command that adds the server and signs in (Claude Code, Codex). No token is shown or kept.
+ */
+export function SignInSetup({
+  client,
+  mcpUrl,
+}: {
+  readonly client: AgentClient;
+  /** `null` when the server has no public address configured. */
+  readonly mcpUrl: string | null;
+}) {
+  if (mcpUrl === null) return <NoSignInUrl />;
+
+  const snippet = canSignIn(client)
+    ? signInSnippet(client, mcpUrl)
+    : agentSnippet(client, { agentName: "", mcpUrl });
+
+  return (
+    <div className="agents-secret">
+      <SnippetSteps snippet={snippet} />
+      <p className="settings-hint text-faint">
+        There's no token to keep. On Smartfire's approval page you pick a new or existing agent, its
+        rooms and abilities, and confirm your password. A connection lasts up to 180 days, then you
+        approve it again.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Reconnecting a connection: the app has to sign in again, from its own settings, so this says
+ * how, with the connector URL. A product known by its exact client id gets its own steps.
+ */
+export function ReconnectSetup({
+  client,
+  clientName,
+  agentName,
+  mcpUrl,
+}: {
+  /** The product it is, when its client id says so; else it's named only by `clientName`. */
+  readonly client: AgentClient | null;
+  readonly clientName: string;
+  readonly agentName: string;
+  readonly mcpUrl: string | null;
+}) {
+  if (mcpUrl === null) return <NoSignInUrl />;
+
+  const snippet: Snippet =
+    client === null
+      ? {
+          steps: [{ label: "Connector URL", code: mcpUrl }],
+          note: `Sign in again from the app you connected (${clientName}): reconnect Smartfire where it lists its connectors or MCP servers, or add it again with this URL.`,
+        }
+      : canSignIn(client)
+        ? signInSnippet(client, mcpUrl)
+        : agentSnippet(client, { agentName, mcpUrl });
+
+  return (
+    <div className="agents-secret">
+      <SnippetSteps snippet={snippet} />
+      <p className="settings-hint text-faint">
+        When Smartfire's approval page opens, choose {agentName} (it's picked already if it's the
+        last agent this app connected as), check its rooms and abilities, and approve.
+      </p>
     </div>
   );
 }

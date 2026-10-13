@@ -1,5 +1,5 @@
 //! Consent API for the OAuth screen. Secrets never appear in consent data.
-use crate::{PersonalAgent, PersonalAgentRoom};
+use crate::{PersonalAgent, PersonalAgentRoom, Timestamp};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -18,6 +18,34 @@ pub struct OAuthConsent {
     pub limit: Option<i64>,
     /// Existing agents expose their current rooms and capabilities for the consent diff.
     pub access_applies_to_all_connections: bool,
+    /// What each existing agent can do in each room it's in now, so the page can show exactly
+    /// what approval changes room by room. Approval replaces all of it with the chosen rooms,
+    /// each getting the chosen capabilities.
+    pub room_access: Vec<OAuthAgentRoomAccess>,
+    /// Per agent, how many rooms it's in that the member can no longer see (they left a private
+    /// room, say). Only counted, never named; approval takes the agent out of them. Agents with
+    /// none are left out.
+    pub hidden_rooms: Vec<OAuthAgentHiddenRooms>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct OAuthAgentHiddenRooms {
+    pub agent_id: i64,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct OAuthAgentRoomAccess {
+    pub agent_id: i64,
+    pub room_id: i64,
+    /// The room's name. Only rooms the member can see are listed; others are in `hidden_rooms`.
+    pub room_name: String,
+    /// Empty when the agent is in the room without any capability there.
+    pub capabilities: Vec<String>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -43,4 +71,29 @@ pub struct ApproveOAuthAuthorization {
 #[ts(export)]
 pub struct OAuthRedirect {
     pub redirect_to: String,
+}
+
+/// `GET /api/v1/admin/oauth_clients`: the OAuth clients that have connected, or are blocked.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AdminOAuthClientList {
+    pub clients: Vec<AdminOAuthClient>,
+    pub oauth_available: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AdminOAuthClient {
+    pub id: i64,
+    pub client_name: String,
+    /// The client's id: the URL of its metadata document.
+    pub client_id: String,
+    pub client_host: String,
+    /// Connections that can still be used (unrevoked and unexpired).
+    pub live_connections: i64,
+    pub last_connected_at: Option<Timestamp>,
+    /// Blocked clients can't connect, and their connections stop working until unblocked.
+    pub blocked_at: Option<Timestamp>,
 }

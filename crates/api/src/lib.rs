@@ -537,6 +537,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(invites::routes())
         .merge(bots::routes())
         .merge(me_agents::routes())
+        .merge(oauth::admin_routes())
         .merge(webhooks::routes())
         .merge(slack::routes())
         .merge(welcome::routes())
