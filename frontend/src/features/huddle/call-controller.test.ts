@@ -12,6 +12,7 @@ import {
   type CallEnvironment,
   endCallOnAccountChange,
   SERVER_MUTED_NOTICE,
+  STATS_INTERVAL_MS,
 } from "./call-controller.ts";
 import { callStore, initialCallState } from "./call-store.ts";
 import { EMPTY_DEVICE_LISTS } from "./engine/devices.ts";
@@ -125,6 +126,106 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("connection details sampling", () => {
+  it("stops sampling and discards pending results when Call settings closes", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("no transport");
+    const pending = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
+    const sample = vi.spyOn(transport, "sampleStats");
+    const fresh = await transport.sampleStats(true);
+    sample.mockClear().mockImplementationOnce(() => pending.promise);
+
+    try {
+      controller.toggleDevices();
+      controller.toggleStats();
+      expect(sample).toHaveBeenCalledExactlyOnceWith(true);
+      controller.toggleDevices();
+      expect(callStore.getState().statsOpen).toBe(false);
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS * 2);
+      expect(sample).toHaveBeenCalledTimes(1);
+      controller.toggleDevices();
+      expect(callStore.getState().statsOpen).toBe(false);
+      controller.toggleStats();
+      await settle();
+      expect(sample).toHaveBeenCalledTimes(2);
+      expect(sample).toHaveBeenLastCalledWith(true);
+      expect(callStore.getState().stats).toEqual(fresh);
+
+      if (fresh === null) throw new Error("fake stats missing");
+      pending.resolve({ ...fresh, rttMs: 999 });
+      await settle();
+      expect(callStore.getState().stats).toEqual(fresh);
+      controller.toggleDevices();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS * 2);
+      expect(sample).toHaveBeenCalledTimes(2);
+      expect(callStore.getState().stats).toBeNull();
+    } finally {
+      pending.resolve(fresh);
+      sample.mockRestore();
+      await controller.leave();
+    }
+  });
+
+  it("samples active video tracks only while the details panel is open and visible", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("no fake transport");
+    const sample = vi.spyOn(transport, "sampleStats");
+
+    try {
+      await controller.toggleCamera();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(0);
+      controller.toggleStats();
+      await settle();
+      expect(sample).toHaveBeenCalledTimes(1);
+      expect(sample).toHaveBeenLastCalledWith(true);
+      expect(
+        callStore.getState().stats?.videoTracks.map((track) => ({
+          direction: track.direction,
+          source: track.source,
+          dimensions: track.layers.map((layer) => [
+            layer.frameWidth,
+            layer.frameHeight,
+            layer.framesPerSecond,
+          ]),
+        })),
+      ).toEqual([{ direction: "sending", source: "camera", dimensions: [[640, 360, 15]] }]);
+
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(2);
+      expect(sample).toHaveBeenLastCalledWith(false);
+      visibility.mockReturnValue("hidden");
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(2);
+      visibility.mockReturnValue("visible");
+      controller.toggleStats();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(2);
+
+      controller.toggleStats();
+      await settle();
+      expect(sample).toHaveBeenCalledTimes(3);
+      expect(sample).toHaveBeenLastCalledWith(true);
+      await controller.leave();
+      await vi.advanceTimersByTimeAsync(STATS_INTERVAL_MS);
+      expect(sample).toHaveBeenCalledTimes(3);
+    } finally {
+      await controller.leave();
+      sample.mockRestore();
+      visibility.mockRestore();
+    }
+  });
 });
 
 describe("joining", () => {
@@ -703,6 +804,120 @@ describe("the microphone", () => {
 });
 
 describe("call state", () => {
+  it("discards a pending stats result after closing and reopening connection details", async () => {
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("no transport");
+    const old = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
+    const fresh = Promise.withResolvers<Awaited<ReturnType<FakeTransport["sampleStats"]>>>();
+
+    const read = vi
+      .spyOn(transport, "sampleStats")
+      .mockImplementationOnce(() => old.promise)
+      .mockImplementationOnce(() => fresh.promise);
+
+    const stats = {
+      rttMs: 42,
+      lossRatio: 0,
+      jitterMs: 0,
+      rxBps: null,
+      txBps: null,
+      relayed: false,
+      videoTracks: [],
+    };
+
+    try {
+      controller.toggleStats();
+      controller.toggleStats();
+      controller.toggleStats();
+      old.resolve({ ...stats, rttMs: 999 });
+      await settle();
+      expect(callStore.getState().stats).toBeNull();
+      fresh.resolve(stats);
+      await settle();
+      expect(callStore.getState().stats?.rttMs).toBe(42);
+      expect(read).toHaveBeenCalledTimes(2);
+    } finally {
+      read.mockRestore();
+      await controller.leave();
+    }
+  });
+
+  it("keeps an already expanded share focused when delayed stage metadata arrives", async () => {
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("no transport");
+    const original = transport.snapshot();
+    let speaking = false;
+
+    const snapshot = vi.spyOn(transport, "snapshot").mockImplementation(() => ({
+      ...original,
+      participants: [
+        ...original.participants,
+        {
+          identity: "presenter",
+          name: "Presenter",
+          local: false,
+          speaking,
+          audioLevel: 0,
+          microphoneMuted: false,
+          quality: "good",
+          cameraId: null,
+          screenId: "screen",
+        },
+      ],
+    }));
+
+    const shown = vi.spyOn(transport, "showScreen");
+    const preference = vi.spyOn(transport, "setViewerQuality");
+
+    try {
+      await transport.setMicrophone(false);
+      controller.expand("screen");
+      controller.screenShown("screen", true);
+      shown.mockClear();
+      store.setState({
+        stages: {
+          [ROOM]: {
+            roomId: ROOM,
+            audienceCount: 1,
+            audienceBudget: 300,
+            audienceAvailability: "open",
+            members: [],
+            live: {
+              id: 41,
+              membershipId: 42,
+              userId: 42,
+              identity: "presenter",
+              quality: "1080p15",
+              startedAt: "2026-10-12T12:00:00Z",
+            },
+          },
+        },
+      });
+      speaking = true;
+      await transport.setMicrophone(true);
+      expect(callStore.getState().expandedVideoId).toBe("screen");
+      expect(shown).toHaveBeenLastCalledWith("screen", true);
+      expect(preference).not.toHaveBeenCalledWith("screen", "auto");
+
+      controller.setViewerQuality("low");
+      shown.mockClear();
+      controller.screenShown("screen", true);
+      expect(preference).toHaveBeenLastCalledWith("screen", "low");
+      expect(shown).not.toHaveBeenCalled();
+    } finally {
+      snapshot.mockRestore();
+      shown.mockRestore();
+      preference.mockRestore();
+      await controller.leave();
+    }
+  });
+
   it("a double click on Go live posts one stream", async () => {
     const started: number[] = [];
 

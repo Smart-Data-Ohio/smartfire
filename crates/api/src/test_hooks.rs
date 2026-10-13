@@ -263,3 +263,36 @@ pub(crate) fn read_after_sidebar_snapshot(database: &Path, room_id: i64) -> bool
     *left -= 1;
     true
 }
+
+type DeliveryHolds = Mutex<Option<HashMap<(PathBuf, i64), WriteHold>>>;
+static BEFORE_SYNC_DELIVERY: DeliveryHolds = Mutex::new(None);
+
+/// Pauses a viewer's next file-change batch before its delivery authorization.
+pub fn hold_before_sync_delivery(database: &Path, viewer: i64) -> WriteHold {
+    let held = WriteHold {
+        reached: Arc::new(Barrier::new(2)),
+        release: Arc::new(Barrier::new(2)),
+    };
+    let copy = WriteHold {
+        reached: held.reached.clone(),
+        release: held.release.clone(),
+    };
+    BEFORE_SYNC_DELIVERY
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .insert((database.to_owned(), viewer), held);
+    copy
+}
+
+pub(crate) async fn before_sync_delivery(database: &Path, viewer: i64) {
+    let held = BEFORE_SYNC_DELIVERY
+        .lock()
+        .unwrap()
+        .as_mut()
+        .and_then(|holds| holds.remove(&(database.to_owned(), viewer)));
+    if let Some(held) = held {
+        held.reached.wait().await;
+        held.release.wait().await;
+    }
+}

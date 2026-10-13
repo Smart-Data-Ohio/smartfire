@@ -137,12 +137,13 @@ describe("editing and deleting", () => {
 
     expect(events.map((event) => event.type)).toEqual([
       "message.removed",
+      "room.files.changed",
       "thread.indicator",
       "thread.updated",
       "thread.updated",
       "thread.unread",
     ]);
-    expect(events[1]?.data).toMatchObject({ thread: { replyCount: 5 } });
+    expect(events[2]?.data).toMatchObject({ thread: { replyCount: 5 } });
   });
 });
 
