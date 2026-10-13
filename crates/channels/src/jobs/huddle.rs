@@ -80,18 +80,20 @@ async fn invitation(app: App, job: Invitation, _: Execution) -> JobResult {
 }
 
 async fn presence(app: App, job: Presence, _: Execution) -> JobResult {
-    // Publish on the writer's ordered after-commit lane. An independent reader can publish
-    // an idle stage after StreamChanged and coalesce away the live state.
-    app.db
-        .write(move |tx| {
-            if let Some(grant) =
-                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(tx.conn(), job.0.grant_id)?
-            {
-                campfire_db::models::huddle_effects::broadcast_presence(tx, grant.room_id);
-            }
-            Ok(())
-        })
-        .await?;
+    // Keep publication ordered with StreamChanged, but let its errors reach the job's retry
+    // policy instead of the model broadcast sink, which logs and drops failures.
+    let db = app.db.clone();
+    db.write(move |tx| {
+        if let Some(grant) =
+            campfire_db::models::huddle_grant::HuddleGrant::find_by_id(tx.conn(), job.0.grant_id)?
+        {
+            tx.after_commit(move |_| {
+                crate::channels::huddle_effects::presence(&app, grant.room_id)
+            });
+        }
+        Ok(())
+    })
+    .await?;
     Ok(Outcome::Done)
 }
 

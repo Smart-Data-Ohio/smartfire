@@ -51,7 +51,7 @@ pub(crate) fn role_event(app: &App, room_id: i64, membership_id: i64) -> anyhow:
     Ok(())
 }
 
-pub fn presence(app: &App, room_id: i64) -> anyhow::Result<()> {
+pub fn presence(app: &App, room_id: i64) -> campfire_db::Result<()> {
     if !app.config.huddle.configured() { return Ok(()); }
     app.db.read_blocking(|conn| {
         if let Some(room) = Room::find_by_id(conn, room_id)?.filter(|room| room.deleted_at.is_none()) {
