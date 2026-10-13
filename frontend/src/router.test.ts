@@ -60,6 +60,8 @@ describe("the screen map and the router", () => {
       "/app/guide",
       // Ignoring people (Discord's) is new with the SPA; classic had no ignore list.
       "/app/settings/ignored",
+      // Personal agents (Connect an agent) are new with the SPA; classic had no such page.
+      "/app/settings/agents",
       // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
       "/app/r/:id/t/:id/links",

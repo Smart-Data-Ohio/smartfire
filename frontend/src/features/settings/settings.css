@@ -995,6 +995,339 @@
     font-weight: var(--weight-semibold);
   }
 
+  /* ── Agents: the cards and the Connect an agent wizard ──────────────────── */
+
+  .agents-intro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .agents-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .agents-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-pane);
+  }
+
+  .agents-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .agents-card-title {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    min-width: 0;
+  }
+
+  .agents-card-title h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .agents-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .agents-facts dd {
+    margin: var(--space-0-5) 0 0;
+    overflow-wrap: anywhere;
+  }
+
+  .agents-tokens {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .agents-tokens h4 {
+    margin: 0;
+  }
+
+  .agents-token {
+    flex-wrap: wrap;
+  }
+
+  .agents-token[data-state="revoked"] {
+    color: var(--text-muted);
+  }
+
+  .agents-token .settings-list-main {
+    flex-basis: 220px;
+  }
+
+  .agents-token-actions,
+  .agents-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .agents-last-four {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    font-weight: normal;
+  }
+
+  .agents-wizard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    max-width: 640px;
+  }
+
+  .agents-wizard h2 {
+    margin: 0;
+  }
+
+  .agents-wizard h2:focus {
+    outline: none;
+  }
+
+  .agents-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--text-faint);
+    font-size: var(--text-sidebar);
+  }
+
+  .agents-step {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  .agents-step-number {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--border-strong);
+    border-radius: 50%;
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    transition:
+      background-color var(--duration-small) var(--ease-enter),
+      color var(--duration-small) var(--ease-enter);
+  }
+
+  .agents-step[data-done] .agents-step-number {
+    border-color: transparent;
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  .agents-step[aria-current="step"] {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .agents-step[aria-current="step"] .agents-step-number {
+    border-color: transparent;
+    background: var(--agent);
+    color: var(--on-accent);
+  }
+
+  .agents-clients,
+  .agents-icons,
+  .agents-choices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .agents-client {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--touch-target);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-small) var(--ease-enter),
+      border-color var(--duration-small) var(--ease-enter);
+  }
+
+  .agents-client:hover {
+    background: var(--bg-hover);
+  }
+
+  .agents-client:has(input:checked) {
+    border-color: var(--agent);
+    background: var(--agent-soft);
+  }
+
+  .agents-client:has(input:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .agents-client input {
+    flex-shrink: 0;
+    accent-color: var(--agent);
+  }
+
+  .agents-client-text,
+  .agents-check-label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    min-width: 0;
+  }
+
+  .agents-client-label {
+    font-weight: var(--weight-medium);
+  }
+
+  .agents-icon-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .agents-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: var(--touch-target);
+    height: var(--touch-target);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 1.375rem;
+    cursor: pointer;
+  }
+
+  .agents-icon:hover {
+    background: var(--bg-hover);
+  }
+
+  .agents-icon:has(input:checked) {
+    border-color: var(--agent);
+    background: var(--agent-soft);
+  }
+
+  .agents-icon:has(input:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* The radio covers its tile: the tile is what's tapped, and what the touch check measures. */
+  .agents-icon input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .agents-checks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .agents-checks .checkbox-row {
+    min-height: 36px;
+  }
+
+  .agents-secret {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .agents-secret-warning {
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklch, var(--warning) 16%, transparent);
+    color: var(--warning-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .agents-code {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .agents-code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .agents-pre {
+    margin: 0;
+    overflow-x: auto;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+    line-height: 1.6;
+    white-space: pre;
+  }
+
+  .agents-pre[data-wrap] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .agents-wizard-actions {
+    flex-wrap: wrap;
+  }
+
+  @media (width < 720px) {
+    .agents-card {
+      padding: var(--space-3);
+    }
+
+    .agents-wizard-actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+
+    .agents-checks .checkbox-row {
+      min-height: var(--touch-target);
+    }
+  }
+
   /* ── Phones: list, then detail ─────────────────────────────────────────── */
 
   /* The root is the list of sections; a section is a page pushed over it (SectionsLayout), so

@@ -34,6 +34,7 @@ import { RoomRoute } from "./features/room/room-route.tsx";
 import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
 import { NEW_ROOM_SLUGS } from "./features/rooms/room-forms.ts";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
+import { AgentsSection } from "./features/settings/agents-section.tsx";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
 import { BlockedSection } from "./features/settings/blocked-section.tsx";
 import { CallsSection } from "./features/settings/calls-section.tsx";
@@ -482,6 +483,7 @@ const settingsSections = [
     path: "slack",
     component: PersonalSlackSection,
   }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "agents", component: AgentsSection }),
   createRoute({
     getParentRoute: () => settingsRoute,
     path: "slack/$runId",

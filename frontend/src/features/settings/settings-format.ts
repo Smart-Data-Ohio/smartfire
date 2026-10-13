@@ -100,6 +100,7 @@ export const SECTIONS = [
     under: "/settings/slack",
     group: "integrations",
   },
+  { key: "agents", label: "Agents", icon: "bot", path: "/settings/agents", group: "integrations" },
 ] as const satisfies readonly Section[];
 
 /** Sections in runs of the same group, in order: the phone list's blocks. */
