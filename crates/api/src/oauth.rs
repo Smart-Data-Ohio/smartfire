@@ -552,6 +552,9 @@ async fn token(c: &mut Ctx) -> Result {
         method,
         verified,
     } = client_authentication(c, &input).await?;
+    let missing_credentials = c.request.header("authorization").is_none()
+        && !input.contains_key("client_secret")
+        && !input.contains_key("client_assertion");
     let result = c
         .app()
         .db
@@ -563,18 +566,27 @@ async fn token(c: &mut Ctx) -> Result {
             }
             let value = |key: &str| input.get(key).map(String::as_str).unwrap_or_default();
             match value("grant_type") {
-                "authorization_code" => oauth::exchange_code(
-                    tx,
-                    oauth::CodeExchange {
-                        code: value("code"),
-                        client_id: &client_id,
-                        redirect_uri: input.get("redirect_uri").map(String::as_str),
-                        verifier: value("code_verifier"),
-                        resource: value("resource"),
-                        method,
-                    },
-                )
-                .map(|pair| ("invalid_grant", pair)),
+                "authorization_code" => {
+                    if missing_credentials
+                        && OAuthClient::find_by_client_id(tx.conn(), &client_id)?.is_some_and(
+                            |client| !client::allows(&client, client::AuthMethod::None),
+                        )
+                    {
+                        return Ok(("invalid_client", None));
+                    }
+                    oauth::exchange_code(
+                        tx,
+                        oauth::CodeExchange {
+                            code: value("code"),
+                            client_id: &client_id,
+                            redirect_uri: input.get("redirect_uri").map(String::as_str),
+                            verifier: value("code_verifier"),
+                            resource: value("resource"),
+                            method,
+                        },
+                    )
+                    .map(|pair| ("invalid_grant", pair))
+                }
                 "refresh_token" => oauth::refresh(
                     tx,
                     value("refresh_token"),

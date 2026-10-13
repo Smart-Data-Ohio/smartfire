@@ -260,6 +260,9 @@ async fn oauth_jwt_header_claim_and_mechanism_refusals_leave_code_unconsumed() {
     ] {
         let mut claim = claims(&f, name);
         claim[field] = value;
+        if name == "exp too far" {
+            claim.as_object_mut().unwrap().remove("iat");
+        }
         cases.push((name, header("RS256"), claim));
     }
     for field in ["iss", "sub", "aud", "exp", "jti"] {
@@ -874,4 +877,45 @@ async fn oauth_jwt_review_mixed_mechanisms_return_invalid_request_without_consum
     .await;
     assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
     assert_eq!(mcp(&f.app, access).await.status.as_u16(), 401);
+}
+
+#[tokio::test]
+async fn oauth_jwt_missing_required_authentication_returns_invalid_client_without_consuming_code() {
+    for alg in ["RS256", "ES256"] {
+        let f = if alg == "RS256" {
+            let mut doc = document();
+            doc["token_endpoint_auth_methods_supported"] = json!(["private_key_jwt"]);
+            jwt_fixture_with_document(alg, doc).await
+        } else {
+            jwt_fixture(alg).await
+        };
+        let code = code(&f).await;
+        for requested_method in [None, Some("none"), Some("private_key_jwt")] {
+            let mut form = code_form(&code);
+            if let Some(method) = requested_method {
+                form.push(("token_endpoint_auth_method", method));
+            }
+            auth_error(
+                f.app
+                    .anonymous()
+                    .send(Req::new(Method::POST, "/oauth/token").form(&form))
+                    .await,
+                "invalid_client",
+            );
+        }
+        let reply = send(
+            &f.app,
+            &code_form(&code),
+            &sign(alg, &header(alg), &claims(&f, "authenticated exchange")),
+        )
+        .await;
+        assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+        assert_eq!(
+            mcp(&f.app, reply.json()["access_token"].as_str().unwrap())
+                .await
+                .status
+                .as_u16(),
+            200
+        );
+    }
 }
