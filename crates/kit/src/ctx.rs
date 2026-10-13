@@ -40,6 +40,7 @@ pub struct Ctx {
     pub cache_control: CacheControl,
     session: Session,
     flash: Option<Flash>,
+    session_cookie_overflow_response: Option<std::sync::Mutex<Response>>,
     kit: Kit,
     extensions: Extensions,
     action_started: bool,
@@ -113,6 +114,7 @@ impl Ctx {
             cache_control: CacheControl::default(),
             session,
             flash: None,
+            session_cookie_overflow_response: None,
             kit,
             extensions: Extensions::new(),
             action_started: false,
@@ -285,6 +287,33 @@ impl Ctx {
             session.insert(csrf::SESSION_KEY, token);
         }
         session.commit(&mut self.cookies.clone(), now).is_ok()
+    }
+
+    /// Preview the real serializer and wire encoding, reserving room for later requests.
+    pub fn session_cookie_fits_with_headroom(&mut self, bytes: usize) -> bool {
+        let now = self.now();
+        let mut session = self.session().clone();
+        if let Some(flash) = &self.flash {
+            session.insert(
+                "flash",
+                flash.to_session_value().unwrap_or(serde_json::Value::Null),
+            );
+        }
+        if let Some(token) = &self.csrf_token {
+            session.insert(csrf::SESSION_KEY, token.clone());
+        }
+        let mut cookies = self.cookies.clone();
+        session.preview_commit(&mut cookies, now).is_ok()
+            && cookies
+                .set_cookie_headers(self.request.is_ssl(), &self.request.host())
+                .iter()
+                .all(|cookie| cookie.len().saturating_add(bytes) < crate::cookies::MAX_COOKIE_SIZE)
+    }
+
+    /// Opt into a protocol refusal if the final session write overflows. Recovery clears
+    /// the cookie session, including flash and CSRF, before emitting the supplied response.
+    pub fn on_session_cookie_overflow(&mut self, response: Response) {
+        self.session_cookie_overflow_response = Some(std::sync::Mutex::new(response));
     }
 
     /// `reset_session`: new session id, no data, no flash, and a new CSRF token when one is next
@@ -814,7 +843,19 @@ impl Ctx {
         // The CSP middleware runs inside the session middleware: the nonce sees the session as
         // the action (and the flash commit) left it, before the CSRF token is stored.
         self.apply_content_security_policy(&mut response);
+        let cookies_before_commit = self
+            .session_cookie_overflow_response
+            .as_ref()
+            .map(|_| self.cookies.clone());
         if let Err(error) = self.commit_session(&mut response) {
+            if matches!(error, Error::CookieOverflow(_))
+                && let Some(fallback) = self.session_cookie_overflow_response.take()
+            {
+                self.cookies =
+                    cookies_before_commit.expect("overflow handler took a cookie snapshot");
+                self.reset_session();
+                return self.finish(Ok(fallback.into_inner().expect("unused overflow response")));
+            }
             return self.error_response(error);
         }
         response
@@ -859,6 +900,14 @@ impl Ctx {
         self.session.commit(&mut self.cookies, now)?;
 
         for cookie in self.cookies.set_cookie_headers(self.request.is_ssl(), &self.request.host()) {
+            if self.session_cookie_overflow_response.is_some()
+                && cookie.len() >= crate::cookies::MAX_COOKIE_SIZE
+            {
+                return Err(Error::CookieOverflow(format!(
+                    "session cookie header overflowed with size {} bytes",
+                    cookie.len()
+                )));
+            }
             response.headers.append(header::SET_COOKIE, HeaderValue::from_str(&cookie).map_err(Error::internal)?);
         }
         Ok(())
