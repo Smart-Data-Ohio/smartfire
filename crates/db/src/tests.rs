@@ -2,6 +2,7 @@
 
 mod agent_work_test;
 mod personal_agent_access_test;
+mod oauth_test;
 mod personal_agent_review_test;
 mod agent_recorder_cost_test;
 mod ws12_agent_named_test;

@@ -35,9 +35,19 @@ pub fn no_store(c: &mut Ctx) {
     c.set_header("pragma", "no-cache");
 }
 
-/// Count every call, including failed calls, under the credential digest. A session
+/// Count calls under the credential, so rotating OAuth tokens share a bucket. A session
 /// with no Bearer header skips the counter, as Rails' agent_throttle_key does.
 pub fn retry_after(c: &Ctx, limit: u64, controller: &str, action: &str) -> Option<i64> {
+    if let Some(identity) = c.current::<CurrentAgent>() {
+        return retry_after_for_key(
+            c.kit().rate_limits(),
+            &format!("credential:{}", identity.credential_id),
+            c.now(),
+            limit,
+            controller,
+            action,
+        );
+    }
     retry_after_for(
         c.kit().rate_limits(),
         c.request.header("authorization"),
@@ -65,10 +75,21 @@ fn retry_after_for(
     if token.is_empty() {
         return None;
     }
+    let digest = format!("{:x}", Sha256::digest(token));
+    retry_after_for_key(store, &digest, now, limit, controller, action)
+}
+
+fn retry_after_for_key(
+    store: &campfire_kit::RateLimitStore,
+    credential: &str,
+    now: jiff::Timestamp,
+    limit: u64,
+    controller: &str,
+    action: &str,
+) -> Option<i64> {
     let seconds = now.as_second();
     let bucket = seconds.div_euclid(60);
-    let digest = format!("{:x}", Sha256::digest(token));
-    let key = format!("agent_api_throttle:{controller}:{action}:{bucket}:{digest}");
+    let key = format!("agent_api_throttle:{controller}:{action}:{bucket}:{credential}");
     let count = store.increment(&key, SignedDuration::from_secs(65), now);
     (count > limit).then_some(((bucket + 1) * 60 - seconds).max(1))
 }

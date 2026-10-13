@@ -1036,6 +1036,7 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
     let mut expected = golden["tasks"].as_array().unwrap().clone();
     expected.insert(0, serde_json::json!({"name":"event reminders","seconds":17}));
+    expected.insert(0, serde_json::json!({"name":"OAuth sweep","seconds":3600}));
     // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
     let retention = expected.pop().unwrap();
     expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
