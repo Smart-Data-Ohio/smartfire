@@ -145,13 +145,16 @@ async fn start(
             "message does not support permit"
         )));
     }
-    let a = if streaming {
+    let mut a = if streaming {
         let mut a = attributes(&args, rest, false);
         a.body = None;
         a
     } else {
         canonical(c, &args, rest, false).await?
     };
+    if !rest && !streaming {
+        a.sticker_id = args.get("sticker_id").and_then(Value::as_i64);
+    }
     let drive = drive(&args, rest);
     let assignment = if rest && !streaming {
         let params = c

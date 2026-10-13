@@ -23,6 +23,7 @@ pub mod fizzy_profile;
 pub mod room_unread;
 pub mod calls;
 pub mod message_payload;
+pub mod stickers;
 pub mod bot_input_casts;
 pub mod message_freshness;
 pub mod github;
@@ -626,7 +627,11 @@ impl<'a> Presenter<'a> {
                 }
             } else {
                 AttachmentPreview::Image {
-                    thumb_url: self.thumb_path(blob)?,
+                    thumb_url: if campfire_storage::klipy::verified_image_import(verifier, blob, self.now) {
+                        campfire_storage::paths::blob_redirect_path(verifier, blob, None)
+                    } else {
+                        self.thumb_path(blob)?
+                    },
                 }
             }
         } else {

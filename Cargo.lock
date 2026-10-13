@@ -500,6 +500,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "hkdf",
+ "hmac",
  "http",
  "http-body-util",
  "hyper",

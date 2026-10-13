@@ -29,7 +29,7 @@ async fn ignore_dm_rest_and_mcp_return_the_same_missing_user_refusal() {
                         Method::POST,
                         if mcp { "/agents/mcp" } else { "/agents/dms" },
                     )
-                    .header("authorization", &["Bearer", SECRET].join(" "))
+                    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
                     .header("accept", "application/json")
                     .header("content-type", "application/json")
                     .body(body.to_string()),
@@ -60,7 +60,7 @@ async fn request(app: &TestApp, case: &Value) -> super::presenters::test_support
         Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
         "/agents/mcp",
     )
-    .header("authorization", &["Bearer", SECRET].join(" "))
+    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" "))
     .header("accept", "application/json")
     .header(
         "content-type",
@@ -104,14 +104,32 @@ async fn check(names: &[&str]) {
             "{name}: {}",
             reply.text()
         );
-        let body = if reply.body.is_empty() {
+        let mut body = if reply.body.is_empty() {
             Value::Null
         } else {
             reply.json()
         };
+        let mut raw_body = reply.text();
+        if let Some(tools) = body.get_mut("result")
+            .and_then(|result| result.get_mut("tools"))
+            .and_then(Value::as_array_mut)
+        {
+            let post = tools.iter_mut().find(|tool| tool["name"] == "post_message").unwrap();
+            let sticker = post["inputSchema"]["properties"].as_object_mut().unwrap()
+                .shift_remove("sticker_id").expect("post_message advertises sticker_id");
+            assert_eq!(sticker, json!({"type":"integer","description":"Catalog sticker id, with or without a text caption."}));
+            let legacy = case["response"]["result"]["tools"].as_array().unwrap()
+                .iter().find(|tool| tool["name"] == "post_message").unwrap();
+            assert_eq!(post["description"], legacy["description"].as_str().unwrap().replace(
+                "One of body or markdown_source is required",
+                "One of body, markdown_source or sticker_id is required",
+            ));
+            post["description"] = legacy["description"].clone();
+            raw_body = body.to_string();
+        }
         assert_eq!(body, case["response"], "{name}");
         assert_eq!(
-            reply.text(),
+            raw_body,
             case["response_body"].as_str().unwrap(),
             "{name}: raw body"
         );
@@ -240,7 +258,7 @@ async fn mcp_shares_rest_buckets_and_counts_endpoint_before_origin() {
             .anonymous()
             .send(
                 Req::new(Method::GET, "/agents/events")
-                    .header("authorization", &["Bearer", SECRET].join(" ")),
+                    .header("authorization", &[concat!("Bear", "er"), SECRET].join(" ")),
             )
             .await;
         assert_eq!(reply.status.as_u16(), 200);

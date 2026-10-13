@@ -36,6 +36,8 @@ mod drive;
 mod error;
 mod events;
 mod fizzy;
+mod gif;
+pub use gif::{GifCategory, GifCategoryList, GifConfig, GifItem, GifList, GifSuggestions};
 mod huddle;
 mod sticker;
 pub use sticker::*;
@@ -179,7 +181,7 @@ pub use organize::{
     MoveWorkspaceRoom, ReorderWorkspaceCategories, WorkspaceCategory, WorkspaceLayout,
     WorkspaceRoomPosition, WriteWorkspaceCategory,
 };
-pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
+pub use panes::{FileList, FileType, Member, MemberList, RoomFile, RoomFilesChanged, StarState};
 pub use people::{BlockList, BlockedPerson, BlockState, DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
 pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
@@ -246,6 +248,8 @@ pub type Timestamp = String;
 mod tests;
 #[cfg(test)]
 mod tests_sticker;
+#[cfg(test)]
+mod tests_gif;
 #[cfg(test)]
 mod tests_s2;
 #[cfg(test)]

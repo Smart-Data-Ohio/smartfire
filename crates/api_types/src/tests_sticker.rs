@@ -85,6 +85,7 @@ fn sticker_messages_round_trip_available_deleted_and_sticker_only_create() {
             attachment_signed_ids: None,
             attachment_spoilers: None,
             drive_file_ids: None,
+            gif_slug: None,
         },
         json!({"clientMessageId":"sticker-only","stickerId":1,"markdownSource":"","replyToMessageId":null,"replyNotifyAuthor":null,"attachmentSignedId":null}),
     );

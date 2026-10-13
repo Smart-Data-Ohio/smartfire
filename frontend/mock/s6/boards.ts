@@ -1,3 +1,4 @@
+import type { Attachment } from "../../src/gen/Attachment.ts";
 import type { BoardListing } from "../../src/gen/BoardListing.ts";
 import type { BoardPostForm } from "../../src/gen/BoardPostForm.ts";
 import type { BoardStatusFilter } from "../../src/gen/BoardStatusFilter.ts";
@@ -28,7 +29,13 @@ function statusOf(raw: Json | undefined, fallback: WorkStatus): WorkStatus {
   return status ?? fallback;
 }
 
-export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads, work: Work) {
+export function createBoards(
+  ctx: S2Context,
+  threads: Threads,
+  uploads: Uploads,
+  work: Work,
+  gif?: (slug: string) => Attachment,
+) {
   const tagCatalog = createBoardTags(ctx);
 
   const boardRoom = (roomId: number) => {
@@ -222,9 +229,10 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
       messageBody == null ||
       (source.trim() === "" &&
         field(messageBody, "attachmentSignedId") == null &&
-        (stringArrayField(messageBody, "attachmentSignedIds") ?? []).length === 0)
+        (stringArrayField(messageBody, "attachmentSignedIds") ?? []).length === 0 &&
+        (stringField(messageBody, "gifSlug") ?? "").trim() === "")
         ? null
-        : parseMessage(messageBody, uploads.attachment);
+        : parseMessage(messageBody, uploads.attachment, undefined, gif);
 
     const at = iso(ctx.now());
 

@@ -10,6 +10,7 @@ import {
   formatBytes,
   isFileType,
   reconcileFiles,
+  retireFileUpdates,
   showsAsGrid,
 } from "./files.ts";
 
@@ -64,6 +65,8 @@ describe("appendFiles", () => {
 });
 
 describe("reconcileFiles", () => {
+  const all = { type: "all", search: "" } as const;
+
   it("keeps the list and rows when a text edit leaves attachments unchanged", () => {
     const first = file(1);
     const held = [first, file(2)];
@@ -72,9 +75,11 @@ describe("reconcileFiles", () => {
       reconcileFiles(
         held,
         new Map([
-          [1, [first.attachment]],
+          [1, [first]],
           [1000, []],
         ]),
+        all,
+        true,
       ),
     ).toBe(held);
   });
@@ -85,12 +90,69 @@ describe("reconcileFiles", () => {
 
     const files = reconcileFiles(
       [first, second],
-      new Map([[1, [{ ...first.attachment, spoiler: true }]]]),
+      new Map([[1, [{ ...first, attachment: { ...first.attachment, spoiler: true } }]]]),
+      all,
+      true,
     );
 
     expect(files[0]?.attachment.spoiler).toBe(true);
     expect(files[1]).toBe(second);
     expect(first.attachment.spoiler).toBe(false);
+  });
+
+  it("drops the files of a message whose live entry is empty", () => {
+    const files = reconcileFiles([file(2), file(1)], new Map([[2, []]]), all, true);
+
+    expect(files.map((entry) => entry.messageId)).toEqual([1]);
+  });
+
+  it("inserts a new file in newest-first order", () => {
+    const older = { ...file(1), createdAt: "2026-10-06T09:00:00.000Z" };
+    const middle = { ...file(2), createdAt: "2026-10-06T09:01:00.000Z" };
+    const fresh = { ...file(3), createdAt: "2026-10-06T09:02:00.000Z" };
+
+    const files = reconcileFiles([middle, older], new Map([[3, [fresh]]]), all, true);
+
+    expect(files.map((entry) => entry.messageId)).toEqual([3, 2, 1]);
+  });
+
+  it("holds back a new file older than the loaded window while pages remain", () => {
+    const held = [{ ...file(2), createdAt: "2026-10-06T09:01:00.000Z" }];
+    const old = { ...file(1), createdAt: "2026-10-06T09:00:00.000Z" };
+    const live = new Map([[1, [old]]]);
+
+    expect(reconcileFiles(held, live, all, false)).toBe(held);
+    expect(reconcileFiles(held, live, all, true).map((entry) => entry.messageId)).toEqual([2, 1]);
+  });
+
+  it("inserts only files the active filter admits", () => {
+    const image: RoomFile = {
+      ...file(3, "deck.png"),
+      attachment: attachment("deck.png", "image/png", "image"),
+    };
+
+    const doc = file(4, "deck-notes.txt");
+
+    const live = new Map([
+      [3, [image]],
+      [4, [doc]],
+    ]);
+
+    expect(
+      reconcileFiles([], live, { type: "images", search: "" }, true).map(
+        (entry) => entry.messageId,
+      ),
+    ).toEqual([3]);
+    expect(
+      reconcileFiles([], live, { type: "all", search: "NOTES" }, true).map(
+        (entry) => entry.messageId,
+      ),
+    ).toEqual([4]);
+    expect(
+      reconcileFiles([], live, { type: "documents", search: "" }, true).map(
+        (entry) => entry.messageId,
+      ),
+    ).toEqual([4]);
   });
 });
 
@@ -129,4 +191,26 @@ describe("file presentation", () => {
     expect(emptyFilesText("images", " deck ")).toBe('No files match "deck".');
     expect(emptyFilesText("other", "")).toBe("No other files shared here yet.");
   });
+});
+
+it("retires covered image metadata independently of a PDF sibling", () => {
+  const image = {
+    ...file(1, "image.png"),
+    attachment: attachment("image.png", "image/png", "image"),
+  };
+
+  const pdf = { ...file(1, "notes.pdf"), attachment: attachment("notes.pdf", "application/pdf") };
+  const live = new Map([[1, [image, pdf]]]);
+  const snapshot = new Map(live);
+  const authoritative = { ...image, attachment: { ...image.attachment, spoiler: true } };
+
+  retireFileUpdates(live, snapshot, {
+    files: [authoritative],
+    filter: { type: "images", search: "" },
+    complete: true,
+  });
+  expect(reconcileFiles([authoritative], live, { type: "images", search: "" }, true)).toEqual([
+    authoritative,
+  ]);
+  expect(reconcileFiles([], live, { type: "documents", search: "" }, true)).toEqual([pdf]);
 });

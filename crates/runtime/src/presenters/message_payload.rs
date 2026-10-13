@@ -23,6 +23,11 @@ pub fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) 
         "body": body, "creator": user(p, &p.user(message.creator_id)?, base)?,
         "room": {"id": message.room_id, "icon_name": room.icon_name}
     });
+    if let Some(sticker) = super::stickers::message_sticker(
+        p.conn, message, super::stickers::StickerUrls::Signed { storage: p.storage, base },
+    )? {
+        result["sticker"] = json!(sticker);
+    }
     if let Some(id) = message.thread_id {
         let record = payload_thread(p, id)?;
         result["thread_context"] = thread(p, &record, viewer, base)?;

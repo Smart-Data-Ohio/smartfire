@@ -66,28 +66,9 @@ pub(crate) fn message_sticker(
     conn: &campfire_db::Connection,
     message: &Message,
 ) -> campfire_db::Result<Option<api::MessageSticker>> {
-    let sticker = match message.sticker_id.map(|id| Sticker::find(conn, id)).transpose() {
-        Ok(Some(sticker)) => sticker,
-        Ok(None) | Err(campfire_db::Error::RecordNotFound("Sticker")) => {
-            return Ok(message
-                .sticker_name
-                .clone()
-                .map(|name| api::MessageSticker::Deleted { name }));
-        }
-        Err(error) => return Err(error),
-    };
-    let id = sticker.id;
-    let blob = attachments::attached_blob(conn, "Sticker", id, "image")?
-        .ok_or(campfire_db::Error::RecordNotFound("sticker image"))?;
-    let animated = campfire_storage::workspace_icon::animated(&blob);
-    let (image_url, still_url) = paths(id, animated);
-    Ok(Some(api::MessageSticker::Available {
-        id,
-        name: sticker.name,
-        image_url,
-        still_url,
-        animated,
-    }))
+    campfire_runtime::presenters::stickers::message_sticker(
+        conn, message, campfire_runtime::presenters::stickers::StickerUrls::Session,
+    )
 }
 
 async fn list(c: &mut Ctx) -> Result {

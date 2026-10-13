@@ -54,4 +54,10 @@ attachmentSpoilers?: Array<boolean>,
  * At most ten; an invalid id is a 422, as the classic composer is. A message may be empty
  * of Markdown when it carries one of these or a file.
  */
-driveFileIds?: Array<string>, };
+driveFileIds?: Array<string>,
+/**
+ * A KLIPY GIF to send (`GifItem.slug` from `/api/v1/gifs/search`): the server
+ * downloads the GIF and attaches it as a normal file on the message. A message
+ * may be empty of Markdown when it carries one of these.
+ */
+gifSlug?: string, };
