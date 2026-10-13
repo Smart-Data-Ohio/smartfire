@@ -48,7 +48,10 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::huddle_effects::StageRoster::KIND => decode::<campfire_db::models::huddle_effects::StageRoster>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_roster(app,e.room_id))),
         campfire_db::models::huddle_effects::RoleEvent::KIND => decode::<campfire_db::models::huddle_effects::RoleEvent>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::role_event(app,e.room_id,e.membership_id))),
         campfire_db::models::huddle_effects::Presence::KIND => decode::<campfire_db::models::huddle_effects::Presence>(request).and_then(|effect| {
-            app.map_or(Ok(()), |app| super::huddle_effects::presence(app, effect.room_id))
+            if let Some(app) = app {
+                super::huddle_effects::presence(app, effect.room_id)?;
+            }
+            Ok(())
         }),
         campfire_db::models::scheduled_message::ScheduledMessageChange::KIND => decode(request).map(|change| {
             if let Some(app) = app { app.broadcasts.sync_scheduled(change); }
