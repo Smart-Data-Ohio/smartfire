@@ -103,7 +103,8 @@ function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProp
     const item = items.find((item) =>
       chip.operator === "from_id"
         ? item.kind === "person" && String(item.userId) === chip.value
-        : chip.operator === "in_id" && item.kind === "room" && String(item.roomId) === chip.value,
+        : // A conversation, a DM shown as its person (your note-to-self as you) included.
+          chip.operator === "in_id" && item.kind !== "thread" && String(item.roomId) === chip.value,
     );
 
     return item === undefined

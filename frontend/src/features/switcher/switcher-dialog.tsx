@@ -8,6 +8,7 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { namesWithYou } from "../directs/note-to-self.ts";
 import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
@@ -168,7 +169,7 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
   const items = mergeItems(
     localItems(sidebar, viewerId),
     catalogue === null ? [] : remoteItems(withoutRemovedThreads(catalogue, removedThreads)),
-    (userId) => users[userId]?.name,
+    namesWithYou(users, viewerId),
   );
 
   const sections = rankItems(items, query, recents);

@@ -18,7 +18,7 @@ export type DirectCandidate = typeof DirectCandidate.Type;
 
 export type DirectCandidatePin = Assert<Pinned<typeof DirectCandidate, GeneratedDirectCandidate>>;
 
-/** `GET /api/v1/directs/candidates`: everyone but the viewer, starred first. */
+/** `GET /api/v1/directs/candidates`: the viewer first (their note-to-self), then starred first. */
 export const DirectCandidateList = Schema.Struct({
   candidates: Schema.Array(DirectCandidate),
   users: Schema.Array(User),

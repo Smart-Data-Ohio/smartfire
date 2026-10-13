@@ -3,9 +3,11 @@ import type { DirectCandidate } from "../../gen/DirectCandidate.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
+import { useViewerId } from "../messages/use-message.ts";
 import { AgentBadge } from "../people/agent-badge.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { withYou, YOU_TAG } from "./note-to-self.ts";
 import { MAX_OTHERS, pickerOptions, removeLast, toggleSelected } from "./picker.ts";
 import "./directs.css";
 
@@ -27,6 +29,16 @@ interface PeoplePickerProps {
   readonly placeholder: string;
 }
 
+/** A person's name, yours with a muted "(you)". */
+function PersonName({ name, you }: { readonly name: string; readonly you: boolean }) {
+  return (
+    <>
+      {name}
+      {you ? <span className="picker-you"> {YOU_TAG}</span> : null}
+    </>
+  );
+}
+
 function Chip({
   userId,
   onRemove,
@@ -36,12 +48,15 @@ function Chip({
   readonly onRemove?: () => void;
 }) {
   const name = useUser(userId)?.name ?? UNKNOWN_NAME;
+  const you = useViewerId() === userId;
 
   if (onRemove === undefined) {
     return (
       <span className="picker-chip" data-fixed>
         <UserAvatar userId={userId} size={20} decorative />
-        <span className="picker-chip-name">{name}</span>
+        <span className="picker-chip-name">
+          <PersonName name={name} you={you} />
+        </span>
       </span>
     );
   }
@@ -49,11 +64,13 @@ function Chip({
   return (
     <span className="picker-chip enter-chip">
       <UserAvatar userId={userId} size={20} decorative />
-      <span className="picker-chip-name">{name}</span>
+      <span className="picker-chip-name">
+        <PersonName name={name} you={you} />
+      </span>
       <button
         type="button"
         className="picker-chip-remove"
-        aria-label={`Remove ${name}`}
+        aria-label={`Remove ${you ? withYou(name) : name}`}
         tabIndex={-1}
         onClick={onRemove}
       >
@@ -100,11 +117,15 @@ export function PeoplePicker({
   const [activeIndex, setActiveIndex] = useState(0);
   const users = useStore((state) => state.users);
   const presence = useStore((state) => state.presence);
+  const viewerId = useViewerId();
   const hidden = new Set([...selected, ...(excluded ?? [])]);
-  const options = candidates === null ? [] : pickerOptions(candidates, users, query, hidden);
+  const options =
+    candidates === null ? [] : pickerOptions(candidates, users, query, hidden, viewerId);
   const active = Math.min(activeIndex, Math.max(options.length - 1, 0));
   const activeOption = options[active];
-  const full = selected.length >= limit;
+  // `limit` counts others: you, picked too, don't take one of their places.
+  const slots = viewerId !== null && selected.includes(viewerId) ? limit + 1 : limit;
+  const full = selected.length >= slots;
 
   useEffect(() => {
     if (activeOption !== undefined) {
@@ -113,7 +134,7 @@ export function PeoplePicker({
   }, [activeOption, id]);
 
   const pick = (userId: number) => {
-    onSelectedChange(toggleSelected(selected, userId, limit));
+    onSelectedChange(toggleSelected(selected, userId, slots));
     setQuery("");
     setActiveIndex(0);
     inputRef.current?.focus();
@@ -232,7 +253,9 @@ export function PeoplePicker({
               >
                 <UserAvatar userId={option.userId} size={28} presence decorative />
                 <span className="picker-option-text">
-                  <span className="picker-option-name">{option.name}</span>
+                  <span className="picker-option-name">
+                    <PersonName name={option.name} you={option.you} />
+                  </span>
                   {status === null ? null : <span className="picker-option-status">{status}</span>}
                 </span>
                 {option.agent ? <AgentBadge userId={option.userId} /> : null}

@@ -1,18 +1,28 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   createContext,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   use,
+  useState,
 } from "react";
 import { afterRelease, useLongPress } from "../../lib/menu-long-press.ts";
 import { formatFull, formatListTime } from "../../lib/time.ts";
 import type { SidebarRow as Row } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
+import { directs } from "../../sync/directs.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Badge } from "../../ui/badge.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { toast } from "../../ui/toast-store.ts";
+import {
+  isNoteToSelf,
+  NOTE_TO_SELF_PLACEHOLDER,
+  useViewerName,
+  withYou,
+  YOU_TAG,
+} from "../directs/note-to-self.ts";
 import { JoinPill } from "../huddle/call-alerts.tsx";
 import { CallMark, VoiceParticipants } from "../huddle/voice-participants.tsx";
 import { useViewerId } from "../messages/use-message.ts";
@@ -119,12 +129,19 @@ function PreviewedName({ row, last }: { readonly row: Row; readonly last: LastMe
   const viewerId = useViewerId();
   const creator = useUser(last.creatorId);
   const group = row.directMemberIds.length > 1;
-  const who = last.creatorId === viewerId ? "You" : group ? creator?.name.split(" ")[0] : undefined;
+  // In your note-to-self every message is yours: no "You:" before each.
+  const who = isNoteToSelf(row, viewerId)
+    ? undefined
+    : last.creatorId === viewerId
+      ? "You"
+      : group
+        ? creator?.name.split(" ")[0]
+        : undefined;
 
   return (
     <span className="sidebar-row-text">
       <span className="sidebar-row-line">
-        <span className="sidebar-row-name">{row.displayName}</span>
+        <RowName row={row} />
         <time
           className="sidebar-row-time"
           dateTime={last.createdAt}
@@ -138,6 +155,99 @@ function PreviewedName({ row, last }: { readonly row: Row; readonly last: LastMe
         {last.excerpt}
       </span>
     </span>
+  );
+}
+
+/** Your name with a muted "(you)": your note-to-self's label. */
+function YouName({ name }: { readonly name: string }) {
+  return (
+    <span className="sidebar-row-name">
+      {name}
+      <span className="sidebar-row-tag"> {YOU_TAG}</span>
+    </span>
+  );
+}
+
+/** The row's name: its label, or your own name with "(you)" for your note-to-self. */
+function RowName({ row }: { readonly row: Row }) {
+  const viewerId = useViewerId();
+  const viewerName = useViewerName();
+
+  return isNoteToSelf(row, viewerId) && viewerName !== null ? (
+    <YouName name={viewerName} />
+  ) : (
+    <span className="sidebar-row-name">{row.displayName}</span>
+  );
+}
+
+/** What a row's accessible names call it: "Your Name (you)" for your note-to-self. */
+function useRowLabel(row: Row): string {
+  const viewerId = useViewerId();
+  const viewerName = useViewerName();
+
+  return isNoteToSelf(row, viewerId) && viewerName !== null ? withYou(viewerName) : row.displayName;
+}
+
+/**
+ * Your note-to-self before it exists, first in Direct messages: it looks like its row will, and
+ * opening it creates the room (the server keeps no empty one for people who never use it).
+ */
+export function NoteToSelfOffer({ preview = false }: { readonly preview?: boolean }) {
+  const navigate = useNavigate();
+  const viewerId = useViewerId();
+  const viewerName = useViewerName();
+  const [busy, setBusy] = useState(false);
+
+  if (viewerId === null || viewerName === null) {
+    return null;
+  }
+
+  const open = () => {
+    if (busy) {
+      return;
+    }
+
+    setBusy(true);
+    directs.create([]).then(
+      (row) => {
+        setBusy(false);
+        void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } });
+      },
+      (error: Error) => {
+        setBusy(false);
+        toast({
+          title: "Couldn't open your notes",
+          description: error.message,
+          tone: "danger",
+        });
+      },
+    );
+  };
+
+  return (
+    <li className="sidebar-row-item" data-note-to-self-offer>
+      <button
+        type="button"
+        className="sidebar-row"
+        data-preview={preview || undefined}
+        aria-busy={busy || undefined}
+        onClick={open}
+      >
+        <span className="sidebar-row-glyph">
+          <UserAvatar userId={viewerId} size={20} presence decorative />
+        </span>
+        {preview ? (
+          <span className="sidebar-row-text">
+            <span className="sidebar-row-line">
+              <YouName name={viewerName} />
+            </span>
+            <span className="sidebar-row-preview">{NOTE_TO_SELF_PLACEHOLDER}</span>
+          </span>
+        ) : (
+          <YouName name={viewerName} />
+        )}
+      </button>
+    </li>
   );
 }
 
@@ -179,6 +289,7 @@ export function SidebarRow({
   const pill = rowPillCount(row);
   const state = rowState(row, selected);
   const last = preview && room.kind === "direct" ? row.lastMessage : undefined;
+  const label = useRowLabel(row);
 
   return (
     <li
@@ -245,11 +356,7 @@ export function SidebarRow({
         onBlur={actions.onBlur}
       >
         <RowGlyph row={row} />
-        {last === undefined ? (
-          <span className="sidebar-row-name">{row.displayName}</span>
-        ) : (
-          <PreviewedName row={row} last={last} />
-        )}
+        {last === undefined ? <RowName row={row} /> : <PreviewedName row={row} last={last} />}
         {state === "unread" || (selected && rowUnread(row)) ? (
           <span className="visually-hidden">, unread</span>
         ) : null}
@@ -259,7 +366,7 @@ export function SidebarRow({
       </Link>
       <IconButton
         icon="more"
-        label={`${row.displayName} options`}
+        label={`${label} options`}
         size="sm"
         tabIndex={-1}
         aria-haspopup="menu"

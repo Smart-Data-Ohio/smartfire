@@ -4,6 +4,7 @@ import type { FileList } from "../../src/gen/FileList.ts";
 import type { MemberList } from "../../src/gen/MemberList.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { RoomDetail } from "../../src/gen/RoomDetail.ts";
+import type { Sidebar } from "../../src/gen/Sidebar.ts";
 import type { SidebarRow } from "../../src/gen/SidebarRow.ts";
 import type { StarState } from "../../src/gen/StarState.ts";
 import type { Switcher } from "../../src/gen/Switcher.ts";
@@ -13,18 +14,18 @@ import { collect, expectStatus, get, harness, messageBody, send } from "./testin
 const { rooms, users, threads, messages, viewer } = SEED_IDS;
 
 describe("directs", () => {
-  it("lists candidates, starred first", async () => {
+  it("lists candidates, you then starred first", async () => {
     const { server } = harness();
     const list = await get<DirectCandidateList>(server, "/api/v1/directs/candidates");
 
-    expect(list.candidates.slice(0, 3).map((row) => row.userId)).toEqual([
+    expect(list.candidates.slice(0, 4).map((row) => row.userId)).toEqual([
+      viewer,
       users.maya,
       users.priya,
       users.theo,
     ]);
-    expect(list.candidates.slice(0, 3).every((row) => row.starred)).toBe(true);
+    expect(list.candidates.slice(1, 4).every((row) => row.starred)).toBe(true);
     expect(list.candidates.find((row) => row.userId === users.ember)?.agent).toBe(true);
-    expect(list.candidates.map((row) => row.userId)).not.toContain(viewer);
     expect(list.candidates.map((row) => row.userId)).not.toContain(users.dana);
   });
 
@@ -83,6 +84,33 @@ describe("directs", () => {
     });
 
     expect(same.status).toBe(200);
+  });
+
+  it("offers your note-to-self first until you have a row for it", async () => {
+    const { server } = harness();
+    const before = await get<Sidebar>(server, "/api/v1/sidebar");
+
+    expect(before.directPlaceholderUserIds[0]).toBe(viewer);
+    expect(before.users.map((user) => user.id)).toContain(viewer);
+
+    const self = await expectStatus<SidebarRow>(
+      server,
+      "POST",
+      "/api/v1/directs",
+      { userIds: [] },
+      201,
+    );
+    const after = await get<Sidebar>(server, "/api/v1/sidebar");
+
+    expect(after.directPlaceholderUserIds).not.toContain(viewer);
+    expect(after.rows.find((row) => row.room.id === self.room.id)?.directMemberIds).toEqual([
+      viewer,
+    ]);
+
+    // Only yourself is the same room.
+    const again = await send(server, "POST", "/api/v1/directs", { userIds: [viewer] });
+
+    expect(again.status).toBe(200);
   });
 
   it("grows a group with a system note, and refuses a one-to-one room", async () => {

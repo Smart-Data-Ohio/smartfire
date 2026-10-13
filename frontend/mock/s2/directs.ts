@@ -42,9 +42,12 @@ export function createDirects(ctx: S2Context): Directs {
     const world = ctx.world();
 
     const users = [...world.users.values()]
-      .filter((user) => user.status === "active" && user.id !== VIEWER_ID)
+      .filter((user) => user.status === "active")
       .sort(
-        (a, b) => Number(world.stars.has(b.id)) - Number(world.stars.has(a.id)) || byName(a, b),
+        (a, b) =>
+          Number(b.id === VIEWER_ID) - Number(a.id === VIEWER_ID) ||
+          Number(world.stars.has(b.id)) - Number(world.stars.has(a.id)) ||
+          byName(a, b),
       );
 
     return {

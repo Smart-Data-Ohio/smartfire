@@ -78,7 +78,7 @@ const BLANK = {
   updatedAt: null,
 } as const satisfies Partial<SwitcherItem>;
 
-function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
+function localItem(row: SidebarRow): SwitcherItem {
   const { room, membership } = row;
 
   const live = {
@@ -96,7 +96,8 @@ function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
   const [only] = row.directMemberIds;
   const oneToOne = room.kind === "direct" && room.name === null && row.directMemberIds.length === 1;
 
-  if (oneToOne && only !== undefined && only !== viewerId) {
+  // Your note-to-self is you, as a one-to-one DM is its other person.
+  if (oneToOne && only !== undefined) {
     return { ...live, key: `person:${only}`, kind: "person", userId: only };
   }
 
@@ -105,11 +106,26 @@ function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
   return { ...live, key: `room:${room.id}`, kind: "room", memberIds };
 }
 
-/** The sidebar's rooms as switcher items: a one-to-one DM is its person. */
+/**
+ * The sidebar's rooms as switcher items: a one-to-one DM is its person, your note-to-self is you.
+ * Before the note-to-self exists you are listed anyway, while the sidebar offers it.
+ */
 export function localItems(sidebar: SidebarState, viewerId: number | null): SwitcherItem[] {
-  return sidebarSections(sidebar).flatMap((section) =>
-    section.rows.map((row) => localItem(row, viewerId)),
+  const items = sidebarSections(sidebar, { viewerId }).flatMap((section) =>
+    section.rows.map(localItem),
   );
+
+  const offered =
+    viewerId !== null &&
+    sidebar.placeholderUserIds.includes(viewerId) &&
+    !items.some((item) => item.key === `person:${viewerId}`);
+
+  return offered
+    ? [
+        ...items,
+        { ...BLANK, key: `person:${viewerId}`, kind: "person", label: "", userId: viewerId },
+      ]
+    : items;
 }
 
 const REMOTE_ROOM_KIND = {

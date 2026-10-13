@@ -1,5 +1,11 @@
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import {
+  NOTE_TO_SELF_LINE,
+  useNoteToSelf,
+  useViewerName,
+  YOU_TAG,
+} from "../directs/note-to-self.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "./room-icon.ts";
 
@@ -33,6 +39,8 @@ export function UnreadDivider({ count }: { readonly count: number }) {
 export function RoomIntro({ roomId }: { readonly roomId: number }) {
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
   const empty = useStore((state) => (state.timelines[roomId]?.ids.length ?? 0) === 0);
+  const self = useNoteToSelf(roomId);
+  const viewerName = useViewerName();
 
   if (detail === null) {
     return <div className="room-intro" />;
@@ -41,6 +49,19 @@ export function RoomIntro({ roomId }: { readonly roomId: number }) {
   const { room, displayName, directMemberIds } = detail;
   const direct = room.kind === "direct";
   const otherId = direct ? directMemberIds[0] : undefined;
+
+  if (self && otherId !== undefined) {
+    return (
+      <div className="room-intro enter-fade" data-empty={empty || undefined} data-note-to-self>
+        <UserAvatar userId={otherId} size={64} presence decorative />
+        <h2 className="room-intro-title">
+          {viewerName ?? displayName}
+          <span className="room-intro-you"> {YOU_TAG}</span>
+        </h2>
+        <p className="room-intro-text">{NOTE_TO_SELF_LINE}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="room-intro enter-fade" data-empty={empty || undefined}>

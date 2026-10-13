@@ -39,6 +39,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import { isNoteToSelf } from "./note-to-self.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
 import { removeCategory, replyCategories, upsertCategory } from "./organize.ts";
 import {
@@ -1125,12 +1126,22 @@ function removeRow(state: State, roomId: number): State {
   const { [roomId]: gone, ...rows } = state.sidebar.rows;
   const layoutChanged = workspaceRooms.length !== state.sidebar.workspaceLayout.rooms.length;
   const clock = layoutChanged ? state.rowTouches.clock + 1 : state.rowTouches.clock;
+  const viewerId = state.me?.user.id ?? state.boot?.user.id ?? null;
+  // Your note-to-self gone from the sidebar is offered again, as the next snapshot would.
+  const offerSelf =
+    gone !== undefined &&
+    viewerId !== null &&
+    isNoteToSelf(gone, viewerId) &&
+    !state.sidebar.placeholderUserIds.includes(viewerId);
 
   return {
     ...keepRowFlag(state, gone),
     rowTouches: { ...state.rowTouches, clock },
     sidebar: {
       ...state.sidebar,
+      placeholderUserIds: offerSelf
+        ? [viewerId, ...state.sidebar.placeholderUserIds]
+        : state.sidebar.placeholderUserIds,
       rows,
       order: state.sidebar.order.filter((id) => id !== roomId),
       workspaceLayout: { ...state.sidebar.workspaceLayout, rooms: workspaceRooms },

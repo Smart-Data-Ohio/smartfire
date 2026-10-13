@@ -614,6 +614,16 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       .slice(0, 20)
       .map((user) => user.id);
 
+    // Your note-to-self leads, offered until you have a visible row for it.
+    const noteToSelf = rows.some(
+      (row) =>
+        row.room.kind === "direct" &&
+        row.directMemberIds.length === 1 &&
+        row.directMemberIds[0] === VIEWER_ID,
+    );
+
+    if (!noteToSelf) placeholders.unshift(VIEWER_ID);
+
     return {
       rows,
       categories: [...world.categories],

@@ -6,6 +6,7 @@ import { formatFull } from "../../lib/time.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { useNoteToSelfRoomId, withYou, YOU_TAG } from "../directs/note-to-self.ts";
 import { FileSpoiler } from "../messages/file-spoiler.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
 import { messageFiles } from "../messages/message-files.ts";
@@ -19,10 +20,15 @@ import { highlightHtml } from "./highlight.ts";
 
 /** Where a conversation label goes: the room, or the thread open beside it. */
 function ConversationLink({ name }: { readonly name: ConversationName }) {
+  const you = useNoteToSelfRoomId() === name.roomId;
+
   const roomLabel = (
     <>
       <Icon name={ROOM_KIND_ICON[name.roomKind]} size={14} className="search-conv-icon" />
-      <span className="search-conv-room">{name.roomName}</span>
+      <span className="search-conv-room">
+        {name.roomName}
+        {you ? <span className="text-faint"> {YOU_TAG}</span> : null}
+      </span>
     </>
   );
 
@@ -134,6 +140,7 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
   const deleted = useStore((state) => state.tombstones[hit.id] !== undefined);
   const message = live !== undefined && live.updatedAt >= hit.updatedAt ? live : hit;
   const author = useUser(message.creatorId);
+  const selfRoomId = useNoteToSelfRoomId();
   const name = author?.name ?? UNKNOWN_NAME;
   const body = message.bodyHtml;
 
@@ -153,7 +160,10 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
   }
 
   const when = hitTime(message.createdAt, now);
-  const place = conversation === undefined ? "" : ` in ${conversation.roomName}`;
+  const place =
+    conversation === undefined
+      ? ""
+      : ` in ${conversation.roomId === selfRoomId ? withYou(conversation.roomName) : conversation.roomName}`;
   const label = `${name}${place}, ${when}`;
 
   return (
