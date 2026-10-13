@@ -104,14 +104,32 @@ async fn check(names: &[&str]) {
             "{name}: {}",
             reply.text()
         );
-        let body = if reply.body.is_empty() {
+        let mut body = if reply.body.is_empty() {
             Value::Null
         } else {
             reply.json()
         };
+        let mut raw_body = reply.text();
+        if let Some(tools) = body.get_mut("result")
+            .and_then(|result| result.get_mut("tools"))
+            .and_then(Value::as_array_mut)
+        {
+            let post = tools.iter_mut().find(|tool| tool["name"] == "post_message").unwrap();
+            let sticker = post["inputSchema"]["properties"].as_object_mut().unwrap()
+                .shift_remove("sticker_id").expect("post_message advertises sticker_id");
+            assert_eq!(sticker, json!({"type":"integer","description":"Catalog sticker id, with or without a text caption."}));
+            let legacy = case["response"]["result"]["tools"].as_array().unwrap()
+                .iter().find(|tool| tool["name"] == "post_message").unwrap();
+            assert_eq!(post["description"], legacy["description"].as_str().unwrap().replace(
+                "One of body or markdown_source is required",
+                "One of body, markdown_source or sticker_id is required",
+            ));
+            post["description"] = legacy["description"].clone();
+            raw_body = body.to_string();
+        }
         assert_eq!(body, case["response"], "{name}");
         assert_eq!(
-            reply.text(),
+            raw_body,
             case["response_body"].as_str().unwrap(),
             "{name}: raw body"
         );

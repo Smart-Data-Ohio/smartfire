@@ -726,7 +726,7 @@ pub fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Stag
                 AttachmentPolicy::SignedBlob { actor_id } => actor_id,
                 AttachmentPolicy::OwnedUpload { uploader_id } | AttachmentPolicy::ScheduledUpload { uploader_id, .. } => Some(uploader_id),
             };
-            if !campfire_db::Blob::reusable_by(tx.conn(), blob.id, actor_id.unwrap_or(0))? {
+            if !campfire_db::Blob::reusable_by(tx.conn(), blob.id, actor_id.unwrap_or(0), "Message")? {
                 let mut errors = campfire_db::Errors::default();
                 errors.add(attribute, "is inaccessible");
                 return Err(campfire_db::Error::RecordInvalid(errors));
