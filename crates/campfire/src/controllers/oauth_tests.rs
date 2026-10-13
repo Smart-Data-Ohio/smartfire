@@ -1,0 +1,1222 @@
+use super::presenters::test_support::{DAVID, Req, TestApp};
+use campfire_kit::{FrozenClock, Method};
+use serde_json::json;
+use std::sync::Arc;
+
+async fn setup(enabled: bool) -> TestApp {
+    TestApp::boot_with_clock_and_env(
+        Arc::new(FrozenClock::new("2026-10-13T16:00:00Z".parse().unwrap())),
+        &[
+            ("APP_URL", "https://smartfire.example"),
+            ("SMARTFIRE_MCP_OAUTH", if enabled { "1" } else { "0" }),
+        ],
+    )
+    .await
+    .expect("restored default seed")
+    .without_job_runner()
+    .await
+}
+
+#[tokio::test]
+async fn oauth_switch_off_preserves_mcp_bytes_and_hides_endpoints() {
+    let app = setup(false).await;
+    for path in [
+        "/.well-known/oauth-authorization-server",
+        "/.well-known/oauth-protected-resource",
+        "/.well-known/oauth-protected-resource/agents/mcp",
+        "/oauth/authorize",
+        "/oauth/token",
+        "/oauth/revoke",
+        "/oauth/register",
+        "/api/v1/oauth/authorizations/unknown",
+    ] {
+        for method in [Method::GET, Method::POST, Method::OPTIONS] {
+            assert_eq!(
+                app.anonymous()
+                    .send(Req::new(method, path))
+                    .await
+                    .status
+                    .as_u16(),
+                404,
+                "{path}"
+            );
+        }
+    }
+    let req = || {
+        Req::new(Method::POST, "/agents/mcp")
+            .json_body(&json!({"jsonrpc":"2.0","id":1,"method":"tools/list"}))
+    };
+    let missing = app.sign_in(DAVID).await.send(req()).await;
+    assert_eq!(missing.status.as_u16(), 403);
+    assert_eq!(
+        missing.body,
+        br#"{"error":"Forbidden: Bearer agent token required"}"#
+    );
+    assert_eq!(missing.header("www-authenticate"), None);
+    let invalid = app
+        .anonymous()
+        .send(req().header("authorization", &["Bearer", "invalid"].join(" ")))
+        .await;
+    assert_eq!(invalid.status.as_u16(), 401);
+    assert!(invalid.body.is_empty());
+    assert_eq!(invalid.header("www-authenticate"), None);
+}
+
+#[tokio::test]
+async fn oauth_switch_on_advertises_only_cimd_none_and_challenges() {
+    let app = setup(true).await;
+    let meta = app
+        .anonymous()
+        .get("/.well-known/oauth-authorization-server")
+        .await;
+    assert_eq!(meta.status.as_u16(), 200, "{}", meta.text());
+    assert_eq!(meta.json()["issuer"], "https://smartfire.example");
+    assert_eq!(
+        meta.json()["token_endpoint_auth_methods_supported"],
+        json!(["none"])
+    );
+    assert!(meta.json().get("registration_endpoint").is_none());
+    let mut owner = app.sign_in(DAVID).await;
+    assert_eq!(
+        owner.get("/api/v1/me/agents").await.json()["oauthAvailable"],
+        true
+    );
+    let missing = app
+        .anonymous()
+        .send(Req::new(Method::POST, "/agents/mcp").json_body(&json!({"method":"tools/list"})))
+        .await;
+    assert_eq!(missing.status.as_u16(), 401);
+    assert_eq!(
+        missing.header("www-authenticate"),
+        Some(
+            "Bearer resource_metadata=\"https://smartfire.example/.well-known/oauth-protected-resource/agents/mcp\", scope=\"agent\""
+        )
+    );
+    let missing_session = owner
+        .send(Req::new(Method::POST, "/agents/mcp").json_body(&json!({"method":"tools/list"})))
+        .await;
+    assert_eq!(
+        missing_session.status.as_u16(),
+        401,
+        "session without agent token must get the OAuth challenge"
+    );
+    assert!(missing_session.header("www-authenticate").is_some());
+}
+
+use super::presenters::test_support::{Browser, Reply};
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use campfire_app::net::{
+    Network,
+    test_support::{FakeResolver, FakeServer, MappingDialer, Route},
+};
+use campfire_kit::Clock;
+use rusqlite::params;
+use serde_json::Value;
+use sha2::{Digest, Sha256};
+use std::collections::HashSet;
+use std::sync::Mutex;
+
+const CLIENT: &str = "https://client.example/metadata.json";
+const REDIRECT: &str = "https://client.example/callback";
+const RESOURCE: &str = "https://smartfire.example/agents/mcp";
+const VERIFIER: &str = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGH";
+
+fn metadata() -> Value {
+    json!({"client_id":CLIENT,"client_name":"Test client","redirect_uris":[REDIRECT,"http://127.0.0.1/callback","http://[::1]/callback"],"token_endpoint_auth_method":"none"})
+}
+struct Fixture {
+    app: TestApp,
+    server: FakeServer,
+    resolver: Arc<FakeResolver>,
+    dialer: Arc<MappingDialer>,
+    clock: Arc<FrozenClock>,
+}
+async fn fixture(document: Value) -> Fixture {
+    let host = url::Url::parse(document["client_id"].as_str().unwrap())
+        .unwrap()
+        .host_str()
+        .unwrap()
+        .to_string();
+    let path = url::Url::parse(document["client_id"].as_str().unwrap())
+        .unwrap()
+        .path()
+        .to_string();
+    let route = Route::new("GET", &host, &path, 200)
+        .header("Content-Type", "application/json")
+        .header("Cache-Control", "max-age=600")
+        .body(serde_json::to_vec(&document).unwrap());
+    let (server, roots) = FakeServer::start_named_tls_ws15e(vec![route], vec![host.clone()]).await;
+    let resolver = Arc::new(FakeResolver::new([(host.as_str(), vec!["93.184.216.34"])]));
+    let dialer = Arc::new(MappingDialer {
+        public: HashSet::from(["93.184.216.34".parse().unwrap()]),
+        to: server.addr,
+        dialed: Mutex::new(vec![]),
+    });
+    let network = Network {
+        resolver: resolver.clone(),
+        dialer: dialer.clone(),
+        tls: campfire_app::net::tls_config(roots),
+    };
+    let clock = Arc::new(FrozenClock::new("2026-10-13T16:00:00Z".parse().unwrap()));
+    let app = TestApp::boot_with_network_clock_and_env(
+        network,
+        clock.clone(),
+        &[
+            ("APP_URL", "https://smartfire.example"),
+            ("SMARTFIRE_MCP_OAUTH", "1"),
+        ],
+    )
+    .await
+    .unwrap()
+    .without_job_runner()
+    .await;
+    Fixture {
+        app,
+        server,
+        resolver,
+        dialer,
+        clock,
+    }
+}
+fn authorize_url(client: &str, redirect: &str) -> String {
+    let mut url = url::Url::parse("http://campfire.test/oauth/authorize").unwrap();
+    url.query_pairs_mut().extend_pairs([
+        ("client_id", client),
+        ("redirect_uri", redirect),
+        ("response_type", "code"),
+        ("code_challenge_method", "S256"),
+        (
+            "code_challenge",
+            &URL_SAFE_NO_PAD.encode(Sha256::digest(VERIFIER)),
+        ),
+        ("resource", RESOURCE),
+        ("scope", "agent"),
+        ("state", "opaque state & value"),
+    ]);
+    format!("/oauth/authorize?{}", url.query().unwrap())
+}
+fn consent_path(reply: &Reply) -> String {
+    let url = url::Url::parse(reply.location().expect("consent redirect")).unwrap();
+    assert!(
+        url.path().starts_with("/app/oauth/consent/"),
+        "{}",
+        reply.text()
+    );
+    url.path()
+        .replace("/app/oauth/consent/", "/api/v1/oauth/authorizations/")
+}
+async fn approve(browser: &mut Browser<'_>, client: &str, redirect: &str) -> String {
+    let reply = browser.get(&authorize_url(client, redirect)).await;
+    let path = consent_path(&reply);
+    let consent = browser.get(&path).await;
+    assert_eq!(consent.status.as_u16(), 200, "{}", consent.text());
+    assert!(
+        consent
+            .header("content-security-policy")
+            .unwrap()
+            .contains("frame-ancestors 'none'")
+    );
+    browser.grant_sudo().await;
+    let reply = browser
+        .write(
+            Req::new(Method::POST, &format!("{path}/approve"))
+                .json_body(&json!({"name":"Connected agent","roomIds":[],"capabilities":[]})),
+        )
+        .await;
+    assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+    let url = url::Url::parse(reply.json()["redirectTo"].as_str().unwrap()).unwrap();
+    let query = url
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(query.get("state").unwrap(), "opaque state & value");
+    assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+    query.get("code").unwrap().to_string()
+}
+async fn exchange(
+    app: &TestApp,
+    code: &str,
+    client: &str,
+    redirect: &str,
+    verifier: &str,
+    resource: &str,
+) -> Reply {
+    app.anonymous()
+        .send(Req::new(Method::POST, "/oauth/token").form(&[
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("client_id", client),
+            ("redirect_uri", redirect),
+            ("code_verifier", verifier),
+            ("resource", resource),
+        ]))
+        .await
+}
+async fn tokens(f: &Fixture) -> Value {
+    let mut browser = f.app.sign_in(DAVID).await;
+    let code = approve(&mut browser, CLIENT, REDIRECT).await;
+    let reply = exchange(&f.app, &code, CLIENT, REDIRECT, VERIFIER, RESOURCE).await;
+    assert_eq!(reply.status.as_u16(), 200, "{}", reply.text());
+    reply.json()
+}
+async fn refresh(app: &TestApp, token: &str, client: &str, resource: &str, method: bool) -> Reply {
+    let mut req = Req::new(Method::POST, "/oauth/token").form(&[
+        ("grant_type", "refresh_token"),
+        ("refresh_token", token),
+        ("client_id", client),
+        ("resource", resource),
+    ]);
+    if method {
+        req = req.header("authorization", "Basic dGVzdDpzZWNyZXQ=");
+    }
+    app.anonymous().send(req).await
+}
+async fn mcp(app: &TestApp, token: &str) -> Reply {
+    app.anonymous()
+        .send(
+            Req::new(Method::POST, "/agents/mcp")
+                .header("authorization", &["Bearer", token].join(" "))
+                .json_body(&json!({"jsonrpc":"2.0","id":1,"method":"tools/list"})),
+        )
+        .await
+}
+fn invalid(reply: Reply) {
+    assert_eq!(reply.status.as_u16(), 400, "{}", reply.text());
+    assert_eq!(reply.json()["error"], "invalid_grant");
+    assert_eq!(reply.header("cache-control"), Some("no-store"));
+}
+
+#[tokio::test]
+async fn oauth_pkce_flow_fetches_pinned_cimd_and_uses_cache() {
+    let f = fixture(metadata()).await;
+    let pair = tokens(&f).await;
+    assert_eq!(pair["token_type"], "Bearer");
+    assert_eq!(pair["scope"], "agent");
+    assert_eq!(pair["expires_in"], 3600);
+    assert_eq!(
+        mcp(&f.app, pair["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        200
+    );
+    let mut owner = f.app.sign_in(DAVID).await;
+    let second = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let consent = owner.get(&consent_path(&second)).await.json();
+    assert!(consent["selectedAgentId"].is_number());
+    assert_eq!(f.server.received.lock().unwrap().len(), 1);
+    assert_eq!(f.resolver.lookups(), ["client.example"]);
+    assert_eq!(
+        f.dialer.dialed.lock().unwrap()[0].ip().to_string(),
+        "93.184.216.34"
+    );
+}
+
+#[tokio::test]
+async fn oauth_signed_out_cookie_jar_returns_through_consent_and_password_sudo() {
+    let f = fixture(metadata()).await;
+    let mut browser = f.app.anonymous();
+    let start = authorize_url(CLIENT, REDIRECT);
+    assert!(
+        browser
+            .get(&start)
+            .await
+            .location()
+            .unwrap()
+            .contains("/app/session/new")
+    );
+    assert_eq!(browser.get("/app/session/new").await.status.as_u16(), 200);
+    let login = browser
+        .password_sign_in("david@37signals.com", "secret123456")
+        .await;
+    assert_eq!(login.status.as_u16(), 200, "{}", login.text());
+    assert_eq!(login.json()["kind"], "secondFactorRequired");
+    let encryption = f.app.booted.app.ar_encryption.clone();
+    let code = f
+        .app
+        .db()
+        .read(move |conn| {
+            let factor = campfire_db::TwoFactorCredential::for_user(conn, DAVID)?.unwrap();
+            let secret = factor.secret(&encryption)?;
+            Ok(rails_compat::totp::at(
+                &secret,
+                "2026-10-13T16:00:00Z"
+                    .parse::<jiff::Timestamp>()
+                    .unwrap()
+                    .as_second(),
+            )
+            .unwrap())
+        })
+        .await
+        .unwrap();
+    let verified = browser.answer_challenge(&code, false).await;
+    assert_eq!(verified.status.as_u16(), 200, "{}", verified.text());
+    let return_to = url::Url::parse(verified.json()["location"].as_str().unwrap()).unwrap();
+    assert_eq!(return_to.path(), "/oauth/authorize");
+    let reply = browser
+        .get(&format!(
+            "{}?{}",
+            return_to.path(),
+            return_to.query().unwrap()
+        ))
+        .await;
+    let path = consent_path(&reply);
+    assert_eq!(browser.get(&path).await.status.as_u16(), 200);
+    let approval = || {
+        Req::new(Method::POST, &format!("{path}/approve"))
+            .json_body(&json!({"name":"Signed out flow","roomIds":[],"capabilities":[]}))
+    };
+    let sudo = browser.write(approval()).await;
+    assert_eq!(sudo.status.as_u16(), 403, "{}", sudo.text());
+    assert_eq!(sudo.json()["error"]["_tag"], "SudoRequired");
+    assert_eq!(
+        browser.confirm_sudo("secret123456").await.status.as_u16(),
+        200
+    );
+    let done = browser.write(approval()).await;
+    assert_eq!(done.status.as_u16(), 200, "{}", done.text());
+    let callback = url::Url::parse(done.json()["redirectTo"].as_str().unwrap()).unwrap();
+    let query = callback
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(query.get("state").unwrap(), "opaque state & value");
+    assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+    assert_eq!(
+        exchange(
+            &f.app,
+            query.get("code").unwrap(),
+            CLIENT,
+            REDIRECT,
+            VERIFIER,
+            RESOURCE
+        )
+        .await
+        .status
+        .as_u16(),
+        200
+    );
+}
+
+#[tokio::test]
+async fn oauth_bad_code_inputs_do_not_consume_code_and_replay_revokes_connection() {
+    let f = fixture(metadata()).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let code = approve(&mut owner, CLIENT, REDIRECT).await;
+    for (client, redirect, verifier, resource) in [
+        (CLIENT, REDIRECT, "wrong", RESOURCE),
+        (CLIENT, "https://client.example/wrong", VERIFIER, RESOURCE),
+        (
+            CLIENT,
+            REDIRECT,
+            VERIFIER,
+            "https://other.example/agents/mcp",
+        ),
+        (
+            "https://wrong.example/metadata",
+            REDIRECT,
+            VERIFIER,
+            RESOURCE,
+        ),
+    ] {
+        invalid(exchange(&f.app, &code, client, redirect, verifier, resource).await);
+    }
+    let success = exchange(&f.app, &code, CLIENT, REDIRECT, VERIFIER, RESOURCE).await;
+    assert_eq!(success.status.as_u16(), 200, "{}", success.text());
+    invalid(exchange(&f.app, &code, CLIENT, REDIRECT, VERIFIER, RESOURCE).await);
+    assert_eq!(
+        mcp(&f.app, success.json()["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+}
+
+#[tokio::test]
+async fn oauth_loopback_redirect_accepts_any_port_but_exchange_binds_exact_uri() {
+    let f = fixture(metadata()).await;
+    for redirect in [
+        "http://127.0.0.1:54123/callback",
+        "http://[::1]:54124/callback",
+    ] {
+        let mut owner = f.app.sign_in(DAVID).await;
+        let code = approve(&mut owner, CLIENT, redirect).await;
+        invalid(
+            exchange(
+                &f.app,
+                &code,
+                CLIENT,
+                "http://127.0.0.1:9999/callback",
+                VERIFIER,
+                RESOURCE,
+            )
+            .await,
+        );
+        assert_eq!(
+            exchange(&f.app, &code, CLIENT, redirect, VERIFIER, RESOURCE)
+                .await
+                .status
+                .as_u16(),
+            200
+        );
+    }
+}
+
+#[tokio::test]
+async fn oauth_wrong_refresh_client_method_resource_and_origin_leave_token_unconsumed() {
+    let f = fixture(metadata()).await;
+    let pair = tokens(&f).await;
+    let secret = pair["refresh_token"].as_str().unwrap();
+    invalid(
+        refresh(
+            &f.app,
+            secret,
+            "https://wrong.example/client.json",
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    invalid(refresh(&f.app, secret, CLIENT, RESOURCE, true).await);
+    invalid(
+        refresh(
+            &f.app,
+            secret,
+            CLIENT,
+            "https://wrong.example/agents/mcp",
+            false,
+        )
+        .await,
+    );
+    f.app
+        .db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE oauth_connections SET resource='https://old.example/agents/mcp'",
+                [],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    invalid(refresh(&f.app, secret, CLIENT, RESOURCE, false).await);
+    f.app
+        .db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE oauth_connections SET resource=?", [RESOURCE])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        refresh(&f.app, secret, CLIENT, RESOURCE, false)
+            .await
+            .status
+            .as_u16(),
+        200
+    );
+}
+
+async fn assert_reused(f: &Fixture, original: &Value, rotated: &Value) {
+    for pair in [original, rotated] {
+        assert_eq!(
+            mcp(&f.app, pair["access_token"].as_str().unwrap())
+                .await
+                .status
+                .as_u16(),
+            401
+        );
+        invalid(
+            refresh(
+                &f.app,
+                pair["refresh_token"].as_str().unwrap(),
+                CLIENT,
+                RESOURCE,
+                false,
+            )
+            .await,
+        );
+    }
+    f.app.db().read(|conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='oauth.refresh_reuse'",[],|r|r.get::<_,i64>(0))?,1);
+        let jobs = conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Smartfire::MailDeliveryJob' AND arguments LIKE '%OAuthRefreshReuse%'",[],|r|r.get::<_,i64>(0))?;
+        assert_eq!(jobs,1,"owner notification committed with revocation");
+        let payload: String = conn.query_row("SELECT arguments FROM background_jobs WHERE job_class='Smartfire::MailDeliveryJob' AND arguments LIKE '%OAuthRefreshReuse%'", [], |r|r.get(0))?;
+        let payload: Value = serde_json::from_str(&payload).unwrap();
+        assert_eq!(payload["notification"]["OAuthRefreshReuse"]["user_id"], DAVID);
+
+        Ok(())
+    }).await.unwrap();
+}
+#[tokio::test]
+async fn oauth_attacker_rotates_first_then_original_client_reuse_revokes_every_token_and_notifies_owner()
+ {
+    let f = fixture(metadata()).await;
+    let original = tokens(&f).await;
+    // A separate cookie-free party rotates the stolen public-client token first.
+    let attacker = refresh(
+        &f.app,
+        original["refresh_token"].as_str().unwrap(),
+        CLIENT,
+        RESOURCE,
+        false,
+    )
+    .await;
+    assert_eq!(attacker.status.as_u16(), 200);
+    assert_ne!(original["refresh_token"], attacker.json()["refresh_token"]);
+    invalid(
+        refresh(
+            &f.app,
+            original["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    assert_reused(&f, &original, &attacker.json()).await;
+}
+#[tokio::test]
+async fn oauth_two_concurrent_refreshes_have_one_winner_then_revoke() {
+    let f = fixture(metadata()).await;
+    let original = tokens(&f).await;
+    let secret = original["refresh_token"].as_str().unwrap();
+    let (one, two) = tokio::join!(
+        refresh(&f.app, secret, CLIENT, RESOURCE, false),
+        refresh(&f.app, secret, CLIENT, RESOURCE, false)
+    );
+    let (winner, loser) = if one.status.as_u16() == 200 {
+        (one, two)
+    } else {
+        (two, one)
+    };
+    assert_eq!(winner.status.as_u16(), 200, "{}", winner.text());
+    invalid(loser);
+    assert_reused(&f, &original, &winner.json()).await;
+}
+#[tokio::test]
+async fn oauth_reuse_after_sweep_of_old_expired_tombstone_still_revokes() {
+    let f = fixture(metadata()).await;
+    let original = tokens(&f).await;
+    let rotated = refresh(
+        &f.app,
+        original["refresh_token"].as_str().unwrap(),
+        CLIENT,
+        RESOURCE,
+        false,
+    )
+    .await
+    .json();
+    let digest = campfire_db::user::digest_bot_token(original["refresh_token"].as_str().unwrap());
+    f.app
+        .db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE oauth_tokens SET expires_at=? WHERE token_digest=?",
+                params![
+                    tx.now().since(jiff::SignedDuration::from_hours(-90 * 24)),
+                    digest
+                ],
+            )?;
+            campfire_db::models::oauth::sweep(tx)
+        })
+        .await
+        .unwrap();
+    invalid(
+        refresh(
+            &f.app,
+            original["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    assert_reused(&f, &original, &rotated).await;
+}
+#[tokio::test]
+async fn oauth_tokens_are_capped_at_connection_lifetime_and_refresh_stops_at_180_days() {
+    let f = fixture(metadata()).await;
+    let pair = tokens(&f).await;
+    let deadline = f
+        .app
+        .db()
+        .read(|conn| {
+            Ok(
+                conn.query_row("SELECT expires_at FROM oauth_connections", [], |r| {
+                    r.get::<_, campfire_db::Timestamp>(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        deadline.jiff(),
+        f.clock.now() + jiff::SignedDuration::from_hours(180 * 24)
+    );
+    f.app
+        .db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE oauth_connections SET expires_at=?",
+                [tx.now().since(jiff::SignedDuration::from_secs(30))],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let near = refresh(
+        &f.app,
+        pair["refresh_token"].as_str().unwrap(),
+        CLIENT,
+        RESOURCE,
+        false,
+    )
+    .await;
+    assert_eq!(near.status.as_u16(), 200);
+    assert_eq!(near.json()["expires_in"], 30);
+    let near_pair = near.json();
+    for key in ["access_token", "refresh_token"] {
+        let secret = near_pair[key].as_str().unwrap().to_string();
+        f.app
+            .db()
+            .read(move |conn| {
+                let token =
+                    campfire_db::models::oauth::OAuthToken::find_by_secret(conn, &secret)?.unwrap();
+                let connection = campfire_db::models::oauth::OAuthConnection::find(
+                    conn,
+                    token.oauth_connection_id,
+                )?
+                .unwrap();
+                assert_eq!(token.expires_at, connection.expires_at);
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+    f.clock
+        .set(deadline.jiff() + jiff::SignedDuration::from_secs(1));
+    invalid(
+        refresh(
+            &f.app,
+            near.json()["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    assert_eq!(
+        mcp(&f.app, near.json()["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+}
+
+#[tokio::test]
+async fn oauth_chatgpt_published_method_array_selects_none() {
+    let document = json!({"client_id":"https://chatgpt.com/oauth/client.json","client_uri":"https://chatgpt.com/","redirect_uris":["https://chatgpt.com/connector_platform_oauth_redirect"],"token_endpoint_auth_method":"private_key_jwt","token_endpoint_auth_methods_supported":["none","private_key_jwt"],"grant_types":["authorization_code","refresh_token"],"response_types":["code"],"client_name":"ChatGPT","logo_uri":"https://persistent.oaistatic.com/sonic/misc/openai-logo.png","token_endpoint_auth_signing_alg":"RS256","jwks_uri":"https://chatgpt.com/oauth/jwks.json"});
+    let f = fixture(document).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let client = "https://chatgpt.com/oauth/client.json";
+    let redirect = "https://chatgpt.com/connector_platform_oauth_redirect";
+    let code = approve(&mut owner, client, redirect).await;
+    assert_eq!(
+        exchange(&f.app, &code, client, redirect, VERIFIER, RESOURCE)
+            .await
+            .status
+            .as_u16(),
+        200
+    );
+}
+#[tokio::test]
+async fn oauth_unsupported_only_client_and_untrusted_redirect_use_error_page() {
+    let mut document = metadata();
+    document["token_endpoint_auth_method"] = json!("private_key_jwt");
+    let f = fixture(document).await;
+    for redirect in [REDIRECT, "https://attacker.example/callback"] {
+        let reply = f
+            .app
+            .anonymous()
+            .get(&authorize_url(CLIENT, redirect))
+            .await;
+        assert!(reply.location().unwrap().contains("/app/oauth/error"));
+        assert!(!reply.location().unwrap().contains("attacker.example"));
+    }
+}
+#[tokio::test]
+async fn oauth_internal_cimd_dns_answers_refused_without_dialing() {
+    let f = fixture(metadata()).await;
+    for ip in [
+        "127.0.0.1",
+        "10.0.0.1",
+        "169.254.169.254",
+        "192.168.1.1",
+        "100.64.0.1",
+        "::1",
+        "fd00::1",
+        "fe80::1",
+    ] {
+        f.resolver
+            .set("client.example", vec![vec![ip.parse().unwrap()]]);
+        let reply = f
+            .app
+            .anonymous()
+            .get(&authorize_url(CLIENT, REDIRECT))
+            .await;
+        assert!(
+            reply.location().unwrap().contains("/app/oauth/error"),
+            "{ip}"
+        );
+    }
+    assert!(f.dialer.dialed.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn oauth_consent_owner_csrf_policy_deny_and_single_approval() {
+    let f = fixture(metadata()).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let reply = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&reply);
+    let mut other = f.app.sign_in(super::presenters::test_support::JASON).await;
+    other.grant_sudo().await;
+    assert_eq!(other.get(&path).await.status.as_u16(), 404);
+    let request = |body: &Value| Req::new(Method::POST, &format!("{path}/approve")).json_body(body);
+    let input = json!({"name":"Consent test","roomIds":[],"capabilities":[]});
+    owner.grant_sudo().await;
+    assert_eq!(owner.send(request(&input)).await.status.as_u16(), 422);
+    assert_eq!(other.write(request(&input)).await.status.as_u16(), 404);
+    assert_eq!(
+        owner
+            .write(request(
+                &json!({"name":"Consent test","roomIds":[],"capabilities":["dm_anyone"]})
+            ))
+            .await
+            .status
+            .as_u16(),
+        422
+    );
+    let no_rows = f
+        .app
+        .db()
+        .read(|conn| {
+            Ok(
+                conn.query_row("SELECT COUNT(*) FROM oauth_connections", [], |r| {
+                    r.get::<_, i64>(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(no_rows, 0);
+    let denied = owner
+        .write(Req::new(Method::POST, &format!("{path}/deny")).json_body(&json!({})))
+        .await;
+    assert_eq!(denied.status.as_u16(), 200);
+    let url = url::Url::parse(denied.json()["redirectTo"].as_str().unwrap()).unwrap();
+    let query = url
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(query.get("error").unwrap(), "access_denied");
+    assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+    assert_eq!(query.get("state").unwrap(), "opaque state & value");
+    assert_eq!(owner.write(request(&input)).await.status.as_u16(), 404);
+}
+
+#[tokio::test]
+async fn oauth_revoke_access_only_itself_refresh_entire_connection_and_unknown_always_200() {
+    let f = fixture(metadata()).await;
+    let original = tokens(&f).await;
+    let rotated = refresh(
+        &f.app,
+        original["refresh_token"].as_str().unwrap(),
+        CLIENT,
+        RESOURCE,
+        false,
+    )
+    .await
+    .json();
+    for secret in ["unknown", original["access_token"].as_str().unwrap()] {
+        let reply = f
+            .app
+            .anonymous()
+            .send(
+                Req::new(Method::POST, "/oauth/revoke")
+                    .form(&[("client_id", CLIENT), ("token", secret)]),
+            )
+            .await;
+        assert_eq!(reply.status.as_u16(), 200);
+        assert_eq!(reply.header("access-control-allow-origin"), Some("*"));
+    }
+    assert_eq!(
+        mcp(&f.app, original["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+    assert_eq!(
+        mcp(&f.app, rotated["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        200
+    );
+    assert_eq!(
+        f.app
+            .anonymous()
+            .send(Req::new(Method::POST, "/oauth/revoke").form(&[
+                ("client_id", CLIENT),
+                ("token", rotated["refresh_token"].as_str().unwrap())
+            ]))
+            .await
+            .status
+            .as_u16(),
+        200
+    );
+    assert_eq!(
+        mcp(&f.app, rotated["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+    invalid(
+        refresh(
+            &f.app,
+            rotated["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+}
+
+#[tokio::test]
+async fn oauth_trusted_authorize_errors_include_state_issuer_and_no_pending_row() {
+    let f = fixture(metadata()).await;
+    for (key, value, error) in [
+        ("response_type", "token", "unsupported_response_type"),
+        ("code_challenge_method", "plain", "invalid_request"),
+        (
+            "resource",
+            "https://wrong.example/agents/mcp",
+            "invalid_target",
+        ),
+        ("scope", "agent admin", "invalid_scope"),
+    ] {
+        let mut url = url::Url::parse(&format!(
+            "http://campfire.test{}",
+            authorize_url(CLIENT, REDIRECT)
+        ))
+        .unwrap();
+        let mut params = url.query_pairs().into_owned().collect::<Vec<_>>();
+        for pair in &mut params {
+            if pair.0 == key {
+                pair.1 = value.into();
+            }
+        }
+        url.set_query(None);
+        url.query_pairs_mut().extend_pairs(params);
+        let reply = f
+            .app
+            .anonymous()
+            .get(&format!("/oauth/authorize?{}", url.query().unwrap()))
+            .await;
+        let callback = url::Url::parse(reply.location().unwrap()).unwrap();
+        assert_eq!(callback.host_str(), Some("client.example"));
+        let query = callback
+            .query_pairs()
+            .collect::<std::collections::HashMap<_, _>>();
+        assert_eq!(query.get("error").unwrap(), error);
+        assert_eq!(query.get("state").unwrap(), "opaque state & value");
+        assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+    }
+    assert_eq!(
+        f.app
+            .db()
+            .read(|conn| Ok(conn.query_row(
+                "SELECT COUNT(*) FROM oauth_authorizations",
+                [],
+                |r| r.get::<_, i64>(0)
+            )?))
+            .await
+            .unwrap(),
+        0
+    );
+}
+
+#[tokio::test]
+async fn oauth_cimd_redirect_size_type_and_identity_limits_and_cache_refetch() {
+    let f = fixture(metadata()).await;
+    for route in [
+        Route::new("GET","client.example","/metadata.json",302).header("Location","https://client.example/other"),
+        Route::new("GET","client.example","/metadata.json",200).header("Content-Type","text/plain").body(serde_json::to_vec(&metadata()).unwrap()),
+        Route::new("GET","client.example","/metadata.json",200).header("Content-Type","application/json").body(vec![b' ';16385]),
+        Route::new("GET","client.example","/metadata.json",200).header("Content-Type","application/json").body(br#"{"client_id":"https://other.example/metadata","client_name":"Invalid","redirect_uris":["https://client.example/callback"],"token_endpoint_auth_method":"none"}"#.to_vec()),
+    ] {
+        f.server.replace_routes(vec![route]);
+        let reply=f.app.anonymous().get(&authorize_url(CLIENT,REDIRECT)).await;
+        assert!(reply.location().unwrap().contains("/app/oauth/error"));
+    }
+    f.server.replace_routes(vec![
+        Route::new("GET", "client.example", "/metadata.json", 200)
+            .header("Content-Type", "application/json")
+            .header("Cache-Control", "max-age=1")
+            .body(serde_json::to_vec(&metadata()).unwrap()),
+    ]);
+    let mut owner = f.app.sign_in(DAVID).await;
+    assert!(
+        owner
+            .get(&authorize_url(CLIENT, REDIRECT))
+            .await
+            .location()
+            .unwrap()
+            .contains("/app/oauth/consent/")
+    );
+    let fetched = f.server.received.lock().unwrap().len();
+    f.clock.advance(jiff::SignedDuration::from_secs(299));
+    owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    assert_eq!(f.server.received.lock().unwrap().len(), fetched);
+    f.clock.advance(jiff::SignedDuration::from_secs(2));
+    owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    assert_eq!(f.server.received.lock().unwrap().len(), fetched + 1);
+}
+
+#[tokio::test]
+async fn oauth_cimd_mixed_private_public_answer_is_refused_and_blocked_client_stays_blocked() {
+    let f = fixture(metadata()).await;
+    f.resolver.set(
+        "client.example",
+        vec![vec![
+            "10.0.0.1".parse().unwrap(),
+            "93.184.216.34".parse().unwrap(),
+        ]],
+    );
+    assert!(
+        f.app
+            .anonymous()
+            .get(&authorize_url(CLIENT, REDIRECT))
+            .await
+            .location()
+            .unwrap()
+            .contains("/app/oauth/error")
+    );
+    assert!(f.dialer.dialed.lock().unwrap().is_empty());
+    f.resolver.set(
+        "client.example",
+        vec![vec!["93.184.216.34".parse().unwrap()]],
+    );
+    let pair = tokens(&f).await;
+    f.app
+        .db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE oauth_clients SET blocked_at=?", [tx.now()])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        f.app
+            .anonymous()
+            .get(&authorize_url(CLIENT, REDIRECT))
+            .await
+            .location()
+            .unwrap()
+            .contains("/app/oauth/error")
+    );
+    assert_eq!(
+        mcp(&f.app, pair["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+    invalid(
+        refresh(
+            &f.app,
+            pair["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+}
+
+#[tokio::test]
+async fn oauth_expired_code_and_idle_refresh_fail_and_refresh_resource_can_be_omitted() {
+    let f = fixture(metadata()).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let code = approve(&mut owner, CLIENT, REDIRECT).await;
+    f.clock.advance(jiff::SignedDuration::from_secs(61));
+    invalid(exchange(&f.app, &code, CLIENT, REDIRECT, VERIFIER, RESOURCE).await);
+    let pair = tokens(&f).await;
+    let reply = f
+        .app
+        .anonymous()
+        .send(Req::new(Method::POST, "/oauth/token").form(&[
+            ("grant_type", "refresh_token"),
+            ("refresh_token", pair["refresh_token"].as_str().unwrap()),
+            ("client_id", CLIENT),
+        ]))
+        .await;
+    assert_eq!(reply.status.as_u16(), 200);
+    f.clock.advance(jiff::SignedDuration::from_hours(30 * 24));
+    invalid(
+        refresh(
+            &f.app,
+            reply.json()["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+}
+#[tokio::test]
+async fn oauth_changed_app_url_rejects_refresh_without_consuming_it() {
+    let f = fixture(metadata()).await;
+    let pair = tokens(&f).await;
+    let app = f
+        .app
+        .restart(
+            f.clock,
+            &[
+                ("APP_URL", "https://changed.example"),
+                ("SMARTFIRE_MCP_OAUTH", "1"),
+            ],
+        )
+        .await
+        .without_job_runner()
+        .await;
+    invalid(
+        refresh(
+            &app,
+            pair["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    let secret = pair["refresh_token"].as_str().unwrap().to_string();
+    app.db()
+        .read(move |conn| {
+            assert!(
+                campfire_db::models::oauth::OAuthToken::find_by_secret(conn, &secret)?
+                    .unwrap()
+                    .used_at
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+#[tokio::test]
+async fn oauth_token_and_discovery_cors_and_token_rate_limit() {
+    let app = setup(true).await;
+    for path in [
+        "/.well-known/oauth-authorization-server",
+        "/.well-known/oauth-protected-resource/agents/mcp",
+        "/oauth/token",
+        "/oauth/revoke",
+    ] {
+        let reply = app
+            .anonymous()
+            .send(Req::new(Method::OPTIONS, path).header("origin", "https://client.example"))
+            .await;
+        assert_eq!(reply.status.as_u16(), 204);
+        assert_eq!(reply.header("access-control-allow-origin"), Some("*"));
+        assert_eq!(reply.header("access-control-allow-credentials"), None);
+    }
+    let resource = app
+        .anonymous()
+        .get("/.well-known/oauth-protected-resource")
+        .await
+        .json();
+    assert_eq!(resource["resource"], RESOURCE);
+    assert_eq!(
+        resource["authorization_servers"],
+        json!(["https://smartfire.example"])
+    );
+    assert_eq!(resource["bearer_methods_supported"], json!(["header"]));
+    for _ in 0..60 {
+        invalid(refresh(&app, "invalid", CLIENT, RESOURCE, false).await);
+    }
+    assert_eq!(
+        refresh(&app, "invalid", CLIENT, RESOURCE, false)
+            .await
+            .status
+            .as_u16(),
+        429
+    );
+}
+
+#[tokio::test]
+async fn oauth_consent_reuses_owned_agent_and_replaces_access_for_all_connections() {
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let consent = owner.get(&path).await.json();
+    let agent_id = consent["selectedAgentId"].as_i64().unwrap();
+    assert_eq!(consent["accessAppliesToAllConnections"], true);
+    owner.grant_sudo().await;
+    let approved=owner.write(Req::new(Method::POST,&format!("{path}/approve")).json_body(&json!({"agentId":agent_id,"roomIds":[super::presenters::test_support::ALL_TALK],"capabilities":["read_messages","post_messages"]}))).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    f.app.db().read(move |conn| {
+        assert_eq!(conn.query_row("SELECT COUNT(*) FROM oauth_connections c JOIN agent_credentials k ON k.id=c.agent_credential_id WHERE k.agent_id=?",[agent_id],|r|r.get::<_,i64>(0))?,2);
+        let grants=campfire_db::AgentGrant::effective_for_agent(conn,agent_id)?;
+        assert_eq!(grants.iter().map(|g|g.capability.as_str()).collect::<std::collections::BTreeSet<_>>(),["post_messages","read_messages"].into());
+        Ok(())
+    }).await.unwrap();
+    let mut other = f.app.sign_in(super::presenters::test_support::JASON).await;
+    let next = other.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    other.grant_sudo().await;
+    let refused = other
+        .write(
+            Req::new(Method::POST, &format!("{path}/approve"))
+                .json_body(&json!({"agentId":agent_id,"roomIds":[],"capabilities":[]})),
+        )
+        .await;
+    assert_eq!(refused.status.as_u16(), 404);
+}
+#[tokio::test]
+async fn oauth_consent_obeys_workspace_switch_even_for_existing_agent() {
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let agent_id = owner.get(&path).await.json()["selectedAgentId"]
+        .as_i64()
+        .unwrap();
+    owner.grant_sudo().await;
+    f.app.db().write(|tx|{tx.conn().execute("UPDATE accounts SET settings=json_set(COALESCE(settings,'{}'),'$.member_agents_enabled',json('false'))",[])?;Ok(())}).await.unwrap();
+    let refused = owner
+        .write(
+            Req::new(Method::POST, &format!("{path}/approve"))
+                .json_body(&json!({"agentId":agent_id,"roomIds":[],"capabilities":[]})),
+        )
+        .await;
+    assert_eq!(refused.status.as_u16(), 403);
+    assert_eq!(
+        f.app
+            .db()
+            .read(|conn| Ok(
+                conn.query_row("SELECT COUNT(*) FROM oauth_connections", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        1
+    );
+}

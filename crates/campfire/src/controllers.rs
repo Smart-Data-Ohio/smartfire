@@ -1321,3 +1321,6 @@ mod ws12_inbox_remaining_tests;
 
 #[cfg(test)]
 mod ws12_work_remaining_tests;
+
+#[cfg(test)]
+mod oauth_tests;
