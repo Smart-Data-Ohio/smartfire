@@ -109,6 +109,39 @@ class PathScopeTest(unittest.TestCase):
         head = self.git("rev-parse", "HEAD").strip()
         self.assertEqual(self.run_scope({"before": self.base, "after": head}, "^frontend/"), "run=true")
 
+    def test_oauth_browser_covers_server_consent_personal_agents_and_its_own_inputs(self):
+        workflow = yaml_json((ROOT / ".github/workflows/oauth-browser.yml").read_text())
+        self.assertEqual(set(workflow["jobs"]), {"acceptance"})
+        job = workflow["jobs"]["acceptance"]
+        self.assertNotIn("if", job)
+        scope = next(step for step in job["steps"] if step.get("id") == "scope")
+        for path, expected in [
+            ("crates/app/src/config.rs", True),
+            ("crates/app/src/oauth/client.rs", True),
+            ("crates/api/src/me_agents.rs", True),
+            ("crates/db/src/models/personal_agents.rs", True),
+            ("crates/runtime/src/concerns/oauth.rs", True),
+            ("frontend/src/features/oauth/consent-page.tsx", True),
+            ("frontend/e2e/oauth/connect.spec.ts", True),
+            ("frontend/playwright.oauth.config.ts", True),
+            ("crates/campfire/src/controllers/oauth_browser_tests.rs", True),
+            ("parity/seeds/manifest.json", True),
+            (".github/workflows/oauth-browser.yml", True),
+            ("ops/scripts/mcp-oauth-smoke.sh", True),
+            ("docs/usage.md", False),
+        ]:
+            head = self.commit(path)
+            for event in [{"before": self.base, "after": head},
+                          {"pull_request": {"base": {"sha": self.base}, "head": {"sha": head}}}]:
+                with self.subTest(path=path, event=event):
+                    self.assertEqual(self.run_scope(event, scope["env"]["PATTERN"]),
+                                     "run=true" if expected else "run=false")
+            self.base = head
+        browser = next(step for step in job["steps"] if "oauth_browser_acceptance" in step.get("run", ""))
+        self.assertIn("--ignored --exact --nocapture", browser["run"])
+        self.assertEqual(browser["env"]["SPA_DIST"], "frontend/dist")
+        self.assertEqual(browser["env"]["SMARTFIRE_E2E_PORT"], "4398")
+
     def test_scheduled_events_and_unavailable_history_run_checks(self):
         self.assertEqual(self.run_scope({}, "^Cargo.lock$"), "run=true")
         self.assertEqual(self.run_scope({"before": "a" * 40, "after": self.base}, "^Cargo.lock$"), "run=true")

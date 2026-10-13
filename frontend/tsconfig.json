@@ -28,6 +28,7 @@
     "tools/service-worker.test.ts",
     "vite.config.ts",
     "playwright.config.ts",
+    "playwright.oauth.config.ts",
     "playwright.mock.config.ts"
   ]
 }

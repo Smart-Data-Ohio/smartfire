@@ -13,7 +13,7 @@ async fn setup() -> TestApp {
         std::sync::Arc::new(campfire_kit::FrozenClock::new(
             "2026-03-02T16:00:00Z".parse().unwrap(),
         )),
-        &[("APP_URL", "https://smartfire.example")],
+        &[("APP_URL", "https://smartfire.example"), ("SMARTFIRE_MCP_OAUTH", "0")],
     )
     .await
     .expect("OAuth tests require restored default seed")

@@ -85,6 +85,19 @@ release's image as MIGRATING.
 
 ## Image and release contract
 
+`scripts/mcp-oauth-smoke.sh BASE_URL` checks OAuth discovery, registration CORS,
+and the unauthenticated MCP challenge after a release. It uses curl and jq with
+no credentials and exits nonzero on any mismatch. It does not register a client
+or approve a connection. Run it against the public origin:
+
+```sh
+ops/scripts/mcp-oauth-smoke.sh https://chat.example.com
+```
+
+`tests/test_mcp_oauth_smoke.py` runs the real script and curl against a local
+HTTP fixture, including refusals for incorrect fields, headers, and statuses.
+The required **Ops scripts** job discovers it with the other `test_*.py` tests.
+
 Build with the repository root as the context; it carries `frontend/` and retained inputs in `crates/static_assets/`:
 
 ```sh

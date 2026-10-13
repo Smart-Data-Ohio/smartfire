@@ -1324,3 +1324,6 @@ mod ws12_work_remaining_tests;
 
 #[cfg(test)]
 mod oauth_tests;
+
+#[cfg(test)]
+mod oauth_browser_tests;
