@@ -13,7 +13,8 @@ pub struct PersonalAgentList {
     pub limit: Option<i64>,
     pub capabilities: Vec<String>,
     pub rooms: Vec<GrantRoom>,
-    pub mcp_url: String,
+    /// Null until a valid APP_URL is configured; request headers never supply this URL.
+    pub mcp_url: Option<String>,
     pub oauth_available: bool,
 }
 

@@ -6,4 +6,8 @@ export type PersonalAgentList = { agents: Array<PersonalAgent>, enabled: boolean
 /**
  * Null for administrators, who have no per-member creation limit.
  */
-limit: number | null, capabilities: Array<string>, rooms: Array<GrantRoom>, mcpUrl: string, oauthAvailable: boolean, };
+limit: number | null, capabilities: Array<string>, rooms: Array<GrantRoom>,
+/**
+ * Null until a valid APP_URL is configured; request headers never supply this URL.
+ */
+mcpUrl: string | null, oauthAvailable: boolean, };

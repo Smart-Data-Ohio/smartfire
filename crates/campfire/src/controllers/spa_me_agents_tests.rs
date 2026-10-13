@@ -453,3 +453,133 @@ async fn personal_agent_member_api_credential_expiry_atomic_rotation_and_csrf() 
     assert_eq!(profile["roomIds"], json!([]));
     assert_eq!(profile["capabilities"], json!([]));
 }
+
+#[tokio::test]
+async fn personal_agent_review_mcp_url_is_null_without_app_url_despite_forged_hosts() {
+    let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
+    ));
+    let a = TestApp::boot_seed_with_env("default", clock, &[])
+        .await
+        .expect("restored seed")
+        .without_job_runner()
+        .await;
+    let mut member = a.sign_in(KEVIN).await;
+    let mut advertised = Vec::new();
+    for request in [
+        get(ROOT),
+        get(ROOT).header("host", "evil.example"),
+        get(ROOT).header("x-forwarded-host", "evil.example"),
+        get(ROOT)
+            .header("host", "internal.example")
+            .header("x-forwarded-host", "evil.example"),
+    ] {
+        let reply = member.send(request).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let list: Value = parse(&reply);
+        advertised.push(list["mcpUrl"].clone());
+    }
+    assert!(
+        advertised.iter().all(Value::is_null),
+        "URLs from unconfigured requests: {advertised:?}"
+    );
+    let configured = app().await.expect("restored seed");
+    let mut member = configured.sign_in(KEVIN).await;
+    let reply = member
+        .send(
+            get(ROOT)
+                .header("host", "evil.example")
+                .header("x-forwarded-host", "another-evil.example"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let list: Value = parse(&reply);
+    assert_eq!(list["mcpUrl"], "https://agents.example.test/agents/mcp");
+}
+
+#[tokio::test]
+async fn personal_agent_review_profile_audit_records_member_and_changed_fields_atomically() {
+    let a = app().await.expect("restored seed");
+    let mut member = a.sign_in(KEVIN).await;
+    member.grant_sudo().await;
+    let created = create(&mut member).await;
+    let id = created["agent"]["id"].as_i64().unwrap();
+    let path = format!("{ROOT}/{id}");
+    let update = json!({"name":"Renamed helper","provider":"Local","runtime":"CLI","description":"Owner configured","dailyMessageCap":null});
+    assert_eq!(
+        write(&mut member, Method::PATCH, &path, update.clone())
+            .await
+            .status,
+        StatusCode::OK
+    );
+    let rows=a.db().read(move |conn| {
+        let mut statement=conn.prepare("SELECT actor_id,actor_label,target_type,target_id,target_label,details FROM audit_logs WHERE action='agent.update' AND target_id=? ORDER BY id")?;
+        Ok(statement.query_map([id],|row| Ok(json!({"actorId":row.get::<_,i64>(0)?,"actorLabel":row.get::<_,String>(1)?,"targetType":row.get::<_,String>(2)?,"targetId":row.get::<_,i64>(3)?,"targetLabel":row.get::<_,String>(4)?,"changes":serde_json::from_str::<Value>(&row.get::<_,String>(5)?).unwrap()})))?.collect::<rusqlite::Result<Vec<_>>>()?)
+    }).await.unwrap();
+    assert_eq!(rows.len(), 1, "profile and budget changes need an audit");
+    assert_eq!(rows[0]["actorId"], KEVIN);
+    assert!(rows[0]["actorLabel"].as_str().unwrap().contains("Kevin"));
+    assert_eq!(rows[0]["targetType"], "Agent");
+    assert_eq!(rows[0]["targetId"], id);
+    assert_eq!(rows[0]["targetLabel"], "Renamed helper");
+    assert_eq!(
+        rows[0]["changes"],
+        json!({
+            "name":{"before":"Personal helper","after":"Renamed helper"},
+            "provider":{"before":null,"after":"Local"},
+            "runtime":{"before":null,"after":"CLI"},
+            "description":{"before":null,"after":"Owner configured"},
+            "daily_message_cap":{"before":200,"after":null},
+        })
+    );
+    // A no-op and a validation failure must not claim a change.
+    assert_eq!(
+        write(&mut member, Method::PATCH, &path, update)
+            .await
+            .status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        write(
+            &mut member,
+            Method::PATCH,
+            &path,
+            json!({"name":"Invalid rename","dailyMessageCap":0})
+        )
+        .await
+        .status,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    a.db()
+        .read(move |conn| {
+            let count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM audit_logs WHERE action='agent.update' AND target_id=?",
+                [id],
+                |r| r.get(0),
+            )?;
+            assert_eq!(count, 1);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    a.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_profile_audit BEFORE INSERT ON audit_logs WHEN NEW.action='agent.update' BEGIN SELECT RAISE(ABORT,'audit unavailable'); END;")?;
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(
+        write(
+            &mut member,
+            Method::PATCH,
+            &path,
+            json!({"name":"Must roll back","dailyMessageCap":50})
+        )
+        .await
+        .status,
+        StatusCode::INTERNAL_SERVER_ERROR
+    );
+    let profile: Value = parse(&member.send(get(&path)).await);
+    assert_eq!(profile["name"], "Renamed helper");
+    assert_eq!(profile["dailyMessageCap"], Value::Null);
+}

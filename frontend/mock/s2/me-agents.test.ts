@@ -103,4 +103,97 @@ describe("personal agents", () => {
         .status,
     ).toBe(403);
   });
+  it("returns only effective capabilities when no room was granted", async () => {
+    const { server } = harness();
+
+    const created = await send(server, "POST", ROOT, {
+      name: "No rooms",
+      roomIds: [],
+      capabilities: ["read_messages"],
+    });
+
+    expect(created.status).toBe(201);
+    const agent = field(created.json, "agent");
+    expect(field(agent, "capabilities")).toEqual([]);
+    const id = intField(agent, "id");
+    const shown = await server.handle({ method: "GET", path: `${ROOT}/${id}` });
+    expect(field(shown.json, "capabilities")).toEqual([]);
+
+    const updated = await send(server, "PUT", `${ROOT}/${id}/access`, {
+      roomIds: [],
+      capabilities: ["react"],
+    });
+
+    expect(updated.status).toBe(200);
+    expect(field(updated.json, "capabilities")).toEqual([]);
+  });
+  it("filters rooms and effective capabilities after the owner leaves", async () => {
+    const { server } = harness();
+
+    const room = await send(server, "POST", "/api/v1/rooms", {
+      type: "closed",
+      clientRoomId: "d35352aa-5906-4d78-9236-673af121a781",
+      name: "Agent room",
+      iconName: null,
+      userIds: [1, 2],
+    });
+
+    expect(room.status).toBe(201);
+    const roomId = intField(field(room.json, "room"), "id");
+
+    const created = await send(server, "POST", ROOT, {
+      name: "Room helper",
+      roomIds: [roomId],
+      capabilities: ["read_messages"],
+    });
+
+    expect(created.status).toBe(201);
+    const agent = field(created.json, "agent");
+    expect(field(agent, "roomIds")).toEqual([roomId]);
+    expect(field(agent, "capabilities")).toEqual(["read_messages"]);
+    const id = intField(agent, "id");
+    const path = `${ROOT}/${id}`;
+
+    const left = await send(server, "PATCH", `/api/v1/rooms/${roomId}`, {
+      type: "closed",
+      userIds: [2],
+    });
+
+    expect(left.status).toBe(200);
+    const shown = await server.handle({ method: "GET", path });
+    expect(field(shown.json, "roomIds")).toEqual([]);
+    expect(field(shown.json, "capabilities")).toEqual([]);
+    const listed = await server.handle({ method: "GET", path: ROOT });
+    const listedAgents = field(listed.json, "agents");
+    expect(Array.isArray(listedAgents) && field(listedAgents[0], "roomIds")).toEqual([]);
+    expect(Array.isArray(listedAgents) && field(listedAgents[0], "capabilities")).toEqual([]);
+    const patched = await send(server, "PATCH", path, { description: "Still mine" });
+    expect(patched.status).toBe(200);
+    expect(field(patched.json, "roomIds")).toEqual([]);
+    expect(field(patched.json, "capabilities")).toEqual([]);
+  });
+  it("rejects zero message caps without changing the profile", async () => {
+    const { server } = harness();
+
+    const created = await send(server, "POST", ROOT, {
+      name: "Keep this name",
+      roomIds: [],
+      capabilities: [],
+    });
+
+    const id = intField(field(created.json, "agent"), "id");
+    const path = `${ROOT}/${id}`;
+
+    const rejected = await send(server, "PATCH", path, {
+      name: "Must not save",
+      dailyMessageCap: 0,
+    });
+
+    expect(rejected.status).toBe(422);
+    const shown = await server.handle({ method: "GET", path });
+    expect(stringField(shown.json, "name")).toBe("Keep this name");
+    expect(field(shown.json, "dailyMessageCap")).toBe(200);
+    expect((await send(server, "PATCH", path, { dailyMessageCap: 1 })).status).toBe(200);
+    expect((await send(server, "PATCH", path, { dailyMessageCap: null })).status).toBe(200);
+  });
 });

@@ -12,9 +12,15 @@ const CAPABILITIES = ["read_messages", "post_messages", "react", "manage_threads
 
 const DAY = 86_400_000;
 
+interface AgentRecord {
+  profile: Omit<PersonalAgent, "roomIds" | "capabilities">;
+  roomIds: number[];
+  grants: Map<number, string[]>;
+}
+
 export function createMeAgents(ctx: S2Context, admin: AdminModule) {
   let world: World | null = null;
-  const agents = new Map<number, PersonalAgent>();
+  const agents = new Map<number, AgentRecord>();
   let nextId = 10000;
   let nextCredentialId = 10000;
 
@@ -26,8 +32,14 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       nextCredentialId = 10000;
     }
 
+    const grantable = new Set(rooms().map((room) => room.id));
+
     for (const agent of agents.values()) {
-      for (const credential of agent.credentials) {
+      for (const roomId of agent.grants.keys()) {
+        if (!grantable.has(roomId)) agent.grants.delete(roomId);
+      }
+
+      for (const credential of agent.profile.credentials) {
         if (
           credential.state === "active" &&
           credential.expiresAt !== null &&
@@ -77,12 +89,30 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
     };
   };
 
+  const replaceAccess = (record: AgentRecord, next: ReturnType<typeof access>) => {
+    record.roomIds = next.roomIds;
+    record.grants.clear();
+
+    for (const roomId of next.roomIds) record.grants.set(roomId, [...next.capabilities]);
+  };
+
+  const present = (record: AgentRecord): PersonalAgent => {
+    const grantable = new Set(rooms().map((room) => room.id));
+    const roomIds = record.roomIds.filter((id) => grantable.has(id));
+
+    const capabilities = record.profile.suspended
+      ? []
+      : [...new Set(roomIds.flatMap((id) => record.grants.get(id) ?? []))].sort();
+
+    return { ...record.profile, roomIds, capabilities };
+  };
+
   const enabled = () => {
     if (!admin.memberAgentPolicy().enabled) throw forbidden("Member agents are disabled");
   };
 
   const issue = (
-    agent: PersonalAgent,
+    agent: AgentRecord,
     body: Json | undefined,
     previous?: PersonalAgentCredential,
   ) => {
@@ -112,15 +142,15 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
     };
 
     if (previous !== undefined) previous.state = "revoked";
-    agent.credentials.unshift(credential);
+    agent.profile.credentials.unshift(credential);
 
     return { status: 201, json: { credential, secret } };
   };
 
   const summaries = (): BotSummary[] =>
-    [...current().values()].map((agent) => ({
-      id: agent.userId,
-      name: agent.name,
+    [...current().values()].map(({ profile }) => ({
+      id: profile.userId,
+      name: profile.name,
       avatarUrl: "/avatar.svg",
       icon: null,
       rooms: [],
@@ -134,7 +164,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         const policy = admin.memberAgentPolicy();
 
         const list: PersonalAgentList = {
-          agents: [...current().values()],
+          agents: [...current().values()].map(present),
           enabled: policy.enabled,
           limit: ctx.world().users.get(VIEWER_ID)?.role === "administrator" ? null : policy.limit,
           capabilities: CAPABILITIES,
@@ -162,7 +192,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         const granted = access(body);
         const id = nextId;
 
-        const agent: PersonalAgent = {
+        const profile: AgentRecord["profile"] = {
           id,
           userId: id,
           name,
@@ -174,8 +204,11 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
           suspended: false,
           lastUsedAt: null,
           credentials: [],
-          ...granted,
         };
+
+        const agent: AgentRecord = { profile, roomIds: [], grants: new Map() };
+
+        replaceAccess(agent, granted);
 
         const issued = issue(agent, {
           name: stringField(body, "tokenName") ?? "Primary token",
@@ -185,9 +218,12 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         agents.set(id, agent);
         nextId++;
 
-        return { status: 201, json: { agent, secret: stringField(issued.json, "secret") } };
+        return {
+          status: 201,
+          json: { agent: present(agent), secret: stringField(issued.json, "secret") },
+        };
       }),
-      route("GET", /^\/me\/agents\/(\d+)$/, ({ ids }) => ok(find(ids[0]))),
+      route("GET", /^\/me\/agents\/(\d+)$/, ({ ids }) => ok(present(find(ids[0])))),
       route("PATCH", /^\/me\/agents\/(\d+)$/, ({ ids, body }) => {
         const agent = find(ids[0]);
         const cap = field(body, "dailyMessageCap");
@@ -195,9 +231,9 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         if (
           cap !== undefined &&
           cap !== null &&
-          (!isNumber(cap) || !Number.isSafeInteger(cap) || cap < 0)
+          (!isNumber(cap) || !Number.isSafeInteger(cap) || cap <= 0)
         )
-          throw validation("dailyMessageCap", "must be a non-negative integer or null");
+          throw validation("dailyMessageCap", "must be a positive integer or null");
         const name = stringField(body, "name");
 
         if (name !== null && name.trim() === "") throw validation("name", "can't be blank");
@@ -211,33 +247,33 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
           if (value !== null) {
             if (key === "name" && value.trim() === "") throw validation("name", "can't be blank");
-            agent[key] = value;
+            agent.profile[key] = value;
           }
         }
 
         if (cap !== undefined) {
-          if (cap !== null && (!isNumber(cap) || !Number.isSafeInteger(cap) || cap < 0))
-            throw validation("dailyMessageCap", "must be a non-negative integer or null");
-          agent.dailyMessageCap = cap;
+          if (cap !== null && (!isNumber(cap) || !Number.isSafeInteger(cap) || cap <= 0))
+            throw validation("dailyMessageCap", "must be a positive integer or null");
+          agent.profile.dailyMessageCap = cap;
         }
 
-        return ok(agent);
+        return ok(present(agent));
       }),
       route("DELETE", /^\/me\/agents\/(\d+)$/, ({ ids }) => {
         const agent = find(ids[0]);
-        current().delete(agent.id);
+        current().delete(agent.profile.id);
 
-        return ok({ id: agent.id });
+        return ok({ id: agent.profile.id });
       }),
       route("PUT", /^\/me\/agents\/(\d+)\/access$/, ({ ids, body }) => {
         const agent = find(ids[0]);
         enabled();
-        Object.assign(agent, access(body));
+        replaceAccess(agent, access(body));
 
-        return ok(agent);
+        return ok(present(agent));
       }),
       route("GET", /^\/me\/agents\/(\d+)\/credentials$/, ({ ids }) =>
-        ok({ credentials: find(ids[0]).credentials }),
+        ok({ credentials: find(ids[0]).profile.credentials }),
       ),
       route("POST", /^\/me\/agents\/(\d+)\/credentials$/, ({ ids, body }) => {
         const agent = find(ids[0]);
@@ -250,7 +286,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       }),
       route("POST", /^\/me\/agents\/(\d+)\/credentials\/(\d+)\/rotate$/, ({ ids, body }) => {
         const agent = find(ids[0]);
-        const credential = agent.credentials.find((c) => c.id === ids[1]);
+        const credential = agent.profile.credentials.find((c) => c.id === ids[1]);
 
         if (credential === undefined || credential.state === "revoked") throw notFound();
         enabled();
@@ -260,12 +296,12 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       }),
       route("DELETE", /^\/me\/agents\/(\d+)\/credentials\/(\d+)$/, ({ ids }) => {
         const agent = find(ids[0]);
-        const credential = agent.credentials.find((c) => c.id === ids[1]);
+        const credential = agent.profile.credentials.find((c) => c.id === ids[1]);
 
         if (credential === undefined) throw notFound();
         credential.state = "revoked";
 
-        return ok({ credentials: agent.credentials });
+        return ok({ credentials: agent.profile.credentials });
       }),
     ],
   };

@@ -12,7 +12,7 @@ use campfire_api_types as api;
 use campfire_app::app::AppCtx;
 use campfire_db::models::{
     agent_access,
-    audit_log::{AuditLog, Context, NewAuditLog, Target},
+    audit_log::{self, AuditLog, Context, NewAuditLog, Target},
     personal_agents,
 };
 use campfire_db::{
@@ -212,16 +212,12 @@ fn expiry(c: &mut Ctx, value: Option<&str>) -> Result<Option<Timestamp>> {
 async fn list_agents(c: &mut Ctx) -> Result {
     let owner = member(c).await?;
     let now = Timestamp::from_jiff(c.now());
-    let mcp_url = format!(
-        "{}/agents/mcp",
-        c.app()
-            .config
-            .mail
-            .app_url
-            .clone()
-            .unwrap_or_else(|| c.url_for(""))
-            .trim_end_matches('/')
-    );
+    let mcp_url = c
+        .app()
+        .config
+        .mail
+        .validated_app_url()
+        .map(|origin| format!("{origin}/agents/mcp"));
     let list = c
         .app()
         .db
@@ -353,11 +349,15 @@ async fn update_agent(c: &mut Ctx) -> Result {
     let agent = owned(c, owner.id).await?;
     let input: api::UpdatePersonalAgent = body(c).await?;
     let agent_id = agent.id;
+    let context = campfire_people::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
         .write(move |tx| {
             let mut agent = personal_agents::owned(tx.conn(), owner.id, agent_id)?;
-            User::find(tx.conn(), agent.user_id)?.update(
+            let before_agent = agent.clone();
+            let mut bot = User::find(tx.conn(), agent.user_id)?;
+            let before_bot = bot.clone();
+            bot.update(
                 tx,
                 UserChanges {
                     name: input.name,
@@ -374,7 +374,46 @@ async fn update_agent(c: &mut Ctx) -> Result {
                     daily_message_cap: input.daily_message_cap,
                     ..Default::default()
                 },
-            )
+            )?;
+            let mut changes = serde_json::Map::new();
+            for (field, before, after) in [
+                ("name", json!(before_bot.name), json!(bot.name)),
+                (
+                    "icon_name",
+                    json!(before_bot.icon_name),
+                    json!(bot.icon_name),
+                ),
+                (
+                    "provider",
+                    json!(before_agent.provider),
+                    json!(agent.provider),
+                ),
+                ("runtime", json!(before_agent.runtime), json!(agent.runtime)),
+                (
+                    "description",
+                    json!(before_agent.description),
+                    json!(agent.description),
+                ),
+                (
+                    "daily_message_cap",
+                    json!(before_agent.daily_message_cap),
+                    json!(agent.daily_message_cap),
+                ),
+            ] {
+                if before != after {
+                    changes.insert(field.into(), audit_log::pair(before, after));
+                }
+            }
+            if !changes.is_empty() {
+                audit(
+                    tx,
+                    &agent,
+                    "agent.update",
+                    serde_json::Value::Object(changes),
+                    &context,
+                )?;
+            }
+            Ok(())
         })
         .await
         .map_err(saved_error)?;
