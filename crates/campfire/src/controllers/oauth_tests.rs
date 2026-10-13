@@ -745,6 +745,14 @@ async fn oauth_unsupported_only_client_and_untrusted_redirect_use_error_page() {
         assert!(reply.location().unwrap().contains("/app/oauth/error"));
         assert!(!reply.location().unwrap().contains("attacker.example"));
     }
+    // The page it names opens for a visitor who hasn't signed in.
+    let page = f
+        .app
+        .anonymous()
+        .get("/app/oauth/error?error=invalid_client")
+        .await;
+    assert_eq!(page.status.as_u16(), 200, "{}", page.text());
+    assert!(page.header("content-type").unwrap().starts_with("text/html"));
 }
 #[tokio::test]
 async fn oauth_internal_cimd_dns_answers_refused_without_dialing() {
@@ -1218,5 +1226,210 @@ async fn oauth_consent_obeys_workspace_switch_even_for_existing_agent() {
             .await
             .unwrap(),
         1
+    );
+}
+
+fn oauth_credential(list: &Value) -> Value {
+    list["agents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|agent| agent["credentials"].as_array().unwrap().clone())
+        .find(|credential| credential["kind"] == "oauth")
+        .expect("an OAuth connection")
+}
+#[tokio::test]
+async fn oauth_connections_list_with_client_and_explain_a_reuse_revocation() {
+    let f = fixture(metadata()).await;
+    let original = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let listed = oauth_credential(&owner.get("/api/v1/me/agents").await.json());
+    assert_eq!(listed["state"], "active");
+    assert_eq!(listed["lastFour"], "oauth");
+    assert_eq!(listed["expiresAt"], "2027-04-11T16:00:00.000Z");
+    assert_eq!(
+        listed["connection"],
+        json!({"clientName":"Test client","clientHost":"client.example","clientBlocked":false,"revokedReason":null})
+    );
+    let agent_id = owner.get("/api/v1/me/agents").await.json()["agents"][0]["id"]
+        .as_i64()
+        .unwrap();
+    let cid = listed["id"].as_i64().unwrap();
+    owner.grant_sudo().await;
+    let rotate = owner
+        .write(
+            Req::new(
+                Method::POST,
+                &format!("/api/v1/me/agents/{agent_id}/credentials/{cid}/rotate"),
+            )
+            .json_body(&json!({})),
+        )
+        .await;
+    assert_eq!(rotate.status.as_u16(), 404, "a connection has no secret to rotate");
+    let attacker = refresh(
+        &f.app,
+        original["refresh_token"].as_str().unwrap(),
+        CLIENT,
+        RESOURCE,
+        false,
+    )
+    .await;
+    assert_eq!(attacker.status.as_u16(), 200);
+    invalid(
+        refresh(
+            &f.app,
+            original["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    let credentials = owner
+        .get(&format!("/api/v1/me/agents/{agent_id}/credentials"))
+        .await
+        .json();
+    let revoked = credentials["credentials"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|credential| credential["id"] == cid)
+        .unwrap()
+        .clone();
+    assert_eq!(revoked["state"], "revoked");
+    assert_eq!(revoked["connection"]["revokedReason"], "tokenReused");
+}
+#[tokio::test]
+async fn oauth_owner_revokes_a_connection_and_its_tokens_from_settings() {
+    let f = fixture(metadata()).await;
+    let pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let list = owner.get("/api/v1/me/agents").await.json();
+    let agent_id = list["agents"][0]["id"].as_i64().unwrap();
+    let cid = oauth_credential(&list)["id"].as_i64().unwrap();
+    let revoked = owner
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/api/v1/me/agents/{agent_id}/credentials/{cid}"),
+        ))
+        .await;
+    assert_eq!(revoked.status.as_u16(), 200, "{}", revoked.text());
+    let row = revoked.json()["credentials"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|credential| credential["id"] == cid)
+        .unwrap()
+        .clone();
+    assert_eq!(row["state"], "revoked");
+    assert_eq!(row["connection"]["revokedReason"], Value::Null);
+    assert_eq!(
+        mcp(&f.app, pair["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+    invalid(
+        refresh(
+            &f.app,
+            pair["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    let audits = f
+        .app
+        .db()
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM audit_logs WHERE action IN ('oauth.revoke','agent.credential.revoke') AND target_id IN (?, ?)",
+                params![cid, agent_id],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(audits, 2);
+}
+#[tokio::test]
+async fn oauth_admin_lists_blocks_and_unblocks_connected_clients() {
+    let f = fixture(metadata()).await;
+    let mut admin = f.app.sign_in(DAVID).await;
+    let empty = admin.get("/api/v1/admin/oauth_clients").await;
+    assert_eq!(empty.status.as_u16(), 200, "{}", empty.text());
+    assert_eq!(
+        empty.json(),
+        json!({"clients":[],"oauthAvailable":true}),
+        "a client that only fetched metadata isn't listed"
+    );
+    let pair = tokens(&f).await;
+    let listed = admin.get("/api/v1/admin/oauth_clients").await.json();
+    let client = listed["clients"][0].clone();
+    assert_eq!(client["clientName"], "Test client");
+    assert_eq!(client["clientId"], CLIENT);
+    assert_eq!(client["clientHost"], "client.example");
+    assert_eq!(client["liveConnections"], 1);
+    assert_eq!(client["lastConnectedAt"], "2026-10-13T16:00:00.000Z");
+    assert_eq!(client["blockedAt"], Value::Null);
+    let id = client["id"].as_i64().unwrap();
+    let path = format!("/api/v1/admin/oauth_clients/{id}/block");
+    let mut member = f
+        .app
+        .sign_in(super::presenters::test_support::KEVIN)
+        .await;
+    assert_eq!(
+        member.get("/api/v1/admin/oauth_clients").await.status.as_u16(),
+        403
+    );
+    assert_eq!(
+        member
+            .write(Req::new(Method::PUT, &path))
+            .await
+            .status
+            .as_u16(),
+        403
+    );
+    let blocked = admin.write(Req::new(Method::PUT, &path)).await;
+    assert_eq!(blocked.status.as_u16(), 200, "{}", blocked.text());
+    assert_eq!(blocked.json()["blockedAt"], "2026-10-13T16:00:00.000Z");
+    let access = pair["access_token"].as_str().unwrap();
+    assert_eq!(mcp(&f.app, access).await.status.as_u16(), 401);
+    let owner_view = oauth_credential(&admin.get("/api/v1/me/agents").await.json());
+    assert_eq!(owner_view["connection"]["clientBlocked"], true);
+    let refused = admin.get(&authorize_url(CLIENT, REDIRECT)).await;
+    assert!(
+        !refused
+            .location()
+            .unwrap_or_default()
+            .contains("/app/oauth/consent/"),
+        "a blocked client can't start another authorization"
+    );
+    let unblocked = admin.write(Req::new(Method::DELETE, &path)).await;
+    assert_eq!(unblocked.status.as_u16(), 200);
+    assert_eq!(unblocked.json()["blockedAt"], Value::Null);
+    assert_eq!(mcp(&f.app, access).await.status.as_u16(), 200);
+    let audits = f
+        .app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM audit_logs WHERE action IN ('oauth.client.block','oauth.client.unblock') AND target_type='OAuthClient'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(audits, 2);
+    assert_eq!(
+        admin
+            .write(Req::new(Method::PUT, "/api/v1/admin/oauth_clients/999999/block"))
+            .await
+            .status
+            .as_u16(),
+        404
     );
 }

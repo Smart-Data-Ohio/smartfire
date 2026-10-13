@@ -4,7 +4,9 @@
  * 2026-10-13): Claude Code's `claude mcp add --transport http … --header` (code.claude.com/docs/en/mcp),
  * Codex's `[mcp_servers.<name>]` table with `bearer_token_env_var` in `~/.codex/config.toml`, and
  * Cursor's `mcpServers` in `mcp.json` with `headers` and `${env:NAME}` interpolation
- * (cursor.com/docs/mcp).
+ * (cursor.com/docs/mcp). Without a token, with the server's OAuth: Claude Code's `/mcp` →
+ * Authenticate after `claude mcp add` with no header, and Codex's `codex mcp login <name>` for a
+ * `url`-only server.
  */
 
 /** The clients that connect with a token. */
@@ -14,6 +16,14 @@ export type TokenClient = "claude-code" | "codex" | "cursor" | "other";
 export type WebConnector = "claude-ai" | "chatgpt" | "grok";
 
 export type AgentClient = TokenClient | WebConnector;
+
+/** The terminal clients that can also sign in through OAuth instead of holding a token. */
+export type SignInClient = "claude-code" | "codex";
+
+/** Whether `client` can sign in through OAuth instead of holding a token. */
+export function canSignIn(client: AgentClient | null): client is SignInClient {
+  return client === "claude-code" || client === "codex";
+}
 
 /** One thing to copy, and what to do with it. */
 export interface SnippetStep {
@@ -165,6 +175,38 @@ function webConnector(client: WebConnector, input: SnippetInput): Snippet {
   return {
     steps: [{ label: "Connector URL", code: input.mcpUrl }],
     note: `${CONNECTOR_SETTINGS[client]} with this URL, then sign in to Smartfire and approve it.`,
+  };
+}
+
+/**
+ * How a terminal client connects without a token: added with only the URL, then signed in from
+ * the client, which opens Smartfire's approval page in the browser.
+ */
+export function signInSnippet(client: SignInClient, mcpUrl: string): Snippet {
+  const name = serverName("");
+
+  if (client === "claude-code") {
+    return {
+      steps: [
+        {
+          label: "Run in a terminal",
+          code: `claude mcp add --transport http --scope user ${name} ${shellWord(mcpUrl)}`,
+        },
+        { label: "Then, in Claude Code", code: "/mcp" },
+      ],
+      note: `Choose ${name} and Authenticate. Your browser opens Smartfire, where you choose the agent and approve it.`,
+    };
+  }
+
+  return {
+    steps: [
+      {
+        label: "Add to ~/.codex/config.toml",
+        code: [`[mcp_servers.${name}]`, `url = ${JSON.stringify(mcpUrl)}`].join("\n"),
+      },
+      { label: "Then sign in", code: `codex mcp login ${name}` },
+    ],
+    note: "Your browser opens Smartfire, where you choose the agent and approve it.",
   };
 }
 

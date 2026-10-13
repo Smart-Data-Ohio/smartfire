@@ -24,6 +24,7 @@ const TOKEN: PersonalAgentCredential = {
   lastUsedAt: null,
   lastUsedIp: null,
   state: "active",
+  connection: null,
 };
 
 const AGENT: PersonalAgent = {

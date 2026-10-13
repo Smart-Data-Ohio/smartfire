@@ -10,16 +10,20 @@ use axum::{
 };
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
+use campfire_app::oauth::client;
 use campfire_db::models::{
     agent_access,
     audit_log::{self, AuditLog, Context, NewAuditLog, Target},
+    oauth::OAuthConnection,
     personal_agents,
 };
 use campfire_db::{
     Agent, AgentChanges, AgentCredential, Connection, NewUser, Timestamp, Tx, User, UserChanges,
 };
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
+use rusqlite::OptionalExtension;
 use serde_json::json;
+use std::collections::HashMap;
 
 pub fn routes() -> Router<Kit> {
     Router::new()
@@ -122,7 +126,45 @@ fn refuse(error: api::ApiError) -> Error {
         Err(error) => Error::internal(error),
     }
 }
-fn credential(row: AgentCredential, now: Timestamp) -> api::PersonalAgentCredential {
+/// The agent's OAuth connections, by credential id: their clients, and why the server revoked one.
+fn connections(
+    conn: &Connection,
+    agent_id: i64,
+) -> campfire_db::Result<HashMap<i64, api::PersonalAgentConnection>> {
+    let sql = "SELECT connection.agent_credential_id, client.client_name, client.client_id, client.blocked_at IS NOT NULL, EXISTS (SELECT 1 FROM audit_logs log WHERE log.action IN ('oauth.refresh_reuse','oauth.code_reuse') AND log.target_type='AgentCredential' AND log.target_id=connection.agent_credential_id) FROM oauth_connections connection JOIN oauth_clients client ON client.id=connection.oauth_client_id JOIN agent_credentials credential ON credential.id=connection.agent_credential_id WHERE credential.agent_id=?";
+    let mut statement = conn.prepare(sql)?;
+    let rows = statement.query_map([agent_id], |r| {
+        let client_id: String = r.get(2)?;
+        Ok((
+            r.get::<_, i64>(0)?,
+            api::PersonalAgentConnection {
+                client_name: r.get(1)?,
+                client_host: client::client_host(&client_id),
+                client_blocked: r.get(3)?,
+                revoked_reason: r
+                    .get::<_, bool>(4)?
+                    .then_some(api::ConnectionRevokedReason::TokenReused),
+            },
+        ))
+    })?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+/// Whether credential `id` belongs to an OAuth connection rather than a token.
+fn connection_for(conn: &Connection, id: i64) -> campfire_db::Result<Option<OAuthConnection>> {
+    let connection_id: Option<i64> = conn
+        .query_row(
+            "SELECT id FROM oauth_connections WHERE agent_credential_id=?",
+            [id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    connection_id.map_or(Ok(None), |id| OAuthConnection::find(conn, id))
+}
+fn credential(
+    row: AgentCredential,
+    now: Timestamp,
+    connection: Option<api::PersonalAgentConnection>,
+) -> api::PersonalAgentCredential {
     let state = if row.revoked_at.is_some() {
         api::CredentialState::Revoked
     } else if !row.active(now) {
@@ -130,9 +172,20 @@ fn credential(row: AgentCredential, now: Timestamp) -> api::PersonalAgentCredent
     } else {
         api::CredentialState::Active
     };
+    // The server's reason only explains a revocation.
+    let connection = connection.map(|connection| api::PersonalAgentConnection {
+        revoked_reason: connection
+            .revoked_reason
+            .filter(|_| state == api::CredentialState::Revoked),
+        ..connection
+    });
     api::PersonalAgentCredential {
         id: row.id,
-        kind: api::PersonalCredentialKind::Token,
+        kind: if connection.is_some() {
+            api::PersonalCredentialKind::Oauth
+        } else {
+            api::PersonalCredentialKind::Token
+        },
         name: row.name,
         last_four: row.token_last_four,
         created_at: time(row.created_at),
@@ -140,6 +193,7 @@ fn credential(row: AgentCredential, now: Timestamp) -> api::PersonalAgentCredent
         last_used_at: row.last_used_at.map(time),
         last_used_ip: row.last_used_ip,
         state,
+        connection,
     }
 }
 pub(crate) fn present(
@@ -151,9 +205,13 @@ pub(crate) fn present(
     let icon_url = UserExtras::load(conn, [&bot])?
         .avatar_icon(bot.id)
         .and_then(|icon| icon.image_url.clone());
+    let mut connections = connections(conn, agent.id)?;
     let credentials = AgentCredential::for_agent(conn, agent.id)?
         .into_iter()
-        .map(|r| credential(r, now))
+        .map(|r| {
+            let connection = connections.remove(&r.id);
+            credential(r, now, connection)
+        })
         .collect::<Vec<_>>();
     let grants = campfire_db::AgentGrant::effective_for_agent(conn, agent.id)?;
     let grantable =
@@ -502,10 +560,14 @@ async fn reply_credentials(c: &mut Ctx, agent_id: i64, owner_id: i64) -> Result 
         .db
         .read(move |conn| {
             personal_agents::owned(conn, owner_id, agent_id)?;
+            let mut connections = connections(conn, agent_id)?;
             Ok(api::PersonalCredentialList {
                 credentials: AgentCredential::for_agent(conn, agent_id)?
                     .into_iter()
-                    .map(|row| credential(row, now))
+                    .map(|row| {
+                        let connection = connections.remove(&row.id);
+                        credential(row, now, connection)
+                    })
                     .collect(),
             })
         })
@@ -550,7 +612,7 @@ async fn issue_credential(c: &mut Ctx) -> Result {
                 &context,
             )?;
             Ok(api::PersonalCredentialCreated {
-                credential: credential(row, tx.now()),
+                credential: credential(row, tx.now(), None),
                 secret,
             })
         })
@@ -562,9 +624,16 @@ async fn rotate_credential(c: &mut Ctx) -> Result {
     let owner = member(c).await?;
     let agent = owned(c, owner.id).await?;
     let cid = id(c, "cid")?;
+    // A connection has no secret to replace: its client signs in again (Reconnect).
     c.app()
         .db
-        .read(move |conn| find_credential(conn, agent.id, cid))
+        .read(move |conn| {
+            find_credential(conn, agent.id, cid)?;
+            match connection_for(conn, cid)? {
+                Some(_) => Err(campfire_db::Error::RecordNotFound("AgentCredential")),
+                None => Ok(()),
+            }
+        })
         .await
         .map_err(saved_error)?;
     require_sudo(c).await?;
@@ -575,11 +644,11 @@ async fn rotate_credential(c: &mut Ctx) -> Result {
         let agent = personal_agents::owned(tx.conn(),owner.id,agent.id)?;
         enabled(tx.conn())?;
         let mut old = find_credential(tx.conn(),agent.id,cid)?;
-        if old.revoked_at.is_some() {return Err(campfire_db::Error::RecordNotFound("AgentCredential"));}
+        if old.revoked_at.is_some() || connection_for(tx.conn(),cid)?.is_some() {return Err(campfire_db::Error::RecordNotFound("AgentCredential"));}
         let (row,secret) = AgentCredential::create_personal_with_secret(tx,agent.id,input.name.as_deref().unwrap_or(&old.name),owner.id,expires_at)?;
         old.revoke(tx)?;
         audit(tx,&agent,"agent.credential.rotate",json!({"id":row.id,"previous_id":old.id,"name":row.name,"expires_at":row.expires_at.map(time)}),&context)?;
-        Ok(api::PersonalCredentialCreated {credential:credential(row,tx.now()),secret})
+        Ok(api::PersonalCredentialCreated {credential:credential(row,tx.now(),None),secret})
     }).await.map_err(saved_error)?;
     c.json(StatusCode::CREATED, &response)
 }
@@ -594,7 +663,14 @@ async fn revoke_credential(c: &mut Ctx) -> Result {
             let agent = personal_agents::owned(tx.conn(), owner.id, agent.id)?;
             let mut row = find_credential(tx.conn(), agent.id, cid)?;
             if row.revoked_at.is_none() {
-                row.revoke(tx)?;
+                // A connection's tokens go with it, as `/oauth/revoke` takes them.
+                match connection_for(tx.conn(), cid)? {
+                    Some(connection) => {
+                        connection.revoke(tx)?;
+                        campfire_app::oauth::audit(tx, &connection, "oauth.revoke", &context)?;
+                    }
+                    None => row.revoke(tx)?,
+                }
                 audit(
                     tx,
                     &agent,

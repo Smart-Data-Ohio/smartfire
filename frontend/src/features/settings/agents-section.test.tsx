@@ -44,6 +44,7 @@ const TOKEN: PersonalAgentCredential = {
   lastUsedAt: null,
   lastUsedIp: null,
   state: "active",
+  connection: null,
 };
 
 const AGENT: PersonalAgent = {
@@ -185,6 +186,213 @@ describe("the cards", () => {
     expect(within(shown).getByText(SECRET)).toBeTruthy();
     expect(within(shown).getByText(/bearer_token_env_var = "SMARTFIRE_HELPER_TOKEN"/)).toBeTruthy();
     expect(screen.getAllByText("Revoked")).toHaveLength(1);
+  });
+});
+
+const CONNECTION: PersonalAgentCredential = {
+  id: 21,
+  kind: "oauth",
+  name: "Claude",
+  lastFour: "oauth",
+  createdAt: "2026-10-13T12:00:00.000Z",
+  expiresAt: "2027-04-11T12:00:00.000Z",
+  lastUsedAt: null,
+  lastUsedIp: null,
+  state: "active",
+  connection: {
+    clientName: "Claude",
+    clientHost: "claude.ai",
+    clientBlocked: false,
+    revokedReason: null,
+  },
+};
+
+const REUSED: PersonalAgentCredential = {
+  ...CONNECTION,
+  id: 22,
+  name: "Codex",
+  state: "revoked",
+  connection: {
+    clientName: "Codex",
+    clientHost: "openai.com",
+    clientBlocked: false,
+    revokedReason: "tokenReused",
+  },
+};
+
+describe("connections", () => {
+  it("lists an agent's connections apart from its tokens, with their dates", async () => {
+    await mount(
+      list({ oauthAvailable: true, agents: [{ ...AGENT, credentials: [CONNECTION, TOKEN] }] }),
+    );
+
+    const card = await screen.findByRole("article", { name: "Helper" });
+    const connections = within(card).getByRole("region", { name: "Helper's connections" });
+    const tokens = within(card).getByRole("region", { name: "Helper's tokens" });
+
+    expect(within(connections).getByText("Claude")).toBeTruthy();
+    expect(
+      within(connections).getByText(/^Connected .+2026 · expires .+2027 · never used$/),
+    ).toBeTruthy();
+    expect(within(connections).getByRole("button", { name: "Revoke Claude" })).toBeTruthy();
+    expect(within(connections).queryByRole("button", { name: /Rotate/ })).toBeNull();
+    expect(within(connections).queryByRole("button", { name: /Reconnect/ })).toBeNull();
+    expect(within(tokens).getByText("…beef")).toBeTruthy();
+    expect(within(tokens).queryByText("Claude")).toBeNull();
+  });
+
+  it("says no token is needed when it only connects by signing in", async () => {
+    await mount(list({ oauthAvailable: true, agents: [{ ...AGENT, credentials: [CONNECTION] }] }));
+
+    expect(await screen.findByText("No tokens. Its connections sign in instead.")).toBeTruthy();
+  });
+
+  it("explains a connection ended for a reused sign-in token, and offers Reconnect", async () => {
+    await mount(list({ oauthAvailable: true, agents: [{ ...AGENT, credentials: [REUSED] }] }));
+
+    const connections = await screen.findByRole("region", { name: "Helper's connections" });
+
+    expect(
+      within(connections).getByText(
+        "Disconnected because an old sign-in token was reused. Reconnect to continue.",
+      ),
+    ).toBeTruthy();
+    expect(within(connections).getByText("Disconnected")).toBeTruthy();
+    expect(within(connections).queryByRole("button", { name: "Revoke Codex" })).toBeNull();
+
+    fireEvent.click(within(connections).getByRole("button", { name: "Reconnect Codex" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Reconnect Codex" });
+
+    expect(within(dialog).getByText("https://chat.example.com/agents/mcp")).toBeTruthy();
+    expect(within(dialog).getByText(/choose Helper/)).toBeTruthy();
+  });
+
+  it("gives a web app's own steps when reconnecting it", async () => {
+    await mount(
+      list({
+        oauthAvailable: true,
+        agents: [{ ...AGENT, credentials: [{ ...CONNECTION, state: "expired" }] }],
+      }),
+    );
+
+    expect(await screen.findByText(/Connections last 180 days/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Reconnect Claude" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Reconnect Claude" });
+
+    expect(within(dialog).getByText(/Settings → Connectors/)).toBeTruthy();
+  });
+
+  it("offers no Reconnect without OAuth, or for an app an administrator blocked", async () => {
+    const blocked: PersonalAgentCredential = {
+      ...CONNECTION,
+      id: 23,
+      connection: {
+        clientName: "Grok",
+        clientHost: "grok.com",
+        clientBlocked: true,
+        revokedReason: null,
+      },
+      name: "Grok",
+    };
+
+    await mount(
+      list({ oauthAvailable: false, agents: [{ ...AGENT, credentials: [REUSED, blocked] }] }),
+    );
+
+    const connections = await screen.findByRole("region", { name: "Helper's connections" });
+
+    expect(within(connections).queryByRole("button", { name: /Reconnect/ })).toBeNull();
+    expect(within(connections).getByText(/administrator blocked this app/)).toBeTruthy();
+    expect(within(connections).getByText("Blocked")).toBeTruthy();
+  });
+
+  it("revokes a connection after asking, replacing the agent's credentials", async () => {
+    await mount(list({ oauthAvailable: true, agents: [{ ...AGENT, credentials: [CONNECTION] }] }));
+
+    const revoke = vi.spyOn(meAgents, "revokeToken").mockResolvedValue({
+      credentials: [{ ...CONNECTION, state: "revoked" }],
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Revoke Claude" }));
+
+    const ask = await screen.findByRole("alertdialog", { name: "Revoke Claude?" });
+
+    expect(within(ask).getByText(/Claude stops reaching Helper at once/)).toBeTruthy();
+    fireEvent.click(within(ask).getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() => expect(revoke).toHaveBeenCalledWith(7, 21));
+    expect(await screen.findByRole("button", { name: "Reconnect Claude" })).toBeTruthy();
+    expect(screen.getByText("Revoked")).toBeTruthy();
+  });
+});
+
+describe("the wizard, signing in", () => {
+  it("gives claude.ai its connector URL and steps, and makes nothing", async () => {
+    await mount(list({ agents: [], oauthAvailable: true }));
+
+    const create = vi.spyOn(meAgents, "create");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
+    fireEvent.click(screen.getByRole("radio", { name: /claude\.ai/ }));
+    next();
+
+    expect(await screen.findByRole("heading", { name: "Connect claude.ai" })).toBeTruthy();
+    expect(screen.getByText("https://chat.example.com/agents/mcp")).toBeTruthy();
+    expect(screen.getByText(/There's no token to keep/)).toBeTruthy();
+    expect(
+      screen.getAllByRole("listitem").some((item) => item.textContent?.includes("Identity")),
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(screen.queryByRole("heading", { name: "Connect claude.ai" })).toBeNull();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("signs Claude Code in without a token by default, or makes one when asked", async () => {
+    await mount(list({ agents: [], oauthAvailable: true }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Claude Code/ }));
+
+    expect(screen.getByRole("radio", { name: "Sign in, no token" })).toHaveProperty(
+      "checked",
+      true,
+    );
+    next();
+
+    expect(
+      await screen.findByText(
+        "claude mcp add --transport http --scope user smartfire https://chat.example.com/agents/mcp",
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("radio", { name: "With a token" }));
+    next();
+
+    expect(await screen.findByRole("textbox", { name: /Name/ })).toBeTruthy();
+  });
+
+  it("gives Codex its config and login command", async () => {
+    await mount(list({ agents: [], oauthAvailable: true }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Codex/ }));
+    next();
+
+    expect(await screen.findByText("codex mcp login smartfire")).toBeTruthy();
+    expect(screen.getByText(/url = "https:\/\/chat\.example\.com\/agents\/mcp"/)).toBeTruthy();
+  });
+
+  it("offers no sign-in choice without OAuth", async () => {
+    await mount(list({ agents: [] }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Claude Code/ }));
+
+    expect(screen.queryByRole("radio", { name: "Sign in, no token" })).toBeNull();
   });
 });
 

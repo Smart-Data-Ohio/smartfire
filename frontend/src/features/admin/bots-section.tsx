@@ -8,6 +8,7 @@ import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage } from "../settings/settings-parts.tsx";
 import { AdministratorsOnly, useAdmin } from "./admin-parts.tsx";
 import { BotPicture, CopyLine } from "./bot-parts.tsx";
+import { ConnectedAppsGroup } from "./oauth-clients-section.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -108,6 +109,7 @@ export function BotsSection() {
           </ul>
         ) : null}
       </SettingsGroup>
+      <ConnectedAppsGroup />
     </SettingsPage>
   );
 }

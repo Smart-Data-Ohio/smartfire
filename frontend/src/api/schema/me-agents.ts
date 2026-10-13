@@ -1,8 +1,10 @@
 import { Schema } from "effect";
+import type { ConnectionRevokedReason as GeneratedConnectionRevokedReason } from "../../gen/ConnectionRevokedReason.ts";
 import type { CreatePersonalAgent as GeneratedCreatePersonalAgent } from "../../gen/CreatePersonalAgent.ts";
 import type { IssuePersonalCredential as GeneratedIssuePersonalCredential } from "../../gen/IssuePersonalCredential.ts";
 import type { PersonalAgent as GeneratedPersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentAccess as GeneratedPersonalAgentAccess } from "../../gen/PersonalAgentAccess.ts";
+import type { PersonalAgentConnection as GeneratedPersonalAgentConnection } from "../../gen/PersonalAgentConnection.ts";
 import type { PersonalAgentCreated as GeneratedPersonalAgentCreated } from "../../gen/PersonalAgentCreated.ts";
 import type { PersonalAgentCredential as GeneratedPersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList as GeneratedPersonalAgentList } from "../../gen/PersonalAgentList.ts";
@@ -16,10 +18,32 @@ import { AgentId, CredentialId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 
-/** A token one of your agents connects with; its secret shows only when issued. */
+/** Why the server revoked a connection: a used sign-in token was presented again. */
+export const ConnectionRevokedReason = Schema.Literals(["tokenReused"]);
+
+export type ConnectionRevokedReasonPin = Assert<
+  Pinned<typeof ConnectionRevokedReason, GeneratedConnectionRevokedReason>
+>;
+
+/** An OAuth connection's client, and the server's reason when it revoked one. */
+export const PersonalAgentConnection = Schema.Struct({
+  clientName: Schema.String,
+  clientHost: Schema.String,
+  clientBlocked: Schema.Boolean,
+  revokedReason: Schema.NullOr(ConnectionRevokedReason),
+});
+
+export type PersonalAgentConnectionPin = Assert<
+  Pinned<typeof PersonalAgentConnection, GeneratedPersonalAgentConnection>
+>;
+
+/**
+ * A way into one of your agents: a token (its secret shows only when issued) or an OAuth
+ * connection a client signed in with (`connection` names the client).
+ */
 export const PersonalAgentCredential = Schema.Struct({
   id: CredentialId,
-  kind: Schema.Literal("token"),
+  kind: Schema.Literals(["token", "oauth"]),
   name: Schema.String,
   lastFour: Schema.String,
   createdAt: Timestamp,
@@ -27,6 +51,7 @@ export const PersonalAgentCredential = Schema.Struct({
   lastUsedAt: Schema.NullOr(Timestamp),
   lastUsedIp: Schema.NullOr(Schema.String),
   state: CredentialState,
+  connection: Schema.NullOr(PersonalAgentConnection),
 });
 
 export type PersonalAgentCredentialPin = Assert<

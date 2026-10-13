@@ -84,6 +84,10 @@ describe("the screen map and the router", () => {
       "/app/about",
       "/app/privacy",
       "/app/terms",
+      // Connecting an app as an agent (OAuth) is new with the SPA: its approval page, and the
+      // error page for a request the server can't hand back (public, like About).
+      "/app/oauth/consent/:id",
+      "/app/oauth/error",
     ]);
 
     for (const route of Object.values(router.routesById)) {

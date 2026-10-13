@@ -60,6 +60,113 @@ pub fn routes(enabled: bool) -> Router<Kit> {
             post(action(deny)),
         )
 }
+/// The administrators' list of connected clients and their block switch. Mounted whatever the
+/// gate says, so a client can still be blocked while new connections are off.
+pub fn admin_routes() -> Router<Kit> {
+    Router::new()
+        .route("/api/v1/admin/oauth_clients", get(action(clients)))
+        .route(
+            "/api/v1/admin/oauth_clients/{id}/block",
+            axum::routing::put(action(block)).delete(action(unblock)),
+        )
+}
+endpoint!(
+    /// `GET /api/v1/admin/oauth_clients`
+    clients => index_clients
+);
+endpoint!(
+    /// `PUT /api/v1/admin/oauth_clients/:id/block`
+    block => block_client
+);
+endpoint!(
+    /// `DELETE /api/v1/admin/oauth_clients/:id/block`
+    unblock => unblock_client
+);
+const CLIENT_SQL: &str = "SELECT client.id, client.client_name, client.client_id, client.blocked_at, (SELECT COUNT(*) FROM oauth_connections connection JOIN agent_credentials credential ON credential.id=connection.agent_credential_id WHERE connection.oauth_client_id=client.id AND credential.revoked_at IS NULL AND connection.expires_at>?1) AS live, (SELECT MAX(connection.created_at) FROM oauth_connections connection WHERE connection.oauth_client_id=client.id) AS last_connected_at FROM oauth_clients client";
+fn admin_client(r: &rusqlite::Row<'_>) -> rusqlite::Result<api::AdminOAuthClient> {
+    let client_id: String = r.get(2)?;
+    Ok(api::AdminOAuthClient {
+        id: r.get(0)?,
+        client_name: r.get(1)?,
+        client_host: client::client_host(&client_id),
+        client_id,
+        blocked_at: r.get::<_, Option<Timestamp>>(3)?.map(crate::dto::time),
+        live_connections: r.get(4)?,
+        last_connected_at: r.get::<_, Option<Timestamp>>(5)?.map(crate::dto::time),
+    })
+}
+async fn index_clients(c: &mut Ctx) -> Result {
+    crate::admin::administrator(c).await?;
+    let oauth_available = c.app().config.oauth_issuer().is_some();
+    let now = Timestamp::from_jiff(c.now());
+    let clients = c
+        .app()
+        .db
+        .read(move |conn| {
+            let sql = format!("{CLIENT_SQL} WHERE client.blocked_at IS NOT NULL OR EXISTS (SELECT 1 FROM oauth_connections connection WHERE connection.oauth_client_id=client.id) ORDER BY client.blocked_at IS NULL, last_connected_at DESC, client.id DESC");
+            let mut statement = conn.prepare(&sql)?;
+            let rows = statement.query_map([now], admin_client)?;
+            Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+        })
+        .await
+        .map_err(campfire_runtime::context::db_error)?;
+    c.json(
+        StatusCode::OK,
+        &api::AdminOAuthClientList {
+            clients,
+            oauth_available,
+        },
+    )
+}
+async fn block_client(c: &mut Ctx) -> Result {
+    set_blocked(c, true).await
+}
+async fn unblock_client(c: &mut Ctx) -> Result {
+    set_blocked(c, false).await
+}
+/// Blocking stops new authorizations and every token of the client's connections; unblocking
+/// lets the unexpired, unrevoked ones work again. Neither revokes anything.
+async fn set_blocked(c: &mut Ctx, blocked: bool) -> Result {
+    crate::admin::administrator(c).await?;
+    let id = c
+        .param_str("id")
+        .and_then(|id| id.parse::<i64>().ok())
+        .ok_or(Error::NotFound)?;
+    let context = campfire_people::controllers::two_factor::audit_context(c)?;
+    let client = c
+        .app()
+        .db
+        .write(move |tx| {
+            let client = OAuthClient::find(tx.conn(), id)?
+                .ok_or(campfire_db::Error::RecordNotFound("OAuthClient"))?;
+            if client.blocked_at.is_some() != blocked {
+                let at = blocked.then(|| tx.now());
+                tx.conn().execute(
+                    "UPDATE oauth_clients SET blocked_at=?,updated_at=? WHERE id=?",
+                    params![at, tx.now(), id],
+                )?;
+                campfire_db::models::audit_log::AuditLog::record(
+                    tx,
+                    campfire_db::models::audit_log::NewAuditLog {
+                        action: if blocked { "oauth.client.block" } else { "oauth.client.unblock" }.into(),
+                        target: Some(campfire_db::models::audit_log::Target {
+                            record_type: "OAuthClient".into(),
+                            id,
+                            label: Some(client.client_name),
+                        }),
+                        changes: Some(json!({"client_id":client.client_id})),
+                        ..Default::default()
+                    },
+                    &context,
+                )?;
+            }
+            let sql = format!("{CLIENT_SQL} WHERE client.id=?2");
+            Ok(tx.conn().query_row(&sql, params![tx.now(), id], admin_client)?)
+        })
+        .await
+        .map_err(campfire_runtime::context::db_error)?;
+    c.json(StatusCode::OK, &client)
+}
 fn issuer(c: &Ctx) -> String {
     c.app().config.oauth_issuer().expect("gated route")
 }

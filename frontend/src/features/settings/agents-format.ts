@@ -4,7 +4,7 @@ import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import { ActionError } from "../../sync/run.ts";
-import type { AgentClient, WebConnector } from "./agent-snippets.ts";
+import { type AgentClient, canSignIn, type WebConnector } from "./agent-snippets.ts";
 
 export interface ClientChoice {
   readonly value: AgentClient;
@@ -70,6 +70,11 @@ const WEB_CONNECTORS: readonly (ClientChoice & { readonly value: WebConnector })
     icon: "rocket",
   },
 ];
+
+/** Whether `client` is a web app, which only ever connects by signing in. */
+export function isWebConnector(client: AgentClient | null): client is WebConnector {
+  return WEB_CONNECTORS.some((choice) => choice.value === client);
+}
 
 /** The clients the first step offers: the web apps only when the server can sign them in. */
 export function clientChoices(oauthAvailable: boolean): readonly ClientChoice[] {
@@ -186,10 +191,18 @@ export interface WizardDraft {
   readonly roomIds: readonly number[];
   readonly capabilities: readonly string[];
   readonly expiry: Expiry;
+  /**
+   * Claude Code or Codex signs in through OAuth instead of holding a token (offered only while
+   * the server has OAuth). The web apps always sign in.
+   */
+  readonly signIn: boolean;
 }
 
-/** A fresh draft: every ability ticked, no rooms (the owner's DM works regardless). */
-export function emptyDraft(capabilities: readonly string[]): WizardDraft {
+/**
+ * A fresh draft: every ability ticked, no rooms (the owner's DM works regardless), and signing in
+ * rather than a token wherever the server offers it.
+ */
+export function emptyDraft(capabilities: readonly string[], signIn = false): WizardDraft {
   return {
     client: null,
     name: "",
@@ -197,7 +210,24 @@ export function emptyDraft(capabilities: readonly string[]): WizardDraft {
     roomIds: [],
     capabilities: [...capabilities],
     expiry: "90d",
+    signIn,
   };
+}
+
+/**
+ * Whether the draft connects by signing in: a web app, or Claude Code or Codex set to sign in, on
+ * a server with OAuth. Then the wizard makes nothing: the agent, its rooms and its abilities are
+ * chosen on the approval page the client opens.
+ */
+export function connectsBySignIn(draft: WizardDraft, oauthAvailable: boolean): boolean {
+  return (
+    oauthAvailable && (isWebConnector(draft.client) || (canSignIn(draft.client) && draft.signIn))
+  );
+}
+
+/** The wizard's steps for this draft: signing in skips naming the agent and its access. */
+export function stepsFor(draft: WizardDraft, oauthAvailable: boolean): readonly Step[] {
+  return connectsBySignIn(draft, oauthAvailable) ? ["client", "connect"] : STEPS;
 }
 
 /** Why `step` can't move on yet, or `null` when it can. */
@@ -249,6 +279,11 @@ export function roomNames(list: PersonalAgentList, roomIds: readonly number[]): 
   return list.rooms.filter((room) => roomIds.includes(room.id)).map((room) => room.name);
 }
 
+/** Whether a credential is an OAuth connection rather than a token. */
+export function isConnection(credential: PersonalAgentCredential): boolean {
+  return credential.kind === "oauth";
+}
+
 /** Tokens newest first; revoked ones last. */
 export function sortedTokens(
   credentials: readonly PersonalAgentCredential[],
@@ -287,6 +322,85 @@ export function tokenMeta(
   return parts.join(" · ");
 }
 
+/** A connection's client, by the name the server knows it by. */
+export function connectionClient(credential: PersonalAgentCredential): string {
+  return credential.connection?.clientName ?? credential.name;
+}
+
+/** "Connected Oct 13, 2026 · expires Apr 11, 2027 · last used 2 hours ago". */
+export function connectionMeta(
+  credential: PersonalAgentCredential,
+  ago: (at: string) => string,
+): string {
+  const parts = [`Connected ${shortDay(credential.createdAt)}`];
+
+  if (credential.state !== "revoked" && credential.expiresAt !== null) {
+    parts.push(
+      `${credential.state === "expired" ? "expired" : "expires"} ${shortDay(credential.expiresAt)}`,
+    );
+  }
+
+  parts.push(
+    credential.lastUsedAt === null ? "never used" : `last used ${ago(credential.lastUsedAt)}`,
+  );
+
+  return parts.join(" · ");
+}
+
+/** Said on a connection the server revoked because a used sign-in token came back. */
+export const REUSED_REASON =
+  "Disconnected because an old sign-in token was reused. Reconnect to continue.";
+
+/** What's wrong with a connection, in plain words; `null` while it works. */
+export function connectionProblem(credential: PersonalAgentCredential): string | null {
+  if (credential.state === "revoked") {
+    return credential.connection?.revokedReason === "tokenReused" ? REUSED_REASON : null;
+  }
+
+  if (credential.connection?.clientBlocked === true) {
+    return "An administrator blocked this app. It can't reach the agent until they unblock it.";
+  }
+
+  if (credential.state === "expired") {
+    return "Connections last 180 days. Reconnect to keep using it.";
+  }
+
+  return null;
+}
+
+/** The badge beside a connection that isn't working; `null` while it is. */
+export function connectionBadge(credential: PersonalAgentCredential): string | null {
+  if (credential.state === "revoked") {
+    return credential.connection?.revokedReason === "tokenReused" ? "Disconnected" : "Revoked";
+  }
+
+  if (credential.connection?.clientBlocked === true) return "Blocked";
+
+  return credential.state === "expired" ? "Expired" : null;
+}
+
+/** Whether Reconnect can help: it ended (not by an administrator's block) and OAuth is on. */
+export function canReconnect(
+  credential: PersonalAgentCredential,
+  oauthAvailable: boolean,
+): boolean {
+  return (
+    oauthAvailable && credential.state !== "active" && credential.connection?.clientBlocked !== true
+  );
+}
+
+/** The web app a connection's client is, by its host, when it's one the wizard knows. */
+export function connectedWebApp(credential: PersonalAgentCredential): WebConnector | null {
+  const host = credential.connection?.clientHost ?? "";
+  const under = (domain: string) => host === domain || host.endsWith(`.${domain}`);
+
+  if (under("claude.ai") || under("claude.com")) return "claude-ai";
+
+  if (under("chatgpt.com") || under("openai.com")) return "chatgpt";
+
+  return under("grok.com") || under("x.ai") ? "grok" : null;
+}
+
 export const TOKEN_STATE: Readonly<Record<PersonalAgentCredential["state"], string>> = {
   active: "Active",
   expired: "Expired",
@@ -302,6 +416,7 @@ export function serializeDraft(draft: WizardDraft): string {
     roomIds: draft.roomIds.join(","),
     capabilities: draft.capabilities.join(","),
     expiry: draft.expiry,
+    signIn: draft.signIn ? "1" : "",
   }).toString();
 }
 
@@ -331,6 +446,7 @@ export function parseDraft(text: string): WizardDraft | null {
       .filter((id) => Number.isSafeInteger(id) && id > 0),
     capabilities: items(fields.get("capabilities")),
     expiry: expiry.value,
+    signIn: fields.get("signIn") === "1",
   };
 }
 

@@ -1,5 +1,5 @@
 //! Consent API for the OAuth screen. Secrets never appear in consent data.
-use crate::{PersonalAgent, PersonalAgentRoom};
+use crate::{PersonalAgent, PersonalAgentRoom, Timestamp};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -43,4 +43,29 @@ pub struct ApproveOAuthAuthorization {
 #[ts(export)]
 pub struct OAuthRedirect {
     pub redirect_to: String,
+}
+
+/// `GET /api/v1/admin/oauth_clients`: the OAuth clients that have connected, or are blocked.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AdminOAuthClientList {
+    pub clients: Vec<AdminOAuthClient>,
+    pub oauth_available: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AdminOAuthClient {
+    pub id: i64,
+    pub client_name: String,
+    /// The client's id: the URL of its metadata document.
+    pub client_id: String,
+    pub client_host: String,
+    /// Connections that can still be used (unrevoked and unexpired).
+    pub live_connections: i64,
+    pub last_connected_at: Option<Timestamp>,
+    /// Blocked clients can't connect, and their connections stop working until unblocked.
+    pub blocked_at: Option<Timestamp>,
 }
