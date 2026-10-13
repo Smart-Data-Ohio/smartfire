@@ -5,6 +5,7 @@
  */
 import type { SwitcherRoomKind } from "../../gen/SwitcherRoomKind.ts";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
+import { isNoteToSelf, sidebarOffersNoteToSelf } from "../../store/note-to-self.ts";
 import type { SidebarState } from "../../store/state.ts";
 import { rowPillCount, rowUnread, sidebarSections } from "../sidebar/sections.ts";
 import { matchScore, normalizeQuery } from "./match.ts";
@@ -96,7 +97,9 @@ function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
   const [only] = row.directMemberIds;
   const oneToOne = room.kind === "direct" && room.name === null && row.directMemberIds.length === 1;
 
-  if (oneToOne && only !== undefined && only !== viewerId) {
+  // Your note-to-self is you, as a one-to-one DM is its other person; a group everyone else
+  // left is still a room, so it never stands in for (or beside) your note-to-self.
+  if (oneToOne && only !== undefined && (only !== viewerId || isNoteToSelf(row))) {
     return { ...live, key: `person:${only}`, kind: "person", userId: only };
   }
 
@@ -105,11 +108,34 @@ function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
   return { ...live, key: `room:${room.id}`, kind: "room", memberIds };
 }
 
-/** The sidebar's rooms as switcher items: a one-to-one DM is its person. */
+/**
+ * The sidebar's rooms as switcher items: a one-to-one DM is its person, your note-to-self is you.
+ * Before the note-to-self exists you are listed anyway, while the sidebar offers it.
+ */
 export function localItems(sidebar: SidebarState, viewerId: number | null): SwitcherItem[] {
-  return sidebarSections(sidebar).flatMap((section) =>
+  const items = sidebarSections(sidebar).flatMap((section) =>
     section.rows.map((row) => localItem(row, viewerId)),
   );
+
+  const offered =
+    viewerId !== null &&
+    sidebarOffersNoteToSelf(sidebar, viewerId) &&
+    !items.some((item) => item.key === `person:${viewerId}`);
+
+  // A hidden note-to-self keeps its room, so a search filter on it still reads as you.
+  return offered
+    ? [
+        ...items,
+        {
+          ...BLANK,
+          key: `person:${viewerId}`,
+          kind: "person",
+          label: "",
+          userId: viewerId,
+          roomId: sidebar.noteToSelfRoomId,
+        },
+      ]
+    : items;
 }
 
 const REMOTE_ROOM_KIND = {

@@ -86,6 +86,7 @@ export const RoomDetail = Schema.Struct({
   memberPreviewIds: Schema.Array(UserId),
   users: Schema.Array(User),
   unread: Schema.NullOr(UnreadDivider),
+  noteToSelf: Schema.optionalKey(Schema.Boolean),
 });
 
 export type RoomDetail = typeof RoomDetail.Type;

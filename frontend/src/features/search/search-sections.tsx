@@ -7,6 +7,7 @@ import { formatFull } from "../../lib/time.ts";
 import { conversationKey } from "../../store/search.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
+import { useNoteToSelfRoomId, withYou } from "../directs/note-to-self.ts";
 import { hitDay, SECTION_TITLE, WORK_STATUS_LABEL } from "./format.ts";
 
 const SECTION_ICON = {
@@ -105,6 +106,11 @@ function Section({
   readonly now: number;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const selfRoomId = useNoteToSelfRoomId();
+
+  const youName = (roomId: number, name: string | null) =>
+    roomId === selfRoomId ? withYou(name) : name;
+
   const rows = expanded ? section.rows : section.rows.slice(0, COLLAPSED_ROWS);
   const hidden = section.rows.length - rows.length;
 
@@ -120,11 +126,12 @@ function Section({
             <SectionRow
               kind={section.kind}
               row={row}
-              roomName={
+              roomName={youName(
+                row.roomId,
                 conversations[conversationKey(row.roomId, null)]?.roomName ??
-                conversations[conversationKey(row.roomId, row.id)]?.roomName ??
-                null
-              }
+                  conversations[conversationKey(row.roomId, row.id)]?.roomName ??
+                  null,
+              )}
               now={now}
             />
           </li>

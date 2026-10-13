@@ -3,8 +3,8 @@
 /**
  * The `room.unread` event on a member's `user` topic: the JSON twin of
  * `user_<id>_unreads {roomId}`. Sent to every member a new root message makes the room unread
- * for (muted members only when mentioned, `unread_user_ids`), and to the person's other tabs
- * when they mark a room unread.
+ * for (muted members only when mentioned, `unread_user_ids`), never its author, and to the
+ * person's other tabs when they mark a room unread.
  */
 export type RoomUnread = { roomId: number,
 /**

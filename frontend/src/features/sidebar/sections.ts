@@ -1,5 +1,6 @@
 import type { WorkspaceCategory } from "../../gen/WorkspaceCategory.ts";
 import type { RoomCategory, RoomKind, SidebarRow } from "../../store/model.ts";
+import { isNoteToSelf } from "../../store/note-to-self.ts";
 import { byFavoritePosition, organizedSidebar } from "../../store/organize.ts";
 import type { SidebarState } from "../../store/state.ts";
 import { sharedCategories, sharedLayout } from "../../store/workspace-layout.ts";
@@ -115,7 +116,7 @@ function sharedSection(category: WorkspaceCategory, rows: readonly SidebarRow[])
  * the workspace's shared layout: the shared categories in the administrators' order, each room in
  * its shared position, then Channels, Boards and Voice for the rooms in no shared category (in
  * their shared order too, rooms never organized after the rest by name), and Direct messages
- * newest first. A shared category with nothing left to show is dropped, except for administrators
+ * newest first after your note-to-self. A shared category with nothing left to show is dropped, except for administrators
  * (a drag shows the dragged room's own again: `dragSections` in organize-model.ts).
  * Pending organising changes are drawn in, and invisible rooms stay out. Empty Favourites, Boards
  * and Voice are dropped (a drag shows them again where the dragged room can land); Channels and
@@ -184,7 +185,9 @@ export function sidebarSections(
   homes.channels.sort(bySharedPosition);
   homes.boards.sort(bySharedPosition);
   homes.voice.sort(bySharedPosition);
-  homes.direct.sort(byNewest);
+  const self = (row: SidebarRow) => Number(isNoteToSelf(row));
+
+  homes.direct.sort((left, right) => self(right) - self(left) || byNewest(left, right));
 
   const sections: SidebarSection[] = [];
 

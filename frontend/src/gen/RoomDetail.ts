@@ -43,4 +43,8 @@ users: Array<User>,
 /**
  * Where the unread divider goes (`unread_divider`); `null` when the room is read.
  */
-unread: UnreadDivider | null, };
+unread: UnreadDivider | null,
+/**
+ * `true` for the viewer's note-to-self, as on its sidebar row; absent otherwise.
+ */
+noteToSelf?: boolean, };

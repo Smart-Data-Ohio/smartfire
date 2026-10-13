@@ -8,6 +8,13 @@ import { PageHeader } from "../../ui/page-header.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { useWorkingPresence } from "../agents/working.ts";
 import { DirectHeaderActions, useDirectActions } from "../directs/direct-header-actions.tsx";
+import {
+  NOTE_TO_SELF_LINE,
+  useNoteToSelf,
+  useViewerName,
+  withYou,
+} from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { EventsLink } from "../events/events-link.tsx";
 import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
 import { raisedHandsLabel, useRaisedHands } from "../huddle/stage-button.tsx";
@@ -97,10 +104,26 @@ interface TitleProps {
   readonly topic: string | null;
   /** An announcement room: the megaphone stands in for the kind's glyph, with a tag on wide screens. */
   readonly announcement: boolean;
+  /** Your note-to-self: your name with "(you)", and a line about the space instead of presence. */
+  readonly self: boolean;
+}
+
+/** The title's name, with a muted "(you)" in your note-to-self. */
+function TitleName({ name, self }: { readonly name: string; readonly self: boolean }) {
+  return <>{self ? <YouLabel name={name} tagClassName="room-title-you" /> : name}</>;
 }
 
 /** Wide screens: the glyph and name (a DM: the person and their status inline). */
-function WideTitle({ roomId, kind, name, iconName, otherId, topic, announcement }: TitleProps) {
+function WideTitle({
+  roomId,
+  kind,
+  name,
+  iconName,
+  otherId,
+  topic,
+  announcement,
+  self,
+}: TitleProps) {
   const { toggle } = usePaneNavigation(roomId);
 
   return (
@@ -112,8 +135,14 @@ function WideTitle({ roomId, kind, name, iconName, otherId, topic, announcement 
           ) : (
             <UserAvatar userId={otherId} size={24} presence decorative />
           )}
-          <h1 className="room-title-name">{name}</h1>
-          {otherId === undefined ? null : <DirectSubtitle userId={otherId} />}
+          <h1 className="room-title-name">
+            <TitleName name={name} self={self} />
+          </h1>
+          {self ? (
+            <span className="room-header-topic">{NOTE_TO_SELF_LINE}</span>
+          ) : otherId === undefined ? null : (
+            <DirectSubtitle userId={otherId} />
+          )}
         </>
       ) : (
         <>
@@ -157,26 +186,27 @@ function WideTitle({ roomId, kind, name, iconName, otherId, topic, announcement 
  * Phones: the name over a muted line (a channel's member count, a person's status), all one
  * button that opens the room's details, as Slack's and Discord's mobile headers do.
  */
-function PhoneTitle({ roomId, kind, name, iconName, otherId, announcement }: TitleProps) {
+function PhoneTitle({ roomId, kind, name, iconName, otherId, announcement, self }: TitleProps) {
   const { toggle } = usePaneNavigation(roomId);
   const memberCount = useStore((state) => state.rooms[roomId]?.detail?.memberCount ?? null);
 
-  const meta =
-    kind === "direct" && otherId !== undefined ? (
-      <DirectSubtitle userId={otherId} linked={false} />
-    ) : memberCount === null ? null : (
-      <span className="room-header-topic">
-        {announcement ? "Announcements · " : null}
-        {memberCount} {memberCount === 1 ? "member" : "members"}
-      </span>
-    );
+  const meta = self ? (
+    <span className="room-header-topic">{NOTE_TO_SELF_LINE}</span>
+  ) : kind === "direct" && otherId !== undefined ? (
+    <DirectSubtitle userId={otherId} linked={false} />
+  ) : memberCount === null ? null : (
+    <span className="room-header-topic">
+      {announcement ? "Announcements · " : null}
+      {memberCount} {memberCount === 1 ? "member" : "members"}
+    </span>
+  );
 
   return (
     <h1 className="room-title enter-fade">
       <button
         type="button"
         className="room-title-button"
-        aria-label={`${name}, details`}
+        aria-label={`${self ? withYou(name) : name}, details`}
         onClick={() => toggle("details")}
       >
         {kind === "direct" && otherId !== undefined ? (
@@ -191,7 +221,9 @@ function PhoneTitle({ roomId, kind, name, iconName, otherId, announcement }: Tit
           />
         )}
         <span className="room-title-text">
-          <span className="room-title-name">{name}</span>
+          <span className="room-title-name">
+            <TitleName name={name} self={self} />
+          </span>
           {meta}
         </span>
       </button>
@@ -206,9 +238,12 @@ function PhoneTitle({ roomId, kind, name, iconName, otherId, announcement }: Tit
 function PhoneOverflowItems({
   roomId,
   directActions,
+  self,
 }: {
   readonly roomId: number;
   readonly directActions: ReturnType<typeof useDirectActions>["actions"];
+  /** Your note-to-self: nothing in it notifies you, so no levels. */
+  readonly self: boolean;
 }) {
   const navigate = useNavigate();
 
@@ -222,7 +257,7 @@ function PhoneOverflowItems({
       {directActions.length === 0 ? null : <MenuSeparator />}
       <PaneMenuItems roomId={roomId} />
       <MenuSeparator />
-      <NotificationsSubMenu roomId={roomId} />
+      {self ? null : <NotificationsSubMenu roomId={roomId} />}
       <MenuItem
         icon="calendar"
         onSelect={() => void navigate({ to: "/r/$roomId/events", params: { roomId } })}
@@ -248,7 +283,9 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const row = useStore((state) => state.sidebar.rows[roomId] ?? null);
   const phone = usePhoneLayout();
   const kind = detail?.room.kind ?? row?.room.kind ?? null;
-  const name = detail?.displayName ?? row?.displayName ?? null;
+  const self = useNoteToSelf(roomId);
+  const viewerName = useViewerName();
+  const name = (self ? viewerName : null) ?? detail?.displayName ?? row?.displayName ?? null;
   const iconName = detail?.room.iconName ?? row?.room.iconName ?? null;
   const topic = detail === null ? (row?.room.topic ?? null) : detail.room.topic;
   const announcement = useAnnouncementRoom(roomId);
@@ -276,6 +313,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         otherId={otherId}
         topic={topic}
         announcement={announcement}
+        self={self}
       />
     ) : (
       <WideTitle
@@ -286,6 +324,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         otherId={otherId}
         topic={topic}
         announcement={announcement}
+        self={self}
       />
     );
 
@@ -300,12 +339,15 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         title={title}
         actions={
           phone ? (
-            <HuddleLauncher roomId={roomId} />
+            self ? null : (
+              <HuddleLauncher roomId={roomId} />
+            )
           ) : (
             <>
               {kind === "direct" ? <DirectHeaderActions roomId={roomId} /> : null}
-              <HuddleLauncher roomId={roomId} />
-              <NotificationsButton roomId={roomId} />
+              {/* Nobody to call, and nothing in it notifies you. */}
+              {self ? null : <HuddleLauncher roomId={roomId} />}
+              {self ? null : <NotificationsButton roomId={roomId} />}
               {kind === null ? null : <EventsLink roomId={roomId} />}
               <PaneButtons roomId={roomId} />
               <HeaderSearch />
@@ -316,7 +358,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
           !phone || kind === null ? undefined : notificationsRoute ? (
             <NotificationLevels roomId={roomId} />
           ) : (
-            <PhoneOverflowItems roomId={roomId} directActions={direct.actions} />
+            <PhoneOverflowItems roomId={roomId} directActions={direct.actions} self={self} />
           )
         }
         overflowLabel={phone && notificationsRoute ? "Notifications" : "More"}

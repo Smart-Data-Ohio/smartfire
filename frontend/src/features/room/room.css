@@ -106,6 +106,12 @@
     white-space: nowrap;
   }
 
+  /* "(you)" after your name in your note-to-self's header and intro. */
+  :is(.room-title-you, .room-intro-you) {
+    color: var(--text-faint);
+    font-weight: var(--weight-regular);
+  }
+
   /* An announcement room's tag beside its name, quieter than the name. */
   .room-announcement-tag {
     flex-shrink: 0;

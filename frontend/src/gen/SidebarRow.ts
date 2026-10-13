@@ -67,4 +67,9 @@ lastMessage?: SidebarLastMessage,
 /**
  * Management changed the room's metadata or membership; reload a loaded room's detail.
  */
-refreshRoom?: boolean, };
+refreshRoom?: boolean,
+/**
+ * `true` for the viewer's note-to-self, the direct room opened for just them (its canonical
+ * member key); absent otherwise, a group everyone else left included.
+ */
+noteToSelf?: boolean, };

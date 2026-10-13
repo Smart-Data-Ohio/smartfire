@@ -436,6 +436,18 @@ impl Room {
         }
     }
 
+    /// The person's note-to-self: the direct room `find_or_create_direct_for(&[user_id])` opens,
+    /// found by the canonical key for just them. A group whose other members all left keeps its
+    /// own (room-suffixed or named) key and is never mistaken for it.
+    pub fn note_to_self_for(conn: &Connection, user_id: i64) -> Result<Option<Self>> {
+        Self::find_direct_for(conn, &[user_id])
+    }
+
+    /// Whether `room_id` is the person's note-to-self ([`Self::note_to_self_for`]).
+    pub fn is_note_to_self_of(conn: &Connection, room_id: i64, user_id: i64) -> Result<bool> {
+        Ok(Self::note_to_self_for(conn, user_id)?.is_some_and(|room| room.id == room_id))
+    }
+
     /// `Rooms::Direct.find_for(users)`: the alive direct room keyed by the exact member set, else
     /// (`find_unkeyed_for`) an alive direct room with no key whose members are exactly those.
     pub fn find_direct_for(conn: &Connection, user_ids: &[i64]) -> Result<Option<Self>> {

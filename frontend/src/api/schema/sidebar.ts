@@ -36,6 +36,7 @@ export const SidebarRow = Schema.Struct({
   threadNotificationCount: Schema.Int,
   lastMessage: Schema.optionalKey(SidebarLastMessage),
   refreshRoom: Schema.optionalKey(Schema.Boolean),
+  noteToSelf: Schema.optionalKey(Schema.Boolean),
 });
 
 export type SidebarRow = typeof SidebarRow.Type;
@@ -60,6 +61,7 @@ export const Sidebar = Schema.Struct({
   categories: Schema.Array(RoomCategory),
   users: Schema.Array(User),
   directPlaceholderUserIds: Schema.Array(UserId),
+  noteToSelfRoomId: Schema.optionalKey(RoomId),
   canCreateRooms: Schema.Boolean,
   workspaceLayout: WorkspaceLayout,
 });

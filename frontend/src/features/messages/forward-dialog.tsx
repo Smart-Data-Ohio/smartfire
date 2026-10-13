@@ -11,6 +11,8 @@ import { Checkbox } from "../../ui/checkbox.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useNoteToSelfRoomId } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { plainText } from "./commands.ts";
 import { filterDestinations, MAX_FORWARDS, targetKey } from "./forward-targets.ts";
 import { fileSummary, messageFiles, wordlessSummary } from "./message-files.ts";
@@ -58,6 +60,7 @@ function Preview({ message }: { readonly message: MessageDTO }) {
 export default function ForwardDialog({ message, open, onOpenChange }: ForwardDialogProps) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [query, setQuery] = useState("");
+  const selfRoomId = useNoteToSelfRoomId();
   const [selected, setSelected] = useState<readonly ForwardTarget[]>([]);
   const [note, setNote] = useState("");
   const [sending, setSending] = useState(false);
@@ -152,7 +155,13 @@ export default function ForwardDialog({ message, open, onOpenChange }: ForwardDi
                         size={14}
                         className="forward-option-icon"
                       />
-                      <span className="forward-option-name">{destination.name}</span>
+                      <span className="forward-option-name">
+                        {destination.roomId === selfRoomId ? (
+                          <YouLabel name={destination.name} tagClassName="text-faint" />
+                        ) : (
+                          destination.name
+                        )}
+                      </span>
                     </span>
                   }
                 />

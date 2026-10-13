@@ -322,3 +322,28 @@ fn create_validates() {
         Some("https://fcm.googleapis.com/x")
     );
 }
+
+#[test]
+fn a_note_to_self_never_pushes_to_or_unreads_its_author() {
+    let t = TestDb::new();
+    let david = id("david");
+    assert!(!t.read(|c| PushSubscription::for_user(c, david)).is_empty(), "David has devices");
+    let room = t.write(move |tx| crate::Room::find_or_create_direct_for(tx, &[david], david));
+    for body in ["Buy milk".to_owned(), format!("Remind {}", mention_attachment_for(david))] {
+        let attributes = NewMessage {
+            room_id: room.id,
+            creator_id: david,
+            body: Some(body),
+            ..Default::default()
+        };
+        let message = t.write(move |tx| Message::create(tx, attributes));
+        let now = t.now();
+        let (_, pushes, mentions) =
+            t.read(|c| PushSubscription::pushes_for(c, &BasicRichText, &message, now));
+        assert!(pushes.is_empty() && mentions.is_empty(), "{pushes:?} {mentions:?}");
+        let membership = t
+            .read(|c| Membership::find_by_room_and_user(c, room.id, david))
+            .expect("David is its member");
+        assert_eq!(membership.unread_at, None);
+    }
+}

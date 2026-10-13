@@ -73,7 +73,7 @@ const SORTS = [
   { value: "relevance", label: "Relevance" },
 ] as const satisfies readonly { readonly value: SearchSort; readonly label: string }[];
 
-interface FilterBarProps {
+export interface FilterBarProps {
   readonly query: string;
   readonly chips: readonly SearchChip[];
   readonly onQuery: (query: string) => void;
@@ -94,7 +94,7 @@ const FILTER_PARTS: RowParts = {
 };
 
 /** The query's filters as removable chips, then pills that add the common ones. */
-function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProps) {
+export function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProps) {
   const barRef = useRef<HTMLDivElement | null>(null);
   const items = useSuggestible(true, true);
   const sort = chips.findLast((chip) => chip.operator === "sort")?.value ?? "newest";
@@ -103,7 +103,8 @@ function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProp
     const item = items.find((item) =>
       chip.operator === "from_id"
         ? item.kind === "person" && String(item.userId) === chip.value
-        : chip.operator === "in_id" && item.kind === "room" && String(item.roomId) === chip.value,
+        : // A conversation, a DM shown as its person (your note-to-self as you) included.
+          chip.operator === "in_id" && item.kind !== "thread" && String(item.roomId) === chip.value,
     );
 
     return item === undefined

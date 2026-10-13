@@ -12,8 +12,9 @@ use ts_rs::TS;
 use crate::User;
 
 /// `GET /api/v1/directs/candidates` (`rooms/directs#new`): everyone the viewer can message, i.e.
-/// active users but themselves, bots included; starred first, then by `LOWER(name)`. The client
-/// filters by name as the person types.
+/// active users, bots included. The viewer comes first (picking only them opens their
+/// note-to-self), then the starred, then by `LOWER(name)`. The client filters by name as the
+/// person types.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -35,14 +36,15 @@ pub struct DirectCandidate {
 /// `POST /api/v1/directs` (`rooms/directs#create`): open the direct room with exactly these
 /// people and the viewer, creating it if there's none (matched on the member set, so the same
 /// people always get the same room: 200 for an existing one, 201 for a new one). Inactive ids
-/// are dropped; an empty list is the note-to-self. More than 9 others is a 422. Answers the
+/// and the viewer's own id are dropped; an empty list (or only the viewer) is the note-to-self.
+/// More than 9 others is a 422. An existing room the viewer hid shows again. Answers the
 /// viewer's [`crate::SidebarRow`] for it; a new room reaches every member as
 /// `sidebar.row.upserted`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct CreateDirect {
-    /// The other people, the viewer left out.
+    /// The other people; the viewer's own id is ignored.
     pub user_ids: Vec<i64>,
 }
 

@@ -24,6 +24,7 @@ import type { IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { LazyCreatePollDialog } from "../cards/lazy-create-poll-dialog.tsx";
+import { NOTE_TO_SELF_PLACEHOLDER, roomIsNoteToSelf } from "../directs/note-to-self.ts";
 import { startHuddleFromCommand } from "../huddle/slash-huddle.ts";
 import { editLastOwnMessage } from "../messages/edit-last.ts";
 import { stickerText } from "../messages/message-files.ts";
@@ -159,7 +160,8 @@ const FORMATS: readonly FormatButton[] = [
 ];
 
 interface ConversationName {
-  readonly kind: "direct" | "room" | null;
+  /** `self`: your note-to-self. */
+  readonly kind: "direct" | "room" | "self" | null;
   readonly name: string | null;
 }
 
@@ -171,6 +173,10 @@ function useConversationName(roomId: number): ConversationName {
 
     if (roomKind === null) {
       return null;
+    }
+
+    if (roomIsNoteToSelf(state, roomId)) {
+      return "self";
     }
 
     return roomKind === "direct" ? "direct" : "room";
@@ -185,6 +191,10 @@ function useConversationName(roomId: number): ConversationName {
 }
 
 function placeholderFor({ kind, name }: ConversationName): string {
+  if (kind === "self") {
+    return NOTE_TO_SELF_PLACEHOLDER;
+  }
+
   if (name === null) {
     return "Message";
   }
@@ -195,6 +205,10 @@ function placeholderFor({ kind, name }: ConversationName): string {
 function dropLabelFor({ kind, name }: ConversationName, inThread: boolean): string {
   if (inThread) {
     return "They'll be shared in this thread.";
+  }
+
+  if (kind === "self") {
+    return "They'll be kept here, just for you.";
   }
 
   if (name === null) {

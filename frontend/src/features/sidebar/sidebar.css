@@ -482,6 +482,18 @@
     opacity: 0.8;
   }
 
+  /* "(you)" after your name on your note-to-self: muted, whatever state the row is in. */
+  .sidebar-row-tag {
+    color: var(--text-faint);
+    font-weight: var(--weight-regular);
+  }
+
+  /* Your note-to-self before it exists is a button that reads as the row it will become. */
+  button.sidebar-row {
+    width: 100%;
+    text-align: start;
+  }
+
   /* A direct row's preview wrappers: dissolved here, two lines on phones (below). */
   .sidebar-row-text,
   .sidebar-row-line {

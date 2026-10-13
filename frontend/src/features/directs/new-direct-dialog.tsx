@@ -5,8 +5,9 @@ import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useViewerId } from "../messages/use-message.ts";
 import { PeoplePicker } from "./people-picker.tsx";
-import { directIntent } from "./picker.ts";
+import { directIntent, otherIds } from "./picker.ts";
 import { useCandidates } from "./use-candidates.ts";
 
 interface NewDirectDialogProps {
@@ -16,6 +17,7 @@ interface NewDirectDialogProps {
 
 const SUBMIT_LABEL = {
   none: "Start conversation",
+  self: "Open your notes",
   direct: "Start conversation",
   group: "Start group conversation",
 } as const;
@@ -32,7 +34,8 @@ export default function NewDirectDialog({ open, onOpenChange }: NewDirectDialogP
   const [problem, setProblem] = useState<string | null>(null);
   const [wasOpen, setWasOpen] = useState(open);
   const { candidates, error } = useCandidates(open);
-  const intent = directIntent(selected);
+  const viewerId = useViewerId();
+  const intent = directIntent(selected, viewerId);
 
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -51,7 +54,7 @@ export default function NewDirectDialog({ open, onOpenChange }: NewDirectDialogP
 
     setBusy(true);
     setProblem(null);
-    directs.create(selected).then(
+    directs.create(otherIds(selected, viewerId)).then(
       (row) => {
         setBusy(false);
         void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } });
