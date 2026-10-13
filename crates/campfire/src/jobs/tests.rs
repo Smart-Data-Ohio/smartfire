@@ -65,6 +65,110 @@ async fn huddle_presence_worker_discards_missing_grants_successfully() {
 }
 
 #[tokio::test]
+async fn huddle_presence_worker_retries_publication_lookup_failures() {
+    use crate::controllers::presenters::test_support::{DAVID, JASON, SEED_NOW, TestApp};
+    use crate::controllers::spa::api_tests::{Sync, serve};
+    use campfire_api_types as api;
+    use campfire_db::{Membership, Room, RoomType, Session};
+    use rusqlite::functions::FunctionFlags;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    for code in [rusqlite::ffi::SQLITE_BUSY, rusqlite::ffi::SQLITE_LOCKED] {
+        let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
+        let config = crate::huddle::Config {
+            public_url: Some("wss://public.example.test".into()),
+            internal_url: Some("http://internal.example.test:7880".into()),
+            api_key: Some("retry-fixture-key".into()),
+            api_secret: Some("retry-fixture-secret".into()),
+            gateway_secret: Some("retry-fixture-gateway".into()),
+        };
+        // A single reader prevents another worker from bypassing the lookup fault.
+        let test = TestApp::boot_with_settings(config, clock.clone(), &[("RAILS_MAX_THREADS", "1")])
+            .await.expect("frozen seeds required").without_job_runner().await;
+        let app = test.booted.app.clone();
+        let room_id = app.db.write(|tx| {
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            let room = Room::create_for(tx, RoomType::Stage, Some("Retry stage"), DAVID, &[DAVID, JASON])?;
+            let member = Membership::find_by_room_and_user(tx.conn(), room.id, DAVID)?.unwrap();
+            let session = Session::start(tx, DAVID, None, None)?;
+            let grant_id = tx.conn().query_row(
+                "INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,last_issued_at,last_seen_at,created_at,updated_at) \
+                 VALUES('retry-participant','retry-room',?,?,?,?,?,?,?,?) RETURNING id",
+                rusqlite::params![session.id, DAVID, member.id, room.id, tx.now(), tx.now(), tx.now(), tx.now()],
+                |row| row.get::<_, i64>(0),
+            )?;
+            campfire_db::models::stream::Stream::create(tx, room.id, member.id, DAVID, "1080p60", None)?;
+            tx.emit_after_commit(Event::job(&campfire_db::models::huddle_grant::PresenceJob { grant_id }));
+            Ok(room.id)
+        }).await.unwrap();
+        let (addr, server) = serve(&test).await;
+        let browser = test.sign_in(JASON).await;
+        let mut socket = Sync::connect(addr, &browser.cookie_header(), &[format!("room:{room_id}")]).await;
+        socket.welcome().await;
+
+        let lookups = Arc::new(AtomicUsize::new(0));
+        let failures = lookups.clone();
+        // Shadow only the reader's rooms table. Grant lookup and queue writes still succeed.
+        app.db.read(move |conn| {
+            conn.create_scalar_function(
+                "fail_presence_room_lookup", 0,
+                FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_INNOCUOUS,
+                move |_| -> rusqlite::Result<i64> {
+                    failures.fetch_add(1, Ordering::SeqCst);
+                    Err(rusqlite::Error::SqliteFailure(
+                        rusqlite::ffi::Error::new(code),
+                        None,
+                    ))
+                },
+            )?;
+            conn.execute_batch(
+                "PRAGMA query_only=OFF; \
+                 CREATE TEMP VIEW rooms AS SELECT * FROM main.rooms WHERE fail_presence_room_lookup(); \
+                 PRAGMA query_only=ON;",
+            )?;
+            Ok(())
+        }).await.unwrap();
+
+        let failure = app.db.read(move |conn| Room::find_by_id(conn, room_id)).await.unwrap_err();
+        assert!(matches!(&failure, campfire_db::Error::Sqlite(rusqlite::Error::SqliteFailure(error, _))
+            if error.extended_code == code), "wrong injected SQLite error: {failure:?}");
+
+        let config = RunnerConfig::new(vec![campfire_jobs::QueueConfig::new("default", 1)]);
+        let producer = campfire_jobs::start(
+            app.db.clone(), app.jobs.queue.clone(), huddle::source_registry(), app.clone(), config.clone(),
+        );
+        let rows = wait_for(&app, "the failed presence publication", |rows| {
+            rows.is_empty() || rows.iter().all(|job| job.attempts == 1 && job.status != "running")
+        }).await;
+        producer.shutdown(WAIT).await;
+        assert!(lookups.load(Ordering::SeqCst) >= 2, "publication did not run the failing lookup");
+        assert_eq!(rows.len(), 1, "presence publication failure was marked done for SQLite code {code}");
+        let retry = &rows[0];
+        assert_eq!(retry.class, "Huddle::BroadcastPresenceJob");
+        assert_eq!(retry.status, "ready", "{retry:#?}");
+        assert_eq!(retry.attempts, 1);
+        assert!(retry.run_at > app.db.env().now());
+        assert!(retry.last_error.as_deref().unwrap().contains("locked"));
+
+        app.db.read(|conn| {
+            conn.execute_batch("PRAGMA query_only=OFF; DROP VIEW temp.rooms; PRAGMA query_only=ON;")?;
+            Ok(())
+        }).await.unwrap();
+        clock.advance(jiff::SignedDuration::from_secs(4));
+        let producer = campfire_jobs::start(
+            app.db.clone(), app.jobs.queue.clone(), huddle::source_registry(), app.clone(), config,
+        );
+        socket.until(|event| matches!(&event.payload, api::SyncPayload::HuddlePresence(presence)
+            if presence.room_id == room_id && presence.live && presence.participants.iter().any(|p| p.user_id == DAVID)), |_| false).await;
+        socket.until(|event| matches!(&event.payload, api::SyncPayload::StageUpdated(stage)
+            if stage.room_id == room_id && stage.live.as_ref().is_some_and(|live| live.quality == api::StreamQuality::P1080Fps60)), |_| false).await;
+        wait_for(&app, "the successful presence retry", |rows| rows.is_empty()).await;
+        producer.shutdown(WAIT).await;
+        server.abort();
+    }
+}
+
+#[tokio::test]
 async fn huddle_join_and_invitation_workers_discard_missing_sources_successfully() {
     let (booted, _dir) = app().await;
     booted.app.db.write(|tx| {

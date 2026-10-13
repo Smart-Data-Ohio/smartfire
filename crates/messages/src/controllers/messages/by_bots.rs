@@ -1,6 +1,7 @@
 //! `Messages::ByBotsController` (reference/app/controllers/messages/by_bots_controller.rb): the
 //! bot API under `/rooms/:room_id/:bot_key/messages` (JSON by route default). Bodies are the raw
 //! request body (`RawRequestBody`), or a top-level multipart `attachment`.
+//! JSON with `sticker_id` takes an optional `body` or `markdown_source` caption.
 
 use campfire_db::{Message, Room, Timeline};
 use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permit_keys};
@@ -64,7 +65,7 @@ async fn create_action(c: &mut Ctx) -> Result {
         Some(campfire_db::models::agent_posting::PostingCheck::Budget(payload)) => return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &format::JSON, payload.to_string())),
         _ => {},
     }
-    let mut attributes = message_params(c)?;
+    let mut attributes = create_message_params(c)?;
     attributes.client_message_id = client_message_id;
     attributes.client_message_lookup = client_id.lookup;
     let message = match create_message_with_agent_policy(c, &room, attributes, true).await? {
@@ -150,6 +151,29 @@ fn ensure_body_or_attachment_present(c: &mut Ctx) -> Result<()> {
         return halt(concerns::head(StatusCode::UNPROCESSABLE_ENTITY));
     }
     Ok(())
+}
+
+fn create_message_params(c: &Ctx) -> Result<MessageParams> {
+    if c.request.media_type().as_deref() == Some("application/json")
+        && c.params.get("sticker_id").is_some()
+    {
+        let sticker_id = c.params.get("sticker_id")
+            .and_then(|value| value.to_json().as_i64())
+            .ok_or_else(|| campfire_kit::Error::BadRequest("sticker_id must be an integer".into()))?;
+        let text = |key: &str| -> Result<Option<String>> {
+            match c.params.get(key) {
+                None | Some(Param::Null) => Ok(None),
+                Some(Param::Str(value)) => Ok(Some(value.clone())),
+                _ => Err(campfire_kit::Error::BadRequest(format!("{key} must be a string"))),
+            }
+        };
+        let mut attributes = message_params(c)?;
+        attributes.sticker_id = Some(sticker_id);
+        attributes.body = text("body")?;
+        attributes.markdown_source = text("markdown_source")?;
+        return Ok(attributes);
+    }
+    message_params(c)
 }
 
 /// `params[:attachment] ? params.permit(:attachment) : { body: raw_request_body }`

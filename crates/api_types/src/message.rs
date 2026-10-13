@@ -250,6 +250,12 @@ pub struct CreateMessage {
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drive_file_ids: Option<Vec<String>>,
+    /// A KLIPY GIF to send (`GifItem.slug` from `/api/v1/gifs/search`): the server
+    /// downloads the GIF and attaches it as a normal file on the message. A message
+    /// may be empty of Markdown when it carries one of these.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gif_slug: Option<String>,
 }
 
 /// `PATCH /api/v1/messages/:id`: edit a message (`messages#update`, or

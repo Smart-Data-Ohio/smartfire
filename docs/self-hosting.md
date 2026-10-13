@@ -146,6 +146,35 @@ Calendar and Drive use additional configuration. Follow the
 `APP_URL` for links created by background Calendar jobs and the restricted
 browser key for Drive Picker.
 
+#### GIF search (optional)
+
+Set `KLIPY_API_KEY` from the [KLIPY Partner Panel](https://partner.klipy.com) to
+turn on GIF search. Blank or absent disables it. The SPA reads
+`GET /api/v1/gifs/config`; discovery and preview endpoints return a typed
+404 with "GIFs are disabled on this server" when it is off.
+
+The server proxies search, trending, suggestions, autocomplete, categories,
+and previews. Requests include a stable HMAC customer id derived from
+`SECRET_KEY_BASE`, `rating=pg`, and the documented `content_filter=high`.
+KLIPY's native docs do not document `rating`; whether it enforces PG is
+unverified. Configure the Partner Panel's content policy too. Extra customer
+and filter parameters on categories, terms, and item lookup are also
+unverified against a live key.
+
+Each user can make 30 discovery requests, 240 preview requests, and 10 sends
+per minute. Successful discovery responses are cached for 60 seconds per
+customer, with at most 512 entries. A process restart clears these limits
+and the cache. Only HTTPS on port 443 at `static.klipy.com`,
+`static1.klipy.com`, and `static2.klipy.com` is allowed for media. Redirects
+are rejected. Preview bodies are limited to 5 MiB. Sent GIFs are limited to
+20 MiB or the workspace upload limit, whichever is smaller.
+
+Posting `gifSlug` downloads a rendition into ordinary message storage.
+The blob metadata retains the KLIPY id, slug, title, and attribution without
+a schema change. Sent files remain local after provider content changes.
+The picker UI is a separate slice. The [integration requirements](https://docs.klipy.com/integration-requirements)
+require KLIPY approval for server proxying and rehosting.
+
 #### Public privacy and terms pages
 
 `/about`, `/privacy`, and `/terms` are available without sign-in. Set

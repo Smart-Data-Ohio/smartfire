@@ -36,6 +36,8 @@ mod drive;
 mod error;
 mod events;
 mod fizzy;
+mod gif;
+pub use gif::{GifCategory, GifCategoryList, GifConfig, GifItem, GifList, GifSuggestions};
 mod huddle;
 mod sticker;
 pub use sticker::*;
@@ -246,6 +248,8 @@ pub type Timestamp = String;
 mod tests;
 #[cfg(test)]
 mod tests_sticker;
+#[cfg(test)]
+mod tests_gif;
 #[cfg(test)]
 mod tests_s2;
 #[cfg(test)]

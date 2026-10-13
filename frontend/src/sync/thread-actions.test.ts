@@ -40,6 +40,26 @@ describe("thread reply paging", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("gives a new thread's GIF its own spoiler flag", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply(`POST /rooms/${ROOM}/threads`, {
+        detail: threadDetailFixture(THREAD, null, null),
+        message: reply(91),
+      });
+      // Flags covering only the (zero) uploads: the server counts the GIF as one more file
+      // and refuses a short list, so the request must carry the GIF's flag too.
+      yield* threads.create(ROOM, 1, "", { gifSlug: "hello-wave", attachmentSpoilers: [] });
+      expect((yield* fake.requests).at(-1)?.body).toMatchObject({
+        message: { gifSlug: "hello-wave", attachmentSpoilers: [false] },
+      });
+      yield* threads.create(ROOM, 2, "", { gifSlug: "hello-wave", attachmentSpoilers: [false] });
+      expect((yield* fake.requests).at(-1)?.body).toMatchObject({
+        message: { gifSlug: "hello-wave", attachmentSpoilers: [false] },
+      });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("carries a sticker in a new thread's first reply, with or without text", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;

@@ -22,6 +22,7 @@ pub mod announcements;
 pub mod agents;
 pub mod cards;
 pub mod fizzy;
+pub mod gifs;
 pub mod github;
 pub mod composer;
 mod cursor;
@@ -529,6 +530,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(templates::routes())
         .merge(soundboard::routes())
         .merge(stickers::routes())
+        .merge(gifs::routes())
         .merge(invites::routes())
         .merge(bots::routes())
         .merge(webhooks::routes())

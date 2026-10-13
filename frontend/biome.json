@@ -54,6 +54,7 @@
                       "**/sync/**",
                       "!**/sync/runtime.ts",
                       "!**/sync/composer-actions.ts",
+                      "!**/sync/gif-actions.ts",
                       "!**/sync/directs.ts",
                       "!**/sync/huddles.ts",
                       "!**/sync/panes.ts",
@@ -63,7 +64,7 @@
                       "!**/sync/two-factor-setup.ts",
                       "!**/sync/run.ts"
                     ],
-                    "message": "src/sync's Effect programs stay behind the plain async facades: actions in src/sync/runtime.ts, composer-actions.ts, directs.ts, huddles.ts, panes.ts, settings.ts, admin.ts, auth.ts or two-factor-setup.ts."
+                    "message": "src/sync's Effect programs stay behind the plain async facades: actions in src/sync/runtime.ts, composer-actions.ts, gif-actions.ts, directs.ts, huddles.ts, panes.ts, settings.ts, admin.ts, auth.ts or two-factor-setup.ts."
                   },
                   {
                     "group": ["**/sync/runtime.ts"],

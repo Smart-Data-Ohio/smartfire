@@ -263,6 +263,7 @@ const threads = {
       readonly attachmentSpoilers?: readonly boolean[];
       readonly clientMessageId?: string;
       readonly driveFileIds?: readonly string[];
+      readonly gifSlug?: string | undefined;
       readonly stickerId?: number | null;
       readonly visibility?: ThreadVisibility;
     },
