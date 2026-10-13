@@ -1502,8 +1502,9 @@ async fn a_second_generation_forward_from_before_the_fix_keeps_only_renderer_mar
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
     let html = concat!(
-        "<table class=\"visually-hidden\" style=\"position: fixed\" onclick=\"x()\"><tr>",
-        "<td align=\"justify\" onmouseover=\"x()\">cell</td><td align=\"center\">other</td></tr></table>",
+        "<table class=\"visually-hidden\" style=\"position: fixed\" onclick=\"x()\" width=\"100000\" height=\"100000\">",
+        "<tr><th width=\"100000\" height=\"100000\">head</th></tr><tr>",
+        "<td align=\"justify\" onmouseover=\"x()\" height=\"10000000\" width=\"10000000\">cell</td><td align=\"center\">other</td></tr></table>",
         "<ul><li><input type=\"checkbox\" value=\"v\" onfocus=\"x()\"> item</li><li><input type=\"text\" name=\"n\"> text</li></ul>",
         "<ol start=\"-1\"><li>one</li></ol>",
         "<p><a href=\"https://example.com/\" target=\"_top\" rel=\"opener\">link</a></p>",
@@ -1540,8 +1541,8 @@ async fn a_second_generation_forward_from_before_the_fix_keeps_only_renderer_mar
     let stored = a.db().read(move |conn| Message::find(conn, second)).await.unwrap();
     assert!(stored.forwarded_markdown && stored.edited_at.is_none());
     let shown = parse::<api::MessageRead>(&david.send(get(&format!("/api/v1/messages/{second}"))).await).message.body_html;
-    assert!(shown.contains("<table><tbody><tr><td>cell</td><td align=\"center\">other</td>"), "{shown}");
-    for hostile in ["visually-hidden", "style=", "onclick", "onmouseover", "onfocus", "justify", "type=\"text\"", "value=", "name=", "start=", "_top", "opener\""] {
+    assert!(shown.contains("<table><tbody><tr><th>head</th></tr><tr><td>cell</td><td align=\"center\">other</td>"), "{shown}");
+    for hostile in ["width=", "height=", "visually-hidden", "style=", "onclick", "onmouseover", "onfocus", "justify", "type=\"text\"", "value=", "name=", "start=", "_top", "opener\""] {
         assert!(!shown.contains(hostile), "{hostile}: {shown}");
     }
     assert!(shown.contains("<li><input type=\"checkbox\" disabled=\"disabled\"> item</li><li> text</li>"), "{shown}");

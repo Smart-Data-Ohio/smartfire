@@ -1608,8 +1608,12 @@ impl Message {
     /// keeps only the last edit, so it can't say whether the source was edited before the copy
     /// was taken. Rejecting every chain that can't be checked would drop tables from forwards
     /// whose source was later deleted or edited, which a snapshot is meant to survive. So such a
-    /// row keeps the Markdown allowlist, and `markdown::constrain_body_markup` holds it to markup
-    /// `markdown::render` could have produced from a message anyone can post.
+    /// row keeps the Markdown allowlist, and `markdown::constrain_body_markup` bounds what that
+    /// grants: the elements only Markdown adds (a table's, a checkbox) carry no attribute but the
+    /// values `markdown::render` writes, and Markdown's extra attributes (`align`, `start`,
+    /// `target`, `rel`, its classes) only those values too. Every other attribute is one Action
+    /// Text keeps on any HTML body. What's left is arrangement comrak wouldn't produce, such as a
+    /// checkbox outside a list or a list inside a cell, which only changes layout.
     pub fn forwarded_markdown_snapshot(&self) -> bool {
         self.forwarded_markdown && self.edited_at.is_none()
     }

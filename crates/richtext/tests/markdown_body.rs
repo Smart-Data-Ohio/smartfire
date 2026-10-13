@@ -242,3 +242,25 @@ fn checkbox_list_start_and_link_values_are_the_renderers() {
         "<div class=\"trix-content\"><ul><li><input type=\"checkbox\" checked=\"\" disabled=\"disabled\">a</li></ul><ol><li>b</li></ol><a>c</a></div>"
     );
 }
+
+#[test]
+fn a_tables_elements_keep_no_dimensions_or_other_action_text_attributes() {
+    let html = shown_html(
+        "<table width=\"100000\" height=\"100000\" title=\"t\"><thead><tr height=\"9\"><th width=\"100000\" height=\"100000\" \
+         align=\"left\">a</th></tr></thead><tbody lang=\"en\"><tr><td height=\"10000000\" width=\"1\" abbr=\"x\" \
+         data-spoiler=\"true\" class=\"spoiler\" align=\"right\">b</td></tr></tbody></table>",
+    );
+    assert_eq!(
+        html,
+        "<div class=\"trix-content\"><table><thead><tr><th align=\"left\">a</th></tr></thead><tbody><tr><td align=\"right\">b</td></tr></tbody></table></div>"
+    );
+}
+
+#[test]
+fn elements_action_text_allows_keep_their_dimensions() {
+    let img = "<p><img src=\"https://example.com/a.png\" width=\"40\" height=\"30\" alt=\"a\"></p>";
+    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
+    let action_text = compact(&Content::load(img, &ctx).unwrap().to_rendered_html_with_layout(&ctx).unwrap());
+    assert!(action_text.contains("width=\"40\"") && action_text.contains("height=\"30\""), "{action_text}");
+    assert_eq!(shown_html(img), action_text);
+}

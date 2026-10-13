@@ -412,11 +412,17 @@ fn allowed_class(class: &str) -> bool {
 /// The classes of a workspace icon's image, which `render` adds after it filters classes (`icon_node`).
 const ICON_CLASSES: &[&str] = &["icon", "icon--brand", "icon--custom"];
 
+/// A table's elements. Action Text allows none of them, so `render` is their only source, and it
+/// writes no attribute on them but a cell's `align`.
+const TABLE_TAGS: &[&str] = &["table", "thead", "tbody", "tfoot", "tr", "th", "td", "col", "colgroup"];
+
 /// A Markdown body's own markup as the SPA shows it (`Content::to_rendered_markdown_html_with_layout`),
 /// held to the values `render` emits for what `SafeList::markdown_body` adds to Action Text's
 /// allowlist, since a body (a forwarded snapshot, say) may not have come from `render`:
 /// - `class`: only `allowed_class`es, as `render` keeps, and an icon image's `ICON_CLASSES`;
-/// - `align`: `left`, `center` or `right`, on a table cell;
+/// - a table's elements (`TABLE_TAGS`): no attribute but `align`, which is `left`, `center` or
+///   `right`, on a cell. Action Text's own attributes (`width`, `height`, `title`, `lang`,
+///   `data-spoiler` and the rest) go too: they are allowed on its tags, not on these;
 /// - `input`: a task item's checkbox, with `type`, `checked` (as comrak writes it) and `disabled`
 ///   and nothing else; any other input goes;
 /// - `start`: a number, on an ordered list;
@@ -424,9 +430,9 @@ const ICON_CLASSES: &[&str] = &["icon", "icon--brand", "icon--custom"];
 /// - `target`: `_blank` on a link to another site, with the safe `rel`; an in-app link opens in
 ///   place (`sanitize_presentation`), and no other element keeps either.
 ///
-/// It runs before attachments render, so their partials keep their own classes. Attributes Action
-/// Text's allowlist already has (`href`, `title`, `data-spoiler` and the rest) are left to the
-/// sanitizer, as in any rich text body. Scripts and styles never reach the page: the sanitizer
+/// It runs before attachments render, so their partials keep their own classes. On Action Text's
+/// own tags, the attributes its allowlist has (`href`, `title`, `width`, `data-spoiler` and the
+/// rest) are left to the sanitizer, as in any rich text body. Scripts and styles never reach the page: the sanitizer
 /// drops every `on*` handler, `style` and unknown attribute afterwards.
 pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
     for node in dom.descendants(root) {
@@ -447,6 +453,13 @@ pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
         let aligned = matches!(name.as_str(), "th" | "td") && matches!(dom.attr(node, "align"), Some("left" | "center" | "right"));
         if !aligned {
             dom.remove_attr(node, "align");
+        }
+        if TABLE_TAGS.contains(&name.as_str()) {
+            for (attribute, _) in dom.attrs(node) {
+                if attribute != "align" {
+                    dom.remove_attr(node, &attribute);
+                }
+            }
         }
         if name == "input" {
             if dom.attr(node, "type") != Some("checkbox") {
