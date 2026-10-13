@@ -20,10 +20,19 @@ pub const PERSONAL_CAPABILITIES: [&str; 4] =
     ["read_messages", "post_messages", "react", "manage_threads"];
 
 /// SQL expressions here and in capability_sql are supplied by code, never requests.
+/// A personal agent is live only while its owner is active and the workspace allows personal
+/// agents (`AccountSettings::member_agents_enabled`: off only when stored as JSON `false`).
+/// Turning the setting off pauses tokens and grants without rewriting them.
 pub fn agent_live(agent: &str) -> String {
     format!(
-        "{agent}.suspended_at IS NULL AND EXISTS (SELECT 1 FROM users live_bot WHERE live_bot.id={agent}.user_id AND live_bot.status=0) AND ({agent}.kind!='personal' OR EXISTS (SELECT 1 FROM users live_owner WHERE live_owner.id={agent}.owner_id AND live_owner.status=0))"
+        "{agent}.suspended_at IS NULL AND EXISTS (SELECT 1 FROM users live_bot WHERE live_bot.id={agent}.user_id AND live_bot.status=0) AND ({agent}.kind!='personal' OR (EXISTS (SELECT 1 FROM users live_owner WHERE live_owner.id={agent}.owner_id AND live_owner.status=0) AND {}))",
+        member_agents_enabled_sql()
     )
+}
+
+/// SQL for `Account.first.settings.member_agents_enabled()`.
+fn member_agents_enabled_sql() -> &'static str {
+    "COALESCE((SELECT CASE WHEN json_valid(live_account.settings) THEN json_type(live_account.settings,'$.member_agents_enabled') END FROM accounts live_account ORDER BY live_account.id LIMIT 1),'')!='false'"
 }
 
 pub fn legacy_sql(agent: &str) -> String {

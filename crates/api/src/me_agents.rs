@@ -1,7 +1,7 @@
 //! Session-authenticated management of the current member's personal agents.
 use crate::{
     admin::{body, require_sudo, viewer},
-    dto::time,
+    dto::{UserExtras, time},
     error::{fail, validation},
 };
 use axum::{
@@ -12,7 +12,7 @@ use campfire_api_types as api;
 use campfire_app::app::AppCtx;
 use campfire_db::models::{
     agent_access,
-    audit_log::{AuditLog, Context, NewAuditLog, Target},
+    audit_log::{self, AuditLog, Context, NewAuditLog, Target},
     personal_agents,
 };
 use campfire_db::{
@@ -85,6 +85,9 @@ async fn owned(c: &Ctx, owner_id: i64) -> Result<Agent> {
         .map_err(saved_error)
 }
 const DISABLED: &str = "MemberAgentsDisabled";
+const DISABLED_MESSAGE: &str = "Personal agents are turned off for this workspace.";
+const LIMIT: &str = "MemberAgentLimitReached";
+const LIMIT_MESSAGE: &str = "personal agent limit reached";
 fn enabled(conn: &Connection) -> campfire_db::Result<()> {
     if !campfire_db::Account::first(conn)?
         .ok_or(campfire_db::Error::RecordNotFound("Account"))?
@@ -96,10 +99,27 @@ fn enabled(conn: &Connection) -> campfire_db::Result<()> {
     Ok(())
 }
 fn saved_error(error: campfire_db::Error) -> Error {
-    if matches!(&error, campfire_db::Error::Other(message) if message == DISABLED) {
-        Error::Halt(Box::new(campfire_kit::Response::new(StatusCode::FORBIDDEN)))
-    } else {
-        Error::internal(error)
+    match &error {
+        campfire_db::Error::Other(message) if message == DISABLED => refuse(api::ApiError::Forbidden {
+            message: DISABLED_MESSAGE.into(),
+        }),
+        campfire_db::Error::Other(message) if message == LIMIT => refuse(api::ApiError::Validation {
+            message: "Personal agent limit reached".into(),
+            fields: [("base".to_string(), vec![LIMIT_MESSAGE.to_string()])].into(),
+        }),
+        _ => Error::internal(error),
+    }
+}
+/// A refusal found inside a database closure, as the API's usual error body.
+fn refuse(error: api::ApiError) -> Error {
+    let status = StatusCode::from_u16(error.status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+    match serde_json::to_vec(&api::ApiErrorResponse { error }) {
+        Ok(body) => Error::Halt(Box::new(campfire_kit::Response::with_body(
+            status,
+            campfire_kit::response::JSON_UTF8,
+            body,
+        ))),
+        Err(error) => Error::internal(error),
     }
 }
 fn credential(row: AgentCredential, now: Timestamp) -> api::PersonalAgentCredential {
@@ -128,6 +148,9 @@ fn present(
     now: Timestamp,
 ) -> campfire_db::Result<api::PersonalAgent> {
     let bot = User::find(conn, agent.user_id)?;
+    let icon_url = UserExtras::load(conn, [&bot])?
+        .avatar_icon(bot.id)
+        .and_then(|icon| icon.image_url.clone());
     let credentials = AgentCredential::for_agent(conn, agent.id)?
         .into_iter()
         .map(|r| credential(r, now))
@@ -138,7 +161,7 @@ fn present(
     let room_ids = campfire_db::Membership::for_user(conn, bot.id)?
         .into_iter()
         .map(|m| m.room_id)
-        .filter(|id| grantable.iter().any(|(room, _)| room == id))
+        .filter(|id| grantable.iter().any(|room| room.id == *id))
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect();
@@ -153,6 +176,7 @@ fn present(
         user_id: bot.id,
         name: bot.name,
         icon_name: bot.icon_name,
+        icon_url,
         provider: agent.provider,
         runtime: agent.runtime,
         description: agent.description,
@@ -164,6 +188,7 @@ fn present(
             .iter()
             .filter_map(|c| c.last_used_at.clone())
             .max(),
+        created_at: time(agent.created_at),
         credentials,
     })
 }
@@ -212,16 +237,12 @@ fn expiry(c: &mut Ctx, value: Option<&str>) -> Result<Option<Timestamp>> {
 async fn list_agents(c: &mut Ctx) -> Result {
     let owner = member(c).await?;
     let now = Timestamp::from_jiff(c.now());
-    let mcp_url = format!(
-        "{}/agents/mcp",
-        c.app()
-            .config
-            .mail
-            .app_url
-            .clone()
-            .unwrap_or_else(|| c.url_for(""))
-            .trim_end_matches('/')
-    );
+    let mcp_url = c
+        .app()
+        .config
+        .mail
+        .validated_app_url()
+        .map(|origin| format!("{origin}/agents/mcp"));
     let list = c
         .app()
         .db
@@ -241,7 +262,11 @@ async fn list_agents(c: &mut Ctx) -> Result {
                     .to_vec(),
                 rooms: personal_agents::grantable_rooms(conn, owner.id)?
                     .into_iter()
-                    .map(|(id, name)| api::GrantRoom { id, name })
+                    .map(|room| api::PersonalAgentRoom {
+                        id: room.id,
+                        name: room.name,
+                        private: room.private,
+                    })
                     .collect(),
                 mcp_url,
                 oauth_available: false,
@@ -283,9 +308,7 @@ async fn create_agent(c: &mut Ctx) -> Result {
                 && personal_agents::for_owner(tx.conn(), owner.id)?.len() as i64
                     >= settings.member_agent_limit()
             {
-                let mut errors = campfire_db::Errors::default();
-                errors.add("name", "personal agent limit reached");
-                errors.into_result()?;
+                return Err(campfire_db::Error::Other(LIMIT.into()));
             }
             let mut agent = personal_agents::create(
                 tx,
@@ -353,11 +376,15 @@ async fn update_agent(c: &mut Ctx) -> Result {
     let agent = owned(c, owner.id).await?;
     let input: api::UpdatePersonalAgent = body(c).await?;
     let agent_id = agent.id;
+    let context = campfire_people::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
         .write(move |tx| {
             let mut agent = personal_agents::owned(tx.conn(), owner.id, agent_id)?;
-            User::find(tx.conn(), agent.user_id)?.update(
+            let before_agent = agent.clone();
+            let mut bot = User::find(tx.conn(), agent.user_id)?;
+            let before_bot = bot.clone();
+            bot.update(
                 tx,
                 UserChanges {
                     name: input.name,
@@ -374,7 +401,46 @@ async fn update_agent(c: &mut Ctx) -> Result {
                     daily_message_cap: input.daily_message_cap,
                     ..Default::default()
                 },
-            )
+            )?;
+            let mut changes = serde_json::Map::new();
+            for (field, before, after) in [
+                ("name", json!(before_bot.name), json!(bot.name)),
+                (
+                    "icon_name",
+                    json!(before_bot.icon_name),
+                    json!(bot.icon_name),
+                ),
+                (
+                    "provider",
+                    json!(before_agent.provider),
+                    json!(agent.provider),
+                ),
+                ("runtime", json!(before_agent.runtime), json!(agent.runtime)),
+                (
+                    "description",
+                    json!(before_agent.description),
+                    json!(agent.description),
+                ),
+                (
+                    "daily_message_cap",
+                    json!(before_agent.daily_message_cap),
+                    json!(agent.daily_message_cap),
+                ),
+            ] {
+                if before != after {
+                    changes.insert(field.into(), audit_log::pair(before, after));
+                }
+            }
+            if !changes.is_empty() {
+                audit(
+                    tx,
+                    &agent,
+                    "agent.update",
+                    serde_json::Value::Object(changes),
+                    &context,
+                )?;
+            }
+            Ok(())
         })
         .await
         .map_err(saved_error)?;
@@ -389,8 +455,9 @@ async fn remove_agent(c: &mut Ctx) -> Result {
         .read(move |conn| User::find(conn, agent.user_id))
         .await
         .map_err(saved_error)?;
+    let id = bot.id;
     campfire_people::controllers::accounts::bots::remove_bot(c, bot).await?;
-    c.json(StatusCode::OK, &api::BotRemoved { id: agent.id })
+    c.json(StatusCode::OK, &api::BotRemoved { id })
 }
 async fn update_access(c: &mut Ctx) -> Result {
     let owner = member(c).await?;

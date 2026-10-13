@@ -1126,7 +1126,9 @@ list.
 
 Active human members manage their own personal agents at `/api/v1/me/agents`.
 The list includes `enabled`, `limit`, grantable `capabilities` and `rooms`,
-`mcpUrl` from the configured `APP_URL`, and `oauthAvailable`, which is false.
+`mcpUrl` from a validated `APP_URL`, and `oauthAvailable`, which is false.
+`mcpUrl` is null when that address is absent or invalid. Request Host and
+forwarded Host headers never supply it.
 The limit is null for administrators. Workspace settings default to enabled
 and three active agents per member; administrators can change
 `memberAgentsEnabled` and `memberAgentLimit` on `/api/v1/admin/workspace`.
@@ -1161,5 +1163,7 @@ Administrators retain their existing bot management routes.
 Each secret is `sfa_` followed by 64 random hexadecimal characters. Only its
 SHA-256 digest and last four characters are stored; subsequent reads never
 include it. Creation, issue, rotate, revoke and access replacement record audit
-events without secrets. Personal agents remain subject to the shared live
-owner/room/capability policy described above.
+events without secrets. Profile and budget changes record `agent.update` with
+the member actor and changed fields as before/after pairs, in the same transaction
+as the update. No-op or failed updates record no change. Personal agents remain
+subject to the shared live owner/room/capability policy described above.

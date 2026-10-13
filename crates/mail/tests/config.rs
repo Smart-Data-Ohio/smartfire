@@ -98,3 +98,20 @@ fn configuration_debug_never_prints_passwords() {
     assert!(!formatted.contains("private-smtp-value"));
     assert!(!formatted.contains("private-ingress-value"));
 }
+
+#[test]
+fn validated_app_url_requires_a_configured_http_origin() {
+    assert_eq!(Config::default().validated_app_url(), None);
+    for origin in ["", "not a URL", "javascript:alert(1)", "ftp://example.test",
+        "https://user:password@example.test", "https://example.test/path",
+        "https://example.test?query=1", "https://example.test/#fragment"] {
+        let config = Config { app_url: Some(origin.into()), ..Config::default() };
+        assert_eq!(config.validated_app_url(),None,"{origin}");
+    }
+    for (origin, expected) in [("https://EXAMPLE.test/","https://example.test"),
+        ("http://localhost:3000/","http://localhost:3000"),
+        ("https://[::1]:3000/","https://[::1]:3000")] {
+        let config = Config { app_url: Some(origin.into()), ..Config::default() };
+        assert_eq!(config.validated_app_url().as_deref(),Some(expected));
+    }
+}

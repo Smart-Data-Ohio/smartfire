@@ -91,6 +91,11 @@ impl UserExtras {
         self.avatars.contains(&user_id)
     }
 
+    /// The bot's resolved avatar icon, as [`user`] sends it.
+    pub fn avatar_icon(&self, user_id: i64) -> Option<&api::Icon> {
+        self.icons.get(&user_id)
+    }
+
     /// The profile banner's image and first-frame paths, both `None` without one.
     pub fn banner_paths(&self, secrets: &Secrets, user_id: i64) -> (Option<String>, Option<String>) {
         banner_paths(secrets, user_id, self.banners.get(&user_id).copied())
