@@ -394,12 +394,15 @@ function EditDialog({
   list,
   onClose,
   onSaved,
+  onProfileSaved,
   onTurnedOff,
 }: {
   readonly agent: PersonalAgent | null;
   readonly list: PersonalAgentList;
   readonly onClose: () => void;
   readonly onSaved: (agent: PersonalAgent) => void;
+  /** Its new name or icon took, whatever becomes of its access: the card shows it at once. */
+  readonly onProfileSaved: (agent: PersonalAgent) => void;
   /** The workspace turned personal agents off since the list loaded: load it again. */
   readonly onTurnedOff: () => void;
 }) {
@@ -409,9 +412,13 @@ function EditDialog({
   const [capabilities, setCapabilities] = useState<readonly string[]>([]);
   const [error, setError] = useState<string | undefined>(undefined);
   const { busy, track } = useBusy();
+  // The name and icon the server holds now: a rename that took survives a failed access save, so
+  // a retry neither renames again nor puts the old name back.
+  const profile = useRef<Pick<PersonalAgent, "name" | "iconName"> | null>(null);
 
   useEffect(() => {
     if (agent !== null) {
+      profile.current = { name: agent.name, iconName: agent.iconName };
       setName(agent.name);
       setIconName(agent.iconName);
       setRoomIds(agent.roomIds);
@@ -439,24 +446,21 @@ function EditDialog({
       return;
     }
 
+    // The access answer is the agent as the server holds it after both writes, name included.
     const save = async () => {
-      let saved = agent;
+      const held = profile.current ?? agent;
 
-      if (name.trim() !== agent.name || iconName !== agent.iconName) {
-        saved = await meAgents.update(agent.id, { name: name.trim(), iconName });
+      if (name.trim() !== held.name || iconName !== held.iconName) {
+        const saved = await meAgents.update(agent.id, { name: name.trim(), iconName });
+
+        profile.current = { name: saved.name, iconName: saved.iconName };
+        onProfileSaved(saved);
       }
 
-      return meAgents
-        .setAccess(agent.id, {
-          roomIds: [...roomIds],
-          capabilities: roomIds.length === 0 ? [] : [...capabilities],
-        })
-        .then((next) => ({
-          ...next,
-          name: saved.name,
-          iconName: saved.iconName,
-          iconUrl: saved.iconUrl,
-        }));
+      return meAgents.setAccess(agent.id, {
+        roomIds: [...roomIds],
+        capabilities: roomIds.length === 0 ? [] : [...capabilities],
+      });
     };
 
     void track(
@@ -766,6 +770,7 @@ export function AgentsSection() {
               replace((current) => withAgent(current, agent));
               setEditing(null);
             }}
+            onProfileSaved={(agent) => replace((current) => withAgent(current, agent))}
             onTurnedOff={fetchList}
           />
           <TokenDialog

@@ -68,7 +68,14 @@ matrix("an agent's token shows once, then rotates and revokes", async ({ page, t
 
   await page.getByRole("radio", { name: /Claude Code/ }).check();
   await page.getByRole("button", { name: "Next" }).click();
-  await page.getByRole("textbox", { name: "Name" }).fill("Helper");
+
+  // Typed key by key, the name keeps the focus: no re-render moves it to the step's heading.
+  const name = page.getByRole("textbox", { name: "Name" });
+
+  await name.click();
+  await name.pressSequentially("Helper");
+  await expect(name).toBeFocused();
+  await expect(name).toHaveValue("Helper");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("checkbox", { name: "general" }).check();
 

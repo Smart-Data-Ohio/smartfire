@@ -1,4 +1,4 @@
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { PersonalAgentCreated } from "../../gen/PersonalAgentCreated.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import { meAgents } from "../../sync/settings.ts";
@@ -113,16 +113,17 @@ export function AgentWizard({
   const [fields, setFields] = useState<Readonly<Record<string, readonly string[]>>>({});
   const [created, setCreated] = useState<PersonalAgentCreated | null>(null);
   const { busy, track } = useBusy();
-  const opened = useRef(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  // The step whose heading last took the focus; `null` before the first.
+  const shown = useRef<string | null>(null);
+  const view = created === null ? step : "created";
 
-  // Each step's heading mounts anew (it's keyed by the step) and takes the focus, except the
-  // first one's: the button that opened the wizard keeps it.
-  const heading = (element: HTMLHeadingElement | null) => {
-    if (element === null) return;
-
-    if (opened.current) element.focus();
-    opened.current = true;
-  };
+  // A new step's heading takes the focus, except the first one's: the button that opened the
+  // wizard keeps it. Only a step change moves it, never typing (a re-render) within a step.
+  useEffect(() => {
+    if (shown.current !== null && shown.current !== view) heading.current?.focus();
+    shown.current = view;
+  }, [view]);
 
   const at = STEPS.indexOf(step);
   const edit = (change: Partial<WizardDraft>) => setDraft((current) => ({ ...current, ...change }));

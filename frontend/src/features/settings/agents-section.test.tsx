@@ -5,6 +5,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
@@ -166,6 +167,46 @@ describe("the cards", () => {
     expect(screen.getByRole("article", { name: "Other" })).toBeTruthy();
   });
 
+  it("shows a rename that took even when the access save fails, and keeps it on retry", async () => {
+    await mount(list());
+
+    const update = vi.spyOn(meAgents, "update").mockResolvedValue({ ...AGENT, name: "Renamed" });
+
+    const setAccess = vi
+      .spyOn(meAgents, "setAccess")
+      .mockRejectedValueOnce(
+        new ActionError("Validation", "Invalid", { roomIds: ["includes a room you're not in"] }),
+      )
+      .mockResolvedValueOnce({ ...AGENT, name: "Renamed", roomIds: [], capabilities: [] });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Helper" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
+
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Name" }), {
+      target: { value: "Renamed" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(await within(dialog).findByText("includes a room you're not in")).toBeTruthy();
+    expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
+
+    // Closed, reopened, the room taken away: the rename isn't sent again, nor undone.
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Renamed" }));
+
+    const again = screen.getByRole("dialog", { name: "Edit Renamed" });
+
+    fireEvent.click(within(again).getByRole("checkbox", { name: "Design" }));
+    fireEvent.click(within(again).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(setAccess).toHaveBeenCalledTimes(2));
+    expect(update).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
+    expect(screen.queryByRole("article", { name: "Helper" })).toBeNull();
+  });
+
   it("rotates a token, showing the new one once with its client's setup", async () => {
     await mount(list());
 
@@ -274,6 +315,24 @@ describe("the wizard", () => {
 
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0]?.[0]).toMatchObject({ roomIds: [], capabilities: [] });
+  });
+
+  it("keeps the focus in the name field while it's typed, one key at a time", async () => {
+    await mount(list({ agents: [] }));
+
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Connect an agent" }));
+    await user.click(screen.getByRole("radio", { name: /Codex CLI/ }));
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    const field = screen.getByRole("textbox", { name: "Name" });
+
+    await user.click(field);
+    await user.type(field, "My helper");
+
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty("value", "My helper");
   });
 
   it("marks private rooms and says the agent shows in their member lists", async () => {
