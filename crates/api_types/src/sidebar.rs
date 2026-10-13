@@ -28,7 +28,9 @@ pub struct Sidebar {
     pub users: Vec<User>,
     /// Up to 20 active people the viewer has no direct room with yet, oldest account first
     /// (`find_direct_placeholder_users`): the "start a conversation" suggestions under the
-    /// direct messages.
+    /// direct messages. Led by the viewer's own id while they have no note-to-self row (a
+    /// direct row whose `directMemberIds` is just them), so every client can offer it before it
+    /// exists: `POST /api/v1/directs` with no `userIds` opens it, creating it on first use.
     pub direct_placeholder_user_ids: Vec<i64>,
     /// Whether the viewer may create channels: an administrator, or anyone when the account
     /// doesn't restrict room creation to administrators.

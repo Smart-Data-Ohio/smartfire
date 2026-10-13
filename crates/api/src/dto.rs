@@ -1171,6 +1171,11 @@ fn last_direct_messages(
         .collect())
 }
 
+/// Whether the row is the viewer's note-to-self: a direct room with no other members.
+fn note_to_self(row: &api::SidebarRow, viewer_id: i64) -> bool {
+    row.room.kind == api::RoomKind::Direct && row.direct_member_ids == [viewer_id]
+}
+
 /// Whether the membership has a sidebar row (`memberships.visible`, of an alive room).
 fn visible(room: &Room, membership: &Membership) -> bool {
     !room.deleted()
@@ -1304,10 +1309,13 @@ pub fn sidebar(
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);
     }
-    let placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, viewer)?
+    let mut placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, viewer)?
         .iter()
         .map(|user| user.id)
         .collect();
+    if !rows.iter().any(|row| note_to_self(row, viewer.id)) {
+        placeholders.insert(0, viewer.id);
+    }
     user_ids.extend(placeholders.iter().copied());
     let categories = campfire_db::RoomCategory::ordered_for_user(conn, viewer.id)?
         .into_iter()
