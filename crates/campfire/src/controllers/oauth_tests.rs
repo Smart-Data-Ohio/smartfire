@@ -63,7 +63,7 @@ async fn oauth_switch_off_preserves_mcp_bytes_and_hides_endpoints() {
 }
 
 #[tokio::test]
-async fn oauth_switch_on_advertises_cimd_dcr_none_and_challenges() {
+async fn oauth_switch_on_advertises_cimd_dcr_client_authentication_and_challenges() {
     let app = setup(true).await;
     let meta = app
         .anonymous()
@@ -73,12 +73,13 @@ async fn oauth_switch_on_advertises_cimd_dcr_none_and_challenges() {
     assert_eq!(meta.json()["issuer"], "https://smartfire.example");
     assert_eq!(
         meta.json()["token_endpoint_auth_methods_supported"],
-        json!(["none"])
+        json!(["none", "private_key_jwt"])
     );
     assert_eq!(
         meta.json()["registration_endpoint"],
         "https://smartfire.example/oauth/register"
     );
+    assert_eq!(meta.json()["token_endpoint_auth_signing_alg_values_supported"], json!(["RS256", "ES256"]));
     let mut owner = app.sign_in(DAVID).await;
     assert_eq!(
         owner.get("/api/v1/me/agents").await.json()["oauthAvailable"],
@@ -784,7 +785,7 @@ async fn oauth_chatgpt_published_method_array_selects_none() {
 #[tokio::test]
 async fn oauth_unsupported_only_client_and_untrusted_redirect_use_error_page() {
     let mut document = metadata();
-    document["token_endpoint_auth_method"] = json!("private_key_jwt");
+    document["token_endpoint_auth_method"] = json!("client_secret_basic");
     let f = fixture(document).await;
     for redirect in [REDIRECT, "https://attacker.example/callback"] {
         let reply = f
@@ -1996,3 +1997,6 @@ async fn oauth_dcr_requires_bounded_json_and_preflight_sets_no_cookies() {
     assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
     assert_eq!(reply.header("set-cookie"), None);
 }
+
+#[path = "oauth_assertion_tests.rs"]
+mod assertions;

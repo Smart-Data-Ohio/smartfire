@@ -1,6 +1,8 @@
 //! OAuth authorization-server operations. Public protocol refusals commit replay revocation.
+pub mod assertion;
 pub mod client;
 pub mod registration;
+use client::AuthMethod;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use campfire_db::{
     AgentCredential, Connection, Result, Timestamp, Tx,
@@ -70,7 +72,7 @@ impl Authorization {
             .filter(|a| a.user_id == user_id && a.status == "pending" && a.expires_at > now)
             .ok_or(campfire_db::Error::RecordNotFound("OAuthAuthorization"))?;
         OAuthClient::find(conn, auth.oauth_client_id)?
-            .filter(|client| client.blocked_at.is_none() && client::allows_none(client))
+            .filter(|client| client.blocked_at.is_none() && client::has_supported_method(client))
             .ok_or(campfire_db::Error::RecordNotFound("OAuthClient"))?;
         Ok(auth)
     }
@@ -183,15 +185,21 @@ fn live(tx: &Tx<'_>, connection: &OAuthConnection) -> Result<bool> {
             [credential.agent_id],
         )?)
 }
-fn client_valid(tx: &Tx<'_>, connection: &OAuthConnection, client_id: &str) -> Result<bool> {
+fn client_valid(
+    tx: &Tx<'_>,
+    connection: &OAuthConnection,
+    client_id: &str,
+    method: AuthMethod,
+) -> Result<bool> {
     Ok(
         OAuthClient::find(tx.conn(), connection.oauth_client_id)?.is_some_and(|client| {
             client.client_id == client_id
                 && client.blocked_at.is_none()
-                && client::allows_none(&client)
+                && client::allows(&client, method)
         }),
     )
 }
+
 pub fn audit(
     tx: &Tx<'_>,
     connection: &OAuthConnection,
@@ -223,7 +231,7 @@ pub struct CodeExchange<'a> {
     pub redirect_uri: Option<&'a str>,
     pub verifier: &'a str,
     pub resource: &'a str,
-    pub method_none: bool,
+    pub method: Option<AuthMethod>,
 }
 pub fn exchange_code(tx: &mut Tx<'_>, input: CodeExchange<'_>) -> Result<Option<TokenPair>> {
     let auth = query_one(
@@ -248,8 +256,10 @@ pub fn exchange_code(tx: &mut Tx<'_>, input: CodeExchange<'_>) -> Result<Option<
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"-._~".contains(&b))
         && bool::from(challenge.as_bytes().ct_eq(auth.code_challenge.as_bytes()));
-    if !input.method_none
-        || !client_valid(tx, &connection, input.client_id)?
+    let Some(method) = input.method else {
+        return Ok(None);
+    };
+    if !client_valid(tx, &connection, input.client_id, method)?
         || input
             .redirect_uri
             .is_some_and(|uri| uri != auth.redirect_uri)
@@ -268,8 +278,8 @@ pub fn exchange_code(tx: &mut Tx<'_>, input: CodeExchange<'_>) -> Result<Option<
     }
     tx.conn().execute("UPDATE oauth_authorizations SET status='exchanged',updated_at=? WHERE id=? AND status='approved'",params![tx.now(),auth.id])?;
     tx.conn().execute(
-        "UPDATE oauth_connections SET auth_method='none' WHERE id=?",
-        [connection.id],
+        "UPDATE oauth_connections SET auth_method=? WHERE id=?",
+        params![method.as_str(), connection.id],
     )?;
     issue(tx, &connection).map(Some)
 }
@@ -279,7 +289,7 @@ pub fn refresh(
     secret: &str,
     client_id: &str,
     resource: Option<&str>,
-    method_none: bool,
+    method: Option<AuthMethod>,
 ) -> Result<Option<TokenPair>> {
     let Some(token) = OAuthToken::find_by_secret(tx.conn(), secret)?
         .filter(|token| token.kind == TokenKind::Refresh)
@@ -290,9 +300,11 @@ pub fn refresh(
         return Ok(None);
     };
     // Validate all bindings before consumption, including on a replay.
-    if !method_none
-        || connection.auth_method.as_deref() != Some("none")
-        || !client_valid(tx, &connection, client_id)?
+    let Some(method) = method else {
+        return Ok(None);
+    };
+    if connection.auth_method.as_deref() != Some(method.as_str())
+        || !client_valid(tx, &connection, client_id, method)?
         || resource.is_some_and(|resource| resource != connection.resource)
         || connection.resource != canonical_resource(&tx.env().default_url_origin)
     {
@@ -347,7 +359,7 @@ pub fn revoke(tx: &mut Tx<'_>, secret: &str, client_id: &str, method_none: bool)
     let Some(connection) = OAuthConnection::find(tx.conn(), token.oauth_connection_id)? else {
         return Ok(());
     };
-    if !method_none || !client_valid(tx, &connection, client_id)? {
+    if !method_none || !client_valid(tx, &connection, client_id, AuthMethod::None)? {
         return Ok(());
     }
     if token.kind == TokenKind::Access {

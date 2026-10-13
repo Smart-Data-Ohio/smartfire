@@ -6,7 +6,7 @@ use axum::{
 use campfire_api_types as api;
 use campfire_app::{
     app::AppCtx,
-    oauth::{self, Authorization, client, registration::Registration},
+    oauth::{self, Authorization, assertion, client, registration::Registration},
 };
 use campfire_db::{
     NewUser, Timestamp, User,
@@ -83,7 +83,7 @@ async fn preflight(c: &mut Ctx) -> Result {
 async fn metadata(c: &mut Ctx) -> Result {
     public(c);
     let issuer = issuer(c);
-    c.json(StatusCode::OK,&json!({"issuer":issuer,"authorization_endpoint":format!("{issuer}/oauth/authorize"),"token_endpoint":format!("{issuer}/oauth/token"),"revocation_endpoint":format!("{issuer}/oauth/revoke"),"registration_endpoint":format!("{issuer}/oauth/register"),"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"],"revocation_endpoint_auth_methods_supported":["none"],"client_id_metadata_document_supported":true,"authorization_response_iss_parameter_supported":true,"scopes_supported":["agent"]}))
+    c.json(StatusCode::OK,&json!({"issuer":issuer,"authorization_endpoint":format!("{issuer}/oauth/authorize"),"token_endpoint":format!("{issuer}/oauth/token"),"revocation_endpoint":format!("{issuer}/oauth/revoke"),"registration_endpoint":format!("{issuer}/oauth/register"),"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none","private_key_jwt"],"token_endpoint_auth_signing_alg_values_supported":["RS256","ES256"],"revocation_endpoint_auth_methods_supported":["none"],"client_id_metadata_document_supported":true,"authorization_response_iss_parameter_supported":true,"scopes_supported":["agent"]}))
 }
 async fn resource_metadata(c: &mut Ctx) -> Result {
     public(c);
@@ -148,7 +148,7 @@ async fn authorize(c: &mut Ctx) -> Result {
         Err(Error::Halt(response)) => return Err(Error::Halt(response)),
         Err(_) => return error_page(c, "invalid_client"),
     };
-    if !client::allows_none(&client) {
+    if !client::has_supported_method(&client) {
         return error_page(c, "unsupported_client_authentication");
     }
     let redirect = c.param_str("redirect_uri").unwrap_or_default().to_string();
@@ -464,40 +464,89 @@ async fn token(c: &mut Ctx) -> Result {
     let Some(input) = form(c).await? else {
         return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_request"}));
     };
-    let client = input
-        .get("client_id")
-        .map(String::as_str)
-        .unwrap_or_default();
-    let ip = c.request.remote_ip()?;
-    throttle(c, &format!("token:{client}:{ip}"), 60)?;
-    let method_none = none_method(c, &input);
+    let mut client_id = input.get("client_id").cloned().unwrap_or_default();
+    let ip = c.request.remote_ip()?.to_string();
+    let assertion =
+        if input.contains_key("client_assertion") || input.contains_key("client_assertion_type") {
+            if c.request.header("authorization").is_some()
+                || input.contains_key("client_secret")
+                || input.get("client_assertion_type").map(String::as_str) != Some(assertion::TYPE)
+                || input
+                    .get("token_endpoint_auth_method")
+                    .is_some_and(|method| method != "private_key_jwt")
+            {
+                throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
+                return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}));
+            }
+            let parsed = assertion::parse(
+                input
+                    .get("client_assertion")
+                    .map(String::as_str)
+                    .unwrap_or_default(),
+                input.get("client_id").map(String::as_str),
+                &issuer(c),
+                Timestamp::from_jiff(c.now()),
+            );
+            let Ok(parsed) = parsed else {
+                throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
+                return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"}));
+            };
+            client_id = parsed.client_id().to_owned();
+            Some(parsed)
+        } else {
+            None
+        };
+    throttle(c, &format!("token:{client_id}:{ip}"), 60)?;
+    let app = c.app().clone();
+    let verified = if let Some(assertion) = assertion {
+        match assertion::verify(&app, assertion, || throttle(c, "cimd-global", 30)).await {
+            Ok(verified) => Some(verified),
+            Err(Error::Halt(response)) => return Err(Error::Halt(response)),
+            Err(Error::Internal(error)) => return Err(Error::Internal(error)),
+            Err(_) => return c.json(StatusCode::BAD_REQUEST, &json!({"error":"invalid_client"})),
+        }
+    } else {
+        None
+    };
+    let method = if verified.is_some() {
+        Some(client::AuthMethod::PrivateKeyJwt)
+    } else if none_method(c, &input) {
+        Some(client::AuthMethod::None)
+    } else {
+        None
+    };
     let result = c
         .app()
         .db
         .write(move |tx| {
+            if let Some(verified) = verified
+                && !verified.consume(tx)?
+            {
+                return Ok(("invalid_client", None));
+            }
             let value = |key: &str| input.get(key).map(String::as_str).unwrap_or_default();
             match value("grant_type") {
                 "authorization_code" => oauth::exchange_code(
                     tx,
                     oauth::CodeExchange {
                         code: value("code"),
-                        client_id: value("client_id"),
+                        client_id: &client_id,
                         redirect_uri: input.get("redirect_uri").map(String::as_str),
                         verifier: value("code_verifier"),
                         resource: value("resource"),
-                        method_none,
+                        method,
                     },
                 )
-                .map(|pair| (false, pair)),
+                .map(|pair| ("invalid_grant", pair)),
                 "refresh_token" => oauth::refresh(
                     tx,
                     value("refresh_token"),
-                    value("client_id"),
+                    &client_id,
                     input.get("resource").map(String::as_str),
-                    method_none,
+                    method,
                 )
-                .map(|pair| (false, pair)),
-                _ => Ok((true, None)),
+                .map(|pair| ("invalid_grant", pair)),
+                _ => Ok(("unsupported_grant_type", None)),
             }
         })
         .await
@@ -505,12 +554,10 @@ async fn token(c: &mut Ctx) -> Result {
     if let Some(pair) = result.1 {
         c.json(StatusCode::OK, &pair)
     } else {
-        c.json(
-            StatusCode::BAD_REQUEST,
-            &json!({"error":if result.0{"unsupported_grant_type"}else{"invalid_grant"}}),
-        )
+        c.json(StatusCode::BAD_REQUEST, &json!({"error":result.0}))
     }
 }
+
 async fn revoke(c: &mut Ctx) -> Result {
     public(c);
     if let Some(input) = form(c).await? {
