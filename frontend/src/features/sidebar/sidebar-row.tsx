@@ -130,6 +130,7 @@ function PreviewedName({ row, last }: { readonly row: Row; readonly last: LastMe
   const creator = useUser(last.creatorId);
   const group = row.directMemberIds.length > 1;
   // In your note-to-self every message is yours: no "You:" before each.
+
   const who = isNoteToSelf(row, viewerId)
     ? undefined
     : last.creatorId === viewerId

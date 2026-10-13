@@ -107,8 +107,10 @@ function Section({
 }) {
   const [expanded, setExpanded] = useState(false);
   const selfRoomId = useNoteToSelfRoomId();
+
   const youName = (roomId: number, name: string | null) =>
     name !== null && roomId === selfRoomId ? withYou(name) : name;
+
   const rows = expanded ? section.rows : section.rows.slice(0, COLLAPSED_ROWS);
   const hidden = section.rows.length - rows.length;
 

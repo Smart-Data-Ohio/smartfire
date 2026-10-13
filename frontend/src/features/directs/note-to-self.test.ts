@@ -15,9 +15,11 @@ import {
 } from "./note-to-self.ts";
 
 const VIEWER = meFixture.user.id;
+
 const SELF_ROOM = 40;
 
 const self = sidebarRowFixture(SELF_ROOM, "Ada", "direct", [VIEWER]);
+
 const grace = {
   ...sidebarRowFixture(41, "Grace", "direct", [3]),
   room: {
@@ -76,6 +78,7 @@ describe("the note-to-self", () => {
 
   it("leads Direct messages, ahead of newer conversations", () => {
     const state = signedIn([grace, self], [3]);
+
     const directs = sidebarSections(state.sidebar, { viewerId: VIEWER }).find(
       (section) => section.kind === "direct",
     );

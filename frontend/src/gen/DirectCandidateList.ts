@@ -4,7 +4,8 @@ import type { User } from "./User";
 
 /**
  * `GET /api/v1/directs/candidates` (`rooms/directs#new`): everyone the viewer can message, i.e.
- * active users but themselves, bots included; starred first, then by `LOWER(name)`. The client
- * filters by name as the person types.
+ * active users, bots included. The viewer comes first (picking only them opens their
+ * note-to-self), then the starred, then by `LOWER(name)`. The client filters by name as the
+ * person types.
  */
 export type DirectCandidateList = { candidates: Array<DirectCandidate>, users: Array<User>, };

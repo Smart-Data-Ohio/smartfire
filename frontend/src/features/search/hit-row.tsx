@@ -160,10 +160,12 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
   }
 
   const when = hitTime(message.createdAt, now);
+
   const place =
     conversation === undefined
       ? ""
       : ` in ${conversation.roomId === selfRoomId ? withYou(conversation.roomName) : conversation.roomName}`;
+
   const label = `${name}${place}, ${when}`;
 
   return (

@@ -100,6 +100,7 @@ describe("directs", () => {
       { userIds: [] },
       201,
     );
+
     const after = await get<Sidebar>(server, "/api/v1/sidebar");
 
     expect(after.directPlaceholderUserIds).not.toContain(viewer);

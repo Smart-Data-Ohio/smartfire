@@ -35,7 +35,9 @@ users: Array<User>,
 /**
  * Up to 20 active people the viewer has no direct room with yet, oldest account first
  * (`find_direct_placeholder_users`): the "start a conversation" suggestions under the
- * direct messages.
+ * direct messages. Led by the viewer's own id while they have no note-to-self row (a
+ * direct row whose `directMemberIds` is just them), so every client can offer it before it
+ * exists: `POST /api/v1/directs` with no `userIds` opens it, creating it on first use.
  */
 directPlaceholderUserIds: Array<number>,
 /**

@@ -1128,6 +1128,7 @@ function removeRow(state: State, roomId: number): State {
   const clock = layoutChanged ? state.rowTouches.clock + 1 : state.rowTouches.clock;
   const viewerId = state.me?.user.id ?? state.boot?.user.id ?? null;
   // Your note-to-self gone from the sidebar is offered again, as the next snapshot would.
+
   const offerSelf =
     gone !== undefined &&
     viewerId !== null &&

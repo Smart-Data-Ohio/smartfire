@@ -4,12 +4,13 @@
  * `POST /api/v1/directs` (`rooms/directs#create`): open the direct room with exactly these
  * people and the viewer, creating it if there's none (matched on the member set, so the same
  * people always get the same room: 200 for an existing one, 201 for a new one). Inactive ids
- * are dropped; an empty list is the note-to-self. More than 9 others is a 422. Answers the
+ * and the viewer's own id are dropped; an empty list (or only the viewer) is the note-to-self.
+ * More than 9 others is a 422. An existing room the viewer hid shows again. Answers the
  * viewer's [`crate::SidebarRow`] for it; a new room reaches every member as
  * `sidebar.row.upserted`.
  */
 export type CreateDirect = {
 /**
- * The other people, the viewer left out.
+ * The other people; the viewer's own id is ignored.
  */
 userIds: Array<number>, };

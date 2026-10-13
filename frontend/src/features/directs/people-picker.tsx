@@ -119,8 +119,10 @@ export function PeoplePicker({
   const presence = useStore((state) => state.presence);
   const viewerId = useViewerId();
   const hidden = new Set([...selected, ...(excluded ?? [])]);
+
   const options =
     candidates === null ? [] : pickerOptions(candidates, users, query, hidden, viewerId);
+
   const active = Math.min(activeIndex, Math.max(options.length - 1, 0));
   const activeOption = options[active];
   // `limit` counts others: you, picked too, don't take one of their places.
