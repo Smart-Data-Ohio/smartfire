@@ -1,8 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
+import type { PersonalAgentAccess } from "../../gen/PersonalAgentAccess.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
+import type { UpdatePersonalAgent } from "../../gen/UpdatePersonalAgent.ts";
 import { ActionError } from "../../sync/run.ts";
 import { meAgents, SAVE_UNCONFIRMED } from "../../sync/settings.ts";
 import { AgentAvatar } from "../../ui/agent-avatar.tsx";
@@ -15,6 +17,15 @@ import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import { AccessFields, ExpiryField, IdentityFields, SecretBlock } from "./agent-parts.tsx";
 import { AgentWizard, WIZARD_DRAFT_KEY } from "./agent-wizard.tsx";
+import {
+  type AgentCache,
+  nextSequence,
+  withAgent,
+  withCreated,
+  withList,
+  withRemoved,
+  withTokens,
+} from "./agents-cache.ts";
 import {
   abilityLabel,
   agentIcon,
@@ -45,7 +56,7 @@ import {
 type Load =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
-  | { readonly status: "ready"; readonly list: PersonalAgentList };
+  | { readonly status: "ready"; readonly cache: AgentCache };
 
 /** A token being issued or rotated: which agent, and the token it replaces. */
 interface TokenAsk {
@@ -72,23 +83,25 @@ function saveUnconfirmed(error: Error): boolean {
   return error instanceof ActionError && error.tag === SAVE_UNCONFIRMED;
 }
 
-/** The list with `agent` in place of its old copy. */
-function withAgent(list: PersonalAgentList, agent: PersonalAgent): PersonalAgentList {
-  return { ...list, agents: list.agents.map((a) => (a.id === agent.id ? agent : a)) };
+/** `held` with the tokens in `incoming` in place of their old copies, and any new ones first. */
+function mergedTokens(
+  held: readonly PersonalAgentCredential[],
+  incoming: readonly PersonalAgentCredential[],
+): PersonalAgentCredential[] {
+  return [...incoming, ...held.filter((h) => !incoming.some((i) => i.id === h.id))];
 }
 
-/** The list with agent `agentId`'s tokens changed as they stand now. */
-function withTokens(
-  list: PersonalAgentList,
-  agentId: number,
-  change: (credentials: readonly PersonalAgentCredential[]) => PersonalAgentCredential[],
-): PersonalAgentList {
-  return {
-    ...list,
-    agents: list.agents.map((a) =>
-      a.id === agentId ? { ...a, credentials: change(a.credentials) } : a,
-    ),
-  };
+/**
+ * The edit dialog's writes and reload, each landing in the section's cache in the order they were
+ * sent (see agents-cache.ts), and answering what the server said.
+ */
+interface AgentWrites {
+  readonly rename: (
+    agentId: number,
+    change: Partial<UpdatePersonalAgent>,
+  ) => Promise<PersonalAgent>;
+  readonly setAccess: (agentId: number, access: PersonalAgentAccess) => Promise<PersonalAgent>;
+  readonly reload: () => Promise<void>;
 }
 
 /** One token: its name and dates, and Rotate and Revoke while it can still be used. */
@@ -280,10 +293,12 @@ function TokenDialog({
   readonly onClose: () => void;
   /** The workspace turned personal agents off since the list loaded: load it again. */
   readonly onTurnedOff: () => void;
+  /** `at`: the request's number (agents-cache.ts), taken when it was sent. */
   readonly onIssued: (
     agent: PersonalAgent,
     credential: PersonalAgentCredential,
     secret: string,
+    at: number,
   ) => void;
 }) {
   const [name, setName] = useState("");
@@ -315,6 +330,8 @@ function TokenDialog({
       return;
     }
 
+    const at = nextSequence();
+
     const write =
       replacing === null
         ? meAgents.issueToken(agent.id, name.trim(), expiresAtOf(expiry))
@@ -323,7 +340,7 @@ function TokenDialog({
     void track(
       "token",
       write.then(
-        ({ credential, secret }) => onIssued(agent, credential, secret),
+        ({ credential, secret }) => onIssued(agent, credential, secret, at),
         (failure: Error) => {
           const named = fieldsOf(failure);
 
@@ -394,125 +411,142 @@ function TokenDialog({
   );
 }
 
-/** Its name, icon, rooms and abilities, saved together. */
+/** What the edit form holds. */
+interface EditForm {
+  readonly name: string;
+  readonly iconName: string | null;
+  readonly roomIds: readonly number[];
+  readonly capabilities: readonly string[];
+}
+
+/** Which parts of the form the person changed in this opening. */
+interface Touched {
+  readonly name: boolean;
+  readonly icon: boolean;
+  readonly access: boolean;
+}
+
+const UNTOUCHED: Touched = { name: false, icon: false, access: false };
+
+/** The form for `agent` as the cache holds it. */
+function formOf(agent: PersonalAgent | null, offered: readonly string[]): EditForm {
+  if (agent === null) return { name: "", iconName: null, roomIds: [], capabilities: [] };
+
+  return {
+    name: agent.name,
+    iconName: agent.iconName,
+    roomIds: agent.roomIds,
+    capabilities: agent.roomIds.length === 0 ? offered : agent.capabilities,
+  };
+}
+
+/**
+ * Its name, icon, rooms and abilities. One mount is one opening (the section keys it): the form is
+ * seeded from the cached agent once, and only an unanswered save starts it over, from the reloaded
+ * cache, and only if nothing was changed since that save was sent. What the server holds is only
+ * ever the cached `agent`: a save sends just the parts the person changed that differ from it.
+ */
 function EditDialog({
   agent,
   list,
+  writes,
   onClose,
-  onSaved,
-  onProfileSaved,
   onTurnedOff,
-  onReload,
 }: {
+  /** The cached agent, live; `null` while closed. */
   readonly agent: PersonalAgent | null;
   readonly list: PersonalAgentList;
+  readonly writes: AgentWrites;
   readonly onClose: () => void;
-  readonly onSaved: (agent: PersonalAgent) => void;
-  /** Its new name or icon took, whatever becomes of its access: the card shows it at once. */
-  readonly onProfileSaved: (agent: PersonalAgent) => void;
   /** The workspace turned personal agents off since the list loaded: load it again. */
   readonly onTurnedOff: () => void;
-  /** Loads the list from the server again (its cards follow), and answers it. */
-  readonly onReload: () => Promise<PersonalAgentList>;
 }) {
-  const [name, setName] = useState("");
-  const [iconName, setIconName] = useState<string | null>(null);
-  const [roomIds, setRoomIds] = useState<readonly number[]>([]);
-  const [capabilities, setCapabilities] = useState<readonly string[]>([]);
+  const [form, setForm] = useState<EditForm>(() => formOf(agent, list.capabilities));
+  const [touched, setTouched] = useState<Touched>(UNTOUCHED);
   const [error, setError] = useState<string | undefined>(undefined);
+  // After an unanswered save: its reload is out, or back (the form may follow the cache).
+  const [recovery, setRecovery] = useState<"none" | "pending" | "arrived">("none");
+  // Whether the form was changed since the last save was sent.
+  const [changedSinceSave, setChangedSinceSave] = useState(false);
   const { busy, track } = useBusy();
-  // The name and icon the server holds now: a rename that took survives a failed access save, so
-  // a retry neither renames again nor puts the old name back. `null` when unknown (a save went
-  // unanswered and the reload failed): the next save sends the name and icon as they stand.
-  const profile = useRef<Pick<PersonalAgent, "name" | "iconName"> | null>(null);
-  // Which opening this is: a reload asked by an earlier one never reseeds a later one's form.
-  const opening = useRef(0);
-  // The workspace's abilities, read on opening only: a reloaded list mustn't start the form over.
-  const offered = useRef(list.capabilities);
-
-  offered.current = list.capabilities;
 
   useEffect(() => {
-    if (agent !== null) {
-      opening.current += 1;
-      profile.current = { name: agent.name, iconName: agent.iconName };
-      setName(agent.name);
-      setIconName(agent.iconName);
-      setRoomIds(agent.roomIds);
-      setCapabilities(agent.roomIds.length === 0 ? offered.current : agent.capabilities);
-      setError(undefined);
+    if (recovery !== "arrived") return;
+
+    if (agent !== null && !changedSinceSave) {
+      setForm(formOf(agent, list.capabilities));
+      setTouched(UNTOUCHED);
     }
-  }, [agent]);
+
+    setRecovery("none");
+  }, [recovery, agent, changedSinceSave, list.capabilities]);
 
   if (agent === null) {
     return <Dialog open={false} onOpenChange={onClose} title="" />;
   }
 
+  const edit = (change: Partial<EditForm>, part: keyof Touched) => {
+    setForm((current) => ({ ...current, ...change }));
+    setTouched((current) => ({ ...current, [part]: true }));
+    setChangedSinceSave(true);
+  };
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
-    if (name.trim() === "") {
+    const name = form.name.trim();
+
+    if (name === "") {
       setError("Give the agent a name.");
 
       return;
     }
 
-    if (roomIds.length > 0 && capabilities.length === 0) {
+    if (form.roomIds.length > 0 && form.capabilities.length === 0) {
       setError("Choose at least one ability for its rooms.");
 
       return;
     }
 
-    const session = opening.current;
+    // Compared with the cache as it stands now: a rename that already took isn't sent again, and
+    // a field the person left alone is never sent back over a newer value.
+    const rename = touched.name && name !== agent.name;
+    const reicon = touched.icon && form.iconName !== agent.iconName;
 
-    // An unanswered save may have landed: load what the server holds, and start this form over
-    // from it so a retry sends nothing stale.
-    const recheck = () => {
-      profile.current = null;
-      onReload().then(
-        (fresh) => {
-          if (session !== opening.current) return;
+    if (!rename && !reicon && !touched.access) {
+      onClose();
 
-          const held = fresh.agents.find((a) => a.id === agent.id);
+      return;
+    }
 
-          if (held === undefined) {
-            onClose();
-
-            return;
-          }
-
-          profile.current = { name: held.name, iconName: held.iconName };
-          setName(held.name);
-          setIconName(held.iconName);
-          setRoomIds(held.roomIds);
-          setCapabilities(held.roomIds.length === 0 ? list.capabilities : held.capabilities);
-        },
-        () => undefined,
-      );
-    };
-
-    // The access answer is the agent as the server holds it after both writes, name included.
     const save = async () => {
-      const held = profile.current;
+      let latest = agent;
 
-      if (held === null || name.trim() !== held.name || iconName !== held.iconName) {
-        const saved = await meAgents.update(agent.id, { name: name.trim(), iconName });
-
-        profile.current = { name: saved.name, iconName: saved.iconName };
-        onProfileSaved(saved);
+      if (rename || reicon) {
+        // `null` leaves that field as the server holds it.
+        latest = await writes.rename(agent.id, {
+          name: rename ? name : null,
+          iconName: reicon ? form.iconName : null,
+        });
       }
 
-      return meAgents.setAccess(agent.id, {
-        roomIds: [...roomIds],
-        capabilities: roomIds.length === 0 ? [] : [...capabilities],
-      });
+      if (touched.access) {
+        latest = await writes.setAccess(agent.id, {
+          roomIds: [...form.roomIds],
+          capabilities: form.roomIds.length === 0 ? [] : [...form.capabilities],
+        });
+      }
+
+      return latest;
     };
 
+    setError(undefined);
+    setChangedSinceSave(false);
     void track(
       "edit",
       save().then(
         (next) => {
-          onSaved(next);
+          onClose();
           toast({ title: `${next.name} saved`, tone: "success" });
         },
         (failure: Error) => {
@@ -525,9 +559,14 @@ function EditDialog({
             return;
           }
 
+          // It may have landed: load what the server holds before saving again.
           if (saveUnconfirmed(failure)) {
             setError(failure.message);
-            recheck();
+            setRecovery("pending");
+            writes.reload().then(
+              () => setRecovery("arrived"),
+              () => setRecovery("none"),
+            );
 
             return;
           }
@@ -543,8 +582,8 @@ function EditDialog({
     );
   };
 
-  // While a save is out the dialog stays open: its rename and access writes, and what it learns the
-  // server holds, belong to this opening alone, never to a later one's form.
+  // While a save is out the dialog stays open (it's bounded, so not for long); while the reload
+  // after an unanswered one is out, it can close but not save.
   const saving = busy("edit");
 
   return (
@@ -565,7 +604,7 @@ function EditDialog({
             form="agents-edit-form"
             variant="primary"
             loading={saving}
-            disabled={saving}
+            disabled={saving || recovery === "pending"}
           >
             Save
           </Button>
@@ -573,14 +612,19 @@ function EditDialog({
       }
     >
       <form id="agents-edit-form" className="settings-form" onSubmit={submit} noValidate>
-        <IdentityFields name={name} iconName={iconName} onName={setName} onIcon={setIconName} />
+        <IdentityFields
+          name={form.name}
+          iconName={form.iconName}
+          onName={(name) => edit({ name }, "name")}
+          onIcon={(iconName) => edit({ iconName }, "icon")}
+        />
         <AccessFields
           rooms={list.rooms}
           capabilities={list.capabilities}
-          roomIds={roomIds}
-          granted={capabilities}
-          onRooms={setRoomIds}
-          onCapabilities={setCapabilities}
+          roomIds={form.roomIds}
+          granted={form.capabilities}
+          onRooms={(roomIds) => edit({ roomIds }, "access")}
+          onCapabilities={(capabilities) => edit({ capabilities }, "access")}
         />
         <FieldError message={error} />
       </form>
@@ -639,24 +683,40 @@ function keptWizardDraft(): WizardDraft | null {
 export function AgentsSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [wizard, setWizard] = useState<{ draft: WizardDraft; restored: boolean } | null>(null);
-  const [editing, setEditing] = useState<PersonalAgent | null>(null);
+  // The agent being edited, by id (the dialog reads it from the cache), and which opening this is.
+  const [editing, setEditing] = useState<number | null>(null);
+  const [opening, setOpening] = useState(0);
   const [tokenAsk, setTokenAsk] = useState<TokenAsk | null>(null);
   const [shown, setShown] = useState<Shown | null>(null);
   const [ask, setAsk] = useState<Ask>(null);
   const { busy, track } = useBusy();
   const restoredOnce = useRef(false);
 
-  // Also the quiet reload after a write finds personal agents turned off: the list stays shown.
-  const fetchList = useCallback(() => {
-    meAgents.list().then(
-      (list) => setLoad({ status: "ready", list }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
+  // A load of the whole list, numbered when sent: it lands under what was written since.
+  const loadList = useCallback((): Promise<void> => {
+    const at = nextSequence();
+
+    return meAgents.list().then((fresh) =>
+      setLoad((current) => ({
+        status: "ready",
+        cache: withList(current.status === "ready" ? current.cache : null, fresh, at),
+      })),
     );
   }, []);
 
+  // The first load, a retry, and the quiet reload after a write finds personal agents turned
+  // off: a failure shows only when there's no list to keep showing.
+  const fetchList = useCallback(() => {
+    loadList().catch((error: Error) =>
+      setLoad((current) =>
+        current.status === "ready" ? current : { status: "error", message: error.message },
+      ),
+    );
+  }, [loadList]);
+
   useEffect(fetchList, [fetchList]);
 
-  const list = load.status === "ready" ? load.list : null;
+  const list = load.status === "ready" ? load.cache.list : null;
 
   // A wizard left for a Google confirmation comes back where it stopped: on its last step.
   useEffect(() => {
@@ -677,18 +737,32 @@ export function AgentsSection() {
     fetchList();
   };
 
-  // The list again, keeping the page shown while it comes: for a dialog that must know the truth.
-  const refetch = () =>
-    meAgents.list().then((fresh) => {
-      setLoad({ status: "ready", list: fresh });
-
-      return fresh;
-    });
-
-  const replace = (change: (current: PersonalAgentList) => PersonalAgentList) =>
+  const replace = (change: (current: AgentCache) => AgentCache) =>
     setLoad((current) =>
-      current.status === "ready" ? { status: "ready", list: change(current.list) } : current,
+      current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
     );
+
+  const writes: AgentWrites = {
+    rename: (agentId, change) => {
+      const at = nextSequence();
+
+      return meAgents.update(agentId, change).then((agent) => {
+        replace((current) => withAgent(current, agent, at));
+
+        return agent;
+      });
+    },
+    setAccess: (agentId, access) => {
+      const at = nextSequence();
+
+      return meAgents.setAccess(agentId, access).then((agent) => {
+        replace((current) => withAgent(current, agent, at));
+
+        return agent;
+      });
+    },
+    reload: loadList,
+  };
 
   const revoke = (agent: PersonalAgent, credential: PersonalAgentCredential) =>
     setAsk({
@@ -696,17 +770,22 @@ export function AgentsSection() {
       message: "Anything using this token stops reaching the agent at once.",
       label: "Revoke",
       danger: true,
-      run: () =>
+      run: () => {
+        const at = nextSequence();
+
         void track(
           `token-${credential.id}`,
           meAgents.revokeToken(agent.id, credential.id).then(
             ({ credentials }) => {
-              replace((current) => withTokens(current, agent.id, () => [...credentials]));
+              replace((current) =>
+                withTokens(current, agent.id, (held) => mergedTokens(held, credentials), at),
+              );
               toast({ title: `${credential.name} was revoked`, tone: "success" });
             },
             (error: Error) => toastFailure(`Couldn't revoke ${credential.name}`, error),
           ),
-        ),
+        );
+      },
     });
 
   const remove = (agent: PersonalAgent) =>
@@ -715,31 +794,41 @@ export function AgentsSection() {
       message: "It leaves its rooms and its tokens stop working. This can't be undone.",
       label: "Remove agent",
       danger: true,
-      run: () =>
+      run: () => {
+        const at = nextSequence();
+
         void track(
           `agent-${agent.id}`,
           // The answer's id is the agent's bot user, not the agent: drop the one asked for.
           meAgents.remove(agent.id).then(
             () => {
-              replace((current) => ({
-                ...current,
-                agents: current.agents.filter((a) => a.id !== agent.id),
-              }));
+              replace((current) => withRemoved(current, agent.id, at));
               toast({ title: `${agent.name} was removed`, tone: "success" });
             },
             (error: Error) => toastFailure(`Couldn't remove ${agent.name}`, error),
           ),
-        ),
+        );
+      },
     });
 
-  const issued = (agent: PersonalAgent, credential: PersonalAgentCredential, secret: string) => {
+  const issued = (
+    agent: PersonalAgent,
+    credential: PersonalAgentCredential,
+    secret: string,
+    at: number,
+  ) => {
     const replaced = tokenAsk?.replacing?.id;
 
     replace((current) =>
-      withTokens(current, agent.id, (credentials) => [
-        credential,
-        ...credentials.map((c) => (c.id === replaced ? { ...c, state: "revoked" as const } : c)),
-      ]),
+      withTokens(
+        current,
+        agent.id,
+        (credentials) => [
+          credential,
+          ...credentials.map((c) => (c.id === replaced ? { ...c, state: "revoked" as const } : c)),
+        ],
+        at,
+      ),
     );
     setTokenAsk(null);
     setShown({ agent, secret });
@@ -770,9 +859,11 @@ export function AgentsSection() {
           list={list}
           initial={wizard.draft}
           initialStep={wizard.restored ? "connect" : "client"}
-          onCreated={({ agent }) =>
-            replace((current) => ({ ...current, agents: [...current.agents, agent] }))
-          }
+          onCreated={({ agent }) => {
+            const at = nextSequence();
+
+            replace((current) => withCreated(current, agent, at));
+          }}
           onRefused={fetchList}
           onClose={() => setWizard(null)}
         />
@@ -813,7 +904,10 @@ export function AgentsSection() {
                     agent={agent}
                     list={list}
                     busy={busy}
-                    onEdit={() => setEditing(agent)}
+                    onEdit={() => {
+                      setEditing(agent.id);
+                      setOpening((count) => count + 1);
+                    }}
                     onRemove={() => remove(agent)}
                     onIssue={() => setTokenAsk({ agent, replacing: null })}
                     onRotate={(credential) => setTokenAsk({ agent, replacing: credential })}
@@ -828,16 +922,12 @@ export function AgentsSection() {
       {list === null ? null : (
         <>
           <EditDialog
-            agent={editing}
+            key={opening}
+            agent={editing === null ? null : (list.agents.find((a) => a.id === editing) ?? null)}
             list={list}
+            writes={writes}
             onClose={() => setEditing(null)}
-            onSaved={(agent) => {
-              replace((current) => withAgent(current, agent));
-              setEditing(null);
-            }}
-            onProfileSaved={(agent) => replace((current) => withAgent(current, agent))}
             onTurnedOff={fetchList}
-            onReload={refetch}
           />
           <TokenDialog
             ask={tokenAsk}

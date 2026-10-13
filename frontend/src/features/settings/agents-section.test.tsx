@@ -167,6 +167,85 @@ describe("the cards", () => {
     expect(screen.getByRole("article", { name: "Other" })).toBeTruthy();
   });
 
+  it("rotates a token, showing the new one once with its client's setup", async () => {
+    await mount(list());
+
+    const rotate = vi.spyOn(meAgents, "rotateToken").mockResolvedValue({
+      credential: { ...TOKEN, id: 12, lastFour: SECRET.slice(-4) },
+      secret: SECRET,
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Rotate Primary token" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByLabelText("Never"));
+    fireEvent.click(screen.getByRole("button", { name: "Rotate token" }));
+
+    const shown = await screen.findByRole("alertdialog", { name: "Helper's new token" });
+
+    expect(rotate).toHaveBeenCalledWith(7, 11, "never");
+    expect(within(shown).getByText(SECRET)).toBeTruthy();
+    expect(within(shown).getByText(/bearer_token_env_var = "SMARTFIRE_HELPER_TOKEN"/)).toBeTruthy();
+    expect(screen.getAllByText("Revoked")).toHaveLength(1);
+  });
+});
+
+/** A promise settled by hand, for answers that arrive in a chosen order. */
+function deferred<T>() {
+  const settle = {
+    resolve: (_value: T): void => undefined,
+    reject: (_error: Error): void => undefined,
+  };
+
+  const promise = new Promise<T>((resolve, reject) => {
+    settle.resolve = resolve;
+    settle.reject = reject;
+  });
+
+  return { promise, settle };
+}
+
+const UNCONFIRMED = /Couldn't confirm the save/;
+
+const ROOM_REFUSED = new ActionError("Validation", "Invalid", {
+  roomIds: ["includes a room you're not in"],
+});
+
+const editDialog = () => screen.getByRole("dialog");
+
+const button = (name: string) => within(editDialog()).getByRole("button", { name });
+
+const nameField = () => within(editDialog()).getByRole("textbox", { name: "Name" });
+
+function rename(to: string) {
+  fireEvent.change(nameField(), { target: { value: to } });
+}
+
+/**
+ * Opens Helper's edit dialog, renames it and saves through the real (bounded) request, whose
+ * answer never comes; runs the clock past the bound. The reload that follows answers `reload`.
+ */
+async function timeOutRename(reload: Promise<PersonalAgentList>) {
+  vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise<Response>(() => undefined));
+
+  const edit = await screen.findByRole("button", { name: "Edit Helper" });
+
+  vi.useFakeTimers();
+
+  try {
+    fireEvent.click(edit);
+    rename("Renamed");
+    vi.spyOn(meAgents, "list").mockReturnValue(reload);
+    fireEvent.click(button("Save"));
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
+    expect(button("Cancel").hasAttribute("disabled")).toBe(true);
+    await act(() => vi.advanceTimersByTimeAsync(15_000));
+  } finally {
+    vi.useRealTimers();
+  }
+
+  expect(await within(editDialog()).findByText(UNCONFIRMED)).toBeTruthy();
+}
+
+describe("editing an agent", () => {
   it("shows a rename that took even when the access save fails, and keeps it on retry", async () => {
     await mount(list());
 
@@ -174,151 +253,96 @@ describe("the cards", () => {
 
     const setAccess = vi
       .spyOn(meAgents, "setAccess")
-      .mockRejectedValueOnce(
-        new ActionError("Validation", "Invalid", { roomIds: ["includes a room you're not in"] }),
-      )
+      .mockRejectedValueOnce(ROOM_REFUSED)
       .mockResolvedValueOnce({ ...AGENT, name: "Renamed", roomIds: [], capabilities: [] });
 
     fireEvent.click(await screen.findByRole("button", { name: "Edit Helper" }));
+    rename("Renamed");
+    fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "General" }));
+    fireEvent.click(button("Save"));
 
-    const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
-
-    fireEvent.change(within(dialog).getByRole("textbox", { name: "Name" }), {
-      target: { value: "Renamed" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-
-    expect(await within(dialog).findByText("includes a room you're not in")).toBeTruthy();
+    expect(await within(editDialog()).findByText("includes a room you're not in")).toBeTruthy();
     expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
 
     // Closed, reopened, the room taken away: the rename isn't sent again, nor undone.
-    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(button("Cancel"));
     fireEvent.click(await screen.findByRole("button", { name: "Edit Renamed" }));
-
-    const again = screen.getByRole("dialog", { name: "Edit Renamed" });
-
-    fireEvent.click(within(again).getByRole("checkbox", { name: "Design" }));
-    fireEvent.click(within(again).getByRole("button", { name: "Save" }));
+    expect(nameField()).toHaveProperty("value", "Renamed");
+    fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "Design" }));
+    fireEvent.click(button("Save"));
 
     await waitFor(() => expect(setAccess).toHaveBeenCalledTimes(2));
     expect(update).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
-    expect(screen.queryByRole("article", { name: "Helper" })).toBeNull();
   });
 
   it("can't be closed while a rename is out, so a retry never undoes it", async () => {
     await mount(list());
 
-    let answer: (agent: PersonalAgent) => void = () => undefined;
-
-    const update = vi.spyOn(meAgents, "update").mockReturnValue(
-      new Promise<PersonalAgent>((resolve) => {
-        answer = resolve;
-      }),
-    );
+    const answer = deferred<PersonalAgent>();
+    const update = vi.spyOn(meAgents, "update").mockReturnValue(answer.promise);
 
     const setAccess = vi
       .spyOn(meAgents, "setAccess")
-      .mockRejectedValueOnce(
-        new ActionError("Validation", "Invalid", { roomIds: ["includes a room you're not in"] }),
-      )
+      .mockRejectedValueOnce(ROOM_REFUSED)
       .mockResolvedValueOnce({ ...AGENT, name: "Renamed", roomIds: [], capabilities: [] });
 
     fireEvent.click(await screen.findByRole("button", { name: "Edit Helper" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
+    const dialog = editDialog();
 
-    fireEvent.change(within(dialog).getByRole("textbox", { name: "Name" }), {
-      target: { value: "Renamed" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    rename("Renamed");
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "General" }));
+    fireEvent.click(button("Save"));
     await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
 
     // The rename is out: neither Cancel nor Escape closes this opening for a fresh one.
-    const cancel = within(dialog).getByRole("button", { name: "Cancel" });
-
-    expect(cancel.hasAttribute("disabled")).toBe(true);
-    fireEvent.click(cancel);
+    expect(button("Cancel").hasAttribute("disabled")).toBe(true);
+    fireEvent.click(button("Cancel"));
     fireEvent.keyDown(dialog, { key: "Escape" });
-    expect(screen.getByRole("dialog", { name: "Edit Helper" })).toBe(dialog);
+    expect(editDialog()).toBe(dialog);
 
     // The rename lands, the access save is refused, and the corrected retry keeps the name.
-    await act(async () => answer({ ...AGENT, name: "Renamed" }));
+    await act(async () => answer.settle.resolve({ ...AGENT, name: "Renamed" }));
     expect(await within(dialog).findByText("includes a room you're not in")).toBeTruthy();
     expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
 
     fireEvent.click(within(dialog).getByRole("checkbox", { name: "Design" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    fireEvent.click(button("Save"));
 
     await waitFor(() => expect(setAccess).toHaveBeenCalledTimes(2));
     expect(update).toHaveBeenCalledTimes(1);
-    expect(update).toHaveBeenCalledWith(7, { name: "Renamed", iconName: "owl" });
+    expect(update).toHaveBeenCalledWith(7, { name: "Renamed", iconName: null });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
   });
 
-  it("ends a save that gets no answer, reloads, and retries without the old name", async () => {
+  it("holds Save while the reload after an unanswered save is out, then shows the server's", async () => {
     await mount(list());
 
-    // The rename landed, but its answer never comes.
-    const reload = vi
-      .spyOn(meAgents, "list")
-      .mockResolvedValue(list({ agents: [{ ...AGENT, name: "Renamed" }] }));
+    const reload = deferred<PersonalAgentList>();
 
-    vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise<Response>(() => undefined));
+    await timeOutRename(reload.promise);
 
-    const edit = await screen.findByRole("button", { name: "Edit Helper" });
+    // Closable at once, but not savable until the server has said what it holds.
+    expect(button("Cancel").hasAttribute("disabled")).toBe(false);
+    expect(button("Save").hasAttribute("disabled")).toBe(true);
 
-    vi.useFakeTimers();
+    await act(async () => reload.settle.resolve(list({ agents: [{ ...AGENT, name: "Renamed" }] })));
 
-    try {
-      fireEvent.click(edit);
-
-      const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
-
-      fireEvent.change(within(dialog).getByRole("textbox", { name: "Name" }), {
-        target: { value: "Renamed" },
-      });
-      fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-      await act(() => vi.advanceTimersByTimeAsync(1_000));
-      expect(within(dialog).getByRole("button", { name: "Cancel" }).hasAttribute("disabled")).toBe(
-        true,
-      );
-
-      await act(() => vi.advanceTimersByTimeAsync(15_000));
-    } finally {
-      vi.useRealTimers();
-    }
-
-    const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
-
-    expect(
-      await within(dialog).findByText("Couldn't confirm the save. Check the agent and try again."),
-    ).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: "Cancel" }).hasAttribute("disabled")).toBe(
-      false,
-    );
-    // Once on opening the page, once more after the unanswered save.
-    await waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
-    expect(await screen.findByRole("article", { name: "Renamed" })).toBeTruthy();
-    expect(within(dialog).getByRole("textbox", { name: "Name" })).toHaveProperty(
-      "value",
-      "Renamed",
-    );
-
-    // The retry starts from what the server holds: no rename is sent at all.
-    const update = vi.spyOn(meAgents, "update");
-
-    const setAccess = vi
-      .spyOn(meAgents, "setAccess")
-      .mockResolvedValue({ ...AGENT, name: "Renamed" });
-
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(setAccess).toHaveBeenCalledTimes(1));
-    expect(update).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+    expect(nameField()).toHaveProperty("value", "Renamed");
     expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
+
+    // The form is the server's again: saving sends nothing at all.
+    const update = vi.spyOn(meAgents, "update");
+    const setAccess = vi.spyOn(meAgents, "setAccess");
+
+    fireEvent.click(button("Save"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(update).not.toHaveBeenCalled();
+    expect(setAccess).not.toHaveBeenCalled();
   });
 
   it("can be closed once an unanswered save ends", async () => {
@@ -338,29 +362,68 @@ describe("the cards", () => {
       vi.useRealTimers();
     }
 
-    expect(await screen.findByText(/Couldn't confirm the save/)).toBeTruthy();
+    expect(await screen.findByText(UNCONFIRMED)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  it("rotates a token, showing the new one once with its client's setup", async () => {
+  it("never lets an older reload put back a name saved after it was sent", async () => {
     await mount(list());
 
-    const rotate = vi.spyOn(meAgents, "rotateToken").mockResolvedValue({
-      credential: { ...TOKEN, id: 12, lastFour: SECRET.slice(-4) },
-      secret: SECRET,
-    });
+    const reload = deferred<PersonalAgentList>();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Rotate Primary token" }));
-    fireEvent.click(within(screen.getByRole("dialog")).getByLabelText("Never"));
-    fireEvent.click(screen.getByRole("button", { name: "Rotate token" }));
+    await timeOutRename(reload.promise);
 
-    const shown = await screen.findByRole("alertdialog", { name: "Helper's new token" });
+    // Closed while the reload is out, reopened, and renamed again: that one lands.
+    fireEvent.click(button("Cancel"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    vi.spyOn(meAgents, "update").mockResolvedValue({ ...AGENT, name: "Third" });
+    fireEvent.click(screen.getByRole("button", { name: "Edit Helper" }));
+    rename("Third");
+    fireEvent.click(button("Save"));
+    expect(await screen.findByRole("article", { name: "Third" })).toBeTruthy();
 
-    expect(rotate).toHaveBeenCalledWith(7, 11, "never");
-    expect(within(shown).getByText(SECRET)).toBeTruthy();
-    expect(within(shown).getByText(/bearer_token_env_var = "SMARTFIRE_HELPER_TOKEN"/)).toBeTruthy();
-    expect(screen.getAllByText("Revoked")).toHaveLength(1);
+    // The first reload, sent before that rename, answers last with the name it found then.
+    await act(async () => reload.settle.resolve(list({ agents: [{ ...AGENT, name: "Renamed" }] })));
+    expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
+    expect(screen.queryByRole("article", { name: "Renamed" })).toBeNull();
+  });
+
+  it("never lets the reload reset a name typed after the unanswered save", async () => {
+    await mount(list());
+
+    const reload = deferred<PersonalAgentList>();
+
+    await timeOutRename(reload.promise);
+
+    // Typed while the reload is out; it answers with the first rename, which did land.
+    rename("Third");
+    await act(async () => reload.settle.resolve(list({ agents: [{ ...AGENT, name: "Renamed" }] })));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+    expect(nameField()).toHaveProperty("value", "Third");
+
+    // That rename lands; the access save beside it is refused.
+    const update = vi
+      .spyOn(meAgents, "update")
+      .mockResolvedValueOnce({ ...AGENT, name: "Third" })
+      .mockResolvedValueOnce({ ...AGENT, name: "Third", iconName: "brain" });
+
+    vi.spyOn(meAgents, "setAccess").mockRejectedValueOnce(ROOM_REFUSED);
+    fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "General" }));
+    fireEvent.click(button("Save"));
+    expect(await within(editDialog()).findByText("includes a room you're not in")).toBeTruthy();
+    expect(update).toHaveBeenLastCalledWith(7, { name: "Third", iconName: null });
+    expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
+
+    // Only the icon changes now: the name isn't sent, so nothing can put an older one back.
+    fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "General" }));
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: "Brain" }));
+    vi.spyOn(meAgents, "setAccess").mockResolvedValueOnce({ ...AGENT, name: "Third" });
+    fireEvent.click(button("Save"));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+    expect(update).toHaveBeenLastCalledWith(7, { name: null, iconName: "brain" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
   });
 });
 
