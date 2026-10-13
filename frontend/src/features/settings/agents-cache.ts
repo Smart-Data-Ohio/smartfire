@@ -4,7 +4,8 @@
  * An agent's profile and access: latest sent wins. Every rename, access save, removal and reload
  * of the whole list takes a number from `nextSequence()` when it is sent, and an answer lands only
  * where no answer to a later-sent request has landed. So a slow reload never puts back an older
- * name, and an older reload can't bring back a removed agent (it keeps its number).
+ * name, and an older reload can't bring back a removed agent (it keeps its number). An older
+ * reload's tokens are still merged by state, below.
  *
  * Its tokens and connections: their state only ever moves forward, from active to expired to
  * revoked, and they are never deleted. So every answer's state is merged in by that, not by when it
@@ -139,6 +140,25 @@ function confirmed(
   return next;
 }
 
+/** `cache` with only the states and revocation reasons of an older load's tokens merged in. */
+function withOlderTokens(cache: AgentCache, older: PersonalAgentList): AgentCache {
+  let tokensAt = cache.tokensAt;
+
+  const agents = cache.list.agents.map((agent) => {
+    const listed = older.agents.find((a) => a.id === agent.id);
+
+    if (listed === undefined) return agent;
+
+    const tokens = mergedTokens(agent.credentials, listed.credentials, null, tokensAt);
+
+    tokensAt = tokens.tokensAt;
+
+    return { ...agent, credentials: tokens.credentials };
+  });
+
+  return { ...cache, list: { ...cache.list, agents }, tokensAt };
+}
+
 /** A whole-list load sent as request `at`, over what `cache` holds (if anything yet). */
 export function withList(
   cache: AgentCache | null,
@@ -153,7 +173,9 @@ export function withList(
     return { list: fresh, applied: new Map(), listSequence: at, unconfirmed: new Map(), tokensAt };
   }
 
-  if (at <= cache.listSequence) return cache;
+  // An older load says nothing new about profiles or the agents listed, but its tokens' states
+  // and revocation reasons still only move forward, so those are merged in all the same.
+  if (at <= cache.listSequence) return withOlderTokens(cache, fresh);
 
   const listed = new Set(fresh.agents.map((agent) => agent.id));
   let tokensAt = cache.tokensAt;

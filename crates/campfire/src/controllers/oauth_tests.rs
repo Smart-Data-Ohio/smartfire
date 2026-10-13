@@ -1948,3 +1948,29 @@ async fn oauth_consent_counts_rooms_the_owner_left_without_naming_them_and_appro
     let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
     assert_eq!(owner.get(&consent_path(&next)).await.json()["hiddenRooms"], json!([]));
 }
+#[tokio::test]
+async fn oauth_approval_gives_one_identical_error_for_any_room_the_owner_cannot_see() {
+    use super::presenters::test_support::{DIRECT_KEVIN_BENDER, QUIET_CORNER};
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    // A private room David has left, so it exists but he can't see it.
+    f.app.db().write(|tx| {
+        campfire_db::Room::find(tx.conn(), QUIET_CORNER)?.revoke_from(tx, &[DAVID])?;
+        Ok(())
+    }).await.unwrap();
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let agent_id = owner.get(&path).await.json()["selectedAgentId"].as_i64().unwrap();
+    owner.grant_sudo().await;
+    let mut bodies = Vec::new();
+    for room in [999_999_999, QUIET_CORNER, DIRECT_KEVIN_BENDER] {
+        let body = json!({"agentId":agent_id,"roomIds":[room],"capabilities":["read_messages"]});
+        let refused = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&body)).await;
+        assert_eq!(refused.status.as_u16(), 422, "{room}: {}", refused.text());
+        bodies.push(refused.text());
+    }
+    assert_eq!(bodies[0], bodies[1]);
+    assert_eq!(bodies[0], bodies[2]);
+    assert!(!bodies[0].contains("existing room"), "{}", bodies[0]);
+}

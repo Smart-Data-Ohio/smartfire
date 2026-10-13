@@ -92,7 +92,10 @@ describe("the agents cache", () => {
     const older = nextSequence();
     const newer = withList(null, list([{ ...AGENT, name: "Newer" }]), nextSequence());
 
-    expect(withList(newer, list([{ ...AGENT, name: "Older" }]), older)).toBe(newer);
+    const after = withList(newer, list([{ ...AGENT, name: "Older" }]), older);
+
+    expect(names(after)).toEqual(["Newer"]);
+    expect(states(after)).toEqual(states(newer));
   });
 
   it("never brings back a removed agent from an older reload, but drops one a newer omits", () => {
@@ -292,6 +295,41 @@ describe("the agents cache", () => {
         ["c", "a", "b"],
         ["c", "b", "a"],
       ] as const;
+
+      type Via = "list" | "tokens";
+
+      /** Answer `name`, sent as `at`, landing as a whole-list load or as a token answer. */
+      const land = (cache: AgentCache, name: keyof typeof answers, at: number, via: Via) =>
+        via === "list"
+          ? withList(cache, list([{ ...AGENT, credentials: [answers[name]] }]), at)
+          : withTokens(cache, AGENT.id, [answers[name]], at);
+
+      // How each of A, B and C lands: all as reloads, or reloads mixed with token answers.
+      const mixes: readonly (readonly [Via, Via, Via])[] = [
+        ["list", "list", "list"],
+        ["list", "tokens", "list"],
+        ["tokens", "list", "tokens"],
+        ["tokens", "tokens", "list"],
+        ["list", "list", "tokens"],
+      ];
+
+      for (const mix of mixes) {
+        for (const order of orders) {
+          it(`keeps the reason when ${mix.join("/")} answers arrive ${order.join(", ")}`, () => {
+            const cache = start();
+            const sent = { a: nextSequence(), b: nextSequence(), c: nextSequence() };
+            const via = { a: mix[0], b: mix[1], c: mix[2] };
+
+            const after = order.reduce(
+              (current, name) => land(current, name, sent[name], via[name]),
+              cache,
+            );
+
+            expect(first(after)?.state).toBe("revoked");
+            expect(first(after)?.connection?.revokedReason).toBe("tokenReused");
+          });
+        }
+      }
 
       for (const order of orders) {
         it(`keeps the reason when they arrive ${order.join(", ")}`, () => {
