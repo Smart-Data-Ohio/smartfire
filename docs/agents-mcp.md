@@ -126,7 +126,8 @@ static agent tokens default to **90 days**, with a "never" option when issued.
 > [!WARNING]
 > Clients that refresh in parallel can reuse the same refresh token. Smartfire
 > treats reuse as a breach and revokes the entire connection, including tokens
-> the first refresh issued. The card shows "Revoked: refresh token reused".
+> the first refresh issued. The card shows "Disconnected" with "Disconnected
+> because an old sign-in token was reused. Reconnect to continue."
 > Reconnect from the client and make it serialize refresh requests.
 
 ## Token client setup
