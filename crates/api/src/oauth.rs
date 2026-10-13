@@ -161,9 +161,9 @@ async fn authorize(c: &mut Ctx) -> Result {
         Some("unsupported_response_type")
     } else if c.param_str("code_challenge_method") != Some("S256")
         || !oauth::valid_challenge(&challenge)
-        // Leave room for encryption metadata and the other sign-in session keys.
-        // The saved return URL includes percent encoding, not just decoded state.
-        || c.request.url().len() > 2048
+        // Budget the encoded return URL conservatively: CSRF, flash, sign-in keys,
+        // encryption and cookie encoding must also fit in the 4096-byte cookie.
+        || c.request.url().len() > 1024
     {
         Some("invalid_request")
     } else if c
