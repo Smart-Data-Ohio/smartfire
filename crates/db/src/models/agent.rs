@@ -627,7 +627,7 @@ impl Agent {
         for capability in capabilities {
             let rooms = query_all(
                 conn,
-                "SELECT room_id FROM agent_grants WHERE agent_id=? AND capability=? AND revoked_at IS NULL",
+                &format!("SELECT g.room_id FROM agent_grants g WHERE g.agent_id=? AND g.capability=? AND ({})", super::agent_grant::effective_active_sql("g")),
                 params![self.id, capability],
                 |r| r.get::<_, Option<i64>>(0),
             )?;

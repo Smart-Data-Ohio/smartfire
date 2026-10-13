@@ -247,7 +247,7 @@ fn review_s1_legacy_grants_cannot_block_owner_ban() {
 }
 
 #[test]
-fn review_s1_migration_revokes_legacy_grants_without_jobs_and_controls_still_work() {
+fn review_s1_migration_preserves_legacy_rows_is_additive_and_controls_still_work() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("legacy.sqlite3");
     let seed = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -285,15 +285,42 @@ fn review_s1_migration_revokes_legacy_grants_without_jobs_and_controls_still_wor
         conn.query_row("SELECT COALESCE(json_group_array(json(row)), '[]') FROM (SELECT json_object('id',id,'class',job_class,'arguments',arguments,'run_at',run_at) row FROM background_jobs ORDER BY id)",[],|row|row.get::<_,String>(0)).unwrap()
     };
     let before = jobs(&conn);
+    let before_path = dir.path().join("before.sqlite3");
+    conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
+        .unwrap();
+    std::fs::copy(&path, &before_path).unwrap();
     crate::migrations::migrate_preserving_existing_foreign_key_violations(&mut conn).unwrap();
+    conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
+        .unwrap();
+    let verified = crate::additive::verify(&before_path, &path).unwrap();
+    assert!(verified.contains("MATCH:"), "{verified}");
     assert_eq!(jobs(&conn), before);
     for grant_id in live {
-        assert!(
-            AgentGrant::find(&conn, grant_id)
+        let grant = AgentGrant::find(&conn, grant_id).unwrap().unwrap();
+        assert_eq!(grant.revoked_at, None);
+        assert_eq!(grant.updated_at, stamp);
+        if ["external_action", "fizzy", "dm_anyone", "legacy_action"]
+            .contains(&grant.capability.as_str())
+        {
+            assert!(
+                !crate::models::agent_access::has_capability_anywhere(
+                    &conn,
+                    grant.agent_id,
+                    &grant.capability
+                )
                 .unwrap()
+            );
+        } else {
+            assert!(
+                !crate::models::agent_access::capability_for_agent(
+                    &conn,
+                    grant.agent_id,
+                    &grant.capability,
+                    grant.room_id
+                )
                 .unwrap()
-                .revoked()
-        );
+            );
+        }
     }
     for grant_id in revoked {
         let grant = AgentGrant::find(&conn, grant_id).unwrap().unwrap();
@@ -452,6 +479,34 @@ fn review_s1_completion_revocation_after_authorized_request_hides_old_events() {
             agent_event_access::Acknowledgment::Forbidden
         ));
         assert!(crate::AgentApproval::find(tx.conn(), approval_id)?.is_some());
+        Ok(())
+    });
+}
+
+#[test]
+fn review_s1_incompatible_legacy_grants_are_ineffective_in_active_scopes_and_summaries() {
+    let t = legacy_personal(false);
+    t.write(|tx| {
+        let agent = Agent::find(tx.conn(), id("bender_agent"))?.unwrap();
+        for capability in crate::models::agent_access::CAPABILITIES {
+            assert!(!crate::models::agent_access::has_capability_anywhere(tx.conn(), agent.id, capability)?);
+            assert!(!agent.can(tx.conn(), capability, Some(id("watercooler")))?);
+        }
+        assert!(agent.grant_lines(tx.conn())?.unwrap().is_empty());
+        assert!(AgentGrant::all_active(tx.conn())?.iter().all(|grant| grant.agent_id != agent.id));
+        let own = crate::Room::find_or_create_direct_for(tx, &[id("bender"), id("david")], id("david"))?;
+        tx.conn().execute("INSERT INTO agent_grants(agent_id,room_id,capability,granted_by_id,created_at,updated_at) VALUES (?,?,'react',?,?,?)",params![agent.id,own.id,id("david"),tx.now(),tx.now()])?;
+        assert!(agent.can(tx.conn(), "react", Some(own.id))?);
+        assert!(agent.grant_lines(tx.conn())?.unwrap().is_empty());
+        assert!(AgentGrant::all_active(tx.conn())?.iter().all(|grant| grant.agent_id != agent.id));
+        let valid = AgentGrant::create(tx, NewGrant { agent_id: agent.id, room_id: Some(id("watercooler")), capability: "read_messages".into(), granted_by_id: id("david"), ..Default::default() })?;
+        let active = AgentGrant::all_active(tx.conn())?.into_iter().filter(|grant| grant.agent_id == agent.id).map(|grant| grant.id).collect::<Vec<_>>();
+        assert_eq!(active, [valid.id]);
+        let lines = agent.grant_lines(tx.conn())?.unwrap();
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].capability, "read_messages");
+        assert!(!lines[0].workspace_wide);
+        assert_eq!(lines[0].room_count, 1);
         Ok(())
     });
 }

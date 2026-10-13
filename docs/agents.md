@@ -405,6 +405,12 @@ room when a room is given, workspace-wide when none is. A missing grant is
 403. Seeds and workspace-agent creation do not grant `external_action`
 automatically. An administrator must issue the grant explicitly.
 
+The personal-agent policy migration changes only the schema. Existing
+incompatible personal grants remain in the audit record, retain their
+revocation timestamps, and are ignored by authorization and active-grant
+summaries. They can still be revoked, and they cannot block suspension,
+the kill switch, or owner deactivation and bans.
+
 The `approval_decided`, `github_action_completed`, and
 `fizzy_action_completed` events require a live `external_action` grant
 for the approval's room. A workspace-wide grant also covers that room.

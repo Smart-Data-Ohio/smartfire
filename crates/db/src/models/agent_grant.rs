@@ -31,7 +31,19 @@ pub struct GrantChanges {
     pub granted_by_id: Option<i64>,
     pub revoked_at: Option<Option<Timestamp>>,
 }
+/// Effective personal grants use the same live policy as authorization. Direct-room
+/// grants remain incompatible even when the owner DM has implicit access.
+pub(crate) fn effective_active_sql(grant: &str) -> String {
+    let capability = super::agent_access::capability_sql(
+        &format!("{grant}.agent_id"),
+        &format!("{grant}.room_id"),
+        &format!("{grant}.capability"),
+    );
+    format!("{grant}.revoked_at IS NULL AND (NOT EXISTS (SELECT 1 FROM agents grant_agent WHERE grant_agent.id={grant}.agent_id AND grant_agent.kind='personal') OR (EXISTS (SELECT 1 FROM rooms grant_room WHERE grant_room.id={grant}.room_id AND grant_room.type!='Rooms::Direct') AND ({capability})))")
+}
+
 impl AgentGrant {
+    /// Persisted revocation state; effective access also requires the live agent policy.
     pub fn active(&self) -> bool {
         self.revoked_at.is_none()
     }
@@ -44,7 +56,7 @@ impl AgentGrant {
     pub fn all_active(conn: &Connection) -> Result<Vec<Self>> {
         query_all(
             conn,
-            "SELECT * FROM agent_grants WHERE revoked_at IS NULL ORDER BY id",
+            &format!("SELECT g.* FROM agent_grants g WHERE {} ORDER BY g.id", effective_active_sql("g")),
             [],
             Self::from_row,
         )

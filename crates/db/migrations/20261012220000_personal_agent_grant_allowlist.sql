@@ -1,11 +1,4 @@
--- Preserve legacy grants for audit, and revoke only incompatible active personal grants.
-UPDATE agent_grants
-SET revoked_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
-WHERE revoked_at IS NULL
- AND agent_id IN (SELECT id FROM agents WHERE kind='personal')
- AND (capability NOT IN ('read_messages','post_messages','react','manage_threads')
-      OR room_id IS NULL OR EXISTS (SELECT 1 FROM rooms WHERE id=room_id AND type='Rooms::Direct'));
-
+-- Existing grants remain unchanged for audit; the runtime ignores incompatible personal grants.
 CREATE TRIGGER personal_agent_grant_insert
 BEFORE INSERT ON agent_grants
 WHEN EXISTS (SELECT 1 FROM agents WHERE id=NEW.agent_id AND kind='personal')
