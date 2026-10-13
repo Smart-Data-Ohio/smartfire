@@ -74,9 +74,27 @@ pub fn redirect_matches(registered: &str, requested: &str) -> bool {
     registered_url == requested_url
 }
 
-pub fn allows_none(client: &OAuthClient) -> bool {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AuthMethod {
+    None,
+    PrivateKeyJwt,
+}
+impl AuthMethod {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::PrivateKeyJwt => "private_key_jwt",
+        }
+    }
+}
+
+pub fn allows(client: &OAuthClient, method: AuthMethod) -> bool {
     serde_json::from_str::<Vec<String>>(&client.auth_methods)
-        .is_ok_and(|methods| methods.iter().any(|method| method == "none"))
+        .is_ok_and(|methods| methods.iter().any(|name| name == method.as_str()))
+}
+
+pub fn has_supported_method(client: &OAuthClient) -> bool {
+    allows(client, AuthMethod::None) || allows(client, AuthMethod::PrivateKeyJwt)
 }
 
 struct PublicResolver<'a>(&'a dyn net::Resolver);
@@ -104,6 +122,16 @@ pub struct Document {
 /// Includes DNS, TLS, headers and the bounded body in one total deadline.
 pub async fn fetch(network: &Network, client_id: &str) -> anyhow::Result<Document> {
     let url = metadata_url(client_id)?;
+    let (value, cache_seconds) = fetch_json(network, &url, &["application/json"]).await?;
+    parse_document(value, cache_seconds, client_id)
+}
+
+/// CIMD and JWKS share public DNS pinning, no redirects, and the same body/deadline limits.
+pub async fn fetch_json(
+    network: &Network,
+    url: &Url,
+    media_types: &[&str],
+) -> anyhow::Result<(Value, i64)> {
     tokio::time::timeout(DEADLINE, async {
         let host = url.host_str().expect("validated host");
         let pinned_ip =
@@ -124,7 +152,7 @@ pub async fn fetch(network: &Network, client_id: &str) -> anyhow::Result<Documen
             target,
             Some(endpoint.host_header()),
             vec![
-                ("Accept".into(), "application/json".into()),
+                ("Accept".into(), media_types.join(", ")),
                 ("Accept-Encoding".into(), "identity".into()),
             ],
         );
@@ -141,10 +169,10 @@ pub async fn fetch(network: &Network, client_id: &str) -> anyhow::Result<Documen
         .await?;
         anyhow::ensure!(
             response.status == 200
-                && response
-                    .content_type()
-                    .is_some_and(|t| t.eq_ignore_ascii_case("application/json")),
-            "Client metadata must be a JSON 200 response"
+                && response.content_type().is_some_and(|t| media_types
+                    .iter()
+                    .any(|media_type| t.eq_ignore_ascii_case(media_type))),
+            "OAuth document must have an accepted JSON media type and a 200 response"
         );
         let cache_seconds = cache_seconds(response.header("cache-control").as_deref());
         anyhow::ensure!(
@@ -157,45 +185,48 @@ pub async fn fetch(network: &Network, client_id: &str) -> anyhow::Result<Documen
             anyhow::bail!("Client metadata exceeds 16 KB")
         };
         let value: Value = serde_json::from_slice(&bytes)?;
-        anyhow::ensure!(
-            value["client_id"].as_str() == Some(client_id),
-            "Client ID mismatch"
-        );
-        anyhow::ensure!(
-            value["client_name"]
-                .as_str()
-                .is_some_and(|name| !name.trim().is_empty() && name.len() <= 100),
-            "Client name required"
-        );
-        let redirect_uris: Vec<String> = serde_json::from_value(value["redirect_uris"].clone())?;
-        anyhow::ensure!(
-            !redirect_uris.is_empty()
-                && redirect_uris.iter().all(|uri| redirect_url(uri).is_some()),
-            "Invalid redirect URIs"
-        );
-        let methods = if let Some(array) = value.get("token_endpoint_auth_methods_supported") {
-            serde_json::from_value::<Vec<String>>(array.clone())?
-        } else {
-            vec![
-                value
-                    .get("token_endpoint_auth_method")
-                    .map(|v| {
-                        v.as_str()
-                            .ok_or_else(|| anyhow::anyhow!("Invalid auth method"))
-                    })
-                    .transpose()?
-                    .unwrap_or("client_secret_basic")
-                    .into(),
-            ]
-        };
-        Ok(Document {
-            value,
-            redirect_uris,
-            methods,
-            cache_seconds,
-        })
+        Ok((value, cache_seconds))
     })
     .await?
+}
+
+fn parse_document(value: Value, cache_seconds: i64, client_id: &str) -> anyhow::Result<Document> {
+    anyhow::ensure!(
+        value["client_id"].as_str() == Some(client_id),
+        "Client ID mismatch"
+    );
+    anyhow::ensure!(
+        value["client_name"]
+            .as_str()
+            .is_some_and(|name| !name.trim().is_empty() && name.len() <= 100),
+        "Client name required"
+    );
+    let redirect_uris: Vec<String> = serde_json::from_value(value["redirect_uris"].clone())?;
+    anyhow::ensure!(
+        !redirect_uris.is_empty() && redirect_uris.iter().all(|uri| redirect_url(uri).is_some()),
+        "Invalid redirect URIs"
+    );
+    let methods = if let Some(array) = value.get("token_endpoint_auth_methods_supported") {
+        serde_json::from_value::<Vec<String>>(array.clone())?
+    } else {
+        vec![
+            value
+                .get("token_endpoint_auth_method")
+                .map(|v| {
+                    v.as_str()
+                        .ok_or_else(|| anyhow::anyhow!("Invalid auth method"))
+                })
+                .transpose()?
+                .unwrap_or("client_secret_basic")
+                .into(),
+        ]
+    };
+    Ok(Document {
+        value,
+        redirect_uris,
+        methods,
+        cache_seconds,
+    })
 }
 
 fn cache_seconds(header: Option<&str>) -> i64 {

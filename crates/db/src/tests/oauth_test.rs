@@ -228,7 +228,7 @@ fn oauth_migration_of_default_seed_preserves_background_jobs() {
     let file = dir.path().join("default.sqlite3");
     std::fs::copy(source, file.clone()).unwrap();
     let mut conn = Connection::open(file).unwrap();
-    conn.execute_batch("DROP TABLE IF EXISTS oauth_authorizations; DROP TABLE IF EXISTS oauth_tokens; DROP TABLE IF EXISTS oauth_connections; DROP TABLE IF EXISTS oauth_clients; DELETE FROM schema_migrations WHERE version='20261013120000';").unwrap();
+    conn.execute_batch("DROP TABLE IF EXISTS oauth_assertion_jtis; DROP TABLE IF EXISTS oauth_authorizations; DROP TABLE IF EXISTS oauth_tokens; DROP TABLE IF EXISTS oauth_connections; DROP TABLE IF EXISTS oauth_clients; DELETE FROM schema_migrations WHERE version IN ('20261013120000','20261013200000');").unwrap();
     fn jobs(conn: &Connection) -> Vec<Vec<rusqlite::types::Value>> {
         let mut statement = conn
             .prepare("SELECT * FROM background_jobs ORDER BY id")
@@ -243,9 +243,29 @@ fn oauth_migration_of_default_seed_preserves_background_jobs() {
     let before = jobs(&conn);
     assert_eq!(
         crate::migrations::migrate_preserving_existing_foreign_key_violations(&mut conn).unwrap(),
-        ["20261013120000"]
+        ["20261013120000", "20261013200000"]
     );
     assert_eq!(jobs(&conn), before);
+}
+
+#[test]
+fn oauth_assertion_jtis_are_unique_per_client_swept_on_expiry_and_cascade() {
+    let (t, connection) = setup();
+    t.write(move |tx| {
+        let client = connection.oauth_client_id;
+        let expiry = tx.now().since(SignedDuration::from_secs(60));
+        let insert = "INSERT INTO oauth_assertion_jtis(oauth_client_id,jti_digest,expires_at) VALUES(?,?,?)";
+        tx.conn().execute(insert, params![client, "digest", expiry])?;
+        assert!(tx.conn().execute(insert, params![client, "digest", expiry]).is_err());
+        tx.conn().execute(insert, params![client, "expired", tx.now()])?;
+        let other: i64 = tx.conn().query_row("INSERT INTO oauth_clients(client_id,registration,client_name,redirect_uris,created_at,updated_at) VALUES('other','cimd','Other','[]',?,?) RETURNING id", params![tx.now(),tx.now()], |r| r.get(0))?;
+        tx.conn().execute(insert, params![other, "digest", expiry])?;
+        oauth::sweep(tx)?;
+        assert_eq!(crate::sql::query_all(tx.conn(), "SELECT jti_digest FROM oauth_assertion_jtis ORDER BY id", [], |r| r.get::<_,String>(0))?, ["digest", "digest"]);
+        tx.conn().execute("DELETE FROM oauth_clients WHERE id=?", [other])?;
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM oauth_assertion_jtis", [], |r| r.get::<_,i64>(0))?, 1);
+        Ok(())
+    });
 }
 
 #[test]
