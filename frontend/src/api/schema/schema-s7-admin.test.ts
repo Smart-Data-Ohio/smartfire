@@ -54,6 +54,8 @@ describe("S7 admin schemas", () => {
       restrictRoomCreationToAdministrators: false,
       uploadLimitBytes: 100 * 1024 * 1024,
       stageAudienceBudget: 300,
+      memberAgentsEnabled: true,
+      memberAgentLimit: 3,
       version: "2.0.0",
       description: "Our community",
       vanitySlug: "smart-data",
@@ -65,6 +67,8 @@ describe("S7 admin schemas", () => {
       restrictRoomCreationToAdministrators: true,
       uploadLimitBytes: null,
       stageAudienceBudget: null,
+      memberAgentsEnabled: null,
+      memberAgentLimit: null,
       description: null,
       vanitySlug: null,
     });

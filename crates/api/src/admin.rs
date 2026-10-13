@@ -285,6 +285,8 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
             .restrict_room_creation_to_administrators(),
         upload_limit_bytes: account.settings().upload_limit_bytes(),
         stage_audience_budget: account.settings().stage_audience_budget(),
+        member_agents_enabled: account.settings().member_agents_enabled(),
+        member_agent_limit: account.settings().member_agent_limit(),
         version: c.app().config.app_version.clone(),
         description: account.settings().description().to_string(),
         vanity_slug: account.settings().vanity_slug().map(str::to_string),
@@ -313,6 +315,11 @@ async fn save_workspace(c: &mut Ctx) -> Result {
             validation("stageAudienceBudget", "must be a positive safe integer"),
         ));
     }
+    if let Some(limit) = update.member_agent_limit
+        && !(0..=campfire_db::models::account::MAX_UPLOAD_LIMIT_BYTES).contains(&limit)
+    {
+        return Err(fail(c, validation("memberAgentLimit", "must be a non-negative safe integer")));
+    }
     let description = update
         .description
         .as_deref()
@@ -335,6 +342,12 @@ async fn save_workspace(c: &mut Ctx) -> Result {
                 restrict.to_string(),
             )]
         });
+    if let Some(enabled) = update.member_agents_enabled {
+        settings.get_or_insert_with(Vec::new).push(("member_agents_enabled".into(), enabled.to_string()));
+    }
+    if let Some(limit) = update.member_agent_limit {
+        settings.get_or_insert_with(Vec::new).push(("member_agent_limit".into(), limit.to_string()));
+    }
     if let Some(policy) = update.afk_policy {
         settings.get_or_insert_with(Vec::new)
             .push(("afk_policy".into(), serde_json::to_string(&policy).expect("AFK policy encodes")));

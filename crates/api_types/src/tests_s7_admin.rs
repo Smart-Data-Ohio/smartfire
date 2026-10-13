@@ -52,6 +52,8 @@ fn the_workspace_and_its_writes() {
             restrict_room_creation_to_administrators: false,
             upload_limit_bytes: 104_857_600,
             stage_audience_budget: 300,
+            member_agents_enabled: true,
+            member_agent_limit: 3,
             version: "2.0.0".into(),
             description: "Our community".into(),
             vanity_slug: Some("smart-data".into()),
@@ -70,6 +72,8 @@ fn the_workspace_and_its_writes() {
             "restrictRoomCreationToAdministrators": false,
             "uploadLimitBytes": 104857600,
             "stageAudienceBudget": 300,
+            "memberAgentsEnabled": true,
+            "memberAgentLimit": 3,
             "version": "2.0.0",
             "description": "Our community",
             "vanitySlug": "smart-data",
@@ -84,10 +88,12 @@ fn the_workspace_and_its_writes() {
             restrict_room_creation_to_administrators: Some(true),
             upload_limit_bytes: None,
             stage_audience_budget: None,
+            member_agents_enabled: None,
+            member_agent_limit: None,
             description: None,
             vanity_slug: None,
         },
-        json!({ "afkPolicy": null, "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null, "stageAudienceBudget": null, "description": null, "vanitySlug": null }),
+        json!({ "afkPolicy": null, "name": null, "restrictRoomCreationToAdministrators": true, "uploadLimitBytes": null, "stageAudienceBudget": null, "memberAgentsEnabled": null, "memberAgentLimit": null, "description": null, "vanitySlug": null }),
     );
     assert_wire(
         &UpdateLogo {
