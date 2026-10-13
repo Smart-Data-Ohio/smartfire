@@ -16,6 +16,8 @@ impl Registration {
         if client_name.trim().is_empty()
             || client_name.chars().count() > 100
             || value["token_endpoint_auth_method"].as_str() != Some("none")
+            || value.get("client_secret").is_some()
+            || value.get("client_secret_expires_at").is_some()
         {
             return Err(invalid);
         }
@@ -24,17 +26,14 @@ impl Registration {
         if redirect_uris.is_empty() || redirect_uris.iter().any(|uri| redirect_url(uri).is_none()) {
             return Err("invalid_redirect_uri");
         }
-        let grant_types: Vec<String> = match value.get("grant_types") {
+        let mut grant_types: Vec<String> = match value.get("grant_types") {
             Some(grants) => serde_json::from_value(grants.clone()).map_err(|_| invalid)?,
             None => vec!["authorization_code".into(), "refresh_token".into()],
         };
-        if !grant_types
-            .iter()
-            .any(|grant| grant == "authorization_code")
-            || grant_types
-                .iter()
-                .any(|grant| !matches!(grant.as_str(), "authorization_code" | "refresh_token"))
-        {
+        // Token issuance and refresh support both grants for every connection. Require the
+        // fixed pair so metadata matches that policy without per-client grant checks.
+        grant_types.sort_unstable();
+        if grant_types != ["authorization_code", "refresh_token"] {
             return Err(invalid);
         }
         if let Some(responses) = value.get("response_types") {
