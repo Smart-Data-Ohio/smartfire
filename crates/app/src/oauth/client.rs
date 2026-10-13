@@ -219,7 +219,6 @@ pub async fn identify(
 ) -> campfire_kit::Result<OAuthClient> {
     use campfire_kit::Error;
     use rusqlite::params;
-    metadata_url(client_id).map_err(|_| Error::NotFound)?;
     let id = client_id.to_string();
     let cached = app
         .db
@@ -230,13 +229,15 @@ pub async fn identify(
         if client.blocked_at.is_some() {
             return Err(Error::NotFound);
         }
-        if client
-            .refetch_after
-            .is_some_and(|at| at > Timestamp::from_jiff(app.clock.now()))
+        if client.registration == "dcr"
+            || client
+                .refetch_after
+                .is_some_and(|at| at > Timestamp::from_jiff(app.clock.now()))
         {
             return Ok(client);
         }
     }
+    metadata_url(client_id).map_err(|_| Error::NotFound)?;
     may_fetch()?;
     let document = fetch(&app.subscription_network, client_id)
         .await

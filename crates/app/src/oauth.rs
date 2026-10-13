@@ -1,5 +1,6 @@
 //! OAuth authorization-server operations. Public protocol refusals commit replay revocation.
 pub mod client;
+pub mod registration;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use campfire_db::{
     AgentCredential, Connection, Result, Timestamp, Tx,

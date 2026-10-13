@@ -320,3 +320,82 @@ fn oauth_workspace_data_removal_clears_all_rows_under_enforced_foreign_keys() {
     });
     assert_eq!(token_count(&t), 0);
 }
+
+#[test]
+fn oauth_dcr_sweep_removes_only_old_unused_clients_and_keeps_pending_consent() {
+    let (t, connection) = setup();
+    let connection_id = connection.id;
+    t.write(move |tx| {
+        let old = tx.now().ago(SignedDuration::from_hours(25));
+        token(tx, connection_id, "dcr-tombstone", "refresh", old, Some(old))?;
+        token(tx, connection_id, "dcr-access", "access", tx.now().since(SignedDuration::from_mins(5)), None)?;
+        // A client with a connection survives, even after revocation and token-family cleanup.
+        tx.conn().execute("UPDATE oauth_clients SET registration='dcr',created_at=? WHERE id=?", params![old,connection.oauth_client_id])?;
+        for (id, kind, created) in [("old-unused","dcr",old),("fresh-unused","dcr",tx.now()),("boundary-unused","dcr",tx.now().ago(SignedDuration::from_hours(24))),("old-cimd","cimd",old),("pending-unused","dcr",old)] {
+            tx.conn().execute("INSERT INTO oauth_clients(client_id,registration,client_name,redirect_uris,created_at,updated_at) VALUES(?,?,'Test client','[]',?,?)", params![id,kind,created,created])?;
+        }
+        tx.conn().execute("INSERT INTO oauth_authorizations(public_id,oauth_client_id,user_id,redirect_uri,code_challenge,scope,resource,expires_at,created_at,updated_at) SELECT 'pending-dcr',id,?,'https://client.example/callback','challenge','agent','http://example.com/agents/mcp',?,?,? FROM oauth_clients WHERE client_id='pending-unused'", params![super::id("david"),tx.now().since(SignedDuration::from_mins(10)),tx.now(),tx.now()])?;
+        oauth::sweep(tx)
+    });
+    let clients = || {
+        t.read(|conn| {
+            let mut stmt =
+                conn.prepare("SELECT client_id FROM oauth_clients ORDER BY client_id")?;
+            Ok(stmt
+                .query_map([], |r| r.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?)
+        })
+    };
+    assert_eq!(
+        clients(),
+        [
+            "fresh-unused",
+            "https://client.example/metadata",
+            "old-cimd",
+            "pending-unused"
+        ]
+    );
+    t.write(move |tx| {
+        OAuthConnection::find(tx.conn(), connection_id)?
+            .unwrap()
+            .revoke(tx)?;
+        oauth::sweep(tx)
+    });
+    assert_eq!(
+        clients(),
+        [
+            "fresh-unused",
+            "https://client.example/metadata",
+            "old-cimd",
+            "pending-unused"
+        ]
+    );
+    assert_eq!(
+        token_count(&t),
+        2,
+        "revoked family retains its tombstones until every token expires"
+    );
+    t.clock
+        .travel_to(t.now().since(SignedDuration::from_mins(10)));
+    t.write(|tx| oauth::sweep(tx));
+    assert_eq!(
+        clients(),
+        [
+            "fresh-unused",
+            "https://client.example/metadata",
+            "old-cimd"
+        ]
+    );
+    assert_eq!(token_count(&t), 0);
+    t.write(move |tx| {
+        crate::AgentCredential::find(tx.conn(), connection.agent_credential_id)?
+            .unwrap()
+            .destroy(tx)?;
+        oauth::sweep(tx)
+    });
+    assert_eq!(clients(), ["fresh-unused", "old-cimd"]);
+    t.clock
+        .travel_to(t.now().since(SignedDuration::from_hours(24)));
+    t.write(|tx| oauth::sweep(tx));
+    assert_eq!(clients(), ["old-cimd"]);
+}

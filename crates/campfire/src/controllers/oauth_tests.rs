@@ -63,7 +63,7 @@ async fn oauth_switch_off_preserves_mcp_bytes_and_hides_endpoints() {
 }
 
 #[tokio::test]
-async fn oauth_switch_on_advertises_only_cimd_none_and_challenges() {
+async fn oauth_switch_on_advertises_cimd_dcr_none_and_challenges() {
     let app = setup(true).await;
     let meta = app
         .anonymous()
@@ -75,7 +75,10 @@ async fn oauth_switch_on_advertises_only_cimd_none_and_challenges() {
         meta.json()["token_endpoint_auth_methods_supported"],
         json!(["none"])
     );
-    assert!(meta.json().get("registration_endpoint").is_none());
+    assert_eq!(
+        meta.json()["registration_endpoint"],
+        "https://smartfire.example/oauth/register"
+    );
     let mut owner = app.sign_in(DAVID).await;
     assert_eq!(
         owner.get("/api/v1/me/agents").await.json()["oauthAvailable"],
@@ -1973,4 +1976,461 @@ async fn oauth_approval_gives_one_identical_error_for_any_room_the_owner_cannot_
     assert_eq!(bodies[0], bodies[1]);
     assert_eq!(bodies[0], bodies[2]);
     assert!(!bodies[0].contains("existing room"), "{}", bodies[0]);
+}
+
+fn registration() -> Value {
+    json!({"client_name":"Registered client","redirect_uris":[REDIRECT,"http://127.0.0.1/callback","http://[::1]/callback"],"token_endpoint_auth_method":"none"})
+}
+async fn register(app: &TestApp, input: &Value, ip: &str) -> Reply {
+    app.anonymous()
+        .send(
+            Req::new(Method::POST, "/oauth/register")
+                .header("x-forwarded-for", ip)
+                .header("origin", "https://connector.example")
+                .json_body(input),
+        )
+        .await
+}
+
+#[tokio::test]
+async fn oauth_dcr_public_client_completes_pkce_refresh_and_blocking() {
+    let f = fixture(metadata()).await;
+    let registered = register(&f.app, &registration(), "203.0.113.7").await;
+    assert_eq!(registered.status.as_u16(), 201, "{}", registered.text());
+    let body = registered.json();
+    let client_id = body["client_id"].as_str().unwrap().to_string();
+    assert!(!client_id.starts_with("https:"));
+    assert_eq!(body["client_id_issued_at"], f.clock.now().as_second());
+    assert_eq!(body["client_name"], "Registered client");
+    assert_eq!(body["redirect_uris"], registration()["redirect_uris"]);
+    assert_eq!(body["token_endpoint_auth_method"], "none");
+    assert_eq!(
+        body["grant_types"],
+        json!(["authorization_code", "refresh_token"])
+    );
+    assert_eq!(body["response_types"], json!(["code"]));
+    assert_eq!(body["scope"], "agent");
+    assert!(body.get("client_secret").is_none());
+    assert_eq!(registered.header("access-control-allow-origin"), Some("*"));
+    assert_eq!(registered.header("access-control-allow-credentials"), None);
+    assert_eq!(registered.header("set-cookie"), None);
+    assert_eq!(registered.header("cache-control"), Some("no-store"));
+    let id = client_id.clone();
+    let stored = f
+        .app
+        .db()
+        .read(move |conn| {
+            Ok(campfire_db::models::oauth::OAuthClient::find_by_client_id(conn, &id)?.unwrap())
+        })
+        .await
+        .unwrap();
+    assert_eq!(stored.registration, "dcr");
+    assert_eq!(stored.auth_methods, r#"["none"]"#);
+    assert_eq!(
+        serde_json::from_str::<Value>(stored.metadata.as_deref().unwrap()).unwrap(),
+        body
+    );
+    assert!(stored.fetched_at.is_none());
+    assert!(stored.refetch_after.is_none());
+
+    let mut browser = f.app.sign_in(DAVID).await;
+    let mismatch = browser
+        .get(&authorize_url(&client_id, "https://client.example/other"))
+        .await;
+    assert!(
+        mismatch
+            .location()
+            .unwrap()
+            .ends_with("/app/oauth/error?error=invalid_redirect_uri")
+    );
+    // The DCR resolver never performs a metadata fetch, even beyond the CIMD cache lifetime.
+    f.clock.advance(jiff::SignedDuration::from_secs(601));
+    let code = approve(&mut browser, &client_id, REDIRECT).await;
+    invalid(
+        exchange(
+            &f.app,
+            &code,
+            &client_id,
+            REDIRECT,
+            "wrong-verifier",
+            RESOURCE,
+        )
+        .await,
+    );
+    let pair = exchange(&f.app, &code, &client_id, REDIRECT, VERIFIER, RESOURCE).await;
+    assert_eq!(pair.status.as_u16(), 200, "{}", pair.text());
+    let pair = pair.json();
+    assert_eq!(
+        mcp(&f.app, pair["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        200
+    );
+    invalid(
+        refresh(
+            &f.app,
+            pair["refresh_token"].as_str().unwrap(),
+            &client_id,
+            RESOURCE,
+            true,
+        )
+        .await,
+    );
+    let rotated = refresh(
+        &f.app,
+        pair["refresh_token"].as_str().unwrap(),
+        &client_id,
+        RESOURCE,
+        false,
+    )
+    .await;
+    assert_eq!(rotated.status.as_u16(), 200, "{}", rotated.text());
+    let rotated = rotated.json();
+    let code = approve(&mut browser, &client_id, "http://[::1]:54321/callback").await;
+    assert_eq!(
+        exchange(
+            &f.app,
+            &code,
+            &client_id,
+            "http://[::1]:54321/callback",
+            VERIFIER,
+            RESOURCE
+        )
+        .await
+        .status
+        .as_u16(),
+        200
+    );
+    assert!(f.server.received.lock().unwrap().is_empty());
+    assert!(f.resolver.lookups().is_empty());
+    f.app
+        .db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE oauth_clients SET blocked_at=? WHERE id=?",
+                params![tx.now(), stored.id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        mcp(&f.app, rotated["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+    invalid(
+        refresh(
+            &f.app,
+            rotated["refresh_token"].as_str().unwrap(),
+            &client_id,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    let blocked = browser.get(&authorize_url(&client_id, REDIRECT)).await;
+    assert!(
+        blocked
+            .location()
+            .unwrap()
+            .ends_with("/app/oauth/error?error=invalid_client")
+    );
+}
+
+#[tokio::test]
+async fn oauth_dcr_rejects_confidential_other_and_missing_methods() {
+    let app = setup(true).await;
+    for (index, method) in [
+        json!("client_secret_basic"),
+        json!("client_secret_post"),
+        json!("private_key_jwt"),
+        json!("unknown"),
+        json!(null),
+        json!(["none"]),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut input = registration();
+        input["token_endpoint_auth_method"] = method;
+        let reply = register(&app, &input, &format!("203.0.113.{}", index + 1)).await;
+        assert_eq!(reply.status.as_u16(), 400, "{}", reply.text());
+        assert_eq!(reply.json()["error"], "invalid_client_metadata");
+        assert_eq!(reply.header("access-control-allow-origin"), Some("*"));
+    }
+    let mut input = registration();
+    input
+        .as_object_mut()
+        .unwrap()
+        .remove("token_endpoint_auth_method");
+    let reply = register(&app, &input, "203.0.113.20").await;
+    assert_eq!(reply.status.as_u16(), 400);
+    assert_eq!(reply.json()["error"], "invalid_client_metadata");
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(
+                conn.query_row("SELECT COUNT(*) FROM oauth_clients", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        0
+    );
+}
+
+#[tokio::test]
+async fn oauth_dcr_validates_redirects_names_and_supported_metadata() {
+    let app = setup(true).await;
+    let bad_redirects = [
+        json!([]),
+        json!(null),
+        json!("https://client.example/callback"),
+        json!(["http://client.example/callback"]),
+        json!(["http://localhost/callback"]),
+        json!(["http://192.168.1.1/callback"]),
+        json!(["ftp://client.example/callback"]),
+        json!(["https://client.example/callback#fragment"]),
+        json!(["https://user:secret@client.example/callback"]),
+        json!([REDIRECT, "http://bad.example/callback"]),
+    ];
+    for (index, redirects) in bad_redirects.into_iter().enumerate() {
+        let mut input = registration();
+        input["redirect_uris"] = redirects;
+        let reply = register(&app, &input, &format!("203.0.113.{}", index + 1)).await;
+        assert_eq!(reply.status.as_u16(), 400, "{}", reply.text());
+        assert_eq!(reply.json()["error"], "invalid_redirect_uri");
+    }
+    let mut input = registration();
+    input.as_object_mut().unwrap().remove("redirect_uris");
+    let reply = register(&app, &input, "203.0.113.30").await;
+    assert_eq!(reply.status.as_u16(), 400);
+    assert_eq!(reply.json()["error"], "invalid_redirect_uri");
+    for (index, name) in [
+        json!(""),
+        json!("   "),
+        json!(null),
+        json!(42),
+        json!("x".repeat(101)),
+        json!("é".repeat(101)),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut input = registration();
+        input["client_name"] = name;
+        let reply = register(&app, &input, &format!("203.0.113.{}", index + 50)).await;
+        assert_eq!(reply.status.as_u16(), 400, "{}", reply.text());
+        assert_eq!(reply.json()["error"], "invalid_client_metadata");
+    }
+    let mut input = registration();
+    input.as_object_mut().unwrap().remove("client_name");
+    let reply = register(&app, &input, "203.0.113.70").await;
+    assert_eq!(reply.status.as_u16(), 400);
+    assert_eq!(reply.json()["error"], "invalid_client_metadata");
+    for (key, value) in [
+        ("grant_types", json!(["client_credentials"])),
+        ("response_types", json!(["token"])),
+        ("scope", json!("admin")),
+        ("client_uri", json!("javascript:alert(1)")),
+    ] {
+        let mut input = registration();
+        input[key] = value;
+        let reply = register(&app, &input, "203.0.113.80").await;
+        assert_eq!(reply.status.as_u16(), 400);
+        assert_eq!(reply.json()["error"], "invalid_client_metadata");
+    }
+    let mut input = registration();
+    input["client_name"] = json!("é".repeat(100));
+    input["redirect_uris"] = json!([
+        "http://127.0.0.2:56789/callback",
+        "http://[::1]:12345/callback"
+    ]);
+    input["client_uri"] = json!("https://client.example/");
+    input["ignored_extension"] = json!("ignored");
+    let reply = register(&app, &input, "203.0.113.90").await;
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    assert_eq!(reply.json()["client_name"], input["client_name"]);
+    assert_eq!(reply.json()["client_uri"], input["client_uri"]);
+    assert!(reply.json().get("ignored_extension").is_none());
+}
+
+#[tokio::test]
+async fn oauth_dcr_rate_limit_is_ten_per_hour_per_ip_and_counts_invalid_requests() {
+    let clock = Arc::new(FrozenClock::new("2026-10-13T16:00:00Z".parse().unwrap()));
+    let app = TestApp::boot_with_clock_and_env(
+        clock.clone(),
+        &[
+            ("APP_URL", "https://smartfire.example"),
+            ("SMARTFIRE_MCP_OAUTH", "1"),
+        ],
+    )
+    .await
+    .unwrap()
+    .without_job_runner()
+    .await;
+    let mut ids = HashSet::new();
+    for _ in 0..10 {
+        let reply = register(&app, &registration(), "203.0.113.1").await;
+        assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+        assert!(ids.insert(reply.json()["client_id"].as_str().unwrap().to_string()));
+    }
+    let reply = register(&app, &registration(), "203.0.113.1").await;
+    assert_eq!(reply.status.as_u16(), 429);
+    assert_eq!(reply.header("retry-after"), Some("3600"));
+    assert_eq!(reply.header("access-control-allow-origin"), Some("*"));
+    assert_eq!(reply.header("set-cookie"), None);
+    assert_eq!(
+        register(&app, &registration(), "203.0.113.2")
+            .await
+            .status
+            .as_u16(),
+        201
+    );
+    clock.advance(jiff::SignedDuration::from_secs(3599));
+    assert_eq!(
+        register(&app, &registration(), "203.0.113.1")
+            .await
+            .status
+            .as_u16(),
+        429
+    );
+    clock.advance(jiff::SignedDuration::from_secs(1));
+    assert_eq!(
+        register(&app, &registration(), "203.0.113.1")
+            .await
+            .status
+            .as_u16(),
+        201
+    );
+    for _ in 0..10 {
+        assert_eq!(
+            register(&app, &json!({}), "203.0.113.3")
+                .await
+                .status
+                .as_u16(),
+            400
+        );
+    }
+    assert_eq!(
+        register(&app, &registration(), "203.0.113.3")
+            .await
+            .status
+            .as_u16(),
+        429
+    );
+}
+
+#[tokio::test]
+async fn oauth_dcr_requires_bounded_json_and_preflight_sets_no_cookies() {
+    let app = setup(true).await;
+    for req in [
+        Req::new(Method::POST, "/oauth/register").body(b"{}"),
+        Req::new(Method::POST, "/oauth/register")
+            .header("content-type", "application/json")
+            .body(b"{"),
+        Req::new(Method::POST, "/oauth/register")
+            .header("content-type", "application/json")
+            .body(vec![b' '; 16385]),
+    ] {
+        let reply = app.anonymous().send(req).await;
+        assert_eq!(reply.status.as_u16(), 400, "{}", reply.text());
+        assert_eq!(reply.json()["error"], "invalid_client_metadata");
+        assert_eq!(reply.header("access-control-allow-origin"), Some("*"));
+    }
+    let mut browser = app.sign_in(DAVID).await;
+    let reply = browser
+        .send(
+            Req::new(Method::OPTIONS, "/oauth/register")
+                .header("origin", "https://connector.example"),
+        )
+        .await;
+    assert_eq!(reply.status.as_u16(), 204);
+    assert_eq!(reply.header("access-control-allow-origin"), Some("*"));
+    assert_eq!(reply.header("access-control-allow-credentials"), None);
+    assert_eq!(reply.header("set-cookie"), None);
+    let reply = browser
+        .send(Req::new(Method::POST, "/oauth/register").json_body(&registration()))
+        .await;
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    assert_eq!(reply.header("set-cookie"), None);
+}
+
+#[tokio::test]
+async fn oauth_dcr_rejects_secret_fields_even_with_public_auth_method() {
+    let app = setup(true).await;
+    for (key, value) in [
+        ("client_secret", json!("secret")),
+        ("client_secret", json!("")),
+        ("client_secret", json!(null)),
+        ("client_secret_expires_at", json!(0)),
+        ("client_secret_expires_at", json!(null)),
+    ] {
+        let mut input = registration();
+        input[key] = value;
+        let reply = register(&app, &input, "203.0.113.31").await;
+        assert_eq!(reply.status.as_u16(), 400, "{key}: {}", reply.text());
+        assert_eq!(reply.json()["error"], "invalid_client_metadata");
+    }
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(
+                conn.query_row("SELECT COUNT(*) FROM oauth_clients", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        0
+    );
+}
+
+#[tokio::test]
+async fn oauth_dcr_requires_and_returns_the_fixed_grant_pair() {
+    let app = setup(true).await;
+    for (grants, status) in [
+        (None, 201),
+        (Some(json!(["authorization_code", "refresh_token"])), 201),
+        (Some(json!(["authorization_code"])), 400),
+        (Some(json!(["unknown"])), 400),
+        (Some(json!(["refresh_token", "authorization_code"])), 201),
+        (Some(json!([])), 400),
+        (Some(json!(["refresh_token"])), 400),
+        (
+            Some(json!(["authorization_code", "authorization_code"])),
+            400,
+        ),
+        (
+            Some(json!(["authorization_code", "refresh_token", "unknown"])),
+            400,
+        ),
+        (Some(json!(null)), 400),
+    ] {
+        let mut input = registration();
+        if let Some(grants) = grants {
+            input["grant_types"] = grants;
+        }
+        let reply = register(&app, &input, "203.0.113.32").await;
+        assert_eq!(reply.status.as_u16(), status, "{input}: {}", reply.text());
+        if status == 201 {
+            assert_eq!(
+                reply.json()["grant_types"],
+                json!(["authorization_code", "refresh_token"])
+            );
+        } else {
+            assert_eq!(reply.json()["error"], "invalid_client_metadata");
+        }
+    }
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(
+                conn.query_row("SELECT COUNT(*) FROM oauth_clients", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        3
+    );
 }
