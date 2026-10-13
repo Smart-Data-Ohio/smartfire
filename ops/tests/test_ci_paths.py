@@ -127,6 +127,7 @@ class PathScopeTest(unittest.TestCase):
             ("crates/campfire/src/controllers/oauth_browser_tests.rs", True),
             ("parity/seeds/manifest.json", True),
             (".github/workflows/oauth-browser.yml", True),
+            ("ops/scripts/mcp-oauth-smoke.sh", True),
             ("docs/usage.md", False),
         ]:
             head = self.commit(path)

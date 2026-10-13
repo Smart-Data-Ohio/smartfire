@@ -29,7 +29,7 @@ jobs:
       - name: Decide whether OAuth acceptance is needed
         id: scope
         env:
-          PATTERN: '^(crates/|frontend/|fixtures/|test-support/|parity/|\.cargo/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|\.github/workflows/oauth-browser\.yml$|\.github/scripts/)'
+          PATTERN: '^(crates/|frontend/|fixtures/|test-support/|parity/|\.cargo/|Cargo\.(toml|lock)$|rust-toolchain\.toml$|ops/scripts/mcp-oauth-smoke\.sh$|\.github/workflows/oauth-browser\.yml$|\.github/scripts/)'
         run: python3 .github/scripts/check-paths.py
       - name: Set up Node
         if: steps.scope.outputs.run == 'true'

@@ -146,6 +146,41 @@ Calendar and Drive use additional configuration. Follow the
 `APP_URL` for links created by background Calendar jobs and the restricted
 browser key for Drive Picker.
 
+#### MCP OAuth
+
+MCP OAuth is on by default. Set `APP_URL=https://chat.example.com` to your
+public origin, with no path. OAuth discovery and `/oauth/*` are available only
+with an HTTPS `APP_URL`. Development also allows `http://localhost` when
+`RAILS_ENV=development`. An absent or unsuitable `APP_URL` keeps OAuth
+unavailable. See [Connect by URL](agents-mcp.md#connect-by-url) for member setup.
+
+When a proxy terminates TLS, set `DISABLE_SSL=true` and keep `APP_URL` as the
+external HTTPS origin. Forward the OAuth paths and `/.well-known/*` unchanged.
+Set `X-Forwarded-Proto: https` and preserve the external host. Restrict direct
+access to the app so clients cannot bypass the proxy.
+
+Client registration is limited to **10 requests per hour per client IP**.
+At the public proxy, discard incoming `Forwarded`, `X-Forwarded-For`, and
+`Client-IP` headers, then set `X-Forwarded-For` to the actual client IP.
+Additional trusted proxies may append their hop. Smartfire uses the first
+untrusted address from the right, skipping loopback, private, and link-local
+proxy addresses. A conflicting `Client-IP` header is rejected. Without the
+correct forwarded IP, users behind the proxy share its registration limit.
+
+To turn OAuth off, set `SMARTFIRE_MCP_OAUTH=0` and restart. `false`, `off`, and
+`no` also disable it, regardless of case or surrounding whitespace. Unset,
+blank, or other values leave it on. This hides OAuth discovery, authorization,
+registration, token, and revocation endpoints and the web connector choices.
+Existing OAuth access tokens keep working until expiry or revocation. To stop
+them immediately, revoke the connection or block its client app. Static agent
+tokens remain available.
+
+After a release, run the unauthenticated deployment check:
+
+```sh
+ops/scripts/mcp-oauth-smoke.sh https://chat.example.com
+```
+
 #### GIF search (optional)
 
 Set `KLIPY_API_KEY` from the [KLIPY Partner Panel](https://partner.klipy.com) to

@@ -2,10 +2,10 @@
 
 Smartfire exposes its agent API as a [Model Context Protocol](https://modelcontextprotocol.io)
 server, so Claude, Cursor, Codex, and similar clients can use the workspace as
-a tool. The endpoint is `POST /agents/mcp`, authenticated with the same agent
-token as the [REST agent API](agents.md), and every tool delegates to the same
-service code — and the same capability grants and rate limits — as its REST
-counterpart.
+a tool. The endpoint is `POST /agents/mcp`. Members can connect a client by URL
+and sign in with OAuth, or use an agent token as with the [REST agent API](agents.md).
+Every tool uses the same service code, capability grants, and rate limits as its
+REST counterpart. OAuth connections authenticate only at the MCP endpoint.
 
 ## Protocol
 
@@ -65,11 +65,77 @@ per-credential cap of 600 requests/minute across all methods
 bucket). Past it the endpoint answers HTTP 429 with a `Retry-After`
 header and `{ "error": "rate_limited" }`, like the REST endpoints.
 
-## Client setup
+## Connect by URL
 
-Create an agent token on the bot page (shown once), grant the agent the
-capabilities its tools need, and point the client at the endpoint with the
-token in an `Authorization` header.
+In Smartfire, open **Settings → Agents → Connect an agent** and copy the MCP
+URL, such as `https://chat.example.com/agents/mcp`. Your administrator must
+configure a public HTTPS address and enable OAuth. Cloud clients must be able
+to reach that address from their servers. A client's plan or workspace policy
+may limit custom connectors.
+
+Add the URL in your client and choose OAuth authentication:
+
+| Client | Setup |
+| --- | --- |
+| [ChatGPT](https://developers.openai.com/api/docs/guides/custom-mcp-server) | On the web, open **Plugins**, select **+ → Add custom MCP server**, and enter the Server URL. Choose OAuth and CIMD, then create and install the plugin. Sign in when prompted. |
+| [Claude](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) | Open **Customize → Connectors → Add custom connector**, enter the URL, and choose **Sign in now**. Use Claude's published identity or automatic registration. A team owner may need to add the connector first. |
+| [Cursor](https://cursor.com/docs/mcp) | Add the URL to `~/.cursor/mcp.json` as below. Enable the server in **Customize** and complete the OAuth sign-in prompt. |
+| [Grok](https://docs.x.ai/grok/connectors) | Open [Connectors](https://grok.com/connectors), choose **New Connector → Custom**, enter the URL, and complete authentication. |
+| [MCP Inspector](https://github.com/modelcontextprotocol/inspector) | Run `npx @modelcontextprotocol/inspector`. Select Streamable HTTP, enter the URL, and use the OAuth flow in Auth settings before connecting. |
+
+Cursor's URL-only configuration lets it discover OAuth and register its client:
+
+```json
+{
+	"mcpServers": {
+		"smartfire": { "url": "https://chat.example.com/agents/mcp" }
+	}
+}
+```
+
+### Review consent
+
+Smartfire asks you to sign in, including your second factor if enrolled. The
+consent page shows the client app's name, its return hostname, and an unverified
+app warning or a badge for an app on your computer. Choose a new personal agent
+or one you own, then select rooms and abilities. For an existing agent, the page
+shows which rooms and abilities change. These changes affect its other
+connections too.
+
+Personal agents can read and post messages, react, and manage threads in the
+rooms you grant. They cannot exceed your own live access. Confirm your password
+before approval. **Deny** returns to the client without creating a connection.
+
+### Manage connections
+
+Under **Settings → Agents**, each agent lists its connections with the client
+name, connection date, expiry, and last use. **Revoke** stops that connection's
+tokens immediately. **Reconnect** shows the URL and instructions for starting
+sign-in again from the client. Choose the existing agent on the next consent
+page. Deactivating an agent stops all its connections.
+
+Administrators can open **Admin → Bots → Connected apps** and **Block** an app.
+Blocking stops all connections through that client and prevents new approvals.
+Unblocking lets unexpired, unrevoked connections work again.
+
+An OAuth connection lasts at most **180 days**. After that, reconnect and review
+consent again. Access tokens last one hour. Refresh tokens rotate on each use
+and expire after 30 idle days. Neither can outlive the connection. Separately,
+static agent tokens default to **90 days**, with a "never" option when issued.
+
+> [!WARNING]
+> Clients that refresh in parallel can reuse the same refresh token. Smartfire
+> treats reuse as a breach and revokes the entire connection, including tokens
+> the first refresh issued. The card shows "Revoked: refresh token reused".
+> Reconnect from the client and make it serialize refresh requests.
+
+## Token client setup
+
+Under **Settings → Agents**, create or select your personal agent and issue a
+token after password confirmation. Copy the secret, which is shown once.
+Grant the rooms and abilities its tools need, then point the client at the
+endpoint with the token in an `Authorization` header. Administrators manage
+workspace-agent tokens on the bot page.
 
 Claude Code:
 
@@ -127,9 +193,10 @@ curl https://smartfire.example.com/agents/mcp \
 | `set_presence` | the agent itself | `PATCH /agents/me` (`working_presence`) |
 | `add_step`, `update_step` | `post_messages` (message steps) / `manage_threads` (thread steps) | `POST`/`PATCH /agents/steps` |
 
-`tools/list` always returns the full set; per-tool enforcement happens at
-call time, so a client can show every tool and let denials explain which
-grant is missing.
+`tools/list` returns the everyday-chat tools for personal agents. It excludes
+approvals, Fizzy actions, slash-command registration, and work handoffs.
+Personal agents can DM only their owner. Workspace agents receive the full
+tool set. Every tool still checks permissions when called.
 
 "Prior contact" for `open_dm` means the agent's ledger holds a
 `mention`, `reply`, or `direct_message` row with the human as actor —

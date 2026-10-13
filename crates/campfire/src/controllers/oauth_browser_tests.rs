@@ -63,10 +63,7 @@ async fn oauth_browser_acceptance() {
         Arc::new(campfire_kit::FrozenClock::new(
             "2026-10-13T16:00:00Z".parse().unwrap(),
         )),
-        &[
-            ("APP_URL", "https://localhost:4398"),
-            ("SMARTFIRE_MCP_OAUTH", "1"),
-        ],
+        &[("APP_URL", "https://localhost:4398")],
     )
     .await
     .expect("restored default seed")
@@ -128,9 +125,19 @@ async fn oauth_browser_acceptance() {
         .status()
         .await
         .unwrap();
-    server.abort();
     assert!(
         status.success(),
         "Playwright OAuth acceptance failed: {status}"
     );
+    let ca = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(ca.path(), cert.pem()).unwrap();
+    let smoke = tokio::process::Command::new("ops/scripts/mcp-oauth-smoke.sh")
+        .arg("https://localhost:4398")
+        .env("CURL_CA_BUNDLE", ca.path())
+        .current_dir(env!("CARGO_MANIFEST_DIR").to_owned() + "/../..")
+        .status()
+        .await
+        .unwrap();
+    server.abort();
+    assert!(smoke.success(), "OAuth deployment smoke failed: {smoke}");
 }

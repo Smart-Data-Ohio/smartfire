@@ -20,7 +20,8 @@ Ordinary nextest runs leave it ignored because it needs Node, Chromium, and a bu
 SPA. Its dedicated PR job runs it with those inputs. The test reuses `TestApp` and
 the `spa_huddle_tests` serving approach. Its injected resolver and dialer route a
 public CIMD hostname to the test's TLS listener on port 4398. Production's public
-DNS and TLS restrictions remain in force.
+DNS and TLS restrictions remain in force. The same run checks the deployment
+smoke script against that server using the fixture's CA certificate.
 
 `Rust port` reports on every pull request and main push. `Rust changes` selects
 Rust source, Cargo, crate, CI, static asset and fixture inputs. An unrelated PR
