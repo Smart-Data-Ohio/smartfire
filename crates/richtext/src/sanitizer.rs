@@ -112,6 +112,17 @@ impl SafeList {
         SafeList { tags, attributes }
     }
 
+    /// `action_text` for a Markdown body, or a forwarded snapshot of one: also the GFM table
+    /// tags and their `align`, which `markdown::render` stores. Rails' timeline rendered these
+    /// bodies through `markdown::presentation`; the SPA's rendered body goes through Action Text's
+    /// allowlist, which drops the table and leaves its cells' text run together.
+    pub fn markdown_body() -> Self {
+        let mut list = Self::action_text();
+        list.tags.extend(["table", "thead", "tbody", "tr", "th", "td"]);
+        list.attributes.push("align");
+        list
+    }
+
     /// `ContentFilters::SanitizeAttributes`: SanitizeTags' tags, Action Text's attributes plus `class`.
     pub fn content_filter() -> Self {
         let mut attributes = Self::action_text().attributes;

@@ -116,6 +116,13 @@
     padding: var(--space-4) var(--space-5) var(--space-10);
   }
 
+  /* The results under their skeleton reveal take the page's width, not their widest hit's: the
+     reveal's grid would otherwise size to a hit's wide Markdown table and push the hits past the
+     page's edge, where the table can't scroll into view. */
+  .search-content .t-skel > .t-skel-content {
+    min-width: 0;
+  }
+
   .search-section-heading,
   .search-messages-heading {
     display: flex;

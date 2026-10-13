@@ -910,6 +910,48 @@
     padding-left: var(--space-5);
   }
 
+  /* A Markdown table (GFM, crates/richtext markdown.rs). The table element is a block that
+     scrolls sideways: its rows still lay out as a table inside it, as wide as their content but
+     never wider than the body, so a wide table scrolls within the message and never widens the
+     timeline. Cells break at word boundaries, not anywhere as the body's text does, so a column
+     is never squeezed to a letter a line; past that, the table scrolls. */
+  .message-body table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: normal;
+  }
+
+  .message-body :is(th, td) {
+    min-width: 4em;
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--border-strong);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  .message-body th {
+    background: var(--bg-sunken);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* `:---`, `:---:` and `---:` columns: comrak marks their cells with `align`, which the rule
+     above would otherwise override. */
+  .message-body :is(th, td)[align="left"] {
+    text-align: left;
+  }
+
+  .message-body :is(th, td)[align="center"] {
+    text-align: center;
+  }
+
+  .message-body :is(th, td)[align="right"] {
+    text-align: right;
+  }
+
   /* A picture in the body (a rich-text paste's remote images) is bounded like a Slack preview,
      whatever its natural size or width/height attributes, keeping its aspect ratio. The quiet
      checkerboard shows only through transparent pixels. */

@@ -685,18 +685,26 @@ impl<'a> Presenter<'a> {
     }
 
     /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
+    /// The body as the SPA shows it. A Markdown body (or a forwarded snapshot of one) keeps its
+    /// tables, which Action Text's allowlist would drop.
     pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
         let Some(body) = self.stored_body(message)? else {
             return Ok(String::new());
         };
-        self.render_body_html(&body)
+        self.render_body_html(&body, message.markdown() || message.forwarded_markdown)
     }
 
-    fn render_body_html(&self, body: &str) -> Result<String> {
+    fn render_body_html(&self, body: &str, markdown: bool) -> Result<String> {
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
         campfire_richtext::Content::load(body, &ctx)
-            .and_then(|content| content.to_rendered_html_with_layout(&ctx))
+            .and_then(|content| {
+                if markdown {
+                    content.to_rendered_markdown_html_with_layout(&ctx)
+                } else {
+                    content.to_rendered_html_with_layout(&ctx)
+                }
+            })
             .map_err(|error| campfire_db::Error::Other(error.to_string()))
     }
 
@@ -710,7 +718,11 @@ impl<'a> Presenter<'a> {
         if let Some(source) = &message.markdown_source {
             return Ok(source.clone());
         }
-        let body = self.rendered_body_html(message)?;
+        // A forwarded Markdown snapshot converts as Rails did, without its tables.
+        let body = match self.stored_body(message)? {
+            Some(body) => self.render_body_html(&body, false)?,
+            None => String::new(),
+        };
         let resolver = self.resolver();
         campfire_richtext::legacy_markdown::render(
             &body,

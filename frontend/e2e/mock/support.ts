@@ -288,8 +288,9 @@ export function matrix(
 
 /**
  * Asserts nothing scrolls sideways: not the page, and no box inside it (a pane body wider than the
- * screen, say), naming the culprits if so. Code blocks and text fields may; pass `allowScroll` (a
- * selector) for any other deliberate sideways scroller, such as a chip strip.
+ * screen, say), naming the culprits if so. Code blocks, a message's Markdown tables and text fields
+ * may; pass `allowScroll` (a selector) for any other deliberate sideways scroller, such as a chip
+ * strip.
  */
 export async function expectNoHorizontalOverflow(
   page: Page,
@@ -297,7 +298,7 @@ export async function expectNoHorizontalOverflow(
 ): Promise<void> {
   const overflow = await page.evaluate((allowed) => {
     const width = window.innerWidth;
-    const exempt = ["pre", "textarea", allowed].filter(Boolean).join(", ");
+    const exempt = ["pre", "textarea", ".message-body table", allowed].filter(Boolean).join(", ");
 
     const wide = [...document.querySelectorAll("body *")]
       .flatMap((element) => {
