@@ -6,7 +6,7 @@ use axum::{
 use campfire_api_types as api;
 use campfire_app::{
     app::AppCtx,
-    oauth::{self, Authorization, client},
+    oauth::{self, Authorization, client, registration::Registration},
 };
 use campfire_db::{
     NewUser, Timestamp, User,
@@ -37,6 +37,10 @@ pub fn routes(enabled: bool) -> Router<Kit> {
         .route(
             "/.well-known/oauth-protected-resource/agents/mcp",
             get(action(resource_metadata)).options(action(preflight)),
+        )
+        .route(
+            "/oauth/register",
+            post(unparsed_action(register)).options(action(preflight)),
         )
         .route("/oauth/authorize", get(action(authorize)))
         .route(
@@ -79,7 +83,7 @@ async fn preflight(c: &mut Ctx) -> Result {
 async fn metadata(c: &mut Ctx) -> Result {
     public(c);
     let issuer = issuer(c);
-    c.json(StatusCode::OK,&json!({"issuer":issuer,"authorization_endpoint":format!("{issuer}/oauth/authorize"),"token_endpoint":format!("{issuer}/oauth/token"),"revocation_endpoint":format!("{issuer}/oauth/revoke"),"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"],"revocation_endpoint_auth_methods_supported":["none"],"client_id_metadata_document_supported":true,"authorization_response_iss_parameter_supported":true,"scopes_supported":["agent"]}))
+    c.json(StatusCode::OK,&json!({"issuer":issuer,"authorization_endpoint":format!("{issuer}/oauth/authorize"),"token_endpoint":format!("{issuer}/oauth/token"),"revocation_endpoint":format!("{issuer}/oauth/revoke"),"registration_endpoint":format!("{issuer}/oauth/register"),"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"],"revocation_endpoint_auth_methods_supported":["none"],"client_id_metadata_document_supported":true,"authorization_response_iss_parameter_supported":true,"scopes_supported":["agent"]}))
 }
 async fn resource_metadata(c: &mut Ctx) -> Result {
     public(c);
@@ -87,20 +91,23 @@ async fn resource_metadata(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK,&json!({"resource":canonical_resource(&issuer),"authorization_servers":[issuer],"scopes_supported":["agent"],"bearer_methods_supported":["header"],"resource_name":"Smartfire agents"}))
 }
 fn throttle(c: &mut Ctx, key: &str, limit: u64) -> Result<()> {
+    throttle_window(c, key, limit, 60)
+}
+fn throttle_window(c: &mut Ctx, key: &str, limit: u64, seconds: i64) -> Result<()> {
     let now = c.now();
-    let bucket = now.as_second().div_euclid(60);
+    let bucket = now.as_second().div_euclid(seconds);
     let key = format!(
         "oauth:{bucket}:{}",
         campfire_db::user::digest_bot_token(key)
     );
     if c.kit()
         .rate_limits()
-        .increment(&key, jiff::SignedDuration::from_secs(65), now)
+        .increment(&key, jiff::SignedDuration::from_secs(seconds + 5), now)
         > limit
     {
         c.set_header(
             "retry-after",
-            &(((bucket + 1) * 60 - now.as_second()).max(1)).to_string(),
+            &(((bucket + 1) * seconds - now.as_second()).max(1)).to_string(),
         );
         return campfire_kit::halt(c.json(
             StatusCode::TOO_MANY_REQUESTS,
@@ -383,6 +390,47 @@ async fn deny_consent(c: &mut Ctx) -> Result {
             redirect_to: redirect,
         },
     )
+}
+async fn register(c: &mut Ctx) -> Result {
+    public(c);
+    let ip = c.request.remote_ip()?.to_string();
+    throttle_window(c, &format!("register:{ip}"), 10, 3600)?;
+    let invalid = "invalid_client_metadata";
+    if c.request.content_type().is_none_or(|value| {
+        !value
+            .split(';')
+            .next()
+            .unwrap_or("")
+            .trim()
+            .eq_ignore_ascii_case("application/json")
+    }) {
+        return c.json(StatusCode::BAD_REQUEST, &json!({"error": invalid}));
+    }
+    let bytes = c.read_body(16385).await;
+    let registration = if bytes.len() > 16384 {
+        Err(invalid)
+    } else {
+        serde_json::from_slice(&bytes)
+            .map_err(|_| invalid)
+            .and_then(Registration::parse)
+    };
+    let mut registration = match registration {
+        Ok(registration) => registration,
+        Err(error) => return c.json(StatusCode::BAD_REQUEST, &json!({"error": error})),
+    };
+    let response = c.app().db.write(move |tx| {
+        let client_id = oauth::secret();
+        registration.metadata["client_id"] = json!(client_id);
+        registration.metadata["client_id_issued_at"] = json!(tx.now().as_second());
+        tx.conn().execute(
+            "INSERT INTO oauth_clients(client_id,registration,client_name,client_uri,redirect_uris,auth_methods,metadata,created_at,updated_at) VALUES(?,'dcr',?,?,?,'[\"none\"]',?,?,?)",
+            params![client_id, registration.client_name, registration.client_uri,
+                json!(registration.redirect_uris).to_string(), registration.metadata.to_string(),
+                tx.now(), tx.now()],
+        )?;
+        Ok(registration.metadata)
+    }).await.map_err(Error::internal)?;
+    c.json(StatusCode::CREATED, &response)
 }
 async fn form(c: &mut Ctx) -> Result<Option<BTreeMap<String, String>>> {
     if c.request.content_type().is_none_or(|value| {
