@@ -223,6 +223,77 @@ function VanityForm({ workspace }: { readonly workspace: Workspace }) {
   );
 }
 
+/** Personal agents: whether members may connect their own, and how many each may have. */
+function MemberAgentsForm({ workspace }: { readonly workspace: Workspace }) {
+  const { replace } = useAdmin();
+  const [limit, setLimit] = useState(String(workspace.memberAgentLimit));
+  const { busy, track } = useBusy();
+
+  const toggle = (memberAgentsEnabled: boolean) => {
+    void track(
+      "agents-enabled",
+      admin.updateWorkspace({ memberAgentsEnabled }).then(
+        (next) => {
+          replace(next);
+          toast({
+            title: next.memberAgentsEnabled ? "Personal agents on" : "Personal agents off",
+            tone: "success",
+          });
+        },
+        (error: Error) => adminFailure("Couldn't save personal agents", error),
+      ),
+    );
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void track(
+      "agents-limit",
+      admin.updateWorkspace({ memberAgentLimit: Number(limit) }).then(
+        (next) => {
+          replace(next);
+          setLimit(String(next.memberAgentLimit));
+          toast({ title: "Agent limit saved", tone: "success" });
+        },
+        (error: Error) => adminFailure("Couldn't save the agent limit", error),
+      ),
+    );
+  };
+
+  return (
+    <div className="settings-form">
+      <Toggle
+        checked={workspace.memberAgentsEnabled}
+        disabled={busy("agents-enabled")}
+        label="Members can connect their own agents"
+        description="From Settings → Agents, for everyday chat in rooms they're in. Turning this off stops new agents and tokens; existing tokens keep working until revoked."
+        onCheckedChange={toggle}
+      />
+      <form className="settings-form settings-inline" onSubmit={submit}>
+        <TextField
+          label="Agents per member"
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          required
+          hint="Administrators have no limit."
+          value={limit}
+          onChange={(event) => setLimit(event.target.value)}
+        />
+        <Button
+          type="submit"
+          variant="primary"
+          loading={busy("agents-limit")}
+          disabled={busy("agents-limit")}
+        >
+          Save limit
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 /** The join link, to copy or share; administrators can swap it for a new one. */
 function JoinLink() {
   const { workspace, replace } = useAdmin();
@@ -329,6 +400,11 @@ export function WorkspaceSection() {
             label="Must be admin to create new rooms"
             onCheckedChange={restrict}
           />
+        </SettingsGroup>
+      ) : null}
+      {workspace.canAdminister ? (
+        <SettingsGroup title="Personal agents">
+          <MemberAgentsForm key={workspace.memberAgentLimit} workspace={workspace} />
         </SettingsGroup>
       ) : null}
       {workspace.canAdminister ? (
