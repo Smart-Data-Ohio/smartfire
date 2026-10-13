@@ -25,7 +25,7 @@ import {
   type MenuTriggerProps,
   SubMenu,
 } from "../../ui/menu.tsx";
-import { isNoteToSelf, viewerIdOf } from "../directs/note-to-self.ts";
+import { isNoteToSelf } from "../directs/note-to-self.ts";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import { toastFailure } from "../settings/settings-parts.tsx";
@@ -286,7 +286,7 @@ export function RoomMenuItems({
   const favorite = useFavoritePlace(row.room.id);
   const { kind } = row.room;
   // Nothing in your note-to-self notifies you, so it has no levels to choose.
-  const self = useStore((state) => isNoteToSelf(row, viewerIdOf(state)));
+  const self = isNoteToSelf(row);
   const sharedHome = shared.categories.find((category) => category.id === shared.home) ?? null;
 
   const openSettings = () => {

@@ -52,8 +52,6 @@ export interface SidebarSection {
 export interface SectionOptions {
   /** An administrator sees every shared category, empty ones too, so there is somewhere to drop. */
   readonly admin?: boolean;
-  /** The viewer, whose note-to-self leads Direct messages. */
-  readonly viewerId?: number | null;
 }
 
 function byNewest(left: SidebarRow, right: SidebarRow): number {
@@ -126,7 +124,7 @@ function sharedSection(category: WorkspaceCategory, rows: readonly SidebarRow[])
  */
 export function sidebarSections(
   sidebar: SidebarState,
-  { admin = false, viewerId = null }: SectionOptions = {},
+  { admin = false }: SectionOptions = {},
 ): readonly SidebarSection[] {
   const view = organizedSidebar(sidebar);
   const layout = sharedLayout(sidebar);
@@ -187,7 +185,7 @@ export function sidebarSections(
   homes.channels.sort(bySharedPosition);
   homes.boards.sort(bySharedPosition);
   homes.voice.sort(bySharedPosition);
-  const self = (row: SidebarRow) => Number(isNoteToSelf(row, viewerId));
+  const self = (row: SidebarRow) => Number(isNoteToSelf(row));
 
   homes.direct.sort((left, right) => self(right) - self(left) || byNewest(left, right));
 

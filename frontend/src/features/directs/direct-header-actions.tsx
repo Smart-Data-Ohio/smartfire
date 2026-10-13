@@ -1,9 +1,9 @@
 import { type ReactNode, Suspense, useState } from "react";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
-import { useStore } from "../../store/store.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { useDirectFacts } from "./direct-facts.ts";
+import { useNoteToSelf } from "./note-to-self.ts";
 
 const AddPeopleDialog = lazy(() => import("./add-people-dialog.tsx"));
 
@@ -32,7 +32,7 @@ interface DirectActions {
  */
 export function useDirectActions(roomId: number): DirectActions {
   const facts = useDirectFacts(roomId);
-  const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
+  const self = useNoteToSelf(roomId);
   const [open, setOpen] = useState<HeaderDialog | null>(null);
   const [seen, setSeen] = useState<ReadonlySet<HeaderDialog>>(new Set());
 
@@ -44,7 +44,7 @@ export function useDirectActions(roomId: number): DirectActions {
     return { actions: [], dialogs: null };
   }
 
-  const noteToSelf = facts.memberIds.length === 1 && facts.memberIds[0] === viewerId;
+  const noteToSelf = self;
   const groupCapable = facts.memberIds.length > 1 || facts.name !== null;
 
   if (noteToSelf) {

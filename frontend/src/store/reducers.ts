@@ -169,6 +169,7 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
           ? state.sidebar.workspaceLayout
           : sidebar.workspaceLayout,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
+      noteToSelfRoomId: sidebar.noteToSelfRoomId ?? state.sidebar.noteToSelfRoomId,
       canCreateRooms: sidebar.canCreateRooms,
       overlay: state.sidebar.overlay,
     },
@@ -283,6 +284,9 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
     {
       ...state,
       users: mergeUserList(state.users, detail.users),
+      sidebar: isNoteToSelf(detail)
+        ? { ...state.sidebar, noteToSelfRoomId: roomId }
+        : state.sidebar,
       rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
       timelines: {
         ...state.timelines,
@@ -1019,6 +1023,7 @@ function upsertRow(state: State, row: SidebarRow): State {
           ...state.sidebar,
           rows,
           order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+          noteToSelfRoomId: isNoteToSelf(row) ? row.room.id : state.sidebar.noteToSelfRoomId,
         },
       },
       {
@@ -1127,12 +1132,13 @@ function removeRow(state: State, roomId: number): State {
   const layoutChanged = workspaceRooms.length !== state.sidebar.workspaceLayout.rooms.length;
   const clock = layoutChanged ? state.rowTouches.clock + 1 : state.rowTouches.clock;
   const viewerId = state.me?.user.id ?? state.boot?.user.id ?? null;
-  // Your note-to-self gone from the sidebar is offered again, as the next snapshot would.
 
+  // Your note-to-self gone from the sidebar is offered again, as the next snapshot would; its id
+  // stays known, so its labels elsewhere still say "(you)".
   const offerSelf =
     gone !== undefined &&
     viewerId !== null &&
-    isNoteToSelf(gone, viewerId) &&
+    isNoteToSelf(gone) &&
     !state.sidebar.placeholderUserIds.includes(viewerId);
 
   return {

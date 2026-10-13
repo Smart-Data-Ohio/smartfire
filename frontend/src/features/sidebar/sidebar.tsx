@@ -30,7 +30,7 @@ import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
-import { offersNoteToSelf, viewerIdOf } from "../directs/note-to-self.ts";
+import { offersNoteToSelf } from "../directs/note-to-self.ts";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -827,9 +827,8 @@ export function Sidebar() {
     sharedCategories: shared,
   };
 
-  const viewerId = useStore(viewerIdOf);
   const offerNoteToSelf = useStore(offersNoteToSelf);
-  const all = sidebarSections(sidebar, { admin, viewerId });
+  const all = sidebarSections(sidebar, { admin });
   const flip = useFlip(scrollRef);
   const focusAfterRender = useFocusAfterRender();
   // A keyboard drag's steps interrupt: each one answers the key just pressed.

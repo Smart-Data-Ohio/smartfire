@@ -5,6 +5,7 @@
  */
 import type { SwitcherRoomKind } from "../../gen/SwitcherRoomKind.ts";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
+import { isNoteToSelf } from "../../store/note-to-self.ts";
 import type { SidebarState } from "../../store/state.ts";
 import { rowPillCount, rowUnread, sidebarSections } from "../sidebar/sections.ts";
 import { matchScore, normalizeQuery } from "./match.ts";
@@ -78,7 +79,7 @@ const BLANK = {
   updatedAt: null,
 } as const satisfies Partial<SwitcherItem>;
 
-function localItem(row: SidebarRow): SwitcherItem {
+function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
   const { room, membership } = row;
 
   const live = {
@@ -96,8 +97,9 @@ function localItem(row: SidebarRow): SwitcherItem {
   const [only] = row.directMemberIds;
   const oneToOne = room.kind === "direct" && room.name === null && row.directMemberIds.length === 1;
 
-  // Your note-to-self is you, as a one-to-one DM is its other person.
-  if (oneToOne && only !== undefined) {
+  // Your note-to-self is you, as a one-to-one DM is its other person; a group everyone else
+  // left is still a room, so it never stands in for (or beside) your note-to-self.
+  if (oneToOne && only !== undefined && (only !== viewerId || isNoteToSelf(row))) {
     return { ...live, key: `person:${only}`, kind: "person", userId: only };
   }
 
@@ -111,8 +113,8 @@ function localItem(row: SidebarRow): SwitcherItem {
  * Before the note-to-self exists you are listed anyway, while the sidebar offers it.
  */
 export function localItems(sidebar: SidebarState, viewerId: number | null): SwitcherItem[] {
-  const items = sidebarSections(sidebar, { viewerId }).flatMap((section) =>
-    section.rows.map(localItem),
+  const items = sidebarSections(sidebar).flatMap((section) =>
+    section.rows.map((row) => localItem(row, viewerId)),
   );
 
   const offered =

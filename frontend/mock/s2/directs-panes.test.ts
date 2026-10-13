@@ -103,6 +103,9 @@ describe("directs", () => {
 
     const after = await get<Sidebar>(server, "/api/v1/sidebar");
 
+    expect(self.noteToSelf).toBe(true);
+    expect(before.noteToSelfRoomId).toBeUndefined();
+    expect(after.noteToSelfRoomId).toBe(self.room.id);
     expect(after.directPlaceholderUserIds).not.toContain(viewer);
     expect(after.rows.find((row) => row.room.id === self.room.id)?.directMemberIds).toEqual([
       viewer,

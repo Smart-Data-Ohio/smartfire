@@ -28,10 +28,15 @@ pub struct Sidebar {
     pub users: Vec<User>,
     /// Up to 20 active people the viewer has no direct room with yet, oldest account first
     /// (`find_direct_placeholder_users`): the "start a conversation" suggestions under the
-    /// direct messages. Led by the viewer's own id while they have no note-to-self row (a
-    /// direct row whose `directMemberIds` is just them), so every client can offer it before it
-    /// exists: `POST /api/v1/directs` with no `userIds` opens it, creating it on first use.
+    /// direct messages. Led by the viewer's own id while they have no visible note-to-self row
+    /// (one marked `noteToSelf`), so every client can offer it before it exists or after it was
+    /// hidden: `POST /api/v1/directs` with no `userIds` opens it, creating it on first use.
     pub direct_placeholder_user_ids: Vec<i64>,
+    /// The viewer's note-to-self, shown or hidden; absent until they first open it. Labels
+    /// elsewhere (saved, scheduled, search, forward) name it "(you)" by this id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub note_to_self_room_id: Option<i64>,
     /// Whether the viewer may create channels: an administrator, or anyone when the account
     /// doesn't restrict room creation to administrators.
     pub can_create_rooms: bool,
@@ -87,6 +92,11 @@ pub struct SidebarRow {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub refresh_room: Option<bool>,
+    /// `true` for the viewer's note-to-self, the direct room opened for just them (its canonical
+    /// member key); absent otherwise, a group everyone else left included.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub note_to_self: Option<bool>,
 }
 
 /// A direct room's newest root message (system notes aside), as its sidebar row previews it.

@@ -129,9 +129,9 @@ function PreviewedName({ row, last }: { readonly row: Row; readonly last: LastMe
   const viewerId = useViewerId();
   const creator = useUser(last.creatorId);
   const group = row.directMemberIds.length > 1;
-  // In your note-to-self every message is yours: no "You:" before each.
 
-  const who = isNoteToSelf(row, viewerId)
+  // In your note-to-self every message is yours: no "You:" before each.
+  const who = isNoteToSelf(row)
     ? undefined
     : last.creatorId === viewerId
       ? "You"
@@ -171,10 +171,9 @@ function YouName({ name }: { readonly name: string }) {
 
 /** The row's name: its label, or your own name with "(you)" for your note-to-self. */
 function RowName({ row }: { readonly row: Row }) {
-  const viewerId = useViewerId();
   const viewerName = useViewerName();
 
-  return isNoteToSelf(row, viewerId) && viewerName !== null ? (
+  return isNoteToSelf(row) && viewerName !== null ? (
     <YouName name={viewerName} />
   ) : (
     <span className="sidebar-row-name">{row.displayName}</span>
@@ -183,10 +182,9 @@ function RowName({ row }: { readonly row: Row }) {
 
 /** What a row's accessible names call it: "Your Name (you)" for your note-to-self. */
 function useRowLabel(row: Row): string {
-  const viewerId = useViewerId();
   const viewerName = useViewerName();
 
-  return isNoteToSelf(row, viewerId) && viewerName !== null ? withYou(viewerName) : row.displayName;
+  return isNoteToSelf(row) && viewerName !== null ? withYou(viewerName) : row.displayName;
 }
 
 /**

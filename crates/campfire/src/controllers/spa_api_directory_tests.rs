@@ -492,6 +492,9 @@ async fn the_note_to_self_is_offered_first_and_never_goes_unread() {
     let row: api::SidebarRow = parse(&reply);
     let room = row.room.id;
     assert_eq!(row.direct_member_ids, [DAVID]);
+    assert_eq!(row.note_to_self, Some(true));
+    let detail: api::RoomDetail = parse(&david.send(get(&format!("/api/v1/rooms/{room}"))).await);
+    assert_eq!(detail.note_to_self, Some(true));
     let event = sync.until(upserted(true, room), |_| false).await;
     assert_eq!(row_of(&event).direct_member_ids, [DAVID]);
     let reply = david.write(open(json!([DAVID]))).await;
@@ -504,6 +507,9 @@ async fn the_note_to_self_is_offered_first_and_never_goes_unread() {
     let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
     assert!(!sidebar.direct_placeholder_user_ids.contains(&DAVID), "{sidebar:?}");
     assert!(sidebar.rows.iter().any(|row| row.room.id == room));
+    assert_eq!(sidebar.note_to_self_room_id, Some(room));
+    let others: Vec<_> = sidebar.rows.iter().filter(|row| row.note_to_self.is_some()).collect();
+    assert_eq!(others.len(), 1, "{others:?}");
 
     // Your own messages, a mention of yourself included, never make it unread or notify you on
     // any device, and push nothing.
@@ -563,9 +569,106 @@ async fn the_note_to_self_is_offered_first_and_never_goes_unread() {
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
     assert_eq!(sidebar.direct_placeholder_user_ids.first(), Some(&DAVID));
+    // Hidden, it is still known, so its labels elsewhere still say "(you)".
+    assert_eq!(sidebar.note_to_self_room_id, Some(room));
     let reply = david.write(open(json!([]))).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let row: api::SidebarRow = parse(&reply);
     assert_eq!((row.room.id, row.membership.involvement), (room, api::Involvement::Everything));
+    server.abort();
+}
+
+/// A group whose other members all left keeps its own key, so it is never the note-to-self:
+/// the sidebar still offers that, opening it makes a separate room, and the group keeps its name.
+#[tokio::test]
+async fn a_group_everyone_else_left_is_not_the_note_to_self() {
+    let Some(a) = app(true).await else { return };
+    let (_addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let open = |ids: serde_json::Value| json_body(Method::POST, "/api/v1/directs", &json!({"userIds": ids}));
+
+    // A named group, then an unnamed one, that both empty out around David.
+    let reply = david.write(open(json!([JASON, KEVIN, NEW_MEMBER]))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let named = parse::<api::SidebarRow>(&reply).room.id;
+    let reply = david
+        .write(json_body(Method::PATCH, &format!("/api/v1/directs/{named}"), &json!({"name": "Road trip"})))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let reply = david.write(open(json!([JASON, KEVIN]))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let unnamed = parse::<api::SidebarRow>(&reply).room.id;
+    let leave = |room: i64| json_body(Method::DELETE, &format!("/api/v1/rooms/{room}/membership"), &json!({}));
+    for room in [named, unnamed] {
+        for person in [&mut jason, &mut kevin] {
+            let reply = person.write(leave(room)).await;
+            assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        }
+    }
+    let reply = a.sign_in(NEW_MEMBER).await.write(leave(named)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+
+    // The named group is David's alone now, but it is still the group.
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == named).unwrap();
+    assert_eq!((row.direct_member_ids.as_slice(), row.note_to_self), (&[DAVID][..], None));
+    assert_eq!(row.display_name, "Road trip");
+    let detail: api::RoomDetail = parse(&david.send(get(&format!("/api/v1/rooms/{named}"))).await);
+    assert_eq!(detail.note_to_self, None);
+    // The unnamed one emptied first, so it took the key for just David: that's what opening
+    // the note-to-self finds, so it is the note-to-self, and the sidebar stops offering one.
+    let row = sidebar.rows.iter().find(|row| row.room.id == unnamed).unwrap();
+    assert_eq!(row.note_to_self, Some(true));
+    assert_eq!(sidebar.note_to_self_room_id, Some(unnamed));
+    assert!(!sidebar.direct_placeholder_user_ids.contains(&DAVID), "{sidebar:?}");
+    let reply = david.write(open(json!([]))).await;
+    assert_eq!((reply.status, parse::<api::SidebarRow>(&reply).room.id), (StatusCode::OK, unnamed));
+    server.abort();
+}
+
+/// With the note-to-self already open, a named group that empties out stays a group: the
+/// sidebar marks only the real one, and opening "only you" never lands in the group.
+#[tokio::test]
+async fn an_emptied_named_group_beside_the_note_to_self_stays_a_group() {
+    let Some(a) = app(true).await else { return };
+    let (_addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let open = |ids: serde_json::Value| json_body(Method::POST, "/api/v1/directs", &json!({"userIds": ids}));
+
+    let reply = david.write(open(json!([JASON, KEVIN]))).await;
+    let group = parse::<api::SidebarRow>(&reply).room.id;
+    let reply = david
+        .write(json_body(Method::PATCH, &format!("/api/v1/directs/{group}"), &json!({"name": "Ops"})))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let leave = json_body(Method::DELETE, &format!("/api/v1/rooms/{group}/membership"), &json!({}));
+    assert_eq!(jason.write(leave).await.status, StatusCode::OK);
+    let leave = json_body(Method::DELETE, &format!("/api/v1/rooms/{group}/membership"), &json!({}));
+    assert_eq!(a.sign_in(KEVIN).await.write(leave).await.status, StatusCode::OK);
+
+    // Emptied before any note-to-self existed, the named group still isn't one.
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    assert_eq!(sidebar.direct_placeholder_user_ids.first(), Some(&DAVID));
+    assert_eq!(sidebar.note_to_self_room_id, None);
+    let reply = david.write(open(json!([]))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let notes: api::SidebarRow = parse(&reply);
+    assert_ne!(notes.room.id, group);
+    assert_eq!(notes.note_to_self, Some(true));
+
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    let marked: Vec<i64> = sidebar
+        .rows
+        .iter()
+        .filter(|row| row.note_to_self == Some(true))
+        .map(|row| row.room.id)
+        .collect();
+    assert_eq!(marked, [notes.room.id]);
+    assert_eq!(sidebar.note_to_self_room_id, Some(notes.room.id));
+    let group_row = sidebar.rows.iter().find(|row| row.room.id == group).unwrap();
+    assert_eq!(group_row.display_name, "Ops");
     server.abort();
 }

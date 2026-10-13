@@ -511,6 +511,24 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     };
   };
 
+  /**
+   * The viewer's note-to-self, as the server finds it: the direct room opened for just them (the
+   * first with only them in it; the mock keeps no member keys).
+   */
+  const noteToSelfId = (): number | null => {
+    for (const record of world.rooms.values()) {
+      if (
+        record.room.kind === "direct" &&
+        record.memberIds.length === 1 &&
+        record.memberIds[0] === VIEWER_ID
+      ) {
+        return record.room.id;
+      }
+    }
+
+    return null;
+  };
+
   const sidebarRow = (record: RoomRecord): SidebarRow => {
     const unreadCount = unreadMessages(record).length;
 
@@ -531,6 +549,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     if (last !== undefined) {
       row.lastMessage = last;
+    }
+
+    if (record.room.id === noteToSelfId()) {
+      row.noteToSelf = true;
     }
 
     return row;
@@ -615,16 +637,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       .map((user) => user.id);
 
     // Your note-to-self leads, offered until you have a visible row for it.
-    const noteToSelf = rows.some(
-      (row) =>
-        row.room.kind === "direct" &&
-        row.directMemberIds.length === 1 &&
-        row.directMemberIds[0] === VIEWER_ID,
-    );
+    const noteToSelfRoomId = noteToSelfId();
 
-    if (!noteToSelf) placeholders.unshift(VIEWER_ID);
+    if (!rows.some((row) => row.noteToSelf === true)) placeholders.unshift(VIEWER_ID);
 
-    return {
+    const snapshot: Sidebar = {
       rows,
       categories: [...world.categories],
       users: usersFor([...rows.flatMap((row) => row.directMemberIds), ...placeholders]),
@@ -632,6 +649,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       canCreateRooms: true,
       workspaceLayout: workspaceLayoutOf(world),
     };
+
+    if (noteToSelfRoomId !== null) {
+      snapshot.noteToSelfRoomId = noteToSelfRoomId;
+    }
+
+    return snapshot;
   };
 
   const materialiseJoinable = (): RoomRecord => {
@@ -756,7 +779,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const direct = directMemberIds(record);
     const preview = record.memberIds.slice(0, 5);
 
-    return {
+    const detail: RoomDetail = {
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
@@ -767,6 +790,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       users: usersFor([...direct, ...preview]),
       unread: unreadDivider(record),
     };
+
+    if (record.room.id === noteToSelfId()) {
+      detail.noteToSelf = true;
+    }
+
+    return detail;
   };
 
   const messages = (roomId: number, query: URLSearchParams) =>

@@ -48,29 +48,12 @@ export function viewerNameOf(state: State): string | null {
   return (id === null ? undefined : state.users[id]?.name) ?? state.me?.user.name ?? null;
 }
 
-const roomIds = new WeakMap<object, number | null>();
-
-/** Your note-to-self's room id from the sidebar rows (hidden or not), or `null` before it exists. */
+/**
+ * Your note-to-self's room id, shown or hidden, as the server names it (the sidebar snapshot, and
+ * any row or detail marked `noteToSelf`), or `null` before it exists.
+ */
 export function noteToSelfRoomId(state: State): number | null {
-  const rows = state.sidebar.rows;
-  const viewerId = viewerIdOf(state);
-
-  if (viewerId === null) {
-    return null;
-  }
-
-  const known = roomIds.get(rows);
-
-  if (known !== undefined) {
-    return known;
-  }
-
-  const found = Object.values(rows).find((row) => isNoteToSelf(row, viewerId));
-  const id = found?.room.id ?? null;
-
-  roomIds.set(rows, id);
-
-  return id;
+  return state.sidebar.noteToSelfRoomId;
 }
 
 /**
@@ -90,11 +73,13 @@ export function offersNoteToSelf(state: State): boolean {
   return row === undefined || row.membership.involvement === "invisible";
 }
 
-/** Whether `roomId` is your note-to-self, from its detail or its sidebar row. */
+/** Whether `roomId` is your note-to-self, as the server marks it. */
 export function roomIsNoteToSelf(state: State, roomId: number): boolean {
   const source = state.rooms[roomId]?.detail ?? state.sidebar.rows[roomId];
 
-  return source !== undefined && isNoteToSelf(source, viewerIdOf(state));
+  return (
+    state.sidebar.noteToSelfRoomId === roomId || (source !== undefined && isNoteToSelf(source))
+  );
 }
 
 export function useNoteToSelf(roomId: number): boolean {
