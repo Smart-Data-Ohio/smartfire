@@ -12,9 +12,13 @@ fn fixture() -> TestDb {
     )
 }
 #[test]
-fn action_vocabulary_keeps_rails_actions_and_adds_workspace_invites() {
+fn action_vocabulary_keeps_rails_actions_and_adds_workspace_invites_and_personal_agents() {
     let mut expected = golden()["actions"].as_array().unwrap().clone();
     expected.extend([json!("workspace_invite.create"), json!("workspace_invite.revoke")]);
+    let at = expected.iter().position(|a| a == "agent.credential.create").unwrap() + 1;
+    expected.splice(at..at, [
+        json!("agent.credential.issue"), json!("agent.credential.rotate"), json!("agent.access.update"),
+    ]);
     assert_eq!(json!(audit::actions()), json!(expected));
 }
 #[test]
