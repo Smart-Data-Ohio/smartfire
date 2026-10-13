@@ -1592,6 +1592,18 @@ impl Message {
         self.markdown_source.is_some()
     }
 
+    /// Whether the body is still the Markdown render a forward snapshotted, so it may render as
+    /// Markdown (tables, task lists). `forwarded_markdown` alone isn't enough: before edits
+    /// cleared it (`save_changes`), an HTML edit over the snapshot left it set. `edited_at` tells
+    /// those rows apart. The edit endpoints (human, thread, bot) stamp it whenever they change a
+    /// body's text (`body_content_will_change`), and it arrived in the same migration as
+    /// `forwarded_markdown`, so no forward predates it. `updated_at` can't tell: boosts, card
+    /// fetches and reply tombstones touch it without changing the body. An edited forward renders
+    /// as any HTML body does.
+    pub fn forwarded_markdown_snapshot(&self) -> bool {
+        self.forwarded_markdown && self.edited_at.is_none()
+    }
+
     /// `thread_message?`
     pub fn thread_message(&self) -> bool {
         self.thread_id.is_some()

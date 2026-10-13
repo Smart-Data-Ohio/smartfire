@@ -67,12 +67,7 @@ impl Content {
 
     /// `render`, for content `depth` content attachments down, sanitized with `safe`.
     fn render_nested(&self, ctx: &RenderContext, depth: usize, default_renderer: bool, safe: &SafeList) -> Result<String, Error> {
-        let mut dom = self.dom.clone();
-        let root = self.root;
-        render_attachments(&mut dom, root, ctx, depth, default_renderer)?;
-        render_attachment_galleries(&mut dom, root, ctx, depth, default_renderer)?;
-        contain_spoiler_blocks(&mut dom, root);
-        sanitizer::sanitize(&dom.to_html(root), safe).map_err(Error::Parse)
+        render_dom(self.dom.clone(), self.root, ctx, depth, default_renderer, safe)
     }
 
     /// `Content#to_s`: the content partial inside `layouts/action_text/contents/_content.html.erb`,
@@ -82,16 +77,13 @@ impl Content {
     }
 
     /// `to_rendered_html_with_layout` for a Markdown body, or a forwarded snapshot of one: the
-    /// markup `markdown::render` stores survives (`SafeList::markdown_body`), held to what it
-    /// emits (`markdown::constrain_body_markup`).
+    /// markup `markdown::render` stores survives (`SafeList::markdown_body`). The body's own
+    /// markup is first held to what the renderer emits (`markdown::constrain_body_markup`), before
+    /// its attachments render, so a mention's or a file's partial keeps its classes.
     pub fn to_rendered_markdown_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
-        let mut html = self.render_nested(ctx, 0, false, &SafeList::markdown_body())?;
-        if crate::markdown::BODY_ONLY_MARKUP.iter().any(|marker| html.contains(marker)) {
-            let mut dom = Dom::new();
-            let root = dom.parse_fragment(&html).map_err(Error::Parse)?;
-            crate::markdown::constrain_body_markup(&mut dom, root);
-            html = dom.to_html(root);
-        }
+        let mut dom = self.dom.clone();
+        crate::markdown::constrain_body_markup(&mut dom, self.root);
+        let html = render_dom(dom, self.root, ctx, 0, false, &SafeList::markdown_body())?;
         Ok(format!("<div class=\"trix-content\">\n  {html}\n</div>\n"))
     }
 
@@ -106,6 +98,14 @@ impl Content {
             self.render_nested(ctx, 0, true, &SafeList::action_text())?
         ))
     }
+}
+
+/// `Content#render` of `dom`: attachments and galleries rendered, then sanitized with `safe`.
+fn render_dom(mut dom: Dom, root: NodeId, ctx: &RenderContext, depth: usize, default_renderer: bool, safe: &SafeList) -> Result<String, Error> {
+    render_attachments(&mut dom, root, ctx, depth, default_renderer)?;
+    render_attachment_galleries(&mut dom, root, ctx, depth, default_renderer)?;
+    contain_spoiler_blocks(&mut dom, root);
+    sanitizer::sanitize(&dom.to_html(root), safe).map_err(Error::Parse)
 }
 
 /// Loads (and canonicalizes) `html` as a new fragment in `dom`.

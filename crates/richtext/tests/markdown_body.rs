@@ -191,3 +191,54 @@ fn a_links_target_and_rel_are_held_to_what_markdown_emits() {
          <a href=\"https://b.example\">b</a><a href=\"/rooms/1\">c</a><a>d</a><strong>e</strong></div>"
     );
 }
+
+#[test]
+fn only_the_renderers_classes_survive() {
+    let html = shown_html(
+        "<p class=\"visually-hidden spoiler\">a</p><table class=\"visually-hidden\"><tr><td class=\"sr-only\">x</td></tr></table>\
+         <pre><code class=\"language-rust hidden\">y</code></pre><ul class=\"contains-task-list x\"><li class=\"task-list-item\">z</li></ul>\
+         <img class=\"icon icon--custom hidden\" src=\"https://example.com/i.png\" alt=\":i:\"><span class=\"icon\">q</span>",
+    );
+    assert_eq!(
+        html,
+        "<div class=\"trix-content\"><p>a</p><table><tbody><tr><td>x</td></tr></tbody></table>\
+         <pre><code class=\"language-rust\">y</code></pre><ul class=\"contains-task-list\"><li class=\"task-list-item\">z</li></ul>\
+         <img class=\"icon icon--custom\" src=\"https://example.com/i.png\" alt=\":i:\"><span>q</span></div>"
+    );
+}
+
+#[test]
+fn styles_and_handlers_never_survive() {
+    let html = shown_html(
+        "<table style=\"display:none\" onclick=\"x()\"><tr><td style=\"color:red\" onmouseover=\"x()\">a</td></tr></table>\
+         <a href=\"https://example.com\" target=\"_blank\" onclick=\"x()\" style=\"x\">b</a>\
+         <ul><li><input type=\"checkbox\" onchange=\"x()\" style=\"x\">c</li></ul><ol start=\"2\" onfocus=\"x()\"><li>d</li></ol>",
+    );
+    assert!(!html.contains(" style=") && !html.contains(" on"), "{html}");
+    assert!(html.contains("<td>a</td>") && html.contains("<ol start=\"2\"><li>d</li></ol>"), "{html}");
+}
+
+#[test]
+fn alignment_is_only_left_center_or_right_on_a_cell() {
+    let html = shown_html(
+        "<table><tr><th align=\"justify\">a</th><td align=\"RIGHT\">b</td><td align=\"center\">c</td><td align=\"left;x\">d</td></tr></table>\
+         <p align=\"right\">e</p>",
+    );
+    assert_eq!(
+        html,
+        "<div class=\"trix-content\"><table><tbody><tr><th>a</th><td>b</td><td align=\"center\">c</td><td>d</td></tr></tbody></table>\
+         <p>e</p></div>"
+    );
+}
+
+#[test]
+fn checkbox_list_start_and_link_values_are_the_renderers() {
+    let html = shown_html(
+        "<ul><li><input type=\"checkbox\" checked=\"checked\" disabled=\"no\">a</li></ul><ol start=\"9999999999\"><li>b</li></ol>\
+         <a href=\"javascript:alert(1)\" target=\"_blank\" rel=\"opener\">c</a>",
+    );
+    assert_eq!(
+        html,
+        "<div class=\"trix-content\"><ul><li><input type=\"checkbox\" checked=\"\" disabled=\"disabled\">a</li></ul><ol><li>b</li></ol><a>c</a></div>"
+    );
+}

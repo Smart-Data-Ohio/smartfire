@@ -1418,3 +1418,75 @@ async fn an_html_body_written_over_a_forwarded_markdown_snapshot_shows_as_html()
         }
     }
 }
+
+/// A forward edited with HTML before edits cleared `forwarded_markdown` still has the flag set,
+/// over a body that never came from the Markdown renderer. The edit stamped `edited_at`, so it
+/// shows as the HTML body it is (Action Text's cleaning: no table, every class kept off it), and
+/// forwarding it again makes an ordinary forward. An unedited forward keeps its table, with only
+/// the classes the renderer writes.
+#[tokio::test]
+async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
+    use crate::controllers::presenters::test_support::QUIET_CORNER;
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let html = "<table class=\"visually-hidden\"><tr><td>cell</td></tr></table>";
+    let (stale, unedited) = a
+        .db()
+        .write(move |tx| {
+            let source = Message::create(
+                tx,
+                NewMessage { room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("| a |\n|---|\n| cell |".into()), ..Default::default() },
+            )?;
+            let mut ids = Vec::new();
+            for _ in 0..2 {
+                let forward = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        body: Some(html.into()),
+                        forwarded_from_message_id: Some(source.id),
+                        forwarded_at: Some(tx.now()),
+                        forwarded_markdown: true,
+                        ..Default::default()
+                    },
+                )?;
+                ids.push(forward.id);
+            }
+            // The row an HTML edit left on main: the flag still set, and the "(edited)" stamp.
+            tx.conn().execute("UPDATE messages SET edited_at = updated_at WHERE id = ?", [ids[0]])?;
+            Ok((ids[0], ids[1]))
+        })
+        .await
+        .unwrap();
+
+    let shown = |reply: &Reply| parse::<api::MessageRead>(reply).message.body_html;
+    let stale_html = shown(&david.send(get(&format!("/api/v1/messages/{stale}"))).await);
+    assert!(!stale_html.contains("<table") && !stale_html.contains("<td") && stale_html.contains("cell"), "{stale_html}");
+    let unedited_html = shown(&david.send(get(&format!("/api/v1/messages/{unedited}"))).await);
+    assert!(unedited_html.contains("<table><tbody><tr><td>cell</td>"), "{unedited_html}");
+    assert!(!unedited_html.contains("visually-hidden"), "{unedited_html}");
+
+    // Forwarding the edited forward again: the copy is an ordinary forward.
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/rooms/{ALL_TALK}/messages/{stale}/forwards.json"),
+            &json!({"destinations": [{"room_id": QUIET_CORNER}]}),
+        ))
+        .await;
+    assert!(reply.status.is_success(), "{} {}", reply.status, reply.text());
+    let copy = a
+        .db()
+        .read(move |conn| {
+            let id: i64 = conn.query_row("SELECT id FROM messages WHERE forwarded_from_message_id = ? ORDER BY id DESC LIMIT 1", [stale], |row| row.get(0))?;
+            Message::find(conn, id)
+        })
+        .await
+        .unwrap();
+    assert!(!copy.forwarded_markdown);
+    let copy_html = shown(&david.send(get(&format!("/api/v1/messages/{}", copy.id))).await);
+    assert!(!copy_html.contains("<table") && copy_html.contains("cell"), "{copy_html}");
+}

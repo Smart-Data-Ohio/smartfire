@@ -560,7 +560,7 @@ impl<'a> Presenter<'a> {
                 html: String::new(),
             });
         }
-        if message.markdown() || message.forwarded_markdown {
+        if message.markdown() || message.forwarded_markdown_snapshot() {
             let html = if let Some(data) = &self.search_preloads {
                 campfire_richtext::markdown::presentation(&body, &ctx, &data.icons, None)
                     .map_err(|e| e.to_string())
@@ -685,13 +685,14 @@ impl<'a> Presenter<'a> {
     }
 
     /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
-    /// The body as the SPA shows it. A Markdown body (or a forwarded snapshot of one) keeps its
-    /// tables, which Action Text's allowlist would drop.
+    /// The body as the SPA shows it. A Markdown body, or a forward still holding its Markdown
+    /// snapshot (`forwarded_markdown_snapshot`), keeps its tables, which Action Text's allowlist
+    /// would drop.
     pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
         let Some(body) = self.stored_body(message)? else {
             return Ok(String::new());
         };
-        self.render_body_html(&body, message.markdown() || message.forwarded_markdown)
+        self.render_body_html(&body, message.markdown() || message.forwarded_markdown_snapshot())
     }
 
     fn render_body_html(&self, body: &str, markdown: bool) -> Result<String> {
