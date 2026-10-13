@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { field, intField, stringField } from "../json.ts";
-import { errorOf, harness, send } from "./testing.ts";
+import { field, intField, type Json, stringField } from "../json.ts";
+import { lookupIcon } from "./emoji.ts";
+import { errorOf, harness, NOW, send } from "./testing.ts";
 
 const ROOT = "/api/v1/me/agents";
 
@@ -38,7 +39,10 @@ describe("personal agents", () => {
     expect(rotated.status).toBe(201);
     expect(stringField(rotated.json, "secret")).not.toBe(stringField(issued.json, "secret"));
     expect((await send(server, "DELETE", `${path}/credentials/${cid}`)).status).toBe(200);
-    expect((await send(server, "DELETE", path)).status).toBe(200);
+    const removed = await send(server, "DELETE", path);
+    expect(removed.status).toBe(200);
+    expect(intField(agent, "userId")).not.toBe(id);
+    expect(intField(removed.json, "id")).toBe(intField(agent, "userId"));
     expect((await server.handle({ method: "GET", path })).status).toBe(404);
     server.reset();
     expect((await server.handle({ method: "GET", path })).status).toBe(404);
@@ -195,5 +199,119 @@ describe("personal agents", () => {
     expect(field(shown.json, "dailyMessageCap")).toBe(200);
     expect((await send(server, "PATCH", path, { dailyMessageCap: 1 })).status).toBe(200);
     expect((await send(server, "PATCH", path, { dailyMessageCap: null })).status).toBe(200);
+  });
+  it("returns the creation time and resolved avatar icon on creates and reads", async () => {
+    const { server, clock } = harness();
+
+    const created = await send(server, "POST", ROOT, {
+      name: "Branded",
+      iconName: "claude",
+      roomIds: [],
+      capabilities: [],
+    });
+
+    expect(created.status).toBe(201);
+    const agent = field(created.json, "agent");
+    const id = intField(agent, "id");
+    expect(stringField(agent, "createdAt")).toBe(new Date(NOW).toISOString());
+    expect(stringField(agent, "iconUrl")).toBe(lookupIcon("claude")?.imageUrl);
+    clock.advance(10000);
+
+    for (const iconName of ["claude", "partyparrot", "rocket", ""]) {
+      const patched = await send(server, "PATCH", `${ROOT}/${id}`, { iconName });
+      expect(patched.status).toBe(200);
+      expect(field(patched.json, "iconUrl")).toBe(lookupIcon(iconName)?.imageUrl ?? null);
+      expect(stringField(patched.json, "createdAt")).toBe(new Date(NOW).toISOString());
+      const shown = await send(server, "GET", `${ROOT}/${id}`);
+      expect(shown.json).toEqual(patched.json);
+      const listed = await send(server, "GET", ROOT);
+      const agents = field(listed.json, "agents");
+      expect(Array.isArray(agents) && agents[0]).toEqual(patched.json);
+    }
+  });
+  it("marks member-list rooms private and open rooms public", async () => {
+    const { server } = harness();
+
+    for (const [index, kind] of ["open", "closed", "voice", "stage", "board"].entries()) {
+      const room = {
+        type: kind,
+        clientRoomId: `d35352aa-5906-4d78-9236-673af121a78${index}`,
+        name: `Privacy ${kind}`,
+        iconName: null,
+      };
+
+      const created = await send(
+        server,
+        "POST",
+        "/api/v1/rooms",
+        kind === "open" ? room : { ...room, userIds: [1, 2] },
+      );
+
+      expect(created.status, JSON.stringify(created.json)).toBe(201);
+      const id = intField(field(created.json, "room"), "id");
+      const list = await send(server, "GET", ROOT);
+      const rooms = field(list.json, "rooms");
+      const choice = Array.isArray(rooms) ? rooms.find((r) => intField(r, "id") === id) : null;
+      expect(field(choice, "private")).toBe(kind !== "open");
+    }
+  });
+  it("sends readable disabled errors and restores effective grants when reenabled", async () => {
+    const { server } = harness();
+    const list = await send(server, "GET", ROOT);
+    const rooms = field(list.json, "rooms");
+    const roomId = Array.isArray(rooms) ? intField(rooms[0], "id") : null;
+    expect(roomId).not.toBeNull();
+    const body = { name: "Toggle helper", roomIds: [roomId], capabilities: ["read_messages"] };
+    const created = await send(server, "POST", ROOT, body);
+    expect(created.status).toBe(201);
+    const agent = field(created.json, "agent");
+    const id = intField(agent, "id");
+    const credentials = field(agent, "credentials");
+    const cid = Array.isArray(credentials) ? intField(credentials[0], "id") : null;
+    expect(
+      (await send(server, "PATCH", "/api/v1/admin/workspace", { memberAgentsEnabled: false }))
+        .status,
+    ).toBe(200);
+
+    const requests: [string, string, Json][] = [
+      ["POST", ROOT, body],
+      ["POST", `${ROOT}/${id}/credentials`, { name: "Disabled" }],
+      ["POST", `${ROOT}/${id}/credentials/${cid}/rotate`, {}],
+      ["PUT", `${ROOT}/${id}/access`, { roomIds: [], capabilities: [] }],
+    ];
+
+    for (const [method, path, request] of requests) {
+      const denied = await send(server, method, path, request);
+      expect(denied.status).toBe(403);
+      expect(errorOf(denied.json)).toEqual({
+        tag: "Forbidden",
+        message: "Personal agents are turned off for this workspace.",
+      });
+    }
+
+    const paused = await send(server, "GET", `${ROOT}/${id}`);
+    expect(field(paused.json, "capabilities")).toEqual([]);
+    expect(field(paused.json, "credentials")).toEqual(credentials);
+    expect(
+      (await send(server, "PATCH", "/api/v1/admin/workspace", { memberAgentsEnabled: true }))
+        .status,
+    ).toBe(200);
+    const resumed = await send(server, "GET", `${ROOT}/${id}`);
+    expect(field(resumed.json, "capabilities")).toEqual(["read_messages"]);
+    expect(field(resumed.json, "credentials")).toEqual(credentials);
+  });
+  it("reports the per-member limit as a form error", async () => {
+    const { server } = harness();
+    expect(
+      (await send(server, "PATCH", "/api/v1/admin/workspace", { memberAgentLimit: 1 })).status,
+    ).toBe(200);
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    const body = { name: "One helper", roomIds: [], capabilities: [] };
+    expect((await send(server, "POST", ROOT, body)).status).toBe(201);
+    const denied = await send(server, "POST", ROOT, body);
+    expect(denied.status).toBe(422);
+    expect(field(field(denied.json, "error"), "fields")).toEqual({
+      base: ["personal agent limit reached"],
+    });
   });
 });

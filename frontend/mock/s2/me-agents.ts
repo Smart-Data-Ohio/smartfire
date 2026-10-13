@@ -7,13 +7,16 @@ import { field, isNumber, type Json, stringArrayField, stringField } from "../js
 import { timestamp, VIEWER_ID, type World } from "../seed.ts";
 import type { AdminModule } from "./admin.ts";
 import { route, type S2Context } from "./context.ts";
+import { lookupIcon } from "./emoji.ts";
 
 const CAPABILITIES = ["read_messages", "post_messages", "react", "manage_threads"];
 
 const DAY = 86_400_000;
 
+const DISABLED = "Personal agents are turned off for this workspace.";
+
 interface AgentRecord {
-  profile: Omit<PersonalAgent, "roomIds" | "capabilities">;
+  profile: Omit<PersonalAgent, "roomIds" | "capabilities" | "iconUrl">;
   roomIds: number[];
   grants: Map<number, string[]>;
 }
@@ -22,6 +25,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
   let world: World | null = null;
   const agents = new Map<number, AgentRecord>();
   let nextId = 10000;
+  let nextUserId = 20000;
   let nextCredentialId = 10000;
 
   const current = () => {
@@ -29,6 +33,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       world = ctx.world();
       agents.clear();
       nextId = 10000;
+      nextUserId = 20000;
       nextCredentialId = 10000;
     }
 
@@ -63,7 +68,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
   const rooms = () =>
     [...ctx.world().rooms.values()].flatMap((room) =>
       room.room.kind !== "direct" && room.memberIds.includes(VIEWER_ID)
-        ? [{ id: room.room.id, name: ctx.displayName(room) }]
+        ? [{ id: room.room.id, name: ctx.displayName(room), private: room.room.kind !== "open" }]
         : [],
     );
 
@@ -100,15 +105,19 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
     const grantable = new Set(rooms().map((room) => room.id));
     const roomIds = record.roomIds.filter((id) => grantable.has(id));
 
-    const capabilities = record.profile.suspended
-      ? []
-      : [...new Set(roomIds.flatMap((id) => record.grants.get(id) ?? []))].sort();
+    const capabilities =
+      record.profile.suspended || !admin.memberAgentPolicy().enabled
+        ? []
+        : [...new Set(roomIds.flatMap((id) => record.grants.get(id) ?? []))].sort();
 
-    return { ...record.profile, roomIds, capabilities };
+    const iconUrl =
+      lookupIcon(record.profile.iconName ?? "", admin.uploadedIcons())?.imageUrl ?? null;
+
+    return { ...record.profile, iconUrl, roomIds, capabilities };
   };
 
   const enabled = () => {
-    if (!admin.memberAgentPolicy().enabled) throw forbidden("Member agents are disabled");
+    if (!admin.memberAgentPolicy().enabled) throw forbidden(DISABLED);
   };
 
   const issue = (
@@ -185,7 +194,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
           ctx.world().users.get(VIEWER_ID)?.role !== "administrator" &&
           agents.size >= policy.limit
         )
-          throw validation("name", "personal agent limit reached");
+          throw validation("base", "personal agent limit reached", "Personal agent limit reached");
         const name = stringField(body, "name");
 
         if (name === null || name.trim() === "") throw validation("name", "can't be blank");
@@ -194,7 +203,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
         const profile: AgentRecord["profile"] = {
           id,
-          userId: id,
+          userId: nextUserId,
           name,
           iconName: stringField(body, "iconName"),
           provider: stringField(body, "provider"),
@@ -203,6 +212,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
           dailyMessageCap: 200,
           suspended: false,
           lastUsedAt: null,
+          createdAt: timestamp(ctx.now()),
           credentials: [],
         };
 
@@ -217,6 +227,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
         agents.set(id, agent);
         nextId++;
+        nextUserId++;
 
         return {
           status: 201,
@@ -263,7 +274,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         const agent = find(ids[0]);
         current().delete(agent.profile.id);
 
-        return ok({ id: agent.profile.id });
+        return ok({ id: agent.profile.userId });
       }),
       route("PUT", /^\/me\/agents\/(\d+)\/access$/, ({ ids, body }) => {
         const agent = find(ids[0]);

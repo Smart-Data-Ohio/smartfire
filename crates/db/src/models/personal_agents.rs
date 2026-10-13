@@ -39,17 +39,27 @@ pub fn for_owner(conn: &crate::Connection, owner_id: i64) -> Result<Vec<Agent>> 
         .collect()
 }
 
-pub fn grantable_rooms(conn: &crate::Connection, owner_id: i64) -> Result<Vec<(i64, String)>> {
+/// A room a member can grant their personal agent. Private rooms list their members, so the
+/// agent becomes visible there.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GrantableRoom {
+    pub id: i64,
+    pub name: String,
+    pub private: bool,
+}
+
+pub fn grantable_rooms(conn: &crate::Connection, owner_id: i64) -> Result<Vec<GrantableRoom>> {
     let policy = super::agent_access::personal_room_sql("?", "r.id");
     crate::sql::query_all(
         conn,
-        &format!("SELECT r.id,r.name FROM rooms r WHERE ({policy}) ORDER BY r.name,r.id"),
+        &format!("SELECT r.id,r.name,r.type!='Rooms::Open' FROM rooms r WHERE ({policy}) ORDER BY r.name,r.id"),
         [owner_id],
         |r| {
-            Ok((
-                r.get(0)?,
-                r.get::<_, Option<String>>(1)?.unwrap_or_default(),
-            ))
+            Ok(GrantableRoom {
+                id: r.get(0)?,
+                name: r.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                private: r.get(2)?,
+            })
         },
     )
 }
@@ -65,7 +75,7 @@ pub fn replace_access(
     let mut errors = crate::Errors::default();
     let offered = grantable_rooms(tx.conn(), owner_id)?;
     for room in room_ids {
-        if !offered.iter().any(|(id, _)| id == room) {
+        if !offered.iter().any(|offered| offered.id == *room) {
             errors.add("room_ids", "must be a non-direct room you belong to");
         }
     }

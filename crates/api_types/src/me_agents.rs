@@ -1,5 +1,5 @@
 //! Member-owned agents. All secrets appear only in creation responses.
-use crate::{CredentialState, GrantRoom, Timestamp};
+use crate::{CredentialState, Timestamp};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -12,10 +12,21 @@ pub struct PersonalAgentList {
     /// Null for administrators, who have no per-member creation limit.
     pub limit: Option<i64>,
     pub capabilities: Vec<String>,
-    pub rooms: Vec<GrantRoom>,
+    pub rooms: Vec<PersonalAgentRoom>,
     /// Null until a valid APP_URL is configured; request headers never supply this URL.
     pub mcp_url: Option<String>,
     pub oauth_available: bool,
+}
+
+/// A room the member can grant their agent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PersonalAgentRoom {
+    pub id: i64,
+    pub name: String,
+    /// Not an open room: its member list shows the agent once it joins.
+    pub private: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -26,6 +37,9 @@ pub struct PersonalAgent {
     pub user_id: i64,
     pub name: String,
     pub icon_name: Option<String>,
+    /// The bot's avatar icon image, as `User.avatarIcon.imageUrl` resolves it; null for an emoji
+    /// or unknown icon.
+    pub icon_url: Option<String>,
     pub provider: Option<String>,
     pub runtime: Option<String>,
     pub description: Option<String>,
@@ -34,6 +48,7 @@ pub struct PersonalAgent {
     pub room_ids: Vec<i64>,
     pub capabilities: Vec<String>,
     pub last_used_at: Option<Timestamp>,
+    pub created_at: Timestamp,
     pub credentials: Vec<PersonalAgentCredential>,
 }
 

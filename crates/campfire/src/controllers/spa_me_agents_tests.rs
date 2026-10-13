@@ -28,6 +28,7 @@ async fn app() -> Option<TestApp> {
     Some(app)
 }
 const ROOT: &str = "/api/v1/me/agents";
+const DISABLED_MESSAGE: &str = "Personal agents are turned off for this workspace.";
 async fn create(b: &mut Browser<'_>) -> Value {
     let r = write(b, Method::POST, ROOT, json!({"name":"Personal helper","roomIds":[ALL_TALK],"capabilities":["read_messages","post_messages"]})).await;
     assert_eq!(r.status, StatusCode::CREATED, "{}", r.text());
@@ -582,4 +583,165 @@ async fn personal_agent_review_profile_audit_records_member_and_changed_fields_a
     let profile: Value = parse(&member.send(get(&path)).await);
     assert_eq!(profile["name"], "Renamed helper");
     assert_eq!(profile["dailyMessageCap"], Value::Null);
+}
+
+#[tokio::test]
+async fn personal_agent_s3_creation_timestamp_survives_updates() {
+    let a = app().await.expect("restored seed");
+    let mut member = a.sign_in(KEVIN).await;
+    member.grant_sudo().await;
+    let created = create(&mut member).await;
+    let id = created["agent"]["id"].as_i64().unwrap();
+    let expected = a.db().read(move |conn| {
+        Ok(campfire_db::Agent::find(conn, id)?.unwrap().created_at.to_wire())
+    }).await.unwrap();
+    assert_eq!(created["agent"]["createdAt"], expected);
+    let path = format!("{ROOT}/{id}");
+    let updated = write(&mut member, Method::PATCH, &path, json!({"name":"Renamed"})).await;
+    assert_eq!(updated.status, StatusCode::OK);
+    assert_eq!(parse::<Value>(&updated)["createdAt"], expected);
+    let list: Value = parse(&member.send(get(ROOT)).await);
+    assert_eq!(list["agents"][0]["createdAt"], expected);
+}
+
+#[tokio::test]
+async fn personal_agent_s3_icon_url_matches_the_spa_avatar() {
+    let a = app().await.expect("restored seed");
+    let mut member = a.sign_in(KEVIN).await;
+    member.grant_sudo().await;
+    let created = create(&mut member).await;
+    assert_eq!(created["agent"].get("iconUrl"), Some(&Value::Null));
+    let id = created["agent"]["id"].as_i64().unwrap();
+    let bot = created["agent"]["userId"].as_i64().unwrap();
+    a.db().write(|tx| {
+        tx.conn().execute("INSERT INTO workspace_icons(name,title,creator_id,created_at,updated_at) VALUES('personal-test','Personal test',?,?,?)", rusqlite::params![KEVIN,tx.now(),tx.now()])?;
+        Ok(())
+    }).await.unwrap();
+    for (icon, image) in [("claude", true), ("personal-test", true), ("rocket", false), ("", false)] {
+        let updated = write(&mut member, Method::PATCH, &format!("{ROOT}/{id}"), json!({"iconName":icon})).await;
+        assert_eq!(updated.status, StatusCode::OK, "{}", updated.text());
+        let profile: Value = parse(&member.send(get(&format!("/api/v1/people/{bot}"))).await);
+        let expected = profile["user"]["avatarIcon"]["imageUrl"].clone();
+        assert_eq!(expected.is_string(), image, "avatar for {icon}: {profile}");
+        assert_eq!(parse::<Value>(&updated)["iconUrl"], expected);
+        let shown: Value = parse(&member.send(get(&format!("{ROOT}/{id}"))).await);
+        assert_eq!(shown["iconUrl"], expected);
+        let list: Value = parse(&member.send(get(ROOT)).await);
+        assert_eq!(list["agents"][0]["iconUrl"], expected);
+    }
+    let created = write(&mut member, Method::POST, ROOT, json!({"name":"Branded","iconName":"claude","roomIds":[],"capabilities":[]})).await;
+    assert_eq!(created.status, StatusCode::CREATED);
+    assert!(parse::<Value>(&created)["agent"]["iconUrl"].is_string());
+}
+
+#[tokio::test]
+async fn personal_agent_s3_room_choices_describe_privacy() {
+    let a = app().await.expect("restored seed");
+    let rooms = a.db().write(|tx| {
+        let mut rooms = Vec::new();
+        for kind in [campfire_db::RoomType::Open, campfire_db::RoomType::Closed, campfire_db::RoomType::Voice, campfire_db::RoomType::Stage, campfire_db::RoomType::Board] {
+            let room = campfire_db::Room::create(tx, kind, Some(&format!("Privacy {kind:?}")), KEVIN)?;
+            room.grant_to(tx, &[KEVIN])?;
+            rooms.push((room.id, !room.open()));
+        }
+        Ok(rooms)
+    }).await.unwrap();
+    let mut member = a.sign_in(KEVIN).await;
+    let list: Value = parse(&member.send(get(ROOT)).await);
+    for (id, private) in rooms {
+        let choice = list["rooms"].as_array().unwrap().iter().find(|r| r["id"] == id).expect("grantable room");
+        assert_eq!(choice["private"], private, "{choice}");
+    }
+    assert!(!list["rooms"].as_array().unwrap().iter().any(|r| r["id"] == 654632876));
+}
+
+#[tokio::test]
+async fn personal_agent_s3_removal_returns_bot_user_id() {
+    let a = app().await.expect("restored seed");
+    let mut member = a.sign_in(KEVIN).await;
+    member.grant_sudo().await;
+    let created = create(&mut member).await;
+    let id = created["agent"]["id"].as_i64().unwrap();
+    let bot = created["agent"]["userId"].as_i64().unwrap();
+    assert_ne!(id, bot, "distinct agent and user identifiers");
+    let removed = write(&mut member, Method::DELETE, &format!("{ROOT}/{id}"), json!({})).await;
+    assert_eq!(removed.status, StatusCode::OK);
+    assert_eq!(parse::<Value>(&removed)["id"], bot);
+    assert_eq!(member.send(get(&format!("{ROOT}/{id}"))).await.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn personal_agent_s3_disabled_errors_are_readable() {
+    let a = app().await.expect("restored seed");
+    let mut member = a.sign_in(KEVIN).await;
+    member.grant_sudo().await;
+    let created = create(&mut member).await;
+    let id = created["agent"]["id"].as_i64().unwrap();
+    let cid = created["agent"]["credentials"][0]["id"].as_i64().unwrap();
+    let mut admin = a.sign_in(DAVID).await;
+    let toggled = write(&mut admin, Method::PATCH, "/api/v1/admin/workspace", json!({"memberAgentsEnabled":false})).await;
+    assert_eq!(toggled.status, StatusCode::OK);
+    for (method, path, body) in [
+        (Method::POST, ROOT.to_string(), json!({"name":"Disabled","roomIds":[],"capabilities":[]})),
+        (Method::POST, format!("{ROOT}/{id}/credentials"), json!({"name":"Disabled"})),
+        (Method::POST, format!("{ROOT}/{id}/credentials/{cid}/rotate"), json!({})),
+        (Method::PUT, format!("{ROOT}/{id}/access"), json!({"roomIds":[],"capabilities":[]})),
+    ] {
+        let reply = write(&mut member, method, &path, body).await;
+        assert_eq!(reply.status, StatusCode::FORBIDDEN);
+        assert_eq!(parse::<Value>(&reply)["error"], json!({"_tag":"Forbidden","message":DISABLED_MESSAGE}));
+    }
+}
+
+#[tokio::test]
+async fn personal_agent_s3_limit_error_is_form_level() {
+    let a = app().await.expect("restored seed");
+    let mut admin = a.sign_in(DAVID).await;
+    let changed = write(&mut admin, Method::PATCH, "/api/v1/admin/workspace", json!({"memberAgentLimit":1})).await;
+    assert_eq!(changed.status, StatusCode::OK);
+    let mut member = a.sign_in(KEVIN).await;
+    member.grant_sudo().await;
+    create(&mut member).await;
+    let reply = write(&mut member, Method::POST, ROOT, json!({"name":"Over limit","roomIds":[],"capabilities":[]})).await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(parse::<Value>(&reply)["error"]["fields"], json!({"base":["personal agent limit reached"]}));
+}
+
+#[tokio::test]
+async fn personal_agent_s3_toggle_refuses_and_restores_tokens_without_changing_grants() {
+    let a = app().await.expect("restored seed");
+    let mut member = a.sign_in(KEVIN).await;
+    member.grant_sudo().await;
+    let created = create(&mut member).await;
+    let id = created["agent"]["id"].as_i64().unwrap();
+    let secret = created["secret"].as_str().unwrap();
+    let mut admin = a.sign_in(DAVID).await;
+    admin.grant_sudo().await;
+    let issued = write(&mut admin, Method::POST, "/api/v1/admin/bots/394959859/credentials", json!({"name":"Workspace control","expiresAt":null})).await;
+    assert_eq!(issued.status, StatusCode::OK);
+    let issued: Value = parse(&issued);
+    let workspace_secret = issued["secret"].as_str().unwrap();
+    let state = a.db().read(move |conn| {
+        Ok((
+            conn.query_row("SELECT json_group_array(json_object('id',id,'digest',token_digest,'revoked',revoked_at)) FROM agent_credentials WHERE agent_id=?", [id], |r| r.get::<_,String>(0))?,
+            conn.query_row("SELECT json_group_array(json_object('id',id,'cap',capability,'room',room_id,'revoked',revoked_at)) FROM agent_grants WHERE agent_id=?", [id], |r| r.get::<_,String>(0))?,
+        ))
+    }).await.unwrap();
+    for enabled in [true, false, true] {
+        let toggled = write(&mut admin, Method::PATCH, "/api/v1/admin/workspace", json!({"memberAgentsEnabled":enabled})).await;
+        assert_eq!(toggled.status, StatusCode::OK);
+        assert_eq!(mcp(&a, secret).await, if enabled { StatusCode::OK } else { StatusCode::UNAUTHORIZED });
+        let workspace = a.anonymous().send(Req::new(Method::POST, "/agents/mcp").header("authorization", &format!("Bearer {workspace_secret}")).json_body(&json!({"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}))).await;
+        assert_eq!(workspace.status, StatusCode::OK, "{}", workspace.text());
+        assert!(parse::<Value>(&workspace)["result"]["tools"].is_array());
+        let profile: Value = parse(&member.send(get(&format!("{ROOT}/{id}"))).await);
+        assert_eq!(profile["capabilities"], if enabled { json!(["post_messages","read_messages"]) } else { json!([]) });
+        let unchanged = a.db().read(move |conn| {
+            Ok((
+                conn.query_row("SELECT json_group_array(json_object('id',id,'digest',token_digest,'revoked',revoked_at)) FROM agent_credentials WHERE agent_id=?", [id], |r| r.get::<_,String>(0))?,
+                conn.query_row("SELECT json_group_array(json_object('id',id,'cap',capability,'room',room_id,'revoked',revoked_at)) FROM agent_grants WHERE agent_id=?", [id], |r| r.get::<_,String>(0))?,
+            ))
+        }).await.unwrap();
+        assert_eq!(unchanged, state);
+    }
 }
