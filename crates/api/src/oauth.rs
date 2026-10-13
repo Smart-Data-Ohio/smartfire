@@ -132,6 +132,8 @@ fn authorization_error(
 }
 async fn authorize(c: &mut Ctx) -> Result {
     c.no_store();
+    let overflow = error_page(c, "invalid_request")?;
+    c.on_session_cookie_overflow(overflow);
     let client_id = c.param_str("client_id").unwrap_or_default().to_string();
     let app = c.app().clone();
     let client = match client::identify(&app, &client_id, || throttle(c, "cimd-global", 30)).await {
@@ -152,6 +154,8 @@ async fn authorize(c: &mut Ctx) -> Result {
         return error_page(c, "invalid_redirect_uri");
     }
     let state = c.param_str("state").map(str::to_owned);
+    let overflow = authorization_error(c, &redirect, state.as_deref(), "invalid_request", None)?;
+    c.on_session_cookie_overflow(overflow);
     let resource = canonical_resource(&issuer(c));
     let challenge = c
         .param_str("code_challenge")
@@ -161,9 +165,6 @@ async fn authorize(c: &mut Ctx) -> Result {
         Some("unsupported_response_type")
     } else if c.param_str("code_challenge_method") != Some("S256")
         || !oauth::valid_challenge(&challenge)
-        // Budget the encoded return URL conservatively: CSRF, flash, sign-in keys,
-        // encryption and cookie encoding must also fit in the 4096-byte cookie.
-        || c.request.url().len() > 1024
     {
         Some("invalid_request")
     } else if c
@@ -182,7 +183,34 @@ async fn authorize(c: &mut Ctx) -> Result {
     if let Some(error) = bad {
         return authorization_error(c, &redirect, state.as_deref(), error, None);
     }
-    concerns::before_actions(c, Before::default()).await?;
+    let return_url = oauth::AuthorizationReturn {
+        client_id: &client_id,
+        redirect_uri: &redirect,
+        code_challenge: &challenge,
+        resource: &resource,
+        state: state.as_deref(),
+    }
+    .url(&c.url_for("/oauth/authorize"));
+    let Ok(return_url) = return_url else {
+        return authorization_error(c, &redirect, state.as_deref(), "invalid_request", None);
+    };
+    // Count exactly the Rails JSON string the session serializer will encode,
+    // including HTML escaping, before encryption and the metadata's Base64 layers.
+    if rails_compat::json_encode(&json!(&return_url)).len() > 1024 {
+        return authorization_error(c, &redirect, state.as_deref(), "invalid_request", None);
+    }
+    c.set_current(concerns::AuthenticationReturnUrl(return_url));
+    let before = concerns::before_actions(c, Before::default()).await;
+    if matches!(&before, Err(Error::Halt(_))) {
+        // Include the sign-in page's CSRF now and reserve wire bytes for flash and
+        // pending second-factor fields. The final write still has an overflow refusal.
+        c.form_authenticity_token();
+        if !c.session_cookie_fits_with_headroom(1024) {
+            c.reset_session();
+            return authorization_error(c, &redirect, state.as_deref(), "invalid_request", None);
+        }
+    }
+    before?;
     let owner = concerns::require_current_user(c)?.clone();
     if !owner.is_active() || owner.is_bot() {
         return authorization_error(c, &redirect, state.as_deref(), "access_denied", None);

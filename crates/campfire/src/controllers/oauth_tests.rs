@@ -311,15 +311,13 @@ async fn oauth_pkce_flow_fetches_pinned_cimd_and_uses_cache() {
     );
 }
 
-#[tokio::test]
-async fn oauth_signed_out_cookie_jar_returns_through_consent_and_password_sudo() {
-    let f = fixture(metadata()).await;
+async fn oauth_signed_out_to_consent<'a>(
+    f: &'a Fixture,
+    start: &str,
+    state: &str,
+) -> (Browser<'a>, String) {
     let mut browser = f.app.anonymous();
-    let overhead = format!("http://campfire.test{}", authorize_with_state(REDIRECT, "")).len();
-    let state = "a".repeat(1024 - overhead);
-    let start = authorize_with_state(REDIRECT, &state);
-    assert_eq!(format!("http://campfire.test{start}").len(), 1024);
-    let authorized = browser.get(&start).await;
+    let authorized = browser.get(start).await;
     assert_eq!(authorized.status.as_u16(), 302);
     assert!(authorized.location().unwrap().contains("/app/session/new"));
     let sign_in = browser.get("/app/session/new").await;
@@ -351,7 +349,13 @@ async fn oauth_signed_out_cookie_jar_returns_through_consent_and_password_sudo()
     assert_eq!(verified.status.as_u16(), 200, "{}", verified.text());
     let return_to = url::Url::parse(verified.json()["location"].as_str().unwrap()).unwrap();
     assert_eq!(return_to.path(), "/oauth/authorize");
-    assert_eq!(return_to.as_str(), format!("http://campfire.test{start}"));
+    assert_eq!(
+        return_to.as_str(),
+        format!(
+            "http://campfire.test{}",
+            authorize_with_state(REDIRECT, state)
+        )
+    );
     let reply = browser
         .get(&format!(
             "{}?{}",
@@ -363,6 +367,50 @@ async fn oauth_signed_out_cookie_jar_returns_through_consent_and_password_sudo()
     let consent = browser.get(&path).await;
     assert_eq!(consent.status.as_u16(), 200);
     assert_eq!(consent.json()["clientName"], "Test client");
+    for response in [authorized, sign_in, login, verified, reply, consent] {
+        assert_oauth_cookie_budget(&response);
+    }
+    (browser, path)
+}
+
+fn assert_oauth_cookie_budget(reply: &Reply) {
+    assert_ne!(reply.status.as_u16(), 500, "{}", reply.text());
+    for cookie in reply.headers.get_all("set-cookie") {
+        let bytes = cookie.as_bytes().len();
+        assert!(bytes < 4096, "Set-Cookie header was {bytes} bytes");
+    }
+}
+
+fn oauth_return_json_size(state: &str) -> usize {
+    let url = format!(
+        "http://campfire.test{}",
+        authorize_with_state(REDIRECT, state)
+    );
+    let json = serde_json::to_string(&url).unwrap();
+    json.len()
+        + json
+            .bytes()
+            .filter(|byte| matches!(byte, b'&' | b'<' | b'>'))
+            .count()
+            * 5
+}
+
+fn oauth_state_at_return_json_limit(piece: &str) -> String {
+    let overhead = oauth_return_json_size("");
+    let unit = oauth_return_json_size(piece) - overhead;
+    let available = 1024 - overhead;
+    let mut state = piece.repeat(available / unit);
+    state.push_str(&"a".repeat(available % unit));
+    assert_eq!(oauth_return_json_size(&state), 1024);
+    state
+}
+
+#[tokio::test]
+async fn oauth_signed_out_cookie_jar_returns_through_consent_and_password_sudo() {
+    let f = fixture(metadata()).await;
+    let state = oauth_state_at_return_json_limit("a");
+    let start = authorize_with_state(REDIRECT, &state);
+    let (mut browser, path) = oauth_signed_out_to_consent(&f, &start, &state).await;
     let approval = || {
         Req::new(Method::POST, &format!("{path}/approve"))
             .json_body(&json!({"name":"Signed out flow","roomIds":[],"capabilities":[]}))
@@ -390,18 +438,9 @@ async fn oauth_signed_out_cookie_jar_returns_through_consent_and_password_sudo()
     )
     .await;
     assert_eq!(exchanged.status.as_u16(), 200);
-    let mut largest_cookie = 0;
-    for response in [
-        authorized, sign_in, login, verified, reply, consent, sudo, confirmed, done, exchanged,
-    ] {
-        for cookie in response.headers.get_all("set-cookie") {
-            let bytes = cookie.as_bytes().len();
-            assert!(bytes < 4096, "Set-Cookie header was {bytes} bytes");
-            largest_cookie = largest_cookie.max(bytes);
-        }
+    for response in [sudo, confirmed, done, exchanged] {
+        assert_oauth_cookie_budget(&response);
     }
-    assert!(largest_cookie > 0);
-    println!("1024-byte return URL: largest Set-Cookie header was {largest_cookie} bytes");
 }
 
 #[tokio::test]
@@ -1253,12 +1292,129 @@ fn authorize_with_state(redirect: &str, state: &str) -> String {
 }
 
 #[tokio::test]
+async fn oauth_cookie_serialization_discards_empty_and_unknown_query_parameters() {
+    for suffix in [
+        "&".repeat(700),
+        format!(
+            "&ignored={}",
+            url::form_urlencoded::byte_serialize("&<>\"'\\é".repeat(700).as_bytes())
+                .collect::<String>()
+        ),
+    ] {
+        let f = fixture(metadata()).await;
+        let path = format!("{}{}", authorize_with_state(REDIRECT, ""), suffix);
+        let _ = oauth_signed_out_to_consent(&f, &path, "").await;
+    }
+}
+
+#[tokio::test]
+async fn oauth_cookie_serialization_escaping_at_and_over_boundary() {
+    for piece in [
+        "&",
+        "<",
+        ">",
+        "'",
+        "\"",
+        "\\",
+        "é",
+        "🙂",
+        "%26%3C%5C",
+        "\u{2028}",
+        "&<>'\"\\é🙂%26\u{2028}",
+    ] {
+        let f = fixture(metadata()).await;
+        let state = oauth_state_at_return_json_limit(piece);
+        let path = format!(
+            "{}{}&ignored=%26%3c%3e%22%5c%F0%9F%99%82",
+            authorize_with_state(REDIRECT, &state)
+                .replace("%3A", "%3a")
+                .replace("%3C", "%3c")
+                .replace("%3E", "%3e")
+                .replace("%5C", "%5c"),
+            "&".repeat(700),
+        );
+        let _ = oauth_signed_out_to_consent(&f, &path, &state).await;
+        let over = format!("{state}a");
+        assert_eq!(oauth_return_json_size(&over), 1025);
+        let reply = f
+            .app
+            .anonymous()
+            .get(&authorize_with_state(REDIRECT, &over))
+            .await;
+        assert_oauth_cookie_budget(&reply);
+        assert_eq!(reply.status.as_u16(), 302);
+        let callback = url::Url::parse(reply.location().unwrap()).unwrap();
+        assert_eq!(
+            callback.host_str(),
+            Some("client.example"),
+            "escaping input {piece:?}"
+        );
+        assert_eq!(callback.path(), "/callback");
+        let query = callback
+            .query_pairs()
+            .collect::<std::collections::HashMap<_, _>>();
+        assert_eq!(query.get("error").unwrap(), "invalid_request");
+        assert_eq!(query.get("state").unwrap(), &over);
+        assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+        let untrusted = f
+            .app
+            .anonymous()
+            .get(&authorize_with_state(
+                "https://attacker.example/callback",
+                &over,
+            ))
+            .await;
+        assert_oauth_cookie_budget(&untrusted);
+        assert_eq!(untrusted.status.as_u16(), 302);
+        assert_eq!(
+            url::Url::parse(untrusted.location().unwrap())
+                .unwrap()
+                .path(),
+            "/app/oauth/error"
+        );
+    }
+}
+
+#[tokio::test]
+async fn oauth_cookie_serialization_overflow_with_existing_session_redirects() {
+    use campfire_kit::Crypto;
+    let f = fixture(metadata()).await;
+    let crypto = campfire_kit::RailsCrypto::new(f.app.booted.app.secrets.clone());
+    let key = campfire_kit::session::SESSION_KEY;
+    let raw = crypto.encrypt_cookie(
+        key,
+        &json!({"session_id":"a".repeat(32),"existing":"a".repeat(1800)}),
+        None,
+    );
+    let cookie = format!("{key}={}", campfire_kit::cookies::escape(&raw));
+    assert!(
+        cookie.len() + 100 < 4096,
+        "incoming session must fit: {} bytes",
+        cookie.len()
+    );
+    let mut browser = f.app.anonymous();
+    browser.absorb_cookie_header(&cookie);
+    let state = "overflow state & < >";
+    let reply = browser.get(&authorize_with_state(REDIRECT, state)).await;
+    assert_oauth_cookie_budget(&reply);
+    assert_eq!(reply.status.as_u16(), 302);
+    let callback = url::Url::parse(reply.location().unwrap()).unwrap();
+    assert_eq!(callback.host_str(), Some("client.example"));
+    assert_eq!(callback.path(), "/callback");
+    let query = callback
+        .query_pairs()
+        .collect::<std::collections::HashMap<_, _>>();
+    assert_eq!(query.get("error").unwrap(), "invalid_request");
+    assert_eq!(query.get("state").unwrap(), state);
+    assert_eq!(query.get("iss").unwrap(), "https://smartfire.example");
+}
+
+#[tokio::test]
 async fn oauth_return_url_budget_rejects_one_byte_over_boundary() {
     let f = fixture(metadata()).await;
-    let overhead = format!("http://campfire.test{}", authorize_with_state(REDIRECT, "")).len();
-    let state = "a".repeat(1025 - overhead);
+    let state = format!("{}a", oauth_state_at_return_json_limit("a"));
     let path = authorize_with_state(REDIRECT, &state);
-    assert_eq!(format!("http://campfire.test{path}").len(), 1025);
+    assert_eq!(oauth_return_json_size(&state), 1025);
     let reply = f.app.anonymous().get(&path).await;
     assert_eq!(reply.status.as_u16(), 302);
     let callback = url::Url::parse(reply.location().unwrap()).unwrap();

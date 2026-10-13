@@ -108,6 +108,34 @@ pub fn error_callback(
     url.into()
 }
 
+/// Only validated authorization inputs are replayed after sign-in. Query noise and
+/// noncanonical escaping from the original request never enter the cookie session.
+pub struct AuthorizationReturn<'a> {
+    pub client_id: &'a str,
+    pub redirect_uri: &'a str,
+    pub code_challenge: &'a str,
+    pub resource: &'a str,
+    pub state: Option<&'a str>,
+}
+impl AuthorizationReturn<'_> {
+    pub fn url(&self, endpoint: &str) -> std::result::Result<String, url::ParseError> {
+        let mut url = url::Url::parse(endpoint)?;
+        url.query_pairs_mut().extend_pairs([
+            ("client_id", self.client_id),
+            ("redirect_uri", self.redirect_uri),
+            ("response_type", "code"),
+            ("code_challenge_method", "S256"),
+            ("code_challenge", self.code_challenge),
+            ("resource", self.resource),
+            ("scope", "agent"),
+        ]);
+        if let Some(state) = self.state {
+            url.query_pairs_mut().append_pair("state", state);
+        }
+        Ok(url.into())
+    }
+}
+
 #[derive(Serialize)]
 pub struct TokenPair {
     pub access_token: String,
