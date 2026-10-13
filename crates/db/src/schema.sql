@@ -1137,3 +1137,11 @@ CREATE TABLE oauth_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   expires_at datetime(6) NOT NULL, used_at datetime(6), replaced_by_id INTEGER,
   revoked_at datetime(6), created_at datetime(6) NOT NULL);
 CREATE INDEX index_oauth_tokens_on_oauth_connection_id ON oauth_tokens(oauth_connection_id);
+CREATE TABLE oauth_assertion_jtis (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  oauth_client_id INTEGER NOT NULL REFERENCES oauth_clients(id) ON DELETE CASCADE,
+  jti_digest TEXT NOT NULL,
+  expires_at datetime(6) NOT NULL,
+  UNIQUE(oauth_client_id, jti_digest)
+);
+CREATE INDEX index_oauth_assertion_jtis_on_expires_at ON oauth_assertion_jtis(expires_at);
