@@ -12,7 +12,7 @@ async fn app() -> Option<TestApp> {
     let app = TestApp::boot_seed_with_env(
         "default",
         clock,
-        &[("APP_URL", "https://agents.example.test")],
+        &[("APP_URL", "https://agents.example.test"), ("SMARTFIRE_MCP_OAUTH", "0")],
     )
     .await?
     .without_job_runner()

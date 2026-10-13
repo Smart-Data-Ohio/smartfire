@@ -31,7 +31,7 @@ use anyhow::{Context, bail};
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    /// SMARTFIRE_MCP_OAUTH; opt-in until the complete consent UI ships.
+    /// SMARTFIRE_MCP_OAUTH; on by default. Only 0, false, off, or no disable it.
     pub mcp_oauth: bool,
     pub secret_key_base: String,
     /// `GITHUB_WEBHOOK_SECRET`; blank disables inbound GitHub deliveries.
@@ -155,7 +155,7 @@ impl Config {
         } else { Vec::new() };
 
         Ok(Self {
-            mcp_oauth: present("SMARTFIRE_MCP_OAUTH").is_some_and(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "on" | "yes")),
+            mcp_oauth: present("SMARTFIRE_MCP_OAUTH").is_none_or(|v| !matches!(v.trim().to_ascii_lowercase().as_str(), "0" | "false" | "off" | "no")),
             mail: campfire_mail::config::Config::from_map(&[
                 "SMTP_ADDRESS", "SMTP_PORT", "SMTP_DOMAIN", "SMTP_USER_NAME", "SMTP_PASSWORD",
                 "SMTP_AUTHENTICATION", "SMTP_ENABLE_STARTTLS", "MAILER_FROM", "APP_URL",
@@ -234,6 +234,7 @@ mod tests {
     #[test]
     fn production_defaults() {
         let config = config(&[("SECRET_KEY_BASE", "abc")]).unwrap();
+        assert!(config.mcp_oauth);
         assert!(!config.disable_ssl);
         assert_eq!(config.app_version, "0");
         assert_eq!(config.git_revision, None);
@@ -331,8 +332,11 @@ mod oauth_tests {
             "SECRET_KEY_BASE"=>Some("fixture".into()),"APP_URL"=>url.map(str::to_owned),"SMARTFIRE_MCP_OAUTH"=>switch.map(str::to_owned),"RAILS_ENV"=>Some(environment.into()),_=>None
         }).unwrap();
         assert!(config(None,Some("1"),"production").oauth_issuer().is_none());
-        for switch in [None,Some("0"),Some("off"),Some("false"),Some("")] {
+        for switch in [Some("0"),Some("off"),Some("false"),Some("no"),Some(" FALSE "),Some(" Off "),Some(" NO "),Some(" 0 ")] {
             assert!(config(Some("https://smartfire.example"),switch,"production").oauth_issuer().is_none());
+        }
+        for switch in [None,Some(""),Some(" "),Some("1"),Some("true"),Some("on"),Some("yes"),Some("unknown")] {
+            assert_eq!(config(Some("https://smartfire.example"),switch,"production").oauth_issuer().as_deref(),Some("https://smartfire.example"));
         }
         assert_eq!(config(Some("https://smartfire.example/"),Some("1"),"production").oauth_issuer().as_deref(),Some("https://smartfire.example"));
         assert!(config(Some("http://smartfire.example"),Some("1"),"development").oauth_issuer().is_none());
