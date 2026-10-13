@@ -147,6 +147,20 @@ test.describe("on a 390 px phone", () => {
         menu.getByRole("menuitem", { name: /Add people|Leave|Notifications/ }),
       ).toHaveCount(0);
       await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
+
+      // The title opens its details: you, your space, and no levels or people to add.
+      const pane = page.locator("aside.right-pane");
+
+      await page.locator(".room-header .room-title-button").tap();
+      await expect(pane.getByRole("heading", { name: "Details" })).toBeVisible();
+      await expect(pane.locator(".details-name")).toHaveText(`${ME} (you)`);
+      await expect(pane.getByText(LINE)).toBeVisible();
+      await expect(pane.getByRole("button", { name: /^Pinned messages/ })).toBeVisible();
+      await expect(pane.getByRole("button", { name: /^Notifications/ })).toHaveCount(0);
+      await expect(pane.getByRole("button", { name: /Add people|Rename|Leave/ })).toHaveCount(0);
+      await expect(pane.getByRole("link", { name: /settings/i })).toHaveCount(0);
+      await shot(page, "note-to-self-details", theme);
     });
   }
 });
