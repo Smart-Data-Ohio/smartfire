@@ -217,3 +217,16 @@ async fn old_notification_paths_use_server_aliases_and_ignore_a_classic_choice()
         }
     }
 }
+
+#[tokio::test]
+async fn pwa_icons_are_never_masked_so_the_whole_workspace_logo_shows() {
+    let Some(app) = TestApp::boot_seed_with_env("default", seed_clock(), &[]).await else { return; };
+    let manifest = app.anonymous().get("/webmanifest.json").await.json();
+    let purposes: Vec<_> = manifest["icons"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|icon| icon["purpose"].as_str().unwrap_or("any"))
+        .collect();
+    assert_eq!(purposes, ["any", "any"]);
+}

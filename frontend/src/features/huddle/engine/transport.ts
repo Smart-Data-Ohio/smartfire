@@ -66,10 +66,29 @@ export const EMPTY_SNAPSHOT: CallSnapshot = {
   boostCapped: false,
 };
 
-/** Device pixels, for asking a screen share's layer. */
-export interface VideoSize {
-  readonly width: number;
-  readonly height: number;
+/** One primary RTP stream, including each outbound simulcast encoding separately. */
+export interface VideoRtpStats {
+  readonly id: string;
+  readonly ssrc: number | null;
+  readonly frameWidth: number | null;
+  readonly frameHeight: number | null;
+  readonly framesPerSecond: number | null;
+  readonly codec: string | null;
+  readonly rid: string | null;
+  /** The encoder's mode, not a measurement of the currently received SVC layer. */
+  readonly scalabilityMode: string | null;
+  readonly bitrateBps: number | null;
+  readonly freezeCount: number | null;
+  readonly qualityLimitationReason: string | null;
+}
+
+export interface VideoTrackStats {
+  readonly participantId: string;
+  readonly participantName: string;
+  readonly trackSid: string;
+  readonly direction: "sending" | "receiving";
+  readonly source: VideoSource;
+  readonly layers: readonly VideoRtpStats[];
 }
 
 /** What the connection details panel shows (sampled on demand, never sent anywhere). */
@@ -80,6 +99,7 @@ export interface ConnectionStats {
   readonly rxBps: number | null;
   readonly txBps: number | null;
   readonly relayed: boolean | null;
+  readonly videoTracks: readonly VideoTrackStats[];
 }
 
 export type TransportEvent =
@@ -172,8 +192,8 @@ export interface CallTransport {
   microphoneLevel(): number;
   /** Pins (or frees) the layer a watched stream arrives at. */
   setViewerQuality(videoId: string, quality: ViewerQuality): void;
-  /** Asks for an ordinary screen share's top layer, sized to where it shows when expanded. */
-  showScreen(videoId: string, size: VideoSize | null): void;
+  /** A focused share requests the top layer; otherwise its rendered device pixels decide. */
+  showScreen(videoId: string, focused: boolean): void;
   /**
    * One sample of the connection's statistics, `null` while there is nothing to sample. `fresh`
    * starts a new bitrate baseline (a reopened panel shouldn't average over the closed time).

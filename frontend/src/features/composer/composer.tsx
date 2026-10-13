@@ -9,6 +9,7 @@ import {
 import type { SlashCommand } from "../../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../../gen/SlashCommandResult.ts";
 import type { Sticker } from "../../gen/Sticker.ts";
+import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { MOD, type ShortcutId, shortcutKeys } from "../../lib/shortcuts.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { store, useStore } from "../../store/store.ts";
@@ -23,6 +24,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { LazyCreatePollDialog } from "../cards/lazy-create-poll-dialog.tsx";
 import { startHuddleFromCommand } from "../huddle/slash-huddle.ts";
 import { editLastOwnMessage } from "../messages/edit-last.ts";
+import { stickerText } from "../messages/message-files.ts";
 import { notePosted } from "../room/follow-posted.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
 import { DropOverlay, useDropTarget } from "./attachments/drop-zone.tsx";
@@ -100,6 +102,7 @@ export interface ComposerDraft {
   readonly attachmentSpoilers: readonly boolean[];
   /** Drive files pinned on the message. Empty when there are none. */
   readonly driveFileIds: readonly string[];
+  readonly stickerId: number | null;
 }
 
 export interface ComposerProps {
@@ -128,6 +131,7 @@ interface Submission {
   readonly text: string;
   readonly fileIds: ReadonlySet<string>;
   readonly driveFileIds: ReadonlySet<string>;
+  readonly stickerId: number | null;
 }
 
 interface FormatButton {
@@ -270,17 +274,23 @@ export function Composer({
   const attachments = useAttachments(MAX_FILES);
   const [driveFiles, setDriveFiles] = useState<readonly DrivePick[]>([]);
   const [driveOpen, setDriveOpen] = useState(false);
+  const [pendingSticker, setPendingSticker] = useState<Sticker | null>(null);
   const scheduledHere = useScheduled(roomId, threadId, !creating);
   const trigger = focused && entry === null ? findTrigger(text, caret.start, caret.end) : null;
   const autocomplete = useAutocomplete(roomId, threadId, trigger, !creating);
   const hasText = text.trim() !== "";
   const hasFiles = attachments.files.length > 0;
   const hasDrive = driveFiles.length > 0;
+  const hasSticker = pendingSticker !== null;
   const typedReady = entry !== null && entryValid(entry);
-  const canSend = (entry === null ? hasText || hasFiles || hasDrive : typedReady) && !running;
+
+  const canSend =
+    (entry === null ? hasText || hasFiles || hasDrive || hasSticker : typedReady) && !running;
+
   // A new thread's submit holds the tray: files added now would not be in the request, and the
   // tray goes with the navigation that follows a created thread.
   const addingLocked = creating && running;
+  const stickerLocked = creating && (waiting || running);
   // An inline reply (classic's Reply): a new thread's first message never carries one.
   const reply = useReplyTarget(creating ? null : key);
 
@@ -608,6 +618,15 @@ export function Composer({
     focusInput();
   };
 
+  const attachSticker = (sticker: Sticker) => {
+    if (stickerLocked) {
+      return;
+    }
+
+    setPendingSticker(sticker);
+    focusInput();
+  };
+
   const showResult = (
     result: SlashCommandResult,
     typed: string,
@@ -904,13 +923,19 @@ export function Composer({
       text,
       fileIds: new Set(attachments.files.map((entry) => entry.id)),
       driveFileIds: new Set(driveFiles.map((file) => file.id)),
+      stickerId: pendingSticker?.id ?? null,
     };
 
     const files = submittedFiles(submission);
     const drive = submittedDrive(submission);
     const markdown = submission.text.trimEnd();
 
-    if (markdown === "" && files.length === 0 && drive.length === 0) {
+    if (
+      markdown === "" &&
+      files.length === 0 &&
+      drive.length === 0 &&
+      submission.stickerId === null
+    ) {
       waitingSubmission.current = null;
       setWaiting(false);
 
@@ -958,11 +983,13 @@ export function Composer({
         attachmentSignedIds: uploaded.attachmentSignedIds ?? [],
         attachmentSpoilers: uploaded.attachmentSpoilers ?? [],
         driveFileIds: drive.map((file) => file.id),
+        stickerId: submission.stickerId,
       })
         .then(
           () => {
             attachments.clearSent(files);
             clearSentDrive(drive);
+            setPendingSticker(null);
             clearSubmitted(submission.text);
           },
           () => undefined,
@@ -1262,7 +1289,7 @@ export function Composer({
     <div
       className="composer"
       ref={rootRef}
-      data-holding={hasText || hasFiles || hasDrive || entry !== null || undefined}
+      data-holding={hasText || hasFiles || hasDrive || hasSticker || entry !== null || undefined}
     >
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
@@ -1296,6 +1323,35 @@ export function Composer({
             files={driveFiles}
             onRemove={(id) => setDriveFiles((current) => current.filter((file) => file.id !== id))}
           />
+          {pendingSticker === null ? null : (
+            <ul className="tray" aria-label="Attached sticker">
+              <li
+                className="tray-chip"
+                data-kind="sticker"
+                aria-label={`${pendingSticker.name} sticker`}
+              >
+                <span className="tray-thumb">
+                  <EmojiImage
+                    src={pendingSticker.imageUrl}
+                    still={pendingSticker.stillUrl}
+                    alt={stickerText(pendingSticker.name)}
+                    draggable={false}
+                  />
+                </span>
+                <IconButton
+                  icon="x"
+                  label={`Remove ${pendingSticker.name} sticker`}
+                  disabled={stickerLocked}
+                  size="sm"
+                  className="tray-remove"
+                  onClick={() => {
+                    setPendingSticker(null);
+                    focusInput();
+                  }}
+                />
+              </li>
+            </ul>
+          )}
           <DrivePicker
             roomId={roomId}
             attachedFileIds={driveFiles.map((file) => file.id)}
@@ -1374,8 +1430,11 @@ export function Composer({
             {entry === null ? (
               <>
                 <ComposerEmojiButton onInsert={insertAtCaret} />
-                {/* A new thread's first reply can't carry a sticker: it starts the thread. */}
-                {creating ? null : <ComposerStickerButton key={roomId} onPick={sendSticker} />}
+                <ComposerStickerButton
+                  key={roomId}
+                  onPick={creating ? attachSticker : sendSticker}
+                  disabled={stickerLocked}
+                />
                 <IconButton
                   icon="at"
                   label="Mention someone"
