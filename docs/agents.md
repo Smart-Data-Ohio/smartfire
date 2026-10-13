@@ -410,6 +410,9 @@ The `approval_decided`, `github_action_completed`, and
 for the approval's room. A workspace-wide grant also covers that room.
 Polling retains its separate `read_messages` entry check described above.
 Acknowledgment and webhook delivery use the per-event authorization.
+Public workspace message, work, and slash-command event history survives
+room archival while membership and the effective read grant remain.
+Private-thread history and personal-agent events still require a live room.
 Room-scoped actions require current room membership and thread access.
 An approval without a room requires a workspace-wide grant, including
 Fizzy action approvals.
@@ -417,7 +420,8 @@ Fizzy action approvals.
 Revoking the effective grant hides these events from polling, refuses
 acknowledgment, and prevents queued or retried webhook delivery. This
 also applies to decisions and completions for actions already requested
-or started before revocation. The stored approval and event rows remain
+or started before revocation. Leaving the approval's room has the same
+effect, including a failure event recording that the agent left the room. The stored approval and event rows remain
 in the ledger. Personal agents cannot hold `external_action`.
 
 - `POST /agents/approvals` creates a request (201 with `id`, `status`,

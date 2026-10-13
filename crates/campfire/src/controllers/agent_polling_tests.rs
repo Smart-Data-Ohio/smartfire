@@ -70,9 +70,9 @@ async fn agent_polling_public_thread_in_deleted_room_serializes_and_revoked_priv
     }).await.unwrap();
     let deleted = page(&app, private_event - 1).await;
     assert_eq!(deleted.status.as_u16(), 200, "{}", deleted.text());
-    assert_eq!(deleted.json(), json!({"events":[],"next_since":private_event-1}), "deleted rooms no longer satisfy live event authorization");
-    assert_eq!(deleted.json()["next_since"], private_event-1);
-    assert_eq!(deleted.header("x-smartfire-next-since"), Some((private_event-1).to_string().as_str()));
+    assert_eq!(deleted.json(), expected, "public workspace history survives room archival");
+    assert_eq!(deleted.json()["next_since"], public_event);
+    assert_eq!(deleted.header("x-smartfire-next-since"), Some(public_event.to_string().as_str()));
     let next = page(&app, public_event).await;
     assert_eq!(next.status.as_u16(), 200, "{}", next.text());
     assert_eq!(next.json(), json!({"events": [], "next_since": public_event}));

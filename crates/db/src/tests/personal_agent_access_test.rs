@@ -644,11 +644,11 @@ fn personal_agent_cannot_reuse_private_media_after_read_grant_revocation() {
         let blob=tx.conn().last_insert_rowid();
         crate::Message::create(tx,crate::NewMessage{room_id:id("designers"),thread_id:Some(thread.id),creator_id:id("jz"),attachment_blob_id:Some(blob),..Default::default()})?;
         let mut read=grant(tx,"read_messages",Some(id("designers")))?;
-        assert!(crate::Blob::reusable_by(tx.conn(),blob,id("bender"))?);
+        assert!(crate::Blob::reusable_by(tx.conn(),blob,id("bender"),"Message")?);
         read.revoke(tx)?;
         let own=Room::find_or_create_direct_for(tx,&[id("bender"),id("david")],id("david"))?;
         assert!(access::capability_for_agent(tx.conn(),id("bender_agent"),"post_messages",Some(own.id))?);
-        assert!(!crate::Blob::reusable_by(tx.conn(),blob,id("bender"))?);
+        assert!(!crate::Blob::reusable_by(tx.conn(),blob,id("bender"),"Message")?);
         Ok(())
     });
 }
@@ -664,12 +664,12 @@ fn personal_agent_poll_option_reuse_rechecks_source_room_after_owner_departure()
         let blob=tx.conn().last_insert_rowid();
         crate::Attachment::create(tx,"PollOption",option,"media",blob)?;
         let mut post=grant(tx,"post_messages",Some(id("watercooler")))?;
-        assert!(crate::Blob::reusable_by(tx.conn(),blob,id("bender"))?);
+        assert!(crate::Blob::reusable_by(tx.conn(),blob,id("bender"),"PollOption")?);
         post.revoke(tx)?;
-        assert!(!crate::Blob::reusable_by(tx.conn(),blob,id("bender"))?);
+        assert!(!crate::Blob::reusable_by(tx.conn(),blob,id("bender"),"PollOption")?);
         tx.conn().execute("UPDATE agent_grants SET revoked_at=NULL WHERE id=?",[post.id])?;
         tx.conn().execute("DELETE FROM memberships WHERE user_id=? AND room_id=?",params![id("david"),id("watercooler")])?;
-        assert!(!crate::Blob::reusable_by(tx.conn(),blob,id("bender"))?);
+        assert!(!crate::Blob::reusable_by(tx.conn(),blob,id("bender"),"PollOption")?);
         Ok(())
     });
 }

@@ -318,7 +318,15 @@ async fn review_pr206_dispatch_with_production_richtext_jobs_and_bind_limit() {
         app.db()
             .write(move |tx| {
                 for s in setup.as_array().unwrap() {
-                    tx.conn().execute_batch(s.as_str().unwrap())?;
+                    let sql = s.as_str().unwrap();
+                    // These recorded dispatch fixtures exercise workspace bots.
+                    let sql = if sql.starts_with("INSERT INTO agents(id,user_id,owner_id,status,") {
+                        sql.replace("owner_id,status,", "owner_id,kind,status,")
+                            .replace(",'idle',", ",'workspace','idle',")
+                    } else {
+                        sql.to_owned()
+                    };
+                    tx.conn().execute_batch(&sql)?;
                 }
                 Ok(())
             })

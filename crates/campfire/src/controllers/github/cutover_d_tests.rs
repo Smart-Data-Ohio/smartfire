@@ -587,6 +587,19 @@ async fn cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger
             .unwrap()
             .iter()
             .find(|r| r["event_type"] == "github_action_completed");
+        if case == "left_room" {
+            assert!(row.is_none(), "completion leaked after leaving its room: {poll}");
+            let (status, _) = bearer(
+                &f,
+                "POST",
+                &format!("/agents/events/{}/ack", event.0),
+                "bender-test-secret-1234",
+            )
+            .await;
+            assert_eq!(status, 403);
+            assert_eq!(completion(&f, approval).await.2, "delivered");
+            continue;
+        }
         assert!(row.is_some(), "completion absent from {poll}"); // WS15g-004,005 presence
         let row = row.unwrap();
         if case == "success" {
@@ -670,18 +683,6 @@ async fn cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger
             assert_eq!(status, 200); // WS15g-006 status
             assert_eq!(body["outcome"], "acknowledged"); // WS15g-006 response
             assert_eq!(completion(&f, approval).await.2, "acknowledged"); // WS15g-006 DB
-        } else if case == "left_room" {
-            assert_eq!(row["github_action"]["status"], "failed"); // WS15g-005
-            assert_eq!(
-                row["github_action"]["message"],
-                "Agent is no longer a member of the room"
-            ); // WS15g-005
-            assert!(
-                !row["github_action"]
-                    .as_object()
-                    .unwrap()
-                    .contains_key("url")
-            ); // WS15g-005
         }
 
     }

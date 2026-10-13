@@ -292,81 +292,100 @@ fn bots_need_explicit_access_and_private_deletion_targets_only_readers() {
 #[test]
 fn private_thread_review_stream_mentions_invite_at_finalize_before_notifications() {
     use crate::models::{agent_posting::PostResult, agent_streaming};
-    let t = TestDb::new();
-    let thread = private(&t, "designers", "jz");
-    let thread_id = thread.id;
-    let (message_id, receiver_id, receiver_agent_id) = t.write(move |tx| {
-        let receiver = crate::User::create_bot(tx, "Stream Receiver", None)?;
-        let receiver_agent = crate::Agent::create(
-            tx,
-            crate::NewAgent {
-                user_id: receiver.id,
-                owner_id: Some(id("david")),
-                ..Default::default()
-            },
-        )?;
-        crate::Room::find(tx.conn(), id("designers"))?
-            .grant_to(tx, &[id("bender"), receiver.id])?;
-        ChannelThread::find(tx.conn(), thread_id)?.add_access_member(
-            tx,
-            id("david"),
-            id("bender"),
-        )?;
-        let PostResult::Posted(message) = agent_streaming::start(
-            tx,
-            id("bender_agent"),
-            NewMessage {
-                room_id: id("designers"),
-                thread_id: Some(thread_id),
-                client_message_id: Some("private-stream-mentions".into()),
-                markdown_source: Some("Draft".into()),
-                ..Default::default()
-            },
-        )?
-        else {
-            panic!("stream should start");
-        };
-        agent_streaming::update(
-            tx,
-            id("bender_agent"),
-            message.id,
-            Some(" @[Kevin] @[Stream Receiver]"),
-            None,
-        )?;
-        Ok((message.id, receiver.id, receiver_agent.id))
-    });
-    assert!(!t.read(|c| thread.readable_by(c, id("kevin"))));
-    assert!(!t.read(|c| thread.readable_by(c, receiver_id)));
-    t.write(move |tx| agent_streaming::finalize(tx, id("bender_agent"), message_id));
-    assert!(t.read(|c| thread.readable_by(c, id("kevin"))));
-    assert!(t.read(|c| thread.readable_by(c, receiver_id)));
-    assert_eq!(t.read(|c| Ok(c.query_row(
+    for (kind, read_grant, expected_mentions) in [
+        (crate::agent::AgentKind::Workspace, false, 1),
+        (crate::agent::AgentKind::Personal, false, 0),
+        (crate::agent::AgentKind::Personal, true, 1),
+    ] {
+        let t = TestDb::new();
+        let thread = private(&t, "designers", "jz");
+        let thread_id = thread.id;
+        let (message_id, receiver_id, receiver_agent_id) = t.write(move |tx| {
+            let receiver = crate::User::create_bot(tx, "Stream Receiver", None)?;
+            let receiver_agent = crate::Agent::create(
+                tx,
+                crate::NewAgent {
+                    user_id: receiver.id,
+                    kind,
+                    owner_id: Some(id("david")),
+                    ..Default::default()
+                },
+            )?;
+            crate::Room::find(tx.conn(), id("designers"))?
+                .grant_to(tx, &[id("david"), id("bender"), receiver.id])?;
+            if read_grant {
+                crate::AgentGrant::create(
+                    tx,
+                    crate::NewGrant {
+                        agent_id: receiver_agent.id,
+                        room_id: Some(id("designers")),
+                        granted_by_id: id("david"),
+                        capability: "read_messages".into(),
+                        ..Default::default()
+                    },
+                )?;
+            }
+            ChannelThread::find(tx.conn(), thread_id)?.add_access_member(
+                tx,
+                id("david"),
+                id("bender"),
+            )?;
+            let PostResult::Posted(message) = agent_streaming::start(
+                tx,
+                id("bender_agent"),
+                NewMessage {
+                    room_id: id("designers"),
+                    thread_id: Some(thread_id),
+                    client_message_id: Some("private-stream-mentions".into()),
+                    markdown_source: Some("Draft".into()),
+                    ..Default::default()
+                },
+            )?
+            else {
+                panic!("stream should start");
+            };
+            agent_streaming::update(
+                tx,
+                id("bender_agent"),
+                message.id,
+                Some(" @[Kevin] @[Stream Receiver]"),
+                None,
+            )?;
+            Ok((message.id, receiver.id, receiver_agent.id))
+        });
+        assert!(!t.read(|c| thread.readable_by(c, id("kevin"))));
+        assert!(!t.read(|c| thread.readable_by(c, receiver_id)));
+        t.write(move |tx| agent_streaming::finalize(tx, id("bender_agent"), message_id));
+        assert!(t.read(|c| thread.readable_by(c, id("kevin"))));
+        assert!(t.read(|c| thread.readable_by(c, receiver_id)));
+        assert_eq!(t.read(|c| Ok(c.query_row(
         "SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND message_id=? AND event_type='mention' AND outcome='pending'",
-        [receiver_agent_id, message_id], |row| row.get::<_, i64>(0))?)), 1);
-    assert_eq!(t.read(|c| Ok(c.query_row(
+        [receiver_agent_id, message_id], |row| row.get::<_, i64>(0))?)), expected_mentions);
+        assert_eq!(t.read(|c| Ok(c.query_row(
         "SELECT COUNT(*) FROM activity_items WHERE user_id=? AND source_type='Message' AND source_id=? AND event_type='mention'",
         [id("kevin"), message_id], |row| row.get::<_, i64>(0))?)), 1);
-    assert!(
-        t.read(|c| ChannelThread::push_candidates(
-            c,
-            &BasicRichText,
-            &thread,
-            &Message::find(c, message_id)?
-        ))
-        .iter()
-        .any(|candidate| candidate.recipient.id == id("kevin"))
-    );
-    t.write(move |tx| agent_streaming::finalize(tx, id("bender_agent"), message_id));
-    assert_eq!(t.read(|c| Ok(c.query_row(
-        "SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND message_id=? AND event_type='mention'",
-        [receiver_agent_id, message_id], |row| row.get::<_, i64>(0))?)), 1);
-    assert_eq!(
-        t.read(|c| thread.access_members(c))
+        assert!(
+            t.read(|c| ChannelThread::push_candidates(
+                c,
+                &BasicRichText,
+                &thread,
+                &Message::find(c, message_id)?
+            ))
             .iter()
-            .filter(|member| member.user_id == id("kevin"))
-            .count(),
-        1
-    );
+            .any(|candidate| candidate.recipient.id == id("kevin"))
+        );
+        t.write(move |tx| agent_streaming::finalize(tx, id("bender_agent"), message_id));
+        assert_eq!(t.read(|c| Ok(c.query_row(
+        "SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND message_id=? AND event_type='mention'",
+        [receiver_agent_id, message_id], |row| row.get::<_, i64>(0))?)), expected_mentions);
+        assert_eq!(
+            t.read(|c| thread.access_members(c))
+                .iter()
+                .filter(|member| member.user_id == id("kevin"))
+                .count(),
+            1
+        );
+    }
 }
 
 #[test]

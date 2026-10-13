@@ -37,7 +37,7 @@ pub fn authorized_sql(event: &str, message: &str) -> String {
     );
     let cap = format!("CASE WHEN {completion} THEN 'external_action' ELSE 'read_messages' END");
     let user = format!("(SELECT user_id FROM agents WHERE id={event}.agent_id)");
-    let capability = super::agent_access::capability_sql(&format!("{event}.agent_id"), &room, &cap);
+    let capability = super::agent_access::event_capability_sql(&format!("{event}.agent_id"), &room, &cap);
     let thread = thread_readable_sql(event, message, &user);
     format!("({capability}) AND ({thread}) AND (({room}) IS NULL OR EXISTS (SELECT 1 FROM memberships event_member WHERE event_member.room_id=({room}) AND event_member.user_id={user})) AND (
         ({event}.event_type IN ('mention','direct_message','reply') AND {message}.id IS NOT NULL)

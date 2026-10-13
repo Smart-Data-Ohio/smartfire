@@ -35,10 +35,23 @@ pub fn legacy_sql(agent: &str) -> String {
 /// The single capability policy, shared by single, batch and event readers.
 /// Workspace membership remains a caller check; personal membership is a boundary here.
 pub fn capability_sql(agent: &str, room: &str, cap: &str) -> String {
+    capability_policy_sql(agent, room, cap, false)
+}
+
+/// Workspace public event history survives room archival. Personal rooms remain live-only.
+pub(crate) fn event_capability_sql(agent: &str, room: &str, cap: &str) -> String {
+    capability_policy_sql(agent, room, cap, true)
+}
+
+fn capability_policy_sql(agent: &str, room: &str, cap: &str, event_history: bool) -> String {
+    let workspace_room = format!(
+        "({}NOT EXISTS (SELECT 1 FROM rooms policy_deleted WHERE policy_deleted.id=({room}) AND policy_deleted.deleted_at IS NOT NULL))",
+        if event_history { format!("({cap})='read_messages' OR ") } else { String::new() }
+    );
     let live = agent_live("policy_agent");
     let legacy = legacy_sql("policy_agent");
     format!("EXISTS (SELECT 1 FROM agents policy_agent WHERE policy_agent.id=({agent}) AND ({live}) AND ({cap}) IN ('read_messages','post_messages','react','manage_threads','external_action','fizzy','dm_anyone') AND (
-        (policy_agent.kind!='personal' AND NOT EXISTS (SELECT 1 FROM rooms policy_deleted WHERE policy_deleted.id=({room}) AND policy_deleted.deleted_at IS NOT NULL) AND (
+        (policy_agent.kind!='personal' AND {workspace_room} AND (
             (({cap}) IN ('read_messages','post_messages','react') AND ({legacy})) OR EXISTS (SELECT 1 FROM agent_grants policy_grant WHERE policy_grant.agent_id=policy_agent.id AND policy_grant.capability=({cap}) AND policy_grant.revoked_at IS NULL AND (policy_grant.room_id IS NULL OR policy_grant.room_id=({room})))) )
         OR (policy_agent.kind='personal' AND ({cap}) IN ('read_messages','post_messages','react','manage_threads') AND EXISTS (
             SELECT 1 FROM rooms policy_room JOIN memberships policy_member ON policy_member.room_id=policy_room.id AND policy_member.user_id=policy_agent.user_id

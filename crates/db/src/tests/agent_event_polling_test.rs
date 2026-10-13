@@ -52,7 +52,8 @@ fn ws11_poll_payload_matrix_and_dropped_page_cursor_match_rails() {
         check("suspended",json!(0),json!(100))?;
         tx.conn().execute("UPDATE agents SET suspended_at=NULL WHERE id=?",[agent])?;
         tx.conn().execute("UPDATE rooms SET deleted_at=? WHERE id=?",params![tx.now(),room])?;
-        check("soft_deleted_room",json!(0),json!(100))?;
+        // Public workspace history survives archival; completion authorization still applies.
+        check("all",json!(0),json!(100))?;
         tx.conn().execute("UPDATE rooms SET deleted_at=NULL WHERE id=?",[room])?;
         AgentGrant::create(tx,NewGrant {agent_id:agent,granted_by_id:actor,capability:"read_messages".into(),room_id:Some(room),revoked_at:Some(tx.now())})?;
         check("revoked",json!(0),json!(100))?;
