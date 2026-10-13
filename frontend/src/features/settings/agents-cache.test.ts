@@ -273,6 +273,41 @@ describe("the agents cache", () => {
       expect(first(after)?.connection?.revokedReason).toBe("tokenReused");
       expect(first(after)?.lastUsedAt).toBe("2026-10-13T15:00:00.000Z");
     });
+
+    // Sent A, B, C, carried out by the server in another order: C's answer still shows the
+    // connection active, A's shows it revoked without a reason, B's revoked for a reused token.
+    // However the answers arrive, it ends revoked with the reason.
+    describe("when answers sent A, B, C arrive in any order", () => {
+      const answers = {
+        a: { ...CONNECTION, state: "revoked" as const },
+        b: { ...connected({ revokedReason: "tokenReused" }), state: "revoked" as const },
+        c: CONNECTION,
+      };
+
+      const orders = [
+        ["a", "b", "c"],
+        ["a", "c", "b"],
+        ["b", "a", "c"],
+        ["b", "c", "a"],
+        ["c", "a", "b"],
+        ["c", "b", "a"],
+      ] as const;
+
+      for (const order of orders) {
+        it(`keeps the reason when they arrive ${order.join(", ")}`, () => {
+          const cache = start();
+          const sent = { a: nextSequence(), b: nextSequence(), c: nextSequence() };
+
+          const after = order.reduce(
+            (current, name) => withTokens(current, AGENT.id, [answers[name]], sent[name]),
+            cache,
+          );
+
+          expect(first(after)?.state).toBe("revoked");
+          expect(first(after)?.connection?.revokedReason).toBe("tokenReused");
+        });
+      }
+    });
   });
 
   it("keeps an agent unconfirmed until an answer to a request sent after its save lands", () => {

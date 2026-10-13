@@ -345,10 +345,15 @@ async fn show_consent(c: &mut Ctx) -> Result {
         let agents = personal_agents::for_owner(conn, owner.id)?
             .into_iter().map(|agent| crate::me_agents::present(conn, agent, now))
             .collect::<campfire_db::Result<Vec<_>>>()?;
-        let room_access = agents.iter()
-            .map(|agent| room_access(conn, agent))
-            .collect::<campfire_db::Result<Vec<_>>>()?
-            .concat();
+        let mut room_access = Vec::new();
+        let mut hidden_rooms = Vec::new();
+        for agent in &agents {
+            let (access, count) = self::room_access(conn, owner.id, agent)?;
+            room_access.extend(access);
+            if count > 0 {
+                hidden_rooms.push(api::OAuthAgentHiddenRooms { agent_id: agent.id, count });
+            }
+        }
         let last_sql = "SELECT credential.agent_id FROM oauth_connections connection JOIN agent_credentials credential ON credential.id=connection.agent_credential_id JOIN agents agent ON agent.id=credential.agent_id WHERE connection.oauth_client_id=? AND agent.owner_id=? ORDER BY connection.created_at DESC,connection.id DESC LIMIT 1";
         let last: Option<i64> = conn.query_row(last_sql, params![client.id, owner.id], |r| r.get(0)).optional()?;
         let selected_agent_id = last.filter(|id| agents.iter().any(|agent| agent.id == *id));
@@ -370,16 +375,20 @@ async fn show_consent(c: &mut Ctx) -> Result {
             limit: (!owner.is_administrator()).then(|| settings.member_agent_limit()),
             access_applies_to_all_connections: true,
             room_access,
+            hidden_rooms,
         })
     }).await.map_err(campfire_runtime::context::db_error)?;
     c.json(StatusCode::OK, &response)
 }
 /// Each room `agent` is in or holds capabilities in, with what it can do there: everything
 /// approval would replace. Direct and deleted rooms are left alone by approval, so they're skipped.
+/// Rooms `owner_id` can't see any more (`user.rooms`) are only counted: their names and ids stay
+/// private, though approval takes the agent out of them too.
 fn room_access(
     conn: &rusqlite::Connection,
+    owner_id: i64,
     agent: &api::PersonalAgent,
-) -> campfire_db::Result<Vec<api::OAuthAgentRoomAccess>> {
+) -> campfire_db::Result<(Vec<api::OAuthAgentRoomAccess>, i64)> {
     let mut rooms: BTreeMap<i64, Vec<String>> = campfire_db::Membership::for_user(conn, agent.user_id)?
         .into_iter()
         .map(|membership| (membership.room_id, Vec::new()))
@@ -393,9 +402,14 @@ fn room_access(
         }
     }
     let mut access = Vec::new();
+    let mut hidden = 0;
     for (room_id, mut capabilities) in rooms {
         let Some(room) = campfire_db::Room::find_by_id(conn, room_id)? else { continue };
         if room.direct() || room.deleted_at.is_some() {
+            continue;
+        }
+        if campfire_db::Room::find_for_user(conn, owner_id, room_id)?.is_none() {
+            hidden += 1;
             continue;
         }
         capabilities.sort();
@@ -403,7 +417,7 @@ fn room_access(
             agent_id: agent.id, room_id, room_name: room.name.unwrap_or_default(), capabilities,
         });
     }
-    Ok(access)
+    Ok((access, hidden))
 }
 async fn approve_consent(c: &mut Ctx) -> Result {
     protect_consent(c);

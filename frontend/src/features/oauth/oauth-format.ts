@@ -80,8 +80,14 @@ export interface RoomChange {
   readonly loses: readonly string[];
 }
 
-/** How approving changes an existing agent's access, room by room. */
-export type AccessDiff = readonly RoomChange[];
+/**
+ * How approving changes an existing agent's access: room by room, plus how many rooms it leaves
+ * that the person can't see any more (never named).
+ */
+export interface AccessDiff {
+  readonly rooms: readonly RoomChange[];
+  readonly hiddenLeaving: number;
+}
 
 /** `capabilities` in the server's order (any it doesn't offer any more last), named for a sentence. */
 function labels(consent: OAuthConsent, capabilities: readonly string[]): readonly string[] {
@@ -117,13 +123,16 @@ export function accessDiff(
     ...[...now.keys()].filter((id) => !consent.rooms.some((room) => room.id === id)),
   ];
 
-  return roomIds.flatMap((id): RoomChange[] => {
+  const hiddenLeaving =
+    consent.hiddenRooms.find((hidden) => hidden.agentId === agent.id)?.count ?? 0;
+
+  const rooms = roomIds.flatMap((id): RoomChange[] => {
     const current = now.get(id);
     const chosen = form.roomIds.includes(id);
 
     const room =
       consent.rooms.find((offered) => offered.id === id)?.name ??
-      (current?.roomName || "A room you're no longer in");
+      (current?.roomName || "A room without a name");
 
     if (current === undefined) {
       return chosen
@@ -158,11 +167,18 @@ export function accessDiff(
           },
         ];
   });
+
+  return { rooms, hiddenLeaving };
 }
 
 /** Whether a diff changes nothing. */
 export function unchanged(diff: AccessDiff): boolean {
-  return diff.length === 0;
+  return diff.rooms.length === 0 && diff.hiddenLeaving === 0;
+}
+
+/** "1 room you're no longer in", for the rooms it leaves that the person can't see. */
+export function hiddenRoomsText(count: number): string {
+  return count === 1 ? "1 room you're no longer in" : `${count} rooms you're no longer in`;
 }
 
 /** One room's change as a sentence: "can now Post messages; can no longer React". */

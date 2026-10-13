@@ -157,6 +157,7 @@ export function createOAuth(ctx: S2Context, admin: AdminModule, agents: AgentCon
       limit: agents.limit(),
       accessAppliesToAllConnections: true,
       roomAccess: agents.roomAccess(),
+      hiddenRooms: agents.hiddenRooms(),
     };
   };
 

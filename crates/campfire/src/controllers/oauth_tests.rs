@@ -1746,3 +1746,49 @@ async fn oauth_consent_shows_per_room_access_and_approval_replaces_it_room_by_ro
     let shown = room_access(&owner.get(&consent_path(&next)).await.json());
     assert_eq!(shown, vec![(ALL_TALK, read(&["read_messages"]))]);
 }
+#[tokio::test]
+async fn oauth_consent_counts_rooms_the_owner_left_without_naming_them_and_approval_leaves_them() {
+    use super::presenters::test_support::{ALL_TALK, QUIET_CORNER};
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let agent_id = owner.get(&path).await.json()["selectedAgentId"].as_i64().unwrap();
+    owner.grant_sudo().await;
+    let both = json!({"agentId":agent_id,"roomIds":[ALL_TALK,QUIET_CORNER],"capabilities":["read_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    // David leaves the private room; the agent stays in it. Then it's renamed.
+    let bot_id = f.app.db().write(move |tx| {
+        let room = campfire_db::Room::find(tx.conn(), QUIET_CORNER)?;
+        room.revoke_from(tx, &[DAVID])?;
+        tx.conn().execute("UPDATE rooms SET name='Secret plans' WHERE id=?", [QUIET_CORNER])?;
+        Ok(tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| r.get::<_, i64>(0))?)
+    }).await.unwrap();
+    async fn member(app: &TestApp, room_id: i64, bot_id: i64) -> i64 {
+        app.db().read(move |conn| Ok(conn.query_row(
+            "SELECT COUNT(*) FROM memberships WHERE room_id=? AND user_id=?",
+            [room_id, bot_id],
+            |r| r.get::<_, i64>(0),
+        )?)).await.unwrap()
+    }
+    assert_eq!(member(&f.app, QUIET_CORNER, bot_id).await, 1, "the agent is still in the room");
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let reply = owner.get(&path).await;
+    let text = reply.text();
+    assert!(!text.contains("Secret plans"), "{text}");
+    assert!(!text.contains(&QUIET_CORNER.to_string()), "{text}");
+    let consent = reply.json();
+    assert_eq!(room_access(&consent), vec![(ALL_TALK, vec!["read_messages".to_string()])]);
+    assert_eq!(consent["hiddenRooms"], json!([{"agentId":agent_id,"count":1}]));
+    // Approving takes the agent out of the room David can't see.
+    owner.grant_sudo().await;
+    let one = json!({"agentId":agent_id,"roomIds":[ALL_TALK],"capabilities":["read_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    assert_eq!(member(&f.app, QUIET_CORNER, bot_id).await, 0);
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    assert_eq!(owner.get(&consent_path(&next)).await.json()["hiddenRooms"], json!([]));
+}

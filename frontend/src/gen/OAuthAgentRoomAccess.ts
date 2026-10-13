@@ -2,7 +2,7 @@
 
 export type OAuthAgentRoomAccess = { agentId: number, roomId: number,
 /**
- * Named here because the owner may no longer be in the room (it's then not in `rooms`).
+ * The room's name. Only rooms the member can see are listed; others are in `hidden_rooms`.
  */
 roomName: string,
 /**

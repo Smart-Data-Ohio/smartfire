@@ -12,8 +12,8 @@
  * revoked stays revoked, one an answer doesn't mention stays as it is, and a new one is added.
  * What else can change about one (when it was last used, whether an administrator blocked its app,
  * why it was revoked) goes back and forth, so for that the latest sent wins, as for profiles: a
- * slow answer can't unblock a connection a later one showed blocked. Why it was revoked comes with
- * the revocation, so it's taken from the latest-sent answer that shows it revoked.
+ * slow answer can't unblock a connection a later one showed blocked. Why it was revoked sticks
+ * like the state: once any answer says, no answer without a reason clears it.
  *
  * And which agents a save went unanswered for: it may or may not have landed, so the cache can't
  * tell what the server holds for them until an answer to a request sent after it says.
@@ -72,16 +72,14 @@ function mergedToken(
   const details = freshNewer ? fresh : held;
   const state = furthest(held, fresh).state;
 
-  // The reason belongs to a revocation: from the details when they show it, else the other answer.
-  const revokedBy = details.state === "revoked" ? details : furthest(held, fresh);
+  // Why it was revoked sticks like the state: once any answer gave a reason, it stays, whatever
+  // order the answers come in (one sent before the server knew it may have none).
+  const reason = held.connection?.revokedReason ?? fresh.connection?.revokedReason ?? null;
 
   const connection =
     details.connection === null
       ? null
-      : {
-          ...details.connection,
-          revokedReason: state === "revoked" ? (revokedBy.connection?.revokedReason ?? null) : null,
-        };
+      : { ...details.connection, revokedReason: state === "revoked" ? reason : null };
 
   return { ...details, state, connection };
 }

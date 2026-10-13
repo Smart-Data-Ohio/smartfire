@@ -25,6 +25,7 @@ import {
   consentProblem,
   firstPick,
   formFor,
+  hiddenRoomsText,
   pickedAgent,
   type RoomChange,
   roomChangeText,
@@ -287,9 +288,14 @@ function DiffSummary({
         <p className="text-muted">No change: it keeps the rooms and abilities it has.</p>
       ) : (
         <ul className="oauth-diff-list">
-          {diff.map((change) => (
+          {diff.rooms.map((change) => (
             <DiffLine key={change.roomId} change={change} />
           ))}
+          {diff.hiddenLeaving === 0 ? null : (
+            <li>
+              <span className="oauth-diff-label">Leaves</span> {hiddenRoomsText(diff.hiddenLeaving)}
+            </li>
+          )}
         </ul>
       )}
       {everywhere && agent.credentials.some((credential) => credential.state === "active") ? (

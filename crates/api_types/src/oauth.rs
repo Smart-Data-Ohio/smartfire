@@ -22,6 +22,18 @@ pub struct OAuthConsent {
     /// what approval changes room by room. Approval replaces all of it with the chosen rooms,
     /// each getting the chosen capabilities.
     pub room_access: Vec<OAuthAgentRoomAccess>,
+    /// Per agent, how many rooms it's in that the member can no longer see (they left a private
+    /// room, say). Only counted, never named; approval takes the agent out of them. Agents with
+    /// none are left out.
+    pub hidden_rooms: Vec<OAuthAgentHiddenRooms>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct OAuthAgentHiddenRooms {
+    pub agent_id: i64,
+    pub count: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -30,7 +42,7 @@ pub struct OAuthConsent {
 pub struct OAuthAgentRoomAccess {
     pub agent_id: i64,
     pub room_id: i64,
-    /// Named here because the owner may no longer be in the room (it's then not in `rooms`).
+    /// The room's name. Only rooms the member can see are listed; others are in `hidden_rooms`.
     pub room_name: String,
     /// Empty when the agent is in the room without any capability there.
     pub capabilities: Vec<String>,

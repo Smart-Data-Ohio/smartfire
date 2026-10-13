@@ -1,4 +1,5 @@
 import type { BotSummary } from "../../src/gen/BotSummary.ts";
+import type { OAuthAgentHiddenRooms } from "../../src/gen/OAuthAgentHiddenRooms.ts";
 import type { OAuthAgentRoomAccess } from "../../src/gen/OAuthAgentRoomAccess.ts";
 import type { PersonalAgent } from "../../src/gen/PersonalAgent.ts";
 import type { PersonalAgentConnection } from "../../src/gen/PersonalAgentConnection.ts";
@@ -57,6 +58,8 @@ export interface AgentConnections {
   readonly liveConnections: (clientId: string) => number;
   /** What each agent can do in each of its rooms, as the consent page compares it. */
   readonly roomAccess: () => OAuthAgentRoomAccess[];
+  /** Per agent, how many rooms it's in that the viewer can't see any more (only counted). */
+  readonly hiddenRooms: () => OAuthAgentHiddenRooms[];
 }
 
 interface AgentRecord {
@@ -317,6 +320,22 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
     liveConnections: (clientId) =>
       connections().filter((c) => c.state === "active" && c.connection?.clientId === clientId)
         .length,
+    hiddenRooms: () => {
+      const offered = new Set(rooms().map((room) => room.id));
+
+      // Rooms that still exist (not direct) that the viewer isn't in any more.
+      const hidden = (id: number) => {
+        const room = ctx.world().rooms.get(id);
+
+        return room !== undefined && room.room.kind !== "direct" && !offered.has(id);
+      };
+
+      return [...current().values()].flatMap((record) => {
+        const count = record.roomIds.filter(hidden).length;
+
+        return count === 0 ? [] : [{ agentId: record.profile.id, count }];
+      });
+    },
     roomAccess: () =>
       [...current().values()].flatMap((record) => {
         const agent = present(record);

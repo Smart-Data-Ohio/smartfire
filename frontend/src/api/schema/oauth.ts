@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import type { AdminOAuthClient as GeneratedAdminOAuthClient } from "../../gen/AdminOAuthClient.ts";
 import type { AdminOAuthClientList as GeneratedAdminOAuthClientList } from "../../gen/AdminOAuthClientList.ts";
 import type { ApproveOAuthAuthorization as GeneratedApproveOAuthAuthorization } from "../../gen/ApproveOAuthAuthorization.ts";
+import type { OAuthAgentHiddenRooms as GeneratedOAuthAgentHiddenRooms } from "../../gen/OAuthAgentHiddenRooms.ts";
 import type { OAuthAgentRoomAccess as GeneratedOAuthAgentRoomAccess } from "../../gen/OAuthAgentRoomAccess.ts";
 import type { OAuthClientBadge as GeneratedOAuthClientBadge } from "../../gen/OAuthClientBadge.ts";
 import type { OAuthConsent as GeneratedOAuthConsent } from "../../gen/OAuthConsent.ts";
@@ -30,6 +31,13 @@ export type OAuthAgentRoomAccessPin = Assert<
   Pinned<typeof OAuthAgentRoomAccess, GeneratedOAuthAgentRoomAccess>
 >;
 
+/** How many rooms an agent is in that the person can no longer see: counted, never named. */
+export const OAuthAgentHiddenRooms = Schema.Struct({ agentId: AgentId, count: Schema.Int });
+
+export type OAuthAgentHiddenRoomsPin = Assert<
+  Pinned<typeof OAuthAgentHiddenRooms, GeneratedOAuthAgentHiddenRooms>
+>;
+
 /**
  * `GET /oauth/authorizations/:publicId`: the client asking, where it sends you back, your agents
  * (with the one last linked to it), and what a personal agent may be given.
@@ -46,6 +54,7 @@ export const OAuthConsent = Schema.Struct({
   limit: Schema.NullOr(Schema.Number),
   accessAppliesToAllConnections: Schema.Boolean,
   roomAccess: Schema.Array(OAuthAgentRoomAccess),
+  hiddenRooms: Schema.Array(OAuthAgentHiddenRooms),
 });
 
 export type OAuthConsentPin = Assert<Pinned<typeof OAuthConsent, GeneratedOAuthConsent>>;

@@ -74,6 +74,7 @@ function consent(change: Partial<OAuthConsent> = {}): OAuthConsent {
         capabilities: ["post_messages", "read_messages"],
       },
     ],
+    hiddenRooms: [],
     ...change,
   };
 }
@@ -205,30 +206,34 @@ describe("the approval page", () => {
     });
   });
 
-  it("names a room the person has left, which approval takes the agent out of", async () => {
-    await mount(
-      Promise.resolve(
-        consent({
-          roomAccess: [
-            {
-              agentId: 7,
-              roomId: 2,
-              roomName: "Design",
-              capabilities: ["post_messages", "read_messages"],
-            },
-            { agentId: 7, roomId: 9, roomName: "Old project", capabilities: [] },
-          ],
-        }),
-      ),
-    );
+  it("counts rooms the person can't see any more without naming them", async () => {
+    await mount(Promise.resolve(consent({ hiddenRooms: [{ agentId: 7, count: 1 }] })));
 
     const diff = await screen.findByRole("region", { name: "Changes to Helper's access" });
 
+    // Approval takes the agent out of them, so even the untouched form isn't "No change".
+    expect(within(diff).queryByText(/No change/)).toBeNull();
     expect(
       within(diff)
         .getAllByRole("listitem")
         .map((item) => item.textContent),
-    ).toEqual(["Leaves Old project: it couldn't do anything there"]);
+    ).toEqual(["Leaves 1 room you're no longer in"]);
+  });
+
+  it("says how many hidden rooms it leaves, beside the rooms it can name", async () => {
+    await mount(Promise.resolve(consent({ hiddenRooms: [{ agentId: 7, count: 2 }] })));
+
+    const diff = await screen.findByRole("region", { name: "Changes to Helper's access" });
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Design" }));
+    expect(
+      within(diff)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "Leaves Design: can no longer read messages, post messages",
+      "Leaves 2 rooms you're no longer in",
+    ]);
   });
 
   it("makes a new agent, which needs a name", async () => {

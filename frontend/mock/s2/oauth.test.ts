@@ -239,6 +239,44 @@ describe("connecting an app (OAuth)", () => {
     ]);
   });
 
+  it("counts rooms the viewer left without naming them, until approval takes the agent out", async () => {
+    const { server } = harness();
+
+    const connected = await send(server, "POST", "/__mock/oauth-connection", {
+      name: "Helper",
+      roomIds: [ROOM_IDS.general, ROOM_IDS.launchPlanning],
+      capabilities: ["read_messages"],
+    });
+
+    const agentId = intField(connected.json, "agentId");
+
+    // Someone takes the viewer out of the private room and renames it.
+    const edited = await send(server, "PATCH", `/api/v1/rooms/${ROOM_IDS.launchPlanning}`, {
+      type: "closed",
+      name: "secret-plans",
+      userIds: [2, 3, 6],
+    });
+
+    expect(edited.status).toBe(200);
+
+    const path = await authorize(server);
+    const consent = await get<Consent>(server, path);
+
+    expect(JSON.stringify(consent)).not.toContain("secret-plans");
+    expect(consent.roomAccess.map((access) => access.roomId)).toEqual([ROOM_IDS.general]);
+    expect(consent.hiddenRooms).toEqual([{ agentId, count: 1 }]);
+
+    await send(server, "POST", `${path}/approve`, {
+      agentId,
+      name: null,
+      iconName: null,
+      roomIds: [ROOM_IDS.general],
+      capabilities: ["read_messages"],
+    });
+
+    expect((await get<Consent>(server, await authorize(server))).hiddenRooms).toEqual([]);
+  });
+
   it("ends a connection for a reused sign-in token, with the reason", async () => {
     const { server } = harness();
     const connected = await send(server, "POST", "/__mock/oauth-connection", { name: "Helper" });
