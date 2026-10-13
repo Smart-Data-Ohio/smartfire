@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
+import { ActionError } from "../../sync/run.ts";
 import { meAgents } from "../../sync/settings.ts";
 import { SecretBlock } from "./agent-parts.tsx";
 import { AgentsSection } from "./agents-section.tsx";
@@ -49,6 +50,7 @@ const AGENT: PersonalAgent = {
   userId: 70,
   name: "Helper",
   iconName: "owl",
+  iconUrl: null,
   provider: "openai",
   runtime: "codex",
   description: null,
@@ -57,6 +59,7 @@ const AGENT: PersonalAgent = {
   roomIds: [2],
   capabilities: ["post_messages", "read_messages"],
   lastUsedAt: null,
+  createdAt: "2026-10-13T12:00:00.000Z",
   credentials: [TOKEN],
 };
 
@@ -67,8 +70,8 @@ function list(change: Partial<PersonalAgentList> = {}): PersonalAgentList {
     limit: 3,
     capabilities: ["read_messages", "post_messages", "react", "manage_threads"],
     rooms: [
-      { id: 1, name: "General" },
-      { id: 2, name: "Design" },
+      { id: 1, name: "General", private: false },
+      { id: 2, name: "Design", private: false },
     ],
     mcpUrl: "https://chat.example.com/agents/mcp",
     oauthAvailable: false,
@@ -99,7 +102,7 @@ describe("the cards", () => {
 
     const card = await screen.findByRole("article", { name: "Helper" });
 
-    expect(within(card).getByText(/^Codex CLI · never used$/)).toBeTruthy();
+    expect(within(card).getByText(/^Codex CLI · added Oct 13, 2026 · never used$/)).toBeTruthy();
     expect(within(card).getByText("Design")).toBeTruthy();
     expect(within(card).getByText("Post messages, Read messages")).toBeTruthy();
     expect(within(card).getByText("…beef")).toBeTruthy();
@@ -108,10 +111,30 @@ describe("the cards", () => {
     expect(screen.getByText("1 of 3 agents")).toBeTruthy();
   });
 
+  it("draws the bot's icon image when it has one, and its emoji otherwise", async () => {
+    await mount(
+      list({
+        agents: [
+          AGENT,
+          { ...AGENT, id: 8, userId: 80, name: "Pictured", iconUrl: "/icons/claude" },
+        ],
+      }),
+    );
+
+    const pictured = await screen.findByRole("article", { name: "Pictured" });
+
+    expect(pictured.querySelector("img.agent-avatar-icon")?.getAttribute("src")).toBe(
+      "/icons/claude",
+    );
+    expect(within(screen.getByRole("article", { name: "Helper" })).getByText("🦉")).toBeTruthy();
+  });
+
   it("explains when personal agents are off, keeping only revoke and remove", async () => {
     await mount(list({ enabled: false }));
 
     expect(await screen.findByText(/Personal agents are turned off/)).toBeTruthy();
+    expect(screen.getByText(/Your agents stop working until it's turned back on/)).toBeTruthy();
+    expect(screen.getByText("None while personal agents are off")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Connect an agent" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Rotate/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Edit/ })).toBeNull();
@@ -126,6 +149,21 @@ describe("the cards", () => {
 
     expect(connect.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText(/Remove one to connect another/)).toBeTruthy();
+  });
+
+  it("drops the removed agent by its own id, not the bot user id the answer names", async () => {
+    await mount(list({ agents: [AGENT, { ...AGENT, id: 70, userId: 700, name: "Other" }] }));
+
+    const remove = vi.spyOn(meAgents, "remove").mockResolvedValue({ id: AGENT.userId });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Helper" }));
+    fireEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remove agent" }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole("article", { name: "Helper" })).toBeNull());
+    expect(remove).toHaveBeenCalledWith(7);
+    expect(screen.getByRole("article", { name: "Other" })).toBeTruthy();
   });
 
   it("rotates a token, showing the new one once with its client's setup", async () => {
@@ -236,6 +274,82 @@ describe("the wizard", () => {
 
     await waitFor(() => expect(create).toHaveBeenCalled());
     expect(create.mock.calls[0]?.[0]).toMatchObject({ roomIds: [], capabilities: [] });
+  });
+
+  it("marks private rooms and says the agent shows in their member lists", async () => {
+    await mount(
+      list({
+        agents: [],
+        rooms: [
+          { id: 1, name: "General", private: false },
+          { id: 3, name: "Launch", private: true },
+        ],
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Codex CLI/ }));
+    next();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "Solo" } });
+    next();
+
+    expect(screen.getByRole("checkbox", { name: "Launch Private" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "General" })).toBeTruthy();
+    expect(screen.getByText(/everyone in it will see your agent in the member list/)).toBeTruthy();
+  });
+
+  /** Walks a fresh wizard to its last step and presses Create agent. */
+  async function createSolo() {
+    fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
+    fireEvent.click(screen.getByRole("radio", { name: /Codex CLI/ }));
+    next();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "Solo" } });
+    next();
+    next();
+    fireEvent.click(screen.getByRole("button", { name: "Create agent" }));
+  }
+
+  it("shows the agent limit under the form, not on a field", async () => {
+    await mount(list({ agents: [] }));
+    vi.spyOn(meAgents, "create").mockRejectedValue(
+      new ActionError("Validation", "Personal agent limit reached", {
+        base: ["personal agent limit reached"],
+      }),
+    );
+
+    await createSolo();
+
+    expect(await screen.findByText("Personal agent limit reached.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Create its token" })).toBeTruthy();
+  });
+
+  it("says personal agents were turned off, and reloads the list", async () => {
+    await mount(list({ agents: [] }));
+
+    const create = vi
+      .spyOn(meAgents, "create")
+      .mockRejectedValue(
+        new ActionError("Forbidden", "Personal agents are turned off for this workspace."),
+      );
+
+    vi.spyOn(meAgents, "list").mockResolvedValue(list({ agents: [], enabled: false }));
+    await createSolo();
+    await waitFor(() => expect(create).toHaveBeenCalled());
+
+    expect(
+      await screen.findByText("Personal agents are turned off for this workspace."),
+    ).toBeTruthy();
+    expect(await screen.findByRole("link", { name: "Workspace settings" })).toBeTruthy();
+  });
+
+  it("shows the token and the APP_URL note when the server has no public address", async () => {
+    await mount(list({ agents: [], mcpUrl: null }));
+    vi.spyOn(meAgents, "create").mockResolvedValue({ agent: AGENT, secret: SECRET });
+
+    await createSolo();
+
+    await screen.findByRole("heading", { name: "Connect Helper" });
+    expect(screen.getByText(SECRET)).toBeTruthy();
+    expect(screen.getByText(/administrator needs to set it \(APP_URL\)/)).toBeTruthy();
   });
 });
 

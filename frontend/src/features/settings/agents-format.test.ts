@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
+import { ActionError } from "../../sync/run.ts";
 import {
   abilityLabel,
+  agentIcon,
+  baseProblem,
   canCreate,
   clientChoices,
   emptyDraft,
@@ -15,6 +18,7 @@ import {
   sortedTokens,
   stepProblem,
   tokenMeta,
+  turnedOff,
   usage,
   withClient,
 } from "./agents-format.ts";
@@ -28,8 +32,8 @@ function list(change: Partial<PersonalAgentList> = {}): PersonalAgentList {
     limit: 3,
     capabilities: CAPABILITIES,
     rooms: [
-      { id: 1, name: "General" },
-      { id: 2, name: "Design" },
+      { id: 1, name: "General", private: false },
+      { id: 2, name: "Design", private: false },
     ],
     mcpUrl: "https://chat.example.com/agents/mcp",
     oauthAvailable: false,
@@ -42,6 +46,7 @@ const AGENT: PersonalAgent = {
   userId: 50,
   name: "Helper",
   iconName: null,
+  iconUrl: null,
   provider: null,
   runtime: "codex",
   description: null,
@@ -50,6 +55,7 @@ const AGENT: PersonalAgent = {
   roomIds: [],
   capabilities: [],
   lastUsedAt: null,
+  createdAt: "2026-10-13T12:00:00.000Z",
   credentials: [],
 };
 
@@ -178,6 +184,15 @@ describe("the cards", () => {
     expect(iconOf(null)).toBeNull();
   });
 
+  it("shows the bot's icon image when the server resolved one, else its emoji", () => {
+    expect(agentIcon({ ...AGENT, iconName: "claude", iconUrl: "/icons/claude" })).toMatchObject({
+      character: null,
+      imageUrl: "/icons/claude",
+    });
+    expect(agentIcon({ ...AGENT, iconName: "owl" })).toMatchObject({ character: "🦉" });
+    expect(agentIcon(AGENT)).toBeNull();
+  });
+
   it("lists tokens newest first, revoked ones last", () => {
     const sorted = sortedTokens([
       token({ id: 1 }),
@@ -197,5 +212,26 @@ describe("the cards", () => {
     );
     expect(tokenMeta(token({ state: "expired" }), ago)).toContain(" · expired ");
     expect(tokenMeta(token({ state: "revoked" }), ago)).not.toContain("expire");
+  });
+});
+
+describe("refusals", () => {
+  it("reads the agent limit as a form-level sentence", () => {
+    const limit = new ActionError("Validation", "Personal agent limit reached", {
+      base: ["personal agent limit reached"],
+    });
+
+    expect(baseProblem(limit)).toBe("Personal agent limit reached.");
+    expect(
+      baseProblem(new ActionError("Validation", "Invalid", { name: ["can't be blank"] })),
+    ).toBeNull();
+    expect(baseProblem(new Error("boom"))).toBeNull();
+  });
+
+  it("knows a 403 means personal agents are turned off", () => {
+    expect(
+      turnedOff(new ActionError("Forbidden", "Personal agents are turned off for this workspace.")),
+    ).toBe(true);
+    expect(turnedOff(new ActionError("NotFound", "Not found"))).toBe(false);
   });
 });

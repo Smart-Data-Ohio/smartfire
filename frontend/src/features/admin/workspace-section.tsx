@@ -266,7 +266,7 @@ function MemberAgentsForm({ workspace }: { readonly workspace: Workspace }) {
         checked={workspace.memberAgentsEnabled}
         disabled={busy("agents-enabled")}
         label="Members can connect their own agents"
-        description="From Settings → Agents, for everyday chat in rooms they're in. Turning this off stops new agents and tokens; existing tokens keep working until revoked."
+        description="From Settings → Agents, for everyday chat in rooms they're in. Members' agents stop working while this is off, and work again when it's turned back on."
         onCheckedChange={toggle}
       />
       <form className="settings-form settings-inline" onSubmit={submit}>

@@ -16,6 +16,27 @@ async function lapse(request: APIRequestContext): Promise<void> {
   });
 }
 
+/** Connects an agent named `name` straight through the API, as the wizard would. */
+async function connect(request: APIRequestContext, name: string): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const answer = await request.post("/api/v1/me/agents", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: {
+      name,
+      iconName: "owl",
+      provider: "openai",
+      runtime: "codex",
+      roomIds: [],
+      capabilities: [],
+      tokenName: null,
+      expiresAt: null,
+    },
+  });
+
+  expect(answer.status()).toBe(201);
+}
+
 /** Opens Settings → Agents with motion reduced, and waits for its list. */
 async function openAgents(page: Page, theme: Theme = "light"): Promise<void> {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
@@ -50,6 +71,14 @@ matrix("an agent's token shows once, then rotates and revokes", async ({ page, t
   await page.getByRole("textbox", { name: "Name" }).fill("Helper");
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("checkbox", { name: "general" }).check();
+
+  // A private room is marked, and the note says the agent shows in its member list.
+  await expect(
+    page.getByRole("checkbox", { name: "launch-planning Private", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("everyone in it will see your agent in the member list"),
+  ).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await shot(page, "settings-agents-access", theme);
   await page.getByRole("button", { name: "Next" }).click();
@@ -87,6 +116,7 @@ matrix("an agent's token shows once, then rotates and revokes", async ({ page, t
   const card = page.getByRole("article", { name: "Helper" });
 
   await expect(card).toBeVisible();
+  await expect(card.getByText(/^Claude Code · added /)).toBeVisible();
   await expect(card.getByText(`…${secret.slice(-4)}`)).toBeVisible();
   await expect(page.getByText(secret)).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
@@ -122,12 +152,14 @@ matrix("an agent's token shows once, then rotates and revokes", async ({ page, t
 test("an administrator turns personal agents off, and Settings → Agents explains", async ({
   page,
 }) => {
+  await connect(page.request, "Helper");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/app/admin/workspace");
 
   const toggle = page.getByRole("switch", { name: /Members can connect their own agents/ });
 
   await expect(toggle).toBeChecked();
+  await expect(page.getByText(/Members' agents stop working while this is off/)).toBeVisible();
   await toggle.click();
   await expect(page.getByText("Personal agents off")).toBeVisible();
 
@@ -137,5 +169,12 @@ test("an administrator turns personal agents off, and Settings → Agents explai
 
   await page.goto("/app/settings/agents");
   await expect(page.getByText(/Personal agents are turned off/)).toBeVisible();
+  await expect(page.getByText(/Your agents stop working until it's turned back on/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Connect an agent" })).toHaveCount(0);
+
+  const card = page.getByRole("article", { name: "Helper" });
+
+  await expect(card.getByText("Off", { exact: true })).toBeVisible();
+  await expect(card.getByText("None while personal agents are off")).toBeVisible();
+  await expect(card.getByRole("button", { name: "Remove Helper" })).toBeVisible();
 });

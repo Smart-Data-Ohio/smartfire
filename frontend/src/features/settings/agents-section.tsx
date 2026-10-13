@@ -16,17 +16,19 @@ import { AccessFields, ExpiryField, IdentityFields, SecretBlock } from "./agent-
 import { AgentWizard, WIZARD_DRAFT_KEY } from "./agent-wizard.tsx";
 import {
   abilityLabel,
+  agentIcon,
   canCreate,
   clientOf,
   type Expiry,
   emptyDraft,
   expiresAtOf,
-  iconOf,
   parseDraft,
   roomNames,
+  shortDay,
   sortedTokens,
   TOKEN_STATE,
   tokenMeta,
+  turnedOff,
   usage,
   type WizardDraft,
 } from "./agents-format.ts";
@@ -168,19 +170,20 @@ function AgentCard({
         <AgentAvatar
           seed={`${agent.userId}`}
           name={agent.name}
-          icon={iconOf(agent.iconName)}
+          icon={agentIcon(agent)}
           size={40}
           decorative
-          {...(agent.suspended ? { state: "muted" as const } : {})}
+          {...(agent.suspended || !list.enabled ? { state: "muted" as const } : {})}
         />
         <span className="agents-card-title">
           <h3 id={`agent-${agent.id}-name`} className="text-title">
             {agent.name}
             {agent.suspended ? <span className="settings-badge">Suspended</span> : null}
+            {!agent.suspended && !list.enabled ? <span className="settings-badge">Off</span> : null}
           </h3>
           <span className="text-faint">
             {client === null ? "Agent" : client.label}
-            {" · "}
+            {` · added ${shortDay(agent.createdAt)} · `}
             {agent.lastUsedAt === null
               ? "never used"
               : `last used ${timeAgo(agent.lastUsedAt, now)}`}
@@ -195,9 +198,11 @@ function AgentCard({
         <div>
           <dt className="settings-label">Abilities</dt>
           <dd>
-            {agent.capabilities.length === 0 || rooms.length === 0
-              ? "Chat with you in direct messages"
-              : agent.capabilities.map(abilityLabel).join(", ")}
+            {list.enabled
+              ? agent.capabilities.length === 0 || rooms.length === 0
+                ? "Chat with you in direct messages"
+                : agent.capabilities.map(abilityLabel).join(", ")
+              : "None while personal agents are off"}
           </dd>
         </div>
       </dl>
@@ -263,9 +268,12 @@ function TokenDialog({
   ask,
   onClose,
   onIssued,
+  onTurnedOff,
 }: {
   readonly ask: TokenAsk | null;
   readonly onClose: () => void;
+  /** The workspace turned personal agents off since the list loaded: load it again. */
+  readonly onTurnedOff: () => void;
   readonly onIssued: (
     agent: PersonalAgent,
     credential: PersonalAgentCredential,
@@ -317,6 +325,11 @@ function TokenDialog({
             setError([...(named.name ?? []), ...(named.expiresAt ?? [])].join(" and "));
 
             return;
+          }
+
+          if (turnedOff(failure)) {
+            onClose();
+            onTurnedOff();
           }
 
           toastFailure(
@@ -381,11 +394,14 @@ function EditDialog({
   list,
   onClose,
   onSaved,
+  onTurnedOff,
 }: {
   readonly agent: PersonalAgent | null;
   readonly list: PersonalAgentList;
   readonly onClose: () => void;
   readonly onSaved: (agent: PersonalAgent) => void;
+  /** The workspace turned personal agents off since the list loaded: load it again. */
+  readonly onTurnedOff: () => void;
 }) {
   const [name, setName] = useState("");
   const [iconName, setIconName] = useState<string | null>(null);
@@ -435,7 +451,12 @@ function EditDialog({
           roomIds: [...roomIds],
           capabilities: roomIds.length === 0 ? [] : [...capabilities],
         })
-        .then((next) => ({ ...next, name: saved.name, iconName: saved.iconName }));
+        .then((next) => ({
+          ...next,
+          name: saved.name,
+          iconName: saved.iconName,
+          iconUrl: saved.iconUrl,
+        }));
     };
 
     void track(
@@ -453,6 +474,11 @@ function EditDialog({
             setError(messages.join(" and "));
 
             return;
+          }
+
+          if (turnedOff(failure)) {
+            onClose();
+            onTurnedOff();
           }
 
           toastFailure("Couldn't save the agent", failure);
@@ -546,8 +572,8 @@ function keptWizardDraft(): WizardDraft | null {
 
 /**
  * Settings → Agents: the person's own agents, each a card with its rooms, abilities and tokens,
- * and the wizard that connects a new one. When the workspace turns personal agents off, the cards
- * stay so tokens can still be revoked and agents removed.
+ * and the wizard that connects a new one. When the workspace turns personal agents off, the agents
+ * stop working until it's back on; the cards stay so tokens can still be revoked and agents removed.
  */
 export function AgentsSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -559,6 +585,7 @@ export function AgentsSection() {
   const { busy, track } = useBusy();
   const restoredOnce = useRef(false);
 
+  // Also the quiet reload after a write finds personal agents turned off: the list stays shown.
   const fetchList = useCallback(() => {
     meAgents.list().then(
       (list) => setLoad({ status: "ready", list }),
@@ -622,6 +649,7 @@ export function AgentsSection() {
       run: () =>
         void track(
           `agent-${agent.id}`,
+          // The answer's id is the agent's bot user, not the agent: drop the one asked for.
           meAgents.remove(agent.id).then(
             () => {
               replace((current) => ({
@@ -657,11 +685,15 @@ export function AgentsSection() {
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
       {list !== null && !list.enabled ? (
         <p className="settings-callout text-muted" role="status">
-          Personal agents are turned off for this workspace. An administrator can turn them on in{" "}
+          Personal agents are turned off for this workspace.
+          {list.agents.length > 0
+            ? " Your agents stop working until it's turned back on. You can still revoke their tokens and remove them."
+            : ""}{" "}
+          An administrator can turn them on in{" "}
           <Link to="/admin/workspace" className="settings-link">
             Workspace settings
           </Link>
-          .{list.agents.length > 0 ? " You can still revoke tokens and remove your agents." : ""}
+          .
         </p>
       ) : null}
       {list !== null && wizard !== null ? (
@@ -672,6 +704,7 @@ export function AgentsSection() {
           onCreated={({ agent }) =>
             replace((current) => ({ ...current, agents: [...current.agents, agent] }))
           }
+          onRefused={fetchList}
           onClose={() => setWizard(null)}
         />
       ) : null}
@@ -733,8 +766,14 @@ export function AgentsSection() {
               replace((current) => withAgent(current, agent));
               setEditing(null);
             }}
+            onTurnedOff={fetchList}
           />
-          <TokenDialog ask={tokenAsk} onClose={() => setTokenAsk(null)} onIssued={issued} />
+          <TokenDialog
+            ask={tokenAsk}
+            onClose={() => setTokenAsk(null)}
+            onIssued={issued}
+            onTurnedOff={fetchList}
+          />
           <SecretDialog shown={shown} mcpUrl={list.mcpUrl} onClose={() => setShown(null)} />
         </>
       )}

@@ -471,6 +471,7 @@ export const meAgents = {
   setAccess: (agentId: number, access: PersonalAgentAccess): Promise<PersonalAgent> =>
     runAction(updateMeAgentAccess(agentId, access)),
 
+  /** Answers with the agent's bot user id (`BotRemoved.id`), not `agentId`. */
   remove: (agentId: number): Promise<BotRemoved> => runAction(removeMeAgent(agentId)),
 
   issueToken: (

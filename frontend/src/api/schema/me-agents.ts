@@ -6,11 +6,12 @@ import type { PersonalAgentAccess as GeneratedPersonalAgentAccess } from "../../
 import type { PersonalAgentCreated as GeneratedPersonalAgentCreated } from "../../gen/PersonalAgentCreated.ts";
 import type { PersonalAgentCredential as GeneratedPersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList as GeneratedPersonalAgentList } from "../../gen/PersonalAgentList.ts";
+import type { PersonalAgentRoom as GeneratedPersonalAgentRoom } from "../../gen/PersonalAgentRoom.ts";
 import type { PersonalCredentialCreated as GeneratedPersonalCredentialCreated } from "../../gen/PersonalCredentialCreated.ts";
 import type { PersonalCredentialList as GeneratedPersonalCredentialList } from "../../gen/PersonalCredentialList.ts";
 import type { RotatePersonalCredential as GeneratedRotatePersonalCredential } from "../../gen/RotatePersonalCredential.ts";
 import type { UpdatePersonalAgent as GeneratedUpdatePersonalAgent } from "../../gen/UpdatePersonalAgent.ts";
-import { CredentialState, GrantRoom } from "./bots.ts";
+import { CredentialState } from "./bots.ts";
 import { AgentId, CredentialId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
@@ -38,6 +39,8 @@ export const PersonalAgent = Schema.Struct({
   userId: UserId,
   name: Schema.String,
   iconName: Schema.NullOr(Schema.String),
+  /** The bot's icon image (`User.avatarIcon.imageUrl`); null for an emoji or unknown icon. */
+  iconUrl: Schema.NullOr(Schema.String),
   provider: Schema.NullOr(Schema.String),
   runtime: Schema.NullOr(Schema.String),
   description: Schema.NullOr(Schema.String),
@@ -46,19 +49,34 @@ export const PersonalAgent = Schema.Struct({
   roomIds: Schema.Array(RoomId),
   capabilities: Schema.Array(Schema.String),
   lastUsedAt: Schema.NullOr(Timestamp),
+  createdAt: Timestamp,
   credentials: Schema.Array(PersonalAgentCredential),
 });
 
 export type PersonalAgentPin = Assert<Pinned<typeof PersonalAgent, GeneratedPersonalAgent>>;
 
-/** `GET /me/agents`: your agents, and what the workspace lets you give one. */
+/** A room you can give your agent; a private one shows the agent in its member list. */
+export const PersonalAgentRoom = Schema.Struct({
+  id: RoomId,
+  name: Schema.String,
+  private: Schema.Boolean,
+});
+
+export type PersonalAgentRoomPin = Assert<
+  Pinned<typeof PersonalAgentRoom, GeneratedPersonalAgentRoom>
+>;
+
+/**
+ * `GET /me/agents`: your agents, and what the workspace lets you give one. `mcpUrl` is null until
+ * an administrator sets a valid APP_URL.
+ */
 export const PersonalAgentList = Schema.Struct({
   agents: Schema.Array(PersonalAgent),
   enabled: Schema.Boolean,
   limit: Schema.NullOr(Schema.Number),
   capabilities: Schema.Array(Schema.String),
-  rooms: Schema.Array(GrantRoom),
-  mcpUrl: Schema.String,
+  rooms: Schema.Array(PersonalAgentRoom),
+  mcpUrl: Schema.NullOr(Schema.String),
   oauthAvailable: Schema.Boolean,
 });
 

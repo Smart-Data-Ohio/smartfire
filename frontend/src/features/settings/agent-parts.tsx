@@ -1,5 +1,5 @@
 import { useId, useRef } from "react";
-import type { GrantRoom } from "../../gen/GrantRoom.ts";
+import type { PersonalAgentRoom } from "../../gen/PersonalAgentRoom.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -75,8 +75,8 @@ export function AccessFields({
   onRooms,
   onCapabilities,
 }: {
-  /** The non-direct rooms the person is in. */
-  readonly rooms: readonly GrantRoom[];
+  /** The non-direct rooms the person is in; private ones are marked. */
+  readonly rooms: readonly PersonalAgentRoom[];
   /** The abilities the workspace lets a personal agent have. */
   readonly capabilities: readonly string[];
   readonly roomIds: readonly number[];
@@ -100,13 +100,26 @@ export function AccessFields({
               <li key={room.id}>
                 <Checkbox
                   checked={roomIds.includes(room.id)}
-                  label={room.name}
+                  label={
+                    room.private ? (
+                      <span>
+                        {room.name} <span className="settings-badge">Private</span>
+                      </span>
+                    ) : (
+                      room.name
+                    )
+                  }
                   onCheckedChange={(on) => onRooms(toggled(roomIds, room.id, on))}
                 />
               </li>
             ))}
           </ul>
         )}
+        {rooms.some((room) => room.private) ? (
+          <p className="settings-hint text-faint" role="note">
+            In a private room, everyone in it will see your agent in the member list.
+          </p>
+        ) : null}
       </fieldset>
       <fieldset className="agents-choices">
         <legend className="settings-label">Abilities in those rooms</legend>

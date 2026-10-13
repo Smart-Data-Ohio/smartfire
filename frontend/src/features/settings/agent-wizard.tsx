@@ -7,6 +7,7 @@ import { keepDraft } from "../admin/admin-parts.tsx";
 import { leftToConfirm } from "../auth/confirmation.ts";
 import { AccessFields, ExpiryField, IdentityFields, SecretBlock } from "./agent-parts.tsx";
 import {
+  baseProblem,
   clientChoices,
   expiresAtOf,
   STEP_LABELS,
@@ -14,6 +15,7 @@ import {
   type Step,
   serializeDraft,
   stepProblem,
+  turnedOff,
   type WizardDraft,
   withClient,
 } from "./agents-format.ts";
@@ -94,12 +96,15 @@ export function AgentWizard({
   initial,
   initialStep = "client",
   onCreated,
+  onRefused,
   onClose,
 }: {
   readonly list: PersonalAgentList;
   readonly initial: WizardDraft;
   readonly initialStep?: Step;
   readonly onCreated: (created: PersonalAgentCreated) => void;
+  /** The server refused for the workspace's sake (the limit, or agents turned off): reload the list. */
+  readonly onRefused?: () => void;
   readonly onClose: () => void;
 }) {
   const [step, setStep] = useState<Step>(initialStep);
@@ -129,6 +134,7 @@ export function AgentWizard({
 
   const create = () => {
     setFields({});
+    setProblem(null);
     void track(
       "create",
       meAgents
@@ -154,6 +160,17 @@ export function AgentWizard({
             if (first !== undefined) {
               setFields(named);
               setStep(FIELD_STEP.get(first) ?? "identity");
+
+              return;
+            }
+
+            // The limit (a form-level `base` refusal) and agents turned off (403) stop the whole
+            // form, not a field: said under it, with the server's words.
+            const formLevel = baseProblem(error) ?? (turnedOff(error) ? error.message : null);
+
+            if (formLevel !== null) {
+              setProblem(formLevel);
+              onRefused?.();
 
               return;
             }

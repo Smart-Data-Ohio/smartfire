@@ -3,6 +3,7 @@ import type { Icon } from "../../gen/Icon.ts";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
+import { ActionError } from "../../sync/run.ts";
 import type { AgentClient, WebConnector } from "./agent-snippets.ts";
 
 export interface ClientChoice {
@@ -109,6 +110,28 @@ export function iconOf(name: string | null): Icon | null {
         animated: false,
         stillUrl: null,
       };
+}
+
+/**
+ * The icon an agent's card shows: its image when the server resolved one (`iconUrl`), else its
+ * emoji choice, else `null` (its drawn bot).
+ */
+export function agentIcon(
+  agent: Pick<PersonalAgent, "name" | "iconName" | "iconUrl">,
+): Icon | null {
+  if (agent.iconUrl !== null) {
+    return {
+      name: agent.iconName ?? "",
+      title: agent.name,
+      kind: "custom",
+      character: null,
+      imageUrl: agent.iconUrl,
+      animated: false,
+      stillUrl: null,
+    };
+  }
+
+  return iconOf(agent.iconName);
 }
 
 const ABILITIES = new Map([
@@ -309,4 +332,21 @@ export function parseDraft(text: string): WizardDraft | null {
     capabilities: items(fields.get("capabilities")),
     expiry: expiry.value,
   };
+}
+
+/** Whether a write was refused because the workspace turned personal agents off (a 403). */
+export function turnedOff(error: Error): boolean {
+  return error instanceof ActionError && error.tag === "Forbidden";
+}
+
+/**
+ * The wizard's form-level problem for a refusal that names no field (`base`, such as the agent
+ * limit), as a sentence; `null` when there's none.
+ */
+export function baseProblem(error: Error): string | null {
+  if (!(error instanceof ActionError) || error.fields.base === undefined) return null;
+
+  const message = error.message.trim() === "" ? (error.fields.base[0] ?? "") : error.message;
+
+  return /[.!?]$/.test(message) ? message : `${message}.`;
 }
