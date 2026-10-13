@@ -1490,3 +1490,60 @@ async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
     let copy_html = shown(&david.send(get(&format!("/api/v1/messages/{}", copy.id))).await);
     assert!(!copy_html.contains("<table") && copy_html.contains("cell"), "{copy_html}");
 }
+
+/// A forward of an HTML-edited forward, made before the forwarder checked `edited_at`: the flag
+/// inherited, no `edited_at` of its own. Nothing proves it isn't a Markdown snapshot (see
+/// `Message::forwarded_markdown_snapshot`), so it keeps the Markdown allowlist, held to the values
+/// `markdown::render` emits.
+#[tokio::test]
+async fn a_second_generation_forward_from_before_the_fix_keeps_only_renderer_markup() {
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let html = concat!(
+        "<table class=\"visually-hidden\" style=\"position: fixed\" onclick=\"x()\"><tr>",
+        "<td align=\"justify\" onmouseover=\"x()\">cell</td><td align=\"center\">other</td></tr></table>",
+        "<ul><li><input type=\"checkbox\" value=\"v\" onfocus=\"x()\"> item</li><li><input type=\"text\" name=\"n\"> text</li></ul>",
+        "<ol start=\"-1\"><li>one</li></ol>",
+        "<p><a href=\"https://example.com/\" target=\"_top\" rel=\"opener\">link</a></p>",
+    );
+    let second = a
+        .db()
+        .write(move |tx| {
+            let source = Message::create(
+                tx,
+                NewMessage { room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("| a |\n|---|\n| cell |".into()), ..Default::default() },
+            )?;
+            let forward = |tx: &mut campfire_db::Tx<'_>, from: i64| {
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        body: Some(html.into()),
+                        forwarded_from_message_id: Some(from),
+                        forwarded_at: Some(tx.now()),
+                        forwarded_markdown: true,
+                        ..Default::default()
+                    },
+                )
+            };
+            let first = forward(tx, source.id)?;
+            tx.conn().execute("UPDATE messages SET edited_at = updated_at WHERE id = ?", [first.id])?;
+            let second = forward(tx, first.id)?;
+            Ok(second.id)
+        })
+        .await
+        .unwrap();
+
+    let stored = a.db().read(move |conn| Message::find(conn, second)).await.unwrap();
+    assert!(stored.forwarded_markdown && stored.edited_at.is_none());
+    let shown = parse::<api::MessageRead>(&david.send(get(&format!("/api/v1/messages/{second}"))).await).message.body_html;
+    assert!(shown.contains("<table><tbody><tr><td>cell</td><td align=\"center\">other</td>"), "{shown}");
+    for hostile in ["visually-hidden", "style=", "onclick", "onmouseover", "onfocus", "justify", "type=\"text\"", "value=", "name=", "start=", "_top", "opener\""] {
+        assert!(!shown.contains(hostile), "{hostile}: {shown}");
+    }
+    assert!(shown.contains("<li><input type=\"checkbox\" disabled=\"disabled\"> item</li><li> text</li>"), "{shown}");
+    assert!(shown.contains("target=\"_blank\" rel=\"nofollow noopener noreferrer\""), "{shown}");
+}

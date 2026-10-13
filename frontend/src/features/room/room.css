@@ -921,6 +921,13 @@
     accent-color: var(--accent);
   }
 
+  /* In a loose task list (items apart by blank lines) the label is the paragraph after the
+     checkbox. It runs on the checkbox's line, as a tight item's text does; anything after it in
+     the item still starts a line of its own. */
+  .message-body li > input[type="checkbox"]:first-child + p {
+    display: inline;
+  }
+
   /* A Markdown table (GFM, crates/richtext markdown.rs). The table element is a block that
      scrolls sideways: its rows still lay out as a table inside it, as wide as their content but
      never wider than the body, so a wide table scrolls within the message and never widens the

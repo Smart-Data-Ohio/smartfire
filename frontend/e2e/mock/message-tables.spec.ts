@@ -430,6 +430,58 @@ test("a task list shows read-only checkboxes in place of bullets, and a list kee
   await expect(boxes.nth(0)).not.toBeChecked();
 });
 
+/** `- [ ] Draft\n\n- [x] Review`: a loose list, so each label is a paragraph after its checkbox. */
+const LOOSE_TASKS = wrapped(
+  '<ul>\n<li><input type="checkbox" disabled="disabled"> \n<p>Draft</p>\n</li>\n' +
+    '<li><input type="checkbox" checked="" disabled="disabled"> \n<p>Review</p>\n<p>More notes</p>\n</li>\n</ul>',
+);
+
+test("a loose task list keeps each checkbox on its label's line", async ({ page }) => {
+  const id = await post(page, "The loose task list");
+
+  await swapRoomBody(page, id, LOOSE_TASKS);
+  await openApp(page, `r/${ROOM_IDS.general}/m/${id}`);
+
+  const body = row(page, id).locator(".message-body");
+
+  await expect(body.locator('li > input[type="checkbox"]')).toHaveCount(2);
+  await row(page, id).scrollIntoViewIfNeeded();
+  await shot(page, "message-task-list-loose", "light");
+
+  const items = await body.locator("ul > li").evaluateAll((elements) =>
+    elements.map((item) => {
+      const input = item.querySelector("input");
+      const [label, ...rest] = Array.from(item.querySelectorAll("p"));
+
+      if (input === null || label === undefined) {
+        throw new Error("no checkbox or label in the task item");
+      }
+
+      const range = document.createRange();
+
+      range.selectNodeContents(label);
+
+      return {
+        box: input.getBoundingClientRect().toJSON(),
+        label: range.getBoundingClientRect().toJSON(),
+        rest: rest.map((paragraph) => paragraph.getBoundingClientRect().toJSON()),
+      };
+    }),
+  );
+
+  for (const item of items) {
+    // The checkbox and its label share a line, the checkbox first.
+    expect(item.box.top).toBeLessThan(item.label.bottom);
+    expect(item.label.top).toBeLessThan(item.box.bottom);
+    expect(item.box.right).toBeLessThanOrEqual(item.label.left + 0.5);
+
+    // A later paragraph in the item still starts its own line.
+    for (const paragraph of item.rest) {
+      expect(paragraph.top).toBeGreaterThanOrEqual(item.label.bottom - 0.5);
+    }
+  }
+});
+
 test("a wide table stays inside the thread pane", async ({ page }) => {
   await page.route(`**/api/v1/threads/${THREAD_IDS.generalActive}/messages*`, async (route) => {
     const response = await route.fetch();

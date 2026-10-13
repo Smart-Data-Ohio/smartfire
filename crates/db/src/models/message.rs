@@ -1600,6 +1600,16 @@ impl Message {
     /// `forwarded_markdown`, so no forward predates it. `updated_at` can't tell: boosts, card
     /// fetches and reply tombstones touch it without changing the body. An edited forward renders
     /// as any HTML body does.
+    ///
+    /// One older row still passes: a forward of such an edited forward, made before the forwarder
+    /// checked this, inherited the flag with no `edited_at` of its own. Nothing on the row or its
+    /// chain proves which it is. `forwarded_from_message_id` is nulled when the source is
+    /// deleted, which also happens to every forward of a deleted Markdown message, and `edited_at`
+    /// keeps only the last edit, so it can't say whether the source was edited before the copy
+    /// was taken. Rejecting every chain that can't be checked would drop tables from forwards
+    /// whose source was later deleted or edited, which a snapshot is meant to survive. So such a
+    /// row keeps the Markdown allowlist, and `markdown::constrain_body_markup` holds it to markup
+    /// `markdown::render` could have produced from a message anyone can post.
     pub fn forwarded_markdown_snapshot(&self) -> bool {
         self.forwarded_markdown && self.edited_at.is_none()
     }
