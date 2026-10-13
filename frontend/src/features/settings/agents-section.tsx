@@ -3,7 +3,8 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
-import { meAgents } from "../../sync/settings.ts";
+import { ActionError } from "../../sync/run.ts";
+import { meAgents, SAVE_UNCONFIRMED } from "../../sync/settings.ts";
 import { AgentAvatar } from "../../ui/agent-avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
@@ -65,6 +66,11 @@ type Ask = {
   readonly danger: boolean;
   readonly run: () => void;
 } | null;
+
+/** Whether an agent edit got no answer in time, so it may or may not have landed. */
+function saveUnconfirmed(error: Error): boolean {
+  return error instanceof ActionError && error.tag === SAVE_UNCONFIRMED;
+}
 
 /** The list with `agent` in place of its old copy. */
 function withAgent(list: PersonalAgentList, agent: PersonalAgent): PersonalAgentList {
@@ -396,6 +402,7 @@ function EditDialog({
   onSaved,
   onProfileSaved,
   onTurnedOff,
+  onReload,
 }: {
   readonly agent: PersonalAgent | null;
   readonly list: PersonalAgentList;
@@ -405,6 +412,8 @@ function EditDialog({
   readonly onProfileSaved: (agent: PersonalAgent) => void;
   /** The workspace turned personal agents off since the list loaded: load it again. */
   readonly onTurnedOff: () => void;
+  /** Loads the list from the server again (its cards follow), and answers it. */
+  readonly onReload: () => Promise<PersonalAgentList>;
 }) {
   const [name, setName] = useState("");
   const [iconName, setIconName] = useState<string | null>(null);
@@ -413,19 +422,27 @@ function EditDialog({
   const [error, setError] = useState<string | undefined>(undefined);
   const { busy, track } = useBusy();
   // The name and icon the server holds now: a rename that took survives a failed access save, so
-  // a retry neither renames again nor puts the old name back.
+  // a retry neither renames again nor puts the old name back. `null` when unknown (a save went
+  // unanswered and the reload failed): the next save sends the name and icon as they stand.
   const profile = useRef<Pick<PersonalAgent, "name" | "iconName"> | null>(null);
+  // Which opening this is: a reload asked by an earlier one never reseeds a later one's form.
+  const opening = useRef(0);
+  // The workspace's abilities, read on opening only: a reloaded list mustn't start the form over.
+  const offered = useRef(list.capabilities);
+
+  offered.current = list.capabilities;
 
   useEffect(() => {
     if (agent !== null) {
+      opening.current += 1;
       profile.current = { name: agent.name, iconName: agent.iconName };
       setName(agent.name);
       setIconName(agent.iconName);
       setRoomIds(agent.roomIds);
-      setCapabilities(agent.roomIds.length === 0 ? list.capabilities : agent.capabilities);
+      setCapabilities(agent.roomIds.length === 0 ? offered.current : agent.capabilities);
       setError(undefined);
     }
-  }, [agent, list.capabilities]);
+  }, [agent]);
 
   if (agent === null) {
     return <Dialog open={false} onOpenChange={onClose} title="" />;
@@ -446,11 +463,39 @@ function EditDialog({
       return;
     }
 
+    const session = opening.current;
+
+    // An unanswered save may have landed: load what the server holds, and start this form over
+    // from it so a retry sends nothing stale.
+    const recheck = () => {
+      profile.current = null;
+      onReload().then(
+        (fresh) => {
+          if (session !== opening.current) return;
+
+          const held = fresh.agents.find((a) => a.id === agent.id);
+
+          if (held === undefined) {
+            onClose();
+
+            return;
+          }
+
+          profile.current = { name: held.name, iconName: held.iconName };
+          setName(held.name);
+          setIconName(held.iconName);
+          setRoomIds(held.roomIds);
+          setCapabilities(held.roomIds.length === 0 ? list.capabilities : held.capabilities);
+        },
+        () => undefined,
+      );
+    };
+
     // The access answer is the agent as the server holds it after both writes, name included.
     const save = async () => {
-      const held = profile.current ?? agent;
+      const held = profile.current;
 
-      if (name.trim() !== held.name || iconName !== held.iconName) {
+      if (held === null || name.trim() !== held.name || iconName !== held.iconName) {
         const saved = await meAgents.update(agent.id, { name: name.trim(), iconName });
 
         profile.current = { name: saved.name, iconName: saved.iconName };
@@ -476,6 +521,13 @@ function EditDialog({
 
           if (messages.length > 0) {
             setError(messages.join(" and "));
+
+            return;
+          }
+
+          if (saveUnconfirmed(failure)) {
+            setError(failure.message);
+            recheck();
 
             return;
           }
@@ -624,6 +676,14 @@ export function AgentsSection() {
     setLoad({ status: "loading" });
     fetchList();
   };
+
+  // The list again, keeping the page shown while it comes: for a dialog that must know the truth.
+  const refetch = () =>
+    meAgents.list().then((fresh) => {
+      setLoad({ status: "ready", list: fresh });
+
+      return fresh;
+    });
 
   const replace = (change: (current: PersonalAgentList) => PersonalAgentList) =>
     setLoad((current) =>
@@ -777,6 +837,7 @@ export function AgentsSection() {
             }}
             onProfileSaved={(agent) => replace((current) => withAgent(current, agent))}
             onTurnedOff={fetchList}
+            onReload={refetch}
           />
           <TokenDialog
             ask={tokenAsk}

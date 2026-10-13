@@ -258,6 +258,91 @@ describe("the cards", () => {
     expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
   });
 
+  it("ends a save that gets no answer, reloads, and retries without the old name", async () => {
+    await mount(list());
+
+    // The rename landed, but its answer never comes.
+    const reload = vi
+      .spyOn(meAgents, "list")
+      .mockResolvedValue(list({ agents: [{ ...AGENT, name: "Renamed" }] }));
+
+    vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise<Response>(() => undefined));
+
+    const edit = await screen.findByRole("button", { name: "Edit Helper" });
+
+    vi.useFakeTimers();
+
+    try {
+      fireEvent.click(edit);
+
+      const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
+
+      fireEvent.change(within(dialog).getByRole("textbox", { name: "Name" }), {
+        target: { value: "Renamed" },
+      });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+      await act(() => vi.advanceTimersByTimeAsync(1_000));
+      expect(within(dialog).getByRole("button", { name: "Cancel" }).hasAttribute("disabled")).toBe(
+        true,
+      );
+
+      await act(() => vi.advanceTimersByTimeAsync(15_000));
+    } finally {
+      vi.useRealTimers();
+    }
+
+    const dialog = screen.getByRole("dialog", { name: "Edit Helper" });
+
+    expect(
+      await within(dialog).findByText("Couldn't confirm the save. Check the agent and try again."),
+    ).toBeTruthy();
+    expect(within(dialog).getByRole("button", { name: "Cancel" }).hasAttribute("disabled")).toBe(
+      false,
+    );
+    // Once on opening the page, once more after the unanswered save.
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("article", { name: "Renamed" })).toBeTruthy();
+    expect(within(dialog).getByRole("textbox", { name: "Name" })).toHaveProperty(
+      "value",
+      "Renamed",
+    );
+
+    // The retry starts from what the server holds: no rename is sent at all.
+    const update = vi.spyOn(meAgents, "update");
+
+    const setAccess = vi
+      .spyOn(meAgents, "setAccess")
+      .mockResolvedValue({ ...AGENT, name: "Renamed" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(setAccess).toHaveBeenCalledTimes(1));
+    expect(update).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("article", { name: "Renamed" })).toBeTruthy();
+  });
+
+  it("can be closed once an unanswered save ends", async () => {
+    await mount(list());
+    vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise<Response>(() => undefined));
+
+    const edit = await screen.findByRole("button", { name: "Edit Helper" });
+
+    vi.useFakeTimers();
+
+    try {
+      fireEvent.click(edit);
+      fireEvent.click(screen.getByRole("checkbox", { name: "General" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await act(() => vi.advanceTimersByTimeAsync(15_000));
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(await screen.findByText(/Couldn't confirm the save/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("rotates a token, showing the new one once with its client's setup", async () => {
     await mount(list());
 

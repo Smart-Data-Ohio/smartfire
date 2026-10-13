@@ -5,6 +5,7 @@
  * `ActionError`; a rejected change carries its field messages in `fields`.
  */
 
+import { Effect } from "effect";
 import { me, sidebar } from "../api/endpoints.ts";
 import {
   createMeAgent,
@@ -445,6 +446,29 @@ export function followNotificationPreferences(): () => void {
 }
 
 /**
+ * How long an agent's edit waits for its answer. The edit dialog stays open while a save is out,
+ * so an unanswered one must end: it then fails with `SaveUnconfirmed`, since it may have landed.
+ */
+export const AGENT_SAVE_TIMEOUT = "15 seconds";
+
+/** The tag of an agent edit that got no answer in time. */
+export const SAVE_UNCONFIRMED = "SaveUnconfirmed";
+
+const bounded = <A, E extends { readonly _tag: string; readonly message: string }, R>(
+  effect: Effect.Effect<A, E, R>,
+) =>
+  effect.pipe(
+    Effect.timeoutOrElse({
+      duration: AGENT_SAVE_TIMEOUT,
+      orElse: () =>
+        Effect.fail({
+          _tag: SAVE_UNCONFIRMED,
+          message: "Couldn't confirm the save. Check the agent and try again.",
+        }),
+    }),
+  );
+
+/**
  * Settings → Agents: plain promises over `/api/v1/me/agents`. Creating an agent, issuing a token
  * and rotating one may wait on the password confirmation: closing it rejects with
  * `ConfirmationCancelled`, leaving for Google with `SudoRequired` (these writes carry a secret,
@@ -456,20 +480,23 @@ export const meAgents = {
   create: (body: CreatePersonalAgent): Promise<PersonalAgentCreated> =>
     runAction(createMeAgent(body)),
 
+  /** Bounded by `AGENT_SAVE_TIMEOUT`, as is `setAccess`. */
   update: (agentId: number, change: Partial<UpdatePersonalAgent>): Promise<PersonalAgent> =>
     runAction(
-      updateMeAgent(agentId, {
-        name: null,
-        iconName: null,
-        provider: null,
-        runtime: null,
-        description: null,
-        ...change,
-      }),
+      bounded(
+        updateMeAgent(agentId, {
+          name: null,
+          iconName: null,
+          provider: null,
+          runtime: null,
+          description: null,
+          ...change,
+        }),
+      ),
     ),
 
   setAccess: (agentId: number, access: PersonalAgentAccess): Promise<PersonalAgent> =>
-    runAction(updateMeAgentAccess(agentId, access)),
+    runAction(bounded(updateMeAgentAccess(agentId, access))),
 
   /** Answers with the agent's bot user id (`BotRemoved.id`), not `agentId`. */
   remove: (agentId: number): Promise<BotRemoved> => runAction(removeMeAgent(agentId)),
