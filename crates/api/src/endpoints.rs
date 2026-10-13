@@ -293,13 +293,15 @@ async fn post_message(c: &mut Ctx) -> Result {
         signed_id.as_deref(),
         input.attachment_signed_ids.unwrap_or_default(),
     )?;
-    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()))?;
+    let gif_slug = crate::gifs::selection(c, input.gif_slug.as_deref(), signed_id.as_deref(), signed_ids.len())?;
+    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
     if signed_id.is_none()
         && signed_ids.is_empty()
         && drive_file_ids.is_empty()
         && input.sticker_id.is_none()
+        && gif_slug.is_none()
         && input.markdown_source.trim().is_empty()
     {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
@@ -349,6 +351,10 @@ async fn post_message(c: &mut Ctx) -> Result {
                 ));
             }
             require_grouped_uploads(c, &signed_ids).await?;
+            let staged_attachments = match gif_slug {
+                Some(slug) => vec![crate::gifs::stage_gif(c, creator_id, &slug).await?],
+                None => Vec::new(),
+            };
             let markdown_source =
                 Some(input.markdown_source).filter(|source| !source.trim().is_empty());
             let attributes = MessageParams {
@@ -357,6 +363,7 @@ async fn post_message(c: &mut Ctx) -> Result {
                 // `message[attachment]` given a direct upload's signed blob id.
                 attachment: signed_id.map(Assignment::Signed),
                 attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
+                staged_attachments,
                 attachment_spoilers,
                 attachment_policy: posting::AttachmentPolicy::OwnedUpload { uploader_id: creator_id },
                 client_message_id: Some(client_message_id),

@@ -202,6 +202,7 @@ async fn message_params(
     c: &mut Ctx,
     input: api::CreateMessage,
     timeline: Timeline,
+    room_id: i64,
 ) -> Result<MessageParams> {
     let client_message_id = input.client_message_id.trim().to_string();
     if client_message_id.is_empty() {
@@ -220,10 +221,11 @@ async fn message_params(
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
     let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), input.attachment_signed_ids.unwrap_or_default())?;
-    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()))?;
+    let gif_slug = crate::gifs::selection(c, input.gif_slug.as_deref(), signed_id.as_deref(), signed_ids.len())?;
+    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
-    if signed_id.is_none() && signed_ids.is_empty() && drive_file_ids.is_empty() && input.sticker_id.is_none() && input.markdown_source.trim().is_empty() {
+    if signed_id.is_none() && signed_ids.is_empty() && drive_file_ids.is_empty() && input.sticker_id.is_none() && gif_slug.is_none() && input.markdown_source.trim().is_empty() {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     if let Some(reply_to) = input.reply_to_message_id {
@@ -255,11 +257,23 @@ async fn message_params(
         ));
     }
     require_grouped_uploads(c, &signed_ids).await?;
+    let mut staged_attachments = Vec::new();
+    if let Some(slug) = gif_slug {
+        let creator_id = concerns::require_current_user(c)?.id;
+        let lookup = client_message_id.clone();
+        let replay = c.app().db.read(move |conn| {
+            Ok(Message::find_duplicate(conn, room_id, creator_id, &lookup)?.is_some())
+        }).await.map_err(db_error)?;
+        if !replay {
+            staged_attachments.push(crate::gifs::stage_gif(c, creator_id, &slug).await?);
+        }
+    }
     Ok(MessageParams {
         sticker_id: input.sticker_id,
         markdown_source: Some(input.markdown_source).filter(|source| !source.trim().is_empty()),
         attachment: signed_id.map(Assignment::Signed),
         attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
+        staged_attachments,
                 attachment_spoilers,
         attachment_policy: posting::AttachmentPolicy::OwnedUpload { uploader_id: concerns::require_current_user(c)?.id },
         client_message_id: Some(client_message_id),
@@ -306,7 +320,7 @@ async fn create_thread(c: &mut Ctx) -> Result {
     if parent.is_none() {
         return Err(fail(c, not_found()));
     }
-    let attributes = message_params(c, input.message, Timeline::Room(room_id)).await?;
+    let attributes = message_params(c, input.message, Timeline::Room(room_id), room_id).await?;
     let name = input.name.filter(|name| !name.trim().is_empty());
     let outcome = match posting::create_or_find_thread(c, &room, parent_id, name, match input.visibility.unwrap_or_default() {
         api::ThreadVisibility::Public => ThreadVisibility::Public,
@@ -511,7 +525,12 @@ async fn create_reply(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (thread, room, _) = scope(c).await?;
     let input: api::CreateMessage = body(c).await?;
-    let attributes = message_params(c, input, Timeline::Thread(thread.id)).await?;
+    if input.gif_slug.as_deref().is_some_and(|slug| !slug.trim().is_empty()) && thread.locked_at.is_some() {
+        let (room_id, creator_id, lookup) = (room.id, concerns::require_current_user(c)?.id, input.client_message_id.trim().to_owned());
+        let replay = c.app().db.read(move |conn| Ok(Message::find_duplicate(conn, room_id, creator_id, &lookup)?.is_some())).await.map_err(db_error)?;
+        if !replay { return Err(forbidden(c, campfire_db::channel_thread::LOCKED_MESSAGE)); }
+    }
+    let attributes = message_params(c, input, Timeline::Thread(thread.id), room.id).await?;
     // `channel_thread_messages#create`: a retry gets the reply its first attempt posted.
     let (message, status) = match posting::create_or_find_reply(c, &room, thread, attributes).await
     {

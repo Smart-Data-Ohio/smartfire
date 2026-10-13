@@ -4,10 +4,10 @@ use campfire_api_types as api;
 use campfire_app::app::{AppCtx, AppState};
 use campfire_db::models::channel_thread::{BOARD_POSTS_PER_PAGE, board_page_number};
 use campfire_db::{
-    BoardTag, BoardTagPolicy, ChannelThread, Connection, Membership, Message, NewChannelThread, NewMessage, Room, Tx, User,
+    BoardTag, BoardTagPolicy, ChannelThread, Connection, Message, NewChannelThread, NewMessage, Room, Tx, User,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob};
+use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob, require_current_posting_access};
 use campfire_runtime::presenters::attachments::{self, Assignment};
 use campfire_runtime::context::db_error;
 use rusqlite::OptionalExtension;
@@ -323,7 +323,8 @@ async fn create_post(c: &mut Ctx) -> Result {
     let input: api::CreateBoardPost = body(c).await?;
     let (room_id, creator_id) = (room.id, viewer.id);
     let message = input.message.filter(|message| {
-        !campfire_richtext::ruby::is_blank(campfire_richtext::ruby::strip(&message.markdown_source))
+        message.gif_slug.as_deref().is_some_and(|slug| !slug.trim().is_empty())
+            || !campfire_richtext::ruby::is_blank(campfire_richtext::ruby::strip(&message.markdown_source))
             || message
                 .attachment_signed_id
                 .as_ref()
@@ -392,6 +393,12 @@ async fn create_post(c: &mut Ctx) -> Result {
             validation("message", "is too long (maximum is 50000 characters)"),
         ));
     }
+    if input.name.trim().is_empty() {
+        return Err(fail(c, validation("name", "can't be blank")));
+    }
+    if input.name.chars().count() > 100 {
+        return Err(fail(c, validation("name", "is too long (maximum is 100 characters)")));
+    }
     // A new post has no messages yet, so its opener cannot reply on that conversation.
     if message
         .as_ref()
@@ -411,7 +418,8 @@ async fn create_post(c: &mut Ctx) -> Result {
         .filter(|id| !id.is_empty());
     let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), message.as_ref()
         .and_then(|message| message.attachment_signed_ids.clone()).unwrap_or_default())?;
-    let attachment_spoilers = crate::endpoints::file_spoilers(c, message.as_ref().and_then(|message| message.attachment_spoilers.clone()), signed_ids.len() + usize::from(signed_id.is_some()))?;
+    let gif_slug = crate::gifs::selection(c, message.as_ref().and_then(|message| message.gif_slug.as_deref()), signed_id.as_deref(), signed_ids.len())?;
+    let attachment_spoilers = crate::endpoints::file_spoilers(c, message.as_ref().and_then(|message| message.attachment_spoilers.clone()), signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
     require_grouped_uploads(c, &signed_ids).await?;
     if let Some(id) = &signed_id
         && !blob_exists(c, id).await?
@@ -425,7 +433,7 @@ async fn create_post(c: &mut Ctx) -> Result {
         Some(id) => Assignment::Signed(id).stage(c.app()).await?,
         None => Assignment::Unchanged,
     };
-    let files = attachments::stage_many(c.app(), signed_ids.into_iter().map(Assignment::Signed).collect(), campfire_runtime::concerns::require_current_user(c)?.id).await?;
+    let mut files = attachments::stage_many(c.app(), signed_ids.into_iter().map(Assignment::Signed).collect(), campfire_runtime::concerns::require_current_user(c)?.id).await?;
     let message = if let Some(mut message) = message {
         message.drive_file_ids = Some(crate::drive::require_drive_file_ids(
             c,
@@ -435,16 +443,15 @@ async fn create_post(c: &mut Ctx) -> Result {
     } else {
         None
     };
+    if let Some(slug) = gif_slug {
+        files.push(Assignment::Create(crate::gifs::stage_gif(c, creator_id, &slug).await?));
+    }
     let outcome = c
         .app()
         .db
         .write(move |tx| {
-            let room = Room::find(tx.conn(), room_id)?;
-            if !room.board()
-                || room.deleted_at.is_some()
-                || Membership::find_by_room_and_user(tx.conn(), room_id, creator_id)?.is_none()
-                || !User::find(tx.conn(), creator_id)?.is_active()
-            {
+            let room = require_current_posting_access(tx, room_id, creator_id)?;
+            if !room.board() {
                 return Err(campfire_db::Error::RecordNotFound("Room"));
             }
             if let Some(id) = client_id.as_deref()

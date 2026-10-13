@@ -20,6 +20,7 @@
 //!   sends no telemetry).
 //! - `SPA_ENABLED`, `SPA_DEFAULT`: no longer read. The React SPA (`crates/spa`) under `/app` is
 //!   the only UI for signed-in people. Legacy deployments may still supply either variable.
+//! - `KLIPY_API_KEY`: enables GIF search. Blank disables it. Only the server uses the key.
 //!
 //! Storage paths mirror `Rails.root.join("storage")`: the database under `db/`, blobs under
 //! `files/` (`config/storage.yml`), backups under `backups/` (`script/admin/prepare-backup`).
@@ -63,6 +64,8 @@ pub struct Config {
     pub sign_in_google_domains: Vec<String>,
     /// Shared provider configuration from the same injected environment lookup.
     pub google_client: crate::integrations::google::api::Config,
+    /// `KLIPY_API_KEY`; blank disables the GIF picker. Server-side only.
+    pub klipy_api_key: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -172,6 +175,8 @@ impl Config {
                 client_secret: get("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
                 webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
             },
+            klipy_api_key: present("KLIPY_API_KEY"),
+
         })
     }
 }
@@ -203,6 +208,16 @@ mod tests {
     fn requires_a_secret_key_base() {
         assert!(config(&[]).is_err());
         assert_eq!(config(&[("SECRET_KEY_BASE_DUMMY", "1")]).unwrap().secret_key_base.len(), 128);
+    }
+
+    #[test]
+    fn klipy_key_is_optional_and_blank_disables_gifs() {
+        for value in [None, Some(""), Some("  ")] {
+            let mut vars = vec![("SECRET_KEY_BASE", "abc")];
+            if let Some(value) = value { vars.push(("KLIPY_API_KEY", value)); }
+            assert!(config(&vars).unwrap().klipy_api_key.is_none());
+        }
+        assert_eq!(config(&[("SECRET_KEY_BASE", "abc"), ("KLIPY_API_KEY", "test-key")]).unwrap().klipy_api_key.as_deref(), Some("test-key"));
     }
 
     #[test]

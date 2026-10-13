@@ -18,7 +18,7 @@ import { callController } from "./call-controller.ts";
 import { type CallPhase, livePhase, useCall } from "./call-store.ts";
 import { useCallViewCovers, useCallViewNavigation } from "./call-view-cover.ts";
 import { DevicePickers, MeterBar, ShareQualityPicker } from "./device-pickers.tsx";
-import { formatConnectionStats } from "./engine/stats.ts";
+import { formatConnectionStats, formatVideoTrackStats } from "./engine/stats.ts";
 import type { ConnectionQuality } from "./engine/transport.ts";
 import { SoundboardButton } from "./soundboard.tsx";
 import "./huddle.css";
@@ -103,6 +103,7 @@ function SettingsPanel() {
   const sharing = useCall((state) => state.snapshot.screenSharing);
   const canPublish = useCall((state) => state.canPublish);
   const formatted = stats === null ? null : formatConnectionStats(stats);
+  const videoRows = stats === null ? [] : formatVideoTrackStats(stats.videoTracks);
 
   return (
     <section className="huddle-dock-settings" aria-label="Call settings">
@@ -169,6 +170,12 @@ function SettingsPanel() {
                 <dt>Route</dt>
                 <dd>{formatted.transport}</dd>
               </div>
+              {videoRows.map((row) => (
+                <div key={row.key}>
+                  <dt>{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
             </>
           )}
         </dl>

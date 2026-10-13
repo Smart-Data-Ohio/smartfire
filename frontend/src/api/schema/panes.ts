@@ -4,9 +4,10 @@ import type { FileType as GeneratedFileType } from "../../gen/FileType.ts";
 import type { Member as GeneratedMember } from "../../gen/Member.ts";
 import type { MemberList as GeneratedMemberList } from "../../gen/MemberList.ts";
 import type { RoomFile as GeneratedRoomFile } from "../../gen/RoomFile.ts";
+import type { RoomFilesChanged as GeneratedRoomFilesChanged } from "../../gen/RoomFilesChanged.ts";
 import type { StarState as GeneratedStarState } from "../../gen/StarState.ts";
 import { Attachment } from "./attachment.ts";
-import { MessageId, ThreadId, UserId } from "./ids.ts";
+import { MessageId, RoomId, ThreadId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Presence } from "./presence.ts";
 import { Timestamp } from "./time.ts";
@@ -68,3 +69,9 @@ export const FileList = Schema.Struct({
 export type FileList = typeof FileList.Type;
 
 export type FileListPin = Assert<Pinned<typeof FileList, GeneratedFileList>>;
+
+export const RoomFilesChanged = Schema.Struct({ roomId: RoomId, threadId: ThreadId });
+
+export type RoomFilesChangedPin = Assert<
+  Pinned<typeof RoomFilesChanged, GeneratedRoomFilesChanged>
+>;

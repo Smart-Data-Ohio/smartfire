@@ -1,4 +1,7 @@
 import type { Page } from "@playwright/test";
+import { onboardingMockupPng } from "../../mock/s2/assets.ts";
+import { md5Base64 } from "../../mock/s2/digest.ts";
+import { THREAD_IDS } from "../../mock/s2/seed.ts";
 import type { RoomFile } from "../../src/gen/RoomFile.ts";
 import {
   expect,
@@ -193,6 +196,151 @@ test("the files pane keeps loaded pages and scroll position after a text-only ed
   );
   expect(await body.evaluate((element) => element.scrollTop)).toBe(scrollTop);
   expect(requests).toEqual(loadedRequests);
+});
+
+test("the files pane shows an upload and drops it again when its message is deleted, live", async ({
+  page,
+}) => {
+  const fileRequests: string[] = [];
+
+  page.on("request", (request) => {
+    if (request.url().includes(`/api/v1/rooms/${GENERAL}/files`)) {
+      fileRequests.push(request.url());
+    }
+  });
+  await open(page, `r/${GENERAL}`);
+  await openHeaderTool(page, /^Files/);
+  const rows = pane(page).getByRole("list", { name: "Files" }).getByRole("listitem");
+
+  await expect(rows.first()).toBeVisible();
+  const loaded = await rows.count();
+  const loadedRequests = [...fileRequests];
+
+  const composer = page.getByRole("textbox", { name: "Message #general" });
+
+  await page.locator('.composer input[type="file"]').setInputFiles({
+    name: "live-pane.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(onboardingMockupPng()),
+  });
+  await expect(page.locator('.tray-chip[data-phase="done"]')).toHaveCount(1);
+  await composer.fill("Live pane upload");
+  await composer.press("Enter");
+
+  const message = page.locator(".message[data-message-id]", {
+    has: page.getByText("Live pane upload", { exact: true }),
+  });
+
+  await expect(message).toHaveCount(1);
+  const id = await message.getAttribute("data-message-id");
+
+  await expect(pane(page).getByText("live-pane.png")).toBeVisible();
+  await expect(rows).toHaveCount(loaded + 1);
+  expect(fileRequests).toEqual(loadedRequests);
+
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const response = await page.request.delete(`/api/v1/messages/${id}`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+  });
+
+  expect(response.ok()).toBe(true);
+  await expect(message).toHaveCount(0);
+  await expect(pane(page).getByText("live-pane.png")).toHaveCount(0);
+  await expect(rows).toHaveCount(loaded);
+  expect(fileRequests).toEqual(loadedRequests);
+});
+
+test("the files pane shows a thread reply's upload live and drops it when the reply is deleted", async ({
+  page,
+}) => {
+  await open(page, `r/${GENERAL}`);
+  await openHeaderTool(page, /^Files/);
+  const rows = pane(page).getByRole("list", { name: "Files" }).getByRole("listitem");
+
+  await expect(rows.first()).toBeVisible();
+  const loaded = await rows.count();
+
+  const state = await (await page.request.get("/__mock/state")).json();
+  const csrf = { "X-CSRF-Token": state.csrfToken };
+  const bytes = onboardingMockupPng();
+
+  const upload = await page.request.post("/api/v1/uploads", {
+    headers: csrf,
+    data: {
+      filename: "thread-live.png",
+      byteSize: bytes.length,
+      checksum: md5Base64(bytes),
+      contentType: "image/png",
+    },
+  });
+
+  expect(upload.ok()).toBe(true);
+  const { signedId, uploadUrl } = await upload.json();
+
+  const stored = await page.request.put(uploadUrl, {
+    headers: { "Content-Type": "image/png" },
+    data: Buffer.from(bytes),
+  });
+
+  expect(stored.ok()).toBe(true);
+
+  const posted = await page.request.post(`/api/v1/threads/${THREAD_IDS.generalActive}/messages`, {
+    headers: csrf,
+    data: {
+      clientMessageId: "e2e-thread-live-file",
+      markdownSource: "Thread live upload",
+      replyToMessageId: null,
+      replyNotifyAuthor: null,
+      attachmentSignedId: signedId,
+    },
+  });
+
+  expect(posted.ok()).toBe(true);
+  const reply = await posted.json();
+
+  await expect(pane(page).getByText("thread-live.png")).toBeVisible();
+  await expect(rows).toHaveCount(loaded + 1);
+
+  const threadFile = rows.filter({
+    has: page.getByRole("button", { name: "Download thread-live.png" }),
+  });
+
+  const edited = await page.request.patch(`/api/v1/messages/${reply.id}`, {
+    headers: csrf,
+    data: { markdownSource: "Thread live upload", attachmentSpoilers: [true] },
+  });
+
+  expect(edited.ok()).toBe(true);
+  await expect(
+    threadFile.getByRole("button", { name: "Spoiler, activate to reveal" }),
+  ).toBeVisible();
+
+  const removed = await page.request.delete(`/api/v1/messages/${reply.id}`, { headers: csrf });
+
+  expect(removed.ok()).toBe(true);
+  await expect(threadFile).toHaveCount(0);
+  await expect(pane(page).getByText("thread-live.png")).toHaveCount(0);
+  await expect(rows).toHaveCount(loaded);
+
+  const another = await page.request.post(`/api/v1/threads/${THREAD_IDS.generalActive}/messages`, {
+    headers: csrf,
+    data: {
+      clientMessageId: "e2e-thread-live-file-again",
+      markdownSource: "Another thread upload",
+      attachmentSignedId: signedId,
+    },
+  });
+
+  expect(another.ok()).toBe(true);
+  await expect(pane(page).getByText("thread-live.png")).toBeVisible();
+
+  const deletedThread = await page.request.delete(`/api/v1/threads/${THREAD_IDS.generalActive}`, {
+    headers: csrf,
+  });
+
+  expect(deletedThread.ok()).toBe(true);
+  await expect(pane(page).getByText("thread-live.png")).toHaveCount(0);
 });
 
 matrix("the threads pane", async ({ page, theme }) => {

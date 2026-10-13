@@ -304,14 +304,31 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         fizzy: crate::integrations::fizzy::State,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(
+        Self::boot_seed_with_integrations(
             "default",
             clock,
             crate::net::Network::system(),
             &[],
             crate::huddle::Config::default(),
             (None, None),
-            Some(fizzy),
+            (Some(fizzy), None),
+        )
+        .await
+    }
+
+    pub async fn boot_with_klipy(
+        clock: campfire_kit::SharedClock,
+        klipy: crate::integrations::klipy::State,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_integrations(
+            "default",
+            clock,
+            crate::net::Network::system(),
+            extra,
+            crate::huddle::Config::default(),
+            (None, None),
+            (None, Some(klipy)),
         )
         .await
     }
@@ -489,19 +506,19 @@ impl TestApp {
         github_app: Option<crate::integrations::github::client::AppClient>,
         github_read: Option<crate::integrations::github::client::ReadClient>,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(
+        Self::boot_seed_with_integrations(
             name,
             clock,
             network,
             extra,
             huddle,
             (github_app, github_read),
-            None,
+            (None, None),
         )
         .await
     }
 
-    async fn boot_seed_with_fizzy(
+    async fn boot_seed_with_integrations(
         name: &str,
         clock: campfire_kit::SharedClock,
         network: crate::net::Network,
@@ -511,7 +528,10 @@ impl TestApp {
             Option<crate::integrations::github::client::AppClient>,
             Option<crate::integrations::github::client::ReadClient>,
         ),
-        fizzy: Option<crate::integrations::fizzy::State>,
+        (fizzy, klipy): (
+            Option<crate::integrations::fizzy::State>,
+            Option<crate::integrations::klipy::State>,
+        ),
     ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
@@ -528,7 +548,7 @@ impl TestApp {
             periodic: None,
             huddle: None,
         };
-        let booted = if let Some(fizzy) = fizzy {
+        let booted = if fizzy.is_some() || klipy.is_some() {
             crate::server::boot_with_integrations(
                 config,
                 clock,
@@ -537,7 +557,8 @@ impl TestApp {
                     github_app: crate::integrations::github::client::AppClient::new(None, None),
                     github_network: crate::net::Network::system(),
                     subscription_network: network,
-                    fizzy,
+                    fizzy: fizzy.unwrap_or_else(crate::integrations::fizzy::State::system),
+                    klipy: klipy.unwrap_or_else(crate::integrations::klipy::State::system),
                 },
                 intervals,
             )
