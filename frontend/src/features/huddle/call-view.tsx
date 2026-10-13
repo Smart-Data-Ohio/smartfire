@@ -1,7 +1,7 @@
 /**
  * The call over the conversation: a tile per person in the call (their camera, or their avatar
  * in a speaking ring) and a tile per screen share. A share expands into theater mode (and from
- * there to full screen); a stage stream expands itself for viewers and offers its quality. Only
+ * there to full screen), with the room's chat beside it unless hidden (theater-chat.ts); a stage stream expands itself for viewers and offers its quality. Only
  * the three loudest speakers get voice-glow (the dock's microphone is the fourth); the rest keep
  * the plain ring. On a phone the soundboard sits at the view's foot.
  */
@@ -27,6 +27,7 @@ import { loadStreamQuality } from "./engine/preferences.ts";
 import type { CallParticipant, ViewerQuality } from "./engine/transport.ts";
 import { ParticipantMenu } from "./participant-menu.tsx";
 import { SoundboardButton } from "./soundboard.tsx";
+import { setTheaterChat, useTheaterChat, useTheaterChatOpen } from "./theater-chat.ts";
 
 const GLOWS = 3;
 
@@ -64,32 +65,14 @@ function VideoTrack({
     return () => callController.detachVideo(videoId, element);
   }, [videoId]);
 
-  // A share asks for a layer that matches the size it's shown at (device pixels).
   useEffect(() => {
-    const element = ref.current;
-
-    if (!screen || element === null || typeof ResizeObserver === "undefined") {
+    if (!screen) {
       return;
     }
 
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry === undefined) {
-        return;
-      }
+    callController.screenShown(videoId, expanded);
 
-      const ratio = window.devicePixelRatio || 1;
-
-      callController.screenShown(
-        videoId,
-        Math.round(entry.contentRect.width * ratio),
-        Math.round(entry.contentRect.height * ratio),
-        expanded,
-      );
-    });
-
-    observer.observe(element);
-
-    return () => observer.disconnect();
+    return () => callController.screenShown(videoId, false);
   }, [videoId, screen, expanded]);
 
   return (
@@ -204,10 +187,13 @@ function ShareTile({
   participant,
   expanded,
   stream,
+  chat = null,
 }: {
   readonly participant: CallParticipant;
   readonly expanded: boolean;
   readonly stream: boolean;
+  /** Whether the room's chat shows beside theater mode; `null` offers no toggle (a board). */
+  readonly chat?: boolean | null;
 }) {
   const screenId = participant.screenId;
   const userId = useParticipantUser(participant);
@@ -275,6 +261,14 @@ function ShareTile({
             onClick={() => void frame.current?.requestFullscreen?.().catch(() => undefined)}
           />
         ) : null}
+        {expanded && chat !== null ? (
+          <IconButton
+            icon="message-circle"
+            label={chat ? "Hide chat" : "Show chat"}
+            size="sm"
+            onClick={() => setTheaterChat(!chat)}
+          />
+        ) : null}
         <IconButton
           icon={expanded ? "minimize-2" : "maximize-2"}
           label={expanded ? "Exit theater mode" : "Theater mode"}
@@ -309,6 +303,9 @@ export function CallView({ roomId }: { readonly roomId: number }) {
   // Read reactively (not through the controller), so the compiled memo sees the stream change.
   const streamingHere = useCall((state) => state.streaming?.roomId === roomId);
   const presenter = useStore((state) => state.stages[roomId]?.live?.identity ?? null);
+  const conversation = useStore((state) => state.rooms[roomId]?.detail?.room.kind !== "board");
+  const chatOpen = useTheaterChatOpen();
+  const chatBeside = useTheaterChat(roomId);
 
   const covers = useCallViewCovers(roomId);
   const view = useRef<HTMLElement>(null);
@@ -332,6 +329,7 @@ export function CallView({ roomId }: { readonly roomId: number }) {
       ref={view}
       className="call-view"
       data-theater={expanded === undefined ? undefined : true}
+      data-chat={chatBeside || undefined}
       aria-label="Call"
       // Covering the room (a phone), it is a page of its own: focus lands on it.
       tabIndex={covers ? -1 : undefined}
@@ -354,7 +352,12 @@ export function CallView({ roomId }: { readonly roomId: number }) {
         <p className="call-view-connecting">Connecting…</p>
       ) : null}
       {expanded === undefined ? null : (
-        <ShareTile participant={expanded} expanded stream={expanded.screenId === streamVideoId} />
+        <ShareTile
+          participant={expanded}
+          expanded
+          stream={expanded.screenId === streamVideoId}
+          chat={conversation ? chatOpen : null}
+        />
       )}
       <div className="call-grid" data-count={Math.min(participants.length + shares.length, 9)}>
         {shares

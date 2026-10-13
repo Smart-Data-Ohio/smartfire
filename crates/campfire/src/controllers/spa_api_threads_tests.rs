@@ -1206,6 +1206,45 @@ async fn private_threads_require_access_members_and_visibility_is_immutable() {
 }
 
 #[tokio::test]
+async fn reply_summary_visibility_is_sent_only_to_current_thread_readers() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let created = david.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("summary-visibility", "A private reply")}))).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let created: Value = parse(&created);
+    let id = created["detail"]["thread"]["id"].as_i64().unwrap();
+    assert_eq!(created["detail"]["parentMessage"]["thread"]["visibility"], "private");
+
+    let page_path = format!("/api/v1/rooms/{DESIGNERS}/messages");
+    let root = |page: Value| page["messages"].as_array().unwrap().iter()
+        .find(|message| message["id"] == UNTHREADED).unwrap().clone();
+    let parent = root(parse(&david.send(get(&page_path)).await));
+    assert_eq!(parent["thread"]["visibility"], "private");
+    assert_eq!(parent["thread"]["replyCount"], 1);
+    assert_eq!(parent["thread"]["replierIds"], json!([DAVID]));
+    let hidden = root(parse(&kevin.send(get(&page_path)).await));
+    assert_eq!(hidden["thread"], Value::Null);
+
+    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/members"), &json!({"userId": KEVIN}))).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
+    let shared = root(parse(&kevin.send(get(&page_path)).await));
+    assert_eq!(shared["thread"], parent["thread"]);
+    let public_page: Value = parse(&kevin.send(get(&page_path)).await);
+    let public = public_page["messages"].as_array().unwrap().iter()
+        .find(|message| message["id"] == THREAD_PARENT).unwrap();
+    assert_eq!(public["thread"]["visibility"], "public");
+
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/threads/{id}/members/{KEVIN}"), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT);
+    let hidden = root(parse(&kevin.send(get(&page_path)).await));
+    assert_eq!(hidden["thread"], Value::Null);
+}
+
+#[tokio::test]
 async fn private_thread_removal_cancels_an_open_sync_subscription() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
@@ -1600,5 +1639,225 @@ async fn private_thread_creation_conflicts_do_not_reveal_hidden_children() {
         } else {
             assert!(!response.text().contains("already exists"));
         }
+    }
+}
+
+async fn upload_file(browser: &mut crate::controllers::presenters::test_support::Browser<'_>, filename: &str, bytes: &[u8]) -> String {
+    let reply = browser.write(json_body(Method::POST, "/api/v1/uploads", &json!({
+        "filename": filename, "byteSize": bytes.len(), "contentType": "text/plain",
+        "checksum": campfire_storage::key::checksum(bytes),
+    }))).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let upload: api::DirectUpload = parse(&reply);
+    let stored = browser.send(Req::new(Method::PUT, &upload.upload_url)
+        .header("content-type", "text/plain").header("content-length", &bytes.len().to_string())
+        .body(String::from_utf8(bytes.to_vec()).unwrap())).await;
+    assert_eq!(stored.status, StatusCode::NO_CONTENT, "{}", stored.text());
+    upload.signed_id
+}
+
+fn files_changed(event: &api::SyncEvent) -> bool {
+    matches!(&event.payload, api::SyncPayload::RoomFilesChanged(change) if change.room_id == DESIGNERS)
+}
+
+async fn watch_room_files(addr: std::net::SocketAddr, cookie: &str) -> Sync {
+    let mut sync = Sync::connect(addr, cookie, &[format!("room:{DESIGNERS}")]).await;
+    sync.welcome().await;
+    sync
+}
+
+#[tokio::test]
+async fn thread_reply_uploads_reach_room_files_viewers_live() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let (addr, server) = serve(&a).await;
+    // Kevin watches the room only, as someone with its Files pane open does.
+    let mut room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+
+    let signed_id = upload_file(&mut david, "thread-notes.txt", b"thread notes").await;
+    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{THREAD}/messages"), &json!({
+        "clientMessageId": "files-live-public", "markdownSource": "Notes attached",
+        "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id,
+    }))).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let reply: api::MessageDTO = parse(&posted);
+    assert_eq!(reply.attachment.as_ref().unwrap().filename, "thread-notes.txt");
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, format!("room:{DESIGNERS}"));
+
+    a.booted.app.broadcasts.settle_sync().await;
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{}", reply.id),
+        &json!({"markdownSource": "Notes attached", "attachmentSpoilers": [true]}))).await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, format!("room:{DESIGNERS}"));
+
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/messages/{}", reply.id), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT, "{}", removed.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, format!("room:{DESIGNERS}"));
+
+    // A private thread's files reach only its readers, on their own topic.
+    let created: api::ThreadCreated = parse(&david.write(json_body(Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/threads"),
+        &json!({"parentMessageId": UNTHREADED, "visibility": "private",
+            "message": reply_body("files-live-private-create", "Private first reply")}))).await);
+    assert_eq!(created.detail.thread.visibility, api::ThreadVisibility::Private);
+    let private_id = created.detail.thread.id;
+    let added = david.write(json_body(Method::POST, &format!("/api/v1/threads/{private_id}/members"), &json!({"userId": KEVIN}))).await;
+    assert_eq!(added.status, StatusCode::OK, "{}", added.text());
+    let mut outsider = a.sign_in(JZ).await;
+    let mut outsider_sync = Sync::connect(addr, &outsider.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
+    outsider_sync.welcome().await;
+    a.booted.app.broadcasts.settle_sync().await;
+
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let signed_id = upload_file(&mut david, "private-notes.txt", b"private notes").await;
+    let posted = david.write(json_body(Method::POST, &format!("/api/v1/threads/{private_id}/messages"), &json!({
+        "clientMessageId": "files-live-private", "markdownSource": "Private notes attached",
+        "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id,
+    }))).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let private_reply: api::MessageDTO = parse(&posted);
+    assert_eq!(private_reply.thread_id, Some(private_id));
+    assert_eq!(private_reply.attachment.as_ref().unwrap().filename, "private-notes.txt");
+    let event = room_sync.until(files_changed, |_| false).await;
+    assert_eq!(event.topic, "user");
+
+    let visible: api::FileList = parse(&kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/files"))).await);
+    assert!(visible.files.iter().any(|file| file.message_id == private_reply.id));
+    let hidden: api::FileList = parse(&outsider.send(get(&format!("/api/v1/rooms/{DESIGNERS}/files"))).await);
+    assert!(!hidden.files.iter().any(|file| file.message_id == private_reply.id));
+
+    a.booted.app.broadcasts.settle_sync().await;
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{}", private_reply.id),
+        &json!({"markdownSource": "Private notes attached", "attachmentSpoilers": [true]}))).await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    assert_eq!(room_sync.until(files_changed, |_| false).await.topic, "user");
+
+    room_sync = watch_room_files(addr, &kevin.cookie_header()).await;
+    let removed = david.write(json_body(Method::DELETE, &format!("/api/v1/messages/{}", private_reply.id), &json!({}))).await;
+    assert_eq!(removed.status, StatusCode::NO_CONTENT, "{}", removed.text());
+    a.booted.app.broadcasts.settle_sync().await;
+    assert_eq!(room_sync.until(files_changed, |_| false).await.topic, "user");
+
+    a.booted.app.broadcasts.settle_sync().await;
+    let marker = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &reply_body("files-live-marker", "Public marker"))).await;
+    assert_eq!(marker.status, StatusCode::CREATED);
+    outsider_sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.client_message_id == "files-live-marker"),
+        files_changed,
+    ).await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn private_files_notifications_reauthorize_delivery() {
+    private_files_notifications_after_revocation(false).await;
+}
+
+#[tokio::test]
+async fn private_files_notifications_reauthorize_replay() {
+    private_files_notifications_after_revocation(true).await;
+}
+
+async fn private_files_notifications_after_revocation(replay_only: bool) {
+    for revoke_room in [false, true] {
+        let a = app(true).await.expect("the restored frozen default seed");
+        let mut david = a.sign_in(DAVID).await;
+        let kevin = a.sign_in(KEVIN).await;
+        let id = a
+            .db()
+            .write(|tx| {
+                let thread = campfire_db::ChannelThread::create(
+                    tx,
+                    campfire_db::NewChannelThread {
+                        room_id: DESIGNERS,
+                        creator_id: DAVID,
+                        name: Some("Private files".into()),
+                        visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                        ..Default::default()
+                    },
+                )?;
+                thread.add_access_member(tx, DAVID, KEVIN)?;
+                Ok(thread.id)
+            })
+            .await
+            .unwrap();
+        a.booted.app.broadcasts.settle_sync().await;
+        let (addr, server) = serve(&a).await;
+        let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+        let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+            panic!("welcome")
+        };
+        let hold = campfire_api::test_hooks::hold_before_sync_delivery(a.db().path(), KEVIN);
+        let signed_id = upload_file(&mut david, "private-revocation.txt", b"private").await;
+        let response = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"),
+            &json!({"clientMessageId":"private-files-revoke", "markdownSource":"Private file", "attachmentSignedId":signed_id}))).await;
+        assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+        tokio::time::timeout(std::time::Duration::from_secs(10), hold.reached.wait())
+            .await
+            .expect("queued file event");
+        a.db()
+            .write(move |tx| {
+                if revoke_room {
+                    campfire_db::Room::find(tx.conn(), DESIGNERS)?.revoke_from(tx, &[KEVIN])
+                } else {
+                    campfire_db::ChannelThread::find(tx.conn(), id)?
+                        .remove_access_member(tx, DAVID, KEVIN)
+                }
+            })
+            .await
+            .unwrap();
+        hold.release.wait().await;
+        a.booted.app.broadcasts.settle_sync().await;
+        a.booted
+            .app
+            .cable
+            .sync_publish(campfire_cable::sync::SyncPublication::new(
+                campfire_cable::sync::Audience::User(KEVIN),
+                serde_json::to_string(&api::SyncPayload::WorkspaceStylesUpdated(
+                    api::CustomStyles {
+                        css: Some("delivery-marker".into()),
+                    },
+                ))
+                .unwrap(),
+            ));
+        if !replay_only {
+            loop {
+                match sync.next().await {
+                    Some(api::ServerFrame::Batch { events }) => {
+                        assert!(
+                            !events.iter().any(files_changed),
+                            "revoked file notification: {events:?}"
+                        );
+                        if events.iter().any(|event| matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("delivery-marker"))) { break; }
+                    }
+                    Some(api::ServerFrame::Bye { .. }) => break,
+                    Some(api::ServerFrame::Ping) => {}
+                    other => panic!("expected marker or revocation, got {other:?}"),
+                }
+            }
+        }
+        let mut replay = Sync::open(
+            addr,
+            &kevin.cookie_header(),
+            &[],
+            json!({"epoch":epoch,"seq":seq}),
+        )
+        .await;
+        assert!(matches!(
+            replay.next().await,
+            Some(api::ServerFrame::Welcome { resumed: true, .. })
+        ));
+        replay.until(|event| matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("delivery-marker")), files_changed).await;
+        server.abort();
     }
 }

@@ -312,6 +312,13 @@ pub(crate) async fn stage_gif(c: &mut Ctx, user_id: i64, slug: &str) -> Result<S
         ));
     }
     let mut metadata = staged.blob().metadata.clone();
+    metadata.set(
+        campfire_storage::klipy::MARK_KEY,
+        campfire_storage::Json::String(campfire_storage::klipy::import_mark(
+            &*c.app().storage.verifier,
+            &staged.blob().key,
+        )),
+    );
     metadata.set("uploader_id", campfire_storage::Json::Int(user_id));
     metadata.set("klipy_id", campfire_storage::Json::String(item.klipy_id));
     metadata.set("klipy_title", campfire_storage::Json::String(item.title));

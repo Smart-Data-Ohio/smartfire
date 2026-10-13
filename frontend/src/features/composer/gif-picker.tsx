@@ -12,7 +12,7 @@ import type { GifItem } from "../../gen/GifItem.ts";
 import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { gifActions } from "../../sync/gif-actions.ts";
-import { IconButton } from "../../ui/icon-button.tsx";
+import { IconButton, type IconButtonProps } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Popover } from "../../ui/popover.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -469,7 +469,10 @@ export function GifPicker({ onPick }: GifPickerProps) {
  * it opens the picker above the toolbar (a bottom sheet on a touch phone), and a pick is sent
  * at once. The picker closes only once the send lands; a failure toasts and leaves it open.
  */
-export function ComposerGifButton({ onPick }: GifPickerProps) {
+export function ComposerGifButton({
+  onPick,
+  disabled = false,
+}: GifPickerProps & Pick<IconButtonProps, "disabled">) {
   const enabled = useGifEnabled();
 
   useEffect(() => {
@@ -489,6 +492,7 @@ export function ComposerGifButton({ onPick }: GifPickerProps) {
           {...props}
           icon="gif"
           label="GIF"
+          disabled={disabled}
           size="sm"
           onMouseDown={(event) => event.preventDefault()}
         />

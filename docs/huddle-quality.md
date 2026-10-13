@@ -16,7 +16,7 @@ Local tests establish actual media transport and decoded video. They do not esta
 ## Recommended order
 
 1. **Establish a two-machine network pilot.** Put the authorization gateway behind trusted TLS, keep raw LiveKit signaling private, and configure reachable media ports with TURN/TLS fallback. Verify direct UDP and a forced relay connection separately. TURN covers restrictive networks; UDP remains the preferred transport. [LiveKit deployment guidance](https://docs.livekit.io/transport/self-hosting/deployment/)
-2. **Measure quality before changing defaults.** Collect per-call RTT, packet loss, jitter, received bitrate, decoded resolution/frame rate, freezes, and direct-versus-relayed transport. Add a simple connection indicator and a details panel. Do not log join tokens, screen contents, or microphone recordings. Use a repeatable test call to compare changes. The indicator, the details panel, and the direct-versus-relayed flag have landed (see [Connection indicator](#connection-indicator)); per-call history, decoded resolution/frame rate, and freeze counts remain future work.
+2. **Measure quality before changing defaults.** Collect per-call RTT, packet loss, jitter, received bitrate, decoded resolution/frame rate, freezes, and direct-versus-relayed transport. Add a simple connection indicator and a details panel. Do not log join tokens, screen contents, or microphone recordings. Use a repeatable test call to compare changes. The indicator, the details panel, and the direct-versus-relayed flag have landed (see [Connection indicator](#connection-indicator)); per-video-track readings now include resolution, frame rate, codec, RID, bitrate, and freezes. Per-call history remains future work.
 3. **Make ordinary conversation reliable.** Keep echo cancellation and RED on for voice. Add microphone/output selection, a microphone meter, and a pre-call device check. Evaluate background-noise handling with headsets, laptop speakers, and representative browsers. Browser processing support varies. [Noise and echo cancellation](https://docs.livekit.io/transport/media/noise-cancellation/) The pickers, the meter, and the pre-join check have landed (see [Device controls](#device-controls)); the headset/speaker listening evaluation is still open.
 4. **Offer screen profiles for the content.** Start with a text/slides profile targeting 1080p at 15 fps and a motion profile targeting 1080p at 30 fps. Let bandwidth adaptation reduce quality. Test actual code readability at the receiving window's size; resolution alone does not prove readability. These profiles are proposals based on the pinned SDK presets. [Screen sharing](https://docs.livekit.io/transport/media/screenshare/)
 5. **Evaluate camera video separately.** Begin with a proposed 720p/30 fps target and adaptive lower layers. Compare VP8/H.264 compatibility with VP9/AV1 efficiency on the team's actual devices before selecting a default. The 720p/30 target, the explicit grant change, the controls, and the authorization tests have landed (see [Camera](#camera)); the codec comparison is still open. [Codecs and quality controls](https://docs.livekit.io/transport/media/advanced/)
@@ -51,7 +51,33 @@ Three follow-ups hardened the microphone path. A failed `restartTrack` retries o
 
 ### Screen sharing
 
-`setScreenShareEnabled` now requests `contentHint: "detail"`, `surfaceSwitching: "include"`, and tab audio (`audio: true`, `systemAudio: "exclude"`). Screen-share audio was already inside the token's publish grant.
+Ordinary and stage screen shares use the same profiles from
+`frontend/src/features/huddle/engine/screen-quality.ts`. The selected profile
+requests both capture size and frame rate; 1080p15 remains the default.
+
+| Profile | Requested capture | Top encoding ceiling | Lower simulcast layer |
+| --- | --- | --- | --- |
+| 720p15 | 1280×720, 15 fps | 1.5 Mbps, 15 fps | SDK half-size layer, 375 kbps, 15 fps |
+| 1080p15 | 1920×1080, 15 fps | 2.5 Mbps, 15 fps | SDK half-size layer, 625 kbps, 15 fps |
+| 1080p30 | 1920×1080, 30 fps | 5 Mbps, 30 fps | SDK half-size layer, 1.25 Mbps, 30 fps |
+| 1080p60 | 1920×1080, 60 fps | 8 Mbps, 60 fps | 1280×720, 2 Mbps, 30 fps |
+
+The first three profiles request the `text` content hint, with `detail` as the
+fallback when the native track ignores or rejects text. They explicitly use
+`maintain-resolution`. The 60 fps profile uses `motion` and `maintain-framerate`.
+Capture starts with the compatible hint before native-track read-back, so hint
+support never causes another capture picker. Width and height are ideal requests
+outside Safari; Safari uses maximum dimensions. Safari 17 and iOS 17+ start
+unconstrained, matching the pinned SDK exception for silently low-resolution
+capture. Other constraint rejections retry without audio, then with an uncapped
+resolution; cancellation and permission denial do not reopen the picker.
+
+All profiles request `surfaceSwitching: "include"` and tab audio
+(`audio: true`, `systemAudio: "exclude"`). Screen-share audio stays inside the
+existing publish grant. Profile requests are targets; check received stats to
+establish actual resolution and frame rate.
+
+`systemAudio: "exclude"`). Screen-share audio was already inside the token's publish grant.
 
 **Capture and encoding are separate ceilings.** No `resolution` is passed, so the SDK applies its own 1080p/30 capture constraint — and keeps its exemption for Safari 17, which cannot be constrained. Naming a preset's `resolution` here would have been a trap: a preset's resolution carries its frame rate, so asking for `h1080fps15.resolution` would have capped *capture* at 15 fps as well. Capture stays at 30 fps; the encoder is what limits the stream.
 
@@ -59,9 +85,10 @@ Three follow-ups hardened the microphone path. A failed `restartTrack` retries o
 
 The shared audio track publishes with `dtx: false`. Discontinuous transmission is tuned for speech and cuts the stream during perceived silence, which chops music and quiet passages in a demonstration. The microphone keeps `dtx: true`.
 
-Publishing uses `ScreenSharePresets.h1080fps15.encoding` (1920×1080, up to 2.5 Mbps, 15 fps) with `degradationPreference: "maintain-resolution"` — both the SDK's defaults, written out rather than inherited. Capturing at 30 and encoding at 15 is the SDK's own arrangement; the encoder drops every other frame rather than the capture missing them. Small code text stays readable under congestion because frames are dropped before resolution is. With simulcast on (also the SDK default) the publisher also sends a 960×540/15 layer at 625 kbps, so the uplink ceiling is about **3.1 Mbps**.
-
-**1080p/30 is the candidate to test, not the current setting.** `ScreenSharePresets.h1080fps30` would raise the top layer to 5 Mbps and the simulcast layer to 960×540/30 at 1.25 Mbps, about **6.25 Mbps** of publisher uplink — roughly double. That is a real network decision for an office link shared by several people, so it waits for the measurement work above rather than shipping on the strength of "sharper is better".
+The encoding bitrates remain unchanged from the previous profiles. Simulcast
+adds uplink traffic above the top-layer ceiling. A default 1080p15 share can use
+about 3.1 Mbps across both layers; 1080p30 about 6.25 Mbps, and 1080p60 about
+10 Mbps. These are configured maxima rather than measured bandwidth.
 
 ### Camera
 
@@ -97,16 +124,16 @@ The meter next to Mute is driven by the SDK's `createAudioAnalyser` over the loc
 
 The huddle header carries a three-level indicator driven by `ConnectionQualityChanged` for the local participant. The server reports four states; the header compresses them to three: excellent reads good, good reads fair, poor and lost read poor, and unknown — before the first update — reads fair, so an unmeasured connection never claims to be healthy.
 
-Clicking the indicator opens a details panel with the last-sampled round-trip time, packet loss, jitter, received and sent bitrate, and whether the transport is direct or relayed (TURN). Samples come from `getStats` every 2 seconds, only while the panel is open. No values are logged or sent to the server; nothing in this slice writes to the server.
+Opening Connection details in Call settings shows the last-sampled round-trip time, packet loss, jitter, received and sent bitrate, and whether transport is direct or relayed (TURN). Each local and subscribed remote video track adds resolution, FPS, codec MIME type, RID, scalability mode, bitrate, cumulative freeze count, and quality limitation reason. Local simulcast encodings appear separately. Samples come from `getStats` every 2 seconds, only while the panel is open and the page visible. No values are logged or sent to the server; nothing in this slice writes to the server.
 
 **Measured exactly.** The publisher report is read from the local microphone track's sender, the subscriber report from a subscribed remote track's receiver (audio preferred; any subscribed track shares the same subscriber peer connection):
 
 - Round-trip time, packet loss, and jitter come from the publisher's `remote-inbound-rtp` entry — the upstream path, our microphone to the server, as the server reports it back. The audio entry is preferred; video is the fallback so the numbers do not jump when a screen share starts or stops.
 - Packet loss is `packetsLost / (packetsSent + packetsLost)`, with `packetsLost` from that entry and `packetsSent` from the matching `outbound-rtp` entries — Chrome does not repeat the sent count on the remote-inbound side. It reads "–" when either side is missing.
-- Received bitrate is the byte delta across the subscriber's `inbound-rtp` entries; sent bitrate is the byte delta across the publisher's `outbound-rtp` entries. Both need two samples, so they trail the first paint by one interval.
+- Received and sent bitrate sum the sampled subscriber and publisher RTP entries. Per-video-track bitrate uses independent byte deltas for each track and RTP stream. Both need two samples; opening the panel starts a fresh baseline. Missing reports, removed streams, counter resets, and time reversal produce unknown bitrate rather than spikes. Retransmission and repair streams do not appear as extra video layers. FPS uses the reported value, or a decoded/encoded frame delta when unavailable.
 - Transport reads the selected candidate pair (via `transport.selectedCandidatePairId`, falling back to a nominated/selected pair): relay on either end reads "Relayed (TURN)", anything else reads "Direct".
 
-**Not measured.** No per-call history or logging — the panel shows the current sample only. No decoded resolution/frame rate, no freeze counts, no downstream loss or jitter (the panel shows the upstream path only), no multi-user capacity numbers. The loopback suite proves the plumbing, not what the numbers look like on a congested or relayed network; the forced-relay and pilot exercises in step 1 still own that.
+**Not measured.** No per-call history or logging; the panel shows the current sample only. Unsupported browser metrics read "–", rather than zero. Freeze counts are typically receiver-only, and quality limitation reason sender-only. RID and scalability mode are distinct: a mode is not the currently received SVC layer. No downstream loss or jitter, and no multi-user capacity numbers. The loopback suite proves the plumbing, not what the numbers look like on a congested or relayed network; the forced-relay and pilot exercises in step 1 still own that.
 
 **Measured by tests.** The suite asserts the indicator renders with a valid level, that the details show numeric round-trip time, loss, jitter, and both bitrates plus "Direct" on loopback, that sampling runs only while the panel is open, that reopening the panel samples bitrates from scratch, and that received bitrate reads as unknown while alone in the call.
 
@@ -116,9 +143,26 @@ Every shared screen now carries an always-visible **Expand** and **Full screen**
 
 - **Theater mode** keeps everything inside the page: the huddle panel grows to fill the viewport, the chosen screen fills the panel, and the caption, people list and controls stay visible. Escape and the Collapse button both leave it, and focus returns to the control that opened it. When two people share at once the other screens stay on as small thumbnails with their own Expand buttons, and the banner button turns into "Next screen" so it cycles rather than going dead.
 - **Full screen** uses the Fullscreen API on the `<figure>`, which keeps the caption and the controls with the picture. If that is refused it falls back to `video.requestFullscreen()`, then to `video.webkitEnterFullscreen()` for iPhone Safari, which can only do full screen on a video element and shows its own player without the caption. If nothing works the share is expanded into theater mode instead and the panel says so. `fullscreenchange` and `webkitendfullscreen` both restore the button state and the focus.
-- **Quality follows size.** The room runs with `adaptiveStream`, so LiveKit sizes each subscription from the rendered element: enlarging the element is what actually asks the server for a sharper layer. `emitTrackUpdate` takes the *smaller* of the adaptive size and any manual request, so the explicit `setVideoQuality(VideoQuality.HIGH)` and `setVideoDimensions` calls cannot out-argue the observer while the element is still small — they help only once the element has been resized, where they ask for the full layer straight away instead of waiting for the next observer callback. Collapsing calls `setVideoQuality(VideoQuality.HIGH)` again, which clears the requested dimensions and hands control back to adaptive streaming.
+- **Quality follows device pixels.** The room uses `adaptiveStream: { pixelDensity: "screen" }`, so a 2x display requests twice the CSS dimensions. Cameras and share thumbnails still adapt to their rendered size. A focused, expanded, or full-screen share requests the top simulcast layer immediately, subject to network adaptation. The pinned SDK otherwise caps HIGH by its smaller adaptive dimensions. The adapter in `frontend/src/features/huddle/engine/video-quality.ts` bypasses that cap during settings emission and preserves the observers and their latest dimensions; collapse restores adaptive sizing. Stage viewers choosing Low keep that limit; Auto uses the top layer while focused, and High requests it at any size. Unit tests exercise emitted settings from LiveKit 2.22.3, including resize and collapse. Recheck the adapter's protected field when upgrading the SDK.
 - **Noticing a share.** The panel shows "<name> is sharing a screen" with a View button, and the room header grows a green button next to Join huddle for anybody who has scrolled away or has the panel behind a mobile drawer.
 - **Not covered by tests.** Headless Chrome refuses real full screen, so the `fullscreenchange` and `webkitendfullscreen` paths — restoring the button state and the focus after leaving full screen — are exercised only by hand. The tests cover the request chain and the refusal fallback, not a successful entry and exit.
+
+### Verify screen quality on a 2x display
+
+1. Join in two browsers and share code at 1080p15. On the receiving 2x display,
+   open Call settings, then Connection details; wait for two samples.
+2. Expand the share and enter full screen. The receiving screen row should reach
+   the publisher's top resolution, usually 1920×1080 when capture delivers it.
+   FPS can be below 15 for static content; codec should read `video/VP8` in this
+   round. RID may be unavailable downstream, so compare the measured resolution.
+3. Collapse and confirm adaptive resolution can fall with the smaller element.
+   Re-expand and check that the top layer returns. Stage Low retains its limit;
+   Auto while focused and High request the top layer.
+4. Try scrolling and each profile. Watch per-stream bitrate, receiver freeze
+   count, and sender quality limitation reason. A rising freeze count or a
+   bandwidth/CPU limit explains an impaired sample; unsupported fields stay "–".
+5. On Safari 17, verify the unconstrained capture path still shares successfully.
+   Requested profile dimensions are not a guarantee of that browser's capture.
 
 ### How to verify
 

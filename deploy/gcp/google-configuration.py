@@ -34,6 +34,8 @@ def configuration(environ):
         "GOOGLE_SIGN_IN_DOMAINS": domains,
         "GOOGLE_CLOUD_PROJECT_NUMBER": number,
     }
+    if environ.get("KLIPY_API_KEY"):
+        values["KLIPY_API_KEY"] = environ["KLIPY_API_KEY"]
     if not all(isinstance(v, str) and (v or k == "GOOGLE_SIGN_IN_DOMAINS") for k, v in values.items()):
         raise ValueError("Missing Google configuration")
     return {"mode": "apply", "host": host, "environment": values}

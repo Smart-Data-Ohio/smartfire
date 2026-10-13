@@ -21,6 +21,12 @@ def environment(values):
         raise RuntimeError("Invalid ONCE environment; expected a string-to-string map")
     return values
 
+def requested_environment(values, allowed, optional, configuration_name):
+    changes = environment(values)
+    if set(changes) - optional != allowed:
+        raise RuntimeError("Unexpected or missing " + configuration_name)
+    return {key: value for key, value in changes.items() if key not in optional or value}
+
 def current(host):
     ids = run(["docker", "ps", "-q", "--filter", "label=once"]).split()
     containers = json.loads(run(["docker", "inspect", *ids])) if ids else []
@@ -47,7 +53,7 @@ def protected_write(path, value):
         stream.write(value)
 
 
-def configure(allowed, validate, backup_prefix, *, configuration_name, include_plan_values=False):
+def configure(allowed, validate, backup_prefix, *, configuration_name, include_plan_values=False, optional=frozenset()):
     os.umask(0o077)
     backup = None
     try:
@@ -60,11 +66,9 @@ def configure(allowed, validate, backup_prefix, *, configuration_name, include_p
             before, settings = current(host)
             before_env = env(before)
             if request["mode"] == "plan":
-                result = {"host": host, "image": settings["image"], "revision": before_env.get("GIT_REVISION"), "configured_environment_keys": sorted(settings.get("env", {})), "override_keys": sorted(allowed), "will_preserve_existing_settings": True}
+                result = {"host": host, "image": settings["image"], "revision": before_env.get("GIT_REVISION"), "configured_environment_keys": sorted(settings.get("env", {})), "override_keys": sorted(allowed | optional), "will_preserve_existing_settings": True}
                 if include_plan_values:
-                    changes = environment(request["environment"])
-                    if set(changes) != allowed:
-                        raise RuntimeError("Unexpected or missing " + configuration_name)
+                    changes = requested_environment(request["environment"], allowed, optional, configuration_name)
                     validate(changes, host, settings)
                     result["environment"] = changes
                 print(json.dumps(result))
@@ -78,9 +82,7 @@ def configure(allowed, validate, backup_prefix, *, configuration_name, include_p
                 raise RuntimeError("Production image changed; refusing configuration update")
             if not re.fullmatch(r"[a-z0-9.-]+/[a-zA-Z0-9._/-]+@sha256:[0-9a-f]{64}", image):
                 raise RuntimeError("Current image must be the pinned production image")
-            changes = environment(request["environment"])
-            if set(changes) != allowed:
-                raise RuntimeError("Unexpected or missing " + configuration_name)
+            changes = requested_environment(request["environment"], allowed, optional, configuration_name)
             validate(changes, host, settings)
             merged = dict(settings.get("env", {}))
             merged.update(changes)

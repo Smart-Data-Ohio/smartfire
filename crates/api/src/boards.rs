@@ -4,10 +4,10 @@ use campfire_api_types as api;
 use campfire_app::app::{AppCtx, AppState};
 use campfire_db::models::channel_thread::{BOARD_POSTS_PER_PAGE, board_page_number};
 use campfire_db::{
-    BoardTag, BoardTagPolicy, ChannelThread, Connection, Membership, Message, NewChannelThread, NewMessage, Room, Tx, User,
+    BoardTag, BoardTagPolicy, ChannelThread, Connection, Message, NewChannelThread, NewMessage, Room, Tx, User,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob};
+use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob, require_current_posting_access};
 use campfire_runtime::presenters::attachments::{self, Assignment};
 use campfire_runtime::context::db_error;
 use rusqlite::OptionalExtension;
@@ -450,12 +450,8 @@ async fn create_post(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let room = Room::find(tx.conn(), room_id)?;
-            if !room.board()
-                || room.deleted_at.is_some()
-                || Membership::find_by_room_and_user(tx.conn(), room_id, creator_id)?.is_none()
-                || !User::find(tx.conn(), creator_id)?.is_active()
-            {
+            let room = require_current_posting_access(tx, room_id, creator_id)?;
+            if !room.board() {
                 return Err(campfire_db::Error::RecordNotFound("Room"));
             }
             if let Some(id) = client_id.as_deref()

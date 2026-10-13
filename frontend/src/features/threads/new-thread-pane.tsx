@@ -88,6 +88,7 @@ export function NewThreadPane({
         attachmentSpoilers: draft.attachmentSpoilers,
         driveFileIds: draft.driveFileIds,
         gifSlug: draft.gifSlug,
+        stickerId: draft.stickerId,
         clientMessageId,
         visibility: secret ? "private" : "public",
       })

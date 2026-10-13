@@ -115,11 +115,17 @@ export const open = Effect.fn("threads.open")(function* (
   yield* loadPane(threadId, focusMessageId);
 });
 
-/** Loads an open pane again after an error; the subscription `open` took still holds. */
+/** Loads an open pane again after an error, resubscribing in case access was denied. */
 export const reload = Effect.fn("threads.reload")(function* (
   threadId: number,
   focusMessageId: number | null = null,
 ) {
+  if (store.getState().threadPanes[threadId]?.status === "error") {
+    const topics = yield* Topics;
+
+    yield* topics.forgetRejected(threadTopic(threadId));
+  }
+
   yield* loadPane(threadId, focusMessageId);
 });
 
@@ -183,6 +189,7 @@ function threadMessage(
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
     readonly gifSlug?: string | undefined;
+    readonly stickerId?: number | null;
   },
   markdown: string,
 ) {
@@ -224,6 +231,8 @@ function threadMessage(
     message.gifSlug = options.gifSlug;
   }
 
+  if (options.stickerId != null) message.stickerId = options.stickerId;
+
   return message;
 }
 
@@ -244,6 +253,7 @@ export const create = Effect.fn("threads.create")(function* (
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
     readonly gifSlug?: string | undefined;
+    readonly stickerId?: number | null;
     readonly visibility?: ThreadVisibility;
   } = {},
 ) {

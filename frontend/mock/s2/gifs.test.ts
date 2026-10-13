@@ -76,6 +76,7 @@ describe("GIF picker API fixtures", () => {
     const file = message.attachments?.[0];
 
     expect(file?.filename).toBe("Hello-Wave.gif");
+    expect(file?.thumbnailUrl).toBe(file?.url);
     expect(file?.byteSize).toBe(GIF_BYTES.length);
     expect(file?.url).toBe("/mock/files/gifs/hello-wave.gif");
     expect(

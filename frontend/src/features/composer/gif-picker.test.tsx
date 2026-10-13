@@ -486,6 +486,7 @@ describe("sending a GIF from the composer", () => {
         attachmentSpoilers: [false],
         driveFileIds: [],
         gifSlug: "hello-wave",
+        stickerId: null,
       }),
     );
   });

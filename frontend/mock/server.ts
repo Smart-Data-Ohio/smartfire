@@ -360,7 +360,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
             ? event.data.id
             : event.type === "thread.indicator"
               ? event.data.thread?.threadId
-              : event.type === "thread.unread" || event.type === "thread.read"
+              : event.type === "thread.unread" ||
+                  event.type === "thread.read" ||
+                  event.type === "room.files.changed"
                 ? event.data.threadId
                 : event.type === "message.created" ||
                     event.type === "message.updated" ||
