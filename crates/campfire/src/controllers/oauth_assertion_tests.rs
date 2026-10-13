@@ -72,16 +72,16 @@ fn sign_parts(alg: &str, header: &[u8], claims: &[u8]) -> String {
     );
     let rng = SystemRandom::new();
     let signature = match alg {
-        "RS256" => {
+        "RS256" | "RS512" => {
             let key = signature::RsaKeyPair::from_pkcs8(RSA).unwrap();
             let mut output = vec![0; key.public().modulus_len()];
-            key.sign(
-                &signature::RSA_PKCS1_SHA256,
-                &rng,
-                message.as_bytes(),
-                &mut output,
-            )
-            .unwrap();
+            let padding = if alg == "RS512" {
+                &signature::RSA_PKCS1_SHA512
+            } else {
+                &signature::RSA_PKCS1_SHA256
+            };
+            key.sign(padding, &rng, message.as_bytes(), &mut output)
+                .unwrap();
             output
         }
         "ES256" => signature::EcdsaKeyPair::from_pkcs8(
@@ -94,14 +94,16 @@ fn sign_parts(alg: &str, header: &[u8], claims: &[u8]) -> String {
         .unwrap()
         .as_ref()
         .to_vec(),
-        "HS256" => {
+        "HS256" | "HS384" | "HS512" => {
             let public = include_bytes!("../../../../test-support/oauth-jwt/rsa-public.pem");
-            hmac::sign(
-                &hmac::Key::new(hmac::HMAC_SHA256, public),
-                message.as_bytes(),
-            )
-            .as_ref()
-            .to_vec()
+            let algorithm = match alg {
+                "HS384" => hmac::HMAC_SHA384,
+                "HS512" => hmac::HMAC_SHA512,
+                _ => hmac::HMAC_SHA256,
+            };
+            hmac::sign(&hmac::Key::new(algorithm, public), message.as_bytes())
+                .as_ref()
+                .to_vec()
         }
         "none" => vec![],
         _ => panic!("test signer"),
@@ -174,6 +176,131 @@ async fn code(f: &Fixture) -> String {
     approve(&mut f.app.sign_in(DAVID).await, CLIENT, REDIRECT).await
 }
 
+async fn refuses_claim(update: impl FnOnce(&mut Value, i64)) {
+    let f = jwt_fixture("RS256").await;
+    let code = code(&f).await;
+    let mut claim = claims(&f, "negative");
+    update(&mut claim, f.clock.now().as_second());
+    invalid_client(
+        send(
+            &f.app,
+            &code_form(&code),
+            &sign("RS256", &header("RS256"), &claim),
+        )
+        .await,
+    );
+    let valid = send(
+        &f.app,
+        &code_form(&code),
+        &sign("RS256", &header("RS256"), &claims(&f, "valid")),
+    )
+    .await;
+    assert_eq!(valid.status.as_u16(), 200, "{}", valid.text());
+}
+
+#[tokio::test]
+async fn oauth_jwt_expired_without_iat_is_rejected() {
+    refuses_claim(|claim, now| {
+        claim.as_object_mut().unwrap().remove("iat");
+        claim["exp"] = json!(now - 61);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_expiry_at_skew_boundary_without_iat_is_rejected() {
+    refuses_claim(|claim, now| {
+        claim.as_object_mut().unwrap().remove("iat");
+        claim["exp"] = json!(now - 60);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_expiry_too_far_without_iat_is_rejected() {
+    refuses_claim(|claim, now| {
+        claim.as_object_mut().unwrap().remove("iat");
+        claim["exp"] = json!(now + 301);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_future_iat_is_rejected() {
+    refuses_claim(|claim, now| claim["iat"] = json!(now + 1)).await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_iat_lifetime_over_five_minutes_is_rejected() {
+    refuses_claim(|claim, now| claim["iat"] = json!(now - 181)).await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_iat_after_exp_within_skew_is_rejected() {
+    refuses_claim(|claim, now| claim["exp"] = json!(now - 1)).await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_future_nbf_is_rejected() {
+    refuses_claim(|claim, now| claim["nbf"] = json!(now + 61)).await;
+}
+
+async fn refuses_jwks(route: Route) {
+    let f = jwt_fixture("RS256").await;
+    let code = code(&f).await;
+    let jwt = sign("RS256", &header("RS256"), &claims(&f, "jwks"));
+    f.server.replace_routes(vec![route]);
+    invalid_client(send(&f.app, &code_form(&code), &jwt).await);
+    assert_eq!(key_fetches(&f), 1);
+    f.server.replace_routes(vec![key_route(&keys("RS256"))]);
+    let valid = send(&f.app, &code_form(&code), &jwt).await;
+    assert_eq!(valid.status.as_u16(), 200, "{}", valid.text());
+}
+
+fn oversized_jwks() -> Vec<u8> {
+    let mut body = serde_json::to_vec(&keys("RS256")).unwrap();
+    body.resize(16 * 1024 + 1, b' ');
+    body
+}
+
+#[tokio::test]
+async fn oauth_jwt_jwks_content_length_over_limit_is_rejected() {
+    refuses_jwks(key_route(&keys("RS256")).body(oversized_jwks())).await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_jwks_chunked_body_over_limit_is_rejected() {
+    let mut route = key_route(&keys("RS256")).body(oversized_jwks());
+    route.chunked = true;
+    refuses_jwks(route).await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_jwks_wrong_media_type_with_valid_keys_is_rejected() {
+    refuses_jwks(key_route_with_type(&keys("RS256"), "text/plain")).await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_jwks_redirect_with_valid_keys_is_rejected() {
+    let mut route = key_route(&keys("RS256")).header("Location", JWKS);
+    route.status = 302;
+    refuses_jwks(route).await;
+}
+
+#[tokio::test]
+async fn oauth_jwt_correctly_signed_small_rsa_is_rejected() {
+    let f = jwt_fixture("RS256").await;
+    let code = code(&f).await;
+    let values: Value = serde_json::from_str(include_str!(
+        "../../../../test-support/oauth-jwt/rsa-1024.jwks.json"
+    ))
+    .unwrap();
+    f.server.replace_routes(vec![key_route(&values)]);
+    let jwt = include_str!("../../../../test-support/oauth-jwt/rsa-1024.jwt").trim();
+    invalid_client(send(&f.app, &code_form(&code), jwt).await);
+    assert_eq!(key_fetches(&f), 1);
+}
+
 #[tokio::test]
 async fn oauth_jwt_rs256_and_es256_exchange_refresh_and_bind_method() {
     for alg in ["RS256", "ES256"] {
@@ -232,6 +359,9 @@ async fn oauth_jwt_header_claim_and_mechanism_refusals_leave_code_unconsumed() {
     let f = jwt_fixture("RS256").await;
     let code = code(&f).await;
     let now = f.clock.now().as_second();
+    let mut values = keys("RS256");
+    values["keys"][0].as_object_mut().unwrap().remove("alg");
+    f.server.replace_routes(vec![key_route(&values)]);
     let mut cases: Vec<(&str, Value, Value)> = vec![];
     for (name, field, value) in [
         (
@@ -244,15 +374,8 @@ async fn oauth_jwt_header_claim_and_mechanism_refusals_leave_code_unconsumed() {
         ("aud two elements", "aud", json!([ISSUER, ISSUER])),
         ("aud empty array", "aud", json!([])),
         ("aud nonstring", "aud", json!([1])),
-        ("expired exp", "exp", json!(now - 61)),
-        ("exp at skew boundary", "exp", json!(now - 60)),
-        ("exp too far", "exp", json!(now + 301)),
         ("exp string", "exp", json!("123")),
-        ("future iat", "iat", json!(now + 1)),
-        ("old iat", "iat", json!(now - 181)),
         ("iat null", "iat", Value::Null),
-        ("iat after exp", "exp", json!(now - 1)),
-        ("future nbf", "nbf", json!(now + 61)),
         ("nbf null", "nbf", Value::Null),
         ("empty jti", "jti", json!("")),
         ("long jti", "jti", json!("x".repeat(257))),
@@ -260,9 +383,6 @@ async fn oauth_jwt_header_claim_and_mechanism_refusals_leave_code_unconsumed() {
     ] {
         let mut claim = claims(&f, name);
         claim[field] = value;
-        if name == "exp too far" {
-            claim.as_object_mut().unwrap().remove("iat");
-        }
         cases.push((name, header("RS256"), claim));
     }
     for field in ["iss", "sub", "aud", "exp", "jti"] {
@@ -285,10 +405,21 @@ async fn oauth_jwt_header_claim_and_mechanism_refusals_leave_code_unconsumed() {
     for (name, head, claim) in cases {
         let signer = match name {
             "none" => "none",
-            "HS256" => "HS256",
+            "HS256" | "HS384" | "HS512" | "RS512" => name,
             _ => "RS256",
         };
-        let reply = send(&f.app, &code_form(&code), &sign(signer, &head, &claim)).await;
+        let jwt = sign(signer, &head, &claim);
+        assert!(
+            assertion::parse(
+                &jwt,
+                Some(CLIENT),
+                ISSUER,
+                campfire_db::Timestamp::from_jiff(f.clock.now())
+            )
+            .is_err(),
+            "{name}: parser must reject the invalid header or claim"
+        );
+        let reply = send(&f.app, &code_form(&code), &jwt).await;
         assert_eq!(
             reply.json()["error"],
             "invalid_client",
@@ -298,6 +429,15 @@ async fn oauth_jwt_header_claim_and_mechanism_refusals_leave_code_unconsumed() {
         invalid_client(reply);
     }
     let jwt = sign("RS256", &header("RS256"), &claims(&f, "mechanisms"));
+    assert!(
+        assertion::parse(
+            &jwt,
+            Some(CLIENT),
+            ISSUER,
+            campfire_db::Timestamp::from_jiff(f.clock.now())
+        )
+        .is_ok()
+    );
     let mut form = code_form(&code);
     form.push(("token_endpoint_auth_method", "none"));
     invalid_client(send(&f.app, &form, &jwt).await);
@@ -520,26 +660,15 @@ async fn oauth_jwt_refuses_cross_origin_and_guarded_jwks_failures() {
         );
         assert_eq!(key_fetches(&f), 0);
     }
-    for case in ["private DNS", "redirect", "oversize", "nonjson", "bad JSON"] {
+    for case in ["private DNS", "bad JSON"] {
         let f = jwt_fixture("RS256").await;
         let code = code(&f).await;
         let mut route = key_route(&keys("RS256"));
-        match case {
-            "private DNS" => f
-                .resolver
-                .set("client.example", vec![vec!["127.0.0.1".parse().unwrap()]]),
-            "redirect" => {
-                route =
-                    Route::new("GET", "client.example", "/jwks.json", 302).header("Location", JWKS)
-            }
-            "oversize" => route = route.body(vec![b' '; 16385]),
-            "nonjson" => {
-                route = Route::new("GET", "client.example", "/jwks.json", 200)
-                    .header("Content-Type", "text/plain")
-                    .body("{}")
-            }
-            "bad JSON" => route = route.body("{"),
-            _ => unreachable!(),
+        if case == "private DNS" {
+            f.resolver
+                .set("client.example", vec![vec!["127.0.0.1".parse().unwrap()]]);
+        } else {
+            route = route.body("{");
         }
         f.server.replace_routes(vec![route]);
         invalid_client(
@@ -550,18 +679,13 @@ async fn oauth_jwt_refuses_cross_origin_and_guarded_jwks_failures() {
             )
             .await,
         );
-        if case == "private DNS" {
-            assert_eq!(key_fetches(&f), 0);
-        } else {
-            assert_eq!(key_fetches(&f), 1);
-        }
+        assert_eq!(key_fetches(&f), if case == "private DNS" { 0 } else { 1 });
     }
 }
 
 #[tokio::test]
 async fn oauth_jwt_key_constraints_and_missing_kid_selection() {
     for (alg, case) in [
-        ("RS256", "small RSA"),
         ("RS256", "algorithm mismatch"),
         ("ES256", "wrong curve"),
         ("ES256", "wrong point"),
@@ -576,7 +700,6 @@ async fn oauth_jwt_key_constraints_and_missing_kid_selection() {
         let mut values = keys(alg);
         let mut head = header(alg);
         match case {
-            "small RSA" => values["keys"][0]["n"] = json!(URL_SAFE_NO_PAD.encode(vec![255u8; 128])),
             "algorithm mismatch" => values["keys"][0]["alg"] = json!("ES256"),
             "wrong curve" => values["keys"][0]["crv"] = json!("P-384"),
             "wrong point" => values["keys"][0]["x"] = json!(URL_SAFE_NO_PAD.encode([0u8; 31])),
