@@ -1,9 +1,26 @@
 # Continuous integration
 
 Every test kept in the repository runs on pull requests that change its inputs.
-There is no nightly or heavy test tier. Browser and messaging correctness suites,
-their isolated hosts, and their unused recorded fixtures have been removed.
+There is no nightly or heavy test tier. The OAuth browser job runs one Playwright
+acceptance spec against the frozen-seed Rust router with the production SPA
+embedded. It runs on changes to the server, frontend, fixtures, seeds, or its CI
+inputs. Older browser and messaging suites and their unused fixtures were removed.
 Ordinary tests retain the frozen seeds, golden vectors and fixtures they read.
+
+To run OAuth acceptance locally, restore the seeds and build the SPA first:
+
+```sh
+python3 parity/bin/frozen-seeds restore
+pnpm --dir frontend build
+SPA_DIST=frontend/dist SMARTFIRE_E2E_PORT=4398 cargo test --locked -j 1 -p campfire --bin campfire controllers::oauth_browser_tests::oauth_browser_acceptance -- --ignored --exact --nocapture
+```
+
+This explicitly selected Rust test launches Playwright and checks its exit status.
+Ordinary nextest runs leave it ignored because it needs Node, Chromium, and a built
+SPA. Its dedicated PR job runs it with those inputs. The test reuses `TestApp` and
+the `spa_huddle_tests` serving approach. Its injected resolver and dialer route a
+public CIMD hostname to the test's TLS listener on port 4398. Production's public
+DNS and TLS restrictions remain in force.
 
 `Rust port` reports on every pull request and main push. `Rust changes` selects
 Rust source, Cargo, crate, CI, static asset and fixture inputs. An unrelated PR
