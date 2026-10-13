@@ -26,6 +26,7 @@ pub struct AppState {
     pub jobs: crate::queue::Jobs,
     pub mail: crate::state::mail::State,
     pub fizzy: crate::integrations::fizzy::State,
+    pub klipy: crate::integrations::klipy::State,
     pub agent_message_payload: crate::state::agent_payload::State,
     pub agent_repositories: crate::integrations::agent_repositories::State,
     pub sudo: crate::state::sudo::State,
@@ -67,6 +68,7 @@ impl AppState {
             fizzy: crate::integrations::fizzy::State {
                 network: self.fizzy.network.clone(), base: self.fizzy.base.clone(),
             },
+            klipy: self.klipy.clone(),
             agent_message_payload: self.agent_message_payload.fixture_snapshot(),
             agent_repositories: self.agent_repositories.fixture_snapshot(),
             sudo: self.sudo.fixture_snapshot(),

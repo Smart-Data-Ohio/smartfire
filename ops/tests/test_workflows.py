@@ -60,6 +60,15 @@ def plan(document, runtime=None):
 
 
 class WorkflowTest(unittest.TestCase):
+    def test_klipy_secret_is_passed_to_both_google_configuration_steps(self):
+        workflow = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())
+        steps = [step for step in workflow["jobs"]["deploy"]["steps"] if "GOOGLE_OAUTH_CLIENT_JSON" in step.get("env", {})]
+        self.assertEqual(2, len(steps))
+        for step in steps:
+            with self.subTest(step=step["name"]):
+                self.assertEqual("${{ secrets.KLIPY_API_KEY }}", step["env"].get("KLIPY_API_KEY"))
+                self.assertNotIn("KLIPY_API_KEY", step["run"], "the secret stays in the environment and SSH pipe")
+
     def test_vm_phases_receive_the_same_resolved_digest_reference(self):
         workflow = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())
         steps = {step["id"]: step for step in workflow["jobs"]["deploy"]["steps"] if "id" in step}
