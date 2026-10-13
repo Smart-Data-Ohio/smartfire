@@ -1998,5 +1998,81 @@ async fn oauth_dcr_requires_bounded_json_and_preflight_sets_no_cookies() {
     assert_eq!(reply.header("set-cookie"), None);
 }
 
+#[tokio::test]
+async fn oauth_dcr_rejects_secret_fields_even_with_public_auth_method() {
+    let app = setup(true).await;
+    for (key, value) in [
+        ("client_secret", json!("secret")),
+        ("client_secret", json!("")),
+        ("client_secret", json!(null)),
+        ("client_secret_expires_at", json!(0)),
+        ("client_secret_expires_at", json!(null)),
+    ] {
+        let mut input = registration();
+        input[key] = value;
+        let reply = register(&app, &input, "203.0.113.31").await;
+        assert_eq!(reply.status.as_u16(), 400, "{key}: {}", reply.text());
+        assert_eq!(reply.json()["error"], "invalid_client_metadata");
+    }
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(
+                conn.query_row("SELECT COUNT(*) FROM oauth_clients", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        0
+    );
+}
+
+#[tokio::test]
+async fn oauth_dcr_requires_and_returns_the_fixed_grant_pair() {
+    let app = setup(true).await;
+    for (grants, status) in [
+        (None, 201),
+        (Some(json!(["authorization_code", "refresh_token"])), 201),
+        (Some(json!(["authorization_code"])), 400),
+        (Some(json!(["unknown"])), 400),
+        (Some(json!(["refresh_token", "authorization_code"])), 201),
+        (Some(json!([])), 400),
+        (Some(json!(["refresh_token"])), 400),
+        (
+            Some(json!(["authorization_code", "authorization_code"])),
+            400,
+        ),
+        (
+            Some(json!(["authorization_code", "refresh_token", "unknown"])),
+            400,
+        ),
+        (Some(json!(null)), 400),
+    ] {
+        let mut input = registration();
+        if let Some(grants) = grants {
+            input["grant_types"] = grants;
+        }
+        let reply = register(&app, &input, "203.0.113.32").await;
+        assert_eq!(reply.status.as_u16(), status, "{input}: {}", reply.text());
+        if status == 201 {
+            assert_eq!(
+                reply.json()["grant_types"],
+                json!(["authorization_code", "refresh_token"])
+            );
+        } else {
+            assert_eq!(reply.json()["error"], "invalid_client_metadata");
+        }
+    }
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(
+                conn.query_row("SELECT COUNT(*) FROM oauth_clients", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        3
+    );
+}
+
 #[path = "oauth_assertion_tests.rs"]
 mod assertions;
