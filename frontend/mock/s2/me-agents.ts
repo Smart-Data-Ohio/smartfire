@@ -1,5 +1,8 @@
 import type { BotSummary } from "../../src/gen/BotSummary.ts";
+import type { OAuthAgentHiddenRooms } from "../../src/gen/OAuthAgentHiddenRooms.ts";
+import type { OAuthAgentRoomAccess } from "../../src/gen/OAuthAgentRoomAccess.ts";
 import type { PersonalAgent } from "../../src/gen/PersonalAgent.ts";
+import type { PersonalAgentConnection } from "../../src/gen/PersonalAgentConnection.ts";
 import type { PersonalAgentCredential } from "../../src/gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../src/gen/PersonalAgentList.ts";
 import { forbidden, notFound, ok, validation } from "../http.ts";
@@ -14,6 +17,50 @@ const CAPABILITIES = ["read_messages", "post_messages", "react", "manage_threads
 const DAY = 86_400_000;
 
 const DISABLED = "Personal agents are turned off for this workspace.";
+
+/** How long an OAuth connection lasts (the server's `CONNECTION_LIFETIME`). */
+const CONNECTION_DAYS = 180;
+
+/** The client a connection goes through, as the OAuth mock hands it over. */
+export interface ConnectingClient {
+  readonly clientName: string;
+  readonly clientHost: string;
+  /** Its identity (the URL of its metadata document): clients on one host can differ. */
+  readonly clientId: string;
+}
+
+/** What the OAuth mock (mock/s2/oauth.ts) needs from the personal agents it connects. */
+export interface AgentConnections {
+  /** Whether the server has OAuth (what `oauthAvailable` says); off by default. */
+  readonly available: () => boolean;
+  readonly setAvailable: (on: boolean) => void;
+  /** The viewer's agents, as the API presents them. */
+  readonly agents: () => PersonalAgent[];
+  readonly rooms: () => { id: number; name: string; private: boolean }[];
+  readonly capabilities: readonly string[];
+  /** The viewer's agent limit; `null` for an administrator. */
+  readonly limit: () => number | null;
+  readonly enabled: () => boolean;
+  /**
+   * Approves: connects `agentId` (or a new agent named `name`) through `client`, replacing its
+   * access with the body's `roomIds` and `capabilities`, as the server's approve does.
+   */
+  readonly connect: (
+    client: ConnectingClient,
+    agentId: number | null,
+    body: Json | undefined,
+  ) => { agentId: number; credentialId: number };
+  /** Ends a connection as the server does when a used sign-in token comes back. */
+  readonly revokeForReuse: (credentialId: number) => boolean;
+  /** Marks every connection through the client `clientId` blocked or not. */
+  readonly setBlocked: (clientId: string, blocked: boolean) => void;
+  /** The live connections through the client `clientId`. */
+  readonly liveConnections: (clientId: string) => number;
+  /** What each agent can do in each of its rooms, as the consent page compares it. */
+  readonly roomAccess: () => OAuthAgentRoomAccess[];
+  /** Per agent, how many rooms it's in that the viewer can't see any more (only counted). */
+  readonly hiddenRooms: () => OAuthAgentHiddenRooms[];
+}
 
 interface AgentRecord {
   profile: Omit<PersonalAgent, "roomIds" | "capabilities" | "iconUrl">;
@@ -148,12 +195,161 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       lastUsedAt: null,
       lastUsedIp: null,
       state: "active",
+      connection: null,
     };
 
     if (previous !== undefined) previous.state = "revoked";
     agent.profile.credentials.unshift(credential);
 
     return { status: 201, json: { credential, secret } };
+  };
+
+  let oauthAvailable = false;
+  let oauthWorld: World | null = null;
+
+  const connections = (): PersonalAgentCredential[] =>
+    [...current().values()].flatMap((agent) =>
+      agent.profile.credentials.filter((credential) => credential.connection !== null),
+    );
+
+  const viewerLimit = () =>
+    ctx.world().users.get(VIEWER_ID)?.role === "administrator"
+      ? null
+      : admin.memberAgentPolicy().limit;
+
+  const create = (name: string, iconName: string | null): AgentRecord => {
+    const limit = viewerLimit();
+    const existing = current();
+
+    if (limit !== null && existing.size >= limit)
+      throw validation("base", "personal agent limit reached", "Personal agent limit reached");
+
+    if (name.trim() === "") throw validation("name", "can't be blank");
+
+    const profile: AgentRecord["profile"] = {
+      id: nextId++,
+      userId: nextUserId++,
+      name,
+      iconName,
+      provider: null,
+      runtime: null,
+      description: null,
+      dailyMessageCap: 200,
+      suspended: false,
+      lastUsedAt: null,
+      createdAt: timestamp(ctx.now()),
+      credentials: [],
+    };
+
+    const agent: AgentRecord = { profile, roomIds: [], grants: new Map() };
+
+    agents.set(profile.id, agent);
+
+    return agent;
+  };
+
+  const connectionsApi: AgentConnections = {
+    available: () => {
+      if (oauthWorld !== ctx.world()) {
+        oauthWorld = ctx.world();
+        oauthAvailable = false;
+      }
+
+      return oauthAvailable;
+    },
+    setAvailable: (on) => {
+      oauthWorld = ctx.world();
+      oauthAvailable = on;
+    },
+    agents: () => [...current().values()].map(present),
+    rooms: () => rooms(),
+    capabilities: CAPABILITIES,
+    limit: viewerLimit,
+    enabled: () => admin.memberAgentPolicy().enabled,
+    connect: (client, agentId, body) => {
+      enabled();
+      const granted = access(body);
+
+      const agent =
+        agentId === null
+          ? create(stringField(body, "name") ?? "", stringField(body, "iconName"))
+          : find(agentId);
+
+      replaceAccess(agent, granted);
+
+      const connection: PersonalAgentConnection = {
+        clientName: client.clientName,
+        clientHost: client.clientHost,
+        clientId: client.clientId,
+        clientBlocked: false,
+        revokedReason: null,
+      };
+
+      const credential: PersonalAgentCredential = {
+        id: nextCredentialId++,
+        kind: "oauth",
+        name: client.clientName,
+        lastFour: "oauth",
+        createdAt: timestamp(ctx.now()),
+        expiresAt: timestamp(ctx.now() + CONNECTION_DAYS * DAY),
+        lastUsedAt: null,
+        lastUsedIp: null,
+        state: "active",
+        connection,
+      };
+
+      agent.profile.credentials.unshift(credential);
+
+      return { agentId: agent.profile.id, credentialId: credential.id };
+    },
+    revokeForReuse: (credentialId) => {
+      const credential = connections().find((c) => c.id === credentialId);
+
+      if (credential === undefined || credential.connection === null) return false;
+      credential.state = "revoked";
+      credential.connection = { ...credential.connection, revokedReason: "tokenReused" };
+
+      return true;
+    },
+    setBlocked: (clientId, blocked) => {
+      for (const credential of connections()) {
+        if (credential.connection?.clientId === clientId)
+          credential.connection = { ...credential.connection, clientBlocked: blocked };
+      }
+    },
+    liveConnections: (clientId) =>
+      connections().filter((c) => c.state === "active" && c.connection?.clientId === clientId)
+        .length,
+    hiddenRooms: () => {
+      const offered = new Set(rooms().map((room) => room.id));
+
+      // Rooms that still exist (not direct) that the viewer isn't in any more.
+      const hidden = (id: number) => {
+        const room = ctx.world().rooms.get(id);
+
+        return room !== undefined && room.room.kind !== "direct" && !offered.has(id);
+      };
+
+      return [...current().values()].flatMap((record) => {
+        const count = record.roomIds.filter(hidden).length;
+
+        return count === 0 ? [] : [{ agentId: record.profile.id, count }];
+      });
+    },
+    roomAccess: () =>
+      [...current().values()].flatMap((record) => {
+        const agent = present(record);
+        const offered = rooms();
+        // Suspended, or agents turned off: it can do nothing anywhere, as `present` says.
+        const off = record.profile.suspended || !admin.memberAgentPolicy().enabled;
+
+        return agent.roomIds.map((roomId) => ({
+          agentId: agent.id,
+          roomId,
+          roomName: offered.find((room) => room.id === roomId)?.name ?? "",
+          capabilities: off ? [] : [...(record.grants.get(roomId) ?? [])].sort(),
+        }));
+      }),
   };
 
   const summaries = (): BotSummary[] =>
@@ -168,6 +364,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
   return {
     summaries,
+    connections: connectionsApi,
     routes: [
       route("GET", /^\/me\/agents$/, () => {
         const policy = admin.memberAgentPolicy();
@@ -179,7 +376,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
           capabilities: CAPABILITIES,
           rooms: rooms(),
           mcpUrl: "http://127.0.0.1/agents/mcp",
-          oauthAvailable: false,
+          oauthAvailable: connectionsApi.available(),
         };
 
         return ok(list);
@@ -299,7 +496,12 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         const agent = find(ids[0]);
         const credential = agent.profile.credentials.find((c) => c.id === ids[1]);
 
-        if (credential === undefined || credential.state === "revoked") throw notFound();
+        if (
+          credential === undefined ||
+          credential.state === "revoked" ||
+          credential.connection !== null
+        )
+          throw notFound();
         enabled();
         admin.requireSudo();
 

@@ -29,6 +29,7 @@ import { SudoContinue } from "./features/auth/sudo-continue.tsx";
 import { SudoNew } from "./features/auth/sudo-new.tsx";
 import { parseTwoFactorSetupSearch } from "./features/auth/two-factor-search.ts";
 import { NewDirectRoute } from "./features/directs/new-direct-route.tsx";
+import { parseOAuthErrorSearch } from "./features/oauth/oauth-search.ts";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
@@ -212,6 +213,32 @@ const termsRoute = createRoute({
   path: "terms",
   ...chunked(() =>
     import("./features/auth/public-page.tsx").then((module) => ({ default: module.TermsPage })),
+  ),
+});
+
+/**
+ * `/app/oauth/error?error=`: an app's connection request Smartfire couldn't take, outside the
+ * shell for anyone: the server renders it signed out too (crates/spa/src/signed_out.rs).
+ */
+const oauthErrorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "oauth/error",
+  validateSearch: parseOAuthErrorSearch,
+  ...chunked(() =>
+    import("./features/oauth/error-page.tsx").then((module) => ({
+      default: module.OAuthErrorRoute,
+    })),
+  ),
+});
+
+/** `/app/oauth/consent/:publicId`: approving (or denying) an app that asks to connect as an agent. */
+const oauthConsentRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "oauth/consent/$publicId",
+  ...chunked(() =>
+    import("./features/oauth/consent-page.tsx").then((module) => ({
+      default: module.ConsentRoute,
+    })),
   ),
 });
 
@@ -769,10 +796,12 @@ const routeTree = rootRoute.addChildren([
   aboutRoute,
   privacyRoute,
   termsRoute,
+  oauthErrorRoute,
   shellRoute.addChildren([
     homeRoute,
     sudoContinueRoute,
     sudoNewRoute,
+    oauthConsentRoute,
     activityRoute,
     guideRoute,
     savedRoute,

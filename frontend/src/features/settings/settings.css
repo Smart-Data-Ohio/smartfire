@@ -1081,6 +1081,17 @@
     flex-basis: 220px;
   }
 
+  /* A connection: its client's host beside the name, and why the server ended it. */
+  .agents-client-host {
+    font-weight: var(--weight-regular);
+    overflow-wrap: anywhere;
+  }
+
+  .agents-connection-problem {
+    color: var(--danger-text);
+    font-size: var(--text-sidebar);
+  }
+
   .agents-token-actions,
   .agents-card-actions {
     display: flex;

@@ -15,7 +15,13 @@ import { toast } from "../../ui/toast-store.ts";
 import { Confirm, takeDraft } from "../admin/admin-parts.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
-import { AccessFields, ExpiryField, IdentityFields, SecretBlock } from "./agent-parts.tsx";
+import {
+  AccessFields,
+  ExpiryField,
+  IdentityFields,
+  ReconnectSetup,
+  SecretBlock,
+} from "./agent-parts.tsx";
 import { AgentWizard, WIZARD_DRAFT_KEY } from "./agent-wizard.tsx";
 import {
   type AgentCache,
@@ -31,11 +37,19 @@ import {
 import {
   abilityLabel,
   agentIcon,
+  canConnect,
   canCreate,
+  canReconnect,
   clientOf,
+  connectedProduct,
+  connectionBadge,
+  connectionClient,
+  connectionMeta,
+  connectionProblem,
   type Expiry,
   emptyDraft,
   expiresAtOf,
+  isConnection,
   parseDraft,
   roomNames,
   shortDay,
@@ -64,6 +78,12 @@ type Load =
 interface TokenAsk {
   readonly agent: PersonalAgent;
   readonly replacing: PersonalAgentCredential | null;
+}
+
+/** A connection to reconnect: which agent, and the connection that ended. */
+interface ReconnectAsk {
+  readonly agent: PersonalAgent;
+  readonly connection: PersonalAgentCredential;
 }
 
 /** A secret to show once, for an agent. */
@@ -153,7 +173,70 @@ function TokenRow({
   );
 }
 
-/** One agent: who it is, where it can go, what it can do, and its tokens. */
+/**
+ * One OAuth connection: its client and dates, why it stopped when the server ended it, Revoke
+ * while it can still be used and Reconnect once it can't.
+ */
+function ConnectionRow({
+  connection,
+  oauthAvailable,
+  busy,
+  onRevoke,
+  onReconnect,
+}: {
+  readonly connection: PersonalAgentCredential;
+  readonly oauthAvailable: boolean;
+  readonly busy: boolean;
+  readonly onRevoke: () => void;
+  readonly onReconnect: () => void;
+}) {
+  const now = Date.now();
+  const client = connectionClient(connection);
+  const badge = connectionBadge(connection);
+  const problem = connectionProblem(connection);
+  const host = connection.connection?.clientHost;
+
+  return (
+    <li className="settings-list-row agents-token" data-state={connection.state}>
+      <span className="settings-list-main">
+        <strong>
+          {client}
+          {host === undefined || host === client ? null : (
+            <span className="agents-client-host text-faint"> {host}</span>
+          )}
+          {badge === null ? null : <span className="settings-badge">{badge}</span>}
+        </strong>
+        <span className="text-faint">{connectionMeta(connection, (at) => timeAgo(at, now))}</span>
+        {problem === null ? null : <span className="agents-connection-problem">{problem}</span>}
+      </span>
+      <span className="agents-token-actions">
+        {canReconnect(connection, oauthAvailable) ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onReconnect}
+            aria-label={`Reconnect ${client}`}
+          >
+            Reconnect
+          </Button>
+        ) : null}
+        {connection.state === "revoked" ? null : (
+          <Button
+            variant="danger"
+            size="sm"
+            disabled={busy}
+            onClick={onRevoke}
+            aria-label={`Revoke ${client}`}
+          >
+            Revoke
+          </Button>
+        )}
+      </span>
+    </li>
+  );
+}
+
+/** One agent: who it is, where it can go, what it can do, its connections and its tokens. */
 function AgentCard({
   agent,
   list,
@@ -165,6 +248,7 @@ function AgentCard({
   onIssue,
   onRotate,
   onRevoke,
+  onReconnect,
 }: {
   readonly agent: PersonalAgent;
   readonly list: PersonalAgentList;
@@ -177,10 +261,13 @@ function AgentCard({
   readonly onIssue: () => void;
   readonly onRotate: (credential: PersonalAgentCredential) => void;
   readonly onRevoke: (credential: PersonalAgentCredential) => void;
+  readonly onReconnect: (connection: PersonalAgentCredential) => void;
 }) {
   const client = clientOf(agent);
   const rooms = roomNames(list, agent.roomIds);
   const now = Date.now();
+  const tokens = agent.credentials.filter((credential) => !isConnection(credential));
+  const connections = agent.credentials.filter(isConnection);
 
   return (
     <article className="agents-card" aria-labelledby={`agent-${agent.id}-name`}>
@@ -238,13 +325,34 @@ function AgentCard({
           </Button>
         </p>
       ) : null}
+      {connections.length === 0 ? null : (
+        <section className="agents-tokens" aria-label={`${agent.name}'s connections`}>
+          <h4 className="settings-label">Connections</h4>
+          <ul className="settings-list">
+            {sortedTokens(connections).map((connection) => (
+              <ConnectionRow
+                key={connection.id}
+                connection={connection}
+                oauthAvailable={list.enabled && list.oauthAvailable}
+                busy={busy(`token-${connection.id}`)}
+                onRevoke={() => onRevoke(connection)}
+                onReconnect={() => onReconnect(connection)}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="agents-tokens" aria-label={`${agent.name}'s tokens`}>
         <h4 className="settings-label">Tokens</h4>
-        {agent.credentials.length === 0 ? (
-          <p className="text-muted">No tokens. It can't connect until you make one.</p>
+        {tokens.length === 0 ? (
+          <p className="text-muted">
+            {connections.length === 0
+              ? "No tokens. It can't connect until you make one."
+              : "No tokens. Its connections sign in instead."}
+          </p>
         ) : (
           <ul className="settings-list">
-            {sortedTokens(agent.credentials).map((credential) => (
+            {sortedTokens(tokens).map((credential) => (
               <TokenRow
                 key={credential.id}
                 credential={credential}
@@ -667,6 +775,46 @@ function EditDialog({
   );
 }
 
+/** How to reconnect a connection that ended: its app signs in again, from its own settings. */
+function ReconnectDialog({
+  ask,
+  mcpUrl,
+  onClose,
+}: {
+  readonly ask: ReconnectAsk | null;
+  readonly mcpUrl: string | null;
+  readonly onClose: () => void;
+}) {
+  const client = ask === null ? "" : connectionClient(ask.connection);
+
+  return (
+    <Dialog
+      open={ask !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={ask === null ? "" : `Reconnect ${client}`}
+      description={
+        ask === null ? undefined : `${client} has to sign in again. You'll approve it here.`
+      }
+      footer={
+        <Button variant="primary" onClick={onClose} data-autofocus>
+          Done
+        </Button>
+      }
+    >
+      {ask === null ? null : (
+        <ReconnectSetup
+          client={connectedProduct(ask.connection)}
+          clientName={client}
+          agentName={ask.agent.name}
+          mcpUrl={mcpUrl}
+        />
+      )}
+    </Dialog>
+  );
+}
+
 /** A token just made, shown once with how its agent's client uses it. */
 function SecretDialog({
   shown,
@@ -723,6 +871,7 @@ export function AgentsSection() {
   const [opening, setOpening] = useState(0);
   const [tokenAsk, setTokenAsk] = useState<TokenAsk | null>(null);
   const [shown, setShown] = useState<Shown | null>(null);
+  const [reconnecting, setReconnecting] = useState<ReconnectAsk | null>(null);
   const [ask, setAsk] = useState<Ask>(null);
   const { busy, track } = useBusy();
   const restoredOnce = useRef(false);
@@ -809,25 +958,36 @@ export function AgentsSection() {
       loadList().catch((error: Error) => toastFailure("Couldn't reload your agents", error)),
     );
 
-  const revoke = (agent: PersonalAgent, credential: PersonalAgentCredential) =>
+  const revoke = (agent: PersonalAgent, credential: PersonalAgentCredential) => {
+    const connection = isConnection(credential);
+    const name = connection ? connectionClient(credential) : credential.name;
+
     setAsk({
-      title: `Revoke ${credential.name}?`,
-      message: "Anything using this token stops reaching the agent at once.",
+      title: `Revoke ${name}?`,
+      message: connection
+        ? `${name} stops reaching ${agent.name} at once. To use it again, reconnect it and approve it.`
+        : "Anything using this token stops reaching the agent at once.",
       label: "Revoke",
       danger: true,
       run: () => {
+        const at = nextSequence();
+
         void track(
           `token-${credential.id}`,
           meAgents.revokeToken(agent.id, credential.id).then(
             ({ credentials }) => {
-              replace((current) => withTokens(current, agent.id, credentials));
-              toast({ title: `${credential.name} was revoked`, tone: "success" });
+              replace((current) => withTokens(current, agent.id, credentials, at));
+              toast({
+                title: connection ? `${name} was disconnected` : `${name} was revoked`,
+                tone: "success",
+              });
             },
-            (error: Error) => toastFailure(`Couldn't revoke ${credential.name}`, error),
+            (error: Error) => toastFailure(`Couldn't revoke ${name}`, error),
           ),
         );
       },
     });
+  };
 
   const remove = (agent: PersonalAgent) =>
     setAsk({
@@ -861,7 +1021,7 @@ export function AgentsSection() {
         ? [credential]
         : [credential, { ...replaced, state: "revoked" as const }];
 
-    replace((current) => withTokens(current, agent.id, changed));
+    replace((current) => withTokens(current, agent.id, changed, null));
     setTokenAsk(null);
     setShown({ agent, secret });
   };
@@ -869,7 +1029,11 @@ export function AgentsSection() {
   return (
     <SettingsPage
       title="Agents"
-      description="Connect Claude Code, Codex, Cursor or another MCP client as your own agent. It can read and post only in the rooms you give it, and message only you."
+      description={
+        list?.oauthAvailable === true
+          ? "Connect claude.ai, ChatGPT, Grok, Claude Code, Codex, Cursor or another MCP client as your own agent. It can read and post only in the rooms you give it, and message only you."
+          : "Connect Claude Code, Codex, Cursor or another MCP client as your own agent. It can read and post only in the rooms you give it, and message only you."
+      }
     >
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
@@ -907,15 +1071,24 @@ export function AgentsSection() {
               <Button
                 variant="primary"
                 icon="bot"
-                disabled={!canCreate(list)}
-                onClick={() => setWizard({ draft: emptyDraft(list.capabilities), restored: false })}
+                disabled={!canConnect(list)}
+                onClick={() =>
+                  setWizard({
+                    draft: emptyDraft(list.capabilities, list.oauthAvailable),
+                    restored: false,
+                  })
+                }
               >
                 Connect an agent
               </Button>
               {usage(list) === null ? null : (
                 <span className="text-faint">
                   {usage(list)}
-                  {canCreate(list) ? "" : ". Remove one to connect another."}
+                  {canCreate(list)
+                    ? ""
+                    : canConnect(list)
+                      ? ". Apps that sign in can still connect as one of them."
+                      : ". Remove one to connect another."}
                 </span>
               )}
             </div>
@@ -946,6 +1119,7 @@ export function AgentsSection() {
                     onIssue={() => setTokenAsk({ agent, replacing: null })}
                     onRotate={(credential) => setTokenAsk({ agent, replacing: credential })}
                     onRevoke={(credential) => revoke(agent, credential)}
+                    onReconnect={(connection) => setReconnecting({ agent, connection })}
                   />
                 ))}
               </div>
@@ -973,6 +1147,11 @@ export function AgentsSection() {
             onTurnedOff={fetchList}
           />
           <SecretDialog shown={shown} mcpUrl={list.mcpUrl} onClose={() => setShown(null)} />
+          <ReconnectDialog
+            ask={reconnecting}
+            mcpUrl={list.mcpUrl}
+            onClose={() => setReconnecting(null)}
+          />
         </>
       )}
       <Confirm ask={ask} onCancel={() => setAsk(null)} />

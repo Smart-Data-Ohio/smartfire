@@ -74,17 +74,20 @@ pub fn replace_access(
     use crate::{AgentGrant, Membership, NewGrant, Room};
     let mut errors = crate::Errors::default();
     let offered = grantable_rooms(tx.conn(), owner_id)?;
-    for room in room_ids {
-        if !offered.iter().any(|offered| offered.id == *room) {
-            errors.add("room_ids", "must be a non-direct room you belong to");
-        }
+    // A room the owner can't choose gets this one error and no other check, so the answer is the
+    // same whether it doesn't exist, is someone else's private room, or is a direct room.
+    let (rooms, refused): (Vec<i64>, Vec<i64>) = room_ids
+        .iter()
+        .partition(|room| offered.iter().any(|offered| offered.id == **room));
+    if !refused.is_empty() {
+        errors.add("room_ids", "must be a non-direct room you belong to");
     }
     for capability in capabilities {
         // Validate even an empty room set against S1's capability allowlist.
         if !super::agent_access::PERSONAL_CAPABILITIES.contains(&capability.as_str()) {
             errors.add("capabilities", "is not available to personal agents");
         }
-        for room in room_ids {
+        for room in &rooms {
             let shape = AgentGrant::validate_request_shape(
                 tx.conn(),
                 &NewGrant {

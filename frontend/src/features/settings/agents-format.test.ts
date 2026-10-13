@@ -7,16 +7,26 @@ import {
   abilityLabel,
   agentIcon,
   baseProblem,
+  canConnect,
   canCreate,
+  canReconnect,
   clientChoices,
+  connectChoices,
+  connectedProduct,
+  connectionBadge,
+  connectionMeta,
+  connectionProblem,
+  connectsBySignIn,
   emptyDraft,
   expiresAtOf,
   iconOf,
   parseDraft,
+  REUSED_REASON,
   roomNames,
   serializeDraft,
   sortedTokens,
   stepProblem,
+  stepsFor,
   tokenMeta,
   turnedOff,
   usage,
@@ -70,6 +80,7 @@ function token(change: Partial<PersonalAgentCredential>): PersonalAgentCredentia
     lastUsedAt: null,
     lastUsedIp: null,
     state: "active",
+    connection: null,
     ...change,
   };
 }
@@ -117,7 +128,9 @@ describe("the wizard's steps", () => {
       roomIds: [],
       capabilities: CAPABILITIES,
       expiry: "90d",
+      signIn: false,
     });
+    expect(emptyDraft(CAPABILITIES, true).signIn).toBe(true);
     expect(expiresAtOf("90d")).toBeNull();
     expect(expiresAtOf("never")).toBe("never");
   });
@@ -146,6 +159,9 @@ describe("the wizard's steps", () => {
     };
 
     expect(parseDraft(serializeDraft(kept))).toEqual(kept);
+    expect(parseDraft(serializeDraft({ ...kept, client: "codex", signIn: true }))?.signIn).toBe(
+      true,
+    );
     expect(parseDraft(serializeDraft({ ...kept, iconName: null, roomIds: [] }))).toEqual({
       ...kept,
       iconName: null,
@@ -167,6 +183,25 @@ describe("the cards", () => {
     expect(usage(list({ limit: null }))).toBeNull();
     expect(canCreate(list({ limit: null, agents: [AGENT] }))).toBe(true);
     expect(canCreate(list({ enabled: false }))).toBe(false);
+  });
+
+  it("still connects an app that signs in at the limit, as an agent the person has", () => {
+    const full = list({ limit: 1, agents: [AGENT] });
+    const signing = { ...full, oauthAvailable: true };
+
+    expect(canConnect(full)).toBe(false);
+    expect(canConnect(signing)).toBe(true);
+    // With no agent to connect as, there's nothing an app could sign in to.
+    expect(canConnect(list({ limit: 0, oauthAvailable: true }))).toBe(false);
+    expect(canConnect(list({ ...signing, enabled: false }))).toBe(false);
+    expect(connectChoices(signing).map((choice) => choice.value)).toEqual([
+      "claude-ai",
+      "chatgpt",
+      "grok",
+      "claude-code",
+      "codex",
+    ]);
+    expect(connectChoices(list({ oauthAvailable: true }))).toEqual(clientChoices(true));
   });
 
   it("names an agent's rooms, dropping any it can no longer reach", () => {
@@ -233,5 +268,122 @@ describe("refusals", () => {
       turnedOff(new ActionError("Forbidden", "Personal agents are turned off for this workspace.")),
     ).toBe(true);
     expect(turnedOff(new ActionError("NotFound", "Not found"))).toBe(false);
+  });
+});
+
+describe("signing in", () => {
+  const draft = emptyDraft(CAPABILITIES, true);
+
+  it("skips naming and access for the web apps and for Claude Code or Codex set to sign in", () => {
+    const claudeAi = { ...draft, client: "claude-ai" as const };
+    const codex = { ...draft, client: "codex" as const };
+    const cursor = { ...draft, client: "cursor" as const };
+
+    expect(connectsBySignIn(claudeAi, true)).toBe(true);
+    expect(stepsFor(claudeAi, true)).toEqual(["client", "connect"]);
+    expect(connectsBySignIn(codex, true)).toBe(true);
+    expect(connectsBySignIn({ ...codex, signIn: false }, true)).toBe(false);
+    expect(connectsBySignIn(cursor, true)).toBe(false);
+    expect(connectsBySignIn(codex, false)).toBe(false);
+    expect(stepsFor(codex, false)).toEqual(["client", "identity", "access", "connect"]);
+  });
+});
+
+describe("connections", () => {
+  const connection = (change: Partial<PersonalAgentCredential> = {}) =>
+    token({
+      kind: "oauth",
+      name: "Claude",
+      lastFour: "oauth",
+      expiresAt: "2027-04-11T12:00:00.000Z",
+      connection: {
+        clientName: "Claude",
+        clientHost: "claude.ai",
+        clientId: "https://claude.ai/oauth/claude-code-client-metadata",
+        clientBlocked: false,
+        revokedReason: null,
+      },
+      ...change,
+    });
+
+  const ago = () => "2 hours ago";
+
+  it("says when it connected, when it expires and when it was last used", () => {
+    expect(connectionMeta(connection(), ago)).toMatch(
+      /^Connected .+2026 · expires .+2027 · never used$/,
+    );
+    expect(connectionMeta(connection({ lastUsedAt: "2026-10-13T10:00:00Z" }), ago)).toMatch(
+      / · last used 2 hours ago$/,
+    );
+    expect(connectionMeta(connection({ state: "revoked" }), ago)).not.toContain("expire");
+  });
+
+  it("explains a reuse revocation in the exact words, and a block or an expiry", () => {
+    const reused = connection({
+      state: "revoked",
+      connection: {
+        clientName: "Claude",
+        clientHost: "claude.ai",
+        clientId: "https://claude.ai/oauth/claude-code-client-metadata",
+        clientBlocked: false,
+        revokedReason: "tokenReused",
+      },
+    });
+
+    expect(REUSED_REASON).toBe(
+      "Disconnected because an old sign-in token was reused. Reconnect to continue.",
+    );
+    expect(connectionProblem(reused)).toBe(REUSED_REASON);
+    expect(connectionBadge(reused)).toBe("Disconnected");
+    expect(connectionProblem(connection({ state: "revoked" }))).toBeNull();
+    expect(connectionBadge(connection({ state: "revoked" }))).toBe("Revoked");
+    expect(connectionProblem(connection({ state: "expired" }))).toMatch(/180 days/);
+    expect(connectionBadge(connection())).toBeNull();
+    expect(connectionProblem(connection())).toBeNull();
+
+    const blocked = connection({
+      connection: {
+        clientName: "Claude",
+        clientHost: "claude.ai",
+        clientId: "https://claude.ai/oauth/claude-code-client-metadata",
+        clientBlocked: true,
+        revokedReason: null,
+      },
+    });
+
+    expect(connectionBadge(blocked)).toBe("Blocked");
+    expect(connectionProblem(blocked)).toMatch(/administrator blocked/);
+    expect(canReconnect(blocked, true)).toBe(false);
+  });
+
+  it("offers Reconnect once a connection ended, while OAuth is on", () => {
+    expect(canReconnect(connection(), true)).toBe(false);
+    expect(canReconnect(connection({ state: "revoked" }), true)).toBe(true);
+    expect(canReconnect(connection({ state: "expired" }), true)).toBe(true);
+    expect(canReconnect(connection({ state: "revoked" }), false)).toBe(false);
+  });
+
+  it("knows a product only by its exact client id, never by its host", () => {
+    expect(connectedProduct(connection())).toBe("claude-code");
+
+    const by = (clientId: string) =>
+      connectedProduct(
+        connection({
+          connection: {
+            clientName: "x",
+            clientHost: new URL(clientId).hostname,
+            clientId,
+            clientBlocked: false,
+            revokedReason: null,
+          },
+        }),
+      );
+
+    expect(by("https://chatgpt.com/oauth/client.json")).toBe("chatgpt");
+    // Another client from the same host isn't that product.
+    expect(by("https://claude.ai/oauth/some-other-client")).toBeNull();
+    expect(by("https://chatgpt.com/oauth/other.json")).toBeNull();
+    expect(by("https://grok.com/oauth/client.json")).toBeNull();
+    expect(connectedProduct(token({}))).toBeNull();
   });
 });

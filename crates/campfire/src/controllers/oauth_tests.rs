@@ -795,6 +795,14 @@ async fn oauth_unsupported_only_client_and_untrusted_redirect_use_error_page() {
         assert!(reply.location().unwrap().contains("/app/oauth/error"));
         assert!(!reply.location().unwrap().contains("attacker.example"));
     }
+    // The page it names opens for a visitor who hasn't signed in.
+    let page = f
+        .app
+        .anonymous()
+        .get("/app/oauth/error?error=invalid_client")
+        .await;
+    assert_eq!(page.status.as_u16(), 200, "{}", page.text());
+    assert!(page.header("content-type").unwrap().starts_with("text/html"));
 }
 #[tokio::test]
 async fn oauth_internal_cimd_dns_answers_refused_without_dialing() {
@@ -1271,6 +1279,211 @@ async fn oauth_consent_obeys_workspace_switch_even_for_existing_agent() {
     );
 }
 
+fn oauth_credential(list: &Value) -> Value {
+    list["agents"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|agent| agent["credentials"].as_array().unwrap().clone())
+        .find(|credential| credential["kind"] == "oauth")
+        .expect("an OAuth connection")
+}
+#[tokio::test]
+async fn oauth_connections_list_with_client_and_explain_a_reuse_revocation() {
+    let f = fixture(metadata()).await;
+    let original = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let listed = oauth_credential(&owner.get("/api/v1/me/agents").await.json());
+    assert_eq!(listed["state"], "active");
+    assert_eq!(listed["lastFour"], "oauth");
+    assert_eq!(listed["expiresAt"], "2027-04-11T16:00:00.000Z");
+    assert_eq!(
+        listed["connection"],
+        json!({"clientName":"Test client","clientHost":"client.example","clientId":CLIENT,"clientBlocked":false,"revokedReason":null})
+    );
+    let agent_id = owner.get("/api/v1/me/agents").await.json()["agents"][0]["id"]
+        .as_i64()
+        .unwrap();
+    let cid = listed["id"].as_i64().unwrap();
+    owner.grant_sudo().await;
+    let rotate = owner
+        .write(
+            Req::new(
+                Method::POST,
+                &format!("/api/v1/me/agents/{agent_id}/credentials/{cid}/rotate"),
+            )
+            .json_body(&json!({})),
+        )
+        .await;
+    assert_eq!(rotate.status.as_u16(), 404, "a connection has no secret to rotate");
+    let attacker = refresh(
+        &f.app,
+        original["refresh_token"].as_str().unwrap(),
+        CLIENT,
+        RESOURCE,
+        false,
+    )
+    .await;
+    assert_eq!(attacker.status.as_u16(), 200);
+    invalid(
+        refresh(
+            &f.app,
+            original["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    let credentials = owner
+        .get(&format!("/api/v1/me/agents/{agent_id}/credentials"))
+        .await
+        .json();
+    let revoked = credentials["credentials"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|credential| credential["id"] == cid)
+        .unwrap()
+        .clone();
+    assert_eq!(revoked["state"], "revoked");
+    assert_eq!(revoked["connection"]["revokedReason"], "tokenReused");
+}
+#[tokio::test]
+async fn oauth_owner_revokes_a_connection_and_its_tokens_from_settings() {
+    let f = fixture(metadata()).await;
+    let pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let list = owner.get("/api/v1/me/agents").await.json();
+    let agent_id = list["agents"][0]["id"].as_i64().unwrap();
+    let cid = oauth_credential(&list)["id"].as_i64().unwrap();
+    let revoked = owner
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/api/v1/me/agents/{agent_id}/credentials/{cid}"),
+        ))
+        .await;
+    assert_eq!(revoked.status.as_u16(), 200, "{}", revoked.text());
+    let row = revoked.json()["credentials"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|credential| credential["id"] == cid)
+        .unwrap()
+        .clone();
+    assert_eq!(row["state"], "revoked");
+    assert_eq!(row["connection"]["revokedReason"], Value::Null);
+    assert_eq!(
+        mcp(&f.app, pair["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        401
+    );
+    invalid(
+        refresh(
+            &f.app,
+            pair["refresh_token"].as_str().unwrap(),
+            CLIENT,
+            RESOURCE,
+            false,
+        )
+        .await,
+    );
+    let audits = f
+        .app
+        .db()
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM audit_logs WHERE action IN ('oauth.revoke','agent.credential.revoke') AND target_id IN (?, ?)",
+                params![cid, agent_id],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(audits, 2);
+}
+#[tokio::test]
+async fn oauth_admin_lists_blocks_and_unblocks_connected_clients() {
+    let f = fixture(metadata()).await;
+    let mut admin = f.app.sign_in(DAVID).await;
+    let empty = admin.get("/api/v1/admin/oauth_clients").await;
+    assert_eq!(empty.status.as_u16(), 200, "{}", empty.text());
+    assert_eq!(
+        empty.json(),
+        json!({"clients":[],"oauthAvailable":true}),
+        "a client that only fetched metadata isn't listed"
+    );
+    let pair = tokens(&f).await;
+    let listed = admin.get("/api/v1/admin/oauth_clients").await.json();
+    let client = listed["clients"][0].clone();
+    assert_eq!(client["clientName"], "Test client");
+    assert_eq!(client["clientId"], CLIENT);
+    assert_eq!(client["clientHost"], "client.example");
+    assert_eq!(client["liveConnections"], 1);
+    assert_eq!(client["lastConnectedAt"], "2026-10-13T16:00:00.000Z");
+    assert_eq!(client["blockedAt"], Value::Null);
+    let id = client["id"].as_i64().unwrap();
+    let path = format!("/api/v1/admin/oauth_clients/{id}/block");
+    let mut member = f
+        .app
+        .sign_in(super::presenters::test_support::KEVIN)
+        .await;
+    assert_eq!(
+        member.get("/api/v1/admin/oauth_clients").await.status.as_u16(),
+        403
+    );
+    assert_eq!(
+        member
+            .write(Req::new(Method::PUT, &path))
+            .await
+            .status
+            .as_u16(),
+        403
+    );
+    let blocked = admin.write(Req::new(Method::PUT, &path)).await;
+    assert_eq!(blocked.status.as_u16(), 200, "{}", blocked.text());
+    assert_eq!(blocked.json()["blockedAt"], "2026-10-13T16:00:00.000Z");
+    let access = pair["access_token"].as_str().unwrap();
+    assert_eq!(mcp(&f.app, access).await.status.as_u16(), 401);
+    let owner_view = oauth_credential(&admin.get("/api/v1/me/agents").await.json());
+    assert_eq!(owner_view["connection"]["clientBlocked"], true);
+    let refused = admin.get(&authorize_url(CLIENT, REDIRECT)).await;
+    assert!(
+        !refused
+            .location()
+            .unwrap_or_default()
+            .contains("/app/oauth/consent/"),
+        "a blocked client can't start another authorization"
+    );
+    let unblocked = admin.write(Req::new(Method::DELETE, &path)).await;
+    assert_eq!(unblocked.status.as_u16(), 200);
+    assert_eq!(unblocked.json()["blockedAt"], Value::Null);
+    assert_eq!(mcp(&f.app, access).await.status.as_u16(), 200);
+    let audits = f
+        .app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM audit_logs WHERE action IN ('oauth.client.block','oauth.client.unblock') AND target_type='OAuthClient'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(audits, 2);
+    assert_eq!(
+        admin
+            .write(Req::new(Method::PUT, "/api/v1/admin/oauth_clients/999999/block"))
+            .await
+            .status
+            .as_u16(),
+        404
+    );
+}
+
 fn authorize_with_state(redirect: &str, state: &str) -> String {
     let mut url = url::Url::parse(&format!(
         "http://campfire.test{}",
@@ -1614,6 +1827,155 @@ async fn oauth_review_disabled_personal_agents_redirect_access_denied_to_trusted
             .unwrap(),
         0
     );
+}
+
+fn room_access(consent: &Value) -> Vec<(i64, Vec<String>)> {
+    consent["roomAccess"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|entry| {
+            let capabilities = entry["capabilities"].as_array().unwrap();
+            (
+                entry["roomId"].as_i64().unwrap(),
+                capabilities.iter().map(|c| c.as_str().unwrap().to_string()).collect(),
+            )
+        })
+        .collect()
+}
+#[tokio::test]
+async fn oauth_consent_shows_per_room_access_and_approval_replaces_it_room_by_room() {
+    use super::presenters::test_support::{ALL_TALK, HQ};
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let consent = owner.get(&path).await.json();
+    let agent_id = consent["selectedAgentId"].as_i64().unwrap();
+    let offered = consent["rooms"].as_array().unwrap();
+    for room in [ALL_TALK, HQ] {
+        assert!(offered.iter().any(|r| r["id"] == room), "{consent}");
+    }
+    assert_eq!(room_access(&consent), vec![], "a new connection's agent has no rooms yet");
+    owner.grant_sudo().await;
+    let both = json!({"agentId":agent_id,"roomIds":[ALL_TALK,HQ],"capabilities":["read_messages","post_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    // It reads both rooms but posts only in All Talk.
+    f.app.db().write(move |tx| {
+        tx.conn().execute("UPDATE agent_grants SET revoked_at=CURRENT_TIMESTAMP WHERE agent_id=? AND room_id=? AND capability='post_messages'", rusqlite::params![agent_id, HQ])?;
+        Ok(())
+    }).await.unwrap();
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let consent = owner.get(&path).await.json();
+    let read = |caps: &[&str]| caps.iter().map(|c| c.to_string()).collect::<Vec<_>>();
+    let mut shown = room_access(&consent);
+    shown.sort();
+    let mut expected = vec![
+        (ALL_TALK, read(&["post_messages", "read_messages"])),
+        (HQ, read(&["read_messages"])),
+    ];
+    expected.sort();
+    assert_eq!(shown, expected);
+    assert!(consent["roomAccess"].as_array().unwrap().iter().all(|entry| entry["agentId"] == agent_id
+        && !entry["roomName"].as_str().unwrap().is_empty()));
+    // Approving the same rooms and abilities gives posting in HQ too: every chosen room gets
+    // every chosen ability, which is what the page shows as a change.
+    owner.grant_sudo().await;
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let mut shown = room_access(&owner.get(&path).await.json());
+    shown.sort();
+    let mut expected = vec![
+        (ALL_TALK, read(&["post_messages", "read_messages"])),
+        (HQ, read(&["post_messages", "read_messages"])),
+    ];
+    expected.sort();
+    assert_eq!(shown, expected);
+    // Leaving a room drops it and everything the agent could do there.
+    owner.grant_sudo().await;
+    let one = json!({"agentId":agent_id,"roomIds":[ALL_TALK],"capabilities":["read_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let shown = room_access(&owner.get(&consent_path(&next)).await.json());
+    assert_eq!(shown, vec![(ALL_TALK, read(&["read_messages"]))]);
+}
+#[tokio::test]
+async fn oauth_consent_counts_rooms_the_owner_left_without_naming_them_and_approval_leaves_them() {
+    use super::presenters::test_support::{ALL_TALK, QUIET_CORNER};
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let agent_id = owner.get(&path).await.json()["selectedAgentId"].as_i64().unwrap();
+    owner.grant_sudo().await;
+    let both = json!({"agentId":agent_id,"roomIds":[ALL_TALK,QUIET_CORNER],"capabilities":["read_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    // David leaves the private room; the agent stays in it. Then it's renamed.
+    let bot_id = f.app.db().write(move |tx| {
+        let room = campfire_db::Room::find(tx.conn(), QUIET_CORNER)?;
+        room.revoke_from(tx, &[DAVID])?;
+        tx.conn().execute("UPDATE rooms SET name='Secret plans' WHERE id=?", [QUIET_CORNER])?;
+        Ok(tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| r.get::<_, i64>(0))?)
+    }).await.unwrap();
+    async fn member(app: &TestApp, room_id: i64, bot_id: i64) -> i64 {
+        app.db().read(move |conn| Ok(conn.query_row(
+            "SELECT COUNT(*) FROM memberships WHERE room_id=? AND user_id=?",
+            [room_id, bot_id],
+            |r| r.get::<_, i64>(0),
+        )?)).await.unwrap()
+    }
+    assert_eq!(member(&f.app, QUIET_CORNER, bot_id).await, 1, "the agent is still in the room");
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let reply = owner.get(&path).await;
+    let text = reply.text();
+    assert!(!text.contains("Secret plans"), "{text}");
+    assert!(!text.contains(&QUIET_CORNER.to_string()), "{text}");
+    let consent = reply.json();
+    assert_eq!(room_access(&consent), vec![(ALL_TALK, vec!["read_messages".to_string()])]);
+    assert_eq!(consent["hiddenRooms"], json!([{"agentId":agent_id,"count":1}]));
+    // Approving takes the agent out of the room David can't see.
+    owner.grant_sudo().await;
+    let one = json!({"agentId":agent_id,"roomIds":[ALL_TALK],"capabilities":["read_messages"]});
+    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one)).await;
+    assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
+    assert_eq!(member(&f.app, QUIET_CORNER, bot_id).await, 0);
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    assert_eq!(owner.get(&consent_path(&next)).await.json()["hiddenRooms"], json!([]));
+}
+#[tokio::test]
+async fn oauth_approval_gives_one_identical_error_for_any_room_the_owner_cannot_see() {
+    use super::presenters::test_support::{DIRECT_KEVIN_BENDER, QUIET_CORNER};
+    let f = fixture(metadata()).await;
+    let _pair = tokens(&f).await;
+    // A private room David has left, so it exists but he can't see it.
+    f.app.db().write(|tx| {
+        campfire_db::Room::find(tx.conn(), QUIET_CORNER)?.revoke_from(tx, &[DAVID])?;
+        Ok(())
+    }).await.unwrap();
+    let mut owner = f.app.sign_in(DAVID).await;
+    let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
+    let path = consent_path(&next);
+    let agent_id = owner.get(&path).await.json()["selectedAgentId"].as_i64().unwrap();
+    owner.grant_sudo().await;
+    let mut bodies = Vec::new();
+    for room in [999_999_999, QUIET_CORNER, DIRECT_KEVIN_BENDER] {
+        let body = json!({"agentId":agent_id,"roomIds":[room],"capabilities":["read_messages"]});
+        let refused = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&body)).await;
+        assert_eq!(refused.status.as_u16(), 422, "{room}: {}", refused.text());
+        bodies.push(refused.text());
+    }
+    assert_eq!(bodies[0], bodies[1]);
+    assert_eq!(bodies[0], bodies[2]);
+    assert!(!bodies[0].contains("existing room"), "{}", bodies[0]);
 }
 
 fn registration() -> Value {

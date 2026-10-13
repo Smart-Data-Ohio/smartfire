@@ -72,6 +72,7 @@ import {
   threadStatus,
   visibleMessage,
 } from "./s2/model.ts";
+import { createOAuth } from "./s2/oauth.ts";
 import { createPanes } from "./s2/panes.ts";
 import { createPeople } from "./s2/people.ts";
 import { clientMessageIdOf, draftFiles, driveCards, parseMessage } from "./s2/posting.ts";
@@ -1143,6 +1144,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const roomManagement = createRoomManagement(ctx, admin, huddles);
 
   const meAgents = createMeAgents(ctx, admin);
+  const oauth = createOAuth(ctx, admin, meAgents.connections);
 
   const routes = [
     ...createTemplates(ctx, admin, roomManagement).routes,
@@ -1180,6 +1182,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...join.routes,
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...meAgents.routes,
+    ...oauth.routes,
     ...createBots(ctx, uploads, admin.requireSudo, meAgents.summaries).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx, settings).routes,
@@ -1630,6 +1633,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
         return ok;
       default: {
+        const oauthControl = oauth.control(action, body);
+
+        if (oauthControl !== null) return oauthControl;
+
         const boardControl = boards.control(action, body);
 
         if (boardControl !== null) return boardControl;

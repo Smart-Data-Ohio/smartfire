@@ -53,7 +53,7 @@ function useDocumentTitle(roomId: number | null, page: Page): void {
 /**
  * Which column a phone shows: the conversation list, a tab's page beside the tab bar (the
  * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled, Search, Work, the
- * agent pages).
+ * agent pages, an app's approval page).
  */
 function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
   const matchRoute = useMatchRoute();
@@ -68,6 +68,8 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
     matchRoute({ to: "/sudo/continue" }) !== false ||
     // "Confirm it's you" as a page: a full screen, its back chevron to the list.
     matchRoute({ to: "/sudo/new" }) !== false ||
+    // Approving an app that connects as an agent: a full screen, like the confirmation it asks for.
+    matchRoute({ to: "/oauth/consent/$publicId" }) !== false ||
     matchRoute({ to: "/agents", fuzzy: true }) !== false;
 
   if (roomId !== null || pushed) {

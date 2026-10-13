@@ -745,3 +745,34 @@ async fn personal_agent_s3_toggle_refuses_and_restores_tokens_without_changing_g
         assert_eq!(unchanged, state);
     }
 }
+#[tokio::test]
+async fn personal_agent_access_gives_one_identical_error_for_any_room_the_owner_cannot_see() {
+    use crate::controllers::presenters::test_support::{DIRECT_DAVID_JASON, QUIET_CORNER};
+    let a = app().await.expect("restored seed");
+    // A private room Kevin has left, so it exists but he can't see it.
+    a.db()
+        .write(|tx| {
+            campfire_db::Room::find(tx.conn(), QUIET_CORNER)?.revoke_from(tx, &[KEVIN])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut b = a.sign_in(KEVIN).await;
+    b.grant_sudo().await;
+    let id = create(&mut b).await["agent"]["id"].as_i64().unwrap();
+    let mut bodies = Vec::new();
+    for room in [999_999_999, QUIET_CORNER, DIRECT_DAVID_JASON] {
+        let r = write(
+            &mut b,
+            Method::PUT,
+            &format!("{ROOT}/{id}/access"),
+            json!({"roomIds":[room],"capabilities":["read_messages"]}),
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{room}: {}", r.text());
+        bodies.push(r.text());
+    }
+    assert_eq!(bodies[0], bodies[1]);
+    assert_eq!(bodies[0], bodies[2]);
+    assert!(!bodies[0].contains("existing room"), "{}", bodies[0]);
+}

@@ -57,6 +57,32 @@ pub struct PersonalAgent {
 #[ts(export)]
 pub enum PersonalCredentialKind {
     Token,
+    /// An OAuth connection: a client signed in and the owner approved it.
+    Oauth,
+}
+
+/// An OAuth connection's client, and why the server ended it when the owner didn't.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PersonalAgentConnection {
+    pub client_name: String,
+    /// The host of the client's id (its metadata document URL).
+    pub client_host: String,
+    /// The client's id: the exact URL of its metadata document. It identifies the product; the
+    /// host alone doesn't.
+    pub client_id: String,
+    /// An administrator blocked the client: the connection doesn't work until they unblock it.
+    pub client_blocked: bool,
+    pub revoked_reason: Option<ConnectionRevokedReason>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum ConnectionRevokedReason {
+    /// A sign-in token (a used refresh token or authorization code) was presented again.
+    TokenReused,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -72,6 +98,8 @@ pub struct PersonalAgentCredential {
     pub last_used_at: Option<Timestamp>,
     pub last_used_ip: Option<String>,
     pub state: CredentialState,
+    /// OAuth connections only; null for a token.
+    pub connection: Option<PersonalAgentConnection>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
