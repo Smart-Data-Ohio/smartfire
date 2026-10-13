@@ -12,6 +12,7 @@ import { mutations, store } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
 import { clearCommandCache } from "../composer/autocomplete/suggestions.ts";
+import { resetGifConfig } from "../composer/gif-store.ts";
 import { resetStickers } from "../composer/sticker-store.ts";
 import { NewThreadPane } from "./new-thread-pane.tsx";
 
@@ -25,6 +26,7 @@ beforeEach(() => {
   network = installMockNetwork();
   mutations.reset();
   resetStickers();
+  resetGifConfig();
   clearCommandCache();
   sessionStorage.clear();
   document.documentElement.dataset.motion = "reduce";
@@ -124,6 +126,16 @@ it("removes and replaces a held sticker before sending", async () => {
   expect(await response.json()).toMatchObject({
     messages: [{ sticker: { kind: "available", id: 1, name: "Wave" } }],
   });
+});
+
+it("holds the GIF button while a sticker waits to start the thread", async () => {
+  await mountPane();
+  const gif = await screen.findByRole("button", { name: "GIF" });
+  expect(gif).toHaveProperty("disabled", false);
+  await pickSticker("Wave");
+  expect(gif).toHaveProperty("disabled", true);
+  fireEvent.click(screen.getByRole("button", { name: "Remove Wave sticker" }));
+  expect(gif).toHaveProperty("disabled", false);
 });
 
 it("holds the selected sticker while a queued creation waits for an upload", async () => {

@@ -188,6 +188,7 @@ function threadMessage(
     readonly attachmentSpoilers?: readonly boolean[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
+    readonly gifSlug?: string | undefined;
     readonly stickerId?: number | null;
   },
   markdown: string,
@@ -200,8 +201,19 @@ function threadMessage(
     attachmentSignedId: options.attachmentSignedId ?? null,
   };
 
-  if (options.attachmentSpoilers !== undefined)
-    message.attachmentSpoilers = [...options.attachmentSpoilers];
+  if (options.attachmentSpoilers !== undefined) {
+    // The server counts a GIF as one file and wants one flag per file, the GIF last: flags
+    // covering only the uploads gain the GIF's (never a spoiler). No flags at all stay out,
+    // which the server also fills with `false`.
+    const uploads =
+      (options.attachmentSignedIds?.length ?? 0) +
+      (options.attachmentSignedId == null || options.attachmentSignedId === "" ? 0 : 1);
+
+    message.attachmentSpoilers =
+      options.gifSlug !== undefined && options.attachmentSpoilers.length === uploads
+        ? [...options.attachmentSpoilers, false]
+        : [...options.attachmentSpoilers];
+  }
 
   const attachmentSignedIds = options.attachmentSignedIds;
 
@@ -213,6 +225,10 @@ function threadMessage(
 
   if (driveFileIds !== undefined && driveFileIds.length > 0) {
     message.driveFileIds = [...driveFileIds];
+  }
+
+  if (options.gifSlug !== undefined) {
+    message.gifSlug = options.gifSlug;
   }
 
   if (options.stickerId != null) message.stickerId = options.stickerId;
@@ -236,6 +252,7 @@ export const create = Effect.fn("threads.create")(function* (
     readonly attachmentSpoilers?: readonly boolean[];
     readonly clientMessageId?: string;
     readonly driveFileIds?: readonly string[];
+    readonly gifSlug?: string | undefined;
     readonly stickerId?: number | null;
     readonly visibility?: ThreadVisibility;
   } = {},
