@@ -3,6 +3,7 @@ import { meFixture, sidebarFixture, sidebarRowFixture, userFixture } from "../..
 import type { Sidebar } from "../../gen/Sidebar.ts";
 import type { SidebarRow } from "../../store/model.ts";
 import { applyEvents, loadSidebar, setMe } from "../../store/reducers.ts";
+import { rowClock } from "../../store/row-touches.ts";
 import { initialState, type State } from "../../store/state.ts";
 import { sidebarSections } from "../sidebar/sections.ts";
 import { localItems } from "../switcher/ranking.ts";
@@ -11,6 +12,7 @@ import {
   namesWithYou,
   noteToSelfRoomId,
   offersNoteToSelf,
+  ownName,
   roomIsNoteToSelf,
   viewerNameOf,
   withYou,
@@ -79,6 +81,38 @@ describe("the note-to-self", () => {
     expect(name(99)).toBeUndefined();
   });
 
+  it("falls back to You or Your notes for an empty or blank name", () => {
+    const users = {
+      [VIEWER]: userFixture(VIEWER, "   "),
+      3: userFixture(3, "Grace"),
+    };
+
+    expect(ownName("", "  ", "Ada")).toBe("Ada");
+    expect(ownName("", null, undefined, "   ")).toBeNull();
+    expect(withYou("")).toBe("Your notes");
+    expect(withYou("   ")).toBe("Your notes");
+    expect(withYou(null, "You")).toBe("You");
+    expect(withYou("  Ada  ")).toBe("Ada (you)");
+    expect(namesWithYou(users, VIEWER)(VIEWER)).toBe("You");
+    expect(namesWithYou({ [VIEWER]: { name: " ", accountName: "ada" } }, VIEWER)(VIEWER)).toBe(
+      "ada (you)",
+    );
+
+    const blank = setMe(signedIn([], [VIEWER]), {
+      ...meFixture,
+      user: { ...meFixture.user, name: "", accountName: "" },
+    });
+
+    expect(viewerNameOf({ ...blank, users: {} })).toBeNull();
+
+    const account = setMe(signedIn([], [VIEWER]), {
+      ...meFixture,
+      user: { ...meFixture.user, name: " ", accountName: "ada" },
+    });
+
+    expect(viewerNameOf({ ...account, users: {} })).toBe("ada");
+  });
+
   it("is offered while the server leads its placeholders with you and there is no row", () => {
     const before = signedIn([grace, trip], [VIEWER, 3]);
 
@@ -109,11 +143,41 @@ describe("the note-to-self", () => {
   it("is offered again once hidden, and still labelled yours everywhere", () => {
     const state = applyEvents(signedIn([grace, self], [3], SELF_ROOM), removed(SELF_ROOM), 0);
 
-    expect(state.sidebar.placeholderUserIds).toEqual([VIEWER, 3]);
     expect(offersNoteToSelf(state)).toBe(true);
     // Saved, scheduled, search and forward labels go by this, so they keep "(you)".
     expect(noteToSelfRoomId(state)).toBe(SELF_ROOM);
     expect(roomIsNoteToSelf(state, SELF_ROOM)).toBe(true);
+  });
+
+  it("survives a sidebar reply older than hiding it, landing after", () => {
+    const shown = signedIn([grace, self], [3], SELF_ROOM);
+    const since = rowClock(shown);
+    const hidden = applyEvents(shown, removed(SELF_ROOM), 0);
+    // The reply was read before the hide: it still lists the row and doesn't offer you.
+    const stale = sidebarFixture([grace, self], [3]);
+
+    stale.noteToSelfRoomId = SELF_ROOM;
+
+    const state = loadSidebar(hidden, stale, since);
+
+    expect(state.sidebar.rows[SELF_ROOM]).toBeUndefined();
+    expect(offersNoteToSelf(state)).toBe(true);
+    expect(localItems(state.sidebar, VIEWER)).toContainEqual(
+      expect.objectContaining({ key: `person:${VIEWER}`, roomId: SELF_ROOM }),
+    );
+  });
+
+  it("survives a sidebar reply older than hiding it, landing before", () => {
+    const shown = signedIn([grace, self], [3], SELF_ROOM);
+    const since = rowClock(shown);
+    const stale = sidebarFixture([grace, self], [3]);
+
+    stale.noteToSelfRoomId = SELF_ROOM;
+
+    const state = applyEvents(loadSidebar(shown, stale, since), removed(SELF_ROOM), 0);
+
+    expect(state.sidebar.rows[SELF_ROOM]).toBeUndefined();
+    expect(offersNoteToSelf(state)).toBe(true);
   });
 
   it("leads Direct messages, ahead of newer conversations and an emptied group", () => {

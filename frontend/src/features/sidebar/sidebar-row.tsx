@@ -21,8 +21,8 @@ import {
   NOTE_TO_SELF_PLACEHOLDER,
   useViewerName,
   withYou,
-  YOU_TAG,
 } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { JoinPill } from "../huddle/call-alerts.tsx";
 import { CallMark, VoiceParticipants } from "../huddle/voice-participants.tsx";
 import { useViewerId } from "../messages/use-message.ts";
@@ -160,11 +160,10 @@ function PreviewedName({ row, last }: { readonly row: Row; readonly last: LastMe
 }
 
 /** Your name with a muted "(you)": your note-to-self's label. */
-function YouName({ name }: { readonly name: string }) {
+function YouName({ name }: { readonly name: string | null }) {
   return (
     <span className="sidebar-row-name">
-      {name}
-      <span className="sidebar-row-tag"> {YOU_TAG}</span>
+      <YouLabel name={name} tagClassName="sidebar-row-tag" />
     </span>
   );
 }
@@ -173,8 +172,8 @@ function YouName({ name }: { readonly name: string }) {
 function RowName({ row }: { readonly row: Row }) {
   const viewerName = useViewerName();
 
-  return isNoteToSelf(row) && viewerName !== null ? (
-    <YouName name={viewerName} />
+  return isNoteToSelf(row) ? (
+    <YouName name={viewerName ?? row.displayName} />
   ) : (
     <span className="sidebar-row-name">{row.displayName}</span>
   );
@@ -184,7 +183,7 @@ function RowName({ row }: { readonly row: Row }) {
 function useRowLabel(row: Row): string {
   const viewerName = useViewerName();
 
-  return isNoteToSelf(row) && viewerName !== null ? withYou(viewerName) : row.displayName;
+  return isNoteToSelf(row) ? withYou(viewerName ?? row.displayName) : row.displayName;
 }
 
 /**
@@ -197,7 +196,7 @@ export function NoteToSelfOffer({ preview = false }: { readonly preview?: boolea
   const viewerName = useViewerName();
   const [busy, setBusy] = useState(false);
 
-  if (viewerId === null || viewerName === null) {
+  if (viewerId === null) {
     return null;
   }
 

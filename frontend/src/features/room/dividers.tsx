@@ -1,11 +1,7 @@
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
-import {
-  NOTE_TO_SELF_LINE,
-  useNoteToSelf,
-  useViewerName,
-  YOU_TAG,
-} from "../directs/note-to-self.ts";
+import { NOTE_TO_SELF_LINE, useNoteToSelf, useViewerName } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "./room-icon.ts";
 
@@ -55,8 +51,7 @@ export function RoomIntro({ roomId }: { readonly roomId: number }) {
       <div className="room-intro enter-fade" data-empty={empty || undefined} data-note-to-self>
         <UserAvatar userId={otherId} size={64} presence decorative />
         <h2 className="room-intro-title">
-          {viewerName ?? displayName}
-          <span className="room-intro-you"> {YOU_TAG}</span>
+          <YouLabel name={viewerName ?? displayName} tagClassName="room-intro-you" />
         </h2>
         <p className="room-intro-text">{NOTE_TO_SELF_LINE}</p>
       </div>

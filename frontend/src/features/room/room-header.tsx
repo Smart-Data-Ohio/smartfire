@@ -13,8 +13,8 @@ import {
   useNoteToSelf,
   useViewerName,
   withYou,
-  YOU_TAG,
 } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { EventsLink } from "../events/events-link.tsx";
 import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
 import { raisedHandsLabel, useRaisedHands } from "../huddle/stage-button.tsx";
@@ -110,12 +110,7 @@ interface TitleProps {
 
 /** The title's name, with a muted "(you)" in your note-to-self. */
 function TitleName({ name, self }: { readonly name: string; readonly self: boolean }) {
-  return (
-    <>
-      {name}
-      {self ? <span className="room-title-you"> {YOU_TAG}</span> : null}
-    </>
-  );
+  return <>{self ? <YouLabel name={name} tagClassName="room-title-you" /> : name}</>;
 }
 
 /** Wide screens: the glyph and name (a DM: the person and their status inline). */

@@ -6,7 +6,8 @@ import { formatFull } from "../../lib/time.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
-import { useNoteToSelfRoomId, withYou, YOU_TAG } from "../directs/note-to-self.ts";
+import { useNoteToSelfRoomId, withYou } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { FileSpoiler } from "../messages/file-spoiler.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
 import { messageFiles } from "../messages/message-files.ts";
@@ -26,8 +27,7 @@ function ConversationLink({ name }: { readonly name: ConversationName }) {
     <>
       <Icon name={ROOM_KIND_ICON[name.roomKind]} size={14} className="search-conv-icon" />
       <span className="search-conv-room">
-        {name.roomName}
-        {you ? <span className="text-faint"> {YOU_TAG}</span> : null}
+        {you ? <YouLabel name={name.roomName} tagClassName="text-faint" /> : name.roomName}
       </span>
     </>
   );

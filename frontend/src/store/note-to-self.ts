@@ -11,3 +11,30 @@ export interface DirectSource {
 export function isNoteToSelf(source: DirectSource): boolean {
   return source.noteToSelf === true;
 }
+
+interface OfferSource {
+  readonly status: string;
+  readonly noteToSelfRoomId: number | null;
+  readonly rows: Readonly<Record<number, DirectSource & { readonly membership: Involved }>>;
+}
+
+interface Involved {
+  readonly involvement: string;
+}
+
+/**
+ * Whether the sidebar offers your note-to-self: once it has loaded, whenever no visible row is it.
+ * Worked out from the rows rather than kept in the placeholder list, so no order of snapshots and
+ * removals can drop both the row and the offer.
+ */
+export function sidebarOffersNoteToSelf(sidebar: OfferSource, viewerId: number | null): boolean {
+  if (viewerId === null || sidebar.status !== "ready") {
+    return false;
+  }
+
+  return !Object.entries(sidebar.rows).some(
+    ([id, row]) =>
+      row.membership.involvement !== "invisible" &&
+      (Number(id) === sidebar.noteToSelfRoomId || isNoteToSelf(row)),
+  );
+}

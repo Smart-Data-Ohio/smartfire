@@ -7,8 +7,9 @@ import { useViewerId } from "../messages/use-message.ts";
 import { AgentBadge } from "../people/agent-badge.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
-import { withYou, YOU_TAG } from "./note-to-self.ts";
+import { withYou, YOU_FALLBACK } from "./note-to-self.ts";
 import { MAX_OTHERS, pickerOptions, removeLast, toggleSelected } from "./picker.ts";
+import { YouLabel } from "./you-label.tsx";
 import "./directs.css";
 
 interface PeoplePickerProps {
@@ -32,10 +33,7 @@ interface PeoplePickerProps {
 /** A person's name, yours with a muted "(you)". */
 function PersonName({ name, you }: { readonly name: string; readonly you: boolean }) {
   return (
-    <>
-      {name}
-      {you ? <span className="picker-you"> {YOU_TAG}</span> : null}
-    </>
+    <>{you ? <YouLabel name={name} tagClassName="picker-you" fallback={YOU_FALLBACK} /> : name}</>
   );
 }
 
@@ -70,7 +68,7 @@ function Chip({
       <button
         type="button"
         className="picker-chip-remove"
-        aria-label={`Remove ${you ? withYou(name) : name}`}
+        aria-label={`Remove ${you ? withYou(name, YOU_FALLBACK) : name}`}
         tabIndex={-1}
         onClick={onRemove}
       >

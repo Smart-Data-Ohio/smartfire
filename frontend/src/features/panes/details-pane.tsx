@@ -6,12 +6,8 @@ import { Badge } from "../../ui/badge.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Menu } from "../../ui/menu.tsx";
 import { useDirectActions } from "../directs/direct-header-actions.tsx";
-import {
-  NOTE_TO_SELF_LINE,
-  useNoteToSelf,
-  useViewerName,
-  YOU_TAG,
-} from "../directs/note-to-self.ts";
+import { NOTE_TO_SELF_LINE, useNoteToSelf, useViewerName } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { raisedHandsLabel, useRaisedHands } from "../huddle/stage-button.tsx";
 import { useViewerId } from "../messages/use-message.ts";
 import { identityOf } from "../people/agent-identity.ts";
@@ -204,8 +200,7 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
           {self ? (
             <>
               <h3 className="details-name">
-                {viewerName ?? detail.displayName}
-                <span className="details-you"> {YOU_TAG}</span>
+                <YouLabel name={viewerName ?? detail.displayName} tagClassName="details-you" />
               </h3>
               <p className="details-kind">{NOTE_TO_SELF_LINE}</p>
             </>

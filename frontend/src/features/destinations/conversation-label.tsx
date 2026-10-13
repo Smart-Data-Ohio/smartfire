@@ -1,6 +1,7 @@
 import type { ConversationName } from "../../gen/ConversationName.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
-import { useNoteToSelfRoomId, YOU_TAG } from "../directs/note-to-self.ts";
+import { useNoteToSelfRoomId } from "../directs/note-to-self.ts";
+import { YouLabel } from "../directs/you-label.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 
 /** "# general › Launch plan": the room's glyph and name, then the thread's, as a row names it. */
@@ -24,8 +25,11 @@ function NamedConversation({ conversation }: { readonly conversation: Conversati
     <span className="conversation-label">
       <Icon name={ROOM_KIND_ICON[conversation.roomKind]} size={12} className="conversation-glyph" />
       <span className="conversation-room">
-        {conversation.roomName}
-        {you ? <span className="text-faint"> {YOU_TAG}</span> : null}
+        {you ? (
+          <YouLabel name={conversation.roomName} tagClassName="text-faint" />
+        ) : (
+          conversation.roomName
+        )}
       </span>
       {thread === null ? null : (
         <>

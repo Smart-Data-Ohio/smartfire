@@ -5,7 +5,7 @@
  */
 import type { SwitcherRoomKind } from "../../gen/SwitcherRoomKind.ts";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
-import { isNoteToSelf } from "../../store/note-to-self.ts";
+import { isNoteToSelf, sidebarOffersNoteToSelf } from "../../store/note-to-self.ts";
 import type { SidebarState } from "../../store/state.ts";
 import { rowPillCount, rowUnread, sidebarSections } from "../sidebar/sections.ts";
 import { matchScore, normalizeQuery } from "./match.ts";
@@ -119,13 +119,21 @@ export function localItems(sidebar: SidebarState, viewerId: number | null): Swit
 
   const offered =
     viewerId !== null &&
-    sidebar.placeholderUserIds.includes(viewerId) &&
+    sidebarOffersNoteToSelf(sidebar, viewerId) &&
     !items.some((item) => item.key === `person:${viewerId}`);
 
+  // A hidden note-to-self keeps its room, so a search filter on it still reads as you.
   return offered
     ? [
         ...items,
-        { ...BLANK, key: `person:${viewerId}`, kind: "person", label: "", userId: viewerId },
+        {
+          ...BLANK,
+          key: `person:${viewerId}`,
+          kind: "person",
+          label: "",
+          userId: viewerId,
+          roomId: sidebar.noteToSelfRoomId,
+        },
       ]
     : items;
 }

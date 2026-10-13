@@ -4,7 +4,7 @@
  * placeholders until it exists; `POST /directs` with nobody else opens it, creating it on first
  * use. Everywhere it shows, it reads as "Your Name (you)".
  */
-import { isNoteToSelf } from "../../store/note-to-self.ts";
+import { isNoteToSelf, sidebarOffersNoteToSelf } from "../../store/note-to-self.ts";
 import type { State } from "../../store/state.ts";
 import { useStore } from "../../store/store.ts";
 
@@ -20,20 +20,54 @@ export const NOTE_TO_SELF_LINE =
 /** The composer's placeholder in it. */
 export const NOTE_TO_SELF_PLACEHOLDER = "Jot something down";
 
-/** "Your Name (you)", as plain text. */
-export function withYou(name: string): string {
-  return `${name} ${YOU_TAG}`;
+/** What your notes are called when you have no name to show. */
+export const NOTES_FALLBACK = "Your notes";
+
+/** What you are called among people when you have no name to show. */
+export const YOU_FALLBACK = "You";
+
+/**
+ * The first name that says something, trimmed: the shared identity fallback (display name, which
+ * is the nickname or else the account name, then the account name), so an empty or blank name
+ * never stands alone before "(you)". `null` when there is none.
+ */
+export function ownName(...names: readonly (string | null | undefined)[]): string | null {
+  for (const name of names) {
+    const trimmed = name?.trim() ?? "";
+
+    if (trimmed !== "") {
+      return trimmed;
+    }
+  }
+
+  return null;
+}
+
+/** "Your Name (you)", as plain text; `fallback` alone when there is no name to show. */
+export function withYou(name: string | null | undefined, fallback = NOTES_FALLBACK): string {
+  const own = ownName(name);
+
+  return own === null ? fallback : `${own} ${YOU_TAG}`;
+}
+
+interface NamedUser {
+  readonly name: string;
+  readonly accountName?: string;
 }
 
 /** Names people by their profiles in `users`, yours with "(you)" after it (switcher, search). */
 export function namesWithYou(
-  users: Readonly<Record<number, { readonly name: string }>>,
+  users: Readonly<Record<number, NamedUser>>,
   viewerId: number | null,
 ): (userId: number) => string | undefined {
   return (userId) => {
-    const name = users[userId]?.name;
+    const user = users[userId];
 
-    return userId === viewerId && name !== undefined ? withYou(name) : name;
+    if (user === undefined || userId !== viewerId) {
+      return user?.name;
+    }
+
+    return withYou(ownName(user.name, user.accountName), YOU_FALLBACK);
   };
 }
 
@@ -41,11 +75,12 @@ export function viewerIdOf(state: State): number | null {
   return state.me?.user.id ?? state.boot?.user.id ?? null;
 }
 
-/** Your own name, as the sidebar and headers show it. */
+/** Your own name, as the sidebar and headers show it; `null` when every name you have is blank. */
 export function viewerNameOf(state: State): string | null {
   const id = viewerIdOf(state);
+  const user = id === null ? undefined : state.users[id];
 
-  return (id === null ? undefined : state.users[id]?.name) ?? state.me?.user.name ?? null;
+  return ownName(user?.name, user?.accountName, state.me?.user.name, state.me?.user.accountName);
 }
 
 /**
@@ -61,16 +96,7 @@ export function noteToSelfRoomId(state: State): number | null {
  * with you while you have no row for it.
  */
 export function offersNoteToSelf(state: State): boolean {
-  const viewerId = viewerIdOf(state);
-
-  if (viewerId === null || !state.sidebar.placeholderUserIds.includes(viewerId)) {
-    return false;
-  }
-
-  const id = noteToSelfRoomId(state);
-  const row = id === null ? undefined : state.sidebar.rows[id];
-
-  return row === undefined || row.membership.involvement === "invisible";
+  return sidebarOffersNoteToSelf(state.sidebar, viewerIdOf(state));
 }
 
 /** Whether `roomId` is your note-to-self, as the server marks it. */

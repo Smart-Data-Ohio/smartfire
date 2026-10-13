@@ -139,6 +139,8 @@ describe("localItems", () => {
       "room:3",
       "room:11",
       "person:2",
+      // No note-to-self yet, so the sidebar offers it and you are listed too.
+      "person:7",
     ]);
     expect(items.find((item) => item.key === "person:2")?.roomId).toBe(9);
     expect(items.find((item) => item.key === "room:11")?.memberIds).toEqual([3, 4]);
