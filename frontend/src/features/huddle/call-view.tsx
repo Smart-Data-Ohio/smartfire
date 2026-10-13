@@ -65,32 +65,14 @@ function VideoTrack({
     return () => callController.detachVideo(videoId, element);
   }, [videoId]);
 
-  // A share asks for a layer that matches the size it's shown at (device pixels).
   useEffect(() => {
-    const element = ref.current;
-
-    if (!screen || element === null || typeof ResizeObserver === "undefined") {
+    if (!screen) {
       return;
     }
 
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry === undefined) {
-        return;
-      }
+    callController.screenShown(videoId, expanded);
 
-      const ratio = window.devicePixelRatio || 1;
-
-      callController.screenShown(
-        videoId,
-        Math.round(entry.contentRect.width * ratio),
-        Math.round(entry.contentRect.height * ratio),
-        expanded,
-      );
-    });
-
-    observer.observe(element);
-
-    return () => observer.disconnect();
+    return () => callController.screenShown(videoId, false);
   }, [videoId, screen, expanded]);
 
   return (
