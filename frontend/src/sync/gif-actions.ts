@@ -12,10 +12,10 @@ import { runAction } from "./runtime.ts";
 
 export interface SendGif {
   readonly roomId: number;
-  readonly threadId?: number;
+  readonly threadId?: number | undefined;
   readonly slug: string;
   readonly clientMessageId: string;
-  readonly markdownSource?: string;
+  readonly markdownSource?: string | undefined;
 }
 
 /** Picker requests stay local to its caller. Sending uses the ordinary message endpoint. */
