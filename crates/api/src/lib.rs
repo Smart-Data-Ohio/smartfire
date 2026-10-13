@@ -36,6 +36,7 @@ pub mod admin;
 pub mod templates;
 pub mod bots;
 pub mod me_agents;
+pub mod oauth;
 pub mod webhooks;
 pub mod boards;
 mod branding_images;
@@ -90,6 +91,7 @@ pub fn install(app: &Arc<AppState>) {
 /// The `/api/v1` routes and the sync socket.
 pub fn routes(app: &AppState) -> Router<Kit> {
     Router::new()
+        .merge(oauth::routes(app.config.oauth_issuer().is_some()))
         .route("/api/v1/public_pages/{page}", get(action(public_pages::show_json)))
         .route("/api/v1/me", get(action(endpoints::me)))
         .route(

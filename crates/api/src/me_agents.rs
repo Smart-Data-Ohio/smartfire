@@ -61,7 +61,7 @@ endpoint!(issue => issue_credential);
 endpoint!(rotate => rotate_credential);
 endpoint!(revoke => revoke_credential);
 
-async fn member(c: &mut Ctx) -> Result<User> {
+pub(crate) async fn member(c: &mut Ctx) -> Result<User> {
     let user = viewer(c).await?;
     if !user.is_active() || user.is_bot() {
         return Err(Error::Halt(Box::new(campfire_kit::Response::new(
@@ -86,9 +86,9 @@ async fn owned(c: &Ctx, owner_id: i64) -> Result<Agent> {
 }
 const DISABLED: &str = "MemberAgentsDisabled";
 const DISABLED_MESSAGE: &str = "Personal agents are turned off for this workspace.";
-const LIMIT: &str = "MemberAgentLimitReached";
+pub(crate) const LIMIT: &str = "MemberAgentLimitReached";
 const LIMIT_MESSAGE: &str = "personal agent limit reached";
-fn enabled(conn: &Connection) -> campfire_db::Result<()> {
+pub(crate) fn enabled(conn: &Connection) -> campfire_db::Result<()> {
     if !campfire_db::Account::first(conn)?
         .ok_or(campfire_db::Error::RecordNotFound("Account"))?
         .settings()
@@ -98,7 +98,7 @@ fn enabled(conn: &Connection) -> campfire_db::Result<()> {
     }
     Ok(())
 }
-fn saved_error(error: campfire_db::Error) -> Error {
+pub(crate) fn saved_error(error: campfire_db::Error) -> Error {
     match &error {
         campfire_db::Error::Other(message) if message == DISABLED => refuse(api::ApiError::Forbidden {
             message: DISABLED_MESSAGE.into(),
@@ -142,7 +142,7 @@ fn credential(row: AgentCredential, now: Timestamp) -> api::PersonalAgentCredent
         state,
     }
 }
-fn present(
+pub(crate) fn present(
     conn: &Connection,
     agent: Agent,
     now: Timestamp,
@@ -192,7 +192,7 @@ fn present(
         credentials,
     })
 }
-fn audit(
+pub(crate) fn audit(
     tx: &Tx<'_>,
     agent: &Agent,
     action: &str,
@@ -243,6 +243,7 @@ async fn list_agents(c: &mut Ctx) -> Result {
         .mail
         .validated_app_url()
         .map(|origin| format!("{origin}/agents/mcp"));
+    let oauth_available = c.app().config.oauth_issuer().is_some();
     let list = c
         .app()
         .db
@@ -269,7 +270,7 @@ async fn list_agents(c: &mut Ctx) -> Result {
                     })
                     .collect(),
                 mcp_url,
-                oauth_available: false,
+                oauth_available,
             })
         })
         .await

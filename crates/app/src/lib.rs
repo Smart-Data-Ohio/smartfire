@@ -17,6 +17,7 @@ pub mod icons;
 pub mod integrations;
 // The outbound HTTP stack every client shares.
 pub mod net;
+pub mod oauth;
 pub mod picker_configuration;
 pub mod public_policy;
 // The job queue's enqueueing side: job classes, queues and the durable sink.

@@ -28,6 +28,8 @@ mod auth;
 mod board;
 mod board_automations;
 mod bots;
+mod oauth;
+pub use oauth::*;
 mod me_agents;
 pub use me_agents::*;
 mod cards;

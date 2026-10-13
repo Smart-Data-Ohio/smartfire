@@ -6,11 +6,15 @@ use sha2::{Digest, Sha256};
 use super::{AuthenticatedBy, Before, CurrentAgent, authenticated_by, before_actions};
 
 pub async fn require_token(c: &mut Ctx, rescue_forgery: bool) -> Result<CurrentAgent> {
-    match before_actions(c, Before::default().allow_agent_access()).await {
-        Err(Error::InvalidAuthenticityToken(_)) if rescue_forgery => return reject_session(c),
-        result => result?,
-    }
-    token(c)
+    let result = match before_actions(c, Before::default().allow_agent_access()).await {
+        Err(Error::InvalidAuthenticityToken(_)) if rescue_forgery => reject_session(c),
+        result => result,
+    };
+    if super::oauth::challenge(c, &result) { return super::oauth::unauthorized(c); }
+    result?;
+    let result = token(c);
+    if super::oauth::challenge(c, &result) { return super::oauth::unauthorized(c); }
+    result
 }
 
 pub fn token(c: &mut Ctx) -> Result<CurrentAgent> {

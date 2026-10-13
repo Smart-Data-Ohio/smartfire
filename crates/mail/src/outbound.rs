@@ -355,3 +355,10 @@ pub fn cram_md5_response(username: &str, password: &str, challenge: &[u8]) -> St
         hex::encode(mac.finalize().into_bytes())
     ))
 }
+
+/// A refresh-token family was reused. The connection is already revoked when queued.
+pub fn oauth_refresh_reuse(config: &Config, user: &User) -> Message {
+    let url = format!("{}/app/settings/agents",config.url_origin());
+    let text = format!("Hi {},\n\nAn agent connection was revoked because a refresh token was reused. All tokens for that connection have stopped working. Review your agent connections and reconnect the client you trust:\n\n{url}\n",user.name);
+    Message {from:config.mailer_from.clone().unwrap_or_else(||"Smartfire <noreply@smartdata.net>".into()),to:address_with_name(user),subject:"Agent connection revoked: refresh token reused".into(),html:layout(&format!("<p>Hi {},</p><p>An agent connection was revoked because a refresh token was reused. All tokens for that connection have stopped working.</p><p><a href=\"{}\">Review your agent connections and reconnect the client you trust</a>.</p>",h(&user.name),h(&url))),text}
+}

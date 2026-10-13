@@ -45,6 +45,7 @@ pub mod sudo;
 pub mod two_factor;
 pub mod user_agent;
 pub mod agent_api;
+mod oauth;
 
 #[derive(Clone, Copy)]
 pub struct CurrentAgent {
