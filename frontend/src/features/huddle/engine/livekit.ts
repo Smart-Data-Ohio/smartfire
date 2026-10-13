@@ -8,6 +8,7 @@ import type {
   AudioCaptureOptions,
   LocalAudioTrack,
   LocalTrack,
+  LocalVideoTrack,
   Participant,
   RemoteParticipant,
   RemoteTrack,
@@ -22,6 +23,14 @@ import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { loadForUpdate } from "../../../service-worker/update-required.ts";
 import { ActionError } from "../../../sync/run.ts";
 import { microphonePublishOptions } from "./audio-quality.ts";
+import {
+  type CameraCapabilities,
+  type CameraQuality,
+  cameraCaptureOptions,
+  cameraPublishOptions,
+  cameraQualityFromSettings,
+  verifiedCameraCapture,
+} from "./camera-quality.ts";
 import { canShareScreen, permissionDenied } from "./devices.ts";
 import { createLevelMeter, type LevelMeter } from "./meter.ts";
 import {
@@ -29,7 +38,7 @@ import {
   NoiseSuppressor,
   noiseSuppressionSupported,
 } from "./noise.ts";
-import { loadDevicePreferences } from "./preferences.ts";
+import { loadCameraQuality, loadDevicePreferences, storeCameraQuality } from "./preferences.ts";
 import {
   applyScreenContentHint,
   DEFAULT_SHARE_QUALITY,
@@ -58,6 +67,7 @@ import {
   type TransportEvent,
   type ViewerQuality,
 } from "./transport.ts";
+import { parseVideoCodecError, selectVideoCodec, supportsVideoSimulcast } from "./video-codecs.ts";
 import { focusScreenPublication, VIDEO_ADAPTIVE_STREAM } from "./video-quality.ts";
 
 type LiveKit = typeof import("livekit-client");
@@ -98,6 +108,37 @@ interface SinkableAudioContext extends AudioContext {
 
 function sinkable(context: AudioContext): context is SinkableAudioContext {
   return "setSinkId" in context;
+}
+
+/** A failed AddTrack cannot be cancelled on the server without leaving its old session. */
+function restartVideoPublisher(room: Room) {
+  let cancel: () => void = () => undefined;
+
+  const ready = new Promise<void>((resolve, reject) => {
+    const finish = (error?: Error) => {
+      clearTimeout(timeout);
+      room.engine.off("restarted", restarted);
+      room.engine.off("closing", closing);
+
+      if (error === undefined) resolve();
+      else reject(error);
+    };
+
+    const restarted = () => finish();
+    const closing = () => finish(new Error("call-ended"));
+    const timeout = setTimeout(() => finish(new Error("video-reconnect-timeout")), 20_000);
+    cancel = closing;
+    room.engine.on("restarted", restarted);
+    room.engine.on("closing", closing);
+
+    try {
+      room.engine.reconnect();
+    } catch {
+      finish(new Error("video-reconnect-failed"));
+    }
+  });
+
+  return { ready, cancel };
 }
 
 /**
@@ -165,10 +206,12 @@ class LiveKitTransport implements CallTransport {
   /** The microphone track the "ended" restore listens on (the SDK reuses it across restarts). */
   #watchedMicrophone: LocalAudioTrack | null = null;
   readonly #captured = new Map<number, LocalTrack[]>();
+  readonly #recoveringScreens = new Set<Map<string, LocalTrack>>();
   #capturedSequence = 0;
   #statsBaseline: StatsBaseline | null = null;
   #videoStatsBaseline: VideoStatsBaseline | null = null;
   #statsGeneration = 0;
+  #cameraQuality = loadCameraQuality();
   readonly #focusedScreens = new Map<RemoteTrackPublication, () => void>();
   /** The microphone's encoding target, from the grant this connection joined with. */
   #microphonePublish: TrackPublishOptions = microphonePublishOptions(undefined);
@@ -187,6 +230,7 @@ class LiveKitTransport implements CallTransport {
   ): Promise<void> {
     this.#noiseWanted = noiseSuppression;
     this.#microphonePublish = microphonePublishOptions(audioBitrate);
+    this.#cameraQuality = loadCameraQuality();
 
     const room = new this.#lk.Room(this.#roomOptions());
 
@@ -243,6 +287,12 @@ class LiveKitTransport implements CallTransport {
     }
 
     this.#captured.clear();
+
+    for (const screens of this.#recoveringScreens) {
+      for (const screen of screens.values()) screen.stop();
+    }
+
+    this.#recoveringScreens.clear();
 
     if (room !== null) {
       for (const publication of room.localParticipant.trackPublications.values()) {
@@ -334,16 +384,56 @@ class LiveKitTransport implements CallTransport {
    * doesn't inherit the room's screen-share "maintain-resolution").
    */
   async setCamera(enabled: boolean): Promise<void> {
-    const local = this.#room?.localParticipant;
+    const room = this.#room;
+    const local = room?.localParticipant;
 
-    if (local === undefined) {
+    if (room === null || local === undefined) {
       return;
     }
 
     if (enabled) {
-      await local.setCameraEnabled(true, undefined, {
-        degradationPreference: "maintain-framerate",
-      });
+      const existing = local.getTrackPublication(this.#lk.Track.Source.Camera)?.videoTrack;
+
+      if (existing !== undefined) {
+        await existing.unmute();
+
+        const applied = cameraQualityFromSettings(
+          this.#cameraQuality,
+          existing.mediaStreamTrack.getSettings(),
+        );
+
+        if (applied !== this.#cameraQuality) await this.setCameraQuality(applied);
+
+        return;
+      }
+
+      const captured = await this.#captureCamera(room, this.#cameraQuality);
+      const { track } = captured;
+      track.source = this.#lk.Track.Source.Camera;
+
+      if (room !== this.#room) {
+        track.stop();
+
+        return;
+      }
+
+      try {
+        await this.#publishVideo(
+          track,
+          cameraPublishOptions(captured.quality, this.#lk.VideoPreset),
+          null,
+        );
+        this.#cameraQuality = captured.quality;
+        storeCameraQuality(captured.quality);
+        room.options.videoCaptureDefaults = cameraCaptureOptions(
+          captured.quality,
+          loadDevicePreferences().videoinput,
+        );
+        this.#emit({ type: "changed" });
+      } catch (error) {
+        track.stop();
+        throw error;
+      }
 
       return;
     }
@@ -354,6 +444,150 @@ class LiveKitTransport implements CallTransport {
       await local.setCameraEnabled(false);
     } else {
       await local.unpublishTrack(track);
+    }
+  }
+
+  cameraCapabilities(): CameraCapabilities | null {
+    const track = this.#room?.localParticipant.getTrackPublication(
+      this.#lk.Track.Source.Camera,
+    )?.track;
+
+    try {
+      return track?.mediaStreamTrack.getCapabilities?.() ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  cameraQuality(): CameraQuality {
+    return this.#cameraQuality;
+  }
+
+  #captureCamera(room: Room, quality: CameraQuality) {
+    return verifiedCameraCapture(quality, async (candidate) => {
+      if (room !== this.#room) throw new Error("call-ended");
+
+      const track = await this.#lk.createLocalVideoTrack(
+        cameraCaptureOptions(candidate, loadDevicePreferences().videoinput),
+      );
+
+      if (room !== this.#room) {
+        track.stop();
+        throw new Error("call-ended");
+      }
+
+      return {
+        track,
+        getSettings: () => track.mediaStreamTrack.getSettings(),
+        stop: () => track.stop(),
+      };
+    });
+  }
+
+  async setCameraQuality(quality: CameraQuality): Promise<void> {
+    const room = this.#room;
+    const local = room?.localParticipant;
+    const publication = local?.getTrackPublication(this.#lk.Track.Source.Camera);
+    const track = publication?.videoTrack;
+    const previous = this.#cameraQuality;
+    const previousDefaults = room?.options.videoCaptureDefaults ?? cameraCaptureOptions(previous);
+
+    if (this.#room !== null) {
+      this.#room.options.videoCaptureDefaults = cameraCaptureOptions(
+        quality,
+        loadDevicePreferences().videoinput,
+      );
+    }
+
+    if (room === null || local === undefined || track === undefined) {
+      this.#cameraQuality = quality;
+
+      return;
+    }
+
+    const muted = track.isMuted;
+    let replacement: LocalVideoTrack | undefined;
+
+    const stopPending = () => {
+      track.stop();
+      replacement?.stop();
+    };
+
+    this.#unbind.push(stopPending);
+
+    try {
+      // Own the replacement before releasing the working camera. SDK restartTrack can leak a
+      // capture when its separate applyConstraints step rejects before adopting the native track.
+      const captured = await this.#captureCamera(room, quality);
+      replacement = captured.track;
+      replacement.source = this.#lk.Track.Source.Camera;
+
+      if (
+        room !== this.#room ||
+        local.getTrackPublication(this.#lk.Track.Source.Camera)?.videoTrack !== track
+      ) {
+        replacement.stop();
+
+        return;
+      }
+
+      if (muted) await replacement.mute();
+
+      // The SDK clears this map during unpublish(false) without stopping its native clones.
+      for (const backup of track.simulcastCodecs.values()) backup.mediaStreamTrack.stop();
+      await local.unpublishTrack(track, false);
+
+      if (room !== this.#room) {
+        replacement.stop();
+        track.stop();
+
+        return;
+      }
+
+      await this.#publishVideo(
+        replacement,
+        cameraPublishOptions(captured.quality, this.#lk.VideoPreset),
+        null,
+      );
+      track.stop();
+      this.#cameraQuality = captured.quality;
+      storeCameraQuality(captured.quality);
+      room.options.videoCaptureDefaults = cameraCaptureOptions(
+        captured.quality,
+        loadDevicePreferences().videoinput,
+      );
+      this.#emit({ type: "changed" });
+    } catch (error) {
+      replacement?.stop();
+
+      if (room !== this.#room) {
+        track.stop();
+
+        return;
+      }
+
+      room.options.videoCaptureDefaults = previousDefaults;
+
+      // unpublishTrack can remove its maps before negotiation rejects. The original capture
+      // remains owned and usable; restore its publication if the maps have already changed.
+      try {
+        if (local.getTrackPublication(this.#lk.Track.Source.Camera)?.videoTrack !== track) {
+          await this.#publishVideo(
+            track,
+            cameraPublishOptions(previous, this.#lk.VideoPreset),
+            null,
+          );
+        }
+      } catch {
+        await local.unpublishTrack(track).catch(() => undefined);
+        track.stop();
+      }
+
+      throw error;
+    } finally {
+      const index = this.#unbind.indexOf(stopPending);
+
+      if (index >= 0) this.#unbind.splice(index, 1);
     }
   }
 
@@ -377,16 +611,13 @@ class LiveKitTransport implements CallTransport {
       return;
     }
 
-    const publish = screenPublishOptions(quality, this.#lk.VideoPreset);
+    const captured = await this.captureScreen(quality);
 
-    const publication = await withCaptureFallback(
-      quality,
-      (options) => local.setScreenShareEnabled(true, options, publish),
-      this.#lk.getBrowser(),
-    );
-
-    if (publication?.track !== undefined) {
-      applyScreenContentHint(publication.track.mediaStreamTrack, quality);
+    try {
+      await this.publishScreen(captured, quality);
+    } catch (error) {
+      this.discardScreen(captured);
+      throw error;
     }
   }
 
@@ -431,11 +662,182 @@ class LiveKitTransport implements CallTransport {
 
     const publish = screenPublishOptions(streamQuality, this.#lk.VideoPreset);
 
-    for (const track of tracks) {
-      await local.publishTrack(track, publish);
+    const published = [];
+
+    try {
+      for (const track of tracks) {
+        published.push(
+          track instanceof this.#lk.LocalVideoTrack
+            ? await this.#publishVideo(track, publish, streamQuality)
+            : await local.publishTrack(track, publish),
+        );
+      }
+    } catch (error) {
+      for (const publication of published) {
+        if (publication.track !== undefined)
+          await local.unpublishTrack(publication.track).catch(() => undefined);
+      }
+
+      throw error;
     }
 
     this.#captured.delete(captured.id);
+  }
+
+  async #publishVideo(
+    track: LocalVideoTrack,
+    options: TrackPublishOptions,
+    screenQuality: StreamQuality | null,
+  ) {
+    const room = this.#room;
+
+    if (room === null) throw new Error("call-ended");
+    let active: LocalVideoTrack | MediaStreamTrack = track;
+    const stopPending = () => active.stop();
+    this.#unbind.push(stopPending);
+
+    try {
+      const publishTrack = async (video: LocalVideoTrack, publishOptions: TrackPublishOptions) => {
+        const publication = await room.localParticipant.publishTrack(video, publishOptions);
+
+        if (room !== this.#room) {
+          await room.localParticipant.unpublishTrack(video).catch(() => undefined);
+          video.stop();
+          throw new Error("call-ended");
+        }
+
+        return publication;
+      };
+
+      const simulcast = supportsVideoSimulcast(this.#lk.getBrowser(), room.engine.serverVersion);
+      const textScreen = screenQuality !== null && screenQuality !== "1080p60";
+      const encoding = screenQuality === null ? options.videoEncoding : options.screenShareEncoding;
+      const settings = track.mediaStreamTrack.getSettings();
+
+      const codec = await selectVideoCodec({
+        width: settings.width ?? 1280,
+        height: settings.height ?? 720,
+        framerate: Math.min(settings.frameRate ?? 30, encoding?.maxFramerate ?? 30),
+        bitrate: encoding?.maxBitrate ?? 1_700_000,
+        scalabilityMode: screenQuality !== null || simulcast ? "L1T3" : "L3T3_KEY",
+        advancedAllowed: !textScreen || simulcast,
+        supportsAV1: this.#lk.supportsAV1,
+        supportsVP9: this.#lk.supportsVP9,
+      });
+
+      if (room !== this.#room) throw new Error("call-ended");
+
+      const publish: TrackPublishOptions = {
+        ...options,
+        videoCodec: codec,
+        backupCodec:
+          codec === "vp8"
+            ? false
+            : encoding === undefined
+              ? { codec: "vp8" }
+              : { codec: "vp8", encoding: { ...encoding } },
+        backupCodecPolicy: this.#lk.BackupCodecPolicy.SIMULCAST,
+      };
+
+      if (codec !== "vp8")
+        publish.scalabilityMode = screenQuality !== null || simulcast ? "L1T3" : "L3T3_KEY";
+
+      try {
+        return await publishTrack(track, publish);
+      } catch (error) {
+        if (codec === "vp8" || parseVideoCodecError(error) !== "encoder" || room !== this.#room)
+          throw error;
+        const muted = track.isMuted;
+        const media = track.mediaStreamTrack.clone();
+        active = media;
+        track.stop();
+        const screens = new Map<string, LocalTrack>();
+
+        for (const publication of room.localParticipant.trackPublications.values()) {
+          if (publication.videoTrack !== undefined) {
+            for (const backup of publication.videoTrack.simulcastCodecs.values())
+              backup.mediaStreamTrack.stop();
+          }
+
+          if (
+            (publication.source === this.#lk.Track.Source.ScreenShare ||
+              publication.source === this.#lk.Track.Source.ScreenShareAudio) &&
+            publication.track !== undefined
+          ) {
+            screens.set(publication.trackSid, publication.track);
+          }
+        }
+
+        this.#recoveringScreens.add(screens);
+
+        try {
+          // A failed publish may have sent AddTrack before creating any sender. A full SDK
+          // restart clears both the server reservation and local partial senders/resolvers.
+          const restart = restartVideoPublisher(room);
+          this.#unbind.push(restart.cancel);
+
+          try {
+            await restart.ready;
+          } finally {
+            const index = this.#unbind.indexOf(restart.cancel);
+
+            if (index >= 0) this.#unbind.splice(index, 1);
+          }
+
+          if (room !== this.#room) throw error;
+          const fallback = new this.#lk.LocalVideoTrack(media, undefined, false);
+          active = fallback;
+          fallback.source = track.source;
+
+          if (screenQuality !== null) applyScreenContentHint(media, screenQuality);
+
+          if (muted) await fallback.mute();
+
+          try {
+            return await publishTrack(fallback, {
+              ...options,
+              videoCodec: "vp8",
+              backupCodec: false,
+            });
+          } catch (fallbackError) {
+            fallback.stop();
+            throw fallbackError;
+          }
+        } catch (cleanupError) {
+          media.stop();
+          throw cleanupError;
+        } finally {
+          this.#recoveringScreens.delete(screens);
+
+          if (room === this.#room) {
+            const published = new Set(
+              [...room.localParticipant.trackPublications.values()].map(
+                (publication) => publication.track?.mediaStreamTrack.id,
+              ),
+            );
+
+            let screenEnded = false;
+
+            for (const screen of screens.values()) {
+              if (
+                screen.mediaStreamTrack.readyState === "ended" ||
+                !published.has(screen.mediaStreamTrack.id)
+              ) {
+                screen.stop();
+
+                if (screen.source === this.#lk.Track.Source.ScreenShare) screenEnded = true;
+              }
+            }
+
+            if (screenEnded) this.#emit({ type: "screen-ended" });
+          }
+        }
+      }
+    } finally {
+      const index = this.#unbind.indexOf(stopPending);
+
+      if (index >= 0) this.#unbind.splice(index, 1);
+    }
   }
 
   discardScreen(captured: CapturedScreen): void {
@@ -469,6 +871,19 @@ class LiveKitTransport implements CallTransport {
 
     if (kind === "videoinput" && room.options.videoCaptureDefaults !== undefined) {
       room.options.videoCaptureDefaults.deviceId = { ideal: deviceId };
+
+      const track = room.localParticipant.getTrackPublication(
+        this.#lk.Track.Source.Camera,
+      )?.videoTrack;
+
+      if (track !== undefined && !track.isMuted) {
+        const applied = cameraQualityFromSettings(
+          this.#cameraQuality,
+          track.mediaStreamTrack.getSettings(),
+        );
+
+        if (applied !== this.#cameraQuality) await this.setCameraQuality(applied);
+      }
     }
 
     if (kind === "audioinput") {
@@ -658,10 +1073,34 @@ class LiveKitTransport implements CallTransport {
 
       if (cached !== undefined) return cached;
 
-      const pending = track
-        .getRTCStatsReport()
-        .then((report) => report ?? null)
-        .catch(() => null);
+      const sources = [
+        track
+          .getRTCStatsReport()
+          .then((report) => report ?? null)
+          .catch(() => null),
+      ];
+
+      if (track instanceof this.#lk.LocalVideoTrack) {
+        for (const codec of track.simulcastCodecs.values()) {
+          if (codec.sender !== undefined && codec.sender !== track.sender) {
+            sources.push(codec.sender.getStats().catch(() => null));
+          }
+        }
+      }
+
+      const pending = Promise.all(sources).then((samples) => {
+        const combined = new Map<string, StatEntry>();
+        let available = false;
+
+        for (const sample of samples) {
+          if (sample === null) continue;
+          available = true;
+
+          for (const [id, entry] of sample) combined.set(id, entry);
+        }
+
+        return available ? combined : null;
+      });
 
       reports.set(track, pending);
 
@@ -802,10 +1241,10 @@ class LiveKitTransport implements CallTransport {
       // asks the browser to do with a microphone.
       audioCaptureDefaults: this.#audioCapture(),
       // The 720p camera target, the SDK's own default written out to pin it against upgrades.
-      videoCaptureDefaults: {
-        deviceId: { ideal: camera === "" ? "default" : camera },
-        resolution: VideoPresets.h720.resolution,
-      },
+      videoCaptureDefaults: cameraCaptureOptions(
+        this.#cameraQuality,
+        camera === "" ? "default" : camera,
+      ),
       publishDefaults: {
         audioPreset: AudioPresets.music,
         dtx: true,
@@ -943,6 +1382,11 @@ class LiveKitTransport implements CallTransport {
       changed();
 
       if (publication.source === this.#lk.Track.Source.ScreenShare) {
+        for (const screens of this.#recoveringScreens) {
+          if (screens.get(publication.trackSid)?.mediaStreamTrack.readyState === "live") return;
+        }
+
+        for (const screens of this.#recoveringScreens) screens.delete(publication.trackSid);
         this.#emit({ type: "screen-ended" });
       }
     });

@@ -1,6 +1,13 @@
 import * as LiveKit from "livekit-client";
 import { afterEach, expect, it, vi } from "vitest";
 import { liveKitTransport } from "./livekit.ts";
+import {
+  installVideoMedia,
+  offlineLiveKit,
+  videoPublication,
+  videoSender,
+  videoTrack,
+} from "./sdk-testing.ts";
 import type { StatEntry } from "./stats.ts";
 
 afterEach(() => {
@@ -8,7 +15,72 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function report(bytes: number): RTCStatsReport {
+it("samples actual primary and backup video senders only when connection details asks", async () => {
+  installVideoMedia();
+  const { lk, rooms } = offlineLiveKit();
+  const transport = liveKitTransport(lk);
+  await transport.connect("wss://livekit.test", "token", false, 48_000);
+  const room = rooms[0];
+
+  if (room === undefined) throw new Error("SDK room missing");
+  const track = videoTrack();
+  const publication = videoPublication(track);
+  room.localParticipant.trackPublications.set(publication.trackSid, publication);
+  room.localParticipant.videoTrackPublications.set(publication.trackSid, publication);
+
+  const primary = vi.spyOn(track, "getRTCStatsReport").mockImplementation(async () => {
+    const sample = report(10_000);
+    sample.set("codec", { type: "codec", mimeType: "video/AV1" });
+
+    return sample;
+  });
+
+  const backup = videoSender(track.mediaStreamTrack.clone());
+
+  const sampleBackup = vi.spyOn(backup, "getStats").mockImplementation(
+    async () =>
+      new Map([
+        [
+          "backup",
+          {
+            id: "backup",
+            type: "outbound-rtp",
+            kind: "video",
+            ssrc: 51,
+            bytesSent: 1000,
+            codecId: "backup-codec",
+            frameWidth: 640,
+            frameHeight: 360,
+          },
+        ],
+        ["backup-codec", { type: "codec", mimeType: "video/VP8" }],
+      ]),
+  );
+
+  track.simulcastCodecs.set("vp8", {
+    codec: "vp8",
+    mediaStreamTrack: track.mediaStreamTrack.clone(),
+    sender: backup,
+  });
+
+  try {
+    transport.snapshot();
+    expect(primary).not.toHaveBeenCalled();
+    expect(sampleBackup).not.toHaveBeenCalled();
+    const stats = await transport.sampleStats(true);
+    expect(stats?.videoTracks[0]?.layers.map((layer) => layer.codec).sort()).toEqual([
+      "video/AV1",
+      "video/VP8",
+    ]);
+    expect(primary).toHaveBeenCalledTimes(1);
+    expect(sampleBackup).toHaveBeenCalledTimes(1);
+    expect(stats?.videoTracks).toHaveLength(1);
+  } finally {
+    await transport.disconnect();
+  }
+});
+
+function report(bytes: number): Map<string, StatEntry> {
   return new Map<string, StatEntry>([
     [
       "video",
@@ -76,7 +148,14 @@ it("ignores pending samples from before a fresh read without changing its bitrat
 
   const publication: unknown = Reflect.construct(LiveKit.LocalTrackPublication, [
     LiveKit.Track.Kind.Video,
-    { sid: "camera", name: "camera", source: 2, muted: false, width: 1280, height: 720 },
+    {
+      sid: "camera",
+      name: "camera",
+      source: LiveKit.Track.sourceToProto(LiveKit.Track.Source.Camera),
+      muted: false,
+      width: 1280,
+      height: 720,
+    },
     track,
   ]);
 

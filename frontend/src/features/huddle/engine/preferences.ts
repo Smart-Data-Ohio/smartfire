@@ -4,6 +4,11 @@
  * the defaults and writes only last for the page.
  */
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
+import {
+  type CameraQuality,
+  DEFAULT_CAMERA_QUALITY,
+  knownCameraQuality,
+} from "./camera-quality.ts";
 import { DEFAULT_SHARE_QUALITY, knownStreamQuality } from "./screen-quality.ts";
 import type { DeviceKind, ViewerQuality } from "./transport.ts";
 
@@ -14,6 +19,8 @@ export const NOISE_SUPPRESSION_STORAGE_KEY = "campfire.huddle.noiseSuppression";
 export const STREAM_QUALITY_STORAGE_KEY = "campfire.huddle.streamQuality";
 
 export const SHARE_QUALITY_STORAGE_KEY = "campfire.huddle.shareQuality";
+
+export const CAMERA_QUALITY_STORAGE_KEY = "campfire.huddle.cameraQuality";
 
 export const PARTICIPANT_VOLUME_PREFIX = "campfire.huddle.volume.";
 
@@ -110,6 +117,15 @@ export function loadShareQuality(): StreamQuality {
 
 export function storeShareQuality(quality: StreamQuality): void {
   write(SHARE_QUALITY_STORAGE_KEY, quality);
+}
+
+/** The preferred camera capture and encoding quality, independent of the camera's fallback. */
+export function loadCameraQuality(): CameraQuality {
+  return knownCameraQuality(read(CAMERA_QUALITY_STORAGE_KEY)) ?? DEFAULT_CAMERA_QUALITY;
+}
+
+export function storeCameraQuality(quality: CameraQuality): void {
+  write(CAMERA_QUALITY_STORAGE_KEY, quality);
 }
 
 /** Someone's volume for this browser, 0–200; 100 when unset (an empty entry isn't silence). */

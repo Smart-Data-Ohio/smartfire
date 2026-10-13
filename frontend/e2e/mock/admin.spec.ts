@@ -152,12 +152,13 @@ test("an animated icon uploaded here plays in a reaction, and rests on its still
 
   const target = page.locator(`[data-message-id="${MESSAGE_IDS.generalReactions}"]`);
   const bar = target.getByRole("toolbar", { name: "Message actions" });
+  const list = page.getByRole("log", { name: "Messages" });
 
-  await expect(async () => {
-    await page.mouse.move(0, 0);
-    await target.hover();
-    await expect(bar).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
+  await settle(page);
+  await expect(list).toHaveAttribute("data-scroll-settled", "true");
+  await target.hover();
+  await expect(bar).toBeVisible({ timeout: 1000 });
   await bar.getByRole("button", { name: "Add reaction" }).click();
   await page.getByRole("combobox", { name: "Search emoji" }).fill("dance");
   await page.getByRole("option", { name: "Dance", exact: true }).click();

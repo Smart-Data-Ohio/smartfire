@@ -31,6 +31,11 @@ import {
   userIdForIdentity,
 } from "./call-store.ts";
 import {
+  type CameraQuality,
+  cameraCaptureOptions,
+  verifiedCameraCapture,
+} from "./engine/camera-quality.ts";
+import {
   canShareScreen,
   type DeviceLists,
   listDevices,
@@ -41,12 +46,14 @@ import {
 import { createLevelMeter, type LevelMeter } from "./engine/meter.ts";
 import {
   type DevicePreferences,
+  loadCameraQuality,
   loadDevicePreferences,
   loadNoiseSuppression,
   loadParticipantMuted,
   loadParticipantVolume,
   loadShareQuality,
   loadStreamQuality,
+  storeCameraQuality,
   storeDevicePreference,
   storeNoiseSuppression,
   storeParticipantMuted,
@@ -427,6 +434,15 @@ export class CallController {
 
   #refreshSnapshot(): void {
     const snapshot = this.#transport?.snapshot() ?? EMPTY_SNAPSHOT;
+    const cameraCapabilities = this.#transport?.cameraCapabilities() ?? null;
+    const cameraQuality = this.#transport?.cameraQuality() ?? loadCameraQuality();
+
+    if (cameraQuality !== this.#state.cameraQuality) this.#set({ cameraQuality });
+
+    if (JSON.stringify(cameraCapabilities) !== JSON.stringify(this.#state.cameraCapabilities)) {
+      this.#set({ cameraCapabilities });
+    }
+
     this.#speechActivity(snapshot);
     const key = snapshotKey(snapshot);
 
@@ -904,6 +920,7 @@ export class CallController {
     const preview = this.#previewVideoOperation;
 
     this.#stopPreviewVideo();
+    this.#set({ cameraCapabilities: null, cameraQuality: loadCameraQuality() });
 
     const deviceId = this.#state.prejoin?.selected.videoinput ?? "";
 
@@ -912,10 +929,34 @@ export class CallController {
     }
 
     try {
-      const stream = await this.#env.getUserMedia({
-        video: { deviceId: { exact: deviceId } },
-        audio: false,
+      const captured = await verifiedCameraCapture(loadCameraQuality(), async (quality) => {
+        if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin")
+          throw new Error("preview-ended");
+        const capture = cameraCaptureOptions(quality);
+
+        const stream = await this.#env.getUserMedia({
+          video: {
+            deviceId: { exact: deviceId },
+            width: { ideal: capture.resolution?.width ?? 1280 },
+            height: { ideal: capture.resolution?.height ?? 720 },
+            frameRate: capture.frameRate ?? { ideal: 30 },
+          },
+          audio: false,
+        });
+
+        if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
+          stopStream(stream);
+          throw new Error("preview-ended");
+        }
+
+        return {
+          track: stream,
+          getSettings: () => stream.getVideoTracks()[0]?.getSettings?.() ?? {},
+          stop: () => stopStream(stream),
+        };
       });
+
+      const stream = captured.track;
 
       if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
         stopStream(stream);
@@ -924,6 +965,11 @@ export class CallController {
       }
 
       this.#setPrejoin({ preview: stream });
+      storeCameraQuality(captured.quality);
+      this.#set({
+        cameraCapabilities: stream.getVideoTracks()[0]?.getCapabilities?.() ?? null,
+        cameraQuality: captured.quality,
+      });
     } catch {
       if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
         return;
@@ -1037,6 +1083,7 @@ export class CallController {
 
   /** A picker changed. The choice is remembered (only ever from the person's own choice). */
   async selectDevice(kind: DeviceKind, deviceId: string): Promise<void> {
+    if (kind === "videoinput" && this.#state.busy.camera) return;
     storeDevicePreference(kind, deviceId);
 
     const state = this.#state;
@@ -1067,7 +1114,14 @@ export class CallController {
 
     this.#set({ selectedDevices: { ...state.selectedDevices, [kind]: deviceId } });
 
-    const switched = await transport.switchDevice(kind, deviceId);
+    if (kind === "videoinput") this.#setBusy("camera", true);
+    let switched = false;
+
+    try {
+      switched = await transport.switchDevice(kind, deviceId);
+    } finally {
+      if (kind === "videoinput" && transport === this.#transport) this.#setBusy("camera", false);
+    }
 
     if (transport !== this.#transport) {
       return;
@@ -1784,6 +1838,39 @@ export class CallController {
   }
 
   // ── Camera and screen share ───────────────────────────────────────────────────────────────
+
+  async setCameraQuality(quality: CameraQuality): Promise<void> {
+    if (this.#state.busy.camera) return;
+    storeCameraQuality(quality);
+
+    if (this.#state.phase === "prejoin") {
+      await this.#startPreviewVideo();
+
+      return;
+    }
+
+    const transport = this.#transport;
+
+    if (transport === null || this.#state.phase !== "connected") return;
+    this.#setBusy("camera", true);
+
+    try {
+      await transport.setCameraQuality(quality);
+
+      if (transport === this.#transport) {
+        storeCameraQuality(transport.cameraQuality());
+        this.#refreshSnapshot();
+      }
+    } catch {
+      if (transport === this.#transport) {
+        storeCameraQuality(transport.cameraQuality());
+        this.#refreshSnapshot();
+        this.#showNotice("Camera quality could not be changed. Try again.");
+      }
+    } finally {
+      if (transport === this.#transport) this.#setBusy("camera", false);
+    }
+  }
 
   async toggleCamera(): Promise<void> {
     const transport = this.#transport;

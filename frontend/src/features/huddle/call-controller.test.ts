@@ -18,6 +18,8 @@ import { callStore, initialCallState } from "./call-store.ts";
 import { EMPTY_DEVICE_LISTS } from "./engine/devices.ts";
 import { FakeTransport } from "./engine/fake.ts";
 import { liveKitTransport } from "./engine/livekit.ts";
+import { loadCameraQuality, loadDevicePreferences } from "./engine/preferences.ts";
+import { installVideoMedia, VideoMediaStub } from "./engine/sdk-testing.ts";
 
 const ROOM = 8;
 
@@ -224,6 +226,157 @@ describe("connection details sampling", () => {
       await controller.leave();
       sample.mockRestore();
       visibility.mockRestore();
+    }
+  });
+});
+
+describe("camera quality", () => {
+  it("persists and displays the camera profile actually delivered", async () => {
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("transport missing");
+    const applied = vi.spyOn(transport, "cameraQuality").mockReturnValue("1080p30");
+
+    try {
+      await controller.setCameraQuality("1080p60");
+      expect(localStorage.getItem("campfire.huddle.cameraQuality")).toBe("1080p30");
+      expect(callStore.getState().cameraQuality).toBe("1080p30");
+    } finally {
+      applied.mockRestore();
+      await controller.leave();
+    }
+  });
+
+  it("applies and remembers a quality while keeping the connected room and microphone mute", async () => {
+    const { controller, transports, calls } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("no fake transport");
+    const apply = vi.spyOn(transport, "setCameraQuality");
+
+    try {
+      await controller.toggleCamera();
+      await controller.toggleMute();
+      const before = callStore.getState();
+
+      await controller.setCameraQuality("1080p60");
+
+      const after = callStore.getState();
+      expect(apply).toHaveBeenCalledExactlyOnceWith("1080p60");
+      expect(loadCameraQuality()).toBe("1080p60");
+      expect(after.phase).toBe("connected");
+      expect(after.roomId).toBe(ROOM);
+      expect(after.identity).toBe(before.identity);
+      expect(after.startedAt).toBe(before.startedAt);
+      expect(after.snapshot.cameraEnabled).toBe(true);
+      expect(after.snapshot.microphoneEnabled).toBe(false);
+      expect(after.snapshot.participants[0]?.cameraId).toBe(
+        before.snapshot.participants[0]?.cameraId,
+      );
+      expect(after.busy.camera).toBe(false);
+      expect(calls.filter((call) => call.startsWith("join "))).toEqual([`join ${ROOM}`]);
+      expect(calls).not.toContain(`leave ${ROOM}`);
+    } finally {
+      apply.mockRestore();
+      await controller.leave();
+    }
+  });
+
+  it("blocks overlapping camera toggles, device choices, and quality changes until applying finishes", async () => {
+    const { controller, transports } = harness();
+    await controller.join(ROOM, "Lounge", null);
+    const transport = transports[0];
+
+    if (transport === undefined) throw new Error("no fake transport");
+    const pending = Promise.withResolvers<void>();
+    const apply = vi.spyOn(transport, "setCameraQuality").mockImplementation(() => pending.promise);
+    const toggle = vi.spyOn(transport, "setCamera");
+    const switchDevice = vi.spyOn(transport, "switchDevice");
+
+    try {
+      const changing = controller.setCameraQuality("1080p60");
+      expect(callStore.getState().busy.camera).toBe(true);
+
+      await controller.toggleCamera();
+      await controller.selectDevice("videoinput", "another-camera");
+      await controller.setCameraQuality("720p30");
+
+      expect(apply).toHaveBeenCalledExactlyOnceWith("1080p60");
+      expect(toggle).not.toHaveBeenCalled();
+      expect(switchDevice).not.toHaveBeenCalled();
+      expect(loadDevicePreferences().videoinput).toBe("");
+      expect(loadCameraQuality()).toBe("1080p60");
+
+      pending.resolve();
+      await changing;
+      expect(callStore.getState().busy.camera).toBe(false);
+      expect(callStore.getState().phase).toBe("connected");
+    } finally {
+      pending.resolve();
+      apply.mockRestore();
+      toggle.mockRestore();
+      switchDevice.mockRestore();
+      await controller.leave();
+    }
+  });
+
+  it("reads native preview capabilities again when a different camera is selected", async () => {
+    installVideoMedia();
+    const fullHd = new VideoMediaStub();
+    const hd = new VideoMediaStub();
+    const hdCapabilities = { width: { max: 1280 }, height: { max: 720 }, frameRate: { max: 30 } };
+    const fullHdRead = vi.spyOn(fullHd, "getCapabilities");
+    const hdRead = vi.spyOn(hd, "getCapabilities").mockReturnValue(hdCapabilities);
+
+    const streamFor = (track: VideoMediaStub): MediaStream => {
+      const stream: unknown = Reflect.construct(MediaStream, [[track]]);
+
+      if (!(stream instanceof MediaStream)) throw new Error("native preview stream required");
+
+      return stream;
+    };
+
+    let next = streamFor(fullHd);
+
+    const capture = vi.fn(async (constraints: MediaStreamConstraints) => {
+      if (constraints.audio !== false) throw new Error("no microphone in preview test");
+
+      return next;
+    });
+
+    const { controller } = harness({ shouldCheckDevices: async () => true, getUserMedia: capture });
+
+    try {
+      await controller.join(ROOM, "Lounge", null);
+      await controller.selectDevice("videoinput", "full-hd-camera");
+
+      expect(fullHdRead).toHaveBeenCalledOnce();
+      expect(callStore.getState().cameraCapabilities).toEqual({
+        width: { max: 1920 },
+        height: { max: 1080 },
+        frameRate: { max: 60 },
+      });
+
+      next = streamFor(hd);
+      await controller.selectDevice("videoinput", "hd-camera");
+
+      expect(hdRead).toHaveBeenCalledOnce();
+      expect(callStore.getState().cameraCapabilities).toEqual(hdCapabilities);
+      expect(fullHd.readyState).toBe("ended");
+      expect(capture.mock.lastCall?.[0].video).toMatchObject({
+        deviceId: { exact: "hd-camera" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 },
+      });
+    } finally {
+      await controller.leave();
+      fullHdRead.mockRestore();
+      hdRead.mockRestore();
+      vi.unstubAllGlobals();
     }
   });
 });

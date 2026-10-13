@@ -10,6 +10,8 @@
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
 import { store } from "../../../store/store.ts";
 import { DEFAULT_AUDIO_BITRATE, microphonePreset } from "./audio-quality.ts";
+import type { CameraCapabilities, CameraQuality } from "./camera-quality.ts";
+import { loadCameraQuality } from "./preferences.ts";
 import { DEFAULT_SHARE_QUALITY } from "./screen-quality.ts";
 import {
   type CallParticipant,
@@ -408,6 +410,24 @@ export class FakeTransport implements CallTransport {
   setViewerQuality(_videoId: string, _quality: ViewerQuality): void {}
 
   showScreen(_videoId: string, _focused: boolean): void {}
+
+  cameraCapabilities(): CameraCapabilities | null {
+    return this.snapshot().cameraEnabled
+      ? {
+          width: { min: 320, max: 1920 },
+          height: { min: 180, max: 1080 },
+          frameRate: { min: 1, max: 60 },
+        }
+      : null;
+  }
+
+  cameraQuality(): CameraQuality {
+    return loadCameraQuality();
+  }
+
+  async setCameraQuality(_quality: CameraQuality): Promise<void> {
+    this.#emit({ type: "changed" });
+  }
 
   async sampleStats(_fresh: boolean): Promise<ConnectionStats | null> {
     if (!this.#connected) {

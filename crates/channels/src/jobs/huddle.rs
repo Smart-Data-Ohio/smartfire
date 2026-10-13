@@ -80,21 +80,20 @@ async fn invitation(app: App, job: Invitation, _: Execution) -> JobResult {
 }
 
 async fn presence(app: App, job: Presence, _: Execution) -> JobResult {
-    let room = app
-        .db
-        .read(move |conn| {
-            Ok(
-                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, job.0.grant_id)?
-                    .map(|grant| grant.room_id),
-            )
-        })
-        .await?;
-    if let Some(room_id) = room {
-        tokio::task::spawn_blocking(move || {
-            crate::channels::huddle_effects::presence(&app, room_id)
-        })
-        .await??;
-    }
+    // Keep publication ordered with StreamChanged, but let its errors reach the job's retry
+    // policy instead of the model broadcast sink, which logs and drops failures.
+    let db = app.db.clone();
+    db.write(move |tx| {
+        if let Some(grant) =
+            campfire_db::models::huddle_grant::HuddleGrant::find_by_id(tx.conn(), job.0.grant_id)?
+        {
+            tx.after_commit(move |_| {
+                crate::channels::huddle_effects::presence(&app, grant.room_id)
+            });
+        }
+        Ok(())
+    })
+    .await?;
     Ok(Outcome::Done)
 }
 
