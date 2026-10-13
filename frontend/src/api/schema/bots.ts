@@ -225,6 +225,7 @@ export const Grant = Schema.Struct({
   grantedBy: Schema.String,
   createdAt: Timestamp,
   revoked: Schema.Boolean,
+  status: Schema.Literals(["active", "inactive", "incompatible", "revoked"]),
 });
 
 export type GrantPin = Assert<Pinned<typeof Grant, GeneratedGrant>>;

@@ -266,7 +266,20 @@ pub struct CredentialCreated {
     pub credentials: CredentialList,
 }
 
-/// A capability the agent holds, workspace-wide or in one room.
+/// The grant's current policy status, separate from its persisted revocation state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum GrantStatus {
+    Active,
+    /// A compatible personal grant whose live owner/agent/room ceiling denies access.
+    Inactive,
+    /// A preserved legacy personal grant outside the capability/scope allowlist.
+    Incompatible,
+    Revoked,
+}
+
+/// A recorded capability grant, including inactive or incompatible audit records.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -278,6 +291,7 @@ pub struct Grant {
     pub granted_by: String,
     pub created_at: Timestamp,
     pub revoked: bool,
+    pub status: GrantStatus,
 }
 
 /// A room the bot is in, to scope a grant to.

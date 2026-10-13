@@ -31,15 +31,29 @@ pub struct GrantChanges {
     pub granted_by_id: Option<i64>,
     pub revoked_at: Option<Option<Timestamp>>,
 }
+/// Grant-row compatibility under the personal-agent policy. SQL expressions are supplied
+/// by code, never requests; workspace grants retain their existing interpretation.
+pub fn compatible_sql(grant: &str) -> String {
+    let capabilities = super::agent_access::PERSONAL_CAPABILITIES
+        .map(|capability| format!("'{capability}'"))
+        .join(",");
+    format!(
+        "NOT EXISTS (SELECT 1 FROM agents grant_agent WHERE grant_agent.id={grant}.agent_id AND grant_agent.kind='personal') OR ({grant}.capability IN ({capabilities}) AND EXISTS (SELECT 1 FROM rooms grant_room WHERE grant_room.id={grant}.room_id AND grant_room.type!='Rooms::Direct'))"
+    )
+}
+
 /// Effective personal grants use the same live policy as authorization. Direct-room
 /// grants remain incompatible even when the owner DM has implicit access.
-pub(crate) fn effective_active_sql(grant: &str) -> String {
+pub fn effective_active_sql(grant: &str) -> String {
     let capability = super::agent_access::capability_sql(
         &format!("{grant}.agent_id"),
         &format!("{grant}.room_id"),
         &format!("{grant}.capability"),
     );
-    format!("{grant}.revoked_at IS NULL AND (NOT EXISTS (SELECT 1 FROM agents grant_agent WHERE grant_agent.id={grant}.agent_id AND grant_agent.kind='personal') OR (EXISTS (SELECT 1 FROM rooms grant_room WHERE grant_room.id={grant}.room_id AND grant_room.type!='Rooms::Direct') AND ({capability})))")
+    let compatible = compatible_sql(grant);
+    format!(
+        "{grant}.revoked_at IS NULL AND ({compatible}) AND (NOT EXISTS (SELECT 1 FROM agents grant_agent WHERE grant_agent.id={grant}.agent_id AND grant_agent.kind='personal') OR ({capability}))"
+    )
 }
 
 impl AgentGrant {
@@ -56,7 +70,10 @@ impl AgentGrant {
     pub fn all_active(conn: &Connection) -> Result<Vec<Self>> {
         query_all(
             conn,
-            &format!("SELECT g.* FROM agent_grants g WHERE {} ORDER BY g.id", effective_active_sql("g")),
+            &format!(
+                "SELECT g.* FROM agent_grants g WHERE {} ORDER BY g.id",
+                effective_active_sql("g")
+            ),
             [],
             Self::from_row,
         )
@@ -102,14 +119,38 @@ impl AgentGrant {
             "SELECT 1 FROM agent_grants WHERE id=? AND agent_id=? AND room_id IS ? AND capability=?",
             params![exclude, a.agent_id, a.room_id, a.capability],
         )?;
+        if shape_changed {
+            Self::validate_shape(conn, a, &mut errors)?;
+        }
         let blank = campfire_richtext::ruby::is_blank(&a.capability);
-        if shape_changed && blank {
+        if a.revoked_at.is_none()
+            && !blank
+            && exists(
+                conn,
+                "SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND room_id IS ? AND revoked_at IS NULL AND (? IS NULL OR id!=?)",
+                params![a.agent_id, a.capability, a.room_id, exclude, exclude],
+            )?
+        {
+            errors.add("capability", "has already been granted");
+        }
+        Ok(errors)
+    }
+    /// Validate a requested shape before an idempotent duplicate lookup. Existing rows may
+    /// still be revoked or suspended without revalidating their legacy shape.
+    pub fn validate_request_shape(conn: &Connection, a: &NewGrant) -> Result<Errors> {
+        let mut errors = Errors::default();
+        Self::validate_shape(conn, a, &mut errors)?;
+        Ok(errors)
+    }
+    fn validate_shape(conn: &Connection, a: &NewGrant, errors: &mut Errors) -> Result<()> {
+        let blank = campfire_richtext::ruby::is_blank(&a.capability);
+        if blank {
             errors.add("capability", "can't be blank");
         }
-        if shape_changed && !CAPABILITIES.contains(&a.capability.as_str()) {
+        if !CAPABILITIES.contains(&a.capability.as_str()) {
             errors.add("capability", "is not included in the list");
         }
-        if shape_changed && exists(
+        if exists(
             conn,
             "SELECT 1 FROM agents WHERE id=? AND kind='personal'",
             [a.agent_id],
@@ -128,29 +169,19 @@ impl AgentGrant {
             }
         }
         // Rails room_id? queries an integer attribute: zero is false.
-        if shape_changed && let Some(id) = a.room_id
+        if let Some(id) = a.room_id
             && id != 0
             && !exists(conn, "SELECT 1 FROM rooms WHERE id=?", [id])?
         {
             errors.add("room", "must be an existing room");
         }
-        if a.revoked_at.is_none()
-            && !blank
-            && exists(
-                conn,
-                "SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND room_id IS ? AND revoked_at IS NULL AND (? IS NULL OR id!=?)",
-                params![a.agent_id, a.capability, a.room_id, exclude, exclude],
-            )?
-        {
-            errors.add("capability", "has already been granted");
-        }
-        if shape_changed && a.capability == "dm_anyone" && a.room_id.is_some() {
+        if a.capability == "dm_anyone" && a.room_id.is_some() {
             errors.add(
                 "room",
                 "must be blank: dm_anyone is granted workspace-wide only",
             );
         }
-        Ok(errors)
+        Ok(())
     }
     pub fn create(tx: &Tx<'_>, a: NewGrant) -> Result<Self> {
         Self::validate(tx.conn(), &a, None)?.into_result()?;

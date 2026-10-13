@@ -124,8 +124,8 @@ pub use board_automations::{
 pub use bots::{
     Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
     BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
-    CredentialCreated, CredentialList, CredentialState, Grant, GrantList, GrantRoom, UpdateBot,
-    UpdateBotAgent,
+    CredentialCreated, CredentialList, CredentialState, Grant, GrantList, GrantRoom, GrantStatus,
+    UpdateBot, UpdateBotAgent,
 };
 pub use cards::{
     AttendanceResponse, CardFetch, CreateGithubComment, CreateGithubDiscussion, CreateGithubReview,

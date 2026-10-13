@@ -142,6 +142,8 @@ mod agent_mcp_tests;
 mod personal_agent_tests;
 #[cfg(test)]
 mod personal_agent_owner_ceiling_tests;
+#[cfg(test)]
+mod personal_agent_grant_admin_tests;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {

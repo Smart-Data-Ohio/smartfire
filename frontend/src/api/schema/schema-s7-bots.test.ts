@@ -155,6 +155,7 @@ describe("S7 bot schemas", () => {
           grantedBy: "Grace Hopper",
           createdAt: "2026-03-02T16:00:00.000Z",
           revoked: true,
+          status: "revoked",
         },
       ],
       capabilities: ["read_messages", "react"],
