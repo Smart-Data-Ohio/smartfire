@@ -42,35 +42,151 @@ export function appendFiles(held: readonly RoomFile[], page: readonly RoomFile[]
   return [...held, ...page.filter((file) => !seen.has(fileKey(file)))];
 }
 
-/** Live attachment flags and removals keep loaded pages in order, including pending reads. */
+/** The pane's active filter, as the server applies it to a page. */
+export interface FileFilter {
+  readonly type: FileType;
+  readonly search: string;
+}
+
+const DOCUMENT_FILTER_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.ms-",
+  "application/vnd.openxmlformats-officedocument.",
+  "application/vnd.oasis.opendocument.",
+  "text/",
+];
+
+/** Whether a live attachment belongs on the filtered list, by its type group and name. */
+export function matchesFileFilter(attachment: Attachment, filter: FileFilter): boolean {
+  const contentType = attachment.contentType.toLowerCase();
+
+  const group = contentType.startsWith("image/")
+    ? "images"
+    : contentType.startsWith("video/")
+      ? "videos"
+      : DOCUMENT_FILTER_TYPES.some((prefix) =>
+            prefix.endsWith("-") || prefix.endsWith(".") || prefix.endsWith("/")
+              ? contentType.startsWith(prefix)
+              : contentType === prefix,
+          )
+        ? "documents"
+        : "other";
+
+  if (filter.type !== "all" && group !== filter.type) {
+    return false;
+  }
+
+  const search = filter.search.trim().toLowerCase();
+
+  return search === "" || attachment.filename.toLowerCase().includes(search);
+}
+
+/** Newest first, as the server lists files: by attach time, then by message. */
+function isNewer(candidate: RoomFile, file: RoomFile): boolean {
+  return (
+    candidate.createdAt > file.createdAt ||
+    (candidate.createdAt === file.createdAt && candidate.messageId > file.messageId)
+  );
+}
+
+/**
+ * Live files keep loaded pages current, including pending reads: a spoiler flag flips in
+ * place, a file its message no longer carries (an edit, a deletion) drops out, and a file a
+ * message newly carries takes its sorted place. A new file older than everything loaded is
+ * held back while further pages remain, since its place may be on one of them.
+ */
 export function reconcileFiles(
   held: readonly RoomFile[],
-  updates: ReadonlyMap<number, readonly Attachment[]>,
+  updates: ReadonlyMap<number, readonly RoomFile[]>,
+  filter: FileFilter,
+  complete: boolean,
 ): readonly RoomFile[] {
   let changed = false;
   const files: RoomFile[] = [];
 
   for (const file of held) {
-    const attachments = updates.get(file.messageId);
+    const live = updates.get(file.messageId);
 
-    if (attachments === undefined) {
+    if (live === undefined) {
       files.push(file);
       continue;
     }
 
-    const attachment = attachments.find((candidate) => candidate.url === file.attachment.url);
+    const current = live.find((candidate) => candidate.attachment.url === file.attachment.url);
 
-    if (attachment === undefined) {
+    if (current === undefined) {
       changed = true;
-    } else if (attachment.spoiler !== file.attachment.spoiler) {
+    } else if (current.attachment.spoiler !== file.attachment.spoiler) {
       changed = true;
-      files.push({ ...file, attachment: { ...file.attachment, spoiler: attachment.spoiler } });
+      files.push({
+        ...file,
+        attachment: { ...file.attachment, spoiler: current.attachment.spoiler },
+      });
     } else {
       files.push(file);
     }
   }
 
+  const listed = new Set(held.map(fileKey));
+  const last = files.at(-1);
+
+  const fresh = [...updates.values()]
+    .flat()
+    .filter(
+      (file) =>
+        !listed.has(fileKey(file)) &&
+        matchesFileFilter(file.attachment, filter) &&
+        (complete || last === undefined || !isNewer(last, file)),
+    )
+    .sort((a, b) => (isNewer(a, b) ? -1 : isNewer(b, a) ? 1 : 0));
+
+  for (const file of fresh) {
+    const at = files.findIndex((heldFile) => isNewer(file, heldFile));
+
+    files.splice(at === -1 ? files.length : at, 0, file);
+    changed = true;
+  }
+
   return changed ? files : held;
+}
+
+/** Retire updates covered by a read, keeping any event received after that read began. */
+export function retireFileUpdates(
+  updates: Map<number, readonly RoomFile[]>,
+  snapshot: ReadonlyMap<number, readonly RoomFile[]>,
+  read: {
+    readonly files: readonly RoomFile[];
+    readonly filter: FileFilter;
+    readonly complete: boolean;
+    readonly upperBound?: RoomFile | undefined;
+  },
+): void {
+  const last = read.files.at(-1);
+
+  for (const [id, files] of snapshot) {
+    if (updates.get(id) !== files) continue;
+
+    const uncovered = files.filter(
+      (file) =>
+        !matchesFileFilter(file.attachment, read.filter) ||
+        (read.upperBound !== undefined && isNewer(file, read.upperBound)) ||
+        (!read.complete && (last === undefined || isNewer(last, file))),
+    );
+
+    if (uncovered.length === 0) {
+      updates.delete(id);
+    } else {
+      // A remaining sibling must not hide an authoritative row from the same message.
+      updates.set(
+        id,
+        appendFiles(
+          read.files.filter((file) => file.messageId === id),
+          uncovered,
+        ),
+      );
+    }
+  }
 }
 
 /** Images and videos show as tiles; everything else as rows. */
