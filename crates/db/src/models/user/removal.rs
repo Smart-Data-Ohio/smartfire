@@ -36,6 +36,12 @@ impl User {
     ) -> Result<()> {
         tx.savepoint(|tx| {
             AgentGrant::revoke_for_user(tx, self.id)?;
+            if !self.is_bot() {
+                tx.conn().execute(
+                    "UPDATE agent_credentials SET revoked_at=?,updated_at=? WHERE revoked_at IS NULL AND agent_id IN (SELECT id FROM agents WHERE kind='personal' AND owner_id=?)",
+                    rusqlite::params![tx.now(), tx.now(), self.id],
+                )?;
+            }
             dependencies(tx, self, DependencyPhase::BeforeDestroy)?;
             for name in ["avatar", "banner"] {
                 if let Some(attachment) = Attachment::find_for(tx.conn(), "User", self.id, name)? {

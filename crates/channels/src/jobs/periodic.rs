@@ -18,6 +18,7 @@
 //! | stuck Fizzy claims | 30 s | WS15 |
 //! | calendar push channels | 1 h (`Calendar::PushChannel::RENEW_INTERVAL`) | WS14 |
 //! | clear plaintext bot tokens | 24 h, its work once per process | registered ([`clear_plaintext_bot_tokens_task`]) |
+//! | OAuth sweep | 1 h | S4 |
 //! | retention prune | `RETENTION_PRUNE_INTERVAL` (24 h) | WS8 |
 //! | presence leases | 1 min | WS17 |
 //! | meeting status | 1 min | WS17 (WS14 refresh execution) |
@@ -119,6 +120,10 @@ impl Loops {
 pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
     periodic.task(clear_plaintext_bot_tokens_task());
+    periodic.task(Task::new("OAuth sweep", Duration::from_secs(HOUR), |app: App| async move {
+        app.db.write(|tx| campfire_db::models::oauth::sweep(tx)).await?;
+        Ok(())
+    }));
     periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
         stranded_agent_webhooks(&app.db).await
     }));

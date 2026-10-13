@@ -13,6 +13,7 @@ pub use agent_budget_notice::AgentBudgetNotice;
 pub mod agent_work;
 pub mod agent_access;
 pub mod personal_agents;
+pub mod oauth;
 pub mod agent_api_pending;
 pub mod agent_profile;
 pub mod agent_approval;

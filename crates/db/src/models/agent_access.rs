@@ -175,6 +175,7 @@ pub struct AuthenticatedAgent {
     pub user: User,
     pub agent_id: i64,
     pub credential_id: i64,
+    pub oauth: bool,
 }
 
 pub fn authenticate(tx: &Tx<'_>, secret: &str, ip: &str) -> Result<Option<User>> {
@@ -187,12 +188,12 @@ pub fn authenticate_identity(
     secret: &str,
     ip: &str,
 ) -> Result<Option<AuthenticatedAgent>> {
-    let Some(mut credential) =
-        super::agent_credential::AgentCredential::authenticate(tx.conn(), secret, tx.now())?
+    let Some((mut credential, oauth)) =
+        credential_for_secret(tx.conn(), secret, tx.now(), &tx.env().default_url_origin)?
     else {
         return Ok(None);
     };
-    let Some(identity) = identity_for_credential(tx.conn(), &credential)? else {
+    let Some(identity) = identity_for_credential(tx.conn(), &credential, oauth)? else {
         return Ok(None);
     };
     let agent_id = identity.agent_id;
@@ -212,26 +213,42 @@ pub fn verify_identity(
     conn: &Connection,
     secret: &str,
     now: Timestamp,
+    app_url: &str,
 ) -> Result<Option<AuthenticatedAgent>> {
-    let Some(credential) =
-        super::agent_credential::AgentCredential::authenticate(conn, secret, now)?
-    else {
+    let Some((credential, oauth)) = credential_for_secret(conn, secret, now, app_url)? else {
         return Ok(None);
     };
-    identity_for_credential(conn, &credential)
+    identity_for_credential(conn, &credential, oauth)
+}
+fn credential_for_secret(
+    conn: &Connection,
+    secret: &str,
+    now: Timestamp,
+    app_url: &str,
+) -> Result<Option<(super::agent_credential::AgentCredential, bool)>> {
+    if let Some(credential) =
+        super::agent_credential::AgentCredential::authenticate(conn, secret, now)?
+    {
+        return Ok(Some((credential, false)));
+    }
+    Ok(
+        super::oauth::OAuthToken::authenticate(conn, secret, now, app_url)?
+            .map(|credential| (credential, true)),
+    )
 }
 fn identity_for_credential(
     conn: &Connection,
     credential: &super::agent_credential::AgentCredential,
+    oauth: bool,
 ) -> Result<Option<AuthenticatedAgent>> {
     let agent_id = credential.agent_id;
     let identity = query_one(
         conn,
         &format!(
-            "SELECT a.user_id FROM agents a WHERE a.id=? AND ({})",
+            "SELECT a.user_id FROM agents a WHERE a.id=?1 AND (?2=0 OR a.kind='personal') AND ({})",
             agent_live("a")
         ),
-        [agent_id],
+        params![agent_id, oauth],
         |r| r.get::<_, i64>(0),
     )?;
     let Some(user_id) = identity else {
@@ -244,6 +261,7 @@ fn identity_for_credential(
         user,
         agent_id,
         credential_id: credential.id,
+        oauth,
     }))
 }
 
