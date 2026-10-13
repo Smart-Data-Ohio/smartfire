@@ -20,10 +20,19 @@ pub const PERSONAL_CAPABILITIES: [&str; 4] =
     ["read_messages", "post_messages", "react", "manage_threads"];
 
 /// SQL expressions here and in capability_sql are supplied by code, never requests.
+/// A personal agent is live only while its owner is active and the workspace allows personal
+/// agents (`AccountSettings::member_agents_enabled`: off only when stored as JSON `false`).
+/// Turning the setting off pauses tokens and grants without rewriting them.
 pub fn agent_live(agent: &str) -> String {
     format!(
-        "{agent}.suspended_at IS NULL AND EXISTS (SELECT 1 FROM users live_bot WHERE live_bot.id={agent}.user_id AND live_bot.status=0) AND ({agent}.kind!='personal' OR EXISTS (SELECT 1 FROM users live_owner WHERE live_owner.id={agent}.owner_id AND live_owner.status=0))"
+        "{agent}.suspended_at IS NULL AND EXISTS (SELECT 1 FROM users live_bot WHERE live_bot.id={agent}.user_id AND live_bot.status=0) AND ({agent}.kind!='personal' OR (EXISTS (SELECT 1 FROM users live_owner WHERE live_owner.id={agent}.owner_id AND live_owner.status=0) AND {}))",
+        member_agents_enabled_sql()
     )
+}
+
+/// SQL for `Account.first.settings.member_agents_enabled()`.
+fn member_agents_enabled_sql() -> &'static str {
+    "COALESCE((SELECT CASE WHEN json_valid(live_account.settings) THEN json_type(live_account.settings,'$.member_agents_enabled') END FROM accounts live_account ORDER BY live_account.id LIMIT 1),'')!='false'"
 }
 
 pub fn legacy_sql(agent: &str) -> String {
@@ -48,6 +57,7 @@ fn capability_policy_sql(agent: &str, room: &str, cap: &str, event_history: bool
         "({}NOT EXISTS (SELECT 1 FROM rooms policy_deleted WHERE policy_deleted.id=({room}) AND policy_deleted.deleted_at IS NOT NULL))",
         if event_history { format!("({cap})='read_messages' OR ") } else { String::new() }
     );
+    let personal_room = personal_room_sql("policy_agent.owner_id", "policy_room.id");
     let live = agent_live("policy_agent");
     let legacy = legacy_sql("policy_agent");
     format!("EXISTS (SELECT 1 FROM agents policy_agent WHERE policy_agent.id=({agent}) AND ({live}) AND ({cap}) IN ('read_messages','post_messages','react','manage_threads','external_action','fizzy','dm_anyone') AND (
@@ -56,10 +66,16 @@ fn capability_policy_sql(agent: &str, room: &str, cap: &str, event_history: bool
         OR (policy_agent.kind='personal' AND ({cap}) IN ('read_messages','post_messages','react','manage_threads') AND EXISTS (
             SELECT 1 FROM rooms policy_room JOIN memberships policy_member ON policy_member.room_id=policy_room.id AND policy_member.user_id=policy_agent.user_id
             WHERE policy_room.id=({room}) AND policy_room.deleted_at IS NULL AND (
-                (policy_room.type!='Rooms::Direct' AND EXISTS (SELECT 1 FROM memberships policy_owner WHERE policy_owner.room_id=policy_room.id AND policy_owner.user_id=policy_agent.owner_id) AND EXISTS (SELECT 1 FROM agent_grants policy_grant WHERE policy_grant.agent_id=policy_agent.id AND policy_grant.capability=({cap}) AND policy_grant.room_id=policy_room.id AND policy_grant.revoked_at IS NULL))
+                (({personal_room}) AND EXISTS (SELECT 1 FROM agent_grants policy_grant WHERE policy_grant.agent_id=policy_agent.id AND policy_grant.capability=({cap}) AND policy_grant.room_id=policy_room.id AND policy_grant.revoked_at IS NULL))
                 OR (policy_room.type='Rooms::Direct' AND ({cap}) IN ('read_messages','post_messages','react') AND policy_agent.owner_id!=policy_agent.user_id AND (SELECT COUNT(*) FROM memberships dm_member WHERE dm_member.room_id=policy_room.id)=2 AND EXISTS (SELECT 1 FROM memberships dm_owner WHERE dm_owner.room_id=policy_room.id AND dm_owner.user_id=policy_agent.owner_id))
             )))
     ))")
+}
+
+/// A personal grant can name only a live non-direct room its active owner belongs to.
+/// This is shared by the grant writer, member room choices, and capability checks.
+pub fn personal_room_sql(owner: &str, room: &str) -> String {
+    format!("EXISTS (SELECT 1 FROM rooms grant_room JOIN memberships grant_owner ON grant_owner.room_id=grant_room.id JOIN users grant_user ON grant_user.id=grant_owner.user_id WHERE grant_room.id=({room}) AND grant_room.type!='Rooms::Direct' AND grant_room.deleted_at IS NULL AND grant_owner.user_id=({owner}) AND grant_user.status=0)")
 }
 
 pub fn is_personal_user(conn: &Connection, user_id: i64) -> Result<bool> {

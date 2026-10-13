@@ -182,6 +182,15 @@ impl AccountSettings {
         Self { data }
     }
 
+    pub fn member_agents_enabled(&self) -> bool {
+        self.data.get("member_agents_enabled").and_then(Value::as_bool).unwrap_or(true)
+    }
+
+    pub fn member_agent_limit(&self) -> i64 {
+        self.data.get("member_agent_limit").and_then(Value::as_i64)
+            .filter(|limit| (0..=MAX_UPLOAD_LIMIT_BYTES).contains(limit)).unwrap_or(3)
+    }
+
     pub fn description(&self) -> &str {
         self.data
             .get(DESCRIPTION)
@@ -247,6 +256,15 @@ impl AccountSettings {
     pub fn assign(&mut self, values: &[(&str, &str)]) -> Result<()> {
         for (key, value) in values {
             match *key {
+                "member_agents_enabled" => {
+                    self.data.insert((*key).into(), Value::Bool(cast_boolean(value).unwrap_or(false)));
+                }
+                "member_agent_limit" => {
+                    let limit = value.parse::<i64>().ok()
+                        .filter(|limit| (0..=MAX_UPLOAD_LIMIT_BYTES).contains(limit))
+                        .ok_or_else(|| Error::Other("member agent limit must be a non-negative safe integer".into()))?;
+                    self.data.insert((*key).into(), Value::from(limit));
+                }
                 AFK_POLICY => {
                     let policy: AfkPolicy = serde_json::from_str(value)
                         .map_err(|error| Error::Other(error.to_string()))?;

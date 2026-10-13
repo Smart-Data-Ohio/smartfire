@@ -41,11 +41,7 @@ impl Config {
     }
     pub fn from_map(values: &HashMap<String, String>) -> anyhow::Result<Self> {
         let get = |key| values.get(key).filter(|s| !blank(s)).cloned();
-        let app_url = get("APP_URL").map(|origin| {
-            let uri = url::Url::parse(&origin)?;
-            anyhow::ensure!(matches!(uri.scheme(), "http" | "https") && uri.host_str().is_some() && uri.username().is_empty() && uri.password().is_none() && uri.query().is_none() && uri.fragment().is_none() && uri.path() == "/", "APP_URL must be an http or https origin without credentials, a path, query, or fragment");
-            Ok::<_, anyhow::Error>(uri.as_str().trim_end_matches('/').to_owned())
-        }).transpose()?;
+        let app_url = get("APP_URL").map(|origin| validate_app_url(&origin)).transpose()?;
         let smtp = get("SMTP_ADDRESS").map(|address| Smtp {
             address,
             port: values
@@ -68,6 +64,10 @@ impl Config {
             app_url,
         })
     }
+    /// A configured HTTP origin, with no request-derived fallback.
+    pub fn validated_app_url(&self) -> Option<String> {
+        self.app_url.as_deref().and_then(|origin| validate_app_url(origin).ok())
+    }
     pub fn url_origin(&self) -> &str {
         self.app_url.as_deref().unwrap_or("http://example.com")
     }
@@ -78,6 +78,17 @@ impl Config {
         self.smtp.is_some()
     }
 }
+fn validate_app_url(origin: &str) -> anyhow::Result<String> {
+    let uri = url::Url::parse(origin)?;
+    anyhow::ensure!(
+        matches!(uri.scheme(), "http" | "https") && uri.host_str().is_some()
+            && uri.username().is_empty() && uri.password().is_none()
+            && uri.query().is_none() && uri.fragment().is_none() && uri.path() == "/",
+        "APP_URL must be an http or https origin without credentials, a path, query, or fragment"
+    );
+    Ok(uri.as_str().trim_end_matches('/').to_owned())
+}
+
 fn ruby_to_i(s: &str) -> i64 {
     let s = s.trim_start_matches(regex_space);
     let n = s

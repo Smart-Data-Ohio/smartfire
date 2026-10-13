@@ -51,6 +51,8 @@ interface State {
   restrict: boolean;
   uploadLimitBytes: number;
   stageAudienceBudget: number;
+  memberAgentsEnabled: boolean;
+  memberAgentLimit: number;
   css: string | null;
   icons: WorkspaceIcon[];
   /** The signed id of each uploaded icon's file, by name (the seeded icon has none). */
@@ -143,6 +145,8 @@ function initialState(world: World, now: number): State {
     restrict: false,
     uploadLimitBytes: 100 * 1024 * 1024,
     stageAudienceBudget: 300,
+    memberAgentsEnabled: true,
+    memberAgentLimit: 3,
     css: null,
     icons: [
       {
@@ -212,6 +216,7 @@ export interface AdminModule {
   readonly roomCreationRestricted: () => boolean;
   readonly uploadLimitBytes: () => number;
   readonly stageAudienceBudget: () => number;
+  readonly memberAgentPolicy: () => { enabled: boolean; limit: number };
   readonly hasIcon: (name: string) => boolean;
   /** The icons uploaded here, as `:name:` resolves them in reactions and the picker. */
   readonly uploadedIcons: () => readonly Icon[];
@@ -395,6 +400,8 @@ export function createAdmin(
       restrictRoomCreationToAdministrators: held.restrict,
       uploadLimitBytes: held.uploadLimitBytes,
       stageAudienceBudget: held.stageAudienceBudget,
+      memberAgentsEnabled: held.memberAgentsEnabled,
+      memberAgentLimit: held.memberAgentLimit,
       version: "2.0.0-mock",
       description: held.description,
       vanitySlug: held.vanitySlug,
@@ -559,6 +566,18 @@ export function createAdmin(
       throw validation("uploadLimitBytes", "must be a positive safe integer");
     }
 
+    const enabled = booleanField(body, "memberAgentsEnabled");
+    const limit = intField(body, "memberAgentLimit");
+
+    if (
+      field(body, "memberAgentLimit") != null &&
+      (limit === null || limit < 0 || !Number.isSafeInteger(limit))
+    )
+      throw validation("memberAgentLimit", "must be a non-negative safe integer");
+
+    if (enabled !== null) held.memberAgentsEnabled = enabled;
+
+    if (limit !== null) held.memberAgentLimit = limit;
     held.afkPolicy = afkPolicy;
 
     if (name !== null && name.trim() !== "" && name !== held.name) {
@@ -876,6 +895,10 @@ export function createAdmin(
     roomCreationRestricted: () => current().restrict,
     uploadLimitBytes: () => current().uploadLimitBytes,
     stageAudienceBudget: () => current().stageAudienceBudget,
+    memberAgentPolicy: () => ({
+      enabled: current().memberAgentsEnabled,
+      limit: current().memberAgentLimit,
+    }),
     hasIcon: (name) => current().icons.some((icon) => icon.name === name),
     uploadedIcons: () => {
       const held = current();

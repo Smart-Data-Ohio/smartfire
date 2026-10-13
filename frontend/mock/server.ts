@@ -58,6 +58,7 @@ import { createDrive, pickerFiles } from "./s2/drive.ts";
 import { createGifs } from "./s2/gifs.ts";
 import { createInvites } from "./s2/invites.ts";
 import { createJoin, type MockJoined } from "./s2/join.ts";
+import { createMeAgents } from "./s2/me-agents.ts";
 import { createMessages } from "./s2/messages.ts";
 import {
   buildMessage,
@@ -1141,6 +1142,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const roomManagement = createRoomManagement(ctx, admin, huddles);
 
+  const meAgents = createMeAgents(ctx, admin);
+
   const routes = [
     ...createTemplates(ctx, admin, roomManagement).routes,
     ...agents.routes,
@@ -1176,7 +1179,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...signIn.routes,
     ...join.routes,
     ...createPeople(ctx, admin.requireSudo, agents).routes,
-    ...createBots(ctx, uploads, admin.requireSudo).routes,
+    ...meAgents.routes,
+    ...createBots(ctx, uploads, admin.requireSudo, meAgents.summaries).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx, settings).routes,
     ...workspaceLayout.routes,

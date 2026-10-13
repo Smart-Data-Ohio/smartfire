@@ -20,6 +20,8 @@ const workspace: Workspace = {
   afkPolicy: { roomId: null, timeoutMinutes: 5 },
   uploadLimitBytes: 100 * 1024 * 1024,
   stageAudienceBudget: 300,
+  memberAgentsEnabled: true,
+  memberAgentLimit: 3,
   version: "test",
   description: "",
   vanitySlug: null,

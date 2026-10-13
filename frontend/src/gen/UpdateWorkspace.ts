@@ -8,7 +8,7 @@ export type UpdateWorkspace = {
 /**
  * Null leaves the policy unchanged. A policy with roomId null disables AFK moves.
  */
-afkPolicy: AfkPolicy | null, name: string | null, restrictRoomCreationToAdministrators: boolean | null, uploadLimitBytes: number | null, stageAudienceBudget: number | null,
+afkPolicy: AfkPolicy | null, name: string | null, restrictRoomCreationToAdministrators: boolean | null, uploadLimitBytes: number | null, stageAudienceBudget: number | null, memberAgentsEnabled: boolean | null, memberAgentLimit: number | null,
 /**
  * An empty string clears the description; null leaves it unchanged.
  */

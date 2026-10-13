@@ -28,6 +28,8 @@ mod auth;
 mod board;
 mod board_automations;
 mod bots;
+mod me_agents;
+pub use me_agents::*;
 mod cards;
 mod composer;
 mod conversation;

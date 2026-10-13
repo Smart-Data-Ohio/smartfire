@@ -36,7 +36,7 @@ uploadLimitBytes: number,
 /**
  * Declared audience admission limit per stage, default 300.
  */
-stageAudienceBudget: number,
+stageAudienceBudget: number, memberAgentsEnabled: boolean, memberAgentLimit: number,
 /**
  * The footer's "Smartfire version" badge text.
  */

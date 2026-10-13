@@ -1121,3 +1121,49 @@ with the legacy `initialize` handshake kept): thirty-eight tools from
 grants, and rate-limit buckets as its REST counterpart. See
 [Smartfire MCP server](agents-mcp.md) for client setup and the tool
 list.
+
+## Personal agent management API
+
+Active human members manage their own personal agents at `/api/v1/me/agents`.
+The list includes `enabled`, `limit`, grantable `capabilities` and `rooms`,
+`mcpUrl` from a validated `APP_URL`, and `oauthAvailable`, which is false.
+`mcpUrl` is null when that address is absent or invalid. Request Host and
+forwarded Host headers never supply it.
+The limit is null for administrators. Workspace settings default to enabled
+and three active agents per member; administrators can change
+`memberAgentsEnabled` and `memberAgentLimit` on `/api/v1/admin/workspace`.
+Disabling creation also prevents issuing, rotating and expanding access, while
+owners can still inspect, revoke and remove their agents.
+
+All writes require a session and CSRF token. Creation, credential issuance and
+rotation also require password re-confirmation. Another member's agent,
+including one an administrator does not own, returns 404 from this API.
+Administrators retain their existing bot management routes.
+
+- `POST /api/v1/me/agents` accepts `name`, optional `iconName`, `provider`,
+  `runtime`, `tokenName`, `expiresAt`, and required `roomIds` and `capabilities`.
+  It creates the bot, agent, memberships, grants and first credential atomically,
+  returning 201 with `{agent, secret}`.
+- `GET /:id` and `PATCH /:id` read and edit the profile. PATCH accepts `name`,
+  `iconName`, `provider`, `runtime`, `description`, and `dailyMessageCap`.
+  An absent cap leaves it unchanged; null makes it unlimited.
+- `PUT /:id/access` replaces the `roomIds` and `capabilities` set in one
+  transaction. Only non-direct rooms the owner currently belongs to are offered.
+  An empty room set is allowed and leaves only the implicit owner DM available.
+- `GET /:id/credentials` lists credential metadata, including `kind: "token"`,
+  expiry, state and last use. `POST` accepts `name` and optional `expiresAt`.
+- `POST /:id/credentials/:cid/rotate` accepts an optional `name` and `expiresAt`,
+  creates a replacement and revokes the old credential in one transaction.
+  An omitted name retains the previous name. An omitted or null expiry defaults
+  to 90 days on issuance and rotation; `"never"` means no expiry. Explicit
+  RFC 3339 expiry timestamps must be in the future.
+- `DELETE /:id/credentials/:cid` revokes the credential. `DELETE /:id`
+  uses the existing bot removal path, deactivating the bot and making its agent inactive.
+
+Each secret is `sfa_` followed by 64 random hexadecimal characters. Only its
+SHA-256 digest and last four characters are stored; subsequent reads never
+include it. Creation, issue, rotate, revoke and access replacement record audit
+events without secrets. Profile and budget changes record `agent.update` with
+the member actor and changed fields as before/after pairs, in the same transaction
+as the update. No-op or failed updates record no change. Personal agents remain
+subject to the shared live owner/room/capability policy described above.

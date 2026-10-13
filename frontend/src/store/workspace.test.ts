@@ -51,6 +51,8 @@ function workspace(extra: Partial<Workspace> = {}): Workspace {
     afkPolicy: { roomId: null, timeoutMinutes: 5 },
     uploadLimitBytes: 100 * 1024 * 1024,
     stageAudienceBudget: 300,
+    memberAgentsEnabled: true,
+    memberAgentLimit: 3,
     version: "2.0.0",
     description: "",
     vanitySlug: null,

@@ -35,6 +35,7 @@ mod error;
 pub mod admin;
 pub mod templates;
 pub mod bots;
+pub mod me_agents;
 pub mod webhooks;
 pub mod boards;
 mod branding_images;
@@ -533,6 +534,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .merge(gifs::routes())
         .merge(invites::routes())
         .merge(bots::routes())
+        .merge(me_agents::routes())
         .merge(webhooks::routes())
         .merge(slack::routes())
         .merge(welcome::routes())

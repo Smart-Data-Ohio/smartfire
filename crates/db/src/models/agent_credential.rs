@@ -173,6 +173,23 @@ impl AgentCredential {
         attributes.expires_at = expires_at;
         Ok((Self::create(tx, attributes)?, secret))
     }
+    /// Member-issued credentials have a recognizable prefix; legacy issuance is unchanged.
+    pub fn create_personal_with_secret(
+        tx: &Tx<'_>, agent_id: i64, name: &str, created_by_id: i64,
+        expires_at: Option<Timestamp>,
+    ) -> Result<(Self, String)> {
+        let (mut attributes, random) = Self::secret_attributes(agent_id, name, created_by_id);
+        let secret = format!("sfa_{random}");
+        attributes.token_digest = digest_bot_token(&secret);
+        attributes.token_last_four = secret[secret.len()-4..].into();
+        attributes.expires_at = expires_at;
+        Ok((Self::create(tx, attributes)?, secret))
+    }
+
+    pub fn for_agent(conn: &Connection, agent_id: i64) -> Result<Vec<Self>> {
+        crate::sql::query_all(conn, "SELECT * FROM agent_credentials WHERE agent_id=? ORDER BY id DESC", [agent_id], Self::from_row)
+    }
+
     pub fn authenticate(conn: &Connection, secret: &str, now: Timestamp) -> Result<Option<Self>> {
         if campfire_richtext::ruby::is_blank(secret) {
             return Ok(None);

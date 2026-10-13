@@ -167,7 +167,12 @@ export interface BotsModule {
  * Creates the bots module. `requireSudo` throws `SudoRequired` while the password confirmation
  * has lapsed (the admin module's switch).
  */
-export function createBots(ctx: S2Context, uploads: Uploads, requireSudo: () => void): BotsModule {
+export function createBots(
+  ctx: S2Context,
+  uploads: Uploads,
+  requireSudo: () => void,
+  personalSummaries: () => BotSummary[] = () => [],
+): BotsModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
 
@@ -491,10 +496,13 @@ export function createBots(ctx: S2Context, uploads: Uploads, requireSudo: () => 
     routes: [
       route("GET", /^\/admin\/bots$/, () =>
         ok({
-          bots: [...current().bots.values()]
-            .filter((record) => !record.removed)
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map(summary),
+          bots: [
+            ...[...current().bots.values()]
+              .filter((record) => !record.removed)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(summary),
+            ...personalSummaries(),
+          ].sort((a, b) => a.name.localeCompare(b.name)),
         }),
       ),
       route("POST", /^\/admin\/bots$/, ({ body }) => create(body)),

@@ -180,3 +180,7 @@ mod api_gif_tests;
 #[cfg(test)]
 #[path = "spa_template_tests.rs"]
 mod template_tests;
+
+#[cfg(test)]
+#[path = "spa_me_agents_tests.rs"]
+mod me_agents_tests;
