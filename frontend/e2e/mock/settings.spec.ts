@@ -661,7 +661,7 @@ test.describe("on a phone", () => {
 
     const list = nav(page);
 
-    await expect(list.getByRole("link")).toHaveCount(11);
+    await expect(list.getByRole("link")).toHaveCount(12);
     await expect(page.locator(".settings-content")).toBeHidden();
     await expectTouchTargets(page, ".settings-nav");
     await expectTouchTargets(page, ".settings-header");

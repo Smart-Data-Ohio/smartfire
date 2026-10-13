@@ -5,7 +5,18 @@
  * `ActionError`; a rejected change carries its field messages in `fields`.
  */
 
+import { Effect } from "effect";
 import { me, sidebar } from "../api/endpoints.ts";
+import {
+  createMeAgent,
+  issueMeAgentToken,
+  meAgents as listMeAgents,
+  removeMeAgent,
+  revokeMeAgentToken,
+  rotateMeAgentToken,
+  updateMeAgent,
+  updateMeAgentAccess,
+} from "../api/me-agent-endpoints.ts";
 import { personalAppearance } from "../api/schema/appearance.ts";
 import {
   accountSettings,
@@ -38,8 +49,16 @@ import {
 import { completeTour as stampTour } from "../api/tour-endpoints.ts";
 import type { AccountSettings } from "../gen/AccountSettings.ts";
 import type { BackupCodes } from "../gen/BackupCodes.ts";
+import type { BotRemoved } from "../gen/BotRemoved.ts";
+import type { CreatePersonalAgent } from "../gen/CreatePersonalAgent.ts";
 import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
+import type { PersonalAgent } from "../gen/PersonalAgent.ts";
+import type { PersonalAgentAccess } from "../gen/PersonalAgentAccess.ts";
+import type { PersonalAgentCreated } from "../gen/PersonalAgentCreated.ts";
+import type { PersonalAgentList } from "../gen/PersonalAgentList.ts";
+import type { PersonalCredentialCreated } from "../gen/PersonalCredentialCreated.ts";
+import type { PersonalCredentialList } from "../gen/PersonalCredentialList.ts";
 import type { PushPublicKey } from "../gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { SessionList } from "../gen/SessionList.ts";
@@ -48,6 +67,7 @@ import type { TwoFactorChange } from "../gen/TwoFactorChange.ts";
 import type { UpdateAppearance } from "../gen/UpdateAppearance.ts";
 import type { UpdateCalls } from "../gen/UpdateCalls.ts";
 import type { UpdateNotifications } from "../gen/UpdateNotifications.ts";
+import type { UpdatePersonalAgent } from "../gen/UpdatePersonalAgent.ts";
 import type { UpdateProfile } from "../gen/UpdateProfile.ts";
 import type { UpdateStatus } from "../gen/UpdateStatus.ts";
 import {
@@ -424,3 +444,77 @@ export function followNotificationPreferences(): () => void {
     document.removeEventListener("visibilitychange", visible);
   };
 }
+
+/**
+ * How long an agent's edit waits for its answer. The edit dialog stays open while a save is out,
+ * so an unanswered one must end: it then fails with `SaveUnconfirmed`, since it may have landed.
+ */
+export const AGENT_SAVE_TIMEOUT = "15 seconds";
+
+/** The tag of an agent edit that got no answer in time. */
+export const SAVE_UNCONFIRMED = "SaveUnconfirmed";
+
+const bounded = <A, E extends { readonly _tag: string; readonly message: string }, R>(
+  effect: Effect.Effect<A, E, R>,
+) =>
+  effect.pipe(
+    Effect.timeoutOrElse({
+      duration: AGENT_SAVE_TIMEOUT,
+      orElse: () =>
+        Effect.fail({
+          _tag: SAVE_UNCONFIRMED,
+          message: "Couldn't confirm the save. Check the agent and try again.",
+        }),
+    }),
+  );
+
+/**
+ * Settings → Agents: plain promises over `/api/v1/me/agents`. Creating an agent, issuing a token
+ * and rotating one may wait on the password confirmation: closing it rejects with
+ * `ConfirmationCancelled`, leaving for Google with `SudoRequired` (these writes carry a secret,
+ * so they aren't kept). A refused change rejects with `Validation` and its `fields`.
+ */
+export const meAgents = {
+  list: (): Promise<PersonalAgentList> => runAction(listMeAgents()),
+
+  create: (body: CreatePersonalAgent): Promise<PersonalAgentCreated> =>
+    runAction(createMeAgent(body)),
+
+  /** Bounded by `AGENT_SAVE_TIMEOUT`, as is `setAccess`. */
+  update: (agentId: number, change: Partial<UpdatePersonalAgent>): Promise<PersonalAgent> =>
+    runAction(
+      bounded(
+        updateMeAgent(agentId, {
+          name: null,
+          iconName: null,
+          provider: null,
+          runtime: null,
+          description: null,
+          ...change,
+        }),
+      ),
+    ),
+
+  setAccess: (agentId: number, access: PersonalAgentAccess): Promise<PersonalAgent> =>
+    runAction(bounded(updateMeAgentAccess(agentId, access))),
+
+  /** Answers with the agent's bot user id (`BotRemoved.id`), not `agentId`. */
+  remove: (agentId: number): Promise<BotRemoved> => runAction(removeMeAgent(agentId)),
+
+  issueToken: (
+    agentId: number,
+    name: string,
+    expiresAt: string | null,
+  ): Promise<PersonalCredentialCreated> =>
+    runAction(issueMeAgentToken(agentId, { name, expiresAt })),
+
+  rotateToken: (
+    agentId: number,
+    credentialId: number,
+    expiresAt: string | null,
+  ): Promise<PersonalCredentialCreated> =>
+    runAction(rotateMeAgentToken(agentId, credentialId, { name: null, expiresAt })),
+
+  revokeToken: (agentId: number, credentialId: number): Promise<PersonalCredentialList> =>
+    runAction(revokeMeAgentToken(agentId, credentialId)),
+};
