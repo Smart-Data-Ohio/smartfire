@@ -9,8 +9,10 @@ import { forbidden, notFound, ok, validation } from "../http.ts";
 import { field, isNumber, type Json, stringArrayField, stringField } from "../json.ts";
 import { timestamp, VIEWER_ID, type World } from "../seed.ts";
 import type { AdminModule } from "./admin.ts";
+import { type BotAvatarChange, botAvatarChange } from "./bot-avatar.ts";
 import { route, type S2Context } from "./context.ts";
 import { lookupIcon } from "./emoji.ts";
+import type { Uploads } from "./uploads.ts";
 
 const CAPABILITIES = ["read_messages", "post_messages", "react", "manage_threads"];
 
@@ -68,7 +70,7 @@ interface AgentRecord {
   grants: Map<number, string[]>;
 }
 
-export function createMeAgents(ctx: S2Context, admin: AdminModule) {
+export function createMeAgents(ctx: S2Context, admin: AdminModule, uploads: Uploads) {
   let world: World | null = null;
   const agents = new Map<number, AgentRecord>();
   let nextId = 10000;
@@ -217,7 +219,30 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       ? null
       : admin.memberAgentPolicy().limit;
 
-  const create = (name: string, iconName: string | null): AgentRecord => {
+  /** The write's picture and picked avatar, checked before anything is written. */
+  const pictureOf = (body: Json | undefined) => {
+    const avatar = stringField(body, "avatar");
+    const change = botAvatarChange(body, (message) => validation("botAvatar", message));
+
+    return {
+      change,
+      avatarUrl: avatar === null ? null : uploads.attachment(avatar).url,
+    };
+  };
+
+  /** The picture after a write: a new upload, and the spec it's the render of (or none). */
+  const repicture = (
+    profile: AgentRecord["profile"],
+    picture: { change: BotAvatarChange; avatarUrl: string | null },
+  ) => {
+    if (picture.avatarUrl !== null) profile.avatarUrl = picture.avatarUrl;
+
+    if (picture.change.kind === "set") profile.botAvatar = picture.change.spec;
+
+    if (picture.change.kind === "clear") profile.botAvatar = null;
+  };
+
+  const create = (name: string, iconName: string | null, body?: Json): AgentRecord => {
     const limit = viewerLimit();
     const existing = current();
 
@@ -226,11 +251,15 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
     if (name.trim() === "") throw validation("name", "can't be blank");
 
+    const picture = pictureOf(body);
+
     const profile: AgentRecord["profile"] = {
       id: nextId++,
       userId: nextUserId++,
       name,
       iconName,
+      botAvatar: null,
+      avatarUrl: null,
       provider: null,
       runtime: null,
       description: null,
@@ -240,6 +269,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       createdAt: timestamp(ctx.now()),
       credentials: [],
     };
+
+    repicture(profile, picture);
 
     const agent: AgentRecord = { profile, roomIds: [], grants: new Map() };
 
@@ -272,7 +303,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
       const agent =
         agentId === null
-          ? create(stringField(body, "name") ?? "", stringField(body, "iconName"))
+          ? create(stringField(body, "name") ?? "", stringField(body, "iconName"), body)
           : find(agentId);
 
       replaceAccess(agent, granted);
@@ -356,8 +387,9 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
     [...current().values()].map(({ profile }) => ({
       id: profile.userId,
       name: profile.name,
-      avatarUrl: "/avatar.svg",
+      avatarUrl: profile.avatarUrl ?? "/avatar.svg",
       icon: null,
+      botAvatar: profile.botAvatar,
       rooms: [],
       ownership: `Personal agent · Owned by ${ctx.world().users.get(VIEWER_ID)?.name ?? "You"}`,
     }));
@@ -396,6 +428,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
         if (name === null || name.trim() === "") throw validation("name", "can't be blank");
         const granted = access(body);
+        const picture = pictureOf(body);
         const id = nextId;
 
         const profile: AgentRecord["profile"] = {
@@ -403,6 +436,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
           userId: nextUserId,
           name,
           iconName: stringField(body, "iconName"),
+          botAvatar: null,
+          avatarUrl: null,
           provider: stringField(body, "provider"),
           runtime: stringField(body, "runtime"),
           description: null,
@@ -412,6 +447,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
           createdAt: timestamp(ctx.now()),
           credentials: [],
         };
+
+        repicture(profile, picture);
 
         const agent: AgentRecord = { profile, roomIds: [], grants: new Map() };
 
@@ -449,6 +486,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
         if (description !== null && description.length > 500)
           throw validation("description", "must be at most 500 characters");
+
+        repicture(agent.profile, pictureOf(body));
 
         for (const key of ["name", "iconName", "provider", "runtime", "description"] as const) {
           const value = stringField(body, key);

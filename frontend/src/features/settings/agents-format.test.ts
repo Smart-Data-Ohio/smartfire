@@ -57,6 +57,8 @@ const AGENT: PersonalAgent = {
   name: "Helper",
   iconName: null,
   iconUrl: null,
+  botAvatar: null,
+  avatarUrl: null,
   provider: null,
   runtime: "codex",
   description: null,
@@ -104,27 +106,28 @@ describe("clients", () => {
     ]);
   });
 
-  it("takes the client's icon unless one was picked by hand", () => {
+  it("keeps the picked avatar when the client changes", () => {
     const [claude, codex] = clientChoices(false);
 
     if (claude === undefined || codex === undefined) throw new Error("no clients");
 
-    const picked = withClient(emptyDraft(CAPABILITIES), claude);
+    const draft = emptyDraft(CAPABILITIES);
+    const picked = withClient(draft, claude);
 
-    expect(picked).toMatchObject({ client: "claude-code", iconName: "sparkles" });
-    expect(withClient(picked, codex).iconName).toBe("robot");
-    expect(withClient({ ...picked, iconName: "owl" }, codex).iconName).toBe("owl");
+    expect(picked.client).toBe("claude-code");
+    expect(withClient(picked, codex).avatar).toBe(draft.avatar);
   });
 });
 
 describe("the wizard's steps", () => {
   const draft = emptyDraft(CAPABILITIES);
 
-  it("starts with every ability and no rooms, for 90 days", () => {
+  it("starts with a bot avatar, every ability and no rooms, for 90 days", () => {
+    expect(draft.avatar.kind).toBe("bot");
     expect(draft).toEqual({
       client: null,
       name: "",
-      iconName: null,
+      avatar: draft.avatar,
       roomIds: [],
       capabilities: CAPABILITIES,
       expiry: "90d",
@@ -152,7 +155,10 @@ describe("the wizard's steps", () => {
       ...draft,
       client: "cursor" as const,
       name: "Helper, the second",
-      iconName: "owl",
+      avatar: {
+        kind: "bot" as const,
+        spec: { type: "cat" as const, color: "#eb7575", face: "mouth" as const, accessory: null },
+      },
       roomIds: [2, 1],
       capabilities: ["react"],
       expiry: "never" as const,
@@ -162,11 +168,14 @@ describe("the wizard's steps", () => {
     expect(parseDraft(serializeDraft({ ...kept, client: "codex", signIn: true }))?.signIn).toBe(
       true,
     );
-    expect(parseDraft(serializeDraft({ ...kept, iconName: null, roomIds: [] }))).toEqual({
+    expect(parseDraft(serializeDraft({ ...kept, roomIds: [] }))).toEqual({
       ...kept,
-      iconName: null,
       roomIds: [],
     });
+    // An image isn't kept: the form comes back with a bot avatar to pick from.
+    expect(
+      parseDraft(serializeDraft({ ...kept, avatar: { kind: "upload", file: null } }))?.avatar.kind,
+    ).toBe("bot");
     expect(parseDraft("client=nope&expiry=90d")).toBeNull();
     expect(parseDraft("client=codex&expiry=forever")).toBeNull();
     expect(parseDraft("client=codex&expiry=90d&roomIds=1,x,-2")?.roomIds).toEqual([1]);

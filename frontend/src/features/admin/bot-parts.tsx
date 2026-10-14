@@ -1,8 +1,10 @@
 import { Link, notFound, useParams } from "@tanstack/react-router";
 import { useRef } from "react";
+import type { BotAvatarSpec } from "../../gen/BotAvatarSpec.ts";
 import type { BotIcon } from "../../gen/BotIcon.ts";
 import type { BotKey } from "../../gen/BotKey.ts";
 import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
+import { AgentAvatar } from "../../ui/agent-avatar.tsx";
 import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
@@ -27,14 +29,21 @@ export function BotPicture({
   name,
   avatarUrl,
   icon,
+  spec = null,
   size = 32,
 }: {
   readonly id: number;
   readonly name: string;
   readonly avatarUrl: string;
   readonly icon: BotIcon | null;
+  /** The picked bot avatar, drawn ahead of the icon and picture. */
+  readonly spec?: BotAvatarSpec | null;
   readonly size?: number;
 }) {
+  if (spec !== null) {
+    return <AgentAvatar seed={`${id}`} name={name} size={size} spec={spec} picture={avatarUrl} />;
+  }
+
   if (icon?.kind === "emoji") {
     return (
       <span

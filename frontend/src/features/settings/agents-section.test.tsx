@@ -12,6 +12,7 @@ import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import { ActionError } from "../../sync/run.ts";
 import { meAgents } from "../../sync/settings.ts";
+import { avatarUploads } from "../bot-avatar/avatar-choice.ts";
 import { SecretBlock } from "./agent-parts.tsx";
 import { AgentsSection } from "./agents-section.tsx";
 
@@ -25,6 +26,12 @@ beforeEach(() => {
       addListener: () => undefined,
       removeListener: () => undefined,
     });
+
+  // jsdom can't draw a bot avatar or upload one: the picked avatar arrives as a signed id.
+  vi.spyOn(avatarUploads, "render").mockResolvedValue(
+    new File(["png"], "bot-avatar.png", { type: "image/png" }),
+  );
+  vi.spyOn(avatarUploads, "upload").mockResolvedValue("signed-avatar");
 });
 
 afterEach(() => {
@@ -47,12 +54,16 @@ const TOKEN: PersonalAgentCredential = {
   connection: null,
 };
 
+const CAT = { type: "cat" as const, color: "#eaa06f", face: "eyes" as const, accessory: null };
+
 const AGENT: PersonalAgent = {
   id: 7,
   userId: 70,
   name: "Helper",
   iconName: "owl",
   iconUrl: null,
+  botAvatar: null,
+  avatarUrl: null,
   provider: "openai",
   runtime: "codex",
   description: null,
@@ -676,7 +687,7 @@ describe("editing an agent", () => {
     const update = vi
       .spyOn(meAgents, "update")
       .mockResolvedValueOnce({ ...AGENT, name: "Third" })
-      .mockResolvedValueOnce({ ...AGENT, name: "Third", iconName: "brain" });
+      .mockResolvedValueOnce({ ...AGENT, name: "Third", botAvatar: CAT });
 
     vi.spyOn(meAgents, "setAccess").mockRejectedValueOnce(ROOM_REFUSED);
     fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "General" }));
@@ -685,13 +696,19 @@ describe("editing an agent", () => {
     expect(update).toHaveBeenLastCalledWith(7, { name: "Third", iconName: null });
     expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
 
-    // Only the icon changes now: the name isn't sent, so nothing can put an older one back.
+    // Only the picture changes now: the name isn't sent, so nothing can put an older one back.
     fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "General" }));
-    fireEvent.click(within(editDialog()).getByRole("radio", { name: "Brain" }));
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: "Bot avatar" }));
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: "Cat" }));
     vi.spyOn(meAgents, "setAccess").mockResolvedValueOnce({ ...AGENT, name: "Third" });
     fireEvent.click(button("Save"));
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
-    expect(update).toHaveBeenLastCalledWith(7, { name: null, iconName: "brain" });
+    expect(update).toHaveBeenLastCalledWith(7, {
+      name: null,
+      iconName: null,
+      avatar: "signed-avatar",
+      botAvatar: expect.objectContaining({ type: "cat" }),
+    });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
   });
@@ -840,7 +857,7 @@ describe("the wizard", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Name" }), {
       target: { value: " Builder " },
     });
-    fireEvent.click(screen.getByRole("radio", { name: "Brain" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Cat" }));
     next();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "General" }));
@@ -853,7 +870,9 @@ describe("the wizard", () => {
     await screen.findByRole("heading", { name: "Connect Builder" });
     expect(create).toHaveBeenCalledWith({
       name: "Builder",
-      iconName: "brain",
+      iconName: null,
+      avatar: "signed-avatar",
+      botAvatar: expect.objectContaining({ type: "cat" }),
       provider: "anthropic",
       runtime: "claude-code",
       roomIds: [1],

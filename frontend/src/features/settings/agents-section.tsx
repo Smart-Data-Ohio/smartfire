@@ -13,6 +13,7 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Confirm, takeDraft } from "../admin/admin-parts.tsx";
+import { type AvatarChoice, avatarFields, changesAvatar } from "../bot-avatar/avatar-choice.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import {
@@ -275,7 +276,9 @@ function AgentCard({
         <AgentAvatar
           seed={`${agent.userId}`}
           name={agent.name}
+          spec={agent.botAvatar}
           icon={agentIcon(agent)}
+          picture={agent.avatarUrl}
           size={40}
           decorative
           {...(agent.suspended || !list.enabled ? { state: "muted" as const } : {})}
@@ -531,7 +534,7 @@ function TokenDialog({
 /** What the edit form holds. */
 interface EditForm {
   readonly name: string;
-  readonly iconName: string | null;
+  readonly avatar: AvatarChoice;
   readonly roomIds: readonly number[];
   readonly capabilities: readonly string[];
 }
@@ -539,19 +542,24 @@ interface EditForm {
 /** Which parts of the form the person changed in this opening. */
 interface Touched {
   readonly name: boolean;
-  readonly icon: boolean;
+  readonly avatar: boolean;
   readonly access: boolean;
 }
 
-const UNTOUCHED: Touched = { name: false, icon: false, access: false };
+const UNTOUCHED: Touched = { name: false, avatar: false, access: false };
+
+/** An agent's picture field: its picked avatar, else what it has now. */
+function avatarOf(agent: PersonalAgent): AvatarChoice {
+  return agent.botAvatar === null ? { kind: "keep" } : { kind: "bot", spec: agent.botAvatar };
+}
 
 /** The form for `agent` as the cache holds it. */
 function formOf(agent: PersonalAgent | null, offered: readonly string[]): EditForm {
-  if (agent === null) return { name: "", iconName: null, roomIds: [], capabilities: [] };
+  if (agent === null) return { name: "", avatar: { kind: "keep" }, roomIds: [], capabilities: [] };
 
   return {
     name: agent.name,
-    iconName: agent.iconName,
+    avatar: avatarOf(agent),
     roomIds: agent.roomIds,
     capabilities: agent.roomIds.length === 0 ? offered : agent.capabilities,
   };
@@ -647,9 +655,9 @@ function EditDialog({
     // a field the person left alone is never sent back over a newer value. While the cache is
     // unconfirmed, whatever they changed is sent as it stands.
     const rename = touched.name && (unconfirmed || name !== agent.name);
-    const reicon = touched.icon && (unconfirmed || form.iconName !== agent.iconName);
+    const repicture = touched.avatar && changesAvatar(form.avatar, agent.botAvatar);
 
-    if (!rename && !reicon && !touched.access) {
+    if (!rename && !repicture && !touched.access) {
       onClose();
 
       return;
@@ -658,11 +666,14 @@ function EditDialog({
     const save = async () => {
       let latest = agent;
 
-      if (rename || reicon) {
+      if (rename || repicture) {
         // `null` leaves that field as the server holds it.
+        const picture = repicture ? await avatarFields(form.avatar, agent.botAvatar) : null;
+
         latest = await writes.rename(agent.id, {
           name: rename ? name : null,
-          iconName: reicon ? form.iconName : null,
+          iconName: null,
+          ...picture,
         });
       }
 
@@ -757,9 +768,21 @@ function EditDialog({
       <form id="agents-edit-form" className="settings-form" onSubmit={submit} noValidate>
         <IdentityFields
           name={form.name}
-          iconName={form.iconName}
+          avatar={form.avatar}
+          current={
+            agent.botAvatar === null ? (
+              <AgentAvatar
+                seed={`${agent.userId}`}
+                name={agent.name}
+                icon={agentIcon(agent)}
+                picture={agent.avatarUrl}
+                size={56}
+                decorative
+              />
+            ) : null
+          }
           onName={(name) => edit({ name }, "name")}
-          onIcon={(iconName) => edit({ iconName }, "icon")}
+          onAvatar={(avatar) => edit({ avatar }, "avatar")}
         />
         <AccessFields
           rooms={list.rooms}

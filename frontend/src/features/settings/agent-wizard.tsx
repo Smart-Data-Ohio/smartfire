@@ -5,6 +5,7 @@ import { meAgents } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { keepDraft } from "../admin/admin-parts.tsx";
 import { leftToConfirm } from "../auth/confirmation.ts";
+import { avatarFields } from "../bot-avatar/avatar-choice.ts";
 import {
   AccessFields,
   ExpiryField,
@@ -38,6 +39,8 @@ export const WIZARD_DRAFT_KEY = "smartfire.draft.me-agent";
 const FIELD_STEP = new Map<string, Step>([
   ["name", "identity"],
   ["iconName", "identity"],
+  ["avatar", "identity"],
+  ["botAvatar", "identity"],
   ["roomIds", "access"],
   ["capabilities", "access"],
 ]);
@@ -173,17 +176,20 @@ export function AgentWizard({
     setProblem(null);
     void track(
       "create",
-      meAgents
-        .create({
-          name: draft.name.trim(),
-          iconName: draft.iconName,
-          provider: clientChoices(true).find((c) => c.value === draft.client)?.provider ?? null,
-          runtime: draft.client,
-          roomIds: [...draft.roomIds],
-          capabilities: draft.roomIds.length === 0 ? [] : [...draft.capabilities],
-          tokenName: null,
-          expiresAt: expiresAtOf(draft.expiry),
-        })
+      avatarFields(draft.avatar, null)
+        .then((picture) =>
+          meAgents.create({
+            name: draft.name.trim(),
+            iconName: null,
+            ...picture,
+            provider: clientChoices(true).find((c) => c.value === draft.client)?.provider ?? null,
+            runtime: draft.client,
+            roomIds: [...draft.roomIds],
+            capabilities: draft.roomIds.length === 0 ? [] : [...draft.capabilities],
+            tokenName: null,
+            expiresAt: expiresAtOf(draft.expiry),
+          }),
+        )
         .then(
           (answer) => {
             setCreated(answer);
@@ -299,10 +305,15 @@ export function AgentWizard({
         {step === "identity" ? (
           <IdentityFields
             name={draft.name}
-            iconName={draft.iconName}
-            error={fieldError("name") ?? fieldError("iconName")}
+            avatar={draft.avatar}
+            error={
+              fieldError("name") ??
+              fieldError("avatar") ??
+              fieldError("botAvatar") ??
+              fieldError("iconName")
+            }
             onName={(name) => edit({ name })}
-            onIcon={(iconName) => edit({ iconName })}
+            onAvatar={(avatar) => edit({ avatar })}
           />
         ) : null}
         {step === "access" ? (

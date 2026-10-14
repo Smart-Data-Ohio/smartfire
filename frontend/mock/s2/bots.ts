@@ -6,6 +6,7 @@
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { Bot } from "../../src/gen/Bot.ts";
 import type { BotAgent } from "../../src/gen/BotAgent.ts";
+import type { BotAvatarSpec } from "../../src/gen/BotAvatarSpec.ts";
 import type { BotGithub } from "../../src/gen/BotGithub.ts";
 import type { BotKey } from "../../src/gen/BotKey.ts";
 import type { BotRoom } from "../../src/gen/BotRoom.ts";
@@ -17,6 +18,7 @@ import type { GrantList } from "../../src/gen/GrantList.ts";
 import { HttpError, notFound, ok } from "../http.ts";
 import { field, intField, type Json, stringField } from "../json.ts";
 import { BOT_ID, rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { applied, botAvatarChange } from "./bot-avatar.ts";
 import { type Route, route, type S2Context } from "./context.ts";
 import type { Uploads } from "./uploads.ts";
 
@@ -53,6 +55,8 @@ interface BotRecord {
   name: string;
   avatarUrl: string;
   iconName: string | null;
+  /** The picked bot avatar; `avatarUrl` is then its render. */
+  botAvatar: BotAvatarSpec | null;
   webhookUrl: string | null;
   signingSecret: string | null;
   key: string;
@@ -108,6 +112,7 @@ function initialState(world: World, now: number): State {
       name: seeded.name,
       avatarUrl: seeded.avatarUrl,
       iconName: null,
+      botAvatar: seeded.botAvatar,
       webhookUrl: "https://agents.example/smartfire",
       signingSecret: "whsec_mock_signing_secret",
       key: `${BOT_ID}-mockkey`,
@@ -128,6 +133,7 @@ function initialState(world: World, now: number): State {
     name: "Deploy Bot",
     avatarUrl: `/users/${LEGACY_ID}/avatar`,
     iconName: null,
+    botAvatar: null,
     webhookUrl: null,
     signingSecret: null,
     key: `${LEGACY_ID}-mockkey`,
@@ -147,6 +153,7 @@ function initialState(world: World, now: number): State {
     customStatus: null,
     avatarIcon: null,
     agent: null,
+    botAvatar: null,
     createdAt: timestamp(now),
     updatedAt: rowTimestamp(now),
     accountName: "Deploy Bot",
@@ -218,6 +225,7 @@ export function createBots(
     name: record.name,
     avatarUrl: record.avatarUrl,
     icon: null,
+    botAvatar: record.botAvatar,
     ownership:
       record.agent === null ? "no owner recorded" : `Workspace agent · Owned by ${viewerName()}`,
     rooms: rooms(record.id),
@@ -250,6 +258,7 @@ export function createBots(
     iconName: record.iconName,
     icon:
       record.iconName === null ? null : { kind: "emoji", title: record.iconName, character: "🤖" },
+    botAvatar: record.botAvatar,
     webhookUrl: record.webhookUrl,
     canAdminister: true,
     agent: record.agent === null ? null : agentOf(record.agent),
@@ -263,6 +272,25 @@ export function createBots(
     key: record.key,
     exampleCommand: `curl -d 'Hello!' ${ORIGIN}/rooms/ROOM_ID/${record.key}/messages`,
   });
+
+  /** A new picture reaches the bot's user (where the world has one), and every client, at once. */
+  const showPicture = (record: BotRecord) => {
+    const users = ctx.world().users;
+    const user = users.get(record.id);
+
+    if (user === undefined) return;
+
+    const next = {
+      ...user,
+      avatarUrl: record.avatarUrl,
+      hasAvatar: !record.avatarUrl.endsWith("/avatar"),
+      botAvatar: record.botAvatar,
+      updatedAt: rowTimestamp(ctx.now()),
+    };
+
+    users.set(record.id, next);
+    ctx.publish([{ topic: "user", type: "user.updated", data: next }]);
+  };
 
   const changed = (record: BotRecord, notice: string | null = null) =>
     ok({ bot: bot(record), notice });
@@ -288,12 +316,14 @@ export function createBots(
     const held = current();
     const id = held.nextId;
     const avatar = stringField(body, "avatar");
+    const picked = botAvatarChange(body, (message) => refusedField("botAvatar", message));
 
     const record: BotRecord = {
       id,
       name: name.trim(),
       avatarUrl: avatar === null ? `/users/${id}/avatar` : uploads.attachment(avatar).url,
       iconName: stringField(body, "iconName"),
+      botAvatar: applied(null, picked),
       webhookUrl: stringField(body, "webhookUrl"),
       signingSecret: null,
       key: `${id}-${ctx.hex(12)}`,
@@ -333,6 +363,7 @@ export function createBots(
 
     if (name !== null && blank(name)) errors.name = ["can't be blank"];
 
+    const picked = botAvatarChange(body, (message) => refusedField("botAvatar", message));
     const agent = field(body, "agent");
 
     const caps: [number | null, number | null, number | null] = [
@@ -354,6 +385,10 @@ export function createBots(
     const avatar = stringField(body, "avatar");
 
     if (avatar !== null) record.avatarUrl = uploads.attachment(avatar).url;
+
+    record.botAvatar = applied(record.botAvatar, picked);
+
+    if (avatar !== null || picked.kind !== "keep") showPicture(record);
 
     if (record.agent !== null && agent !== undefined && agent !== null) {
       const text = (key: string, fallback: string | null) => {

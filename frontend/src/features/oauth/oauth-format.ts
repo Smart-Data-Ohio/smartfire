@@ -1,5 +1,7 @@
 import type { OAuthConsent } from "../../gen/OAuthConsent.ts";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
+import { randomSpec } from "../../ui/bot-avatar-spec.ts";
+import type { AvatarChoice } from "../bot-avatar/avatar-choice.ts";
 import { abilityLabel } from "../settings/agents-format.ts";
 
 /** Which agent the approval connects as: a new one, or one of the person's own. */
@@ -7,11 +9,12 @@ export type AgentPick =
   | { readonly kind: "new" }
   | { readonly kind: "existing"; readonly id: number };
 
-/** What the approval form holds: the agent, a new one's name and icon, and its access. */
+/** What the approval form holds: the agent, a new one's name and picture, and its access. */
 export interface ConsentForm {
   readonly pick: AgentPick;
   readonly name: string;
-  readonly iconName: string | null;
+  /** A new agent's picture (a random bot avatar to start with); an existing one keeps its own. */
+  readonly avatar: AvatarChoice;
   readonly roomIds: readonly number[];
   readonly capabilities: readonly string[];
 }
@@ -52,13 +55,19 @@ export function formFor(consent: OAuthConsent, pick: AgentPick, name = ""): Cons
   const agent = pickedAgent(consent, pick);
 
   if (agent === null) {
-    return { pick, name, iconName: null, roomIds: [], capabilities: [...consent.capabilities] };
+    return {
+      pick,
+      name,
+      avatar: { kind: "bot", spec: randomSpec() },
+      roomIds: [],
+      capabilities: [...consent.capabilities],
+    };
   }
 
   return {
     pick,
     name: agent.name,
-    iconName: agent.iconName,
+    avatar: { kind: "keep" },
     roomIds: agent.roomIds,
     capabilities: agent.roomIds.length === 0 ? [...consent.capabilities] : agent.capabilities,
   };

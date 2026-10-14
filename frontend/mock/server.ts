@@ -1182,7 +1182,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const roomManagement = createRoomManagement(ctx, admin, huddles);
 
-  const meAgents = createMeAgents(ctx, admin);
+  const meAgents = createMeAgents(ctx, admin, uploads);
   const oauth = createOAuth(ctx, admin, meAgents.connections);
 
   const routes = [

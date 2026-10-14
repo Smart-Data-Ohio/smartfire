@@ -2,10 +2,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import type { BotKey } from "../../gen/BotKey.ts";
 import { bots } from "../../sync/admin.ts";
+import { keptSpec, randomSpec } from "../../ui/bot-avatar-spec.ts";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { leftToConfirm } from "../auth/confirmation.ts";
+import { type AvatarChoice, avatarFields } from "../bot-avatar/avatar-choice.ts";
+import { BotAvatarPicker } from "../bot-avatar/bot-avatar-picker.tsx";
 import {
   FieldError,
   fieldsOf,
@@ -18,7 +21,6 @@ import {
   adminFailure,
   keepDraft,
   takeDraft,
-  uploaded,
   useAdmin,
 } from "./admin-parts.tsx";
 import { optional } from "./bot-format.ts";
@@ -31,11 +33,12 @@ const DRAFT_KEY = "smartfire.draft.admin-new-bot";
 
 interface Draft {
   readonly name: string;
-  readonly iconName: string;
   readonly webhookUrl: string;
+  /** The picked avatar's spec as JSON, kept with the draft (an image isn't). */
+  readonly botAvatar: string;
 }
 
-const EMPTY: Draft = { name: "", iconName: "", webhookUrl: "" };
+const EMPTY: Draft = { name: "", webhookUrl: "", botAvatar: "" };
 
 /** The kept draft, once; the empty form when there's none. */
 function restored(): Draft {
@@ -51,23 +54,24 @@ function restored(): Draft {
 
   return {
     name: fields.get("name") ?? "",
-    iconName: fields.get("iconName") ?? "",
     webhookUrl: fields.get("webhookUrl") ?? "",
+    botAvatar: fields.get("botAvatar") ?? "",
   };
 }
 
 /**
- * New bot: a name, an optional icon and webhook URL, and a picture. It becomes a workspace agent
- * the administrator owns; its key shows once, then its page opens.
+ * New bot: a name, an optional webhook URL, and a picture (a picked bot avatar, or an uploaded
+ * image). It becomes a workspace agent the administrator owns; its key shows once, then its page
+ * opens.
  */
 export function BotNewSection() {
   const { workspace } = useAdmin();
   const navigate = useNavigate();
   const [draft, setDraft] = useState<Draft>(EMPTY);
-  const [file, setFile] = useState<File | null>(null);
+  // A random avatar to start from, so the form is never without one.
+  const [choice, setChoice] = useState<AvatarChoice>(() => ({ kind: "bot", spec: randomSpec() }));
   const [fields, setFields] = useState<Fields>({});
   const [key, setKey] = useState<BotKey | null>(null);
-  const input = useRef<HTMLInputElement | null>(null);
   const { busy, track } = useBusy();
   // Whether the kept draft was taken: once, even when Strict Mode runs the effect twice.
   const taken = useRef(false);
@@ -82,6 +86,10 @@ export function BotNewSection() {
     const kept = restored();
 
     if (kept !== EMPTY) setDraft(kept);
+
+    const spec = keptSpec(kept.botAvatar);
+
+    if (spec !== null) setChoice({ kind: "bot", spec });
   }, [workspace.canAdminister]);
 
   if (!workspace.canAdminister) {
@@ -95,13 +103,14 @@ export function BotNewSection() {
     setFields({});
 
     const save = async () => {
-      const avatar = file === null ? null : await uploaded(file);
+      const picture = await avatarFields(choice, null);
 
       return bots.create({
         name: draft.name,
-        iconName: optional(draft.iconName),
+        iconName: null,
         webhookUrl: optional(draft.webhookUrl),
-        avatar,
+        avatar: picture.avatar,
+        botAvatar: picture.botAvatar,
       });
     };
 
@@ -116,8 +125,11 @@ export function BotNewSection() {
           return;
         }
 
-        if (leftToConfirm(error))
-          keepDraft(DRAFT_KEY, new URLSearchParams({ ...draft }).toString());
+        if (leftToConfirm(error)) {
+          const botAvatar = choice.kind === "bot" ? JSON.stringify(choice.spec) : "";
+
+          keepDraft(DRAFT_KEY, new URLSearchParams({ ...draft, botAvatar }).toString());
+        }
 
         adminFailure("Couldn't create the bot", error);
       }),
@@ -141,15 +153,6 @@ export function BotNewSection() {
             onChange={(event) => edit({ name: event.target.value })}
           />
           <TextField
-            label="Icon"
-            hint="A :shortcode: from the icon set, shown when there's no picture"
-            value={draft.iconName}
-            autoComplete="off"
-            placeholder="robot"
-            error={first("iconName")}
-            onChange={(event) => edit({ iconName: event.target.value })}
-          />
-          <TextField
             label="Webhook URL"
             hint="Messages that mention the bot are posted here"
             type="url"
@@ -159,20 +162,13 @@ export function BotNewSection() {
             error={first("webhookUrl")}
             onChange={(event) => edit({ webhookUrl: event.target.value })}
           />
-          <div className="settings-field">
-            <label className="settings-label" htmlFor="admin-bot-avatar">
-              Picture
-            </label>
-            <input
-              ref={input}
-              id="admin-bot-avatar"
-              className="input"
-              type="file"
-              accept="image/*"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
-            <FieldError message={first("avatar")} />
-          </div>
+          <BotAvatarPicker
+            id="admin-bot-avatar"
+            name={draft.name}
+            value={choice}
+            onChange={setChoice}
+            error={first("avatar") ?? first("botAvatar")}
+          />
           <div className="settings-actions">
             <Button
               type="submit"
