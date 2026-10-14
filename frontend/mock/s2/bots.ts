@@ -334,6 +334,26 @@ export function createBots(
 
     held.bots.set(id, record);
     held.nextId += 1;
+    // The server makes the bot a user: it can post, and the directory draws its avatar.
+    ctx.world().users.set(id, {
+      id,
+      name: record.name,
+      role: "bot",
+      status: "active",
+      bio: null,
+      avatarUrl: record.avatarUrl,
+      hasAvatar: avatar !== null,
+      customStatus: null,
+      avatarIcon: null,
+      agent: null,
+      botAvatar: record.botAvatar,
+      createdAt: timestamp(ctx.now()),
+      updatedAt: rowTimestamp(ctx.now()),
+      accountName: record.name,
+      pronouns: null,
+      bannerUrl: null,
+      bannerStillUrl: null,
+    });
 
     return ok(keyOf(record));
   };
