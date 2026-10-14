@@ -112,6 +112,28 @@ impl SafeList {
         SafeList { tags, attributes }
     }
 
+    /// `action_text` for a Markdown body, or a forwarded snapshot of one, plus every tag and
+    /// attribute `markdown::render` stores (`MARKDOWN_TAGS`, `MARKDOWN_ATTRIBUTES`): tables and
+    /// their `align`, task-list checkboxes, an ordered list's `start`, a link's `target` and `rel`.
+    /// Rails' timeline rendered these bodies through `markdown::presentation`, which keeps the
+    /// same tags, so the composer preview and the sent message show the same markup. The
+    /// attributes only Markdown adds are then held to what it emits
+    /// (`markdown::constrain_body_markup`).
+    pub fn markdown_body() -> Self {
+        let mut list = Self::action_text();
+        for &tag in crate::markdown::MARKDOWN_TAGS {
+            if !list.tags.contains(&tag) {
+                list.tags.push(tag);
+            }
+        }
+        for &attribute in crate::markdown::MARKDOWN_ATTRIBUTES {
+            if !list.attributes.contains(&attribute) {
+                list.attributes.push(attribute);
+            }
+        }
+        list
+    }
+
     /// `ContentFilters::SanitizeAttributes`: SanitizeTags' tags, Action Text's attributes plus `class`.
     pub fn content_filter() -> Self {
         let mut attributes = Self::action_text().attributes;

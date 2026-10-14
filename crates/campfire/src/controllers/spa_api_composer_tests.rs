@@ -1335,3 +1335,216 @@ async fn scheduled_private_drafts_keep_own_source_and_hide_current_parent_facts(
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
     assert!(a.db().read(move |conn| campfire_db::ScheduledMessage::find(conn, pending_id)).await.unwrap().dropped());
 }
+
+/// A forward of a Markdown message shows its snapshot as Markdown: the SPA's body keeps its table
+/// and task list. A body written over the snapshot through an edit endpoint, the human one with
+/// `message[body]` and no `markdown_source`, or a bot's raw body, never went through the Markdown
+/// renderer, so it shows as any HTML body does: no table, no checkbox. The SPA's own edit sends
+/// Markdown source and keeps every Markdown tag.
+#[tokio::test]
+async fn an_html_body_written_over_a_forwarded_markdown_snapshot_shows_as_html() {
+    use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY, Req};
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let html = "<table><tr><td>cell</td></tr></table><ul><li><input type=\"checkbox\" disabled>task</li></ul>";
+    for path in ["human", "bot", "spa"] {
+        let creator = if path == "bot" { BENDER } else { DAVID };
+        let id = a
+            .db()
+            .write(move |tx| {
+                let source = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        markdown_source: Some("| a |\n|---|\n| 1 |\n\n- [ ] todo".into()),
+                        ..Default::default()
+                    },
+                )?;
+                let forward = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: creator,
+                        body: source.body_html(tx.conn())?,
+                        forwarded_from_message_id: Some(source.id),
+                        forwarded_at: Some(tx.now()),
+                        forwarded_markdown: true,
+                        ..Default::default()
+                    },
+                )?;
+                Ok(forward.id)
+            })
+            .await
+            .unwrap();
+        let read = format!("/api/v1/messages/{id}");
+        let before = parse::<api::MessageRead>(&david.send(get(&read)).await).message.body_html;
+        assert!(before.contains("<table>") && before.contains("type=\"checkbox\""), "{path}: {before}");
+
+        let reply = match path {
+            "human" => {
+                david
+                    .write(json_body(Method::PATCH, &format!("/rooms/{ALL_TALK}/messages/{id}.json"), &json!({"message": {"body": html}})))
+                    .await
+            }
+            "bot" => {
+                a.anonymous()
+                    .send(
+                        Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}"))
+                            .header("content-type", "text/plain")
+                            .body(html.to_owned()),
+                    )
+                    .await
+            }
+            _ => {
+                david
+                    .write(json_body(Method::PATCH, &read, &json!({"markdownSource": "| b |\n|---|\n| 2 |\n\n- [x] done"})))
+                    .await
+            }
+        };
+        assert!(reply.status.is_success(), "{path}: {} {}", reply.status, reply.text());
+
+        let after = parse::<api::MessageRead>(&david.send(get(&read)).await).message.body_html;
+        let message = a.db().read(move |conn| Message::find(conn, id)).await.unwrap();
+        assert!(!message.forwarded_markdown, "{path}");
+        if path == "spa" {
+            assert!(message.markdown(), "{path}");
+            assert!(after.contains("<td>2</td>") && after.contains("checked"), "{path}: {after}");
+        } else {
+            assert!(!after.contains("<table") && !after.contains("<td") && !after.contains("<input"), "{path}: {after}");
+            assert!(after.contains("cell") && after.contains("task"), "{path}: {after}");
+        }
+    }
+}
+
+/// A forward edited with HTML before edits cleared `forwarded_markdown` still has the flag set,
+/// over a body that never came from the Markdown renderer. The edit stamped `edited_at`, so it
+/// shows as the HTML body it is (Action Text's cleaning: no table, every class kept off it), and
+/// forwarding it again makes an ordinary forward. An unedited forward keeps its table, with only
+/// the classes the renderer writes.
+#[tokio::test]
+async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
+    use crate::controllers::presenters::test_support::QUIET_CORNER;
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let html = "<table class=\"visually-hidden\"><tr><td>cell</td></tr></table>";
+    let (stale, unedited) = a
+        .db()
+        .write(move |tx| {
+            let source = Message::create(
+                tx,
+                NewMessage { room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("| a |\n|---|\n| cell |".into()), ..Default::default() },
+            )?;
+            let mut ids = Vec::new();
+            for _ in 0..2 {
+                let forward = Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        body: Some(html.into()),
+                        forwarded_from_message_id: Some(source.id),
+                        forwarded_at: Some(tx.now()),
+                        forwarded_markdown: true,
+                        ..Default::default()
+                    },
+                )?;
+                ids.push(forward.id);
+            }
+            // The row an HTML edit left on main: the flag still set, and the "(edited)" stamp.
+            tx.conn().execute("UPDATE messages SET edited_at = updated_at WHERE id = ?", [ids[0]])?;
+            Ok((ids[0], ids[1]))
+        })
+        .await
+        .unwrap();
+
+    let shown = |reply: &Reply| parse::<api::MessageRead>(reply).message.body_html;
+    let stale_html = shown(&david.send(get(&format!("/api/v1/messages/{stale}"))).await);
+    assert!(!stale_html.contains("<table") && !stale_html.contains("<td") && stale_html.contains("cell"), "{stale_html}");
+    let unedited_html = shown(&david.send(get(&format!("/api/v1/messages/{unedited}"))).await);
+    assert!(unedited_html.contains("<table><tbody><tr><td>cell</td>"), "{unedited_html}");
+    assert!(!unedited_html.contains("visually-hidden"), "{unedited_html}");
+
+    // Forwarding the edited forward again: the copy is an ordinary forward.
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/rooms/{ALL_TALK}/messages/{stale}/forwards.json"),
+            &json!({"destinations": [{"room_id": QUIET_CORNER}]}),
+        ))
+        .await;
+    assert!(reply.status.is_success(), "{} {}", reply.status, reply.text());
+    let copy = a
+        .db()
+        .read(move |conn| {
+            let id: i64 = conn.query_row("SELECT id FROM messages WHERE forwarded_from_message_id = ? ORDER BY id DESC LIMIT 1", [stale], |row| row.get(0))?;
+            Message::find(conn, id)
+        })
+        .await
+        .unwrap();
+    assert!(!copy.forwarded_markdown);
+    let copy_html = shown(&david.send(get(&format!("/api/v1/messages/{}", copy.id))).await);
+    assert!(!copy_html.contains("<table") && copy_html.contains("cell"), "{copy_html}");
+}
+
+/// A forward of an HTML-edited forward, made before the forwarder checked `edited_at`: the flag
+/// inherited, no `edited_at` of its own. Nothing proves it isn't a Markdown snapshot (see
+/// `Message::forwarded_markdown_snapshot`), so it keeps the Markdown allowlist, held to the values
+/// `markdown::render` emits.
+#[tokio::test]
+async fn a_second_generation_forward_from_before_the_fix_keeps_only_renderer_markup() {
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let html = concat!(
+        "<table class=\"visually-hidden\" style=\"position: fixed\" onclick=\"x()\" width=\"100000\" height=\"100000\">",
+        "<tr><th width=\"100000\" height=\"100000\">head</th></tr><tr>",
+        "<td align=\"justify\" onmouseover=\"x()\" height=\"10000000\" width=\"10000000\">cell</td><td align=\"center\">other</td></tr></table>",
+        "<ul><li><input type=\"checkbox\" value=\"v\" onfocus=\"x()\"> item</li><li><input type=\"text\" name=\"n\"> text</li></ul>",
+        "<ol start=\"-1\"><li>one</li></ol>",
+        "<p><a href=\"https://example.com/\" target=\"_top\" rel=\"opener\">link</a></p>",
+    );
+    let second = a
+        .db()
+        .write(move |tx| {
+            let source = Message::create(
+                tx,
+                NewMessage { room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("| a |\n|---|\n| cell |".into()), ..Default::default() },
+            )?;
+            let forward = |tx: &mut campfire_db::Tx<'_>, from: i64| {
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        body: Some(html.into()),
+                        forwarded_from_message_id: Some(from),
+                        forwarded_at: Some(tx.now()),
+                        forwarded_markdown: true,
+                        ..Default::default()
+                    },
+                )
+            };
+            let first = forward(tx, source.id)?;
+            tx.conn().execute("UPDATE messages SET edited_at = updated_at WHERE id = ?", [first.id])?;
+            let second = forward(tx, first.id)?;
+            Ok(second.id)
+        })
+        .await
+        .unwrap();
+
+    let stored = a.db().read(move |conn| Message::find(conn, second)).await.unwrap();
+    assert!(stored.forwarded_markdown && stored.edited_at.is_none());
+    let shown = parse::<api::MessageRead>(&david.send(get(&format!("/api/v1/messages/{second}"))).await).message.body_html;
+    assert!(shown.contains("<table><tbody><tr><th>head</th></tr><tr><td>cell</td><td align=\"center\">other</td>"), "{shown}");
+    for hostile in ["width=", "height=", "visually-hidden", "style=", "onclick", "onmouseover", "onfocus", "justify", "type=\"text\"", "value=", "name=", "start=", "_top", "opener\""] {
+        assert!(!shown.contains(hostile), "{hostile}: {shown}");
+    }
+    assert!(shown.contains("<li><input type=\"checkbox\" disabled=\"disabled\"> item</li><li> text</li>"), "{shown}");
+    assert!(shown.contains("target=\"_blank\" rel=\"nofollow noopener noreferrer\""), "{shown}");
+}

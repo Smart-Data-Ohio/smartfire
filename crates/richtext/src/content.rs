@@ -62,23 +62,29 @@ impl Content {
     /// `render_action_text_content(content)`: attachments and galleries rendered, then sanitized
     /// with Action Text's allowlist.
     pub fn render(&self, ctx: &RenderContext) -> Result<String, Error> {
-        self.render_nested(ctx, 0, false)
+        self.render_nested(ctx, 0, false, &SafeList::action_text())
     }
 
-    /// `render`, for content `depth` content attachments down.
-    fn render_nested(&self, ctx: &RenderContext, depth: usize, default_renderer: bool) -> Result<String, Error> {
-        let mut dom = self.dom.clone();
-        let root = self.root;
-        render_attachments(&mut dom, root, ctx, depth, default_renderer)?;
-        render_attachment_galleries(&mut dom, root, ctx, depth, default_renderer)?;
-        contain_spoiler_blocks(&mut dom, root);
-        sanitizer::sanitize(&dom.to_html(root), &SafeList::action_text()).map_err(Error::Parse)
+    /// `render`, for content `depth` content attachments down, sanitized with `safe`.
+    fn render_nested(&self, ctx: &RenderContext, depth: usize, default_renderer: bool, safe: &SafeList) -> Result<String, Error> {
+        render_dom(self.dom.clone(), self.root, ctx, depth, default_renderer, safe)
     }
 
     /// `Content#to_s`: the content partial inside `layouts/action_text/contents/_content.html.erb`,
     /// which our fork overrides with a `trix-content` wrapper.
     pub fn to_rendered_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
         Ok(format!("<div class=\"trix-content\">\n  {}\n</div>\n", self.render(ctx)?))
+    }
+
+    /// `to_rendered_html_with_layout` for a Markdown body, or a forwarded snapshot of one: the
+    /// markup `markdown::render` stores survives (`SafeList::markdown_body`). The body's own
+    /// markup is first held to what the renderer emits (`markdown::constrain_body_markup`), before
+    /// its attachments render, so a mention's or a file's partial keeps its classes.
+    pub fn to_rendered_markdown_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
+        let mut dom = self.dom.clone();
+        crate::markdown::constrain_body_markup(&mut dom, self.root);
+        let html = render_dom(dom, self.root, ctx, 0, false, &SafeList::markdown_body())?;
+        Ok(format!("<div class=\"trix-content\">\n  {html}\n</div>\n"))
     }
 
     /// `Content#to_s` outside Action Text's controller around_action (e.g. rake).
@@ -89,9 +95,17 @@ impl Content {
     pub fn to_rendered_html_with_default_renderer(&self, ctx: &RenderContext) -> Result<String, Error> {
         Ok(format!(
             "<div class=\"trix-content\">\n  {}\n</div>\n",
-            self.render_nested(ctx, 0, true)?
+            self.render_nested(ctx, 0, true, &SafeList::action_text())?
         ))
     }
+}
+
+/// `Content#render` of `dom`: attachments and galleries rendered, then sanitized with `safe`.
+fn render_dom(mut dom: Dom, root: NodeId, ctx: &RenderContext, depth: usize, default_renderer: bool, safe: &SafeList) -> Result<String, Error> {
+    render_attachments(&mut dom, root, ctx, depth, default_renderer)?;
+    render_attachment_galleries(&mut dom, root, ctx, depth, default_renderer)?;
+    contain_spoiler_blocks(&mut dom, root);
+    sanitizer::sanitize(&dom.to_html(root), safe).map_err(Error::Parse)
 }
 
 /// Loads (and canonicalizes) `html` as a new fragment in `dom`.
@@ -246,7 +260,7 @@ fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth
             return Ok(String::new());
         }
         let content = Content::load(content, ctx)?;
-        Ok(format!("{}\n", content.render_nested(ctx, depth + 1, default_renderer)?))
+        Ok(format!("{}\n", content.render_nested(ctx, depth + 1, default_renderer, &SafeList::action_text())?))
     })
 }
 

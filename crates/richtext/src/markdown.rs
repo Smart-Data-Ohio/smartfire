@@ -356,8 +356,7 @@ pub fn conceals_spoiler(dom: &Dom, node: NodeId) -> bool {
 fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
     for node in dom.descendants(root) {
         if let Some(classes) = dom.attr(node, "class") {
-            let classes =
-                classes.split_whitespace().filter(|c| ALLOWED_CLASSES.contains(c) || LANGUAGE_RE.is_match(c)).collect::<Vec<_>>().join(" ");
+            let classes = classes.split_whitespace().filter(|class| allowed_class(class)).collect::<Vec<_>>().join(" ");
             if classes.is_empty() {
                 dom.remove_attr(node, "class");
             } else {
@@ -395,9 +394,104 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
                     dom.remove_attr(node, "href");
                 } else if !in_app_href(&href) {
                     dom.set_attr(node, "target", "_blank");
-                    dom.set_attr(node, "rel", "nofollow noopener noreferrer");
+                    dom.set_attr(node, "rel", NEW_TAB_REL);
                 }
             }
+        }
+    }
+}
+
+/// The safe `rel` of a link that opens in a new tab.
+const NEW_TAB_REL: &str = "nofollow noopener noreferrer";
+
+/// A class `render` keeps: its own (`ALLOWED_CLASSES`) and a code block's `language-*`.
+fn allowed_class(class: &str) -> bool {
+    ALLOWED_CLASSES.contains(&class) || LANGUAGE_RE.is_match(class)
+}
+
+/// The classes of a workspace icon's image, which `render` adds after it filters classes (`icon_node`).
+const ICON_CLASSES: &[&str] = &["icon", "icon--brand", "icon--custom"];
+
+/// A table's elements. Action Text allows none of them, so `render` is their only source, and it
+/// writes no attribute on them but a cell's `align`.
+const TABLE_TAGS: &[&str] = &["table", "thead", "tbody", "tfoot", "tr", "th", "td", "col", "colgroup"];
+
+/// A Markdown body's own markup as the SPA shows it (`Content::to_rendered_markdown_html_with_layout`),
+/// held to the values `render` emits for what `SafeList::markdown_body` adds to Action Text's
+/// allowlist, since a body (a forwarded snapshot, say) may not have come from `render`:
+/// - `class`: only `allowed_class`es, as `render` keeps, and an icon image's `ICON_CLASSES`;
+/// - a table's elements (`TABLE_TAGS`): no attribute but `align`, which is `left`, `center` or
+///   `right`, on a cell. Action Text's own attributes (`width`, `height`, `title`, `lang`,
+///   `data-spoiler` and the rest) go too: they are allowed on its tags, not on these;
+/// - `input`: a task item's checkbox, with `type`, `checked` (as comrak writes it) and `disabled`
+///   and nothing else; any other input goes;
+/// - `start`: a number, on an ordered list;
+/// - `type`, `checked` and `disabled`: on that checkbox only;
+/// - `target`: `_blank` on a link to another site, with the safe `rel`; an in-app link opens in
+///   place (`sanitize_presentation`), and no other element keeps either.
+///
+/// It runs before attachments render, so their partials keep their own classes. On Action Text's
+/// own tags, the attributes its allowlist has (`href`, `title`, `width`, `data-spoiler` and the
+/// rest) are left to the sanitizer, as in any rich text body. Scripts and styles never reach the page: the sanitizer
+/// drops every `on*` handler, `style` and unknown attribute afterwards.
+pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
+    for node in dom.descendants(root) {
+        let Some(name) = dom.local_name(node).map(str::to_owned) else { continue };
+        if let Some(classes) = dom.attr(node, "class") {
+            let icon = name == "img";
+            let classes = classes
+                .split_whitespace()
+                .filter(|class| allowed_class(class) || (icon && ICON_CLASSES.contains(class)))
+                .collect::<Vec<_>>()
+                .join(" ");
+            if classes.is_empty() {
+                dom.remove_attr(node, "class");
+            } else {
+                dom.set_attr(node, "class", &classes);
+            }
+        }
+        let aligned = matches!(name.as_str(), "th" | "td") && matches!(dom.attr(node, "align"), Some("left" | "center" | "right"));
+        if !aligned {
+            dom.remove_attr(node, "align");
+        }
+        if TABLE_TAGS.contains(&name.as_str()) {
+            for (attribute, _) in dom.attrs(node) {
+                if attribute != "align" {
+                    dom.remove_attr(node, &attribute);
+                }
+            }
+        }
+        if name == "input" {
+            if dom.attr(node, "type") != Some("checkbox") {
+                dom.detach(node);
+                continue;
+            }
+            let checked = dom.has_attr(node, "checked");
+            for (attribute, _) in dom.attrs(node) {
+                dom.remove_attr(node, &attribute);
+            }
+            dom.set_attr(node, "type", "checkbox");
+            if checked {
+                dom.set_attr(node, "checked", "");
+            }
+            dom.set_attr(node, "disabled", "disabled");
+        } else {
+            for attribute in ["type", "checked", "disabled"] {
+                dom.remove_attr(node, attribute);
+            }
+        }
+        let numeric = dom.attr(node, "start").is_some_and(|start| !start.is_empty() && start.len() <= 9 && start.bytes().all(|b| b.is_ascii_digit()));
+        if name != "ol" || !numeric {
+            dom.remove_attr(node, "start");
+        }
+        let off_site = name == "a"
+            && dom.attr(node, "href").is_some_and(|href| !is_blank(href) && sanitizer::allowed_uri(href) && !in_app_href(href));
+        if off_site && dom.has_attr(node, "target") {
+            dom.set_attr(node, "target", "_blank");
+            dom.set_attr(node, "rel", NEW_TAB_REL);
+        } else {
+            dom.remove_attr(node, "target");
+            dom.remove_attr(node, "rel");
         }
     }
 }
