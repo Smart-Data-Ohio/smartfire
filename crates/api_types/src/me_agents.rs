@@ -1,5 +1,5 @@
 //! Member-owned agents. All secrets appear only in creation responses.
-use crate::{CredentialState, Timestamp};
+use crate::{BotAvatarSpec, CredentialState, Timestamp};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -40,6 +40,10 @@ pub struct PersonalAgent {
     /// The bot's avatar icon image, as `User.avatarIcon.imageUrl` resolves it; null for an emoji
     /// or unknown icon.
     pub icon_url: Option<String>,
+    /// The picked bot avatar; the client draws it in place of the icon and picture.
+    pub bot_avatar: Option<BotAvatarSpec>,
+    /// The uploaded picture (or the bot avatar's still render), versioned; null without one.
+    pub avatar_url: Option<String>,
     pub provider: Option<String>,
     pub runtime: Option<String>,
     pub description: Option<String>,
@@ -131,6 +135,9 @@ pub struct PersonalCredentialCreated {
 pub struct CreatePersonalAgent {
     pub name: String,
     pub icon_name: Option<String>,
+    /// A blob uploaded with `POST /api/v1/uploads`: the picture, or `botAvatar`'s still render.
+    pub avatar: Option<String>,
+    pub bot_avatar: Option<BotAvatarSpec>,
     pub provider: Option<String>,
     pub runtime: Option<String>,
     pub room_ids: Vec<i64>,
@@ -146,6 +153,11 @@ pub struct CreatePersonalAgent {
 pub struct UpdatePersonalAgent {
     pub name: Option<String>,
     pub icon_name: Option<String>,
+    /// A blob uploaded with `POST /api/v1/uploads` becomes the picture. Without `botAvatar` it
+    /// replaces the picked bot avatar too.
+    pub avatar: Option<String>,
+    /// A picked bot avatar, `avatar` carrying its still render.
+    pub bot_avatar: Option<BotAvatarSpec>,
     pub provider: Option<String>,
     pub runtime: Option<String>,
     pub description: Option<String>,

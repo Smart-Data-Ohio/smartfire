@@ -29,6 +29,10 @@ pub struct User {
     /// Set for an agent (a bot with an `agents` row); `null` for people and for bots without
     /// one, which the classic pages label "Bot". Kept current by `agent.status`.
     pub agent: Option<AgentBadge>,
+    /// The bot avatar picked for a bot (see [`BotAvatarSpec`]); the client draws it in place of
+    /// `avatarUrl`, which holds its still render. `null` for people and for bots without one,
+    /// which keep `avatarIcon` or their uploaded picture.
+    pub bot_avatar: Option<BotAvatarSpec>,
     pub created_at: Timestamp,
     /// `users.updated_at`: moves on every change to the users row, including status changes
     /// from bans and unbans. UTC with exactly six fractional digits and a `Z` suffix, for example
@@ -84,4 +88,69 @@ pub struct CustomStatus {
 #[ts(export)]
 pub struct UserList {
     pub users: Vec<User>,
+}
+
+/// A bot's avatar from Jakub Antalik's bot-avatars library: one of its eighteen bodies in a
+/// colour, with a face and at most one thing to wear. The library's own shading and states apply.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BotAvatarSpec {
+    #[serde(rename = "type")]
+    #[ts(rename = "type")]
+    pub kind: BotAvatarType,
+    /// The body colour, `#rrggbb` in lowercase.
+    pub color: String,
+    pub face: BotAvatarFace,
+    pub accessory: Option<BotAvatarAccessory>,
+}
+
+/// The library's body types (`BotAvatarType`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum BotAvatarType {
+    Clover,
+    Flower,
+    Triangle,
+    Square,
+    Blob,
+    Ghost,
+    Circle,
+    Drop,
+    Star,
+    Droid,
+    Mech,
+    Alien,
+    Hexagon,
+    Cat,
+    Cloud,
+    Pill,
+    Pebble,
+    Puddle,
+}
+
+/// The eyes alone, or the eyes with a mouth.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum BotAvatarFace {
+    Eyes,
+    Mouth,
+}
+
+/// What the bot wears: a hat, glasses, headphones or a bow tie.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub enum BotAvatarAccessory {
+    Beret,
+    Beanie,
+    Party,
+    Crown,
+    RoundGlasses,
+    SquareGlasses,
+    Shades,
+    Headphones,
+    BowTie,
 }

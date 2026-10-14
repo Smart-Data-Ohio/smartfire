@@ -208,6 +208,7 @@ fn an_agent_user_carries_its_badge_and_icon() {
                 "stillUrl": "/assets/icons/github.svg",
             },
             "agent": {"agentId": 3, "kind": "personal", "status": "working", "suspended": false},
+            "botAvatar": null,
             "createdAt": "2026-09-26T12:26:46.848Z",
             "updatedAt": "2026-10-06T09:16:00.123789Z",
             "accountName": "Scout",
