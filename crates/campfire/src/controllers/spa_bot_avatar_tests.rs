@@ -1,6 +1,6 @@
 //! A bot's picked bot avatar through the admin bot API, the personal agent API and the
 //! directory: stored with the picture that is its render (in the same write), replaced, cleared by
-//! a plain picture, and refused when it names something the library doesn't have or comes without
+//! a plain picture (on any path that replaces or removes it), and refused when it names something the library doesn't have or comes without
 //! its render.
 
 use axum::http::{Method, StatusCode};
@@ -8,7 +8,7 @@ use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use super::admin_tests::{app, error, get, owned_upload, parse, spa, upload, write};
-use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN};
+use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN, Req};
 
 /// Bender: a workspace agent David owns.
 const BENDER: i64 = 394959859;
@@ -327,4 +327,117 @@ async fn a_bots_picture_and_its_spec_land_in_one_write() {
     let after = directory_entry(&mut david, BENDER).await;
     assert_eq!(after.bot_avatar, Some(cat_spec()), "{}", reply.text());
     assert_ne!(after.avatar_url, before.avatar_url, "with its render");
+}
+
+/// Bender picks the cat through the SPA, with its render.
+async fn pick_cat(
+    a: &crate::controllers::presenters::test_support::TestApp,
+    david: &mut Browser<'_>,
+) {
+    let render = upload(a, "bot-avatar.png").await;
+    let change: api::BotChange = spa(
+        david,
+        Method::PATCH,
+        &format!("/api/v1/admin/bots/{BENDER}"),
+        json!({"avatar": render, "botAvatar": cat()}),
+    )
+    .await;
+    assert_eq!(change.bot.bot_avatar, Some(cat_spec()));
+}
+
+/// The file name of Bender's attached picture.
+async fn attached_name(
+    a: &crate::controllers::presenters::test_support::TestApp,
+) -> Option<String> {
+    a.db()
+        .read(|conn| {
+            crate::controllers::presenters::attachments::attached_blob(
+                conn, "User", BENDER, "avatar",
+            )
+        })
+        .await
+        .unwrap()
+        .map(|blob| blob.filename.to_string())
+}
+
+#[tokio::test]
+async fn the_classic_form_replacing_or_removing_the_picture_drops_the_spec() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let classic_path = format!("/account/bots/{BENDER}");
+    // A plain picture through the classic form: the SPA must stop drawing the cat that
+    // notifications no longer show.
+    pick_cat(&a, &mut david).await;
+    let picture = upload(&a, "photo.png").await;
+    let reply = david
+        .write(Req::new(Method::PATCH, &classic_path).form(&[("user[avatar]", &picture)]))
+        .await;
+    assert!(reply.status.is_redirection(), "{}", reply.text());
+    let replaced = directory_entry(&mut david, BENDER).await;
+    assert_eq!(
+        replaced.bot_avatar, None,
+        "the picture is no longer the cat's render"
+    );
+    assert_eq!(
+        attached_name(&a).await.as_deref(),
+        Some("photo.png"),
+        "the plain picture replaced the render"
+    );
+
+    // The picture removed: the spec goes with it.
+    pick_cat(&a, &mut david).await;
+    let reply = david
+        .write(Req::new(Method::PATCH, &classic_path).form(&[("user[avatar]", "")]))
+        .await;
+    assert!(reply.status.is_redirection(), "{}", reply.text());
+    let removed = directory_entry(&mut david, BENDER).await;
+    assert_eq!(removed.bot_avatar, None);
+    assert_eq!(attached_name(&a).await, None);
+
+    // Other classic edits leave both alone.
+    pick_cat(&a, &mut david).await;
+    let reply = david
+        .write(Req::new(Method::PATCH, &classic_path).form(&[("user[name]", "Bender B.")]))
+        .await;
+    assert!(reply.status.is_redirection(), "{}", reply.text());
+    assert_eq!(
+        directory_entry(&mut david, BENDER).await.bot_avatar,
+        Some(cat_spec())
+    );
+}
+
+#[tokio::test]
+async fn a_personal_agents_plain_picture_drops_its_spec() {
+    let Some(a) = app().await else { return };
+    let mut kevin = a.sign_in(KEVIN).await;
+    kevin.grant_sudo().await;
+    let render = owned_upload(&a, "bot-avatar.png", KEVIN).await;
+    let created: api::PersonalAgentCreated = parse(
+        &write(
+            &mut kevin,
+            Method::POST,
+            "/api/v1/me/agents",
+            json!({"name": "Helper", "roomIds": [], "capabilities": [], "avatar": render, "botAvatar": cat()}),
+        )
+        .await,
+    );
+    assert_eq!(created.agent.bot_avatar, Some(cat_spec()));
+
+    let picture = owned_upload(&a, "photo.png", KEVIN).await;
+    let reply = write(
+        &mut kevin,
+        Method::PATCH,
+        &format!("/api/v1/me/agents/{}", created.agent.id),
+        json!({"avatar": picture}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let agent: api::PersonalAgent = parse(&reply);
+    assert_eq!(agent.bot_avatar, None);
+    assert_eq!(
+        directory_entry(&mut kevin, created.agent.user_id)
+            .await
+            .bot_avatar,
+        None
+    );
 }

@@ -325,6 +325,7 @@ pub fn attach_existing(
         return Ok(());
     }
     destroy(tx, record, name)?;
+    forget_picked_avatar(tx, record, name)?;
     let now = tx.now();
     campfire_storage::blob::insert_attachment(
         tx.conn(),
@@ -403,8 +404,21 @@ pub fn destroy(tx: &mut Tx<'_>, record: Record, name: &str) -> campfire_db::Resu
     }
     tx.conn().execute_cached("DELETE FROM active_storage_attachments WHERE id = ?1", [attachment_id])?;
     super::accounts::touch(tx.conn(), record.table, record.id, tx.now())?;
+    forget_picked_avatar(tx, record, name)?;
     tx.emit_after_commit(Event::PurgeBlob { blob_id });
     Ok(true)
+}
+
+/// A bot's picked bot avatar only stands while the picture rendered from it is attached: any
+/// path that replaces or removes a user's `avatar` (classic or SPA forms, personal agents,
+/// OAuth, the avatar endpoints) drops the spec in the same write, so the SPA never draws a
+/// character the picture everywhere else no longer shows. A save with a new spec sets it again
+/// after attaching its render.
+fn forget_picked_avatar(tx: &Tx<'_>, record: Record, name: &str) -> campfire_db::Result<()> {
+    if record.record_type == "User" && name == "avatar" {
+        campfire_db::BotAvatar::forget(tx, record.id)?;
+    }
+    Ok(())
 }
 
 /// `record.<name>.variant(name).processed if record.<name>.variable?`: the processed variant's

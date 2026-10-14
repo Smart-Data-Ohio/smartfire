@@ -3,7 +3,7 @@
 //! surface. A bot without a row keeps its icon or uploaded picture.
 use std::collections::HashMap;
 
-use crate::sql::query_all;
+use crate::sql::{CachedStatements, query_all};
 use crate::{Connection, Errors, Result, Tx, User};
 use rusqlite::params;
 
@@ -92,6 +92,15 @@ impl BotAvatar {
             errors.add("bot_avatar", "has an unknown accessory");
         }
         errors
+    }
+
+    /// Drops the user's spec, if any, because the picture it was the render of is going: called by
+    /// every write that replaces or removes a user's attached `avatar`, in that write. A write
+    /// that saves a new spec sets it again afterwards, with the picture rendered from it.
+    pub fn forget(tx: &Tx<'_>, user_id: i64) -> Result<()> {
+        tx.conn()
+            .execute_cached("DELETE FROM bot_avatars WHERE user_id=?", [user_id])?;
+        Ok(())
     }
 
     /// Sets the bot's spec, or clears it with `None`, and touches the bot so clients and its
