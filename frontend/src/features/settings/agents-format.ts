@@ -116,12 +116,18 @@ export function iconOf(name: string | null): Icon | null {
 }
 
 /**
- * The icon an agent's card shows: its image when the server resolved one (`iconUrl`), else its
- * emoji choice, else `null` (its drawn bot).
+ * The icon an agent's card shows: none once it has a picture (an upload or a picked avatar's
+ * render replaces its icon, as the directory's `avatarIcon` and the avatar endpoint do), else its
+ * image when the server resolved one (`iconUrl`), else its emoji choice, else `null` (its drawn
+ * bot).
  */
 export function agentIcon(
-  agent: Pick<PersonalAgent, "name" | "iconName" | "iconUrl">,
+  agent: Pick<PersonalAgent, "name" | "iconName" | "iconUrl" | "avatarUrl">,
 ): Icon | null {
+  if (agent.avatarUrl !== null) {
+    return null;
+  }
+
   if (agent.iconUrl !== null) {
     return {
       name: agent.iconName ?? "",

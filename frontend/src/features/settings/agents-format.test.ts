@@ -237,6 +237,13 @@ describe("the cards", () => {
     expect(agentIcon(AGENT)).toBeNull();
   });
 
+  it("drops the icon once the agent has a picture, uploaded or a picked avatar's render", () => {
+    expect(agentIcon({ ...AGENT, iconName: "robot", avatarUrl: "/users/50/avatar" })).toBeNull();
+    expect(
+      agentIcon({ ...AGENT, iconName: "claude", iconUrl: "/icons/claude", avatarUrl: "/a" }),
+    ).toBeNull();
+  });
+
   it("lists tokens newest first, revoked ones last", () => {
     const sorted = sortedTokens([
       token({ id: 1 }),
