@@ -1,6 +1,7 @@
 //! A bot's picked bot avatar through the admin bot API, the personal agent API and the
-//! directory: stored with the picture that is its render, replaced, cleared by a plain picture,
-//! and refused when it names something the library doesn't have.
+//! directory: stored with the picture that is its render (in the same write), replaced, cleared by
+//! a plain picture, and refused when it names something the library doesn't have or comes without
+//! its render.
 
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
@@ -187,11 +188,26 @@ async fn a_personal_agent_takes_a_picked_avatar() {
     );
 
     let path = format!("/api/v1/me/agents/{}", created.agent.id);
+    let ghost = json!({"type": "ghost", "color": "#ffffff", "face": "eyes", "accessory": null});
     let reply = write(
         &mut kevin,
         Method::PATCH,
         &path,
-        json!({"botAvatar": {"type": "ghost", "color": "#ffffff", "face": "eyes", "accessory": null}}),
+        json!({"botAvatar": ghost}),
+    )
+    .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "a new spec comes with its render: {}",
+        reply.text()
+    );
+    let render = owned_upload(&a, "bot-avatar.png", KEVIN).await;
+    let reply = write(
+        &mut kevin,
+        Method::PATCH,
+        &path,
+        json!({"avatar": render, "botAvatar": ghost}),
     )
     .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
@@ -207,4 +223,108 @@ async fn a_personal_agent_takes_a_picked_avatar() {
             .map(|spec| spec.kind),
         Some(api::BotAvatarType::Ghost)
     );
+}
+
+#[tokio::test]
+async fn a_spec_without_its_render_is_refused() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let path = format!("/api/v1/admin/bots/{BENDER}");
+    let before = directory_entry(&mut david, BENDER).await;
+
+    // Notifications and link previews show the picture: a spec alone would leave them showing
+    // another bot than the SPA draws.
+    let reply = write(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"botAvatar": cat()}),
+    )
+    .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert_eq!(
+        error(&reply)["fields"]["botAvatar"][0],
+        "needs the picture rendered from it"
+    );
+    let after = directory_entry(&mut david, BENDER).await;
+    assert_eq!(after.bot_avatar, None, "nothing was written");
+    assert_eq!(after.avatar_url, before.avatar_url);
+
+    let reply = write(
+        &mut david,
+        Method::POST,
+        "/api/v1/admin/bots",
+        json!({"name": "Whiskers", "iconName": null, "webhookUrl": null, "avatar": null, "botAvatar": cat()}),
+    )
+    .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+}
+
+/// Faults the next write to `table` (an SQLite trigger), as a concurrent or failing save would.
+async fn refuse_writes_to(a: &crate::controllers::presenters::test_support::TestApp, table: &str) {
+    let sql = format!(
+        "DROP TRIGGER IF EXISTS refuse_bot_avatar_test; \
+         CREATE TRIGGER refuse_bot_avatar_test BEFORE INSERT ON {table} \
+         BEGIN SELECT RAISE(ABORT, 'refused by the test'); END;"
+    );
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute_batch(&sql)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn a_bots_picture_and_its_spec_land_in_one_write() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/admin/bots/{BENDER}");
+    let before = directory_entry(&mut david, BENDER).await;
+
+    // The spec's write fails: the picture it was rendered from isn't attached either.
+    refuse_writes_to(&a, "bot_avatars").await;
+    let render = upload(&a, "bot-avatar.png").await;
+    let reply = write(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"avatar": render, "botAvatar": cat()}),
+    )
+    .await;
+    assert!(!reply.status.is_success(), "{}", reply.text());
+    let after = directory_entry(&mut david, BENDER).await;
+    assert_eq!(after.bot_avatar, None);
+    assert_eq!(
+        after.avatar_url, before.avatar_url,
+        "no render without its spec"
+    );
+
+    // A write after them fails (the rename's audit): the picture and spec landed together, so
+    // the render every other surface shows is the bot the SPA draws.
+    refuse_writes_to(&a, "audit_logs").await;
+    let render = upload(&a, "bot-avatar.png").await;
+    let reply = write(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"name": "Bender B.", "avatar": render, "botAvatar": cat()}),
+    )
+    .await;
+    assert!(!reply.status.is_success(), "{}", reply.text());
+    let after = directory_entry(&mut david, BENDER).await;
+    assert_eq!(after.bot_avatar, Some(cat_spec()), "{}", reply.text());
+    assert_ne!(after.avatar_url, before.avatar_url, "with its render");
 }

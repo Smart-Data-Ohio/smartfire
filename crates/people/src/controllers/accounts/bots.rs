@@ -37,6 +37,7 @@ pub async fn create(c: &mut Ctx) -> Result {
             icon_name,
             webhook_url,
             avatar,
+            with_picture: None,
         },
     )
     .await?;
@@ -51,12 +52,18 @@ pub async fn create(c: &mut Ctx) -> Result {
     }
 }
 
+/// A write the SPA makes alongside the bot's picture, in the transaction that attaches it (its
+/// picked bot avatar, which must never land apart from the picture rendered from it).
+pub type WithPicture =
+    Box<dyn for<'tx> FnOnce(&campfire_db::Tx<'tx>, i64) -> campfire_db::Result<()> + Send>;
+
 /// A new bot, as `bot_params` give it on create.
 pub struct NewBot {
     pub name: String,
     pub icon_name: Option<String>,
     pub webhook_url: Option<String>,
     pub avatar: Assignment<campfire_storage::Staged>,
+    pub with_picture: Option<WithPicture>,
 }
 
 /// `create`'s writes once the gates passed: the bot, its webhook, its workspace agent owned by
@@ -67,6 +74,7 @@ pub async fn create_bot(c: &Ctx, new: NewBot) -> Result<campfire_db::Result<User
         icon_name,
         webhook_url,
         avatar,
+        with_picture,
     } = new;
     let owner_id = concerns::require_current_user(c)?.id;
     let context = audit_context(c)?;
@@ -87,6 +95,9 @@ pub async fn create_bot(c: &Ctx, new: NewBot) -> Result<campfire_db::Result<User
                     None,
                 )?;
                 attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
+                if let Some(with_picture) = with_picture {
+                    with_picture(tx, bot.id)?;
+                }
                 Ok(bot)
             })
             .await?;
@@ -161,6 +172,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             .then(|| params.get("webhook_url").and_then(Param::to_s)),
         agent: agent_changes,
         avatar,
+        with_picture: None,
     };
     let result = update_bot(c, bot.clone(), update).await?;
     match result {
@@ -180,6 +192,7 @@ pub struct BotUpdate {
     pub webhook_url: Option<Option<String>>,
     pub agent: AgentChanges,
     pub avatar: Assignment<campfire_storage::Staged>,
+    pub with_picture: Option<WithPicture>,
 }
 
 /// Whether `submitted` (the form's webhook URL, when given) differs from the bot's: the change
@@ -208,6 +221,7 @@ pub async fn update_bot(c: &Ctx, bot: User, update: BotUpdate) -> Result<campfir
         webhook_url,
         agent: agent_changes,
         avatar,
+        with_picture,
     } = update;
     let mut bot = bot;
     let previous_url = c
@@ -260,6 +274,9 @@ pub async fn update_bot(c: &Ctx, bot: User, update: BotUpdate) -> Result<campfir
         }
         let after_url = bot.webhook_url(tx.conn())?;
         attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
+        if let Some(with_picture) = with_picture {
+            with_picture(tx, bot.id)?;
+        }
         Ok((bot, after_url))
         }).await?;
         if let Some(mut updated) = agent.take() {

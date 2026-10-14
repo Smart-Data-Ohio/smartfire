@@ -361,9 +361,9 @@ async fn save_new_bot(c: &mut Ctx) -> Result {
         icon_name: create.icon_name.as_deref().and_then(icon_input),
         webhook_url: create.webhook_url,
         avatar,
+        with_picture: with_picture(bot_avatar),
     };
     let bot = saved(classic::create_bot(c, new).await?)?;
-    save_bot_avatar(c, bot.id, bot_avatar).await?;
     let key = bot.bot_key();
     reply_key(c, &bot, key)
 }
@@ -409,25 +409,21 @@ async fn save_bot(c: &mut Ctx) -> Result {
         webhook_url: update.webhook_url.map(Some),
         agent: agent_changes(update.agent),
         avatar,
+        with_picture: with_picture(bot_avatar),
     };
     saved(classic::update_bot(c, bot, changes).await?)?;
-    save_bot_avatar(c, id, bot_avatar).await?;
     if picture_changing {
         crate::settings::publish_identity(c, id).await?;
     }
     reply_bot(c, id, None).await
 }
 
-/// Sets or clears the bot's picked avatar after its save, as the picture it goes with was.
-async fn save_bot_avatar(c: &Ctx, id: i64, change: bot_avatars::Change) -> Result<()> {
-    if !change.changes() {
-        return Ok(());
-    }
-    c.app()
-        .db
-        .write(move |tx| change.apply(tx, id))
-        .await
-        .map_err(Error::internal)
+/// Sets or clears the bot's picked avatar in the transaction that attaches its picture, so a
+/// concurrent edit can never leave one bot's spec over another's render.
+fn with_picture(change: bot_avatars::Change) -> Option<classic::WithPicture> {
+    change
+        .changes()
+        .then(|| Box::new(move |tx: &campfire_db::Tx<'_>, id| change.apply(tx, id)) as _)
 }
 
 /// `accounts/bots#destroy`: administrators; the bot is deactivated, its agent suspended.
