@@ -12,6 +12,7 @@ const bender: Bot = {
   botAvatar: null,
   webhookUrl: "https://example.com/bender",
   canAdminister: true,
+  supportsBotKey: true,
   agent: {
     id: 11,
     provider: "anthropic",

@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { notFound } from "../http.ts";
 import { field, intField, type Json, stringField } from "../json.ts";
+import { buildWorld } from "../s3/seed.ts";
+import { createRoomManagement } from "../s8/rooms.ts";
+import { ROOM_IDS, VIEWER_ID } from "../seed.ts";
+import { createAdmin } from "./admin.ts";
+import { dispatch, type Route, type S2Context } from "./context.ts";
 import { lookupIcon } from "./emoji.ts";
+import { createMeAgents } from "./me-agents.ts";
 import { errorOf, harness, NOW, send } from "./testing.ts";
+import { createUploads } from "./uploads.ts";
 
 const ROOT = "/api/v1/me/agents";
 
@@ -175,6 +183,91 @@ describe("personal agents", () => {
     expect(patched.status).toBe(200);
     expect(field(patched.json, "roomIds")).toEqual([]);
     expect(field(patched.json, "capabilities")).toEqual([]);
+  });
+  it("keeps grants revoked after an external membership rejoin until explicitly granted", async () => {
+    const { clock } = harness();
+    const world = buildWorld(clock.now(), 1);
+
+    const unused = () => {
+      throw new Error("Unused membership revocation context");
+    };
+
+    const ctx: S2Context = {
+      world: () => world,
+      now: () => clock.now(),
+      scheduler: clock,
+      publish: () => {},
+      uuid: () => "",
+      hex: (length) => "a".repeat(length),
+      mentionables: () => [],
+      roomOr404: (id) => {
+        const room = world.rooms.get(id);
+
+        if (room === undefined || !room.memberIds.includes(VIEWER_ID)) throw notFound();
+
+        return room;
+      },
+      usersFor: (ids) => [...world.users.values()].filter((user) => [...ids].includes(user.id)),
+      displayName: (record) => record.room.name ?? "",
+      sidebarRow: unused,
+      roomDetail: unused,
+      postToRoom: unused,
+    };
+
+    const uploads = createUploads(ctx, unused);
+    const admin = createAdmin(ctx, uploads, () => {});
+    const agents = createMeAgents(ctx, admin, uploads);
+
+    const management = createRoomManagement(
+      ctx,
+      admin,
+      {
+        roomRoles: () => new Map(),
+        reviseRoom: () => {},
+        removeRoom: () => {},
+      },
+      agents.revokeForMembership,
+    );
+
+    const request = async (routes: readonly Route[], method: string, path: string, body?: Json) => {
+      const run = dispatch(routes, method, path, new URLSearchParams(), body);
+
+      if (run === null) throw new Error("Missing membership revocation route");
+
+      return await run();
+    };
+
+    const roomId = ROOM_IDS.launchPlanning;
+    const room = ctx.roomOr404(roomId);
+
+    const created = await request(agents.routes, "POST", "/me/agents", {
+      name: "Room helper",
+      roomIds: [roomId],
+      capabilities: ["read_messages"],
+    });
+
+    expect(created.status).toBe(201);
+    const path = `/me/agents/${intField(field(created.json, "agent"), "id")}`;
+    expect(field(field(created.json, "agent"), "capabilities")).toEqual(["read_messages"]);
+
+    const removed = await request(management.routes, "PATCH", `/rooms/${roomId}`, {
+      type: "closed",
+      userIds: room.memberIds.filter((id) => id !== VIEWER_ID),
+    });
+
+    expect(removed.status).toBe(200);
+    room.memberIds.push(VIEWER_ID);
+    const rejoined = await request(agents.routes, "GET", path);
+    expect(field(rejoined.json, "roomIds")).toEqual([roomId]);
+    expect(field(rejoined.json, "capabilities")).toEqual([]);
+
+    const granted = await request(agents.routes, "PUT", `${path}/access`, {
+      roomIds: [roomId],
+      capabilities: ["read_messages"],
+    });
+
+    expect(granted.status).toBe(200);
+    expect(field(granted.json, "capabilities")).toEqual(["read_messages"]);
   });
   it("rejects zero message caps without changing the profile", async () => {
     const { server } = harness();

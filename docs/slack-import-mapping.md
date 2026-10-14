@@ -15,6 +15,7 @@ and the limits to expect.
 | Private channel | Closed room |
 | Archived channel | Same room type, name suffixed ` (archived)`, every membership invisible |
 | DM (`im`) | One-to-one Direct room via `find_or_create_for` (merges with an existing DM) |
+| Self-DM (`im` to yourself) | Your canonical note-to-self Direct room, reused or created for the person running the import |
 | Group DM (`mpim`, ≤10 members) | Direct room for the member set |
 | Group DM (`mpim`, >10 members) | Closed room named after the members |
 | Message | Message with converted markdown, Slack `ts` as `created_at` (microseconds), `edited.ts` as `edited_at` |
@@ -89,7 +90,17 @@ its time and the run's last message, and the earlier run's memberships move
 their pointer forward to it unless they hold real unread state or already
 point at something newer. The room creator is the user who started the run.
 
-Self-DMs and DMs with Slackbot are skipped.
+Self-DMs import into the run owner's canonical notes, shown as "your notes" in
+the preview. Reconnecting the same Slack identity as another person targets
+that person's own notes. Imported messages are attributed to that owner,
+including when an earlier import mapped the Slack identity to a placeholder.
+The notes room and its membership never belong to the import, even when the
+import creates them. Undo removes the imported history while preserving notes,
+its membership, and the person's own messages. A group DM that shrank to one
+member keeps its own identity and is not the canonical notes room.
+
+DMs with Slackbot are skipped. Administrators import their own DMs through the
+personal import flow too; workspace discovery continues to list channels only.
 
 ## Messages, threads, reactions, pins
 
@@ -124,9 +135,12 @@ stale-thread sweep and room touches.
 
 ## Catch-up
 
-Every Slack object maps once per workspace in `slack_import_records`, so a
-later run skips everything an earlier run brought over — including DMs and
-private channels imported by a different member's personal run.
+Slack objects map once per workspace in `slack_import_records`, so a later
+run skips what an earlier run brought over, including shared DMs and private
+channels. Self-DMs use a separate namespace per notes owner for conversations,
+messages, replies, reactions and pins. Legacy unscoped keys are reused only
+when their room or surviving messages belong to that owner's canonical notes.
+Catch-up coverage follows the same ownership boundary.
 
 The 30-day catch-up window opens only when an earlier, completed, full import
 (an import run with no `oldest` bound) already covered the conversation:
@@ -188,6 +202,9 @@ already mapped, so undoing the earlier run first would leave a hole that
 the later run's coverage hides from every catch-up. The run page shows
 "A later import (#id) also imported some of these conversations; undo that
 one first" with the Undo button disabled until that run is undone.
+Self-DM ordering is per notes owner, so one person's undo does not depend on
+another person's separate notes import. Shared conversations keep the ordering
+above.
 
 One import or undo runs at a time across the workspace. Undo waits while any
 other run is queued, running or undoing, and the run page says so until the

@@ -179,6 +179,12 @@ test("a person previews their conversations and imports the checked ones", async
 
   await expect(page).toHaveURL(/\/app\/settings\/slack\/2$/);
   await expect(page.getByRole("heading", { name: "Your plan" })).toBeVisible(SETTLED);
+  await expect(
+    page.getByRole("checkbox", { name: "Import your notes", exact: true }),
+  ).toBeChecked();
+  await expect(page.getByRole("row").filter({ hasText: "your notes" })).toContainText(
+    "Direct message",
+  );
 
   await page.getByRole("checkbox", { name: "Import grace, alan, you" }).uncheck();
   await page.getByRole("button", { name: "Import checked" }).click();

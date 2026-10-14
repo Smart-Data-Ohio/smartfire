@@ -57,6 +57,8 @@ pub struct BotSummary {
     pub bot_avatar: Option<BotAvatarSpec>,
     /// "Workspace agent · Owned by Grace", "no owner recorded", as the classic list reads.
     pub ownership: String,
+    /// Personal agents use bearer credentials and cannot issue bot keys.
+    pub supports_bot_key: bool,
     pub rooms: Vec<BotRoom>,
 }
 
@@ -122,6 +124,8 @@ pub struct Bot {
     /// The viewer is an administrator: the webhook URL, the key, the GitHub connection,
     /// removal, and issuing credentials and grants are theirs.
     pub can_administer: bool,
+    /// Personal agents use bearer credentials and cannot issue bot keys.
+    pub supports_bot_key: bool,
     /// `null` for a legacy bot that has never been given an agent.
     pub agent: Option<BotAgent>,
     /// Deliveries carry `X-Smartfire-Signature`; `null` until a secret is generated.

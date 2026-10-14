@@ -307,10 +307,7 @@ fn leaves(
         }
         for reactor in reactors {
             let reactor = string(reactor);
-            let key = format!(
-                "{conversation}:{}:{base}:{reactor}",
-                string(&planned.source["ts"])
-            );
+            let key = format!("{}:{base}:{reactor}", planned.key);
             if !valid {
                 issue(
                     tx,
@@ -389,11 +386,12 @@ pub fn history(
     let mut counts = counts();
     let mut parents = Vec::new();
     enrich(tx, run, messages, users)?;
-    let known = known(tx, run, conversation, messages)?;
+    let mapping_key = users::conversation_key(tx.conn(), run, room, conversation)?;
+    let known = known(tx, run, &mapping_key, messages)?;
     for original in messages {
         let message = unwrap(original);
         let ts = string(&message["ts"]);
-        let key = format!("{conversation}:{ts}");
+        let key = format!("{mapping_key}:{ts}");
         if !ts.is_empty()
             && integer(&message["reply_count"]) > 0
             && bounds.contains(&ts)?
@@ -401,7 +399,7 @@ pub fn history(
             && message["subtype"] != "thread_broadcast"
             && known.contains(&key)
             && let Some(id) = users::mapped_id(tx.conn(), run.slack_workspace_id, "message", &key)?
-            && Message::find_by_id(tx.conn(), id)?.is_some()
+            && Message::find_by_id(tx.conn(), id)?.is_some_and(|parent| parent.room_id == room.id)
         {
             parents.push(json!({"ts":ts,"message_id":id}));
         }
@@ -415,7 +413,7 @@ pub fn history(
             users,
             &mut counts,
             PageScope {
-                conversation,
+                conversation: &mapping_key,
                 bounds,
                 known: &known,
                 history: true,
@@ -469,8 +467,11 @@ fn ensure_thread(
     parent_id: i64,
     state: &mut Value,
 ) -> Result<Option<i64>> {
-    let key = format!("{conversation}:{parent_ts}");
-    let Some(parent) = Message::find_by_id(tx.conn(), parent_id)? else {
+    let mapping_key = users::conversation_key(tx.conn(), run, room, conversation)?;
+    let key = format!("{mapping_key}:{parent_ts}");
+    let Some(parent) =
+        Message::find_by_id(tx.conn(), parent_id)?.filter(|parent| parent.room_id == room.id)
+    else {
         return deleted_thread(
             tx,
             run,
@@ -489,7 +490,9 @@ fn ensure_thread(
     )?);
     if let Some(id) = id {
         state["thread_id"] = json!(id);
-        if ChannelThread::find_by_id(tx.conn(), id)?.is_some() {
+        if ChannelThread::find_by_id(tx.conn(), id)?.is_some_and(|thread| {
+            thread.room_id == room.id && thread.parent_message_id == Some(parent_id)
+        }) {
             return Ok(Some(id));
         }
         return deleted_thread(
@@ -531,8 +534,31 @@ pub fn replies(
     users: &mut IndexMap<String, User>,
 ) -> Result<Value> {
     let mut counts = counts();
+    let mapping_key = users::conversation_key(tx.conn(), run, room, page.conversation)?;
+    let parent = Message::find_by_id(tx.conn(), page.parent_id)?;
+    if parent
+        .as_ref()
+        .is_some_and(|parent| parent.room_id != room.id)
+        || (room.direct() && parent.is_none())
+    {
+        deleted_thread(
+            tx,
+            run,
+            &format!("{mapping_key}:{}", page.parent_ts),
+            page.state,
+            "Reply parent is missing from the destination room; skipped its new replies",
+        )?;
+        add(
+            &mut counts["skipped"],
+            page.messages
+                .iter()
+                .filter(|message| message["ts"] != page.parent_ts)
+                .count() as i64,
+        );
+        return Ok(counts);
+    }
     enrich(tx, run, page.messages, users)?;
-    let known = known(tx, run, page.conversation, page.messages)?;
+    let known = known(tx, run, &mapping_key, page.messages)?;
     let mut planned = Vec::new();
     for message in page.messages {
         if message["ts"] == page.parent_ts {
@@ -545,7 +571,7 @@ pub fn replies(
             users,
             &mut counts,
             PageScope {
-                conversation: page.conversation,
+                conversation: &mapping_key,
                 bounds: page.bounds,
                 known: &known,
                 history: false,
@@ -586,10 +612,7 @@ pub fn replies(
                 add(&mut counts["threads"], 1);
                 page.state["created_now"] = json!(false);
             }
-            let key = format!(
-                "{}:{}:follow:{}",
-                page.conversation, page.parent_ts, p.author
-            );
+            let key = format!("{}:{}:follow:{}", mapping_key, page.parent_ts, p.author);
             if users::mapped_id(tx.conn(), run.slack_workspace_id, "thread_membership", &key)?
                 .is_none()
                 && ThreadMembership::find_by_thread_and_user(tx.conn(), thread, p.author)?.is_none()

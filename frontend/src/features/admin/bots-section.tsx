@@ -40,7 +40,7 @@ function BotRow({ bot }: { readonly bot: BotSummary }) {
         Edit
         <span className="visually-hidden"> {bot.name}</span>
       </Link>
-      {bot.rooms.length === 0 ? null : (
+      {!bot.supportsBotKey || bot.rooms.length === 0 ? null : (
         <details className="admin-bot-rooms">
           <summary>
             Post to {bot.rooms.length === 1 ? "its room" : `its ${bot.rooms.length} rooms`}

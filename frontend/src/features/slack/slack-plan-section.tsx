@@ -134,7 +134,9 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
                         }))
                       }
                     >
-                      <option value="new">New room</option>
+                      <option value="new">
+                        {conversation.kind === "Direct message" ? "Direct room" : "New room"}
+                      </option>
                       {plan.rooms.map((room) => (
                         <option key={room.id} value={`${room.id}`}>
                           {room.name}
@@ -156,8 +158,9 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
           </table>
         </section>
         <p id={`${id}-targets`} className="settings-hint text-faint">
-          “New room” creates a room named after the conversation; pick a room to merge into it;
-          “Skip” leaves the conversation out.
+          For channels, “New room” creates a room named after the conversation; pick a room to merge
+          into it. DMs use their matching Direct room, and self-DMs go to your notes. “Skip” leaves
+          the conversation out.
         </p>
       </SettingsGroup>
       <SettingsGroup

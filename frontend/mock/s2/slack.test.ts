@@ -230,7 +230,7 @@ describe("the mock's Slack import pages", () => {
 
     const done = await get<SlackRun>(server, `${API}/slack/imports/${preview.id}`);
 
-    expect(done.conversations.map((each) => each.id)).toEqual(["D100", "M200"]);
+    expect(done.conversations.map((each) => each.id)).toEqual(["DSELF", "D100", "M200"]);
 
     const imported = await started(
       server,

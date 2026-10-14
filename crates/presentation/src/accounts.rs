@@ -12,6 +12,7 @@ pub use crate::HelpContact;
 pub struct Bot {
     pub user: UserSummary,
     pub kind: Option<String>,
+    pub supports_bot_key: bool,
     pub owner_name: Option<String>,
     pub icon: Option<h::AvatarIcon>,
     /// `bot.rooms.without_directs.ordered`.
@@ -38,6 +39,7 @@ pub struct BotForm {
     pub errors: Option<String>,
     pub error_fields: Vec<String>,
     pub agent: Option<BotAgentForm>,
+    pub supports_bot_key: bool,
     pub budget_usage_line: String,
     pub signing_secret: Option<String>,
     pub github: Option<BotGithubAccount>,

@@ -70,6 +70,15 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
 /** What a person's preview finds. */
 const PERSONAL_CONVERSATIONS: readonly SlackConversation[] = [
   {
+    id: "DSELF",
+    name: "your notes",
+    kind: "Direct message",
+    archived: false,
+    members: 1,
+    messages: 3,
+    threads: 0,
+  },
+  {
     id: "D100",
     name: "Grace",
     kind: "Direct message",

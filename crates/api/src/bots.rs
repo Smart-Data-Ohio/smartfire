@@ -238,6 +238,7 @@ async fn index_bots(c: &mut Ctx) -> Result {
                 avatar_url: bot.user.avatar_path,
                 icon: bot.icon.map(icon),
                 ownership,
+                supports_bot_key: bot.supports_bot_key,
                 rooms: bot
                     .rooms
                     .into_iter()
@@ -283,6 +284,7 @@ async fn load_bot(c: &Ctx, bot: &User) -> Result<api::Bot> {
         icon: form.icon.map(icon),
         webhook_url: form.webhook_url,
         can_administer,
+        supports_bot_key: form.supports_bot_key,
         agent: form.agent.map(|agent| api::BotAgent {
             id: agent.id,
             provider: agent.provider,

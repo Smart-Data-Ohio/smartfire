@@ -59,6 +59,7 @@ export const BotSummary = Schema.Struct({
   icon: Schema.NullOr(BotIcon),
   botAvatar: Schema.NullOr(BotAvatarSpec),
   ownership: Schema.String,
+  supportsBotKey: Schema.Boolean,
   rooms: Schema.Array(BotRoom),
 });
 
@@ -106,6 +107,7 @@ export const Bot = Schema.Struct({
   botAvatar: Schema.NullOr(BotAvatarSpec),
   webhookUrl: Schema.NullOr(Schema.String),
   canAdminister: Schema.Boolean,
+  supportsBotKey: Schema.Boolean,
   agent: Schema.NullOr(BotAgent),
   signingSecret: Schema.NullOr(Schema.String),
   github: Schema.NullOr(BotGithub),
