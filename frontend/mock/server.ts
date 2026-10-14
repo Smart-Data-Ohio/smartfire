@@ -1180,9 +1180,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const workspaceLayout = createWorkspaceLayout(ctx);
   const welcome = createWelcome(ctx, admin, openPreview);
 
-  const roomManagement = createRoomManagement(ctx, admin, huddles);
-
   const meAgents = createMeAgents(ctx, admin);
+  const roomManagement = createRoomManagement(ctx, admin, huddles, meAgents.revokeForMembership);
   const oauth = createOAuth(ctx, admin, meAgents.connections);
 
   const routes = [
@@ -1222,7 +1221,13 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...meAgents.routes,
     ...oauth.routes,
-    ...createBots(ctx, uploads, admin.requireSudo, meAgents.summaries, meAgents.bot).routes,
+    ...createBots(
+      ctx,
+      uploads,
+      admin.requireSudo,
+      meAgents,
+      () => admin.memberAgentPolicy().enabled,
+    ).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx, settings).routes,
     ...workspaceLayout.routes,

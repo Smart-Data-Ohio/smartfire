@@ -1,5 +1,3 @@
-import type { Bot } from "../../src/gen/Bot.ts";
-import type { BotSummary } from "../../src/gen/BotSummary.ts";
 import type { OAuthAgentHiddenRooms } from "../../src/gen/OAuthAgentHiddenRooms.ts";
 import type { OAuthAgentRoomAccess } from "../../src/gen/OAuthAgentRoomAccess.ts";
 import type { PersonalAgent } from "../../src/gen/PersonalAgent.ts";
@@ -10,10 +8,11 @@ import { forbidden, notFound, ok, validation } from "../http.ts";
 import { field, isNumber, type Json, stringArrayField, stringField } from "../json.ts";
 import { timestamp, VIEWER_ID, type World } from "../seed.ts";
 import type { AdminModule } from "./admin.ts";
+import { agentRecord, PERSONAL_CAPABILITIES, type PersonalBotRecord } from "./bot-record.ts";
 import { route, type S2Context } from "./context.ts";
 import { lookupIcon } from "./emoji.ts";
 
-const CAPABILITIES = ["read_messages", "post_messages", "react", "manage_threads"];
+const CAPABILITIES = PERSONAL_CAPABILITIES;
 
 const DAY = 86_400_000;
 
@@ -63,15 +62,9 @@ export interface AgentConnections {
   readonly hiddenRooms: () => OAuthAgentHiddenRooms[];
 }
 
-interface AgentRecord {
-  profile: Omit<PersonalAgent, "roomIds" | "capabilities" | "iconUrl">;
-  roomIds: number[];
-  grants: Map<number, string[]>;
-}
-
 export function createMeAgents(ctx: S2Context, admin: AdminModule) {
   let world: World | null = null;
-  const agents = new Map<number, AgentRecord>();
+  const agents = new Map<number, PersonalBotRecord>();
   let nextId = 10000;
   let nextUserId = 20000;
   let nextCredentialId = 10000;
@@ -85,14 +78,13 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       nextCredentialId = 10000;
     }
 
-    const grantable = new Set(rooms().map((room) => room.id));
-
     for (const agent of agents.values()) {
-      for (const roomId of agent.grants.keys()) {
-        if (!grantable.has(roomId)) agent.grants.delete(roomId);
+      if (agent.removed) {
+        agents.delete(agent.agent.id);
+        continue;
       }
 
-      for (const credential of agent.profile.credentials) {
+      for (const credential of agent.agent.credentials) {
         if (
           credential.state === "active" &&
           credential.expiresAt !== null &&
@@ -108,7 +100,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
   const find = (id: number | undefined) => {
     const agent = id === undefined ? undefined : current().get(id);
 
-    if (agent === undefined) throw notFound();
+    if (agent === undefined || agent.removed) throw notFound();
 
     return agent;
   };
@@ -142,26 +134,60 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
     };
   };
 
-  const replaceAccess = (record: AgentRecord, next: ReturnType<typeof access>) => {
+  const replaceAccess = (record: PersonalBotRecord, next: ReturnType<typeof access>) => {
     record.roomIds = next.roomIds;
-    record.grants.clear();
 
-    for (const roomId of next.roomIds) record.grants.set(roomId, [...next.capabilities]);
+    for (const grant of record.agent.grants) grant.revoked = true;
+
+    for (const roomId of next.roomIds) {
+      for (const capability of next.capabilities) {
+        record.agent.grants.push({
+          id: record.agent.grants.length + 1,
+          roomId,
+          capability,
+          grantedBy: ctx.world().users.get(VIEWER_ID)?.name ?? "You",
+          createdAt: timestamp(ctx.now()),
+          revoked: false,
+        });
+        record.agent.everGranted = true;
+      }
+    }
   };
 
-  const present = (record: AgentRecord): PersonalAgent => {
+  const roomCapabilities = (record: PersonalBotRecord, roomId: number) =>
+    record.agent.grants
+      .filter((grant) => !grant.revoked && grant.roomId === roomId)
+      .map((grant) => grant.capability);
+
+  const present = (record: PersonalBotRecord): PersonalAgent => {
     const grantable = new Set(rooms().map((room) => room.id));
     const roomIds = record.roomIds.filter((id) => grantable.has(id));
+    const agent = record.agent;
 
     const capabilities =
-      record.profile.suspended || !admin.memberAgentPolicy().enabled
+      agent.suspended || !admin.memberAgentPolicy().enabled
         ? []
-        : [...new Set(roomIds.flatMap((id) => record.grants.get(id) ?? []))].sort();
+        : [...new Set(roomIds.flatMap((id) => roomCapabilities(record, id)))].sort();
 
-    const iconUrl =
-      lookupIcon(record.profile.iconName ?? "", admin.uploadedIcons())?.imageUrl ?? null;
+    const iconUrl = lookupIcon(record.iconName ?? "", admin.uploadedIcons())?.imageUrl ?? null;
 
-    return { ...record.profile, iconUrl, roomIds, capabilities };
+    return {
+      id: agent.id,
+      userId: record.id,
+      name: record.name,
+      iconName: record.iconName,
+      iconUrl,
+      provider: agent.provider,
+      runtime: agent.runtime,
+      description: agent.description,
+      dailyMessageCap: agent.caps[0],
+      suspended: agent.suspended,
+      lastUsedAt: record.lastUsedAt,
+      createdAt: record.createdAt,
+      credentials: agent.credentials.map(({ createdBy: _createdBy, ...credential }) => credential),
+      roomIds,
+      capabilities,
+    };
   };
 
   const enabled = () => {
@@ -169,7 +195,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
   };
 
   const issue = (
-    agent: AgentRecord,
+    agent: PersonalBotRecord,
     body: Json | undefined,
     previous?: PersonalAgentCredential,
   ) => {
@@ -200,7 +226,10 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
     };
 
     if (previous !== undefined) previous.state = "revoked";
-    agent.profile.credentials.unshift(credential);
+    agent.agent.credentials.unshift({
+      ...credential,
+      createdBy: ctx.world().users.get(VIEWER_ID)?.name ?? "You",
+    });
 
     return { status: 201, json: { credential, secret } };
   };
@@ -210,7 +239,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
   const connections = (): PersonalAgentCredential[] =>
     [...current().values()].flatMap((agent) =>
-      agent.profile.credentials.filter((credential) => credential.connection !== null),
+      agent.agent.credentials.filter((credential) => credential.connection !== null),
     );
 
   const viewerLimit = () =>
@@ -218,7 +247,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       ? null
       : admin.memberAgentPolicy().limit;
 
-  const create = (name: string, iconName: string | null): AgentRecord => {
+  const create = (name: string, iconName: string | null): PersonalBotRecord => {
     const limit = viewerLimit();
     const existing = current();
 
@@ -227,24 +256,23 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
     if (name.trim() === "") throw validation("name", "can't be blank");
 
-    const profile: AgentRecord["profile"] = {
-      id: nextId++,
-      userId: nextUserId++,
+    const agent: PersonalBotRecord = {
+      kind: "personal",
+      id: nextUserId++,
       name,
+      avatarUrl: "/avatar.svg",
+      avatarAttached: false,
       iconName,
-      provider: null,
-      runtime: null,
-      description: null,
-      dailyMessageCap: 200,
-      suspended: false,
-      lastUsedAt: null,
+      webhookUrl: null,
+      signingSecret: null,
+      key: null,
+      github: null,
+      removed: false,
+      agent: { ...agentRecord(nextId++), caps: [200, null, null] },
+      roomIds: [],
       createdAt: timestamp(ctx.now()),
-      credentials: [],
+      lastUsedAt: null,
     };
-
-    const agent: AgentRecord = { profile, roomIds: [], grants: new Map() };
-
-    agents.set(profile.id, agent);
 
     return agent;
   };
@@ -299,9 +327,14 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         connection,
       };
 
-      agent.profile.credentials.unshift(credential);
+      agent.agent.credentials.unshift({
+        ...credential,
+        createdBy: ctx.world().users.get(VIEWER_ID)?.name ?? "You",
+      });
 
-      return { agentId: agent.profile.id, credentialId: credential.id };
+      agents.set(agent.agent.id, agent);
+
+      return { agentId: agent.agent.id, credentialId: credential.id };
     },
     revokeForReuse: (credentialId) => {
       const credential = connections().find((c) => c.id === credentialId);
@@ -334,7 +367,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       return [...current().values()].flatMap((record) => {
         const count = record.roomIds.filter(hidden).length;
 
-        return count === 0 ? [] : [{ agentId: record.profile.id, count }];
+        return count === 0 ? [] : [{ agentId: record.agent.id, count }];
       });
     },
     roomAccess: () =>
@@ -342,66 +375,33 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         const agent = present(record);
         const offered = rooms();
         // Suspended, or agents turned off: it can do nothing anywhere, as `present` says.
-        const off = record.profile.suspended || !admin.memberAgentPolicy().enabled;
+        const off = record.agent.suspended || !admin.memberAgentPolicy().enabled;
 
         return agent.roomIds.map((roomId) => ({
           agentId: agent.id,
           roomId,
           roomName: offered.find((room) => room.id === roomId)?.name ?? "",
-          capabilities: off ? [] : [...(record.grants.get(roomId) ?? [])].sort(),
+          capabilities: off ? [] : roomCapabilities(record, roomId).sort(),
         }));
       }),
   };
 
-  const summaries = (): BotSummary[] =>
-    [...current().values()].map(({ profile }) => ({
-      id: profile.userId,
-      name: profile.name,
-      avatarUrl: "/avatar.svg",
-      icon: null,
-      rooms: [],
-      ownership: `Personal agent · Owned by ${ctx.world().users.get(VIEWER_ID)?.name ?? "You"}`,
-      supportsBotKey: false,
-    }));
-
-  const bot = (userId: number): Bot | undefined => {
-    const profile = [...current().values()].find(
-      (agent) => agent.profile.userId === userId,
-    )?.profile;
-
-    if (profile === undefined) return undefined;
-
-    return {
-      id: profile.userId,
-      name: profile.name,
-      avatarUrl: "/avatar.svg",
-      avatarAttached: false,
-      iconName: profile.iconName,
-      icon: null,
-      webhookUrl: null,
-      canAdminister: true,
-      supportsBotKey: false,
-      agent: {
-        id: profile.id,
-        provider: profile.provider,
-        runtime: profile.runtime,
-        description: profile.description,
-        dailyMessageCap: profile.dailyMessageCap,
-        dailyBoardPostCap: null,
-        dailyExternalActionCap: null,
-        usage: "0 messages · 0 board posts · 0 external actions",
-        suspended: profile.suspended,
-        ledgerUrl: `/agents/${profile.id}/events`,
-        approvalsUrl: `/agents/${profile.id}/approvals`,
-      },
-      signingSecret: null,
-      github: null,
-    };
-  };
-
   return {
-    summaries,
-    bot,
+    records: () => [...current().values()],
+    revokeForMembership: (roomId: number, userId: number) => {
+      if (userId !== VIEWER_ID) return;
+
+      for (const record of current().values()) {
+        for (const grant of record.agent.grants) {
+          if (grant.roomId === roomId) grant.revoked = true;
+        }
+      }
+    },
+    credentialId: () => {
+      current();
+
+      return nextCredentialId++;
+    },
     connections: connectionsApi,
     routes: [
       route("GET", /^\/me\/agents$/, () => {
@@ -423,36 +423,13 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         enabled();
         admin.requireSudo();
         current();
-        const policy = admin.memberAgentPolicy();
-
-        if (
-          ctx.world().users.get(VIEWER_ID)?.role !== "administrator" &&
-          agents.size >= policy.limit
-        )
-          throw validation("base", "personal agent limit reached", "Personal agent limit reached");
         const name = stringField(body, "name");
 
         if (name === null || name.trim() === "") throw validation("name", "can't be blank");
         const granted = access(body);
-        const id = nextId;
-
-        const profile: AgentRecord["profile"] = {
-          id,
-          userId: nextUserId,
-          name,
-          iconName: stringField(body, "iconName"),
-          provider: stringField(body, "provider"),
-          runtime: stringField(body, "runtime"),
-          description: null,
-          dailyMessageCap: 200,
-          suspended: false,
-          lastUsedAt: null,
-          createdAt: timestamp(ctx.now()),
-          credentials: [],
-        };
-
-        const agent: AgentRecord = { profile, roomIds: [], grants: new Map() };
-
+        const agent = create(name, stringField(body, "iconName"));
+        agent.agent.provider = stringField(body, "provider");
+        agent.agent.runtime = stringField(body, "runtime");
         replaceAccess(agent, granted);
 
         const issued = issue(agent, {
@@ -460,9 +437,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
           expiresAt: field(body, "expiresAt") ?? null,
         });
 
-        agents.set(id, agent);
-        nextId++;
-        nextUserId++;
+        agents.set(agent.agent.id, agent);
 
         return {
           status: 201,
@@ -493,23 +468,25 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
           if (value !== null) {
             if (key === "name" && value.trim() === "") throw validation("name", "can't be blank");
-            agent.profile[key] = value;
+
+            if (key === "name" || key === "iconName") agent[key] = value;
+            else agent.agent[key] = value;
           }
         }
 
         if (cap !== undefined) {
           if (cap !== null && (!isNumber(cap) || !Number.isSafeInteger(cap) || cap <= 0))
             throw validation("dailyMessageCap", "must be a positive integer or null");
-          agent.profile.dailyMessageCap = cap;
+          agent.agent.caps[0] = cap;
         }
 
         return ok(present(agent));
       }),
       route("DELETE", /^\/me\/agents\/(\d+)$/, ({ ids }) => {
         const agent = find(ids[0]);
-        current().delete(agent.profile.id);
+        current().delete(agent.agent.id);
 
-        return ok({ id: agent.profile.userId });
+        return ok({ id: agent.id });
       }),
       route("PUT", /^\/me\/agents\/(\d+)\/access$/, ({ ids, body }) => {
         const agent = find(ids[0]);
@@ -519,7 +496,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
         return ok(present(agent));
       }),
       route("GET", /^\/me\/agents\/(\d+)\/credentials$/, ({ ids }) =>
-        ok({ credentials: find(ids[0]).profile.credentials }),
+        ok({ credentials: present(find(ids[0])).credentials }),
       ),
       route("POST", /^\/me\/agents\/(\d+)\/credentials$/, ({ ids, body }) => {
         const agent = find(ids[0]);
@@ -532,7 +509,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       }),
       route("POST", /^\/me\/agents\/(\d+)\/credentials\/(\d+)\/rotate$/, ({ ids, body }) => {
         const agent = find(ids[0]);
-        const credential = agent.profile.credentials.find((c) => c.id === ids[1]);
+        const credential = agent.agent.credentials.find((c) => c.id === ids[1]);
 
         if (
           credential === undefined ||
@@ -547,12 +524,12 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       }),
       route("DELETE", /^\/me\/agents\/(\d+)\/credentials\/(\d+)$/, ({ ids }) => {
         const agent = find(ids[0]);
-        const credential = agent.profile.credentials.find((c) => c.id === ids[1]);
+        const credential = agent.agent.credentials.find((c) => c.id === ids[1]);
 
         if (credential === undefined) throw notFound();
         credential.state = "revoked";
 
-        return ok({ credentials: agent.profile.credentials });
+        return ok({ credentials: present(agent).credentials });
       }),
     ],
   };
