@@ -3,6 +3,7 @@ use super::runner::{
     CATCHUP_LOOKBACK, Operation, Progress, Store, add, array, integer, present, string, truthy,
 };
 use super::{conversations, users, writer};
+use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Database, Error, Result, Room, Timestamp, Tx};
 use indexmap::{IndexMap, IndexSet};
@@ -84,7 +85,7 @@ fn apply(
         Operation::Resolve => resolve(tx, p)?,
         Operation::Bounds => {
             let mut oldest = time_bound(&p.run.options["oldest"])?;
-            if let Some(catchup) = catchup_oldest(tx, &p.run, &string(&p.state["convo"]["id"]))? {
+            if let Some(catchup) = catchup_oldest(tx, &p.run, &mapping_key(p))? {
                 oldest = Some(oldest.map_or(catchup, |old| old.max(catchup)));
             }
             p.state["convo"]["bounds"] =
@@ -104,7 +105,8 @@ fn apply(
                     20usize.saturating_sub(array(&p.stats["samples"]).len()),
                 )?
             } else {
-                note_written(p, &conversation);
+                let key = mapping_key(p);
+                note_written(p, &key);
                 let room = alive_room(tx, integer(&p.state["convo"]["room_id"]))?;
                 let mut users = convo_users(tx, p)?;
                 writer::history(
@@ -166,7 +168,7 @@ fn apply(
         Operation::FinishThread => writer::finish_thread(
             tx,
             &p.run,
-            &string(&p.state["convo"]["id"]),
+            &mapping_key(p),
             &string(&p.state["convo"]["thread_ts"]),
         )?,
         Operation::FinishRooms => {
@@ -194,6 +196,25 @@ fn alive_room(tx: &Tx<'_>, id: i64) -> Result<Room> {
 pub fn convo_users(tx: &mut Tx<'_>, p: &Progress) -> Result<IndexMap<String, campfire_db::User>> {
     let ids = array(&p.state["convo"]["member_ids"]);
     let mut users = users::users_for(tx.conn(), &p.run, ids)?;
+    let notes = p.state["convo"]["room_id"]
+        .as_i64()
+        .map(|id| Room::is_note_to_self_of(tx.conn(), id, p.run.user_id))
+        .transpose()?
+        .unwrap_or(false);
+    if let Some(connection) = p
+        .run
+        .slack_connection_id
+        .map(|id| SlackConnection::find(tx.conn(), id))
+        .transpose()?
+        .flatten()
+        && (notes
+            || conversations::connected_self_dm(&p.conversation(), ids, &connection.slack_user_id))
+    {
+        users.insert(
+            connection.slack_user_id,
+            campfire_db::User::find(tx.conn(), p.run.user_id)?,
+        );
+    }
     for id in ids {
         let key = string(id);
         if !users.contains_key(&key) {
@@ -205,20 +226,63 @@ pub fn convo_users(tx: &mut Tx<'_>, p: &Progress) -> Result<IndexMap<String, cam
 fn resolve(tx: &mut Tx<'_>, p: &mut Progress) -> Result<()> {
     let id = string(&p.state["convo"]["id"]);
     let conversation = p.conversation();
+    let members = array(&p.state["convo"]["member_ids"]).to_vec();
+    let users = if p.dry_run() {
+        conversations::dry_users(tx, &p.run, &members)?
+    } else {
+        convo_users(tx, p)?
+    };
+    let preview = conversations::resolve(tx, &p.run, &conversation, &members, &users, true)?;
+    let key = if preview.notes {
+        users::notes_key(tx.conn(), &p.run, &id)?
+    } else {
+        id.clone()
+    };
     if !p.dry_run()
         && let Some(mapped) =
-            users::mapped_id(tx.conn(), p.run.slack_workspace_id, "conversation", &id)?
+            users::mapped_id(tx.conn(), p.run.slack_workspace_id, "conversation", &key)?
     {
         if let Some(room) = Room::find_by_id(tx.conn(), mapped)?.filter(|r| !r.deleted()) {
-            p.state["convo"]["room_id"] = json!(room.id);
+            let own_notes = Room::is_note_to_self_of(tx.conn(), room.id, p.run.user_id)?;
+            if (preview.notes && !own_notes)
+                || users::notes_owner(tx.conn(), &room)?.is_some_and(|owner| owner != p.run.user_id)
+            {
+                p.state["convo"]["resolved"] = json!(true);
+                p.state["convo"]["skipped"] = json!(true);
+                p.entry_mut()["target"] =
+                    json!({"action":"skip","room_id":null,"room_name":p.entry_mut()["name"]});
+                SlackImport::record_issue(
+                    tx,
+                    p.run.id,
+                    IssueLevel::Warning,
+                    Some(&format!("channel:{id}")),
+                    "Mapped notes belong to another person; skipped this conversation",
+                )?;
+                return Ok(());
+            }
+            let unchanged = truthy(&p.state["convo"]["resolved"])
+                && p.entry_mut()["target"]["room_id"] == room.id;
+            let action = if unchanged && p.entry_mut()["target"]["action"] == "create" {
+                "create"
+            } else {
+                "merge"
+            };
+            set_mapping(p, &id, &key, room.id, own_notes);
             p.state["convo"]["direct"] = json!(room.direct());
             p.state["convo"]["resolved"] = json!(true);
-            let name = room
-                .name
-                .clone()
-                .filter(|n| !n.trim().is_empty())
-                .map_or_else(|| p.entry_mut()["name"].clone(), |n| json!(n));
-            p.entry_mut()["target"] = json!({"action":"merge","room_id":room.id,"room_name":name});
+            p.state["convo"]["skipped"] = json!(false);
+            let name = if own_notes {
+                p.entry_mut()["name"] = json!(conversations::NOTES_NAME);
+                json!(conversations::NOTES_NAME)
+            } else if unchanged && present(&p.entry_mut()["target"]["room_name"]).is_some() {
+                p.entry_mut()["target"]["room_name"].clone()
+            } else {
+                room.name
+                    .clone()
+                    .filter(|n| !n.trim().is_empty())
+                    .map_or_else(|| p.entry_mut()["name"].clone(), |n| json!(n))
+            };
+            p.entry_mut()["target"] = json!({"action":action,"room_id":room.id,"room_name":name});
             return Ok(());
         }
         p.state["convo"]["resolved"] = json!(true);
@@ -234,13 +298,11 @@ fn resolve(tx: &mut Tx<'_>, p: &mut Progress) -> Result<()> {
         )?;
         return Ok(());
     }
-    let members = array(&p.state["convo"]["member_ids"]).to_vec();
-    let users = if p.dry_run() {
-        conversations::dry_users(tx, &p.run, &members)?
+    let target = if p.dry_run() {
+        preview
     } else {
-        convo_users(tx, p)?
+        conversations::resolve(tx, &p.run, &conversation, &members, &users, false)?
     };
-    let target = conversations::resolve(tx, &p.run, &conversation, &members, &users, p.dry_run())?;
     if p.dry_run() {
         let choice = &p.run.options["room_targets"][&id];
         let explicit = choice.as_i64().or_else(|| {
@@ -249,7 +311,9 @@ fn resolve(tx: &mut Tx<'_>, p: &mut Progress) -> Result<()> {
                 .filter(|s| !s.is_empty() && s.bytes().all(|c| c.is_ascii_digit()))
                 .and_then(|s| s.parse().ok())
         });
-        if let Some(room_id) = explicit {
+        if let Some(room_id) = explicit
+            && !truthy(&p.state["convo"]["resolved"])
+        {
             let kind = super::runner::conversation_type(&conversation);
             let message = if kind == "im" || (kind == "mpim" && members.len() <= 10) {
                 Some(
@@ -279,18 +343,61 @@ fn resolve(tx: &mut Tx<'_>, p: &mut Progress) -> Result<()> {
         add(&mut p.stats["counts"]["rooms_merged"], 1);
     }
     let room_id = target.room.as_ref().map(|r| r.id);
-    let name = target
-        .room
-        .as_ref()
-        .and_then(|r| r.name.clone())
-        .filter(|n| !n.trim().is_empty())
-        .unwrap_or_else(|| conversations::describe(&conversation, members.len()));
+    if let Some(room_id) = room_id {
+        set_mapping(p, &id, &key, room_id, target.notes);
+    } else if target.notes {
+        p.state["convo"]["mapping_key"] = json!(key);
+        p.entry_mut()["mapping_key"] = json!(key);
+    }
+    let name = if let Some(name) = target.display_name {
+        p.entry_mut()["name"] = json!(name);
+        name.to_owned()
+    } else {
+        target
+            .room
+            .as_ref()
+            .and_then(|r| r.name.clone())
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or_else(|| conversations::describe(&conversation, members.len()))
+    };
     p.entry_mut()["target"] = json!({"action":target.action,"room_id":room_id,"room_name":name});
     p.state["convo"]["room_id"] = json!(room_id);
     p.state["convo"]["direct"] = json!(target.room.is_some_and(|r| r.direct()));
     p.state["convo"]["resolved"] = json!(true);
     p.state["convo"]["skipped"] = json!(target.action == "skip");
     Ok(())
+}
+
+fn mapping_key(p: &Progress) -> String {
+    present(&p.state["convo"]["mapping_key"]).unwrap_or_else(|| string(&p.state["convo"]["id"]))
+}
+
+fn set_mapping(p: &mut Progress, id: &str, key: &str, room: i64, notes: bool) {
+    if p.state["convo"]["room_id"]
+        .as_i64()
+        .is_some_and(|old| old != room)
+    {
+        for field in [
+            "history_cursor",
+            "thread_ts",
+            "thread_message_id",
+            "thread_cursor",
+        ] {
+            p.state["convo"][field] = Value::Null;
+        }
+        p.state["convo"]["history_done"] = json!(false);
+        p.state["convo"]["thread_queue"] = json!([]);
+        p.state["convo"]["thread_state"] = json!({});
+        p.state["convo"]
+            .as_object_mut()
+            .expect("conversation")
+            .remove("bounds");
+    }
+    p.state["convo"]["room_id"] = json!(room);
+    if notes || key != id {
+        p.state["convo"]["mapping_key"] = json!(key);
+        p.entry_mut()["mapping_key"] = json!(key);
+    }
 }
 fn time_bound(value: &Value) -> Result<Option<f64>> {
     present(value)
@@ -324,7 +431,7 @@ fn catchup_oldest(tx: &Tx<'_>, run: &SlackImport, conversation: &str) -> Result<
         let r = SlackImport::find(tx.conn(), id)?.expect("run");
         if present(&r.options["oldest"]).is_none()
             && array(&r.stats["conversations"]).iter().any(|e| {
-                string(&e["id"]) == conversation
+                present(&e["mapping_key"]).unwrap_or_else(|| string(&e["id"])) == conversation
                     && truthy(&e["done"])
                     && e["target"]["action"] != "skip"
             })
@@ -343,7 +450,7 @@ fn catchup_oldest(tx: &Tx<'_>, run: &SlackImport, conversation: &str) -> Result<
     if !full.iter().any(|r| {
         r.finished_at.is_none_or(|finished| {
             !undone.iter().flatten().any(|u| {
-                u.touched_conversation_ids().contains(conversation)
+                u.touched_mapping_keys().contains(conversation)
                     && u.started_at.is_some_and(|t| t < finished)
                     && u.finished_at.is_some_and(|t| t > finished)
             })
@@ -381,6 +488,9 @@ pub fn finish_rooms(tx: &mut Tx<'_>, p: &Progress) -> Result<()> {
         let Some(room) = Room::find_by_id(tx.conn(), room_id)?.filter(|r| !r.deleted()) else {
             continue;
         };
+        if users::notes_owner(tx.conn(), &room)?.is_some_and(|owner| owner != p.run.user_id) {
+            continue;
+        }
         let last:Option<(i64,Timestamp)>=tx.conn().query_row("SELECT m.id,m.created_at FROM messages m JOIN slack_import_records r ON r.record_id=m.id WHERE r.slack_workspace_id=? AND r.slack_import_id=? AND r.slack_kind='message' AND r.slack_key>=? AND r.slack_key<? ORDER BY m.created_at DESC,m.id DESC LIMIT 1",params![p.run.slack_workspace_id,p.run.id,format!("{id}:"),format!("{id};")],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
         let Some((last_id, created)) = last else {
             continue;

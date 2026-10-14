@@ -148,7 +148,7 @@ export const CONFIRM = {
   cancelWorkspace:
     "Cancel this run? It stops at the next step; already-imported records stay until undone.",
   cancelPersonal: "Cancel this run? It stops at the next step.",
-  undo: "Undo this import? Every room, message, reaction, and pin it created is removed. Records it only matched to existing accounts or rooms stay.",
+  undo: "Undo this import? Imported messages, reactions, pins, and rooms are removed. Your notes room and your own messages stay, as do records matched to existing accounts or rooms.",
   catchUp:
     "Run a catch-up import with the same conversations and targets? Already-imported objects are skipped, so it is safe to repeat.",
   testImport:

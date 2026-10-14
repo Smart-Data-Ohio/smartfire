@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use super::runner::{present, string, truthy};
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
-use campfire_db::{Connection, NewUser, Result, Tx, User};
+use campfire_db::{Connection, NewUser, Result, Room, Tx, User};
 use indexmap::{IndexMap, IndexSet};
 use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
@@ -14,6 +14,55 @@ pub const SLACKBOT_ID: &str = "USLACKBOT";
 pub fn mapped_id(conn: &Connection, workspace: i64, kind: &str, key: &str) -> Result<Option<i64>> {
     Ok(conn.query_row("SELECT record_id FROM slack_import_records WHERE slack_workspace_id=? AND slack_kind=? AND slack_key=?",
         params![workspace,kind,key],|r|r.get(0)).optional()?)
+}
+
+pub fn notes_owner(conn: &Connection, room: &Room) -> Result<Option<i64>> {
+    if room.direct() {
+        let members = room.user_ids(conn)?;
+        if let [owner] = members.as_slice()
+            && Room::is_note_to_self_of(conn, room.id, *owner)?
+        {
+            return Ok(Some(*owner));
+        }
+    }
+    Ok(None)
+}
+
+pub fn notes_key(conn: &Connection, run: &SlackImport, conversation: &str) -> Result<String> {
+    let scoped = format!("notes:{}:{conversation}", run.user_id);
+    let Some(room) = Room::note_to_self_for(conn, run.user_id)? else {
+        return Ok(scoped);
+    };
+    for key in [scoped.as_str(), conversation] {
+        if mapped_id(conn, run.slack_workspace_id, "conversation", key)? == Some(room.id)
+            || conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM slack_import_records r JOIN messages m ON m.id=r.record_id WHERE r.slack_workspace_id=? AND r.slack_kind='message' AND r.slack_key>=? AND r.slack_key<? AND m.room_id=?)",
+                params![run.slack_workspace_id, format!("{key}:"), format!("{key};"), room.id],
+                |r| r.get::<_, bool>(0),
+            )?
+        {
+            return Ok(key.to_owned());
+        }
+    }
+    Ok(scoped)
+}
+
+pub fn conversation_key(
+    conn: &Connection,
+    run: &SlackImport,
+    room: &Room,
+    conversation: &str,
+) -> Result<String> {
+    if notes_owner(conn, room)?.is_some_and(|owner| owner != run.user_id) {
+        return Err(campfire_db::Error::Other(
+            "Slack import target is another person's notes".into(),
+        ));
+    }
+    if Room::is_note_to_self_of(conn, room.id, run.user_id)? {
+        notes_key(conn, run, conversation)
+    } else {
+        Ok(conversation.to_owned())
+    }
 }
 pub fn record(
     tx: &Tx<'_>,
@@ -57,7 +106,10 @@ pub fn users_for(
     Ok(users)
 }
 
-pub fn users_query(workspace: i64, ids: &IndexSet<String>) -> (String, Vec<rusqlite::types::Value>) {
+pub fn users_query(
+    workspace: i64,
+    ids: &IndexSet<String>,
+) -> (String, Vec<rusqlite::types::Value>) {
     records_query(
         workspace,
         ids,

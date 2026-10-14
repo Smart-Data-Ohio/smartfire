@@ -419,6 +419,28 @@ async fn a_preview_reads_with_its_conversations() {
     );
 }
 
+#[tokio::test]
+async fn slack_self_dm_preview_name_reaches_the_spa_conversation() {
+    let Some(a) = app().await else { return };
+    set_up(&a, true).await;
+    let id = run(&a, "personal", "dry_run", "completed", json!({})).await;
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE slack_imports SET stats=? WHERE id=?", params![
+            json!({"conversations":[{"id":"DSELF","name":"your notes","type":"im","members":1,"messages":2,
+                "target":{"action":"create","room_id":null,"room_name":"your notes"}}]}).to_string(), id])?;
+        Ok(())
+    }).await.unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    let preview: api::SlackRun = parse(
+        &david
+            .send(get(&format!("/api/v1/slack/imports/{id}")))
+            .await,
+    );
+    assert_eq!(preview.conversations.len(), 1);
+    assert_eq!(preview.conversations[0].name, "your notes");
+    assert_eq!(preview.conversations[0].kind, "Direct message");
+}
+
 // --- Setup writes ------------------------------------------------------------------------------
 
 #[tokio::test]
