@@ -312,7 +312,11 @@ function Profile({
   if (user.role === "bot") {
     return (
       <div className="person" data-status={user.status}>
-        <Avatar name={user.name} userId={user.id} src={user.avatarUrl} size={96} />
+        {user.botAvatar === null ? (
+          <Avatar name={user.name} userId={user.id} src={user.avatarUrl} size={96} />
+        ) : (
+          <UserAvatar userId={user.id} size={96} live />
+        )}
         <span className="people-badge">Bot</span>
         {ignored ? <span className="people-badge">Ignored</span> : null}
         {active ? (
