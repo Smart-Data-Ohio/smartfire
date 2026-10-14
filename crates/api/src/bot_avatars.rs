@@ -56,8 +56,10 @@ pub enum Change {
 
 impl Change {
     /// The change a write asks for, from its `botAvatar` and whether it uploads a picture. A
-    /// bad colour is refused here, on the `botAvatar` field, before anything is written (serde
-    /// already refused unknown types, faces and accessories).
+    /// bad colour, or a spec without the picture rendered from it, is refused here, on the
+    /// `botAvatar` field, before anything is written (serde already refused unknown types, faces
+    /// and accessories). A spec always arrives with its render, so every surface that shows the
+    /// picture (notifications, the API, link previews) shows the bot the SPA draws.
     pub fn of(c: &mut Ctx, spec: Option<api::BotAvatarSpec>, new_picture: bool) -> Result<Self> {
         Ok(match spec {
             Some(spec) => {
@@ -67,6 +69,12 @@ impl Change {
                         validation("botAvatar", "needs a colour like #7aa2ff"),
                     ));
                 };
+                if !new_picture {
+                    return Err(fail(
+                        c,
+                        validation("botAvatar", "needs the picture rendered from it"),
+                    ));
+                }
                 Self::Set(api::BotAvatarSpec { color, ..spec })
             }
             None if new_picture => Self::Clear,

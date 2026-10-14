@@ -21,6 +21,15 @@ export interface AvatarFields {
 
 const UNCHANGED: AvatarFields = { avatar: null, botAvatar: null };
 
+/**
+ * The spec a bot shows with its render attached: what a save may skip re-sending. The server
+ * stores a spec only with the picture rendered from it, and a plain picture clears it; without a
+ * picture there is nothing to keep, so a save always sends the render then.
+ */
+export function renderedSpec(spec: BotAvatarSpec | null, pictured: boolean): BotAvatarSpec | null {
+  return pictured ? spec : null;
+}
+
 /** A picked avatar's still render as an upload-ready file (about 256 px square). */
 export async function renderedAvatar(spec: BotAvatarSpec): Promise<File> {
   const { specPng } = await loadForUpdate(() => import("../../ui/bot-bitmap.ts"));
@@ -88,7 +97,7 @@ function specKey(spec: BotAvatarSpec): string {
 /**
  * Uploads what the choice needs and names it for the write: a picked avatar sends its spec with
  * its still render (the picture every non-SPA surface shows), an image just the image. A choice
- * that matches what the bot already has sends nothing. `kept` reuses the form's upload of the
+ * that matches what the bot already has (`current`, from `renderedSpec`) sends nothing. `kept` reuses the form's upload of the
  * same picture from an attempt that didn't go through.
  */
 export async function avatarFields(

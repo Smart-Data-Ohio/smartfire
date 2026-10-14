@@ -9,7 +9,12 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { leftToConfirm } from "../auth/confirmation.ts";
-import { type AvatarChoice, avatarFields, keptUpload } from "../bot-avatar/avatar-choice.ts";
+import {
+  type AvatarChoice,
+  avatarFields,
+  keptUpload,
+  renderedSpec,
+} from "../bot-avatar/avatar-choice.ts";
 import { BotAvatarPicker } from "../bot-avatar/bot-avatar-picker.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import {
@@ -247,7 +252,8 @@ export function BotSection() {
     setFields({});
 
     const run = async () => {
-      const picture = await avatarFields(choice, bot.botAvatar, pictureUpload);
+      const current = renderedSpec(bot.botAvatar, bot.avatarAttached);
+      const picture = await avatarFields(choice, current, pictureUpload);
 
       return bots.update(id, { ...botChange(form, bot), ...picture });
     };

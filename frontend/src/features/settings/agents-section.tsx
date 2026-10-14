@@ -18,6 +18,7 @@ import {
   avatarFields,
   changesAvatar,
   keptUpload,
+  renderedSpec,
 } from "../bot-avatar/avatar-choice.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -661,7 +662,8 @@ function EditDialog({
     // a field the person left alone is never sent back over a newer value. While the cache is
     // unconfirmed, whatever they changed is sent as it stands.
     const rename = touched.name && (unconfirmed || name !== agent.name);
-    const repicture = touched.avatar && changesAvatar(form.avatar, agent.botAvatar);
+    const shown = renderedSpec(agent.botAvatar, agent.avatarUrl !== null);
+    const repicture = touched.avatar && changesAvatar(form.avatar, shown);
 
     if (!rename && !repicture && !touched.access) {
       onClose();
@@ -674,9 +676,7 @@ function EditDialog({
 
       if (rename || repicture) {
         // `null` leaves that field as the server holds it.
-        const picture = repicture
-          ? await avatarFields(form.avatar, agent.botAvatar, pictureUpload)
-          : null;
+        const picture = repicture ? await avatarFields(form.avatar, shown, pictureUpload) : null;
 
         latest = await writes.rename(agent.id, {
           name: rename ? name : null,

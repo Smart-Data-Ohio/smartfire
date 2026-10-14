@@ -58,6 +58,27 @@ describe("the mock's bot pages", () => {
     expect(Object.keys(field(field(refused, "error"), "fields") ?? {})).toEqual(["name"]);
   });
 
+  it("refuse a bot avatar that comes without its rendered picture", async () => {
+    const { server } = harness();
+    const cat = { type: "cat", color: "#eaa06f", face: "eyes", accessory: null };
+
+    const refused = await expectStatus<Json>(
+      server,
+      "PATCH",
+      `/api/v1/admin/bots/${BOT_ID}`,
+      { botAvatar: cat },
+      422,
+    );
+
+    expect(field(field(field(refused, "error"), "fields"), "botAvatar")).toEqual([
+      "needs the picture rendered from it",
+    ]);
+
+    const bot = await get<Bot>(server, `/api/v1/admin/bots/${BOT_ID}`);
+
+    expect(bot.botAvatar).toBeNull();
+  });
+
   it("refuse a bad budget by its field, as the classic form does", async () => {
     const { server } = harness();
 

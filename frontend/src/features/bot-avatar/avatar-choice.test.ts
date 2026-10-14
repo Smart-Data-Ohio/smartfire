@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActionError } from "../../sync/run.ts";
-import { avatarFields, avatarUploads, changesAvatar, keptUpload } from "./avatar-choice.ts";
+import {
+  avatarFields,
+  avatarUploads,
+  changesAvatar,
+  keptUpload,
+  renderedSpec,
+} from "./avatar-choice.ts";
 
 const CAT = { type: "cat" as const, color: "#eaa06f", face: "mouth" as const, accessory: null };
 
@@ -37,6 +43,20 @@ describe("saving a bot's picture", () => {
     expect(changesAvatar(same, CAT)).toBe(false);
     expect(await avatarFields(same, CAT)).toEqual({ avatar: null, botAvatar: null });
     expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("sends the render again for a spec whose picture isn't attached", async () => {
+    const { upload } = stubbed();
+    const same = { kind: "bot" as const, spec: CAT };
+
+    expect(renderedSpec(CAT, true)).toBe(CAT);
+    expect(renderedSpec(CAT, false)).toBeNull();
+    expect(changesAvatar(same, renderedSpec(CAT, false))).toBe(true);
+    expect(await avatarFields(same, renderedSpec(CAT, false))).toEqual({
+      avatar: "signed-avatar",
+      botAvatar: CAT,
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
   });
 
   it("sends an image alone, and nothing without one or when keeping", async () => {

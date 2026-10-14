@@ -15,8 +15,9 @@ export type BotAvatarChange =
   | { readonly kind: "keep" };
 
 /**
- * The write's `botAvatar` beside whether it uploads a picture. A spec the library doesn't have, or
- * a colour that isn't `#rrggbb`, is refused on `botAvatar` through `refuse`.
+ * The write's `botAvatar` beside whether it uploads a picture. A spec the library doesn't have, a
+ * colour that isn't `#rrggbb`, or a spec without its rendered picture is refused on `botAvatar`
+ * through `refuse`.
  */
 export function botAvatarChange(
   body: Json | undefined,
@@ -47,6 +48,9 @@ export function botAvatarChange(
   }
 
   if (!/^#[0-9a-f]{6}$/i.test(color)) throw refuse("needs a colour like #7aa2ff");
+
+  // The picture is what every non-SPA surface shows: a spec comes with its render.
+  if (!newPicture) throw refuse("needs the picture rendered from it");
 
   return { kind: "set", spec: { type, color: color.toLowerCase(), face, accessory } };
 }
