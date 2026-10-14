@@ -159,6 +159,21 @@ export function wearOf(accessory: BotAvatarAccessory | null): BotAvatarWear {
   }
 }
 
+/**
+ * How much of its tile a toy fills, and how far below centre it sits: a hat stands above the
+ * body, so a hatted toy is drawn smaller and lower to keep the hat inside the tile.
+ */
+export function fitOf(
+  accessory: BotAvatarAccessory | null,
+  size: number,
+): { readonly scale: number; readonly drop: number } {
+  const snug = size <= 24;
+
+  return wearOf(accessory).hat === "none"
+    ? { scale: snug ? 0.9 : 0.8, drop: 0 }
+    : { scale: snug ? 0.76 : 0.68, drop: snug ? 0.07 : 0.08 };
+}
+
 /** The colour the library takes: `#rrggbb`, else the body's own. */
 export function colorOf(spec: BotAvatarSpec): string {
   return /^#[0-9a-f]{6}$/i.test(spec.color) ? spec.color.toLowerCase() : ownColor(spec.type);

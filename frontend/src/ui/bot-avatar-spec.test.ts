@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   BOT_AVATAR_TYPES,
   describeSpec,
+  fitOf,
   keptSpec,
   ownColor,
   randomSpec,
@@ -59,6 +60,13 @@ describe("bot avatar specs", () => {
       headphones: false,
       bowTie: false,
     });
+  });
+
+  it("draws a hatted toy smaller and lower, so the hat stays in its tile", () => {
+    expect(fitOf(null, 44)).toEqual({ scale: 0.8, drop: 0 });
+    expect(fitOf("shades", 20)).toEqual({ scale: 0.9, drop: 0 });
+    expect(fitOf("crown", 44).scale).toBeLessThan(0.8);
+    expect(fitOf("beanie", 44).drop).toBeGreaterThan(0);
   });
 
   it("reads a picked avatar out, and compares colours in any case", () => {

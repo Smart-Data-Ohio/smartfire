@@ -1,7 +1,7 @@
 import type { BotAvatarDrawConfig, BotAvatarType } from "bot-avatars";
 import * as bots from "bot-avatars";
 import type { BotAvatarSpec } from "../gen/BotAvatarSpec.ts";
-import { colorOf, wearOf } from "./bot-avatar-spec.ts";
+import { colorOf, fitOf, wearOf } from "./bot-avatar-spec.ts";
 
 /** One data URL per look, size, theme and pixel ratio, for the life of the page. */
 const cache = new Map<string, Promise<string>>();
@@ -228,11 +228,12 @@ type Look = { kind: "seed"; seed: string } | { kind: "spec"; spec: BotAvatarSpec
 
 /**
  * The toy drawn into a `size` square: it fills 80 % of it (90 % at sidebar sizes, where every
- * pixel counts); the library draws into a canvas OVERSCAN times the toy, with the toy RISE of its
+ * pixel counts; less, and lower, under a hat — see `fitOf`); the library draws into a canvas OVERSCAN times the toy, with the toy RISE of its
  * size below centre (room for hats and bounce), cropped back to the square here.
  */
 function draw(look: Look, size: number, theme: "light" | "dark", dpr: number, pose: BotPose) {
-  const box = size * (size <= 24 ? 0.9 : 0.8);
+  const fit = look.kind === "spec" ? fitOf(look.spec.accessory, size) : fitOf(null, size);
+  const box = size * fit.scale;
   const work = document.createElement("canvas");
   const side = Math.round(box * bots.BOT_AVATAR_OVERSCAN * dpr);
 
@@ -272,7 +273,7 @@ function draw(look: Look, size: number, theme: "light" | "dark", dpr: number, po
   tileContext.drawImage(
     work,
     (inset - spill * box) * dpr,
-    (inset - (spill + bots.BOT_AVATAR_RISE) * box) * dpr,
+    (inset + fit.drop * size - (spill + bots.BOT_AVATAR_RISE) * box) * dpr,
   );
 
   return tile;

@@ -6,6 +6,7 @@ import { EmojiImage } from "../lib/emoji/emoji-image.tsx";
 import { lazyForUpdate } from "../service-worker/lazy.ts";
 import { loadForUpdate } from "../service-worker/update-required.ts";
 import { AgentThinking } from "./agent-thinking.tsx";
+import { fitOf } from "./bot-avatar-spec.ts";
 import type { BotPose } from "./bot-bitmap.ts";
 import { Icon } from "./icons/icon.tsx";
 import "./avatar.css";
@@ -76,6 +77,7 @@ export function AgentAvatar({
   const src = useBotBitmap(drawn, key, seed, spec, size, theme, pose);
 
   const style = { "--avatar-size": `${size}px` };
+  const fit = fitOf(spec?.accessory ?? null, size);
 
   let body: ReactNode;
 
@@ -93,10 +95,14 @@ export function AgentAvatar({
       {body}
       {live && spec !== null ? (
         <Suspense fallback={null}>
-          <span className="agent-avatar-live" aria-hidden="true">
+          <span
+            className="agent-avatar-live"
+            aria-hidden="true"
+            style={{ paddingTop: `${fit.drop * size * 2}px` }}
+          >
             <LiveBotAvatar
               spec={spec}
-              size={Math.round(size * 0.8)}
+              size={Math.round(size * fit.scale)}
               theme={theme}
               state={liveState(state)}
               interactive={!decorative}
