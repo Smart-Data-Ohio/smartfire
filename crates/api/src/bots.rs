@@ -27,6 +27,7 @@ use campfire_runtime::presenters::{self, accounts as account_presenters};
 use serde_json::json;
 
 use crate::admin::{administrator, body, refusal, require_sudo, viewer};
+use crate::bot_avatars;
 use crate::dto::time;
 use crate::error::{fail, validation};
 
@@ -174,7 +175,11 @@ fn icon(icon: AvatarIcon) -> api::BotIcon {
 }
 
 /// A verified direct upload, as the classic form's `avatar` field gives it.
-fn signed_upload(c: &mut Ctx, field: &str, signed_id: Option<String>) -> Result<Assignment> {
+pub(crate) fn signed_upload(
+    c: &mut Ctx,
+    field: &str,
+    signed_id: Option<String>,
+) -> Result<Assignment> {
     let Some(signed_id) = signed_id else {
         return Ok(Assignment::Unchanged);
     };
@@ -205,11 +210,16 @@ fn saved<T>(outcome: campfire_db::Result<T>) -> Result<T> {
 async fn index_bots(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let secrets = c.app().secrets.clone();
-    let bots = c
+    let (bots, mut bot_avatars) = c
         .app()
         .db
         .read(move |conn| {
-            account_presenters::bots(conn, &secrets, &User::active_bots_ordered(conn)?)
+            let bots = User::active_bots_ordered(conn)?;
+            let ids: Vec<i64> = bots.iter().map(|bot| bot.id).collect();
+            Ok((
+                account_presenters::bots(conn, &secrets, &bots)?,
+                campfire_db::BotAvatar::for_ids(conn, &ids)?,
+            ))
         })
         .await
         .map_err(Error::internal)?;
@@ -219,6 +229,10 @@ async fn index_bots(c: &mut Ctx) -> Result {
         .map(|bot| {
             let ownership = bot.ownership_line();
             api::BotSummary {
+                bot_avatar: bot_avatars
+                    .remove(&bot.user.id)
+                    .as_ref()
+                    .and_then(bot_avatars::spec),
                 id: bot.user.id,
                 name: bot.user.name,
                 avatar_url: bot.user.avatar_path,
@@ -252,7 +266,15 @@ async fn load_bot(c: &Ctx, bot: &User) -> Result<api::Bot> {
     let secrets = c.app().secrets.clone();
     let summary = presenters::user_summary(&secrets, bot);
     let can_administer = concerns::current_user(c).is_some_and(User::is_administrator);
+    let id = bot.id;
+    let bot_avatar = c
+        .app()
+        .db
+        .read(move |conn| bot_avatars::read(conn, id))
+        .await
+        .map_err(Error::internal)?;
     Ok(api::Bot {
+        bot_avatar,
         id: bot.id,
         name: form.name.unwrap_or_else(|| bot.name.clone()),
         avatar_url: summary.avatar_path,
@@ -329,6 +351,8 @@ async fn save_new_bot(c: &mut Ctx) -> Result {
     administrator(c).await?;
     require_sudo(c).await?;
     let create: api::CreateBot = body(c).await?;
+    let new_picture = create.avatar.is_some();
+    let bot_avatar = bot_avatars::Change::of(c, create.bot_avatar, new_picture)?;
     let avatar = signed_upload(c, "avatar", create.avatar)?
         .stage(c.app())
         .await?;
@@ -339,6 +363,7 @@ async fn save_new_bot(c: &mut Ctx) -> Result {
         avatar,
     };
     let bot = saved(classic::create_bot(c, new).await?)?;
+    save_bot_avatar(c, bot.id, bot_avatar).await?;
     let key = bot.bot_key();
     reply_key(c, &bot, key)
 }
@@ -371,10 +396,13 @@ async fn save_bot(c: &mut Ctx) -> Result {
         concerns::ensure_can_administer(c)?;
         require_sudo(c).await?;
     }
+    let new_picture = update.avatar.is_some();
+    let bot_avatar = bot_avatars::Change::of(c, update.bot_avatar, new_picture)?;
     let avatar = signed_upload(c, "avatar", update.avatar)?
         .stage(c.app())
         .await?;
     let id = bot.id;
+    let picture_changing = new_picture || bot_avatar.changes();
     let changes = BotUpdate {
         name: update.name,
         icon_name: update.icon_name.as_deref().map(icon_input),
@@ -383,7 +411,23 @@ async fn save_bot(c: &mut Ctx) -> Result {
         avatar,
     };
     saved(classic::update_bot(c, bot, changes).await?)?;
+    save_bot_avatar(c, id, bot_avatar).await?;
+    if picture_changing {
+        crate::settings::publish_identity(c, id).await?;
+    }
     reply_bot(c, id, None).await
+}
+
+/// Sets or clears the bot's picked avatar after its save, as the picture it goes with was.
+async fn save_bot_avatar(c: &Ctx, id: i64, change: bot_avatars::Change) -> Result<()> {
+    if !change.changes() {
+        return Ok(());
+    }
+    c.app()
+        .db
+        .write(move |tx| change.apply(tx, id))
+        .await
+        .map_err(Error::internal)
 }
 
 /// `accounts/bots#destroy`: administrators; the bot is deactivated, its agent suspended.

@@ -1,0 +1,210 @@
+//! A bot's picked bot avatar through the admin bot API, the personal agent API and the
+//! directory: stored with the picture that is its render, replaced, cleared by a plain picture,
+//! and refused when it names something the library doesn't have.
+
+use axum::http::{Method, StatusCode};
+use campfire_api_types as api;
+use serde_json::{Value, json};
+
+use super::admin_tests::{app, error, get, owned_upload, parse, spa, upload, write};
+use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN};
+
+/// Bender: a workspace agent David owns.
+const BENDER: i64 = 394959859;
+
+fn cat() -> Value {
+    json!({"type": "cat", "color": "#FF8A5C", "face": "mouth", "accessory": "roundGlasses"})
+}
+
+fn cat_spec() -> api::BotAvatarSpec {
+    api::BotAvatarSpec {
+        kind: api::BotAvatarType::Cat,
+        color: "#ff8a5c".into(),
+        face: api::BotAvatarFace::Mouth,
+        accessory: Some(api::BotAvatarAccessory::RoundGlasses),
+    }
+}
+
+async fn directory_entry(b: &mut Browser<'_>, id: i64) -> api::User {
+    let list: api::UserList = parse(&b.send(get(&format!("/api/v1/users?ids={id}"))).await);
+    list.users.into_iter().next().expect("the user")
+}
+
+#[tokio::test]
+async fn a_new_bot_keeps_its_picked_avatar_and_its_render() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let render = upload(&a, "bot-avatar.png").await;
+    let key: api::BotKey = spa(
+        &mut david,
+        Method::POST,
+        "/api/v1/admin/bots",
+        json!({"name": "Whiskers", "iconName": null, "webhookUrl": null, "avatar": render, "botAvatar": cat()}),
+    )
+    .await;
+
+    let bot: api::Bot = parse(
+        &david
+            .send(get(&format!("/api/v1/admin/bots/{}", key.id)))
+            .await,
+    );
+    assert_eq!(
+        bot.bot_avatar,
+        Some(cat_spec()),
+        "the colour is stored in lowercase"
+    );
+    assert!(
+        bot.avatar_attached,
+        "the render is the picture other surfaces show"
+    );
+
+    let list: api::BotList = parse(&david.send(get("/api/v1/admin/bots")).await);
+    let listed = list.bots.iter().find(|each| each.id == key.id).unwrap();
+    assert_eq!(listed.bot_avatar, Some(cat_spec()));
+    assert_eq!(
+        list.bots
+            .iter()
+            .find(|each| each.id == BENDER)
+            .unwrap()
+            .bot_avatar,
+        None,
+        "bots without one keep their icon or picture"
+    );
+
+    let user = directory_entry(&mut david, key.id).await;
+    assert_eq!(user.bot_avatar, Some(cat_spec()));
+    assert!(user.has_avatar);
+    assert_eq!(directory_entry(&mut david, DAVID).await.bot_avatar, None);
+}
+
+#[tokio::test]
+async fn an_edit_replaces_the_avatar_and_a_plain_picture_clears_it() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/admin/bots/{BENDER}");
+    let before = directory_entry(&mut david, BENDER).await;
+
+    let render = upload(&a, "bot-avatar.png").await;
+    let change: api::BotChange = spa(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"avatar": render, "botAvatar": cat()}),
+    )
+    .await;
+    assert_eq!(change.bot.bot_avatar, Some(cat_spec()));
+    assert!(change.bot.avatar_attached);
+    let after = directory_entry(&mut david, BENDER).await;
+    assert_ne!(
+        after.avatar_url, before.avatar_url,
+        "a new avatar URL for the new render"
+    );
+
+    let renamed: api::BotChange = spa(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"name": "Bender B."}),
+    )
+    .await;
+    assert_eq!(
+        renamed.bot.bot_avatar,
+        Some(cat_spec()),
+        "other edits keep it"
+    );
+
+    let picture = upload(&a, "photo.png").await;
+    let cleared: api::BotChange =
+        spa(&mut david, Method::PATCH, &path, json!({"avatar": picture})).await;
+    assert_eq!(
+        cleared.bot.bot_avatar, None,
+        "the picture is no longer the avatar's render"
+    );
+    assert!(cleared.bot.avatar_attached);
+}
+
+#[tokio::test]
+async fn a_spec_the_library_does_not_have_is_refused() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/admin/bots/{BENDER}");
+    for bad in [
+        json!({"type": "dragon", "color": "#ff8a5c", "face": "eyes", "accessory": null}),
+        json!({"type": "cat", "color": "#ff8a5c", "face": "nose", "accessory": null}),
+        json!({"type": "cat", "color": "#ff8a5c", "face": "eyes", "accessory": "monocle"}),
+    ] {
+        let reply = write(&mut david, Method::PATCH, &path, json!({"botAvatar": bad})).await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
+    }
+    for color in ["orange", "#f80", "#ff8a5cff", "ff8a5c"] {
+        let reply = write(
+            &mut david,
+            Method::PATCH,
+            &path,
+            json!({"botAvatar": {"type": "cat", "color": color, "face": "eyes", "accessory": null}}),
+        )
+        .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{color}: {}",
+            reply.text()
+        );
+        assert_eq!(
+            error(&reply)["fields"]["botAvatar"][0],
+            "needs a colour like #7aa2ff"
+        );
+    }
+    let bot: api::Bot = parse(&david.send(get(&path)).await);
+    assert_eq!(bot.bot_avatar, None, "nothing was written");
+}
+
+#[tokio::test]
+async fn a_personal_agent_takes_a_picked_avatar() {
+    let Some(a) = app().await else { return };
+    let mut kevin = a.sign_in(KEVIN).await;
+    kevin.grant_sudo().await;
+    let render = owned_upload(&a, "bot-avatar.png", KEVIN).await;
+    let reply = write(
+        &mut kevin,
+        Method::POST,
+        "/api/v1/me/agents",
+        json!({"name": "Helper", "roomIds": [], "capabilities": [], "avatar": render, "botAvatar": cat()}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let created: api::PersonalAgentCreated = parse(&reply);
+    assert_eq!(created.agent.bot_avatar, Some(cat_spec()));
+    assert!(
+        created.agent.avatar_url.is_some(),
+        "the render is its picture"
+    );
+
+    let path = format!("/api/v1/me/agents/{}", created.agent.id);
+    let reply = write(
+        &mut kevin,
+        Method::PATCH,
+        &path,
+        json!({"botAvatar": {"type": "ghost", "color": "#ffffff", "face": "eyes", "accessory": null}}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let agent: api::PersonalAgent = parse(&reply);
+    assert_eq!(
+        agent.bot_avatar.map(|spec| spec.kind),
+        Some(api::BotAvatarType::Ghost)
+    );
+    assert_eq!(
+        directory_entry(&mut kevin, created.agent.user_id)
+            .await
+            .bot_avatar
+            .map(|spec| spec.kind),
+        Some(api::BotAvatarType::Ghost)
+    );
+}
