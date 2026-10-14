@@ -13,4 +13,8 @@ icon: BotIcon | null,
 /**
  * "Workspace agent · Owned by Grace", "no owner recorded", as the classic list reads.
  */
-ownership: string, rooms: Array<BotRoom>, };
+ownership: string,
+/**
+ * Personal agents use bearer credentials and cannot issue bot keys.
+ */
+supportsBotKey: boolean, rooms: Array<BotRoom>, };

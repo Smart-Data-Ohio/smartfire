@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 use super::admin_tests::{
     app, assert_parity, audits, classic, dump, error, get, json_body, nothing, parse, spa, write,
 };
-use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{ALL_TALK, Browser, DAVID, HQ, KEVIN, Req, TestApp};
 
 /// Bender: a workspace agent David owns, with a webhook.
 const BENDER: i64 = 394959859;
@@ -89,6 +89,155 @@ async fn bender_has_a_grant(_: &TestApp, b: &mut Browser<'_>) -> Value {
 }
 
 // --- Reads and gates ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn bot_key_support_distinguishes_personal_workspace_and_legacy_bots() {
+    let a = app().await.expect("restored default frozen seed");
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let created = write(
+        &mut david,
+        Method::POST,
+        "/api/v1/me/agents",
+        json!({"name": "Personal helper", "roomIds": [ALL_TALK], "capabilities": ["read_messages"]}),
+    ).await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let created: Value = parse(&created);
+    let personal = created["agent"]["userId"].as_i64().unwrap();
+    let list: Value = parse(&david.send(get("/api/v1/admin/bots")).await);
+    for (id, supported) in [(personal, false), (BENDER, true), (DEPLOY, true)] {
+        let summary = list["bots"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|bot| bot["id"] == id)
+            .unwrap();
+        assert_eq!(
+            summary["supportsBotKey"], supported,
+            "bot {id}: key capability on the list"
+        );
+        let detail: Value = parse(&david.send(get(&format!("/api/v1/admin/bots/{id}"))).await);
+        assert_eq!(
+            detail["supportsBotKey"], supported,
+            "bot {id}: key capability on detail"
+        );
+    }
+    for suffix in ["credentials", "grants"] {
+        let reply = david
+            .send(get(&format!("/api/v1/admin/bots/{personal}/{suffix}")))
+            .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::OK,
+            "personal {suffix}: {}",
+            reply.text()
+        );
+    }
+    let refused = write(
+        &mut david,
+        Method::PUT,
+        &format!("/api/v1/admin/bots/{personal}/key"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(
+        refused
+            .text()
+            .contains("Bot key is not available to personal agents")
+    );
+}
+
+#[tokio::test]
+async fn issued_bot_keys_post_as_the_bot_and_rotation_revokes_the_old_key() {
+    let a = app().await.expect("restored default frozen seed");
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let key: api::BotKey = spa(
+        &mut david,
+        Method::POST,
+        "/api/v1/admin/bots",
+        json!({"name": "Key witness"}),
+    )
+    .await;
+    assert!(key.key.starts_with(&format!("{}-", key.id)));
+    let mut anonymous = a.anonymous();
+    let post = anonymous
+        .send(
+            Req::new(Method::POST, &format!("/rooms/{HQ}/{}/messages", key.key))
+                .header("accept", "application/json")
+                .header("content-type", "text/plain")
+                .body("Issued key witness"),
+        )
+        .await;
+    assert_eq!(post.status, StatusCode::CREATED, "{}", post.text());
+    let id: i64 = post
+        .header("location")
+        .unwrap()
+        .rsplit('/')
+        .next()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let rich_text = a.booted.app.db.env().rich_text.clone();
+    let persisted = a
+        .db()
+        .read(move |conn| {
+            let message = campfire_db::Message::find(conn, id)?;
+            Ok((
+                message.creator_id,
+                message.room_id,
+                message.plain_text_body(conn, &*rich_text)?,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_eq!(persisted, (key.id, HQ, "Issued key witness".into()));
+    let rotated: api::BotKey = spa(
+        &mut david,
+        Method::PUT,
+        &format!("/api/v1/admin/bots/{}/key", key.id),
+        Value::Null,
+    )
+    .await;
+    assert_ne!(rotated.key, key.key);
+    for (token, expected) in [
+        (&key.key, StatusCode::FOUND),
+        (&rotated.key, StatusCode::CREATED),
+    ] {
+        let reply = anonymous
+            .send(
+                Req::new(Method::POST, &format!("/rooms/{HQ}/{token}/messages"))
+                    .header("accept", "application/json")
+                    .header("content-type", "text/plain")
+                    .body("Rotated key witness"),
+            )
+            .await;
+        assert_eq!(reply.status, expected, "{}", reply.text());
+        if expected == StatusCode::FOUND {
+            assert!(reply.header("location").unwrap().ends_with("/session/new"));
+        }
+    }
+    let count = a
+        .db()
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM messages WHERE creator_id=? AND room_id=? AND system_note=0",
+                rusqlite::params![key.id, HQ],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 2, "only the issued and rotated keys create messages");
+    let forbidden = anonymous
+        .send(get(&format!(
+            "/api/v1/rooms/{HQ}/messages?bot_key={}",
+            rotated.key
+        )))
+        .await;
+    assert_eq!(forbidden.status, StatusCode::FORBIDDEN);
+}
 
 #[tokio::test]
 async fn the_list_and_a_bot_read_as_the_classic_pages() {

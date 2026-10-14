@@ -43,6 +43,7 @@ describe("S7 bot schemas", () => {
           avatarUrl: "/users/9/avatar?v=1",
           icon: { kind: "emoji", title: "Robot", character: "🤖" },
           ownership: "Workspace agent · Owned by Grace",
+          supportsBotKey: true,
           rooms: [
             {
               id: 3,
@@ -65,6 +66,7 @@ describe("S7 bot schemas", () => {
         icon: { kind: "image", title: "Acme", url: "/icons/acme.svg" },
         webhookUrl: "https://example.com/hook",
         canAdminister: true,
+        supportsBotKey: true,
         agent,
         signingSecret: null,
         github: { login: "bender-bot", usable: false, disconnectedReason: "Bad credentials" },
@@ -76,7 +78,15 @@ describe("S7 bot schemas", () => {
     expect(() =>
       Schema.decodeUnknownSync(BotList)({
         bots: [
-          { id: 9, name: "B", avatarUrl: "", icon: { kind: "gif" }, ownership: "", rooms: [] },
+          {
+            id: 9,
+            name: "B",
+            avatarUrl: "",
+            icon: { kind: "gif" },
+            ownership: "",
+            supportsBotKey: true,
+            rooms: [],
+          },
         ],
       }),
     ).toThrow();

@@ -558,32 +558,34 @@ export function BotSection() {
         />
       )}
       {bot.canAdminister ? (
-        <SettingsGroup title="Key and removal">
+        <SettingsGroup title={bot.supportsBotKey ? "Key and removal" : "Removal"}>
           <div className="settings-actions">
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={busy("key")}
-              onClick={() =>
-                setAsk({
-                  title: "Generate a new key?",
-                  message: CONFIRM.key,
-                  label: "Generate",
-                  danger: true,
-                  run: () =>
-                    void track(
-                      "key",
-                      bots
-                        .resetKey(id)
-                        .then(setKey, (error: Error) =>
-                          adminFailure("Couldn't generate a new key", error),
-                        ),
-                    ),
-                })
-              }
-            >
-              Generate a new key
-            </Button>
+            {bot.supportsBotKey ? (
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={busy("key")}
+                onClick={() =>
+                  setAsk({
+                    title: "Generate a new key?",
+                    message: CONFIRM.key,
+                    label: "Generate",
+                    danger: true,
+                    run: () =>
+                      void track(
+                        "key",
+                        bots
+                          .resetKey(id)
+                          .then(setKey, (error: Error) =>
+                            adminFailure("Couldn't generate a new key", error),
+                          ),
+                      ),
+                  })
+                }
+              >
+                Generate a new key
+              </Button>
+            ) : null}
             <Button
               variant="danger"
               size="sm"

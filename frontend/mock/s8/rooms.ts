@@ -64,6 +64,7 @@ export function createRoomManagement(
   ctx: S2Context,
   admin: Pick<AdminModule, "roomCreationRestricted" | "hasIcon">,
   huddles: Pick<Huddles, "roomRoles" | "reviseRoom" | "removeRoom">,
+  revokeForMembership: (roomId: number, userId: number) => void = () => {},
 ): RoomManagement {
   const creationKeys = new WeakMap<ReturnType<S2Context["world"]>, Map<string, RoomRecord>>();
   const viewer = () => ctx.world().users.get(VIEWER_ID);
@@ -400,6 +401,11 @@ export function createRoomManagement(
           ? record.memberIds
           : [...new Set([...record.memberIds, ...activeUsers().map((user) => user.id)])]
         : input.ids;
+
+    for (const id of previousMembers) {
+      if (!record.memberIds.includes(id)) revokeForMembership(roomId, id);
+    }
+
     huddles.reviseRoom(record, previousMembers);
     publish(record);
 
@@ -410,6 +416,8 @@ export function createRoomManagement(
     const record = ctx.roomOr404(roomId);
 
     if (!canDelete(record)) throw forbidden();
+
+    for (const id of record.memberIds) revokeForMembership(roomId, id);
     huddles.removeRoom(record);
     ctx.world().rooms.delete(roomId);
     ctx.publish([
@@ -426,6 +434,7 @@ export function createRoomManagement(
     const previous = [...record.memberIds];
 
     record.memberIds = record.memberIds.filter((id) => id !== VIEWER_ID);
+    revokeForMembership(roomId, VIEWER_ID);
     huddles.reviseRoom(record, previous);
     const deleted = record.memberIds.length === 0;
 
