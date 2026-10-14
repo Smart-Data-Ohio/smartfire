@@ -25,6 +25,10 @@ icon: BotIcon | null, webhookUrl: string | null,
  */
 canAdminister: boolean,
 /**
+ * Personal agents use bearer credentials and cannot issue bot keys.
+ */
+supportsBotKey: boolean,
+/**
  * `null` for a legacy bot that has never been given an agent.
  */
 agent: BotAgent | null,

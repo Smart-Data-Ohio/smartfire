@@ -1,23 +1,27 @@
 /**
  * Chat bots (S7): the classic bot pages' twin under `/admin/bots/*`, kept per world so `reset()`
  * starts it over. The world's bot is a workspace agent the viewer owns, in the rooms it belongs
- * to; a legacy bot with no agent sits beside it. Bots made here live only in this module.
+ * to; a legacy bot with no agent sits beside it.
  */
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { Bot } from "../../src/gen/Bot.ts";
 import type { BotAgent } from "../../src/gen/BotAgent.ts";
-import type { BotGithub } from "../../src/gen/BotGithub.ts";
 import type { BotKey } from "../../src/gen/BotKey.ts";
 import type { BotRoom } from "../../src/gen/BotRoom.ts";
 import type { BotSummary } from "../../src/gen/BotSummary.ts";
-import type { Credential } from "../../src/gen/Credential.ts";
 import type { CredentialList } from "../../src/gen/CredentialList.ts";
-import type { Grant } from "../../src/gen/Grant.ts";
 import type { GrantList } from "../../src/gen/GrantList.ts";
 import { HttpError, notFound, ok } from "../http.ts";
 import { field, intField, type Json, stringField } from "../json.ts";
 import { BOT_ID, rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
+import {
+  type AgentRecord,
+  agentRecord,
+  type BotRecord,
+  PERSONAL_CAPABILITIES,
+} from "./bot-record.ts";
 import { type Route, route, type S2Context } from "./context.ts";
+import type { createMeAgents } from "./me-agents.ts";
 import type { Uploads } from "./uploads.ts";
 
 /** The capabilities a grant can give, in the classic order. */
@@ -35,31 +39,6 @@ const ORIGIN = "http://127.0.0.1";
 
 /** A legacy bot beside the world's: no agent, no webhook. */
 const LEGACY_ID = 900;
-
-interface AgentRecord {
-  id: number;
-  provider: string | null;
-  runtime: string | null;
-  description: string | null;
-  caps: [number | null, number | null, number | null];
-  suspended: boolean;
-  credentials: Credential[];
-  grants: Grant[];
-  everGranted: boolean;
-}
-
-interface BotRecord {
-  id: number;
-  name: string;
-  avatarUrl: string;
-  iconName: string | null;
-  webhookUrl: string | null;
-  signingSecret: string | null;
-  key: string;
-  github: BotGithub | null;
-  agent: AgentRecord | null;
-  removed: boolean;
-}
 
 interface State {
   bots: Map<number, BotRecord>;
@@ -84,29 +63,17 @@ const refusedField = (key: string, message: string): HttpError =>
 const refusal = (message: string): HttpError =>
   new HttpError(422, { _tag: VALIDATION, message, fields: {} });
 
-function agentRecord(id: number): AgentRecord {
-  return {
-    id,
-    provider: null,
-    runtime: null,
-    description: null,
-    caps: [null, null, null],
-    suspended: false,
-    credentials: [],
-    grants: [],
-    everGranted: false,
-  };
-}
-
 function initialState(world: World, now: number): State {
   const bots = new Map<number, BotRecord>();
   const seeded = world.users.get(BOT_ID);
 
   if (seeded !== undefined) {
     bots.set(BOT_ID, {
+      kind: "workspace",
       id: BOT_ID,
       name: seeded.name,
       avatarUrl: seeded.avatarUrl,
+      avatarAttached: !seeded.avatarUrl.endsWith("/avatar"),
       iconName: null,
       webhookUrl: "https://agents.example/smartfire",
       signingSecret: "whsec_mock_signing_secret",
@@ -124,9 +91,11 @@ function initialState(world: World, now: number): State {
   }
 
   bots.set(LEGACY_ID, {
+    kind: "workspace",
     id: LEGACY_ID,
     name: "Deploy Bot",
     avatarUrl: `/users/${LEGACY_ID}/avatar`,
+    avatarAttached: false,
     iconName: null,
     webhookUrl: null,
     signingSecret: null,
@@ -171,7 +140,8 @@ export function createBots(
   ctx: S2Context,
   uploads: Uploads,
   requireSudo: () => void,
-  personalSummaries: () => BotSummary[] = () => [],
+  personalAgents: Pick<ReturnType<typeof createMeAgents>, "records" | "credentialId">,
+  personalEnabled: () => boolean,
 ): BotsModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
@@ -190,16 +160,22 @@ export function createBots(
   const viewerName = () => ctx.world().users.get(VIEWER_ID)?.name ?? "You";
 
   const botOr404 = (id: number): BotRecord => {
-    const found = current().bots.get(id);
+    const found =
+      current().bots.get(id) ?? personalAgents.records().find((record) => record.id === id);
 
     if (found === undefined || found.removed) throw notFound();
 
     return found;
   };
 
-  const rooms = (id: number): BotRoom[] =>
+  const rooms = (bot: BotRecord): BotRoom[] =>
     [...ctx.world().rooms.values()].flatMap((record) => {
-      if (!record.memberIds.includes(id) || record.room.kind === "direct") return [];
+      const member =
+        bot.kind === "personal"
+          ? bot.roomIds.includes(record.room.id) && record.memberIds.includes(VIEWER_ID)
+          : record.memberIds.includes(bot.id);
+
+      if (!member || record.room.kind === "direct") return [];
 
       const url = `${ORIGIN}/rooms/${record.room.id}/BOT_KEY/messages`;
 
@@ -219,8 +195,13 @@ export function createBots(
     avatarUrl: record.avatarUrl,
     icon: null,
     ownership:
-      record.agent === null ? "no owner recorded" : `Workspace agent · Owned by ${viewerName()}`,
-    rooms: rooms(record.id),
+      record.kind === "personal"
+        ? `Personal agent · Owned by ${viewerName()}`
+        : record.agent === null
+          ? "no owner recorded"
+          : `Workspace agent · Owned by ${viewerName()}`,
+    supportsBotKey: record.kind === "workspace",
+    rooms: record.kind === "personal" ? [] : rooms(record),
   });
 
   const agentOf = (agent: AgentRecord): BotAgent => {
@@ -246,18 +227,19 @@ export function createBots(
     id: record.id,
     name: record.name,
     avatarUrl: record.avatarUrl,
-    avatarAttached: !record.avatarUrl.endsWith("/avatar"),
+    avatarAttached: record.avatarAttached,
     iconName: record.iconName,
     icon:
       record.iconName === null ? null : { kind: "emoji", title: record.iconName, character: "🤖" },
     webhookUrl: record.webhookUrl,
     canAdminister: true,
+    supportsBotKey: record.kind === "workspace",
     agent: record.agent === null ? null : agentOf(record.agent),
     signingSecret: record.signingSecret,
     github: record.github,
   });
 
-  const keyOf = (record: BotRecord): BotKey => ({
+  const keyOf = (record: Extract<BotRecord, { kind: "workspace" }>): BotKey => ({
     id: record.id,
     name: record.name,
     key: record.key,
@@ -289,10 +271,12 @@ export function createBots(
     const id = held.nextId;
     const avatar = stringField(body, "avatar");
 
-    const record: BotRecord = {
+    const record: Extract<BotRecord, { kind: "workspace" }> = {
+      kind: "workspace",
       id,
       name: name.trim(),
       avatarUrl: avatar === null ? `/users/${id}/avatar` : uploads.attachment(avatar).url,
+      avatarAttached: avatar !== null,
       iconName: stringField(body, "iconName"),
       webhookUrl: stringField(body, "webhookUrl"),
       signingSecret: null,
@@ -336,10 +320,23 @@ export function createBots(
     const agent = field(body, "agent");
 
     const caps: [number | null, number | null, number | null] = [
-      cap(stringField(agent, "dailyMessageCap"), "dailyMessageCap", errors),
-      cap(stringField(agent, "dailyBoardPostCap"), "dailyBoardPostCap", errors),
-      cap(stringField(agent, "dailyExternalActionCap"), "dailyExternalActionCap", errors),
+      field(agent, "dailyMessageCap") === undefined
+        ? (record.agent?.caps[0] ?? null)
+        : cap(stringField(agent, "dailyMessageCap"), "dailyMessageCap", errors),
+      field(agent, "dailyBoardPostCap") === undefined
+        ? (record.agent?.caps[1] ?? null)
+        : cap(stringField(agent, "dailyBoardPostCap"), "dailyBoardPostCap", errors),
+      field(agent, "dailyExternalActionCap") === undefined
+        ? (record.agent?.caps[2] ?? null)
+        : cap(stringField(agent, "dailyExternalActionCap"), "dailyExternalActionCap", errors),
     ];
+
+    if (record.kind === "personal" && webhookUrl !== null && !blank(webhookUrl))
+      errors.webhookUrl = ["is not available to personal agents"];
+    const description = stringField(agent, "description");
+
+    if (description !== null && description.length > 500)
+      errors.description = ["is too long (maximum is 500 characters)"];
 
     if (Object.keys(errors).length > 0) throw invalid(errors);
 
@@ -349,11 +346,15 @@ export function createBots(
 
     if (iconName !== null) record.iconName = blank(iconName) ? null : iconName.trim();
 
-    if (webhookUrl !== null) record.webhookUrl = blank(webhookUrl) ? null : webhookUrl.trim();
+    if (record.kind === "workspace" && webhookUrl !== null)
+      record.webhookUrl = blank(webhookUrl) ? null : webhookUrl.trim();
 
     const avatar = stringField(body, "avatar");
 
-    if (avatar !== null) record.avatarUrl = uploads.attachment(avatar).url;
+    if (avatar !== null) {
+      record.avatarUrl = uploads.attachment(avatar).url;
+      record.avatarAttached = true;
+    }
 
     if (record.agent !== null && agent !== undefined && agent !== null) {
       const text = (key: string, fallback: string | null) => {
@@ -375,17 +376,42 @@ export function createBots(
     botId: record.id,
     botName: record.name,
     canIssue: true,
-    credentials: [...agent.credentials].reverse(),
+    credentials: [...agent.credentials]
+      .sort((a, b) => b.id - a.id)
+      .map(
+        ({ kind: _kind, connection: _connection, lastUsedIp: _lastUsedIp, ...credential }) =>
+          credential,
+      ),
   });
 
   const grantList = (record: BotRecord, agent: AgentRecord): GrantList => ({
     botId: record.id,
     botName: record.name,
     canGrant: true,
-    legacy: !agent.everGranted,
-    grants: [...agent.grants].sort((a, b) => Number(a.revoked) - Number(b.revoked)),
+    legacy: record.kind === "workspace" && !agent.everGranted,
+    grants: [...agent.grants]
+      .sort((a, b) => Number(a.revoked) - Number(b.revoked))
+      .map((grant) => ({
+        id: grant.id,
+        capability: grant.capability,
+        roomName:
+          grant.roomId === null
+            ? "Workspace-wide"
+            : (ctx.world().rooms.get(grant.roomId)?.room.name ?? "Deleted room"),
+        grantedBy: grant.grantedBy,
+        createdAt: grant.createdAt,
+        revoked: grant.revoked,
+        status: grant.revoked
+          ? "revoked"
+          : record.kind === "personal" &&
+              (agent.suspended ||
+                !personalEnabled() ||
+                !rooms(record).some((room) => room.id === grant.roomId))
+            ? "inactive"
+            : "active",
+      })),
     capabilities: CAPABILITIES,
-    rooms: rooms(record.id).map((room) => ({ id: room.id, name: room.name })),
+    rooms: rooms(record).map((room) => ({ id: room.id, name: room.name })),
   });
 
   const issue = (id: number, body: Json | undefined) => {
@@ -400,10 +426,15 @@ export function createBots(
 
     const secret = `cfa_${ctx.hex(32)}`;
     const expiresAt = stringField(body, "expiresAt");
-    const credentialId = agent.credentials.length + 1;
 
-    agent.credentials.push({
+    const credentialId =
+      record.kind === "personal" ? personalAgents.credentialId() : agent.credentials.length + 1;
+
+    agent.credentials.unshift({
       id: credentialId,
+      kind: "token",
+      connection: null,
+      lastUsedIp: null,
       name: name.trim(),
       lastFour: secret.slice(-4),
       createdBy: viewerName(),
@@ -445,24 +476,29 @@ export function createBots(
 
     const roomId = intField(body, "roomId");
 
-    const roomName =
-      roomId === null
-        ? "Workspace-wide"
-        : (ctx.world().rooms.get(roomId)?.room.name ?? "Deleted room");
+    if (record.kind === "personal") {
+      if (!PERSONAL_CAPABILITIES.includes(capability))
+        throw invalid({ capability: ["is not available to personal agents"] });
+
+      if (roomId === null)
+        throw invalid({ room: ["must be a non-direct room for a personal agent"] });
+
+      if (!rooms(record).some((room) => room.id === roomId))
+        throw invalid({ roomId: ["isn't one of the bot's rooms"] });
+    }
 
     const held = agent.grants.some(
-      (each) => !each.revoked && each.capability === capability && each.roomName === roomName,
+      (each) => !each.revoked && each.capability === capability && each.roomId === roomId,
     );
 
     if (!held) {
       agent.grants.push({
         id: agent.grants.length + 1,
         capability,
-        roomName,
+        roomId,
         grantedBy: viewerName(),
         createdAt: timestamp(ctx.now()),
         revoked: false,
-        status: "active",
       });
       agent.everGranted = true;
     }
@@ -481,7 +517,7 @@ export function createBots(
 
     if (found === undefined) throw notFound();
 
-    agent.grants[at] = { ...found, revoked: true, status: "revoked" };
+    found.revoked = true;
 
     return ok(grantList(record, agent));
   };
@@ -501,12 +537,16 @@ export function createBots(
               .filter((record) => !record.removed)
               .sort((a, b) => a.name.localeCompare(b.name))
               .map(summary),
-            ...personalSummaries(),
+            ...personalAgents.records().map(summary),
           ].sort((a, b) => a.name.localeCompare(b.name)),
         }),
       ),
       route("POST", /^\/admin\/bots$/, ({ body }) => create(body)),
-      route("GET", /^\/admin\/bots\/(\d+)$/, (request) => ok(bot(botOr404(ids(request)[0])))),
+      route("GET", /^\/admin\/bots\/(\d+)$/, (request) => {
+        const id = ids(request)[0];
+
+        return ok(bot(botOr404(id)));
+      }),
       route("PATCH", /^\/admin\/bots\/(\d+)$/, (request) => update(ids(request)[0], request.body)),
       route("DELETE", /^\/admin\/bots\/(\d+)$/, (request) => {
         const record = botOr404(ids(request)[0]);
@@ -530,6 +570,9 @@ export function createBots(
         requireSudo();
 
         const record = botOr404(ids(request)[0]);
+
+        if (record.kind === "personal")
+          throw refusal("Bot key is not available to personal agents");
 
         record.key = `${record.id}-${ctx.hex(12)}`;
 
