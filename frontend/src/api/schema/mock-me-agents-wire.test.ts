@@ -72,6 +72,8 @@ describe("the personal agents mock against the pinned wire schemas", () => {
           name: "Helper",
           iconName: "claude",
           iconUrl: "/icons/claude",
+          avatarUrl: null,
+          botAvatar: null,
           provider: null,
           runtime: "codex",
           description: null,

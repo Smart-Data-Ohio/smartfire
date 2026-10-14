@@ -54,7 +54,17 @@ export function OwnerAvatar({
   const user = useUser(owner.id) ?? owner;
 
   if (isAgent(user)) {
-    return <AgentAvatar seed={`${user.id}`} name={user.name} size={size} decorative />;
+    return (
+      <AgentAvatar
+        seed={`${user.id}`}
+        name={user.name}
+        size={size}
+        spec={user.botAvatar}
+        icon={user.avatarIcon}
+        picture={user.hasAvatar ? user.avatarUrl : null}
+        decorative
+      />
+    );
   }
 
   return <Avatar name={user.name} userId={user.id} src={user.avatarUrl} size={size} decorative />;

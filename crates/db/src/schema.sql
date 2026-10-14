@@ -1145,3 +1145,12 @@ CREATE TABLE oauth_assertion_jtis (
   UNIQUE(oauth_client_id, jti_digest)
 );
 CREATE INDEX index_oauth_assertion_jtis_on_expires_at ON oauth_assertion_jtis(expires_at);
+CREATE TABLE bot_avatars (
+  user_id INTEGER PRIMARY KEY NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  shape TEXT NOT NULL,
+  color TEXT NOT NULL,
+  face TEXT NOT NULL,
+  accessory TEXT,
+  created_at datetime(6) NOT NULL,
+  updated_at datetime(6) NOT NULL
+);

@@ -261,6 +261,7 @@ export const bots = {
         iconName: null,
         webhookUrl: null,
         avatar: null,
+        botAvatar: null,
         agent: null,
         ...change,
       }),

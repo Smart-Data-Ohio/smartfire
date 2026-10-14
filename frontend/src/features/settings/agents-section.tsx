@@ -13,6 +13,14 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Confirm, takeDraft } from "../admin/admin-parts.tsx";
+import { writeMayHaveLanded } from "../auth/confirmation.ts";
+import {
+  type AvatarChoice,
+  avatarFields,
+  changesAvatar,
+  keptUpload,
+  renderedSpec,
+} from "../bot-avatar/avatar-choice.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import {
@@ -275,7 +283,9 @@ function AgentCard({
         <AgentAvatar
           seed={`${agent.userId}`}
           name={agent.name}
+          spec={agent.botAvatar}
           icon={agentIcon(agent)}
+          picture={agent.avatarUrl}
           size={40}
           decorative
           {...(agent.suspended || !list.enabled ? { state: "muted" as const } : {})}
@@ -531,7 +541,7 @@ function TokenDialog({
 /** What the edit form holds. */
 interface EditForm {
   readonly name: string;
-  readonly iconName: string | null;
+  readonly avatar: AvatarChoice;
   readonly roomIds: readonly number[];
   readonly capabilities: readonly string[];
 }
@@ -539,19 +549,24 @@ interface EditForm {
 /** Which parts of the form the person changed in this opening. */
 interface Touched {
   readonly name: boolean;
-  readonly icon: boolean;
+  readonly avatar: boolean;
   readonly access: boolean;
 }
 
-const UNTOUCHED: Touched = { name: false, icon: false, access: false };
+const UNTOUCHED: Touched = { name: false, avatar: false, access: false };
+
+/** An agent's picture field: its picked avatar, else what it has now. */
+function avatarOf(agent: PersonalAgent): AvatarChoice {
+  return agent.botAvatar === null ? { kind: "keep" } : { kind: "bot", spec: agent.botAvatar };
+}
 
 /** The form for `agent` as the cache holds it. */
 function formOf(agent: PersonalAgent | null, offered: readonly string[]): EditForm {
-  if (agent === null) return { name: "", iconName: null, roomIds: [], capabilities: [] };
+  if (agent === null) return { name: "", avatar: { kind: "keep" }, roomIds: [], capabilities: [] };
 
   return {
     name: agent.name,
-    iconName: agent.iconName,
+    avatar: avatarOf(agent),
     roomIds: agent.roomIds,
     capabilities: agent.roomIds.length === 0 ? offered : agent.capabilities,
   };
@@ -596,6 +611,7 @@ function EditDialog({
   const { busy, track } = useBusy();
   // Whether this opening is still showing: false once closed, by anyone, or unmounted.
   const live = useRef(agent !== null);
+  const [pictureUpload] = useState(keptUpload);
 
   useEffect(() => {
     live.current = agent !== null;
@@ -645,11 +661,18 @@ function EditDialog({
 
     // Compared with the cache as it stands now: a rename that already took isn't sent again, and
     // a field the person left alone is never sent back over a newer value. While the cache is
-    // unconfirmed, whatever they changed is sent as it stands.
+    // unconfirmed, whatever they changed is sent as it stands (a picked avatar with its render).
     const rename = touched.name && (unconfirmed || name !== agent.name);
-    const reicon = touched.icon && (unconfirmed || form.iconName !== agent.iconName);
 
-    if (!rename && !reicon && !touched.access) {
+    const shown = renderedSpec({
+      spec: agent.botAvatar,
+      pictured: agent.avatarUrl !== null,
+      unconfirmed,
+    });
+
+    const repicture = touched.avatar && changesAvatar(form.avatar, shown);
+
+    if (!rename && !repicture && !touched.access) {
       onClose();
 
       return;
@@ -658,11 +681,14 @@ function EditDialog({
     const save = async () => {
       let latest = agent;
 
-      if (rename || reicon) {
+      if (rename || repicture) {
         // `null` leaves that field as the server holds it.
+        const picture = repicture ? await avatarFields(form.avatar, shown, pictureUpload) : null;
+
         latest = await writes.rename(agent.id, {
           name: rename ? name : null,
-          iconName: reicon ? form.iconName : null,
+          iconName: null,
+          ...picture,
         });
       }
 
@@ -682,12 +708,16 @@ function EditDialog({
       "edit",
       save().then(
         (next) => {
+          pictureUpload.settle(null);
+
           if (!live.current) return;
 
           onClose();
           toast({ title: `${next.name} saved`, tone: "success" });
         },
         (failure: Error) => {
+          pictureUpload.settle(failure);
+
           if (turnedOff(failure)) onTurnedOff();
 
           if (!live.current) return;
@@ -757,9 +787,21 @@ function EditDialog({
       <form id="agents-edit-form" className="settings-form" onSubmit={submit} noValidate>
         <IdentityFields
           name={form.name}
-          iconName={form.iconName}
+          avatar={form.avatar}
+          current={
+            agent.botAvatar === null ? (
+              <AgentAvatar
+                seed={`${agent.userId}`}
+                name={agent.name}
+                icon={agentIcon(agent)}
+                picture={agent.avatarUrl}
+                size={56}
+                decorative
+              />
+            ) : null
+          }
           onName={(name) => edit({ name }, "name")}
-          onIcon={(iconName) => edit({ iconName }, "icon")}
+          onAvatar={(avatar) => edit({ avatar }, "avatar")}
         />
         <AccessFields
           rooms={list.rooms}
@@ -926,8 +968,9 @@ export function AgentsSection() {
       current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
     );
 
-  // An agent write, numbered when sent. Its answer lands in the cache; no answer in time marks
-  // the agent unconfirmed there, so whichever opening of its dialog comes next knows.
+  // An agent write, numbered when sent. Its answer lands in the cache; a failure that may have
+  // come after the save (no answer in time, a dropped connection, a server error) marks the agent
+  // unconfirmed there, so whichever opening of its dialog comes next knows.
   const write = (agentId: number, send: () => Promise<PersonalAgent>): Promise<PersonalAgent> => {
     const at = nextSequence();
 
@@ -938,7 +981,9 @@ export function AgentsSection() {
         return agent;
       },
       (failure: Error) => {
-        if (saveUnconfirmed(failure)) replace((current) => withUnconfirmed(current, agentId, at));
+        if (writeMayHaveLanded(failure)) {
+          replace((current) => withUnconfirmed(current, agentId, at));
+        }
 
         throw failure;
       },

@@ -14,6 +14,7 @@ import type { GrantList } from "../../src/gen/GrantList.ts";
 import { HttpError, notFound, ok } from "../http.ts";
 import { field, intField, type Json, stringField } from "../json.ts";
 import { BOT_ID, rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { applied, botAvatarChange } from "./bot-avatar.ts";
 import {
   type AgentRecord,
   agentRecord,
@@ -75,6 +76,7 @@ function initialState(world: World, now: number): State {
       avatarUrl: seeded.avatarUrl,
       avatarAttached: !seeded.avatarUrl.endsWith("/avatar"),
       iconName: null,
+      botAvatar: seeded.botAvatar,
       webhookUrl: "https://agents.example/smartfire",
       signingSecret: "whsec_mock_signing_secret",
       key: `${BOT_ID}-mockkey`,
@@ -97,6 +99,7 @@ function initialState(world: World, now: number): State {
     avatarUrl: `/users/${LEGACY_ID}/avatar`,
     avatarAttached: false,
     iconName: null,
+    botAvatar: null,
     webhookUrl: null,
     signingSecret: null,
     key: `${LEGACY_ID}-mockkey`,
@@ -116,6 +119,7 @@ function initialState(world: World, now: number): State {
     customStatus: null,
     avatarIcon: null,
     agent: null,
+    botAvatar: null,
     createdAt: timestamp(now),
     updatedAt: rowTimestamp(now),
     accountName: "Deploy Bot",
@@ -194,6 +198,7 @@ export function createBots(
     name: record.name,
     avatarUrl: record.avatarUrl,
     icon: null,
+    botAvatar: record.botAvatar,
     ownership:
       record.kind === "personal"
         ? `Personal agent · Owned by ${viewerName()}`
@@ -231,6 +236,7 @@ export function createBots(
     iconName: record.iconName,
     icon:
       record.iconName === null ? null : { kind: "emoji", title: record.iconName, character: "🤖" },
+    botAvatar: record.botAvatar,
     webhookUrl: record.webhookUrl,
     canAdminister: true,
     supportsBotKey: record.kind === "workspace",
@@ -245,6 +251,25 @@ export function createBots(
     key: record.key,
     exampleCommand: `curl -d 'Hello!' ${ORIGIN}/rooms/ROOM_ID/${record.key}/messages`,
   });
+
+  /** A new picture reaches the bot's user (where the world has one), and every client, at once. */
+  const showPicture = (record: BotRecord) => {
+    const users = ctx.world().users;
+    const user = users.get(record.id);
+
+    if (user === undefined) return;
+
+    const next = {
+      ...user,
+      avatarUrl: record.avatarUrl,
+      hasAvatar: record.avatarAttached,
+      botAvatar: record.botAvatar,
+      updatedAt: rowTimestamp(ctx.now()),
+    };
+
+    users.set(record.id, next);
+    ctx.publish([{ topic: "user", type: "user.updated", data: next }]);
+  };
 
   const changed = (record: BotRecord, notice: string | null = null) =>
     ok({ bot: bot(record), notice });
@@ -270,6 +295,7 @@ export function createBots(
     const held = current();
     const id = held.nextId;
     const avatar = stringField(body, "avatar");
+    const picked = botAvatarChange(body, (message) => refusedField("botAvatar", message));
 
     const record: Extract<BotRecord, { kind: "workspace" }> = {
       kind: "workspace",
@@ -278,6 +304,7 @@ export function createBots(
       avatarUrl: avatar === null ? `/users/${id}/avatar` : uploads.attachment(avatar).url,
       avatarAttached: avatar !== null,
       iconName: stringField(body, "iconName"),
+      botAvatar: applied(null, picked),
       webhookUrl: stringField(body, "webhookUrl"),
       signingSecret: null,
       key: `${id}-${ctx.hex(12)}`,
@@ -288,6 +315,26 @@ export function createBots(
 
     held.bots.set(id, record);
     held.nextId += 1;
+    // The server makes the bot a user: it can post, and the directory draws its avatar.
+    ctx.world().users.set(id, {
+      id,
+      name: record.name,
+      role: "bot",
+      status: "active",
+      bio: null,
+      avatarUrl: record.avatarUrl,
+      hasAvatar: record.avatarAttached,
+      customStatus: null,
+      avatarIcon: null,
+      agent: null,
+      botAvatar: record.botAvatar,
+      createdAt: timestamp(ctx.now()),
+      updatedAt: rowTimestamp(ctx.now()),
+      accountName: record.name,
+      pronouns: null,
+      bannerUrl: null,
+      bannerStillUrl: null,
+    });
 
     return ok(keyOf(record));
   };
@@ -317,6 +364,7 @@ export function createBots(
 
     if (name !== null && blank(name)) errors.name = ["can't be blank"];
 
+    const picked = botAvatarChange(body, (message) => refusedField("botAvatar", message));
     const agent = field(body, "agent");
 
     const caps: [number | null, number | null, number | null] = [
@@ -355,6 +403,10 @@ export function createBots(
       record.avatarUrl = uploads.attachment(avatar).url;
       record.avatarAttached = true;
     }
+
+    record.botAvatar = applied(record.botAvatar, picked);
+
+    if (avatar !== null || picked.kind !== "keep") showPicture(record);
 
     if (record.agent !== null && agent !== undefined && agent !== null) {
       const text = (key: string, fallback: string | null) => {

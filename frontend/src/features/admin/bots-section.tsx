@@ -19,7 +19,13 @@ type Load =
 function BotRow({ bot }: { readonly bot: BotSummary }) {
   return (
     <li className="settings-list-row admin-bot-row">
-      <BotPicture id={bot.id} name={bot.name} avatarUrl={bot.avatarUrl} icon={bot.icon} />
+      <BotPicture
+        id={bot.id}
+        name={bot.name}
+        avatarUrl={bot.avatarUrl}
+        icon={bot.icon}
+        spec={bot.botAvatar}
+      />
       <span className="settings-list-main">
         <strong>{bot.name}</strong>
         <span className="text-faint">{bot.ownership}</span>

@@ -1180,7 +1180,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const workspaceLayout = createWorkspaceLayout(ctx);
   const welcome = createWelcome(ctx, admin, openPreview);
 
-  const meAgents = createMeAgents(ctx, admin);
+  const meAgents = createMeAgents(ctx, admin, uploads);
   const roomManagement = createRoomManagement(ctx, admin, huddles, meAgents.revokeForMembership);
   const oauth = createOAuth(ctx, admin, meAgents.connections);
 

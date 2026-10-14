@@ -11,6 +11,7 @@ import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import { ActionError } from "../../sync/run.ts";
 import { oauth } from "../../sync/settings.ts";
 import { pageExit } from "../auth/auth-navigation.ts";
+import { avatarUploads } from "../bot-avatar/avatar-choice.ts";
 import { ConsentPage } from "./consent-page.tsx";
 
 beforeEach(() => {
@@ -23,6 +24,12 @@ beforeEach(() => {
       addListener: () => undefined,
       removeListener: () => undefined,
     });
+
+  // jsdom can't draw a bot avatar or upload one: the picked avatar arrives as a signed id.
+  vi.spyOn(avatarUploads, "render").mockResolvedValue(
+    new File(["png"], "bot-avatar.png", { type: "image/png" }),
+  );
+  vi.spyOn(avatarUploads, "upload").mockResolvedValue("signed-avatar");
 });
 
 afterEach(() => {
@@ -38,6 +45,8 @@ const HELPER: PersonalAgent = {
   name: "Helper",
   iconName: "owl",
   iconUrl: null,
+  botAvatar: null,
+  avatarUrl: null,
   provider: null,
   runtime: null,
   description: null,
@@ -156,6 +165,8 @@ describe("the approval page", () => {
       agentId: 7,
       name: null,
       iconName: null,
+      avatar: null,
+      botAvatar: null,
       roomIds: [1],
       capabilities: ["read_messages", "react"],
     });
@@ -201,6 +212,8 @@ describe("the approval page", () => {
       agentId: 7,
       name: null,
       iconName: null,
+      avatar: null,
+      botAvatar: null,
       roomIds: [1, 2],
       capabilities: ["post_messages", "read_messages"],
     });
@@ -260,6 +273,8 @@ describe("the approval page", () => {
         agentId: null,
         name: "Assistant",
         iconName: null,
+        avatar: "signed-avatar",
+        botAvatar: expect.objectContaining({ accessory: null }),
         roomIds: [],
         capabilities: [],
       }),

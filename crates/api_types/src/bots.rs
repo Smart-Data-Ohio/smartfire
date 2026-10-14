@@ -17,7 +17,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::Timestamp;
+use crate::{BotAvatarSpec, Timestamp};
 
 /// A bot's icon from the icon set, shown instead of the default avatar when no picture is
 /// uploaded.
@@ -53,6 +53,8 @@ pub struct BotSummary {
     pub avatar_url: String,
     /// Shown instead of `avatar_url` when set (no picture is uploaded).
     pub icon: Option<BotIcon>,
+    /// The picked bot avatar, drawn instead of `avatar_url` (its still render) when set.
+    pub bot_avatar: Option<BotAvatarSpec>,
     /// "Workspace agent · Owned by Grace", "no owner recorded", as the classic list reads.
     pub ownership: String,
     /// Personal agents use bearer credentials and cannot issue bot keys.
@@ -116,6 +118,8 @@ pub struct Bot {
     pub icon_name: Option<String>,
     /// `icon_name` resolved, when it names an icon in the set.
     pub icon: Option<BotIcon>,
+    /// The picked bot avatar, drawn instead of the picture (its still render) when set.
+    pub bot_avatar: Option<BotAvatarSpec>,
     pub webhook_url: Option<String>,
     /// The viewer is an administrator: the webhook URL, the key, the GitHub connection,
     /// removal, and issuing credentials and grants are theirs.
@@ -131,7 +135,8 @@ pub struct Bot {
 }
 
 /// `POST /api/v1/admin/bots` (`accounts/bots#create`): a workspace agent owned by the
-/// administrator. `avatar` is a blob uploaded with `POST /api/v1/uploads`.
+/// administrator. `avatar` is a blob uploaded with `POST /api/v1/uploads`; with `botAvatar` it is
+/// that avatar's still render.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -140,6 +145,7 @@ pub struct CreateBot {
     pub icon_name: Option<String>,
     pub webhook_url: Option<String>,
     pub avatar: Option<String>,
+    pub bot_avatar: Option<BotAvatarSpec>,
 }
 
 /// A bot's key, shown once: the answer to a new bot and to `PUT .../key` (a new key; the
@@ -164,8 +170,11 @@ pub struct UpdateBot {
     pub name: Option<String>,
     pub icon_name: Option<String>,
     pub webhook_url: Option<String>,
-    /// A blob uploaded with `POST /api/v1/uploads` becomes the picture.
+    /// A blob uploaded with `POST /api/v1/uploads` becomes the picture. Without `botAvatar` it
+    /// replaces the picked bot avatar too.
     pub avatar: Option<String>,
+    /// A picked bot avatar, `avatar` carrying its still render.
+    pub bot_avatar: Option<BotAvatarSpec>,
     /// Ignored for a legacy bot.
     pub agent: Option<UpdateBotAgent>,
 }

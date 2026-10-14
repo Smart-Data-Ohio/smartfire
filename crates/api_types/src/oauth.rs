@@ -1,5 +1,5 @@
 //! Consent API for the OAuth screen. Secrets never appear in consent data.
-use crate::{PersonalAgent, PersonalAgentRoom, Timestamp};
+use crate::{BotAvatarSpec, PersonalAgent, PersonalAgentRoom, Timestamp};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -63,6 +63,9 @@ pub struct ApproveOAuthAuthorization {
     pub agent_id: Option<i64>,
     pub name: Option<String>,
     pub icon_name: Option<String>,
+    /// For a new agent: a blob uploaded with `POST /api/v1/uploads`, `botAvatar`'s still render.
+    pub avatar: Option<String>,
+    pub bot_avatar: Option<BotAvatarSpec>,
     pub room_ids: Vec<i64>,
     pub capabilities: Vec<String>,
 }

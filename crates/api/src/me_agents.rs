@@ -21,6 +21,11 @@ use campfire_db::{
     Agent, AgentChanges, AgentCredential, Connection, NewUser, Timestamp, Tx, User, UserChanges,
 };
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
+use campfire_runtime::presenters::attachments::{self, Assignment, Record};
+use campfire_storage::Staged;
+use rails_compat::Secrets;
+
+use crate::bot_avatars;
 use rusqlite::OptionalExtension;
 use serde_json::json;
 use std::collections::HashMap;
@@ -199,13 +204,19 @@ fn credential(
 }
 pub(crate) fn present(
     conn: &Connection,
+    secrets: &Secrets,
     agent: Agent,
     now: Timestamp,
 ) -> campfire_db::Result<api::PersonalAgent> {
     let bot = User::find(conn, agent.user_id)?;
-    let icon_url = UserExtras::load(conn, [&bot])?
+    let extras = UserExtras::load(conn, [&bot])?;
+    let icon_url = extras
         .avatar_icon(bot.id)
         .and_then(|icon| icon.image_url.clone());
+    let bot_avatar = extras.bot_avatar(bot.id).cloned();
+    let avatar_url = extras
+        .has_avatar(bot.id)
+        .then(|| campfire_runtime::presenters::avatar_path(secrets, &bot));
     let mut connections = connections(conn, agent.id)?;
     let credentials = AgentCredential::for_agent(conn, agent.id)?
         .into_iter()
@@ -236,6 +247,8 @@ pub(crate) fn present(
         name: bot.name,
         icon_name: bot.icon_name,
         icon_url,
+        bot_avatar,
+        avatar_url,
         provider: agent.provider,
         runtime: agent.runtime,
         description: agent.description,
@@ -303,6 +316,7 @@ async fn list_agents(c: &mut Ctx) -> Result {
         .validated_app_url()
         .map(|origin| format!("{origin}/agents/mcp"));
     let oauth_available = c.app().config.oauth_issuer().is_some();
+    let secrets = c.app().secrets.clone();
     let list = c
         .app()
         .db
@@ -313,7 +327,7 @@ async fn list_agents(c: &mut Ctx) -> Result {
             Ok(api::PersonalAgentList {
                 agents: personal_agents::for_owner(conn, owner.id)?
                     .into_iter()
-                    .map(|a| present(conn, a, now))
+                    .map(|a| present(conn, &secrets, a, now))
                     .collect::<campfire_db::Result<_>>()?,
                 enabled: settings.member_agents_enabled(),
                 limit: (!owner.is_administrator()).then(|| settings.member_agent_limit()),
@@ -343,10 +357,13 @@ async fn show_agent(c: &mut Ctx) -> Result {
 }
 async fn reply_agent(c: &mut Ctx, id: i64, owner_id: i64) -> Result {
     let now = Timestamp::from_jiff(c.now());
+    let secrets = c.app().secrets.clone();
     let agent = c
         .app()
         .db
-        .read(move |conn| present(conn, personal_agents::owned(conn, owner_id, id)?, now))
+        .read(move |conn| {
+            present(conn, &secrets, personal_agents::owned(conn, owner_id, id)?, now)
+        })
         .await
         .map_err(saved_error)?;
     c.json(StatusCode::OK, &agent)
@@ -356,6 +373,8 @@ async fn create_agent(c: &mut Ctx) -> Result {
     require_sudo(c).await?;
     let input: api::CreatePersonalAgent = body(c).await?;
     let expires_at = expiry(c, input.expires_at.as_deref())?;
+    let (avatar, bot_avatar) = avatar_input(c, input.avatar, input.bot_avatar).await?;
+    let secrets = c.app().secrets.clone();
     let context = campfire_people::controllers::two_factor::audit_context(c)?;
     let response = c
         .app()
@@ -379,6 +398,8 @@ async fn create_agent(c: &mut Ctx) -> Result {
                 },
                 owner.id,
             )?;
+            attachments::assign(tx, Record::user(agent.user_id), "avatar", avatar)?;
+            bot_avatar.apply(tx, agent.user_id)?;
             agent.update(
                 tx,
                 AgentChanges {
@@ -423,7 +444,7 @@ async fn create_agent(c: &mut Ctx) -> Result {
                 &context,
             )?;
             Ok(api::PersonalAgentCreated {
-                agent: present(tx.conn(), agent, tx.now())?,
+                agent: present(tx.conn(), &secrets, agent, tx.now())?,
                 secret,
             })
         })
@@ -436,6 +457,8 @@ async fn update_agent(c: &mut Ctx) -> Result {
     let agent = owned(c, owner.id).await?;
     let input: api::UpdatePersonalAgent = body(c).await?;
     let agent_id = agent.id;
+    let (avatar, bot_avatar) = avatar_input(c, input.avatar, input.bot_avatar).await?;
+    let picture_changing = !matches!(avatar, Assignment::Unchanged) || bot_avatar.changes();
     let context = campfire_people::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
@@ -452,6 +475,8 @@ async fn update_agent(c: &mut Ctx) -> Result {
                     ..Default::default()
                 },
             )?;
+            attachments::assign(tx, Record::user(bot.id), "avatar", avatar)?;
+            bot_avatar.apply(tx, bot.id)?;
             agent.update(
                 tx,
                 AgentChanges {
@@ -504,7 +529,25 @@ async fn update_agent(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(saved_error)?;
+    if picture_changing {
+        let user_id = agent.user_id;
+        crate::settings::publish_identity(c, user_id).await?;
+    }
     reply_agent(c, agent_id, owner.id).await
+}
+
+/// A write's picture and bot avatar: the upload verified and staged before the write, the spec
+/// checked (a picture without one replaces the spec it rendered).
+pub(crate) async fn avatar_input(
+    c: &mut Ctx,
+    avatar: Option<String>,
+    bot_avatar: Option<api::BotAvatarSpec>,
+) -> Result<(Assignment<Staged>, bot_avatars::Change)> {
+    let change = bot_avatars::Change::of(c, bot_avatar, avatar.is_some())?;
+    let picture = crate::bots::signed_upload(c, "avatar", avatar)?
+        .stage(c.app())
+        .await?;
+    Ok((picture, change))
 }
 async fn remove_agent(c: &mut Ctx) -> Result {
     let owner = member(c).await?;

@@ -13,6 +13,7 @@ import type { PersonalCredentialCreated as GeneratedPersonalCredentialCreated } 
 import type { PersonalCredentialList as GeneratedPersonalCredentialList } from "../../gen/PersonalCredentialList.ts";
 import type { RotatePersonalCredential as GeneratedRotatePersonalCredential } from "../../gen/RotatePersonalCredential.ts";
 import type { UpdatePersonalAgent as GeneratedUpdatePersonalAgent } from "../../gen/UpdatePersonalAgent.ts";
+import { BotAvatarSpec } from "./bot-avatar.ts";
 import { CredentialState } from "./bots.ts";
 import { AgentId, CredentialId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
@@ -67,6 +68,10 @@ export const PersonalAgent = Schema.Struct({
   iconName: Schema.NullOr(Schema.String),
   /** The bot's icon image (`User.avatarIcon.imageUrl`); null for an emoji or unknown icon. */
   iconUrl: Schema.NullOr(Schema.String),
+  /** The picked bot avatar the SPA draws; `avatarUrl` is its still render. */
+  botAvatar: Schema.NullOr(BotAvatarSpec),
+  /** The uploaded picture, when there is one. */
+  avatarUrl: Schema.NullOr(Schema.String),
   provider: Schema.NullOr(Schema.String),
   runtime: Schema.NullOr(Schema.String),
   description: Schema.NullOr(Schema.String),
@@ -143,6 +148,9 @@ export type PersonalCredentialCreatedPin = Assert<
 export const CreatePersonalAgent = Schema.Struct({
   name: Schema.String,
   iconName: Schema.NullOr(Schema.String),
+  /** A signed upload id for its picture. */
+  avatar: Schema.NullOr(Schema.String),
+  botAvatar: Schema.NullOr(BotAvatarSpec),
   provider: Schema.NullOr(Schema.String),
   runtime: Schema.NullOr(Schema.String),
   roomIds: Schema.Array(RoomId),
@@ -159,6 +167,9 @@ export type CreatePersonalAgentPin = Assert<
 export const UpdatePersonalAgent = Schema.Struct({
   name: Schema.NullOr(Schema.String),
   iconName: Schema.NullOr(Schema.String),
+  /** A signed upload id for a new picture; without `botAvatar` it clears the picked avatar. */
+  avatar: Schema.NullOr(Schema.String),
+  botAvatar: Schema.NullOr(BotAvatarSpec),
   provider: Schema.NullOr(Schema.String),
   runtime: Schema.NullOr(Schema.String),
   description: Schema.NullOr(Schema.String),

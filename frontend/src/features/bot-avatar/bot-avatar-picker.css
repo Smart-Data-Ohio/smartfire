@@ -1,0 +1,312 @@
+/*
+ * The bot avatar picker: native radio groups dressed as a segmented control, a grid of body
+ * tiles, colour swatches and wear chips. The inputs stay in the accessibility tree (arrow keys,
+ * labels); only their boxes are hidden, and keyboard focus rings the visible tile.
+ */
+@layer app {
+  .bot-avatar-picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .bot-avatar-picker fieldset {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .bot-avatar-picker input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .bot-avatar-sources > legend {
+    margin-bottom: var(--space-1-5);
+  }
+
+  .bot-avatar-legend {
+    margin-bottom: var(--space-1-5);
+    padding: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    font-weight: var(--weight-medium);
+  }
+
+  /* A segmented control: the picture's source, the face. */
+  .bot-avatar-segmented {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--space-0-5);
+    max-width: 100%;
+    padding: var(--space-0-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+  }
+
+  .bot-avatar-segment {
+    position: relative;
+    flex: 1 1 auto;
+  }
+
+  .bot-avatar-segment > .bot-avatar-segment-label {
+    display: block;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease-out,
+      color 0.15s ease-out,
+      box-shadow 0.15s ease-out;
+  }
+
+  .bot-avatar-segment:hover > .bot-avatar-segment-label {
+    color: var(--text);
+  }
+
+  .bot-avatar-segment > input:checked + .bot-avatar-segment-label {
+    background: var(--bg-raised);
+    color: var(--text-strong);
+    box-shadow: 0 1px 2px light-dark(oklch(0% 0 0 / 0.12), oklch(0% 0 0 / 0.4));
+  }
+
+  .bot-avatar-segment > input:focus-visible + .bot-avatar-segment-label {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  /* The preview: the picked avatar, live, with what it is and a shuffle. */
+  .bot-avatar-editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-sunken);
+  }
+
+  .bot-avatar-preview {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+  }
+
+  .bot-avatar-preview-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .bot-avatar-summary {
+    margin: 0;
+    color: var(--text-strong);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+  }
+
+  /*
+   * Bodies: as many 56 px tiles as fit (five across on a 360 px phone), each named under it.
+   * Every tile, picked or not, sits on the same ground (--bot-tile), a step darker behind a
+   * light body on a light page and a step lighter behind a dark body on a dark page, so Snow and
+   * Charcoal keep their outline; the picked one is ringed.
+   */
+  .bot-avatar-editor {
+    --bot-tile: var(--bg-raised);
+  }
+
+  .bot-avatar-editor[data-tone="light"] {
+    --bot-tile: light-dark(oklch(84% 0.012 285), var(--bg-raised));
+  }
+
+  .bot-avatar-editor[data-tone="dark"] {
+    --bot-tile: light-dark(var(--bg-raised), oklch(48% 0.015 285));
+  }
+
+  .bot-avatar-preview > .avatar.agent-avatar,
+  .bot-avatar-body > .avatar.agent-avatar {
+    background: var(--bot-tile);
+  }
+
+  .bot-avatar-bodies {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: var(--space-2) var(--space-1-5);
+  }
+
+  .bot-avatar-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: center;
+    min-width: 0;
+    cursor: pointer;
+  }
+
+  .bot-avatar-body > .avatar {
+    box-shadow: 0 0 0 0 transparent;
+    transition:
+      box-shadow 0.15s ease-out,
+      transform 0.15s ease-out;
+  }
+
+  .bot-avatar-body:hover > .avatar {
+    transform: translateY(-1px);
+  }
+
+  .bot-avatar-body > input:checked + .avatar {
+    box-shadow:
+      0 0 0 2px var(--bg-sunken),
+      0 0 0 4px var(--accent);
+  }
+
+  .bot-avatar-body > input:focus-visible + .avatar {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 5px;
+  }
+
+  .bot-avatar-body > .bot-avatar-body-label {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.15s ease-out;
+  }
+
+  .bot-avatar-body:hover > .bot-avatar-body-label {
+    color: var(--text);
+  }
+
+  .bot-avatar-body > input:checked ~ .bot-avatar-body-label {
+    color: var(--text-strong);
+    font-weight: var(--weight-medium);
+  }
+
+  /* Colours: round swatches with a ring on the picked one. */
+  .bot-avatar-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+  }
+
+  .bot-avatar-swatch {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+  }
+
+  .bot-avatar-swatch > .bot-avatar-swatch-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--swatch);
+    box-shadow: inset 0 0 0 1px light-dark(oklch(0% 0 0 / 0.14), oklch(100% 0 0 / 0.16));
+    transition:
+      transform 0.15s ease-out,
+      box-shadow 0.15s ease-out;
+  }
+
+  .bot-avatar-swatch:hover > .bot-avatar-swatch-dot {
+    transform: scale(1.08);
+  }
+
+  .bot-avatar-swatch > input:checked + .bot-avatar-swatch-dot {
+    box-shadow:
+      inset 0 0 0 1px light-dark(oklch(0% 0 0 / 0.14), oklch(100% 0 0 / 0.16)),
+      0 0 0 2px var(--bg-sunken),
+      0 0 0 4px var(--text-strong);
+  }
+
+  .bot-avatar-swatch > input:focus-visible + .bot-avatar-swatch-dot {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 5px;
+  }
+
+  /* Wear: one chip at most. */
+  .bot-avatar-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+  }
+
+  .bot-avatar-chip {
+    position: relative;
+  }
+
+  .bot-avatar-chip > .bot-avatar-chip-label {
+    display: block;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--bg-raised);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease-out,
+      border-color 0.15s ease-out,
+      color 0.15s ease-out;
+  }
+
+  .bot-avatar-chip:hover > .bot-avatar-chip-label {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+
+  .bot-avatar-chip > input:checked + .bot-avatar-chip-label {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--text-strong);
+  }
+
+  .bot-avatar-chip > input:focus-visible + .bot-avatar-chip-label {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .bot-avatar-current,
+  .bot-avatar-upload {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+  }
+
+  .bot-avatar-current > .settings-hint {
+    color: var(--text-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bot-avatar-body > .avatar,
+    .bot-avatar-body > .bot-avatar-body-label,
+    .bot-avatar-swatch > .bot-avatar-swatch-dot,
+    .bot-avatar-segment > .bot-avatar-segment-label,
+    .bot-avatar-chip > .bot-avatar-chip-label {
+      transition: none;
+    }
+
+    .bot-avatar-body:hover > .avatar,
+    .bot-avatar-swatch:hover > .bot-avatar-swatch-dot {
+      transform: none;
+    }
+  }
+}

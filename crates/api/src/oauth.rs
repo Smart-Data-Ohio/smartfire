@@ -17,6 +17,7 @@ use campfire_db::{
 };
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
 use campfire_runtime::concerns::{self, Before};
+use campfire_runtime::presenters::attachments::{self, Assignment, Record};
 use rusqlite::{OptionalExtension, params};
 use serde_json::json;
 use std::collections::BTreeMap;
@@ -371,6 +372,7 @@ async fn show_consent(c: &mut Ctx) -> Result {
     let owner = crate::me_agents::member(c).await?;
     let id = public_id(c);
     let now = Timestamp::from_jiff(c.now());
+    let secrets = c.app().secrets.clone();
     let response = c.app().db.read(move |conn| {
         let auth = Authorization::pending(conn, &id, owner.id, now)?;
         let client = OAuthClient::find(conn, auth.oauth_client_id)?.expect("authorization client");
@@ -378,7 +380,7 @@ async fn show_consent(c: &mut Ctx) -> Result {
         let settings = campfire_db::Account::first(conn)?
             .ok_or(campfire_db::Error::RecordNotFound("Account"))?.settings();
         let agents = personal_agents::for_owner(conn, owner.id)?
-            .into_iter().map(|agent| crate::me_agents::present(conn, agent, now))
+            .into_iter().map(|agent| crate::me_agents::present(conn, &secrets, agent, now))
             .collect::<campfire_db::Result<Vec<_>>>()?;
         let mut room_access = Vec::new();
         let mut hidden_rooms = Vec::new();
@@ -467,7 +469,13 @@ async fn approve_consent(c: &mut Ctx) -> Result {
         .map_err(campfire_runtime::context::db_error)?;
     throttle(c, &format!("authorize:{}", owner.id), 30)?;
     crate::admin::require_sudo(c).await?;
-    let input: api::ApproveOAuthAuthorization = crate::admin::body(c).await?;
+    let mut input: api::ApproveOAuthAuthorization = crate::admin::body(c).await?;
+    // Only a new agent takes a picture here; an existing one keeps its own.
+    let (avatar, bot_avatar) = if input.agent_id.is_none() {
+        crate::me_agents::avatar_input(c, input.avatar.take(), input.bot_avatar.take()).await?
+    } else {
+        (Assignment::Unchanged, crate::bot_avatars::Change::Keep)
+    };
     let id = public_id(c);
     let issuer = issuer(c);
     let context = campfire_people::controllers::two_factor::audit_context(c)?;
@@ -494,6 +502,8 @@ async fn approve_consent(c: &mut Ctx) -> Result {
                     name: input.name.unwrap_or_default(), icon_name: input.icon_name,
                     ..Default::default()
                 }, owner.id)?;
+                attachments::assign(tx, Record::user(agent.user_id), "avatar", avatar)?;
+                bot_avatar.apply(tx, agent.user_id)?;
                 crate::me_agents::audit(tx, &agent, "agent.create", json!({"owner_id":owner.id}), &context)?;
                 agent
             }

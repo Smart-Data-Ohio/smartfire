@@ -5,6 +5,7 @@ import type { UserList as GeneratedUserList } from "../../gen/UserList.ts";
 import type { UserRole as GeneratedUserRole } from "../../gen/UserRole.ts";
 import type { UserStatus as GeneratedUserStatus } from "../../gen/UserStatus.ts";
 import { AgentBadge } from "./agent-identity.ts";
+import { BotAvatarSpec } from "./bot-avatar.ts";
 import { Icon } from "./icon.ts";
 import { UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
@@ -41,6 +42,8 @@ export const User = Schema.Struct({
   avatarIcon: Schema.NullOr(Icon),
   /** Set for an agent (a bot with an `agents` row); `null` for people and plain bots. */
   agent: Schema.NullOr(AgentBadge),
+  /** A bot's picked bot avatar, drawn instead of `avatarUrl` (its still render); else `null`. */
+  botAvatar: Schema.NullOr(BotAvatarSpec),
   createdAt: Timestamp,
   /** `users.updated_at`, to the microsecond: of two copies of a user, the client keeps the later. */
   updatedAt: RowTimestamp,

@@ -62,6 +62,7 @@ const bot = {
   },
   signingSecret: null,
   github: null,
+  botAvatar: null,
 } satisfies Bot;
 
 afterEach(() => {
@@ -114,6 +115,7 @@ it("shows bot-key posting commands only for bots that support keys", async () =>
     name: bot.name,
     avatarUrl: bot.avatarUrl,
     icon: null,
+    botAvatar: null,
     ownership: "Personal agent · Owned by David",
     supportsBotKey: false,
     rooms: [

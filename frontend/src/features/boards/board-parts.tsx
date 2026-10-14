@@ -22,7 +22,15 @@ export function StatusChip({ status }: { readonly status: WorkStatus }) {
 /** A user's avatar from the user itself: owners ride on the post, not always in the store. */
 export function UserFace({ user, size }: { readonly user: User; readonly size: number }) {
   return isAgent(user) ? (
-    <AgentAvatar seed={`${user.id}`} name={user.name} size={size} decorative />
+    <AgentAvatar
+      seed={`${user.id}`}
+      name={user.name}
+      size={size}
+      spec={user.botAvatar}
+      icon={user.avatarIcon}
+      picture={user.hasAvatar ? user.avatarUrl : null}
+      decorative
+    />
   ) : (
     <Avatar name={user.name} userId={user.id} src={user.avatarUrl} size={size} decorative />
   );

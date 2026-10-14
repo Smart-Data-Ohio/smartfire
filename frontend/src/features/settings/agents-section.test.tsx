@@ -12,6 +12,7 @@ import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import { ActionError } from "../../sync/run.ts";
 import { meAgents } from "../../sync/settings.ts";
+import { avatarUploads } from "../bot-avatar/avatar-choice.ts";
 import { SecretBlock } from "./agent-parts.tsx";
 import { AgentsSection } from "./agents-section.tsx";
 
@@ -25,6 +26,12 @@ beforeEach(() => {
       addListener: () => undefined,
       removeListener: () => undefined,
     });
+
+  // jsdom can't draw a bot avatar or upload one: the picked avatar arrives as a signed id.
+  vi.spyOn(avatarUploads, "render").mockResolvedValue(
+    new File(["png"], "bot-avatar.png", { type: "image/png" }),
+  );
+  vi.spyOn(avatarUploads, "upload").mockResolvedValue("signed-avatar");
 });
 
 afterEach(() => {
@@ -47,12 +54,16 @@ const TOKEN: PersonalAgentCredential = {
   connection: null,
 };
 
+const CAT = { type: "cat" as const, color: "#eaa06f", face: "eyes" as const, accessory: null };
+
 const AGENT: PersonalAgent = {
   id: 7,
   userId: 70,
   name: "Helper",
   iconName: "owl",
   iconUrl: null,
+  botAvatar: null,
+  avatarUrl: null,
   provider: "openai",
   runtime: "codex",
   description: null,
@@ -493,7 +504,10 @@ function rename(to: string) {
  * Opens Helper's edit dialog, renames it and saves through the real (bounded) request, whose
  * answer never comes; runs the clock past the bound. The reload that follows answers `reload`.
  */
-async function timeOutRename(reload: Promise<PersonalAgentList>) {
+async function timeOutRename(
+  reload: Promise<PersonalAgentList>,
+  change: () => void = () => rename("Renamed"),
+) {
   vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise<Response>(() => undefined));
 
   const edit = await screen.findByRole("button", { name: "Edit Helper" });
@@ -502,7 +516,7 @@ async function timeOutRename(reload: Promise<PersonalAgentList>) {
 
   try {
     fireEvent.click(edit);
-    rename("Renamed");
+    change();
     vi.spyOn(meAgents, "list").mockReturnValue(reload);
     fireEvent.click(button("Save"));
     await act(() => vi.advanceTimersByTimeAsync(1_000));
@@ -676,7 +690,7 @@ describe("editing an agent", () => {
     const update = vi
       .spyOn(meAgents, "update")
       .mockResolvedValueOnce({ ...AGENT, name: "Third" })
-      .mockResolvedValueOnce({ ...AGENT, name: "Third", iconName: "brain" });
+      .mockResolvedValueOnce({ ...AGENT, name: "Third", botAvatar: CAT });
 
     vi.spyOn(meAgents, "setAccess").mockRejectedValueOnce(ROOM_REFUSED);
     fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "General" }));
@@ -685,13 +699,19 @@ describe("editing an agent", () => {
     expect(update).toHaveBeenLastCalledWith(7, { name: "Third", iconName: null });
     expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
 
-    // Only the icon changes now: the name isn't sent, so nothing can put an older one back.
+    // Only the picture changes now: the name isn't sent, so nothing can put an older one back.
     fireEvent.click(within(editDialog()).getByRole("checkbox", { name: "General" }));
-    fireEvent.click(within(editDialog()).getByRole("radio", { name: "Brain" }));
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: "Bot avatar" }));
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: "Cat" }));
     vi.spyOn(meAgents, "setAccess").mockResolvedValueOnce({ ...AGENT, name: "Third" });
     fireEvent.click(button("Save"));
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
-    expect(update).toHaveBeenLastCalledWith(7, { name: null, iconName: "brain" });
+    expect(update).toHaveBeenLastCalledWith(7, {
+      name: null,
+      iconName: null,
+      avatar: "signed-avatar",
+      botAvatar: expect.objectContaining({ type: "cat" }),
+    });
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(screen.getByRole("article", { name: "Third" })).toBeTruthy();
   });
@@ -711,6 +731,66 @@ describe("editing an agent", () => {
     rename("Helper");
     fireEvent.click(button("Save"));
     await waitFor(() => expect(update).toHaveBeenCalledWith(7, { name: "Helper", iconName: null }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("sends an avatar picked back after an unanswered save whose reload failed", async () => {
+    await mount(list({ agents: [{ ...AGENT, botAvatar: CAT, avatarUrl: "/users/70/avatar" }] }));
+
+    const reload = deferred<PersonalAgentList>();
+
+    const pick = (body: string) =>
+      fireEvent.click(within(editDialog()).getByRole("radio", { name: body }));
+
+    await timeOutRename(reload.promise, () => pick("Ghost"));
+    await act(async () => reload.settle.reject(new Error("offline")));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+
+    // The cache still says cat, but the server may hold the ghost: the cat is sent, not skipped.
+    const update = vi.spyOn(meAgents, "update").mockResolvedValue({ ...AGENT, botAvatar: CAT });
+
+    pick("Cat");
+    fireEvent.click(button("Save"));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(7, {
+        name: null,
+        iconName: null,
+        avatar: "signed-avatar",
+        botAvatar: CAT,
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("sends an avatar picked back after a save whose connection dropped", async () => {
+    await mount(list({ agents: [{ ...AGENT, botAvatar: CAT, avatarUrl: "/users/70/avatar" }] }));
+
+    const pick = (body: string) =>
+      fireEvent.click(within(editDialog()).getByRole("radio", { name: body }));
+
+    // The ghost may have been saved before the connection dropped: the cache can't say.
+    const update = vi
+      .spyOn(meAgents, "update")
+      .mockRejectedValueOnce(new ActionError("NetworkError", "Couldn't reach the server."))
+      .mockResolvedValue({ ...AGENT, botAvatar: CAT, avatarUrl: "/users/70/avatar" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Helper" }));
+    pick("Ghost");
+    fireEvent.click(button("Save"));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+
+    pick("Cat");
+    fireEvent.click(button("Save"));
+    await waitFor(() =>
+      expect(update).toHaveBeenLastCalledWith(7, {
+        name: null,
+        iconName: null,
+        avatar: "signed-avatar",
+        botAvatar: CAT,
+      }),
+    );
+    expect(update).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
@@ -840,7 +920,7 @@ describe("the wizard", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Name" }), {
       target: { value: " Builder " },
     });
-    fireEvent.click(screen.getByRole("radio", { name: "Brain" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Cat" }));
     next();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "General" }));
@@ -853,7 +933,9 @@ describe("the wizard", () => {
     await screen.findByRole("heading", { name: "Connect Builder" });
     expect(create).toHaveBeenCalledWith({
       name: "Builder",
-      iconName: "brain",
+      iconName: null,
+      avatar: "signed-avatar",
+      botAvatar: expect.objectContaining({ type: "cat" }),
       provider: "anthropic",
       runtime: "claude-code",
       roomIds: [1],

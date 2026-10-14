@@ -1,9 +1,11 @@
-import { useId, useRef } from "react";
+import { type ReactNode, useId, useRef } from "react";
 import type { PersonalAgentRoom } from "../../gen/PersonalAgentRoom.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { copy } from "../admin/admin-parts.tsx";
+import type { AvatarChoice } from "../bot-avatar/avatar-choice.ts";
+import { BotAvatarPicker } from "../bot-avatar/bot-avatar-picker.tsx";
 import {
   type AgentClient,
   agentSnippet,
@@ -16,24 +18,26 @@ import {
   abilityLabel,
   EXPIRY_CHOICES,
   type Expiry,
-  ICON_CHOICES,
   toggled,
 } from "./agents-format.ts";
 import { SettingsRadios } from "./settings-parts.tsx";
 
-/** The agent's name and its icon. */
+/** The agent's name and its picture: a picked bot avatar, or an uploaded image. */
 export function IdentityFields({
   name,
-  iconName,
+  avatar,
+  current,
   error,
   onName,
-  onIcon,
+  onAvatar,
 }: {
   readonly name: string;
-  readonly iconName: string | null;
+  readonly avatar: AvatarChoice;
+  /** An existing agent's icon or picture, drawn, offered as "Keep current". */
+  readonly current?: ReactNode;
   readonly error?: string | undefined;
   readonly onName: (name: string) => void;
-  readonly onIcon: (iconName: string) => void;
+  readonly onAvatar: (avatar: AvatarChoice) => void;
 }) {
   const group = useId();
 
@@ -50,24 +54,13 @@ export function IdentityFields({
         error={error}
         onChange={(event) => onName(event.target.value)}
       />
-      <fieldset className="agents-icons">
-        <legend className="settings-label">Icon</legend>
-        <div className="agents-icon-row">
-          {ICON_CHOICES.map((icon) => (
-            <label key={icon.name} className="agents-icon" title={icon.title}>
-              <input
-                type="radio"
-                name={group}
-                value={icon.name}
-                checked={iconName === icon.name}
-                aria-label={icon.title}
-                onChange={() => onIcon(icon.name)}
-              />
-              <span aria-hidden="true">{icon.character}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <BotAvatarPicker
+        id={`agent-avatar${group.replaceAll(":", "")}`}
+        name={name}
+        value={avatar}
+        onChange={onAvatar}
+        current={current}
+      />
     </div>
   );
 }

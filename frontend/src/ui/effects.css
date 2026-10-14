@@ -114,13 +114,42 @@
     object-fit: contain;
   }
 
+  /*
+   * A picked avatar drawn live (panes, profiles, the picker) over its still bitmap, which fades
+   * out once the canvas has faded in, so the swap never flashes an empty tile.
+   */
+  .agent-avatar-live {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .agent-avatar-live .live-bot-avatar {
+    pointer-events: auto;
+  }
+
+  .avatar.agent-avatar:has(.agent-avatar-live canvas) > .avatar-image {
+    animation: agent-avatar-handoff 0.2s ease-out 0.35s forwards;
+  }
+
+  @keyframes agent-avatar-handoff {
+    to {
+      opacity: 0;
+    }
+  }
+
   /* Suspended or deactivated: the tile greys out, so it reads as unable to act. */
   .avatar.agent-avatar[data-agent-state="muted"] {
     background: var(--bg-active);
     color: var(--text-faint);
   }
 
-  .avatar.agent-avatar[data-agent-state="muted"] > :is(img, .agent-avatar-emoji) {
+  .avatar.agent-avatar[data-agent-state="muted"]
+    > :is(img, .agent-avatar-emoji, .agent-avatar-live) {
     filter: grayscale(1);
     opacity: 0.55;
   }

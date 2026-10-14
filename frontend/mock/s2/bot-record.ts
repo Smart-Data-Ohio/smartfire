@@ -16,7 +16,14 @@ export interface AgentRecord {
 
 type BotFields = Pick<
   Bot,
-  "id" | "name" | "avatarUrl" | "avatarAttached" | "iconName" | "signingSecret" | "github"
+  | "id"
+  | "name"
+  | "avatarUrl"
+  | "avatarAttached"
+  | "iconName"
+  | "botAvatar"
+  | "signingSecret"
+  | "github"
 > & {
   removed: boolean;
 };

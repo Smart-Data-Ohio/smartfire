@@ -14,6 +14,7 @@ const user = {
   customStatus: { emoji: "🌴", text: "On a beach", expiresAt: null },
   avatarIcon: null,
   agent: null,
+  botAvatar: null,
   createdAt: "2026-09-26T12:26:46.848Z",
   updatedAt: "2026-09-26T12:26:46.848000Z",
   accountName: "Ada Lovelace",

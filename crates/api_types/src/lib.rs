@@ -231,7 +231,10 @@ pub use thread::{
     ThreadPermissions, ThreadRead, ThreadRemoved, ThreadStatus, ThreadSummary, ThreadUnread,
     UpdateThread, ThreadVisibility, ThreadAccessMember, ThreadAccessMembers, AddThreadAccessMember,
 };
-pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
+pub use user::{
+    BotAvatarAccessory, BotAvatarFace, BotAvatarSpec, BotAvatarType, CustomStatus, User, UserList,
+    UserRole, UserStatus,
+};
 pub use webhooks::{
     ChannelWebhook, ChannelWebhookCredential, ChannelWebhookList, CreateChannelWebhook,
     ExecuteWebhook, MessageWebhook, UpdateChannelWebhook, WebhookEmbed, WebhookEmbedField,

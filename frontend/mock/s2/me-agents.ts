@@ -8,9 +8,11 @@ import { forbidden, notFound, ok, validation } from "../http.ts";
 import { field, isNumber, type Json, stringArrayField, stringField } from "../json.ts";
 import { timestamp, VIEWER_ID, type World } from "../seed.ts";
 import type { AdminModule } from "./admin.ts";
+import { applied, type BotAvatarChange, botAvatarChange } from "./bot-avatar.ts";
 import { agentRecord, PERSONAL_CAPABILITIES, type PersonalBotRecord } from "./bot-record.ts";
 import { route, type S2Context } from "./context.ts";
 import { lookupIcon } from "./emoji.ts";
+import type { Uploads } from "./uploads.ts";
 
 const CAPABILITIES = PERSONAL_CAPABILITIES;
 
@@ -62,7 +64,7 @@ export interface AgentConnections {
   readonly hiddenRooms: () => OAuthAgentHiddenRooms[];
 }
 
-export function createMeAgents(ctx: S2Context, admin: AdminModule) {
+export function createMeAgents(ctx: S2Context, admin: AdminModule, uploads: Uploads) {
   let world: World | null = null;
   const agents = new Map<number, PersonalBotRecord>();
   let nextId = 10000;
@@ -177,6 +179,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       name: record.name,
       iconName: record.iconName,
       iconUrl,
+      botAvatar: record.botAvatar,
+      avatarUrl: record.avatarAttached ? record.avatarUrl : null,
       provider: agent.provider,
       runtime: agent.runtime,
       description: agent.description,
@@ -247,7 +251,31 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       ? null
       : admin.memberAgentPolicy().limit;
 
-  const create = (name: string, iconName: string | null): PersonalBotRecord => {
+  /** The write's picture and picked avatar, checked before anything is written. */
+  const pictureOf = (body: Json | undefined) => {
+    const avatar = stringField(body, "avatar");
+    const change = botAvatarChange(body, (message) => validation("botAvatar", message));
+
+    return {
+      change,
+      avatarUrl: avatar === null ? null : uploads.attachment(avatar).url,
+    };
+  };
+
+  /** The picture after a write: a new upload, and the spec it's the render of (or none). */
+  const repicture = (
+    record: PersonalBotRecord,
+    picture: { change: BotAvatarChange; avatarUrl: string | null },
+  ) => {
+    if (picture.avatarUrl !== null) {
+      record.avatarUrl = picture.avatarUrl;
+      record.avatarAttached = true;
+    }
+
+    record.botAvatar = applied(record.botAvatar, picture.change);
+  };
+
+  const create = (name: string, iconName: string | null, body?: Json): PersonalBotRecord => {
     const limit = viewerLimit();
     const existing = current();
 
@@ -256,6 +284,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
     if (name.trim() === "") throw validation("name", "can't be blank");
 
+    const picture = pictureOf(body);
+
     const agent: PersonalBotRecord = {
       kind: "personal",
       id: nextUserId++,
@@ -263,6 +293,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       avatarUrl: "/avatar.svg",
       avatarAttached: false,
       iconName,
+      botAvatar: null,
       webhookUrl: null,
       signingSecret: null,
       key: null,
@@ -273,6 +304,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       createdAt: timestamp(ctx.now()),
       lastUsedAt: null,
     };
+
+    repicture(agent, picture);
 
     return agent;
   };
@@ -301,7 +334,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
       const agent =
         agentId === null
-          ? create(stringField(body, "name") ?? "", stringField(body, "iconName"))
+          ? create(stringField(body, "name") ?? "", stringField(body, "iconName"), body)
           : find(agentId);
 
       replaceAccess(agent, granted);
@@ -427,7 +460,7 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
         if (name === null || name.trim() === "") throw validation("name", "can't be blank");
         const granted = access(body);
-        const agent = create(name, stringField(body, "iconName"));
+        const agent = create(name, stringField(body, "iconName"), body);
         agent.agent.provider = stringField(body, "provider");
         agent.agent.runtime = stringField(body, "runtime");
         replaceAccess(agent, granted);
@@ -462,6 +495,8 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
 
         if (description !== null && description.length > 500)
           throw validation("description", "must be at most 500 characters");
+
+        repicture(agent, pictureOf(body));
 
         for (const key of ["name", "iconName", "provider", "runtime", "description"] as const) {
           const value = stringField(body, key);

@@ -42,6 +42,7 @@ describe("S7 bot schemas", () => {
           name: "Bender",
           avatarUrl: "/users/9/avatar?v=1",
           icon: { kind: "emoji", title: "Robot", character: "🤖" },
+          botAvatar: null,
           ownership: "Workspace agent · Owned by Grace",
           supportsBotKey: true,
           rooms: [
@@ -64,6 +65,7 @@ describe("S7 bot schemas", () => {
         avatarAttached: false,
         iconName: "acme",
         icon: { kind: "image", title: "Acme", url: "/icons/acme.svg" },
+        botAvatar: null,
         webhookUrl: "https://example.com/hook",
         canAdminister: true,
         supportsBotKey: true,
@@ -98,6 +100,7 @@ describe("S7 bot schemas", () => {
       iconName: null,
       webhookUrl: "https://example.com/robo",
       avatar: "signed-blob",
+      botAvatar: null,
     });
     roundTrips(BotKey, {
       id: 9,
@@ -110,6 +113,7 @@ describe("S7 bot schemas", () => {
       iconName: "",
       webhookUrl: null,
       avatar: null,
+      botAvatar: null,
       agent: {
         provider: null,
         runtime: null,

@@ -8,7 +8,14 @@ import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { leftToConfirm } from "../auth/confirmation.ts";
+import { leftToConfirm, writeMayHaveLanded } from "../auth/confirmation.ts";
+import {
+  type AvatarChoice,
+  avatarFields,
+  keptUpload,
+  renderedSpec,
+} from "../bot-avatar/avatar-choice.ts";
+import { BotAvatarPicker } from "../bot-avatar/bot-avatar-picker.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import {
   FieldError,
@@ -17,7 +24,7 @@ import {
   SettingsPage,
   useBusy,
 } from "../settings/settings-parts.tsx";
-import { adminFailure, Confirm, keepDraft, takeDraft, uploaded, useAdmin } from "./admin-parts.tsx";
+import { adminFailure, Confirm, keepDraft, takeDraft, useAdmin } from "./admin-parts.tsx";
 import { type BotForm, botChange, botForm, CONFIRM, SUSPENDED } from "./bot-format.ts";
 import { BotPicture, CopyLine, KeyDialog, useBotId } from "./bot-parts.tsx";
 
@@ -158,7 +165,15 @@ function GithubGroup({
 }
 
 /**
- * One bot, as its classic edit page shows it: its name, icon, picture and webhook, its agent's
+ * What the picture field starts on: the bot's picked avatar, else what it has now (its icon or
+ * picture stays until the editor picks something else).
+ */
+function startingChoice(bot: Bot): AvatarChoice {
+  return bot.botAvatar === null ? { kind: "keep" } : { kind: "bot", spec: bot.botAvatar };
+}
+
+/**
+ * One bot, as its classic edit page shows it: its name, picture and webhook, its agent's
  * description and daily budgets, the signing secret, the key, the GitHub account, its credentials
  * and grants, the kill switch, and removal. Its agent's owner sees it too, without the
  * administrators' controls.
@@ -169,11 +184,14 @@ export function BotSection() {
   const navigate = useNavigate();
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [form, setForm] = useState<BotForm | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [choice, setChoice] = useState<AvatarChoice>({ kind: "keep" });
+  const [pictureUpload] = useState(keptUpload);
+  // A save failed in a way that may have come after it was saved (see `writeMayHaveLanded`): the
+  // bot shown may not be what the server holds, until a save or load answers.
+  const [unconfirmed, setUnconfirmed] = useState(false);
   const [fields, setFields] = useState<Fields>({});
   const [key, setKey] = useState<BotKey | null>(null);
   const [ask, setAsk] = useState<Ask>(null);
-  const input = useRef<HTMLInputElement | null>(null);
   const { busy, track } = useBusy();
   // Whether the kept edit was taken: once, even when a load lands twice.
   const taken = useRef(false);
@@ -181,6 +199,8 @@ export function BotSection() {
   const show = useCallback((bot: Bot) => {
     setLoad({ status: "ready", bot });
     setForm(botForm(bot));
+    setChoice(startingChoice(bot));
+    setUnconfirmed(false);
   }, []);
 
   const fetchBot = useCallback(() => {
@@ -236,24 +256,31 @@ export function BotSection() {
     setFields({});
 
     const run = async () => {
-      const avatar = file === null ? null : await uploaded(file);
+      const current = renderedSpec({
+        spec: bot.botAvatar,
+        pictured: bot.avatarAttached,
+        unconfirmed,
+      });
 
-      return bots.update(id, { ...botChange(form, bot), avatar });
+      const picture = await avatarFields(choice, current, pictureUpload);
+
+      return bots.update(id, { ...botChange(form, bot), ...picture });
     };
 
     void track(
       "save",
       run().then(
         (change) => {
+          pictureUpload.settle(null);
           landed(change);
-          setFile(null);
-
-          if (input.current !== null) input.current.value = "";
-
           toast({ title: "Bot saved", tone: "success" });
         },
         (error: Error) => {
+          pictureUpload.settle(error);
+
           const named = fieldsOf(error);
+
+          if (writeMayHaveLanded(error)) setUnconfirmed(true);
 
           if (Object.keys(named).length > 0) {
             setFields(named);
@@ -315,29 +342,6 @@ export function BotSection() {
       <SettingsGroup title="The bot">
         <form className="settings-form" onSubmit={save}>
           <FieldError message={first("base")} />
-          <div className="settings-avatar">
-            <BotPicture
-              id={bot.id}
-              name={bot.name}
-              avatarUrl={bot.avatarUrl}
-              icon={bot.avatarAttached ? null : bot.icon}
-              size={64}
-            />
-            <div className="settings-field">
-              <label className="settings-label" htmlFor="admin-bot-picture">
-                Picture
-              </label>
-              <input
-                ref={input}
-                id="admin-bot-picture"
-                className="input"
-                type="file"
-                accept="image/*"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-              <FieldError message={first("avatar")} />
-            </div>
-          </div>
           <TextField
             label="Name"
             value={form.name}
@@ -347,14 +351,23 @@ export function BotSection() {
             error={first("name")}
             onChange={(event) => edit({ name: event.target.value })}
           />
-          <TextField
-            label="Icon"
-            hint="A :shortcode: from the icon set, shown when there's no picture"
-            value={form.iconName}
-            autoComplete="off"
-            placeholder="robot"
-            error={first("iconName")}
-            onChange={(event) => edit({ iconName: event.target.value })}
+          <BotAvatarPicker
+            id="admin-bot-picture"
+            name={form.name}
+            value={choice}
+            onChange={setChoice}
+            current={
+              bot.botAvatar === null ? (
+                <BotPicture
+                  id={bot.id}
+                  name={bot.name}
+                  avatarUrl={bot.avatarUrl}
+                  icon={bot.avatarAttached ? null : bot.icon}
+                  size={56}
+                />
+              ) : null
+            }
+            error={first("avatar") ?? first("botAvatar") ?? first("iconName")}
           />
           <TextField
             label="Webhook URL"

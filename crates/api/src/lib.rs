@@ -35,6 +35,7 @@ mod error;
 pub mod admin;
 pub mod templates;
 pub mod bots;
+mod bot_avatars;
 pub mod me_agents;
 pub mod oauth;
 pub mod webhooks;

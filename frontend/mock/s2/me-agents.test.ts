@@ -214,8 +214,9 @@ describe("personal agents", () => {
       postToRoom: unused,
     };
 
-    const admin = createAdmin(ctx, createUploads(ctx, unused), () => {});
-    const agents = createMeAgents(ctx, admin);
+    const uploads = createUploads(ctx, unused);
+    const admin = createAdmin(ctx, uploads, () => {});
+    const agents = createMeAgents(ctx, admin, uploads);
 
     const management = createRoomManagement(
       ctx,

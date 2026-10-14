@@ -4,6 +4,8 @@ import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import { ActionError } from "../../sync/run.ts";
+import { keptSpec, randomSpec } from "../../ui/bot-avatar-spec.ts";
+import type { AvatarChoice } from "../bot-avatar/avatar-choice.ts";
 import {
   type AgentClient,
   canSignIn,
@@ -17,8 +19,6 @@ export interface ClientChoice {
   readonly hint: string;
   /** Stored as the agent's `provider`, so its card names it. */
   readonly provider: string | null;
-  /** The icon the Identity step starts with. */
-  readonly icon: string;
 }
 
 const TOKEN_CLIENTS: readonly ClientChoice[] = [
@@ -27,28 +27,24 @@ const TOKEN_CLIENTS: readonly ClientChoice[] = [
     label: "Claude Code",
     hint: "Anthropic's coding agent, in your terminal",
     provider: "anthropic",
-    icon: "sparkles",
   },
   {
     value: "codex",
     label: "Codex CLI",
     hint: "OpenAI's coding agent, in your terminal",
     provider: "openai",
-    icon: "robot",
   },
   {
     value: "cursor",
     label: "Cursor",
     hint: "The editor's agent",
     provider: "cursor",
-    icon: "zap",
   },
   {
     value: "other",
     label: "Other MCP or API client",
     hint: "Anything that can send a header",
     provider: null,
-    icon: "robot",
   },
 ];
 
@@ -58,21 +54,18 @@ const WEB_CONNECTORS: readonly (ClientChoice & { readonly value: WebConnector })
     label: "claude.ai",
     hint: "Claude on the web, desktop and phone",
     provider: "anthropic",
-    icon: "sparkles",
   },
   {
     value: "chatgpt",
     label: "ChatGPT",
     hint: "ChatGPT on the web, desktop and phone",
     provider: "openai",
-    icon: "robot",
   },
   {
     value: "grok",
     label: "Grok",
     hint: "Grok on the web and phone",
     provider: "xai",
-    icon: "rocket",
   },
 ];
 
@@ -123,12 +116,18 @@ export function iconOf(name: string | null): Icon | null {
 }
 
 /**
- * The icon an agent's card shows: its image when the server resolved one (`iconUrl`), else its
- * emoji choice, else `null` (its drawn bot).
+ * The icon an agent's card shows: none once it has a picture (an upload or a picked avatar's
+ * render replaces its icon, as the directory's `avatarIcon` and the avatar endpoint do), else its
+ * image when the server resolved one (`iconUrl`), else its emoji choice, else `null` (its drawn
+ * bot).
  */
 export function agentIcon(
-  agent: Pick<PersonalAgent, "name" | "iconName" | "iconUrl">,
+  agent: Pick<PersonalAgent, "name" | "iconName" | "iconUrl" | "avatarUrl">,
 ): Icon | null {
+  if (agent.avatarUrl !== null) {
+    return null;
+  }
+
   if (agent.iconUrl !== null) {
     return {
       name: agent.iconName ?? "",
@@ -192,7 +191,8 @@ export const STEP_LABELS: Readonly<Record<Step, string>> = {
 export interface WizardDraft {
   readonly client: AgentClient | null;
   readonly name: string;
-  readonly iconName: string | null;
+  /** Its picture: a picked bot avatar (random to start with) or an uploaded image. */
+  readonly avatar: AvatarChoice;
   readonly roomIds: readonly number[];
   readonly capabilities: readonly string[];
   readonly expiry: Expiry;
@@ -211,7 +211,7 @@ export function emptyDraft(capabilities: readonly string[], signIn = false): Wiz
   return {
     client: null,
     name: "",
-    iconName: null,
+    avatar: { kind: "bot", spec: randomSpec() },
     roomIds: [],
     capabilities: [...capabilities],
     expiry: "90d",
@@ -254,12 +254,9 @@ export function stepProblem(step: Step, draft: WizardDraft): string | null {
   }
 }
 
-/** The draft with the client picked: its icon too, unless one was already chosen. */
+/** The draft with the client picked. */
 export function withClient(draft: WizardDraft, choice: ClientChoice): WizardDraft {
-  const previous = ALL_CLIENTS.find((c) => c.value === draft.client);
-  const keepIcon = draft.iconName !== null && draft.iconName !== previous?.icon;
-
-  return { ...draft, client: choice.value, iconName: keepIcon ? draft.iconName : choice.icon };
+  return { ...draft, client: choice.value };
 }
 
 /** `values` with `value` in or out, in its original order. */
@@ -442,7 +439,7 @@ export function serializeDraft(draft: WizardDraft): string {
   return new URLSearchParams({
     client: draft.client ?? "",
     name: draft.name,
-    iconName: draft.iconName ?? "",
+    botAvatar: draft.avatar.kind === "bot" ? JSON.stringify(draft.avatar.spec) : "",
     roomIds: draft.roomIds.join(","),
     capabilities: draft.capabilities.join(","),
     expiry: draft.expiry,
@@ -463,14 +460,14 @@ export function parseDraft(text: string): WizardDraft | null {
   const fields = new URLSearchParams(text);
   const client = ALL_CLIENTS.find((choice) => choice.value === fields.get("client"));
   const expiry = EXPIRY_CHOICES.find((choice) => choice.value === fields.get("expiry"));
-  const iconName = fields.get("iconName") ?? "";
+  const spec = keptSpec(fields.get("botAvatar") ?? "");
 
   if (client === undefined || expiry === undefined) return null;
 
   return {
     client: client.value,
     name: fields.get("name") ?? "",
-    iconName: iconName === "" ? null : iconName,
+    avatar: { kind: "bot", spec: spec ?? randomSpec() },
     roomIds: items(fields.get("roomIds"))
       .map(Number)
       .filter((id) => Number.isSafeInteger(id) && id > 0),

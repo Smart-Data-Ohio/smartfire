@@ -18,3 +18,15 @@ export function stoppedAtConfirmation(error: Error): boolean {
     (error.tag === "SudoRequired" || error.tag === "ConfirmationCancelled")
   );
 }
+
+/**
+ * Whether a failed write may still have reached the server and been saved, so what the form holds
+ * can't be trusted until an answer says what the server has. Only a refusal (a 422 `Validation`,
+ * which writes nothing) or a stop at the confirmation (nothing was sent) is known to have saved
+ * nothing. A dropped connection, a timeout or a server error may have come after the save.
+ */
+export function writeMayHaveLanded(error: Error): boolean {
+  const refused = error instanceof ActionError && error.tag === "Validation";
+
+  return !refused && !stoppedAtConfirmation(error);
+}

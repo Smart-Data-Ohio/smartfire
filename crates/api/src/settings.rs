@@ -688,7 +688,7 @@ async fn save_profile(c: &mut Ctx) -> Result {
 
 /// `user.updated` for everyone, with the person as the directory has them, and their direct
 /// conversations' sidebar rows: how a new name, avatar or banner reaches other clients.
-async fn publish_identity(c: &mut Ctx, id: i64) -> Result<()> {
+pub(crate) async fn publish_identity(c: &mut Ctx, id: i64) -> Result<()> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
     let secrets = c.app().secrets.clone();
     let (user, rooms) = c.app().db

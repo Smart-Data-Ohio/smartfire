@@ -114,6 +114,7 @@ export function createChannelWebhooks(ctx: S2Context): ChannelWebhookRoutes {
       customStatus: null,
       avatarIcon: null,
       agent: null,
+      botAvatar: null,
       createdAt: timestamp(now),
       updatedAt: rowTimestamp(now),
       accountName: name,

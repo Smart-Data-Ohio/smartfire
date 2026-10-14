@@ -31,13 +31,15 @@ fn present(value: Option<&str>) -> Option<String> {
 }
 
 /// The per-person facts a [`User`] row doesn't hold, read for a batch at once: who uploaded a
-/// picture, each profile banner, each agent's badge, and each bot's resolved icon.
+/// picture, each profile banner, each agent's badge, and each bot's resolved icon and picked bot
+/// avatar.
 #[derive(Default)]
 pub struct UserExtras {
     avatars: BTreeSet<i64>,
     banners: HashMap<i64, Banner>,
     agents: HashMap<i64, api::AgentBadge>,
     icons: HashMap<i64, api::Icon>,
+    bot_avatars: HashMap<i64, api::BotAvatarSpec>,
 }
 
 impl UserExtras {
@@ -53,6 +55,10 @@ impl UserExtras {
             .map(|user| user.id)
             .collect();
         let agents = agent_badges(conn, &bots)?;
+        let bot_avatars = campfire_db::BotAvatar::for_ids(conn, &bots)?
+            .into_iter()
+            .filter_map(|(id, row)| Some((id, crate::bot_avatars::spec(&row)?)))
+            .collect();
         let icon_users: Vec<_> = users
             .iter()
             .filter(|user| {
@@ -84,6 +90,7 @@ impl UserExtras {
             banners,
             agents,
             icons,
+            bot_avatars,
         })
     }
 
@@ -94,6 +101,11 @@ impl UserExtras {
     /// The bot's resolved avatar icon, as [`user`] sends it.
     pub fn avatar_icon(&self, user_id: i64) -> Option<&api::Icon> {
         self.icons.get(&user_id)
+    }
+
+    /// The bot's picked bot avatar, as [`user`] sends it.
+    pub fn bot_avatar(&self, user_id: i64) -> Option<&api::BotAvatarSpec> {
+        self.bot_avatars.get(&user_id)
     }
 
     /// The profile banner's image and first-frame paths, both `None` without one.
@@ -273,6 +285,7 @@ pub fn user(
         custom_status,
         avatar_icon: extras.icons.get(&user.id).cloned(),
         agent: extras.agents.get(&user.id).cloned(),
+        bot_avatar: extras.bot_avatars.get(&user.id).cloned(),
         created_at: time(user.created_at),
         updated_at: row_version(user.updated_at),
         account_name: user.name.clone(),

@@ -10,6 +10,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { pageExit } from "../auth/auth-navigation.ts";
 import { stoppedAtConfirmation } from "../auth/confirmation.ts";
+import { avatarFields, keptUpload } from "../bot-avatar/avatar-choice.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
 import { AccessFields, IdentityFields } from "../settings/agent-parts.tsx";
@@ -216,7 +217,9 @@ function AgentPicker({
           <AgentAvatar
             seed={`${agent.userId}`}
             name={agent.name}
+            spec={agent.botAvatar}
             icon={agentIcon(agent)}
+            picture={agent.avatarUrl}
             size={28}
             decorative
           />
@@ -325,6 +328,7 @@ function ApprovalForm({
   const [nameError, setNameError] = useState<string | undefined>(undefined);
   // The name typed for a new agent, kept while an existing one is picked.
   const newName = useRef("");
+  const [pictureUpload] = useState(keptUpload);
   const agent = pickedAgent(consent, form.pick);
 
   const pick = (next: AgentPick) => {
@@ -375,17 +379,26 @@ function ApprovalForm({
     setProblem(null);
     setNameError(undefined);
     setBusy("approve");
-    oauth
-      .approve(publicId, {
-        agentId: form.pick.kind === "existing" ? form.pick.id : null,
-        name: form.pick.kind === "new" ? form.name.trim() : null,
-        iconName: form.pick.kind === "new" ? form.iconName : null,
-        roomIds: [...form.roomIds],
-        capabilities: form.roomIds.length === 0 ? [] : [...form.capabilities],
-      })
+    avatarFields(form.pick.kind === "new" ? form.avatar : { kind: "keep" }, null, pictureUpload)
+      .then((picture) =>
+        oauth.approve(publicId, {
+          agentId: form.pick.kind === "existing" ? form.pick.id : null,
+          name: form.pick.kind === "new" ? form.name.trim() : null,
+          iconName: null,
+          ...picture,
+          roomIds: [...form.roomIds],
+          capabilities: form.roomIds.length === 0 ? [] : [...form.capabilities],
+        }),
+      )
       .then(
-        ({ redirectTo }) => onLeave(redirectTo),
-        (error: Error) => failed(error, "approve"),
+        ({ redirectTo }) => {
+          pictureUpload.settle(null);
+          onLeave(redirectTo);
+        },
+        (error: Error) => {
+          pictureUpload.settle(error);
+          failed(error, "approve");
+        },
       );
   };
 
@@ -414,10 +427,10 @@ function ApprovalForm({
             {form.pick.kind === "new" ? (
               <IdentityFields
                 name={form.name}
-                iconName={form.iconName}
+                avatar={form.avatar}
                 error={nameError}
                 onName={(name) => setForm((current) => ({ ...current, name }))}
-                onIcon={(iconName) => setForm((current) => ({ ...current, iconName }))}
+                onAvatar={(avatar) => setForm((current) => ({ ...current, avatar }))}
               />
             ) : null}
             <AccessFields

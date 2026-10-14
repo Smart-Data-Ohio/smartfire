@@ -179,6 +179,7 @@ export function createRoomIntegrations(ctx: S2Context): RoomIntegrations {
       customStatus: null,
       avatarIcon: null,
       agent: null,
+      botAvatar: null,
       createdAt: timestamp(now),
       updatedAt: rowTimestamp(now),
       accountName: "GitHub",

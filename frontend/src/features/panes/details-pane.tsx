@@ -141,7 +141,7 @@ function DirectHero({ userId }: { readonly userId: number }) {
       stillUrl={user?.bannerStillUrl ?? null}
       size="card"
     >
-      <UserAvatar userId={userId} size={64} presence decorative />
+      <UserAvatar userId={userId} size={64} presence decorative live />
     </ProfileHero>
   );
 }

@@ -34,6 +34,8 @@ const AGENT: PersonalAgent = {
   name: "Helper",
   iconName: "owl",
   iconUrl: null,
+  botAvatar: null,
+  avatarUrl: null,
   provider: null,
   runtime: "codex",
   description: null,

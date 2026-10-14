@@ -1,6 +1,6 @@
 //! Wire shapes of the S7 bot types.
 
-use serde_json::json;
+use serde_json::{Value, json};
 
 use crate::tests::assert_wire;
 use crate::*;
@@ -21,6 +21,36 @@ fn agent() -> BotAgent {
     }
 }
 
+fn spec() -> BotAvatarSpec {
+    BotAvatarSpec {
+        kind: BotAvatarType::Cat,
+        color: "#ff8a5c".into(),
+        face: BotAvatarFace::Mouth,
+        accessory: Some(BotAvatarAccessory::RoundGlasses),
+    }
+}
+
+fn spec_json() -> Value {
+    json!({"type": "cat", "color": "#ff8a5c", "face": "mouth", "accessory": "roundGlasses"})
+}
+
+#[test]
+fn a_bot_avatar_names_its_choices_as_the_library_does() {
+    assert_wire(&spec(), spec_json());
+    assert_wire(
+        &BotAvatarSpec { kind: BotAvatarType::Puddle, face: BotAvatarFace::Eyes, accessory: None, ..spec() },
+        json!({"type": "puddle", "color": "#ff8a5c", "face": "eyes", "accessory": null}),
+    );
+    for (accessory, wire) in [
+        (BotAvatarAccessory::BowTie, "bowTie"),
+        (BotAvatarAccessory::SquareGlasses, "squareGlasses"),
+        (BotAvatarAccessory::Party, "party"),
+    ] {
+        assert_eq!(serde_json::to_value(accessory).unwrap(), json!(wire));
+    }
+    assert!(serde_json::from_value::<BotAvatarSpec>(json!({"type": "dragon", "color": "#ff8a5c", "face": "eyes", "accessory": null})).is_err());
+}
+
 #[test]
 fn the_list_and_a_bot() {
     assert_wire(
@@ -33,6 +63,7 @@ fn the_list_and_a_bot() {
                     title: "Robot".into(),
                     character: "🤖".into(),
                 }),
+                bot_avatar: None,
                 ownership: "Workspace agent · Owned by Grace".into(),
                 supports_bot_key: true,
                 rooms: vec![BotRoom {
@@ -51,6 +82,7 @@ fn the_list_and_a_bot() {
             "name": "Bender",
             "avatarUrl": "/users/9/avatar?v=1",
             "icon": {"kind": "emoji", "title": "Robot", "character": "🤖"},
+            "botAvatar": null,
             "ownership": "Workspace agent · Owned by Grace",
             "supportsBotKey": true,
             "rooms": [{
@@ -73,6 +105,7 @@ fn the_list_and_a_bot() {
                     title: "Acme".into(),
                     url: "/icons/acme.svg".into(),
                 }),
+                bot_avatar: Some(spec()),
                 webhook_url: Some("https://example.com/hook".into()),
                 can_administer: true,
                 supports_bot_key: true,
@@ -94,6 +127,7 @@ fn the_list_and_a_bot() {
                 "avatarAttached": false,
                 "iconName": "acme",
                 "icon": {"kind": "image", "title": "Acme", "url": "/icons/acme.svg"},
+                "botAvatar": spec_json(),
                 "webhookUrl": "https://example.com/hook",
                 "canAdminister": true,
                 "supportsBotKey": true,
@@ -127,8 +161,9 @@ fn the_bot_writes() {
             icon_name: None,
             webhook_url: Some("https://example.com/robo".into()),
             avatar: Some("signed-blob".into()),
+            bot_avatar: Some(spec()),
         },
-        json!({"name": "Robo", "iconName": null, "webhookUrl": "https://example.com/robo", "avatar": "signed-blob"}),
+        json!({"name": "Robo", "iconName": null, "webhookUrl": "https://example.com/robo", "avatar": "signed-blob", "botAvatar": spec_json()}),
     );
     assert_wire(
         &BotKey {
@@ -151,6 +186,7 @@ fn the_bot_writes() {
             icon_name: Some(String::new()),
             webhook_url: None,
             avatar: None,
+            bot_avatar: None,
             agent: Some(UpdateBotAgent {
                 daily_message_cap: Some("lots".into()),
                 ..Default::default()
@@ -161,6 +197,7 @@ fn the_bot_writes() {
             "iconName": "",
             "webhookUrl": null,
             "avatar": null,
+            "botAvatar": null,
             "agent": {
                 "provider": null,
                 "runtime": null,
