@@ -10,18 +10,22 @@ interface UserAvatarProps {
   /** Show the presence dot (for an agent: the thinking orbs while it works, or its status dot). */
   readonly presence?: boolean;
   readonly decorative?: boolean;
+  /** Draw a picked bot avatar live (panes and profiles); lists leave it still. */
+  readonly live?: boolean;
 }
 
 /**
- * Anyone's avatar from the store: an agent gets its own icon or a generated bot-avatars tile
- * (greyed out while suspended or deactivated), a person their photo (falling back to initials on
- * their deterministic tint), with an optional presence dot.
+ * Anyone's avatar from the store: an agent gets its picked bot avatar, its own icon, its uploaded
+ * picture or a generated bot-avatars tile (greyed out while suspended or deactivated), a person
+ * their photo (falling back to initials on their deterministic tint), with an optional presence
+ * dot.
  */
 export function UserAvatar({
   userId,
   size = 36,
   presence = false,
   decorative = false,
+  live = false,
 }: UserAvatarProps) {
   const user = useUser(userId);
   const status = usePresenceStatus(presence ? userId : undefined);
@@ -36,7 +40,10 @@ export function UserAvatar({
         name={name}
         size={size}
         decorative={decorative}
+        spec={user?.botAvatar ?? null}
         icon={user?.avatarIcon ?? null}
+        picture={user?.hasAvatar === true ? user.avatarUrl : null}
+        live={live}
         {...corner}
       />
     );

@@ -94,7 +94,7 @@ function Hero({ profile, now }: { readonly profile: AgentProfile; readonly now: 
 
   return (
     <section className="agent-hero" aria-label={name}>
-      <UserAvatar userId={agent.userId} size={72} presence decorative />
+      <UserAvatar userId={agent.userId} size={72} presence decorative live />
       <div className="agent-hero-main">
         <div className="agent-hero-title">
           <h2 className="agent-hero-name">{name}</h2>

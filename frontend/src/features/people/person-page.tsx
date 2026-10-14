@@ -350,7 +350,7 @@ function Profile({
     return (
       <div className="person" data-status="deactivated">
         <ProfileHero userId={user.id} name={user.name} url={null} stillUrl={null}>
-          <UserAvatar userId={user.id} size={96} />
+          <UserAvatar userId={user.id} size={96} live />
         </ProfileHero>
         <p className="text-muted">{user.name} is no longer on this account</p>
       </div>
@@ -365,7 +365,7 @@ function Profile({
         url={user.bannerUrl}
         stillUrl={user.bannerStillUrl}
       >
-        <UserAvatar userId={user.id} size={96} />
+        <UserAvatar userId={user.id} size={96} live />
       </ProfileHero>
       {user.status === "banned" ? <span className="people-badge">Banned</span> : null}
       {ignored ? <span className="people-badge">Ignored</span> : null}
