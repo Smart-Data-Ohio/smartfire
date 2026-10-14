@@ -172,6 +172,7 @@ export function createBots(
   uploads: Uploads,
   requireSudo: () => void,
   personalSummaries: () => BotSummary[] = () => [],
+  personalBot: (id: number) => Bot | undefined = () => undefined,
 ): BotsModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
@@ -220,6 +221,7 @@ export function createBots(
     icon: null,
     ownership:
       record.agent === null ? "no owner recorded" : `Workspace agent · Owned by ${viewerName()}`,
+    supportsBotKey: true,
     rooms: rooms(record.id),
   });
 
@@ -252,6 +254,7 @@ export function createBots(
       record.iconName === null ? null : { kind: "emoji", title: record.iconName, character: "🤖" },
     webhookUrl: record.webhookUrl,
     canAdminister: true,
+    supportsBotKey: true,
     agent: record.agent === null ? null : agentOf(record.agent),
     signingSecret: record.signingSecret,
     github: record.github,
@@ -506,7 +509,11 @@ export function createBots(
         }),
       ),
       route("POST", /^\/admin\/bots$/, ({ body }) => create(body)),
-      route("GET", /^\/admin\/bots\/(\d+)$/, (request) => ok(bot(botOr404(ids(request)[0])))),
+      route("GET", /^\/admin\/bots\/(\d+)$/, (request) => {
+        const id = ids(request)[0];
+
+        return ok(personalBot(id) ?? bot(botOr404(id)));
+      }),
       route("PATCH", /^\/admin\/bots\/(\d+)$/, (request) => update(ids(request)[0], request.body)),
       route("DELETE", /^\/admin\/bots\/(\d+)$/, (request) => {
         const record = botOr404(ids(request)[0]);
@@ -528,6 +535,9 @@ export function createBots(
       }),
       route("PUT", /^\/admin\/bots\/(\d+)\/key$/, (request) => {
         requireSudo();
+
+        if (personalBot(ids(request)[0]) !== undefined)
+          throw refusal("Bot key is not available to personal agents");
 
         const record = botOr404(ids(request)[0]);
 

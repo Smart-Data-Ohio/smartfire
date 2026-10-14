@@ -34,6 +34,7 @@ fn the_list_and_a_bot() {
                     character: "🤖".into(),
                 }),
                 ownership: "Workspace agent · Owned by Grace".into(),
+                supports_bot_key: true,
                 rooms: vec![BotRoom {
                     id: 3,
                     name: "Ops".into(),
@@ -51,6 +52,7 @@ fn the_list_and_a_bot() {
             "avatarUrl": "/users/9/avatar?v=1",
             "icon": {"kind": "emoji", "title": "Robot", "character": "🤖"},
             "ownership": "Workspace agent · Owned by Grace",
+            "supportsBotKey": true,
             "rooms": [{
                 "id": 3,
                 "name": "Ops",
@@ -73,6 +75,7 @@ fn the_list_and_a_bot() {
                 }),
                 webhook_url: Some("https://example.com/hook".into()),
                 can_administer: true,
+                supports_bot_key: true,
                 agent: Some(agent()),
                 signing_secret: None,
                 github: Some(BotGithub {
@@ -93,6 +96,7 @@ fn the_list_and_a_bot() {
                 "icon": {"kind": "image", "title": "Acme", "url": "/icons/acme.svg"},
                 "webhookUrl": "https://example.com/hook",
                 "canAdminister": true,
+                "supportsBotKey": true,
                 "agent": {
                     "id": 11,
                     "provider": "anthropic",

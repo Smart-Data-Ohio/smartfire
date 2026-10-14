@@ -1222,7 +1222,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPeople(ctx, admin.requireSudo, agents).routes,
     ...meAgents.routes,
     ...oauth.routes,
-    ...createBots(ctx, uploads, admin.requireSudo, meAgents.summaries).routes,
+    ...createBots(ctx, uploads, admin.requireSudo, meAgents.summaries, meAgents.bot).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx, settings).routes,
     ...workspaceLayout.routes,

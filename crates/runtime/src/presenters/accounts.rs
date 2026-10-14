@@ -275,6 +275,7 @@ fn bot_with_associations(
     Ok(Bot {
         user: user_summary(secrets, bot),
         kind: agent.map(|agent| agent.kind.name().into()),
+        supports_bot_key: agent.is_none_or(|agent| agent.kind != campfire_db::AgentKind::Personal),
         owner_name,
         icon,
         rooms: rooms
@@ -318,6 +319,7 @@ pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, b
         avatar_attachment_url: avatar.map(|blob| format!("{base_url}{}", campfire_storage::paths::blob_redirect_path(&*app.storage.verifier, &blob, None))),
         persisted: true, icon_name: icon_name.clone(),
         icon: icon_name.as_deref().and_then(|name| super::resolve_avatar_icon(conn, name)),
+        supports_bot_key: profile.as_ref().is_none_or(|agent| agent.kind != campfire_db::AgentKind::Personal),
         agent: profile.map(|agent| BotAgentForm {
             id: agent.id, owner_id: agent.owner_id, provider: agent.provider, runtime: agent.runtime,
             description: agent.description, daily_message_cap: agent.daily_message_cap,

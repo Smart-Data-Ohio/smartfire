@@ -20,6 +20,41 @@ import { BOT_ID } from "../seed.ts";
 import { errorOf, expectStatus, get, harness, send } from "./testing.ts";
 
 describe("the mock's bot pages", () => {
+  it("keeps personal agents manageable while refusing bot keys", async () => {
+    const { server } = harness();
+
+    const created = await expectStatus<Json>(
+      server,
+      "POST",
+      "/api/v1/me/agents",
+      {
+        name: "Personal helper",
+        roomIds: [],
+        capabilities: [],
+      },
+      201,
+    );
+
+    const userId = field(field(created, "agent"), "userId");
+    const list = await get<BotList>(server, "/api/v1/admin/bots");
+    const personal = list.bots.find((bot) => bot.id === userId);
+    expect(personal).toMatchObject({ supportsBotKey: false });
+    const detail = await get<Bot>(server, `/api/v1/admin/bots/${userId}`);
+    Schema.decodeUnknownSync(BotSchema)(detail);
+    expect(detail).toMatchObject({ supportsBotKey: false, canAdminister: true });
+    expect(detail.agent).not.toBeNull();
+
+    const refused = await expectStatus<Json>(
+      server,
+      "PUT",
+      `/api/v1/admin/bots/${userId}/key`,
+      null,
+      422,
+    );
+
+    expect(errorOf(refused).message).toBe("Bot key is not available to personal agents");
+  });
+
   it("answer the contract's shapes", async () => {
     const { server } = harness();
     const list = await get<BotList>(server, "/api/v1/admin/bots");

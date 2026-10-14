@@ -1,3 +1,4 @@
+import type { Bot } from "../../src/gen/Bot.ts";
 import type { BotSummary } from "../../src/gen/BotSummary.ts";
 import type { OAuthAgentHiddenRooms } from "../../src/gen/OAuthAgentHiddenRooms.ts";
 import type { OAuthAgentRoomAccess } from "../../src/gen/OAuthAgentRoomAccess.ts";
@@ -360,10 +361,47 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule) {
       icon: null,
       rooms: [],
       ownership: `Personal agent · Owned by ${ctx.world().users.get(VIEWER_ID)?.name ?? "You"}`,
+      supportsBotKey: false,
     }));
+
+  const bot = (userId: number): Bot | undefined => {
+    const profile = [...current().values()].find(
+      (agent) => agent.profile.userId === userId,
+    )?.profile;
+
+    if (profile === undefined) return undefined;
+
+    return {
+      id: profile.userId,
+      name: profile.name,
+      avatarUrl: "/avatar.svg",
+      avatarAttached: false,
+      iconName: profile.iconName,
+      icon: null,
+      webhookUrl: null,
+      canAdminister: true,
+      supportsBotKey: false,
+      agent: {
+        id: profile.id,
+        provider: profile.provider,
+        runtime: profile.runtime,
+        description: profile.description,
+        dailyMessageCap: profile.dailyMessageCap,
+        dailyBoardPostCap: null,
+        dailyExternalActionCap: null,
+        usage: "0 messages · 0 board posts · 0 external actions",
+        suspended: profile.suspended,
+        ledgerUrl: `/agents/${profile.id}/events`,
+        approvalsUrl: `/agents/${profile.id}/approvals`,
+      },
+      signingSecret: null,
+      github: null,
+    };
+  };
 
   return {
     summaries,
+    bot,
     connections: connectionsApi,
     routes: [
       route("GET", /^\/me\/agents$/, () => {
