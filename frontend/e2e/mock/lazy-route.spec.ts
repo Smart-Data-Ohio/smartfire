@@ -202,6 +202,7 @@ async function expectShellKept(page: Page): Promise<void> {
 }
 
 test("a slow lazy route keeps the shell mounted until its screen arrives", async ({ page }) => {
+  await page.clock.install();
   await watchLoadingPage(page);
   await openApp(page, `r/${ROOM_IDS.general}`);
   await allowMotion(page);
@@ -228,10 +229,13 @@ test("a slow lazy route keeps the shell mounted until its screen arrives", async
     },
   );
 
+  // Keep the draft check ahead of the pending-screen timer, even under browser load.
+  await freezeTime(page);
   await page.getByRole("button", { name: "Activity" }).click();
 
   await expect(composer(page)).toHaveValue(DRAFT);
   await expectShellKept(page);
+  await page.clock.resume();
   await expect(page.getByRole("status", { name: "Loading page" })).toBeVisible();
   await expect(sidebar(page)).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Destinations" })).toBeVisible();
