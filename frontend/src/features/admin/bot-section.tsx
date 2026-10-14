@@ -9,7 +9,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { leftToConfirm } from "../auth/confirmation.ts";
-import { type AvatarChoice, avatarFields } from "../bot-avatar/avatar-choice.ts";
+import { type AvatarChoice, avatarFields, keptUpload } from "../bot-avatar/avatar-choice.ts";
 import { BotAvatarPicker } from "../bot-avatar/bot-avatar-picker.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import {
@@ -180,6 +180,7 @@ export function BotSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [form, setForm] = useState<BotForm | null>(null);
   const [choice, setChoice] = useState<AvatarChoice>({ kind: "keep" });
+  const [pictureUpload] = useState(keptUpload);
   const [fields, setFields] = useState<Fields>({});
   const [key, setKey] = useState<BotKey | null>(null);
   const [ask, setAsk] = useState<Ask>(null);
@@ -246,7 +247,7 @@ export function BotSection() {
     setFields({});
 
     const run = async () => {
-      const picture = await avatarFields(choice, bot.botAvatar);
+      const picture = await avatarFields(choice, bot.botAvatar, pictureUpload);
 
       return bots.update(id, { ...botChange(form, bot), ...picture });
     };
@@ -255,10 +256,13 @@ export function BotSection() {
       "save",
       run().then(
         (change) => {
+          pictureUpload.settle(null);
           landed(change);
           toast({ title: "Bot saved", tone: "success" });
         },
         (error: Error) => {
+          pictureUpload.settle(error);
+
           const named = fieldsOf(error);
 
           if (Object.keys(named).length > 0) {

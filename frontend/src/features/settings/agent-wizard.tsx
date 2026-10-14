@@ -5,7 +5,7 @@ import { meAgents } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { keepDraft } from "../admin/admin-parts.tsx";
 import { leftToConfirm } from "../auth/confirmation.ts";
-import { avatarFields } from "../bot-avatar/avatar-choice.ts";
+import { avatarFields, keptUpload } from "../bot-avatar/avatar-choice.ts";
 import {
   AccessFields,
   ExpiryField,
@@ -144,6 +144,7 @@ export function AgentWizard({
   const [step, setStep] = useState<Step>(initialStep);
   const [draft, setDraft] = useState<WizardDraft>(initial);
   const [problem, setProblem] = useState<string | null>(null);
+  const [pictureUpload] = useState(keptUpload);
   const [fields, setFields] = useState<Readonly<Record<string, readonly string[]>>>({});
   const [created, setCreated] = useState<PersonalAgentCreated | null>(null);
   const { busy, track } = useBusy();
@@ -176,7 +177,7 @@ export function AgentWizard({
     setProblem(null);
     void track(
       "create",
-      avatarFields(draft.avatar, null)
+      avatarFields(draft.avatar, null, pictureUpload)
         .then((picture) =>
           meAgents.create({
             name: draft.name.trim(),
@@ -192,10 +193,13 @@ export function AgentWizard({
         )
         .then(
           (answer) => {
+            pictureUpload.settle(null);
             setCreated(answer);
             onCreated(answer);
           },
           (error: Error) => {
+            pictureUpload.settle(error);
+
             const named = fieldsOf(error);
             const first = Object.keys(named).find((key) => FIELD_STEP.has(key));
 

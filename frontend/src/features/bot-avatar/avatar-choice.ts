@@ -2,6 +2,7 @@ import type { BotAvatarSpec } from "../../gen/BotAvatarSpec.ts";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { sameSpec } from "../../ui/bot-avatar-spec.ts";
 import { uploaded } from "../admin/admin-parts.tsx";
+import { stoppedAtConfirmation } from "../auth/confirmation.ts";
 
 /**
  * What a bot form does with the bot's picture: a picked bot avatar, an uploaded image, or
@@ -39,26 +40,84 @@ export const avatarUploads = {
 };
 
 /**
+ * A form's last upload, kept while its write waits on the password confirmation: saving the same
+ * picture again after the confirmation was closed (or left for Google) reuses it rather than
+ * uploading another copy that nothing would ever attach. Any other outcome lets it go, as the
+ * server may have attached it.
+ */
+export interface KeptUpload {
+  /** The upload for `key` (a spec's text or the image file), started by `start` if it's new. */
+  readonly take: (key: string | File, start: () => Promise<string>) => Promise<string>;
+  /** After the write: `null` when it went through, else what stopped it. */
+  readonly settle: (error: Error | null) => void;
+}
+
+export function keptUpload(): KeptUpload {
+  let kept: { readonly key: string | File; readonly id: Promise<string> } | null = null;
+
+  return {
+    take: (key, start) => {
+      if (kept !== null && kept.key === key) {
+        return kept.id;
+      }
+
+      const id = start();
+      const entry = { key, id };
+
+      kept = entry;
+      // A failed upload is tried afresh next time.
+      id.catch(() => {
+        if (kept === entry) kept = null;
+      });
+
+      return id;
+    },
+    settle: (error) => {
+      if (error === null || !stoppedAtConfirmation(error)) kept = null;
+    },
+  };
+}
+
+/** Each call its own upload: for callers that don't keep one across retries. */
+const FRESH: KeptUpload = { take: (_key, start) => start(), settle: () => undefined };
+
+function specKey(spec: BotAvatarSpec): string {
+  return [spec.type, spec.color.toLowerCase(), spec.face, spec.accessory ?? ""].join("|");
+}
+
+/**
  * Uploads what the choice needs and names it for the write: a picked avatar sends its spec with
  * its still render (the picture every non-SPA surface shows), an image just the image. A choice
- * that matches what the bot already has sends nothing.
+ * that matches what the bot already has sends nothing. `kept` reuses the form's upload of the
+ * same picture from an attempt that didn't go through.
  */
 export async function avatarFields(
   choice: AvatarChoice,
   current: BotAvatarSpec | null,
+  kept: KeptUpload = FRESH,
 ): Promise<AvatarFields> {
   switch (choice.kind) {
-    case "bot":
-      return sameSpec(choice.spec, current)
+    case "bot": {
+      const { spec } = choice;
+
+      return sameSpec(spec, current)
         ? UNCHANGED
         : {
-            avatar: await avatarUploads.upload(await avatarUploads.render(choice.spec)),
-            botAvatar: choice.spec,
+            avatar: await kept.take(specKey(spec), async () =>
+              avatarUploads.upload(await avatarUploads.render(spec)),
+            ),
+            botAvatar: spec,
           };
-    case "upload":
-      return choice.file === null
+    }
+
+    case "upload": {
+      const { file } = choice;
+
+      return file === null
         ? UNCHANGED
-        : { avatar: await avatarUploads.upload(choice.file), botAvatar: null };
+        : { avatar: await kept.take(file, () => avatarUploads.upload(file)), botAvatar: null };
+    }
+
     default:
       return UNCHANGED;
   }

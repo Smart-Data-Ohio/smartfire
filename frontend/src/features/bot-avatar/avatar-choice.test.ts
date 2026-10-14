@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { avatarFields, avatarUploads, changesAvatar } from "./avatar-choice.ts";
+import { ActionError } from "../../sync/run.ts";
+import { avatarFields, avatarUploads, changesAvatar, keptUpload } from "./avatar-choice.ts";
 
 const CAT = { type: "cat" as const, color: "#eaa06f", face: "mouth" as const, accessory: null };
 
@@ -50,5 +51,39 @@ describe("saving a bot's picture", () => {
     expect(render).not.toHaveBeenCalled();
     expect(changesAvatar({ kind: "upload", file: null }, CAT)).toBe(false);
     expect(await avatarFields({ kind: "keep" }, CAT)).toEqual({ avatar: null, botAvatar: null });
+  });
+
+  it("reuses a form's upload after the confirmation was closed, and lets it go after", async () => {
+    const { render, upload } = stubbed();
+    const kept = keptUpload();
+    const cat = { kind: "bot" as const, spec: CAT };
+
+    upload.mockResolvedValueOnce("first").mockResolvedValueOnce("second");
+
+    expect((await avatarFields(cat, null, kept)).avatar).toBe("first");
+    kept.settle(new ActionError("ConfirmationCancelled", "Closed"));
+    expect((await avatarFields(cat, null, kept)).avatar).toBe("first");
+    expect(render).toHaveBeenCalledTimes(1);
+
+    // Once the write went through, the server holds that upload: the next save sends its own.
+    kept.settle(null);
+    expect((await avatarFields(cat, null, kept)).avatar).toBe("second");
+  });
+
+  it("uploads afresh for another picture, after another failure, or when an upload failed", async () => {
+    const { upload } = stubbed();
+    const kept = keptUpload();
+    const photo = new File(["jpg"], "photo.jpg", { type: "image/jpeg" });
+
+    upload.mockRejectedValueOnce(new Error("offline"));
+    await expect(avatarFields({ kind: "upload", file: photo }, null, kept)).rejects.toThrow();
+    expect((await avatarFields({ kind: "upload", file: photo }, null, kept)).avatar).toBe(
+      "signed-avatar",
+    );
+
+    kept.settle(new ActionError("Validation", "Name is taken", { name: ["is taken"] }));
+    await avatarFields({ kind: "upload", file: photo }, null, kept);
+    await avatarFields({ kind: "bot", spec: CAT }, null, kept);
+    expect(upload).toHaveBeenCalledTimes(4);
   });
 });

@@ -13,7 +13,12 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Confirm, takeDraft } from "../admin/admin-parts.tsx";
-import { type AvatarChoice, avatarFields, changesAvatar } from "../bot-avatar/avatar-choice.ts";
+import {
+  type AvatarChoice,
+  avatarFields,
+  changesAvatar,
+  keptUpload,
+} from "../bot-avatar/avatar-choice.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import {
@@ -604,6 +609,7 @@ function EditDialog({
   const { busy, track } = useBusy();
   // Whether this opening is still showing: false once closed, by anyone, or unmounted.
   const live = useRef(agent !== null);
+  const [pictureUpload] = useState(keptUpload);
 
   useEffect(() => {
     live.current = agent !== null;
@@ -668,7 +674,9 @@ function EditDialog({
 
       if (rename || repicture) {
         // `null` leaves that field as the server holds it.
-        const picture = repicture ? await avatarFields(form.avatar, agent.botAvatar) : null;
+        const picture = repicture
+          ? await avatarFields(form.avatar, agent.botAvatar, pictureUpload)
+          : null;
 
         latest = await writes.rename(agent.id, {
           name: rename ? name : null,
@@ -693,12 +701,16 @@ function EditDialog({
       "edit",
       save().then(
         (next) => {
+          pictureUpload.settle(null);
+
           if (!live.current) return;
 
           onClose();
           toast({ title: `${next.name} saved`, tone: "success" });
         },
         (failure: Error) => {
+          pictureUpload.settle(failure);
+
           if (turnedOff(failure)) onTurnedOff();
 
           if (!live.current) return;

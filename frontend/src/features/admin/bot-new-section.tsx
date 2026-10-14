@@ -7,7 +7,7 @@ import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { leftToConfirm } from "../auth/confirmation.ts";
-import { type AvatarChoice, avatarFields } from "../bot-avatar/avatar-choice.ts";
+import { type AvatarChoice, avatarFields, keptUpload } from "../bot-avatar/avatar-choice.ts";
 import { BotAvatarPicker } from "../bot-avatar/bot-avatar-picker.tsx";
 import {
   FieldError,
@@ -70,6 +70,7 @@ export function BotNewSection() {
   const [draft, setDraft] = useState<Draft>(EMPTY);
   // A random avatar to start from, so the form is never without one.
   const [choice, setChoice] = useState<AvatarChoice>(() => ({ kind: "bot", spec: randomSpec() }));
+  const [pictureUpload] = useState(keptUpload);
   const [fields, setFields] = useState<Fields>({});
   const [key, setKey] = useState<BotKey | null>(null);
   const { busy, track } = useBusy();
@@ -103,7 +104,7 @@ export function BotNewSection() {
     setFields({});
 
     const save = async () => {
-      const picture = await avatarFields(choice, null);
+      const picture = await avatarFields(choice, null, pictureUpload);
 
       return bots.create({
         name: draft.name,
@@ -116,23 +117,31 @@ export function BotNewSection() {
 
     void track(
       "create",
-      save().then(setKey, (error: Error) => {
-        const named = fieldsOf(error);
+      save().then(
+        (created) => {
+          pictureUpload.settle(null);
+          setKey(created);
+        },
+        (error: Error) => {
+          pictureUpload.settle(error);
 
-        if (Object.keys(named).length > 0) {
-          setFields(named);
+          const named = fieldsOf(error);
 
-          return;
-        }
+          if (Object.keys(named).length > 0) {
+            setFields(named);
 
-        if (leftToConfirm(error)) {
-          const botAvatar = choice.kind === "bot" ? JSON.stringify(choice.spec) : "";
+            return;
+          }
 
-          keepDraft(DRAFT_KEY, new URLSearchParams({ ...draft, botAvatar }).toString());
-        }
+          if (leftToConfirm(error)) {
+            const botAvatar = choice.kind === "bot" ? JSON.stringify(choice.spec) : "";
 
-        adminFailure("Couldn't create the bot", error);
-      }),
+            keepDraft(DRAFT_KEY, new URLSearchParams({ ...draft, botAvatar }).toString());
+          }
+
+          adminFailure("Couldn't create the bot", error);
+        },
+      ),
     );
   };
 
