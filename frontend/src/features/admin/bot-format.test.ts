@@ -9,6 +9,7 @@ const bender: Bot = {
   avatarAttached: false,
   iconName: null,
   icon: null,
+  botAvatar: null,
   webhookUrl: "https://example.com/bender",
   canAdminister: true,
   agent: {

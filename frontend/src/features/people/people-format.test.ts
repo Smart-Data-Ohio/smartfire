@@ -23,6 +23,7 @@ function user(id: number, role: User["role"], agent = false): User {
     customStatus: null,
     avatarIcon: null,
     agent: agent ? { agentId: id, kind: "workspace", status: "idle", suspended: false } : null,
+    botAvatar: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000000Z",
     accountName: `User ${id}`,

@@ -7,6 +7,7 @@ import type { OAuthAgentRoomAccess as GeneratedOAuthAgentRoomAccess } from "../.
 import type { OAuthClientBadge as GeneratedOAuthClientBadge } from "../../gen/OAuthClientBadge.ts";
 import type { OAuthConsent as GeneratedOAuthConsent } from "../../gen/OAuthConsent.ts";
 import type { OAuthRedirect as GeneratedOAuthRedirect } from "../../gen/OAuthRedirect.ts";
+import { BotAvatarSpec } from "./bot-avatar.ts";
 import { AgentId, RoomId } from "./ids.ts";
 import { PersonalAgent, PersonalAgentRoom } from "./me-agents.ts";
 import type { Assert, Pinned } from "./pin.ts";
@@ -64,6 +65,9 @@ export const ApproveOAuthAuthorization = Schema.Struct({
   agentId: Schema.NullOr(AgentId),
   name: Schema.NullOr(Schema.String),
   iconName: Schema.NullOr(Schema.String),
+  /** A new agent's picture and picked avatar; ignored for an existing agent. */
+  avatar: Schema.NullOr(Schema.String),
+  botAvatar: Schema.NullOr(BotAvatarSpec),
   roomIds: Schema.Array(RoomId),
   capabilities: Schema.Array(Schema.String),
 });

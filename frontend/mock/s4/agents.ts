@@ -402,6 +402,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
       customStatus: null,
       avatarIcon: seed.avatarIcon,
       agent: { agentId: seed.id, kind: seed.kind, status: seed.status, suspended: seed.suspended },
+      botAvatar: null,
       createdAt: held?.createdAt ?? iso(now - seed.createdDaysAgo * DAY),
       updatedAt: held?.updatedAt ?? rowTimestamp(now - seed.createdDaysAgo * DAY),
       accountName: seed.name,

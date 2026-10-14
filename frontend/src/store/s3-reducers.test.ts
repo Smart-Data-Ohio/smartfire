@@ -91,6 +91,7 @@ function user(id: number): User {
     avatarIcon: null,
     customStatus: null,
     agent: null,
+    botAvatar: null,
     createdAt: at(0),
     updatedAt: at(0),
     accountName: `Person ${id}`,

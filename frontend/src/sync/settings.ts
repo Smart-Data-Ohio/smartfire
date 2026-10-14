@@ -491,6 +491,8 @@ export const meAgents = {
         updateMeAgent(agentId, {
           name: null,
           iconName: null,
+          avatar: null,
+          botAvatar: null,
           provider: null,
           runtime: null,
           description: null,

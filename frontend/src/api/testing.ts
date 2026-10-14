@@ -33,6 +33,7 @@ export function userFixture(id: number, name = `User ${id}`): User {
     customStatus: null,
     avatarIcon: null,
     agent: null,
+    botAvatar: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000000Z",
     accountName: name,

@@ -342,6 +342,7 @@ function seedUsers(now: number): Map<number, User> {
           ? // One agent per bot; the mock reuses the bot user's id as the agent id.
             { agentId: person.id, kind: "workspace", status: "idle", suspended: false }
           : null,
+      botAvatar: null,
       createdAt: timestamp(now - person.joinedDaysAgo * DAY),
       updatedAt: rowTimestamp(now - person.joinedDaysAgo * DAY),
       accountName: person.name,

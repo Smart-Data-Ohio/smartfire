@@ -22,6 +22,7 @@ import type { GrantList as GeneratedGrantList } from "../../gen/GrantList.ts";
 import type { GrantRoom as GeneratedGrantRoom } from "../../gen/GrantRoom.ts";
 import type { UpdateBot as GeneratedUpdateBot } from "../../gen/UpdateBot.ts";
 import type { UpdateBotAgent as GeneratedUpdateBotAgent } from "../../gen/UpdateBotAgent.ts";
+import { BotAvatarSpec } from "./bot-avatar.ts";
 import { AgentGrantId, AgentId, CredentialId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
@@ -56,6 +57,7 @@ export const BotSummary = Schema.Struct({
   name: Schema.String,
   avatarUrl: Schema.String,
   icon: Schema.NullOr(BotIcon),
+  botAvatar: Schema.NullOr(BotAvatarSpec),
   ownership: Schema.String,
   rooms: Schema.Array(BotRoom),
 });
@@ -101,6 +103,7 @@ export const Bot = Schema.Struct({
   avatarAttached: Schema.Boolean,
   iconName: Schema.NullOr(Schema.String),
   icon: Schema.NullOr(BotIcon),
+  botAvatar: Schema.NullOr(BotAvatarSpec),
   webhookUrl: Schema.NullOr(Schema.String),
   canAdminister: Schema.Boolean,
   agent: Schema.NullOr(BotAgent),
@@ -116,6 +119,7 @@ export const CreateBot = Schema.Struct({
   iconName: Schema.NullOr(Schema.String),
   webhookUrl: Schema.NullOr(Schema.String),
   avatar: Schema.NullOr(Schema.String),
+  botAvatar: Schema.NullOr(BotAvatarSpec),
 });
 
 export type CreateBotPin = Assert<Pinned<typeof CreateBot, GeneratedCreateBot>>;
@@ -148,6 +152,7 @@ export const UpdateBot = Schema.Struct({
   iconName: Schema.NullOr(Schema.String),
   webhookUrl: Schema.NullOr(Schema.String),
   avatar: Schema.NullOr(Schema.String),
+  botAvatar: Schema.NullOr(BotAvatarSpec),
   agent: Schema.NullOr(UpdateBotAgent),
 });
 
