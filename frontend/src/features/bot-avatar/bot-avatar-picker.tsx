@@ -11,6 +11,7 @@ import {
   describeSpec,
   ownColor,
   randomSpec,
+  toneOf,
   typeLabel,
   withType,
 } from "../../ui/bot-avatar-spec.ts";
@@ -132,7 +133,7 @@ function BotEditor({ id, name, spec, onPick }: BotEditorProps) {
       ];
 
   return (
-    <div className="bot-avatar-editor">
+    <div className="bot-avatar-editor" data-tone={toneOf(color)}>
       <div className="bot-avatar-preview">
         <AgentAvatar seed={id} name={name || "New bot"} size={88} spec={spec} live />
         <div className="bot-avatar-preview-text">
@@ -157,24 +158,26 @@ function BotEditor({ id, name, spec, onPick }: BotEditorProps) {
             const option = withType(spec, entry.type);
             const selected = entry.type === spec.type;
 
+            // A tile shows the shape: the picked colour and face, but nothing worn, which would
+            // hide the silhouette the tile is there to choose (the preview shows it all).
             return (
-              <label key={entry.type} className="bot-avatar-body" title={entry.label}>
+              <label key={entry.type} className="bot-avatar-body">
                 <input
                   type="radio"
                   name={`${id}-type`}
                   value={entry.type}
-                  aria-label={entry.label}
                   checked={selected}
                   onChange={() => onPick(option)}
                 />
                 <AgentAvatar
                   seed={`${id}-${entry.type}`}
                   name={entry.label}
-                  size={44}
-                  spec={option}
+                  size={BODY_TILE}
+                  spec={{ ...option, accessory: null }}
                   live={selected}
                   decorative
                 />
+                <span className="bot-avatar-body-label">{entry.label}</span>
               </label>
             );
           })}
@@ -239,6 +242,9 @@ function BotEditor({ id, name, spec, onPick }: BotEditorProps) {
     </div>
   );
 }
+
+/** A body tile's drawing, in CSS pixels: five across on a 360 px phone. */
+const BODY_TILE = 56;
 
 /** One thing to wear about a third of the time, else nothing. */
 function randomAccessory(): BotAvatarAccessory | null {

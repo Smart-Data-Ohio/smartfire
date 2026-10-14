@@ -45,6 +45,24 @@ async function createWhiskers(page: Page, theme: "light" | "dark" = "light"): Pr
   await settle(page);
   await shot(page, "bot-avatar-picker", theme);
 
+  // The lightest and darkest swatches keep their outline on the tiles in either theme.
+  if (SHOTS) {
+    for (const [swatch, name] of [
+      ["Snow", "bot-avatar-picker-snow"],
+      ["Charcoal", "bot-avatar-picker-charcoal"],
+    ] as const) {
+      await page.getByRole("radio", { name: swatch }).check({ force: true });
+      await expect(page.getByText(`Cat in ${swatch}, crown`)).toBeVisible();
+      await expect(page.locator(".bot-avatar-body img[src^='data:']")).toHaveCount(18, {
+        timeout: 15_000,
+      });
+      await settle(page);
+      await shot(page, name, theme);
+    }
+
+    await page.getByRole("radio", { name: "Teal" }).check({ force: true });
+  }
+
   await page.getByRole("button", { name: "Create bot" }).click();
   await page
     .getByRole("alertdialog", { name: "Whiskers's key" })

@@ -118,35 +118,53 @@
     font-weight: var(--weight-medium);
   }
 
-  /* Bodies: as many 44 px tiles as fit, six across on a 360 px phone. */
+  /*
+   * Bodies: as many 56 px tiles as fit (five across on a 360 px phone), each named under it.
+   * Every tile, picked or not, sits on the same ground (--bot-tile), a step darker behind a
+   * light body on a light page and a step lighter behind a dark body on a dark page, so Snow and
+   * Charcoal keep their outline; the picked one is ringed.
+   */
+  .bot-avatar-editor {
+    --bot-tile: var(--bg-raised);
+  }
+
+  .bot-avatar-editor[data-tone="light"] {
+    --bot-tile: light-dark(oklch(84% 0.012 285), var(--bg-raised));
+  }
+
+  .bot-avatar-editor[data-tone="dark"] {
+    --bot-tile: light-dark(var(--bg-raised), oklch(48% 0.015 285));
+  }
+
+  .bot-avatar-preview > .avatar.agent-avatar,
+  .bot-avatar-body > .avatar.agent-avatar {
+    background: var(--bot-tile);
+  }
+
   .bot-avatar-bodies {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
-    gap: var(--space-1-5);
+    grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+    gap: var(--space-2) var(--space-1-5);
   }
 
   .bot-avatar-body {
     position: relative;
-    display: grid;
-    place-items: center;
-    aspect-ratio: 1;
-    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: center;
+    min-width: 0;
     cursor: pointer;
-    transition: transform 0.15s ease-out;
   }
 
   .bot-avatar-body > .avatar {
     box-shadow: 0 0 0 0 transparent;
     transition:
       box-shadow 0.15s ease-out,
-      filter 0.15s ease-out;
+      transform 0.15s ease-out;
   }
 
-  .bot-avatar-body:not(:has(input:checked)) > .avatar {
-    background: var(--bg-raised);
-  }
-
-  .bot-avatar-body:hover {
+  .bot-avatar-body:hover > .avatar {
     transform: translateY(-1px);
   }
 
@@ -159,6 +177,26 @@
   .bot-avatar-body > input:focus-visible + .avatar {
     outline: 2px solid var(--focus-ring);
     outline-offset: 5px;
+  }
+
+  .bot-avatar-body > .bot-avatar-body-label {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.15s ease-out;
+  }
+
+  .bot-avatar-body:hover > .bot-avatar-body-label {
+    color: var(--text);
+  }
+
+  .bot-avatar-body > input:checked ~ .bot-avatar-body-label {
+    color: var(--text-strong);
+    font-weight: var(--weight-medium);
   }
 
   /* Colours: round swatches with a ring on the picked one. */
@@ -258,15 +296,15 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .bot-avatar-body,
     .bot-avatar-body > .avatar,
+    .bot-avatar-body > .bot-avatar-body-label,
     .bot-avatar-swatch > .bot-avatar-swatch-dot,
     .bot-avatar-segment > .bot-avatar-segment-label,
     .bot-avatar-chip > .bot-avatar-chip-label {
       transition: none;
     }
 
-    .bot-avatar-body:hover,
+    .bot-avatar-body:hover > .avatar,
     .bot-avatar-swatch:hover > .bot-avatar-swatch-dot {
       transform: none;
     }

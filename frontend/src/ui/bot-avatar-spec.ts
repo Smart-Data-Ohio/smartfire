@@ -114,6 +114,25 @@ export function withType(spec: BotAvatarSpec, type: BotAvatarType): BotAvatarSpe
   return { ...spec, type, color };
 }
 
+/**
+ * How light a body colour is, for the tile behind it: `light` (Snow, Butter) wants a darker tile
+ * on a light page, `dark` (Charcoal) a lighter one on a dark page. WCAG relative luminance.
+ */
+export function toneOf(color: string): "light" | "mid" | "dark" {
+  const channels = [1, 3, 5].map((at) => {
+    const value = Number.parseInt(color.slice(at, at + 2), 16) / 255;
+
+    return value <= 0.039_28 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+
+  const [red = 0, green = 0, blue = 0] = channels;
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+  if (luminance > 0.55) return "light";
+
+  return luminance < 0.08 ? "dark" : "mid";
+}
+
 export function sameSpec(a: BotAvatarSpec | null, b: BotAvatarSpec | null): boolean {
   if (a === null || b === null) {
     return a === b;
@@ -171,7 +190,7 @@ export function fitOf(
 
   return wearOf(accessory).hat === "none"
     ? { scale: snug ? 0.9 : 0.8, drop: 0 }
-    : { scale: snug ? 0.76 : 0.68, drop: snug ? 0.07 : 0.08 };
+    : { scale: snug ? 0.76 : 0.64, drop: snug ? 0.07 : 0.1 };
 }
 
 /** The colour the library takes: `#rrggbb`, else the body's own. */
