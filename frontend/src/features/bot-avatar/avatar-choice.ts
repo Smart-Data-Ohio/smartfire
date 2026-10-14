@@ -22,12 +22,22 @@ export interface AvatarFields {
 const UNCHANGED: AvatarFields = { avatar: null, botAvatar: null };
 
 /**
- * The spec a bot shows with its render attached: what a save may skip re-sending. The server
- * stores a spec only with the picture rendered from it, and a plain picture clears it; without a
- * picture there is nothing to keep, so a save always sends the render then.
+ * The spec a save may skip re-sending: the one the bot shows with its render attached, as far as
+ * the form knows. The server stores a spec only with the picture rendered from it, and a plain
+ * picture clears it; without a picture there is nothing to keep. While a save went unanswered
+ * (`unconfirmed`), what the form holds may not be what the server holds (that save may have
+ * changed it), so nothing is skipped: the chosen avatar is always sent with its render.
  */
-export function renderedSpec(spec: BotAvatarSpec | null, pictured: boolean): BotAvatarSpec | null {
-  return pictured ? spec : null;
+export function renderedSpec({
+  spec,
+  pictured,
+  unconfirmed,
+}: {
+  readonly spec: BotAvatarSpec | null;
+  readonly pictured: boolean;
+  readonly unconfirmed: boolean;
+}): BotAvatarSpec | null {
+  return pictured && !unconfirmed ? spec : null;
 }
 
 /** A picked avatar's still render as an upload-ready file (about 256 px square). */

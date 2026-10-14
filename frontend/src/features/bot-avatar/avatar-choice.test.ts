@@ -49,10 +49,27 @@ describe("saving a bot's picture", () => {
     const { upload } = stubbed();
     const same = { kind: "bot" as const, spec: CAT };
 
-    expect(renderedSpec(CAT, true)).toBe(CAT);
-    expect(renderedSpec(CAT, false)).toBeNull();
-    expect(changesAvatar(same, renderedSpec(CAT, false))).toBe(true);
-    expect(await avatarFields(same, renderedSpec(CAT, false))).toEqual({
+    const unpictured = renderedSpec({ spec: CAT, pictured: false, unconfirmed: false });
+
+    expect(renderedSpec({ spec: CAT, pictured: true, unconfirmed: false })).toBe(CAT);
+    expect(unpictured).toBeNull();
+    expect(changesAvatar(same, unpictured)).toBe(true);
+    expect(await avatarFields(same, unpictured)).toEqual({
+      avatar: "signed-avatar",
+      botAvatar: CAT,
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends the chosen avatar again while an unanswered save leaves the bot unconfirmed", async () => {
+    const { upload } = stubbed();
+    const same = { kind: "bot" as const, spec: CAT };
+    // That save may have changed the cat on the server: picking the cat must restore it.
+    const unconfirmed = renderedSpec({ spec: CAT, pictured: true, unconfirmed: true });
+
+    expect(unconfirmed).toBeNull();
+    expect(changesAvatar(same, unconfirmed)).toBe(true);
+    expect(await avatarFields(same, unconfirmed)).toEqual({
       avatar: "signed-avatar",
       botAvatar: CAT,
     });

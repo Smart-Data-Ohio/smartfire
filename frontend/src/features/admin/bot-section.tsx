@@ -8,7 +8,7 @@ import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { leftToConfirm } from "../auth/confirmation.ts";
+import { leftToConfirm, stoppedAtConfirmation } from "../auth/confirmation.ts";
 import {
   type AvatarChoice,
   avatarFields,
@@ -186,6 +186,9 @@ export function BotSection() {
   const [form, setForm] = useState<BotForm | null>(null);
   const [choice, setChoice] = useState<AvatarChoice>({ kind: "keep" });
   const [pictureUpload] = useState(keptUpload);
+  // A save failed without the server saying it wrote nothing (no answer, or an answer that got
+  // lost): the bot shown may not be what it holds, until a save or load answers.
+  const [unconfirmed, setUnconfirmed] = useState(false);
   const [fields, setFields] = useState<Fields>({});
   const [key, setKey] = useState<BotKey | null>(null);
   const [ask, setAsk] = useState<Ask>(null);
@@ -197,6 +200,7 @@ export function BotSection() {
     setLoad({ status: "ready", bot });
     setForm(botForm(bot));
     setChoice(startingChoice(bot));
+    setUnconfirmed(false);
   }, []);
 
   const fetchBot = useCallback(() => {
@@ -252,7 +256,12 @@ export function BotSection() {
     setFields({});
 
     const run = async () => {
-      const current = renderedSpec(bot.botAvatar, bot.avatarAttached);
+      const current = renderedSpec({
+        spec: bot.botAvatar,
+        pictured: bot.avatarAttached,
+        unconfirmed,
+      });
+
       const picture = await avatarFields(choice, current, pictureUpload);
 
       return bots.update(id, { ...botChange(form, bot), ...picture });
@@ -270,6 +279,11 @@ export function BotSection() {
           pictureUpload.settle(error);
 
           const named = fieldsOf(error);
+
+          // A refused field or a stop at the password confirmation wrote nothing.
+          if (Object.keys(named).length === 0 && !stoppedAtConfirmation(error)) {
+            setUnconfirmed(true);
+          }
 
           if (Object.keys(named).length > 0) {
             setFields(named);

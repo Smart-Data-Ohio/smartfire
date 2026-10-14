@@ -660,9 +660,15 @@ function EditDialog({
 
     // Compared with the cache as it stands now: a rename that already took isn't sent again, and
     // a field the person left alone is never sent back over a newer value. While the cache is
-    // unconfirmed, whatever they changed is sent as it stands.
+    // unconfirmed, whatever they changed is sent as it stands (a picked avatar with its render).
     const rename = touched.name && (unconfirmed || name !== agent.name);
-    const shown = renderedSpec(agent.botAvatar, agent.avatarUrl !== null);
+
+    const shown = renderedSpec({
+      spec: agent.botAvatar,
+      pictured: agent.avatarUrl !== null,
+      unconfirmed,
+    });
+
     const repicture = touched.avatar && changesAvatar(form.avatar, shown);
 
     if (!rename && !repicture && !touched.access) {

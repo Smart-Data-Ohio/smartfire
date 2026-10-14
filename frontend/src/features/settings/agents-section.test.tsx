@@ -504,7 +504,10 @@ function rename(to: string) {
  * Opens Helper's edit dialog, renames it and saves through the real (bounded) request, whose
  * answer never comes; runs the clock past the bound. The reload that follows answers `reload`.
  */
-async function timeOutRename(reload: Promise<PersonalAgentList>) {
+async function timeOutRename(
+  reload: Promise<PersonalAgentList>,
+  change: () => void = () => rename("Renamed"),
+) {
   vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise<Response>(() => undefined));
 
   const edit = await screen.findByRole("button", { name: "Edit Helper" });
@@ -513,7 +516,7 @@ async function timeOutRename(reload: Promise<PersonalAgentList>) {
 
   try {
     fireEvent.click(edit);
-    rename("Renamed");
+    change();
     vi.spyOn(meAgents, "list").mockReturnValue(reload);
     fireEvent.click(button("Save"));
     await act(() => vi.advanceTimersByTimeAsync(1_000));
@@ -728,6 +731,34 @@ describe("editing an agent", () => {
     rename("Helper");
     fireEvent.click(button("Save"));
     await waitFor(() => expect(update).toHaveBeenCalledWith(7, { name: "Helper", iconName: null }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("sends an avatar picked back after an unanswered save whose reload failed", async () => {
+    await mount(list({ agents: [{ ...AGENT, botAvatar: CAT, avatarUrl: "/users/70/avatar" }] }));
+
+    const reload = deferred<PersonalAgentList>();
+
+    const pick = (body: string) =>
+      fireEvent.click(within(editDialog()).getByRole("radio", { name: body }));
+
+    await timeOutRename(reload.promise, () => pick("Ghost"));
+    await act(async () => reload.settle.reject(new Error("offline")));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+
+    // The cache still says cat, but the server may hold the ghost: the cat is sent, not skipped.
+    const update = vi.spyOn(meAgents, "update").mockResolvedValue({ ...AGENT, botAvatar: CAT });
+
+    pick("Cat");
+    fireEvent.click(button("Save"));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(7, {
+        name: null,
+        iconName: null,
+        avatar: "signed-avatar",
+        botAvatar: CAT,
+      }),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
