@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 import {
   DESKTOP,
   expect,
@@ -108,37 +108,40 @@ test("a picked bot avatar is kept, edited and drawn beside the bot's messages", 
   await expect(page.locator('[data-bot-avatar="ghost"] canvas')).toBeVisible();
 });
 
-test("picking the avatar back after a save whose answer was lost restores it", async ({ page }) => {
-  const id = await createWhiskers(page);
-  const path = `**/api/v1/admin/bots/${id}`;
+for (const [lost, answer] of [
+  ["connection dropped", (route: Route) => route.abort("failed")],
+  ["server answer failed", (route: Route) => route.fulfill({ status: 500, body: "" })],
+] as const) {
+  test(`picking the avatar back after a save whose ${lost} restores it`, async ({ page }) => {
+    const id = await createWhiskers(page);
+    let dropped = false;
 
-  // The ghost lands on the server, but its answer never reaches the page: the form still shows
-  // the cat the server no longer holds.
-  let lost = false;
+    // The ghost lands on the server, but its answer never reaches the page: the form still
+    // shows the cat the server no longer holds.
+    await page.route(`**/api/v1/admin/bots/${id}`, async (route) => {
+      if (dropped || route.request().method() !== "PATCH") return route.fallback();
 
-  await page.route(path, async (route) => {
-    if (lost || route.request().method() !== "PATCH") return route.fallback();
+      dropped = true;
+      await route.fetch();
+      await answer(route);
+    });
+    await page.getByRole("radio", { name: "Ghost" }).check({ force: true });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("Couldn't save the bot")).toBeVisible();
 
-    lost = true;
-    await route.fetch();
-    await route.abort("failed");
+    const sent = page.waitForRequest(
+      (request) => request.method() === "PATCH" && request.url().endsWith(`/admin/bots/${id}`),
+    );
+
+    await page.getByRole("radio", { name: "Cat", exact: true }).check({ force: true });
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByText("Bot saved")).toBeVisible();
+    expect((await sent).postDataJSON()).toMatchObject({ botAvatar: { type: "cat" } });
+
+    await page.reload();
+    await expect(page.getByRole("radio", { name: "Cat", exact: true })).toBeChecked();
   });
-  await page.getByRole("radio", { name: "Ghost" }).check({ force: true });
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Couldn't save the bot")).toBeVisible();
-
-  const sent = page.waitForRequest(
-    (request) => request.method() === "PATCH" && request.url().endsWith(`/admin/bots/${id}`),
-  );
-
-  await page.getByRole("radio", { name: "Cat", exact: true }).check({ force: true });
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Bot saved")).toBeVisible();
-  expect((await sent).postDataJSON()).toMatchObject({ botAvatar: { type: "cat" } });
-
-  await page.reload();
-  await expect(page.getByRole("radio", { name: "Cat", exact: true })).toBeChecked();
-});
+}
 
 test("an icon bot keeps its icon until a bot avatar is picked", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });

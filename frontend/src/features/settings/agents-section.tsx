@@ -13,6 +13,7 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Confirm, takeDraft } from "../admin/admin-parts.tsx";
+import { writeMayHaveLanded } from "../auth/confirmation.ts";
 import {
   type AvatarChoice,
   avatarFields,
@@ -967,8 +968,9 @@ export function AgentsSection() {
       current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
     );
 
-  // An agent write, numbered when sent. Its answer lands in the cache; no answer in time marks
-  // the agent unconfirmed there, so whichever opening of its dialog comes next knows.
+  // An agent write, numbered when sent. Its answer lands in the cache; a failure that may have
+  // come after the save (no answer in time, a dropped connection, a server error) marks the agent
+  // unconfirmed there, so whichever opening of its dialog comes next knows.
   const write = (agentId: number, send: () => Promise<PersonalAgent>): Promise<PersonalAgent> => {
     const at = nextSequence();
 
@@ -979,7 +981,9 @@ export function AgentsSection() {
         return agent;
       },
       (failure: Error) => {
-        if (saveUnconfirmed(failure)) replace((current) => withUnconfirmed(current, agentId, at));
+        if (writeMayHaveLanded(failure)) {
+          replace((current) => withUnconfirmed(current, agentId, at));
+        }
 
         throw failure;
       },

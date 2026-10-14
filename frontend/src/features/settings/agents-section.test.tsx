@@ -762,6 +762,38 @@ describe("editing an agent", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
+  it("sends an avatar picked back after a save whose connection dropped", async () => {
+    await mount(list({ agents: [{ ...AGENT, botAvatar: CAT, avatarUrl: "/users/70/avatar" }] }));
+
+    const pick = (body: string) =>
+      fireEvent.click(within(editDialog()).getByRole("radio", { name: body }));
+
+    // The ghost may have been saved before the connection dropped: the cache can't say.
+    const update = vi
+      .spyOn(meAgents, "update")
+      .mockRejectedValueOnce(new ActionError("NetworkError", "Couldn't reach the server."))
+      .mockResolvedValue({ ...AGENT, botAvatar: CAT, avatarUrl: "/users/70/avatar" });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Helper" }));
+    pick("Ghost");
+    fireEvent.click(button("Save"));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(button("Save").hasAttribute("disabled")).toBe(false));
+
+    pick("Cat");
+    fireEvent.click(button("Save"));
+    await waitFor(() =>
+      expect(update).toHaveBeenLastCalledWith(7, {
+        name: null,
+        iconName: null,
+        avatar: "signed-avatar",
+        botAvatar: CAT,
+      }),
+    );
+    expect(update).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("still sends a name typed back after closing and reopening, until a later answer lands", async () => {
     await mount(list());
 

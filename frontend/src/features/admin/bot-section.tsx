@@ -8,7 +8,7 @@ import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { leftToConfirm, stoppedAtConfirmation } from "../auth/confirmation.ts";
+import { leftToConfirm, writeMayHaveLanded } from "../auth/confirmation.ts";
 import {
   type AvatarChoice,
   avatarFields,
@@ -186,8 +186,8 @@ export function BotSection() {
   const [form, setForm] = useState<BotForm | null>(null);
   const [choice, setChoice] = useState<AvatarChoice>({ kind: "keep" });
   const [pictureUpload] = useState(keptUpload);
-  // A save failed without the server saying it wrote nothing (no answer, or an answer that got
-  // lost): the bot shown may not be what it holds, until a save or load answers.
+  // A save failed in a way that may have come after it was saved (see `writeMayHaveLanded`): the
+  // bot shown may not be what the server holds, until a save or load answers.
   const [unconfirmed, setUnconfirmed] = useState(false);
   const [fields, setFields] = useState<Fields>({});
   const [key, setKey] = useState<BotKey | null>(null);
@@ -280,10 +280,7 @@ export function BotSection() {
 
           const named = fieldsOf(error);
 
-          // A refused field or a stop at the password confirmation wrote nothing.
-          if (Object.keys(named).length === 0 && !stoppedAtConfirmation(error)) {
-            setUnconfirmed(true);
-          }
+          if (writeMayHaveLanded(error)) setUnconfirmed(true);
 
           if (Object.keys(named).length > 0) {
             setFields(named);
