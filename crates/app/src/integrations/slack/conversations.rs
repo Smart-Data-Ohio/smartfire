@@ -14,6 +14,7 @@ pub struct Target {
     pub room: Option<Room>,
     pub reason: Option<&'static str>,
     pub display_name: Option<&'static str>,
+    pub notes: bool,
 }
 impl Target {
     fn skip(reason: &'static str) -> Self {
@@ -22,6 +23,7 @@ impl Target {
             room: None,
             reason: Some(reason),
             display_name: None,
+            notes: false,
         }
     }
     fn room(room: Option<Room>, created: bool) -> Self {
@@ -30,11 +32,13 @@ impl Target {
             room,
             reason: None,
             display_name: None,
+            notes: false,
         }
     }
     fn notes(room: Option<Room>, created: bool) -> Self {
         Self {
             display_name: Some(NOTES_NAME),
+            notes: true,
             ..Self::room(room, created)
         }
     }
@@ -468,15 +472,10 @@ fn notes(tx: &mut Tx<'_>, run: &SlackImport, c: &Value, dry: bool) -> Result<Tar
         Some(room) => room,
         None => Room::find_or_create_direct_for(tx, &[run.user_id], run.user_id)?,
     };
-    users::record(
-        tx,
-        run,
-        "conversation",
-        &string(&c["id"]),
-        "Room",
-        room.id,
-        false,
-    )?;
+    let key = users::notes_key(tx.conn(), run, &string(&c["id"]))?;
+    if users::mapped_id(tx.conn(), run.slack_workspace_id, "conversation", &key)?.is_none() {
+        users::record(tx, run, "conversation", &key, "Room", room.id, false)?;
+    }
     Ok(Target::notes(Some(room), created))
 }
 

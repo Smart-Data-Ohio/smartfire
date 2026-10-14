@@ -201,15 +201,17 @@ impl SlackImport {
         self.mode == "import"
             && matches!(self.status.as_str(), "completed" | "failed" | "cancelled")
     }
-    pub fn touched_conversation_ids(&self) -> HashSet<String> {
+    pub fn touched_mapping_keys(&self) -> HashSet<String> {
         self.stats["conversations"]
             .as_array()
             .into_iter()
             .flatten()
+            .filter(|entry| matches!(entry["target"]["action"].as_str(), Some("create" | "merge")))
             .filter_map(|entry| {
-                matches!(entry["target"]["action"].as_str(), Some("create" | "merge"))
-                    .then(|| entry["id"].as_str().map(str::to_owned))
-                    .flatten()
+                entry["mapping_key"]
+                    .as_str()
+                    .or_else(|| entry["id"].as_str())
+                    .map(str::to_owned)
             })
             .collect()
     }
@@ -342,7 +344,7 @@ impl SlackImport {
         let Some(started) = self.started_at else {
             return Ok(None);
         };
-        let mut mine = self.touched_conversation_ids();
+        let mut mine = self.touched_mapping_keys();
         let keys = query_all(
             conn,
             "SELECT slack_key FROM slack_import_records WHERE slack_import_id = ? AND slack_kind = 'conversation'",
@@ -360,7 +362,7 @@ impl SlackImport {
             Self::from_row,
         )?;
         Ok(later.into_iter().find(|run| {
-            run.touched_conversation_ids()
+            run.touched_mapping_keys()
                 .iter()
                 .any(|id| mine.contains(id))
         }))
@@ -377,11 +379,10 @@ impl SlackImport {
                     later.id
                 )
             } else {
-                let name: String = conn.query_row(
-                    "SELECT * FROM users WHERE id = ?",
-                    [later.user_id],
-                    |r| Ok(crate::User::from_row(r)?.display_name().to_owned()),
-                )?;
+                let name: String =
+                    conn.query_row("SELECT * FROM users WHERE id = ?", [later.user_id], |r| {
+                        Ok(crate::User::from_row(r)?.display_name().to_owned())
+                    })?;
                 format!(
                     "A later import by {name} also imported some of these conversations. It has to be undone first; ask them or an administrator."
                 )

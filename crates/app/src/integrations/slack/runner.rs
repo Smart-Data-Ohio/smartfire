@@ -309,9 +309,7 @@ impl<S: Store> Runner<S> {
                     }
                 }
                 if truthy(&self.progress.state["convo"]["members_done"]) {
-                    if !truthy(&self.progress.state["convo"]["resolved"])
-                        && !self.commit(Operation::Resolve).await?
-                    {
+                    if !self.commit(Operation::Resolve).await? {
                         return Ok(Outcome::Stopped);
                     }
                     if truthy(&self.progress.state["convo"]["skipped"]) {
