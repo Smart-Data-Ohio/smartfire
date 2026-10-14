@@ -3,6 +3,7 @@ use super::runner::{
     CATCHUP_LOOKBACK, Operation, Progress, Store, add, array, integer, present, string, truthy,
 };
 use super::{conversations, users, writer};
+use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Database, Error, Result, Room, Timestamp, Tx};
 use indexmap::{IndexMap, IndexSet};
@@ -194,6 +195,25 @@ fn alive_room(tx: &Tx<'_>, id: i64) -> Result<Room> {
 pub fn convo_users(tx: &mut Tx<'_>, p: &Progress) -> Result<IndexMap<String, campfire_db::User>> {
     let ids = array(&p.state["convo"]["member_ids"]);
     let mut users = users::users_for(tx.conn(), &p.run, ids)?;
+    let notes = p.state["convo"]["room_id"]
+        .as_i64()
+        .map(|id| Room::is_note_to_self_of(tx.conn(), id, p.run.user_id))
+        .transpose()?
+        .unwrap_or(false);
+    if let Some(connection) = p
+        .run
+        .slack_connection_id
+        .map(|id| SlackConnection::find(tx.conn(), id))
+        .transpose()?
+        .flatten()
+        && (notes
+            || conversations::connected_self_dm(&p.conversation(), ids, &connection.slack_user_id))
+    {
+        users.insert(
+            connection.slack_user_id,
+            campfire_db::User::find(tx.conn(), p.run.user_id)?,
+        );
+    }
     for id in ids {
         let key = string(id);
         if !users.contains_key(&key) {
@@ -213,11 +233,15 @@ fn resolve(tx: &mut Tx<'_>, p: &mut Progress) -> Result<()> {
             p.state["convo"]["room_id"] = json!(room.id);
             p.state["convo"]["direct"] = json!(room.direct());
             p.state["convo"]["resolved"] = json!(true);
-            let name = room
-                .name
-                .clone()
-                .filter(|n| !n.trim().is_empty())
-                .map_or_else(|| p.entry_mut()["name"].clone(), |n| json!(n));
+            let name = if Room::is_note_to_self_of(tx.conn(), room.id, p.run.user_id)? {
+                p.entry_mut()["name"] = json!(conversations::NOTES_NAME);
+                json!(conversations::NOTES_NAME)
+            } else {
+                room.name
+                    .clone()
+                    .filter(|n| !n.trim().is_empty())
+                    .map_or_else(|| p.entry_mut()["name"].clone(), |n| json!(n))
+            };
             p.entry_mut()["target"] = json!({"action":"merge","room_id":room.id,"room_name":name});
             return Ok(());
         }
@@ -279,12 +303,17 @@ fn resolve(tx: &mut Tx<'_>, p: &mut Progress) -> Result<()> {
         add(&mut p.stats["counts"]["rooms_merged"], 1);
     }
     let room_id = target.room.as_ref().map(|r| r.id);
-    let name = target
-        .room
-        .as_ref()
-        .and_then(|r| r.name.clone())
-        .filter(|n| !n.trim().is_empty())
-        .unwrap_or_else(|| conversations::describe(&conversation, members.len()));
+    let name = if let Some(name) = target.display_name {
+        p.entry_mut()["name"] = json!(name);
+        name.to_owned()
+    } else {
+        target
+            .room
+            .as_ref()
+            .and_then(|r| r.name.clone())
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or_else(|| conversations::describe(&conversation, members.len()))
+    };
     p.entry_mut()["target"] = json!({"action":target.action,"room_id":room_id,"room_name":name});
     p.state["convo"]["room_id"] = json!(room_id);
     p.state["convo"]["direct"] = json!(target.room.is_some_and(|r| r.direct()));

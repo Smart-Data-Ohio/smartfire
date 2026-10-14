@@ -289,6 +289,7 @@ mod integrations {
 
             pub(crate) mod tests;
             mod lifecycle_tests;
+            mod self_dm_tests;
         }
         #[cfg(test)]
         pub(crate) mod undoer {

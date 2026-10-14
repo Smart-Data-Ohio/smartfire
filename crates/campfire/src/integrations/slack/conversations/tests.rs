@@ -278,7 +278,7 @@ async fn slack_conversations_explicit_merge_leaves_memberships_and_invalid_targe
     );
 }
 #[tokio::test]
-async fn slack_conversations_directs_reuse_member_sets_skip_self_and_slackbot() {
+async fn slack_conversations_directs_reuse_member_sets_import_self_and_skip_slackbot() {
     let (db, _, _dir) = setup().await;
     let id = start(&db).await;
     let run = run(&db, id).await;
@@ -312,17 +312,17 @@ async fn slack_conversations_directs_reuse_member_sets_skip_self_and_slackbot() 
         assert_eq!(first.action, "create");
         assert_eq!(second.action, "merge");
         assert_eq!(first.room.unwrap().id, second.room.unwrap().id);
+        let notes = resolve(
+            tx,
+            &run,
+            &json!({"id":"DSELF","is_im":true,"user":"UOWNER"}),
+            &[json!("UOWNER")],
+            &users,
+            false,
+        )?.room.unwrap();
         assert_eq!(
-            resolve(
-                tx,
-                &run,
-                &json!({"id":"DSELF","is_im":true,"user":"UOWNER"}),
-                &[json!("UOWNER")],
-                &users,
-                false
-            )?
-            .reason,
-            Some("self DM")
+            notes.id,
+            Room::note_to_self_for(tx.conn(), run.user_id)?.unwrap().id
         );
         assert_eq!(
             resolve(

@@ -13,6 +13,7 @@ pub struct Target {
     pub action: &'static str,
     pub room: Option<Room>,
     pub reason: Option<&'static str>,
+    pub display_name: Option<&'static str>,
 }
 impl Target {
     fn skip(reason: &'static str) -> Self {
@@ -20,6 +21,7 @@ impl Target {
             action: "skip",
             room: None,
             reason: Some(reason),
+            display_name: None,
         }
     }
     fn room(room: Option<Room>, created: bool) -> Self {
@@ -27,8 +29,25 @@ impl Target {
             action: if created { "create" } else { "merge" },
             room,
             reason: None,
+            display_name: None,
         }
     }
+    fn notes(room: Option<Room>, created: bool) -> Self {
+        Self {
+            display_name: Some(NOTES_NAME),
+            ..Self::room(room, created)
+        }
+    }
+}
+pub const NOTES_NAME: &str = "your notes";
+
+pub fn connected_self_dm(c: &Value, member_ids: &[Value], owner_key: &str) -> bool {
+    let peer = present(&c["user"]);
+    !owner_key.is_empty()
+        && conversation_type(c) == "im"
+        && member_ids.iter().all(|id| string(id) == owner_key)
+        && peer.as_ref().is_none_or(|id| id == owner_key)
+        && (peer.is_some() || !member_ids.is_empty())
 }
 #[derive(PartialEq)]
 enum Choice {
@@ -276,7 +295,11 @@ pub fn resolve(
                 )?;
             }
             if peers.is_empty() {
-                return Ok(Target::skip("self DM"));
+                return if connected_self_dm(c, member_ids, &owner_key) {
+                    notes(tx, run, c, dry)
+                } else {
+                    Ok(Target::skip("DM peer not found"))
+                };
             }
             // Import checks mapping before Slackbot; preview checks Slackbot first.
             let peer_users: Vec<_> = peers.iter().filter_map(|id| users.get(id)).collect();
@@ -300,7 +323,7 @@ pub fn resolve(
                 }
             }
             if members.len() == 1 {
-                return Ok(Target::skip("self DM"));
+                return notes(tx, run, c, dry);
             }
             direct(tx, run, c, &members, users, member_ids, dry)
         }
@@ -434,6 +457,29 @@ pub fn resolve(
         }
     }
 }
+fn notes(tx: &mut Tx<'_>, run: &SlackImport, c: &Value, dry: bool) -> Result<Target> {
+    campfire_db::models::agent_access::check_direct_members(tx.conn(), &[run.user_id])?;
+    let room = Room::note_to_self_for(tx.conn(), run.user_id)?;
+    let created = room.is_none();
+    if dry {
+        return Ok(Target::notes(room, created));
+    }
+    let room = match room {
+        Some(room) => room,
+        None => Room::find_or_create_direct_for(tx, &[run.user_id], run.user_id)?,
+    };
+    users::record(
+        tx,
+        run,
+        "conversation",
+        &string(&c["id"]),
+        "Room",
+        room.id,
+        false,
+    )?;
+    Ok(Target::notes(Some(room), created))
+}
+
 fn direct(
     tx: &mut Tx<'_>,
     run: &SlackImport,
@@ -481,12 +527,18 @@ pub fn dry_users(
     member_ids: &[Value],
 ) -> Result<IndexMap<String, User>> {
     let owner = User::find(tx.conn(), run.user_id)?;
+    let mapped = users::users_for(tx.conn(), run, member_ids)?;
     Ok(member_ids
         .iter()
         .enumerate()
         .map(|(i, id)| {
             let mut user = owner.clone();
-            user.id = -(i as i64 + 1);
+            if mapped
+                .get(&string(id))
+                .is_none_or(|user| user.id != run.user_id)
+            {
+                user.id = -(i as i64 + 1);
+            }
             user.name.clear();
             (string(id), user)
         })

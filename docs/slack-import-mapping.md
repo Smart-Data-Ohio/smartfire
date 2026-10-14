@@ -15,6 +15,7 @@ and the limits to expect.
 | Private channel | Closed room |
 | Archived channel | Same room type, name suffixed ` (archived)`, every membership invisible |
 | DM (`im`) | One-to-one Direct room via `find_or_create_for` (merges with an existing DM) |
+| Self-DM (`im` to yourself) | Your canonical note-to-self Direct room, reused or created for the person running the import |
 | Group DM (`mpim`, ≤10 members) | Direct room for the member set |
 | Group DM (`mpim`, >10 members) | Closed room named after the members |
 | Message | Message with converted markdown, Slack `ts` as `created_at` (microseconds), `edited.ts` as `edited_at` |
@@ -89,7 +90,16 @@ its time and the run's last message, and the earlier run's memberships move
 their pointer forward to it unless they hold real unread state or already
 point at something newer. The room creator is the user who started the run.
 
-Self-DMs and DMs with Slackbot are skipped.
+Self-DMs import into the run owner's canonical notes, shown as "your notes" in
+the preview. Their imported messages are attributed to that owner, including
+when an earlier import mapped the connected Slack identity to a placeholder.
+The notes room and its membership never belong to the import, even when the
+import creates them. Undo removes the imported history while preserving notes,
+its membership, and the person's own messages. A group DM that shrank to one
+member keeps its own identity and is not the canonical notes room.
+
+DMs with Slackbot are skipped. Administrators import their own DMs through the
+personal import flow too; workspace discovery continues to list channels only.
 
 ## Messages, threads, reactions, pins
 
