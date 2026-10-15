@@ -9,7 +9,7 @@ import { actions } from "../../sync/runtime.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
 import { clearCommandCache } from "./autocomplete/suggestions.ts";
 import { Composer } from "./composer.tsx";
-import { draftKey, readDraft } from "./draft.ts";
+import { draftKey, readDraft, writeDraft } from "./draft.ts";
 
 const ROOM = 12;
 
@@ -273,11 +273,74 @@ describe("mention autocomplete", () => {
 
     expect(second.getAttribute("aria-disabled")).not.toBe("true");
     fireEvent.click(second);
-    expect(input).toHaveProperty("value", "Hello <@456> ");
+    expect(input).toHaveProperty("value", "Hello @Twin ");
     fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() =>
       expect(send).toHaveBeenCalledWith(ROOM, "Hello <@456>", expect.any(Object)),
+    );
+  });
+
+  it("restores a picked mention with its id and display name even without directory data", async () => {
+    Element.prototype.scrollIntoView = () => undefined;
+    vi.spyOn(composerActions, "suggestUsers").mockResolvedValue([
+      { user: userFixture(456, "Twin"), mentionToken: "<@456>" },
+    ]);
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+    const first = render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "Hello @tw" } });
+    fireEvent.click(await screen.findByRole("option", { name: "Twin" }));
+    first.unmount();
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const restored = screen.getByRole("textbox", { name: "Message" });
+
+    expect(restored).toHaveProperty("value", "Hello @Twin ");
+    fireEvent.keyDown(restored, { key: "Enter" });
+    await waitFor(() =>
+      expect(send).toHaveBeenCalledWith(ROOM, "Hello <@456>", expect.any(Object)),
+    );
+  });
+
+  it("keeps the surviving twin's id when a selected mention is deleted", async () => {
+    store.setState({ users: { 123: userFixture(123, "Twin"), 456: userFixture(456, "Twin") } });
+    writeDraft(draftKey(ROOM, null), "<@123> <@456>");
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Message" });
+
+    input.setSelectionRange(0, 6);
+    fireEvent(
+      input,
+      new InputEvent("beforeinput", { bubbles: true, inputType: "deleteContentBackward" }),
+    );
+    fireEvent.change(input, { target: { value: "@Twin", selectionStart: 0, selectionEnd: 0 } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(send).toHaveBeenCalledWith(ROOM, "<@456>", expect.any(Object)));
+  });
+
+  it("hydrates legacy token drafts and sends mention tokens when scheduling", async () => {
+    store.setState({ users: { 14: userFixture(14, "Jon Dixon") } });
+    writeDraft(draftKey(ROOM, null), "Hello <@14>, typed @Jon");
+    const create = vi.spyOn(actions.scheduled, "create").mockRejectedValue(new Error("Keep draft"));
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    expect(screen.getByRole("textbox", { name: "Message" })).toHaveProperty(
+      "value",
+      "Hello @Jon Dixon, typed @Jon",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Schedule message" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /In 1 hour/ }));
+    await waitFor(() =>
+      expect(create).toHaveBeenCalledWith(
+        ROOM,
+        expect.objectContaining({ markdownSource: "Hello <@14>, typed @Jon" }),
+      ),
     );
   });
 });

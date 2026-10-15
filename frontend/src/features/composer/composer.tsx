@@ -48,6 +48,7 @@ import {
   draftRevision,
   readDraft,
   readFieldsDraft,
+  readMentionDraft,
   writeDraft,
   writeFieldsDraft,
 } from "./draft.ts";
@@ -56,6 +57,7 @@ import { DrivePendingChips, DrivePicker } from "./drive-picker.tsx";
 import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { ComposerGifButton } from "./gif-picker.tsx";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
+import { editMentions, hydrateMentions, type Mention, mentionMarkdown } from "./mentions.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
 import { ReplyChip } from "./reply-chip.tsx";
@@ -94,6 +96,7 @@ import {
 } from "./slash.ts";
 import { ComposerStickerButton } from "./sticker-picker.tsx";
 import { TypingIndicator, useAgentReplying } from "./typing-indicator.tsx";
+import { useMentionEdit } from "./use-mention-edit.ts";
 import "./composer.css";
 import "./schedule/schedule.css";
 
@@ -137,6 +140,7 @@ interface Submission {
   readonly snapshot: ReplySnapshot;
   /** The draft as submitted (untrimmed, to compare with the composer's text later). */
   readonly text: string;
+  readonly markdown: string;
   /** The stored draft's revision as submitted, shared across composer mounts (`draft.ts`). */
   readonly revision: number;
   readonly fileIds: ReadonlySet<string>;
@@ -261,7 +265,17 @@ export function Composer({
   const creating = onSubmit !== undefined;
   /** A typed command's fields saved as this conversation's draft: their line, to open again. */
   const [savedFields] = useState(() => (readFieldsDraft(key) ? readDraft(key) : null));
-  const [text, setText] = useState(() => (savedFields === null ? readDraft(key) : ""));
+
+  const [initialDraft] = useState(() => {
+    const draft = savedFields === null ? readMentionDraft(key) : { text: "", mentions: [] };
+
+    return draft.mentions.length > 0
+      ? draft
+      : hydrateMentions(draft.text, (id) => store.getState().users[id]?.name);
+  });
+
+  const [text, setText] = useState(initialDraft.text);
+  const mentionsRef = useRef(initialDraft.mentions);
   const textRef = useRef(text);
   /** Bumps on every edit and clear: a later outcome only puts back a draft nobody has touched. */
   const draftEdits = useRef(0);
@@ -290,6 +304,7 @@ export function Composer({
   const entrySaving = useRef(savedFields === null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editInputMentions = useMentionEdit(textareaRef);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const conversation = useConversationName(roomId);
   const placeholder = placeholderOverride ?? placeholderFor(conversation);
@@ -299,7 +314,12 @@ export function Composer({
   const [driveOpen, setDriveOpen] = useState(false);
   const [pendingSticker, setPendingSticker] = useState<Sticker | null>(null);
   const scheduledHere = useScheduled(roomId, threadId, !creating);
-  const trigger = focused && entry === null ? findTrigger(text, caret.start, caret.end) : null;
+  const candidate = focused && entry === null ? findTrigger(text, caret.start, caret.end) : null;
+
+  const trigger = mentionsRef.current.some((mention) => mention.start === candidate?.start)
+    ? null
+    : candidate;
+
   const autocomplete = useAutocomplete(roomId, threadId, trigger, !creating);
   const hasText = text.trim() !== "";
   const hasFiles = attachments.files.length > 0;
@@ -379,7 +399,11 @@ export function Composer({
       return;
     }
 
-    writeDraft(key, entry === null ? textRef.current : entryText(entry));
+    writeDraft(
+      key,
+      entry === null ? textRef.current : entryText(entry),
+      entry === null ? mentionsRef.current : [],
+    );
     writeFieldsDraft(key, entry !== null);
   }, [key, entry]);
 
@@ -466,12 +490,19 @@ export function Composer({
     requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
   };
 
-  const update = (next: string) => {
+  const update = (
+    next: string,
+    mentions: readonly Mention[] = editMentions(
+      { text: textRef.current, mentions: mentionsRef.current },
+      next,
+    ).mentions,
+  ) => {
     draftEdits.current += 1;
     entrySaving.current = true;
     textRef.current = next;
+    mentionsRef.current = mentions;
     setText(next);
-    writeDraft(key, next);
+    writeDraft(key, next, mentions);
     writeFieldsDraft(key, false);
     actions.noteActivity();
     actions.setTyping(roomId, next.trim() !== "", threadId);
@@ -514,6 +545,7 @@ export function Composer({
     draftEdits.current += 1;
     entrySaving.current = true;
     textRef.current = "";
+    mentionsRef.current = [];
     setText("");
     writeDraft(key, "");
     writeFieldsDraft(key, false);
@@ -656,7 +688,7 @@ export function Composer({
   const sendGif = async (item: GifItem): Promise<void> => {
     const submitted = textRef.current;
     const revision = draftRevision(key);
-    const markdown = submitted.trimEnd();
+    const markdown = mentionMarkdown({ text: submitted, mentions: mentionsRef.current }).trimEnd();
 
     if (onSubmit !== undefined) {
       await onSubmit({
@@ -902,6 +934,7 @@ export function Composer({
     submitted: string = text,
     revision: number = draftRevision(key),
   ) => {
+    const picked = mentionsRef.current;
     const commands = await loadCommands(roomId, threadId).catch(() => []);
     const route = routeSlash(typed, commands);
 
@@ -942,8 +975,15 @@ export function Composer({
     // A command that fails puts its text back, unless the author has started something newer.
     const restoreTyped = () => {
       if (cleared && draftEdits.current === edits) {
-        update(typed);
-        setRestore({ start: typed.length, end: typed.length });
+        const restored = hydrateMentions(
+          typed,
+          (id) =>
+            picked.find((mention) => mention.token === `<@${id}>`)?.text.slice(1) ??
+            store.getState().users[id]?.name,
+        );
+
+        update(restored.text, restored.mentions);
+        setRestore({ start: restored.text.length, end: restored.text.length });
       }
     };
 
@@ -997,6 +1037,7 @@ export function Composer({
     const submission: Submission = pending ?? {
       snapshot: currentReply(),
       text,
+      markdown: mentionMarkdown({ text, mentions: mentionsRef.current }),
       revision: draftRevision(key),
       fileIds: new Set(attachments.files.map((entry) => entry.id)),
       driveFileIds: new Set(driveFiles.map((file) => file.id)),
@@ -1005,7 +1046,7 @@ export function Composer({
 
     const files = submittedFiles(submission);
     const drive = submittedDrive(submission);
-    const markdown = submission.text.trimEnd();
+    const markdown = submission.markdown.trimEnd();
 
     if (
       markdown === "" &&
@@ -1112,7 +1153,7 @@ export function Composer({
   const schedule = (at: Date): Promise<void> => {
     const submitted = text;
     const revision = draftRevision(key);
-    const markdown = submitted.trimEnd();
+    const markdown = mentionMarkdown({ text: submitted, mentions: mentionsRef.current }).trimEnd();
     const taken = currentReply();
     const files = attachments.files;
 
@@ -1172,9 +1213,19 @@ export function Composer({
       return;
     }
 
-    const completion = applyCompletion(text, trigger, item.insert);
+    const insertion = item.kind === "mention" ? `@${item.user.name}` : item.insert;
+    const completion = applyCompletion(text, trigger, insertion);
+    const shifted = editMentions({ text, mentions: mentionsRef.current }, completion.value);
 
-    update(completion.value);
+    const mentions =
+      item.kind === "mention"
+        ? [
+            ...shifted.mentions,
+            { start: trigger.start, text: insertion, token: `<@${item.user.id}>` },
+          ].sort((a, b) => a.start - b.start)
+        : shifted.mentions;
+
+    update(completion.value, mentions);
     setRestore({ start: completion.caret, end: completion.caret });
   };
 
@@ -1385,7 +1436,7 @@ export function Composer({
           <LazyPreviewPanel
             open={previewOpen}
             roomId={roomId}
-            markdown={text}
+            markdown={mentionMarkdown({ text, mentions: mentionsRef.current })}
             onClose={() => {
               setPreviewOpen(false);
               focusInput();
@@ -1465,7 +1516,13 @@ export function Composer({
               }
               rows={1}
               onChange={(event) => {
-                update(event.target.value);
+                const next = editInputMentions(
+                  { text: textRef.current, mentions: mentionsRef.current },
+                  event.target.value,
+                  event.target.selectionStart,
+                );
+
+                update(next.text, next.mentions);
                 setCaret({ start: event.target.selectionStart, end: event.target.selectionEnd });
               }}
               onSelect={syncCaret}

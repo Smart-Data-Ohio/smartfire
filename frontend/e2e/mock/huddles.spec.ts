@@ -513,7 +513,16 @@ test("stacked theater mode keeps the composer's suggestions over the share", asy
 
   expect(list.y, "the suggestions overlap the share").toBeLessThan(share.y + share.height);
   await option.click({ timeout: 5000 });
-  await expect(composer).toHaveValue(`Over to <@${USER_IDS.maya}> `);
+  await expect(composer).toHaveValue("Over to @Maya Okafor ");
+
+  const sentMention = page.waitForRequest(
+    (request) => request.method() === "POST" && /\/rooms\/\d+\/messages$/.test(request.url()),
+  );
+
+  await composer.press("Enter");
+  expect((await sentMention).postDataJSON()).toMatchObject({
+    markdownSource: `Over to <@${USER_IDS.maya}>`,
+  });
 });
 
 test("Smartfire's motion setting overrides the system one in a call", async ({ page }) => {

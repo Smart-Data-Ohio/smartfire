@@ -253,7 +253,7 @@ describe("editing in place", () => {
     );
     const box = screen.getByRole("textbox", { name: "Edit message" });
 
-    expect(box).toHaveProperty("value", `Hello <@${SEED_IDS.users.maya}>`);
+    expect(box).toHaveProperty("value", "Hello @Maya Okafor");
     await user.type(box, " again{Enter}");
     await waitFor(() => expect(closed).toBe(1));
     expect(current(message.id)?.markdownSource).toBe(`Hello <@${SEED_IDS.users.maya}> again`);

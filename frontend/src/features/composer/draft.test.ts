@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { draftKey, draftRevision, newThreadDraftKey, readDraft, writeDraft } from "./draft.ts";
+import {
+  draftKey,
+  draftRevision,
+  newThreadDraftKey,
+  readDraft,
+  readMentionDraft,
+  writeDraft,
+} from "./draft.ts";
 
 describe("composer drafts", () => {
   afterEach(() => sessionStorage.clear());
@@ -33,6 +40,35 @@ describe("composer drafts", () => {
     writeDraft(key, "hello");
     expect(draftRevision(key)).toBe(start + 3);
     expect(draftRevision(other)).toBe(0);
+  });
+
+  it("revises a draft when an identical name is picked with a different id", () => {
+    const key = draftKey(44, null);
+    const mention = { start: 0, text: "@Twin", token: "<@123>" };
+
+    writeDraft(key, "@Twin", [mention]);
+    const revision = draftRevision(key);
+
+    writeDraft(key, "@Twin", [mention]);
+    expect(draftRevision(key)).toBe(revision);
+    writeDraft(key, "@Twin", [{ ...mention, token: "<@456>" }]);
+    expect(draftRevision(key)).toBe(revision + 1);
+    expect(readMentionDraft(key)).toEqual({
+      text: "@Twin",
+      mentions: [{ ...mention, token: "<@456>" }],
+    });
+  });
+
+  it.each([
+    '{"start":0}',
+    '[{"start":"0","text":"@Twin","token":"<@456>"}]',
+    '[{"start":0,"text":"@Other","token":"<@456>"}]',
+  ])("ignores corrupt or stale mention metadata: %s", (metadata) => {
+    const key = draftKey(45, null);
+
+    writeDraft(key, "@Twin");
+    sessionStorage.setItem(`${key}.mentions`, metadata);
+    expect(readMentionDraft(key)).toEqual({ text: "@Twin", mentions: [] });
   });
 
   it("clears a new thread's draft without touching the room's", () => {

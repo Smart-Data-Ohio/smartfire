@@ -1,12 +1,14 @@
-import { type FormEvent, useEffect, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
 import type { UpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
+import { store } from "../../store/store.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { AttachmentTray } from "../composer/attachments/attachment-tray.tsx";
 import { MAX_FILES, useAttachments } from "../composer/attachments/use-attachments.ts";
+import { hydrateMentions, mentionMarkdown } from "../composer/mentions.ts";
 import {
   customTimeProblem,
   fromLocalInput,
@@ -14,6 +16,7 @@ import {
   sendAtLabel,
   toLocalInput,
 } from "../composer/schedule/presets.ts";
+import { useMentionEdit } from "../composer/use-mention-edit.ts";
 import { useNow } from "../threads/use-now.ts";
 import { ReplyTargetPicker } from "./reply-target-picker.tsx";
 import { ScheduledFiles } from "./scheduled-files.tsx";
@@ -80,7 +83,15 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const filesId = useId();
   const [kept, setKept] = useState(item.attachments);
   const uploads = useAttachments(MAX_FILES - kept.length);
-  const [text, setText] = useState(item.markdownSource);
+
+  const [draft, setDraft] = useState(() =>
+    hydrateMentions(item.markdownSource, (id) => store.getState().users[id]?.name),
+  );
+
+  const text = draft.text;
+  const markdown = mentionMarkdown(draft);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editInputMentions = useMentionEdit(textareaRef);
   const [when, setWhen] = useState(() => toLocalInput(new Date(item.sendAt)));
   const [replyTo, setReplyTo] = useState(item.replyToMessageId);
   const [choosingReply, setChoosingReply] = useState(false);
@@ -97,7 +108,7 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const now = new Date(Math.max(openedAt, tick));
   const at = fromLocalInput(when);
   const timeChanged = when !== toLocalInput(new Date(item.sendAt));
-  const textChanged = text !== item.markdownSource;
+  const textChanged = markdown !== item.markdownSource;
   const replyChanged = replyTo !== item.replyToMessageId;
 
   const filesChanged =
@@ -108,7 +119,7 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
     );
 
   const dirty =
-    text !== start.text || when !== start.when || replyTo !== start.replyTo || filesChanged;
+    markdown !== start.text || when !== start.when || replyTo !== start.replyTo || filesChanged;
 
   useEffect(() => onDirty(dirty), [dirty, onDirty]);
 
@@ -149,7 +160,7 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
     const edit: ScheduledEdit = {};
 
     if (textChanged) {
-      edit.markdownSource = text;
+      edit.markdownSource = markdown;
     }
 
     if (timeChanged) {
@@ -187,12 +198,13 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
           Message
         </label>
         <textarea
+          ref={textareaRef}
           id={textId}
           className="scheduled-edit-text"
           value={text}
           data-autofocus
           onChange={(event) => {
-            setText(event.target.value);
+            setDraft(editInputMentions(draft, event.target.value, event.target.selectionStart));
             setError(undefined);
           }}
           onKeyDown={(event) => {

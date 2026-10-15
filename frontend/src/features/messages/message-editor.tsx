@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { MessageDTO } from "../../store/model.ts";
+import { store } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
@@ -12,6 +13,8 @@ import {
   type TextEdit,
   toggleWrap,
 } from "../composer/markdown-keys.ts";
+import { editMentions, hydrateMentions, mentionMarkdown } from "../composer/mentions.ts";
+import { useMentionEdit } from "../composer/use-mention-edit.ts";
 import { messageFiles } from "./message-files.ts";
 
 interface MessageEditorProps {
@@ -89,12 +92,19 @@ export function editorKeyAction(
  * composer's formatting chords work. Saving unchanged text just closes.
  */
 export function MessageEditor({ message, onClose, onRequestDelete }: MessageEditorProps) {
-  const [text, setText] = useState<string | null>(message.markdownSource);
+  const [draft, setDraft] = useState(() =>
+    message.markdownSource === null
+      ? null
+      : hydrateMentions(message.markdownSource, (id) => store.getState().users[id]?.name),
+  );
+
+  const text = draft?.text ?? null;
   const [original, setOriginal] = useState<string | null>(message.markdownSource);
   const [saving, setSaving] = useState(false);
   const [removedDrive, setRemovedDrive] = useState<readonly string[]>([]);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editInputMentions = useMentionEdit(textareaRef);
   const placedCaret = useRef(false);
   const onCloseRef = useRef(onClose);
 
@@ -113,7 +123,7 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
     actions.messages.source(message.id).then(
       (source) => {
         if (live) {
-          setText(source);
+          setDraft(hydrateMentions(source, (id) => store.getState().users[id]?.name));
           setOriginal(source);
         }
       },
@@ -160,7 +170,7 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
   });
 
   const save = () => {
-    if (text === null || saving) {
+    if (draft === null || saving) {
       return;
     }
 
@@ -168,7 +178,7 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
     const remaining = attached.filter((card) => !removedDrive.includes(card.fileId));
 
     const plan = planEdit({
-      markdown: text,
+      markdown: mentionMarkdown(draft),
       original: original ?? "",
       removedIds: removedDrive,
       remainingDrive: remaining.length,
@@ -199,7 +209,7 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
   };
 
   const apply = (edit: TextEdit) => {
-    setText(edit.value);
+    setDraft((current) => (current === null ? null : editMentions(current, edit.value)));
     setSelection({ start: edit.start, end: edit.end });
   };
 
@@ -267,7 +277,11 @@ export function MessageEditor({ message, onClose, onRequestDelete }: MessageEdit
           rows={1}
           aria-label="Edit message"
           disabled={saving}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            if (draft !== null) {
+              setDraft(editInputMentions(draft, event.target.value, event.target.selectionStart));
+            }
+          }}
           onKeyDown={onKeyDown}
         />
       </div>

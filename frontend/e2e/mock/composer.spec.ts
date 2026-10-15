@@ -422,8 +422,19 @@ matrix("autocomplete: people, emoji, commands and channels", async ({ page, them
   await settle(page);
   await shot(page, "autocomplete-mention", theme);
   await composer(page).press("Enter");
-  await expect(composer(page)).toHaveValue(`Thanks <@${SEED_IDS.users.maya}> `);
+  await expect(composer(page)).toHaveValue("Thanks @Maya Okafor ");
   await expect(suggestions(page)).toBeHidden();
+
+  const sentMention = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().endsWith(`/rooms/${ROOM_IDS.general}/messages`),
+  );
+
+  await composer(page).press("Enter");
+  expect((await sentMention).postDataJSON()).toMatchObject({
+    markdownSource: `Thanks <@${SEED_IDS.users.maya}>`,
+  });
+  await expect(composer(page)).toHaveValue("");
 
   await clearComposer(page);
   await typeInto(page, "Ship it :ta");
