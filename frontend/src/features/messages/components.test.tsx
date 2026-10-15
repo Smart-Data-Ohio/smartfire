@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SEED_IDS } from "../../../mock/server.ts";
@@ -253,11 +253,76 @@ describe("editing in place", () => {
     );
     const box = screen.getByRole("textbox", { name: "Edit message" });
 
-    expect(box).toHaveProperty("value", `Hello <@${SEED_IDS.users.maya}>`);
+    expect(box).toHaveProperty("value", "Hello @Maya Okafor");
     await user.type(box, " again{Enter}");
     await waitFor(() => expect(closed).toBe(1));
     expect(current(message.id)?.markdownSource).toBe(`Hello <@${SEED_IDS.users.maya}> again`);
     expect(current(message.id)?.bodyHtml).toContain(`data-user-id="${SEED_IDS.users.maya}"`);
+  });
+
+  it.each([
+    { key: "b", shiftKey: false, source: "**<@14>**" },
+    { key: "i", shiftKey: false, source: "_<@14>_" },
+    { key: "x", shiftKey: true, source: "~~<@14>~~" },
+    { key: "e", shiftKey: false, source: "`@Jon Dixon`" },
+    { key: "u", shiftKey: true, source: "[@Jon Dixon](url)" },
+  ])("formats a selected mention with Ctrl+$key", async ({ key, shiftKey, source }) => {
+    const message = await post("<@14>");
+    store.setState({ users: { 14: userFixture(14, "Jon Dixon") } });
+    let closed = false;
+    render(
+      <MessageEditor
+        message={message}
+        onClose={() => {
+          closed = true;
+        }}
+        onRequestDelete={() => {}}
+      />,
+    );
+    const box = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Edit message" });
+    box.setSelectionRange(0, box.value.length);
+    fireEvent.keyDown(box, { key, ctrlKey: true, shiftKey });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await waitFor(() => expect(closed).toBe(true));
+    expect(current(message.id)?.markdownSource).toBe(source);
+  });
+
+  it("keeps the second twin's id when the first mention is deleted in the message editor", async () => {
+    const message = await post("<@123> <@456>");
+    store.setState({ users: { 123: userFixture(123, "Twin"), 456: userFixture(456, "Twin") } });
+    let closed = false;
+    render(
+      <MessageEditor
+        message={message}
+        onClose={() => {
+          closed = true;
+        }}
+        onRequestDelete={() => {}}
+      />,
+    );
+    const box = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Edit message" });
+    box.setSelectionRange(0, 6);
+    fireEvent(
+      box,
+      new InputEvent("beforeinput", { bubbles: true, inputType: "deleteContentBackward" }),
+    );
+    fireEvent.change(box, { target: { value: "@Twin", selectionStart: 0 } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await waitFor(() => expect(closed).toBe(true));
+    expect(current(message.id)?.markdownSource).toBe("<@456>");
+  });
+
+  it("hydrates users arriving before the first edit and preserves edits after that", async () => {
+    const message = await post("Hi <@14>");
+    store.setState({ users: {} });
+    render(<MessageEditor message={message} onClose={() => {}} onRequestDelete={() => {}} />);
+    const box = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Edit message" });
+    expect(box.value).toBe("Hi <@14>");
+    act(() => store.setState({ users: { 14: userFixture(14, "Jon Dixon") } }));
+    expect(box.value).toBe("Hi @Jon Dixon");
+    await userEvent.setup().type(box, " again");
+    act(() => store.setState({ users: { 14: userFixture(14, "Changed") } }));
+    expect(box.value).toBe("Hi @Jon Dixon again");
   });
 
   it("decides Enter, Shift+Enter and Esc like the composer", () => {

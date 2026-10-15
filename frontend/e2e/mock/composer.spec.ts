@@ -414,6 +414,82 @@ for (const first of ["POST response", "broadcast"]) {
   });
 }
 
+test("undo and redo restore a picked mention's identity after editing its name", async ({
+  page,
+}) => {
+  await openApp(page, GENERAL);
+  const input = composer(page);
+  await typeInto(page, "@ma");
+  await expect(suggestions(page).getByRole("option", { name: /Maya Okafor/ })).toBeVisible();
+  await input.press("Enter");
+  await expect(input).toHaveValue("@Maya Okafor ");
+  await input.press("Home");
+  await input.press("ArrowRight");
+  await input.press("ArrowRight");
+  await input.pressSequentially("x");
+  await expect(input).toHaveValue("@Mxaya Okafor ");
+  await input.press("Control+z");
+  await expect(input).toHaveValue("@Maya Okafor ");
+  await input.press("Control+Shift+z");
+  await expect(input).toHaveValue("@Mxaya Okafor ");
+  await input.press("Control+z");
+  await expect(input).toHaveValue("@Maya Okafor ");
+
+  const sent = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().endsWith(`/rooms/${ROOM_IDS.general}/messages`),
+  );
+
+  await input.press("Escape");
+  await input.press("Enter");
+  expect((await sent).postDataJSON()).toMatchObject({
+    markdownSource: `<@${SEED_IDS.users.maya}>`,
+  });
+});
+
+test("undo and redo keep twin mention identities after deleting the first twin", async ({
+  page,
+}) => {
+  await page.addInitScript(
+    ({ roomId }) => {
+      const key = `smartfire.draft.${roomId}`;
+      sessionStorage.setItem(key, "@Twin @Twin");
+      sessionStorage.setItem(
+        `${key}.mentions`,
+        JSON.stringify([
+          { start: 0, text: "@Twin", token: "<@123>" },
+          { start: 6, text: "@Twin", token: "<@456>" },
+        ]),
+      );
+    },
+    { roomId: ROOM_IDS.general },
+  );
+  await openApp(page, GENERAL);
+  const input = composer(page);
+  await input.focus();
+  await expect(input).toHaveValue("@Twin @Twin");
+  await input.press("Home");
+
+  for (let count = 0; count < 6; count += 1) await input.press("Shift+ArrowRight");
+  await input.press("Backspace");
+  await expect(input).toHaveValue("@Twin");
+  await input.press("Control+z");
+  await expect(input).toHaveValue("@Twin @Twin");
+  await input.press("Control+Shift+z");
+  await expect(input).toHaveValue("@Twin");
+  await input.press("Control+z");
+  await expect(input).toHaveValue("@Twin @Twin");
+
+  const sent = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().endsWith(`/rooms/${ROOM_IDS.general}/messages`),
+  );
+
+  await input.press("Escape");
+  await input.press("Enter");
+  expect((await sent).postDataJSON()).toMatchObject({ markdownSource: "<@123> <@456>" });
+});
+
 matrix("autocomplete: people, emoji, commands and channels", async ({ page, theme }) => {
   await openApp(page, GENERAL, theme);
 
@@ -422,8 +498,19 @@ matrix("autocomplete: people, emoji, commands and channels", async ({ page, them
   await settle(page);
   await shot(page, "autocomplete-mention", theme);
   await composer(page).press("Enter");
-  await expect(composer(page)).toHaveValue(`Thanks <@${SEED_IDS.users.maya}> `);
+  await expect(composer(page)).toHaveValue("Thanks @Maya Okafor ");
   await expect(suggestions(page)).toBeHidden();
+
+  const sentMention = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().endsWith(`/rooms/${ROOM_IDS.general}/messages`),
+  );
+
+  await composer(page).press("Enter");
+  expect((await sentMention).postDataJSON()).toMatchObject({
+    markdownSource: `Thanks <@${SEED_IDS.users.maya}>`,
+  });
+  await expect(composer(page)).toHaveValue("");
 
   await clearComposer(page);
   await typeInto(page, "Ship it :ta");

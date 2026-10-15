@@ -2,8 +2,10 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../../mock/server.ts";
+import { userFixture } from "../../api/testing.ts";
 import type { MessagePage } from "../../gen/MessagePage.ts";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import { store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { snippet } from "../messages/message-content.tsx";
@@ -43,6 +45,44 @@ afterEach(() => {
 });
 
 describe("the scheduled message editor", () => {
+  it("shows mention names and saves stable tokens when scheduled text is edited", async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(async () => {});
+
+    store.setState({ users: { 14: userFixture(14, "Jon Dixon") } });
+    render(
+      <EditScheduledDialog
+        item={{ ...ITEM, markdownSource: "Hello <@14>" }}
+        onClose={() => undefined}
+        onSave={save}
+      />,
+    );
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    expect(input).toHaveProperty("value", "Hello @Jon Dixon");
+    await user.type(input, " again");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(save).toHaveBeenCalledWith(expect.any(Object), { markdownSource: "Hello <@14> again" });
+  });
+
+  it("hydrates late users until the first text edit", async () => {
+    store.setState({ users: {} });
+    render(
+      <EditScheduledDialog
+        item={{ ...ITEM, markdownSource: "Hi <@14>" }}
+        onClose={() => {}}
+        onSave={async () => {}}
+      />,
+    );
+    const box = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Message" });
+    expect(box.value).toBe("Hi <@14>");
+    act(() => store.setState({ users: { 14: userFixture(14, "Jon Dixon") } }));
+    expect(box.value).toBe("Hi @Jon Dixon");
+    await userEvent.setup().type(box, " again");
+    act(() => store.setState({ users: { 14: userFixture(14, "Changed") } }));
+    expect(box.value).toBe("Hi @Jon Dixon again");
+  });
+
   it("shows a stored reply excerpt without loading the target's timeline", () => {
     render(
       <ScheduledRow
