@@ -47,40 +47,72 @@ describe("mention input history", () => {
     expect(sent()).toBe("@Joxn");
   });
 
-  it("restores a mention after typing beyond the snapshot window and undoing twice", () => {
-    render(<Editor source="<@14>" />);
-    input("@Joxn", "insertText", 3);
+  it.each([
+    { keystrokes: 120, expected: "<@14>" },
+    { keystrokes: 1200, expected: "@Jon" },
+  ])(
+    "sends $expected after undoing $keystrokes keystrokes and a mention edit",
+    ({ keystrokes, expected }) => {
+      render(<Editor source="<@14>" />);
+      input("@Joxn", "insertText", 3);
 
-    let text = "@Joxn ";
+      let text = "@Joxn ";
 
-    for (let count = 0; count < 120; count += 1) {
-      const start = text.length;
-      text += "x";
-      input(text, "insertText", start);
-    }
+      for (let count = 0; count < keystrokes; count += 1) {
+        const start = text.length;
+        text += "x";
+        input(text, "insertText", start);
+      }
 
-    expect(sent()).toBe(`@Joxn ${"x".repeat(120)}`);
-    input("@Joxn", "historyUndo", text.length);
-    expect(sent()).toBe("@Joxn");
-    input("@Jon", "historyUndo", 5);
-    expect(sent()).toBe("<@14>");
-  });
+      expect(sent()).toBe(`@Joxn ${"x".repeat(keystrokes)}`);
+      input("@Joxn", "historyUndo", text.length);
+      expect(sent()).toBe("@Joxn");
+      input("@Jon", "historyUndo", 5);
+      expect(sent()).toBe(expected);
+    },
+  );
 
-  it("undoes to the latest mention snapshot when every retained snapshot has mentions", () => {
-    render(<Editor source="<@14>" />);
-    let text = "@Jon ";
+  it.each([120, 999])(
+    "keeps a manually repaired mention literal after undoing %i keystrokes",
+    (keystrokes) => {
+      render(<Editor source="<@14>" />);
+      input("@Joxn", "insertText", 3);
+      input("@Jon", "insertText", 3, 4);
+      expect(sent()).toBe("@Jon");
 
-    for (let count = 0; count < 120; count += 1) {
-      const start = text.length;
-      text += "x";
-      input(text, "insertText", start);
-    }
+      let text = "@Jon ";
 
-    input(`${text}!`, "insertFromPaste", 0, text.length);
-    expect(sent()).toBe(`${text}!`);
-    input(text, "historyUndo", text.length + 1);
-    expect(sent()).toBe(`<@14> ${"x".repeat(120)}`);
-  });
+      for (let count = 0; count < keystrokes; count += 1) {
+        const start = text.length;
+        text += "x";
+        input(text, "insertText", start);
+      }
+
+      input("@Jon", "historyUndo", text.length);
+      expect(sent()).toBe("@Jon");
+    },
+  );
+
+  it.each([120, 1200])(
+    "keeps the history index on the exact paste snapshot after %i keystrokes",
+    (keystrokes) => {
+      render(<Editor source="<@14>" />);
+      let text = "@Jon ";
+
+      for (let count = 0; count < keystrokes; count += 1) {
+        const start = text.length;
+        text += "x";
+        input(text, "insertText", start);
+      }
+
+      input(`${text}!`, "insertFromPaste", 0, text.length);
+      expect(sent()).toBe(`${text}!`);
+      input(text, "historyUndo", text.length + 1);
+      expect(sent()).toBe(`<@14> ${"x".repeat(keystrokes)}`);
+      input(`${text}!`, "historyRedo", text.length);
+      expect(sent()).toBe(`${text}!`);
+    },
+  );
 
   it("restores twin identities after deleting the first, undoing and redoing", () => {
     render(<Editor source="<@123> <@456>" />);

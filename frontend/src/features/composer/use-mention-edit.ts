@@ -1,7 +1,7 @@
 import { type RefObject, useLayoutEffect, useRef } from "react";
 import { editMentions, type MentionEdit, type MentionText } from "./mentions.ts";
 
-const HISTORY_LIMIT = 100;
+const HISTORY_LIMIT = 1000;
 
 interface PendingEdit extends MentionEdit {
   readonly inputType: string;
@@ -41,16 +41,12 @@ export function useMentionEdit(
 
     state.snapshots.splice(state.index + 1);
     state.snapshots.push(snapshot);
-    state.index = state.snapshots.length - 1;
 
     if (state.snapshots.length > HISTORY_LIMIT) {
-      const oldestMentionless = state.snapshots.findIndex((entry) => entry.mentions.length === 0);
-      const evicted = Math.max(0, oldestMentionless);
-      state.snapshots.splice(evicted, 1);
-
-      // If the new snapshot was evicted, undo must still start at the latest retained one.
-      if (evicted < state.index) state.index -= 1;
+      state.snapshots.shift();
     }
+
+    state.index = state.snapshots.length - 1;
   };
 
   useLayoutEffect(() => {
