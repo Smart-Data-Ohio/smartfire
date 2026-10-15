@@ -4,6 +4,7 @@
  * belong to the composer that asked. Failures reject with an `ActionError` whose message is fit
  * to show. Scheduled messages live in the store: `actions.scheduled` in runtime.ts.
  */
+import { Schema } from "effect";
 import {
   previewMessage,
   runSlashCommand,
@@ -19,6 +20,18 @@ import type { SlashCommandResult } from "../gen/SlashCommandResult.ts";
 import type { StickerCatalog } from "../gen/StickerCatalog.ts";
 import type { UserSuggestion } from "../gen/UserSuggestion.ts";
 import { runAction } from "./runtime.ts";
+
+const DraftMention = Schema.Struct({
+  start: Schema.Int,
+  text: Schema.String,
+  token: Schema.String,
+});
+
+export type DraftMention = typeof DraftMention.Type;
+
+export const decodeDraftMentions = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Array(DraftMention)),
+);
 
 export const composerActions = {
   /** People to `@`-mention in the room, matching `query` anywhere in the name. */

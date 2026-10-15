@@ -1,7 +1,7 @@
 /** Per-conversation drafts in sessionStorage: a room's composer and each thread's keep their own. */
 
+import { decodeDraftMentions } from "../../sync/composer-actions.ts";
 import type { Mention, MentionText } from "./mentions.ts";
-import { decodeDraftMentions } from "./mentions-schema.ts";
 
 const DRAFT_PREFIX = "smartfire.draft.";
 

@@ -30,6 +30,7 @@ export function useMentionEdit(
   draft: MentionText | null,
 ) {
   const pending = useRef<PendingEdit | null>(null);
+  const composition = useRef<MentionText | null>(null);
   const history = useRef<{ snapshots: MentionText[]; index: number }>({ snapshots: [], index: -1 });
 
   const rememberSnapshot = (snapshot: MentionText) => {
@@ -40,9 +41,16 @@ export function useMentionEdit(
 
     state.snapshots.splice(state.index + 1);
     state.snapshots.push(snapshot);
-
-    if (state.snapshots.length > HISTORY_LIMIT) state.snapshots.shift();
     state.index = state.snapshots.length - 1;
+
+    if (state.snapshots.length > HISTORY_LIMIT) {
+      const oldestMentionless = state.snapshots.findIndex((entry) => entry.mentions.length === 0);
+      const evicted = Math.max(0, oldestMentionless);
+      state.snapshots.splice(evicted, 1);
+
+      // If the new snapshot was evicted, undo must still start at the latest retained one.
+      if (evicted < state.index) state.index -= 1;
+    }
   };
 
   useLayoutEffect(() => {
@@ -60,9 +68,23 @@ export function useMentionEdit(
       };
     };
 
-    textarea.addEventListener("beforeinput", remember);
+    const startComposition = () => {
+      composition.current = draft;
+    };
 
-    return () => textarea.removeEventListener("beforeinput", remember);
+    const endComposition = () => {
+      composition.current = null;
+    };
+
+    textarea.addEventListener("beforeinput", remember);
+    textarea.addEventListener("compositionstart", startComposition);
+    textarea.addEventListener("compositionend", endComposition);
+
+    return () => {
+      textarea.removeEventListener("beforeinput", remember);
+      textarea.removeEventListener("compositionstart", startComposition);
+      textarea.removeEventListener("compositionend", endComposition);
+    };
   });
 
   return (current: MentionText, text: string, caret: number): MentionText => {
@@ -72,7 +94,13 @@ export function useMentionEdit(
 
     const inputType = selection?.inputType ?? "";
 
-    if (inputType.startsWith("history") || inputType.includes("Composition")) {
+    if (inputType.includes("Composition") && composition.current?.text === text) {
+      rememberSnapshot(composition.current);
+
+      return composition.current;
+    }
+
+    if (inputType.startsWith("history")) {
       const state = history.current;
       const direction = inputType === "historyRedo" ? 1 : -1;
 

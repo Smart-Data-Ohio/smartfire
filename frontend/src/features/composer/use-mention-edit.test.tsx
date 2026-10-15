@@ -47,6 +47,41 @@ describe("mention input history", () => {
     expect(sent()).toBe("@Joxn");
   });
 
+  it("restores a mention after typing beyond the snapshot window and undoing twice", () => {
+    render(<Editor source="<@14>" />);
+    input("@Joxn", "insertText", 3);
+
+    let text = "@Joxn ";
+
+    for (let count = 0; count < 120; count += 1) {
+      const start = text.length;
+      text += "x";
+      input(text, "insertText", start);
+    }
+
+    expect(sent()).toBe(`@Joxn ${"x".repeat(120)}`);
+    input("@Joxn", "historyUndo", text.length);
+    expect(sent()).toBe("@Joxn");
+    input("@Jon", "historyUndo", 5);
+    expect(sent()).toBe("<@14>");
+  });
+
+  it("undoes to the latest mention snapshot when every retained snapshot has mentions", () => {
+    render(<Editor source="<@14>" />);
+    let text = "@Jon ";
+
+    for (let count = 0; count < 120; count += 1) {
+      const start = text.length;
+      text += "x";
+      input(text, "insertText", start);
+    }
+
+    input(`${text}!`, "insertFromPaste", 0, text.length);
+    expect(sent()).toBe(`${text}!`);
+    input(text, "historyUndo", text.length + 1);
+    expect(sent()).toBe(`<@14> ${"x".repeat(120)}`);
+  });
+
   it("restores twin identities after deleting the first, undoing and redoing", () => {
     render(<Editor source="<@123> <@456>" />);
     input("@Twin", "deleteContentBackward", 0, 6);
@@ -72,10 +107,26 @@ describe("mention input history", () => {
 
   it("restores mention identity when a composition is cancelled", () => {
     render(<Editor source="<@14>" />);
+    const box = screen.getByRole("textbox", { name: "Draft" });
+    fireEvent.compositionStart(box);
     input("@Joxn", "insertCompositionText", 3);
     expect(sent()).toBe("@Joxn");
     input("@Jon", "insertCompositionText", 3, 4);
     expect(sent()).toBe("<@14>");
+    fireEvent.compositionEnd(box);
+  });
+
+  it("keeps a deleted mention literal when its name is retyped through composition", () => {
+    render(<Editor source="<@14>" />);
+    input("", "deleteContentBackward", 0, 4);
+    expect(sent()).toBe("");
+
+    const box = screen.getByRole("textbox", { name: "Draft" });
+    fireEvent.compositionStart(box);
+    input("@Jo", "insertCompositionText", 0);
+    input("@Jon", "insertCompositionText", 0, 3);
+    expect(sent()).toBe("@Jon");
+    fireEvent.compositionEnd(box);
   });
 
   it("uses the selection when pasted text replaces a mention", () => {

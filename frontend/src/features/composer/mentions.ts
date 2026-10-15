@@ -1,6 +1,6 @@
 /** A picked mention keeps its displayed text and the server token it must send. */
+import type { DraftMention } from "../../sync/composer-actions.ts";
 import type { TextEdit } from "./markdown-keys.ts";
-import type { DraftMention } from "./mentions-schema.ts";
 
 export type Mention = DraftMention;
 
