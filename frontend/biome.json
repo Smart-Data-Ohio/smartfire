@@ -30,7 +30,12 @@
   },
   "overrides": [
     {
-      "includes": ["src/**", "!src/api/**", "!src/sync/**"],
+      "includes": [
+        "src/**",
+        "!src/api/**",
+        "!src/sync/**",
+        "!src/features/composer/mentions-schema.ts"
+      ],
       "linter": {
         "rules": {
           "style": {

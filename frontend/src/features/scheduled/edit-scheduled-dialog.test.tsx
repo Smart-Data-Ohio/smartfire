@@ -65,6 +65,24 @@ describe("the scheduled message editor", () => {
     expect(save).toHaveBeenCalledWith(expect.any(Object), { markdownSource: "Hello <@14> again" });
   });
 
+  it("hydrates late users until the first text edit", async () => {
+    store.setState({ users: {} });
+    render(
+      <EditScheduledDialog
+        item={{ ...ITEM, markdownSource: "Hi <@14>" }}
+        onClose={() => {}}
+        onSave={async () => {}}
+      />,
+    );
+    const box = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Message" });
+    expect(box.value).toBe("Hi <@14>");
+    act(() => store.setState({ users: { 14: userFixture(14, "Jon Dixon") } }));
+    expect(box.value).toBe("Hi @Jon Dixon");
+    await userEvent.setup().type(box, " again");
+    act(() => store.setState({ users: { 14: userFixture(14, "Changed") } }));
+    expect(box.value).toBe("Hi @Jon Dixon again");
+  });
+
   it("shows a stored reply excerpt without loading the target's timeline", () => {
     render(
       <ScheduledRow

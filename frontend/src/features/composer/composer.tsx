@@ -57,7 +57,13 @@ import { DrivePendingChips, DrivePicker } from "./drive-picker.tsx";
 import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { ComposerGifButton } from "./gif-picker.tsx";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
-import { editMentions, hydrateMentions, type Mention, mentionMarkdown } from "./mentions.ts";
+import {
+  editMentions,
+  formatMentions,
+  hydrateMentions,
+  type Mention,
+  mentionMarkdown,
+} from "./mentions.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
 import { ReplyChip } from "./reply-chip.tsx";
@@ -304,7 +310,7 @@ export function Composer({
   const entrySaving = useRef(savedFields === null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const editInputMentions = useMentionEdit(textareaRef);
+  const editInputMentions = useMentionEdit(textareaRef, { text, mentions: mentionsRef.current });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const conversation = useConversationName(roomId);
   const placeholder = placeholderOverride ?? placeholderFor(conversation);
@@ -509,7 +515,8 @@ export function Composer({
   };
 
   const apply = (edit: TextEdit) => {
-    update(edit.value);
+    const next = formatMentions({ text: textRef.current, mentions: mentionsRef.current }, edit);
+    update(next.text, next.mentions);
     setRestore({ start: edit.start, end: edit.end });
     focusInput();
   };
@@ -1215,7 +1222,11 @@ export function Composer({
 
     const insertion = item.kind === "mention" ? `@${item.user.name}` : item.insert;
     const completion = applyCompletion(text, trigger, insertion);
-    const shifted = editMentions({ text, mentions: mentionsRef.current }, completion.value);
+
+    const shifted = editMentions({ text, mentions: mentionsRef.current }, completion.value, {
+      start: trigger.start,
+      end: trigger.end,
+    });
 
     const mentions =
       item.kind === "mention"

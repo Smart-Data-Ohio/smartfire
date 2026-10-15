@@ -1,5 +1,6 @@
 /** A picked mention keeps its displayed text and the server token it must send. */
-import type { DraftMention } from "../../sync/composer-actions.ts";
+import type { TextEdit } from "./markdown-keys.ts";
+import type { DraftMention } from "./mentions-schema.ts";
 
 export type Mention = DraftMention;
 
@@ -92,16 +93,91 @@ export function editMentions(
   const delta = text.length - current.text.length;
 
   const mentions = current.mentions.flatMap((mention) => {
-    if (mention.start + mention.text.length <= start) {
+    const mentionEnd = mention.start + mention.text.length;
+
+    if (mentionEnd <= start) {
+      if (mentionEnd === start && /^[\p{L}\p{N}\p{M}_]/u.test(text.slice(mentionEnd))) return [];
+
       return [mention];
     }
 
     if (mention.start >= end) {
-      return [{ ...mention, start: mention.start + delta }];
+      const nextStart = mention.start + delta;
+
+      if (mention.start === end && /[\p{L}\p{N}\p{M}_]$/u.test(text.slice(0, nextStart))) return [];
+
+      return [{ ...mention, start: nextStart }];
     }
 
     return [];
   });
 
   return { text, mentions };
+}
+
+/** Emphasis wraps keep identities; code and links intentionally become literal names. */
+export function formatMentions(current: MentionText, edit: TextEdit): MentionText {
+  for (const marker of ["**", "*", "__", "_", "~~"]) {
+    const size = marker.length;
+    const start = edit.start - size;
+    const end = edit.end - size;
+
+    if (
+      start >= 0 &&
+      edit.value ===
+        current.text.slice(0, start) +
+          marker +
+          current.text.slice(start, end) +
+          marker +
+          current.text.slice(end)
+    ) {
+      return {
+        text: edit.value,
+        mentions: current.mentions.flatMap((mention) => {
+          const mentionEnd = mention.start + mention.text.length;
+
+          if (mentionEnd <= start) return [mention];
+
+          if (mention.start >= end) return [{ ...mention, start: mention.start + 2 * size }];
+
+          if (mention.start >= start && mentionEnd <= end) {
+            return [{ ...mention, start: mention.start + size }];
+          }
+
+          return [];
+        }),
+      };
+    }
+
+    // toggleWrap also removes markers, with or without the markers in the selection.
+    if (
+      current.text ===
+      edit.value.slice(0, edit.start) +
+        marker +
+        edit.value.slice(edit.start, edit.end) +
+        marker +
+        edit.value.slice(edit.end)
+    ) {
+      return {
+        text: edit.value,
+        mentions: current.mentions.flatMap((mention) => {
+          const mentionEnd = mention.start + mention.text.length;
+
+          if (mentionEnd <= edit.start) return [mention];
+
+          if (mention.start >= edit.end + 2 * size) {
+            return [{ ...mention, start: mention.start - 2 * size }];
+          }
+
+          if (mention.start >= edit.start + size && mentionEnd <= edit.end + size) {
+            return [{ ...mention, start: mention.start - size }];
+          }
+
+          return [];
+        }),
+      };
+    }
+  }
+
+  return editMentions(current, edit.value);
 }

@@ -1,14 +1,14 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
 import type { UpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
-import { store } from "../../store/store.ts";
+import { useStore } from "../../store/store.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { AttachmentTray } from "../composer/attachments/attachment-tray.tsx";
 import { MAX_FILES, useAttachments } from "../composer/attachments/use-attachments.ts";
-import { hydrateMentions, mentionMarkdown } from "../composer/mentions.ts";
+import { hydrateMentions, type MentionText, mentionMarkdown } from "../composer/mentions.ts";
 import {
   customTimeProblem,
   fromLocalInput,
@@ -84,14 +84,15 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const [kept, setKept] = useState(item.attachments);
   const uploads = useAttachments(MAX_FILES - kept.length);
 
-  const [draft, setDraft] = useState(() =>
-    hydrateMentions(item.markdownSource, (id) => store.getState().users[id]?.name),
-  );
+  const users = useStore((state) => state.users);
+  const [source] = useState(item.markdownSource);
+  const [editedDraft, setDraft] = useState<MentionText | null>(null);
+  const draft = editedDraft ?? hydrateMentions(source, (id) => users[id]?.name);
 
   const text = draft.text;
   const markdown = mentionMarkdown(draft);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const editInputMentions = useMentionEdit(textareaRef);
+  const editInputMentions = useMentionEdit(textareaRef, draft);
   const [when, setWhen] = useState(() => toLocalInput(new Date(item.sendAt)));
   const [replyTo, setReplyTo] = useState(item.replyToMessageId);
   const [choosingReply, setChoosingReply] = useState(false);

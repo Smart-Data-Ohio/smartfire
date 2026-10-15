@@ -324,6 +324,70 @@ describe("mention autocomplete", () => {
     await waitFor(() => expect(send).toHaveBeenCalledWith(ROOM, "<@456>", expect.any(Object)));
   });
 
+  it.each([
+    { key: "b", shiftKey: false, expected: "**<@14>**" },
+    { key: "i", shiftKey: false, expected: "_<@14>_" },
+    { key: "x", shiftKey: true, expected: "~~<@14>~~" },
+    { key: "e", shiftKey: false, expected: "`@Jon Dixon`" },
+    { key: "u", shiftKey: true, expected: "[@Jon Dixon](url)" },
+  ])("formats a selected mention with Ctrl+$key", async ({ key, shiftKey, expected }) => {
+    store.setState({ users: { 14: userFixture(14, "Jon Dixon") } });
+    writeDraft(draftKey(ROOM, null), "<@14>");
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Message" });
+    input.setSelectionRange(0, input.value.length);
+    fireEvent.keyDown(input, { key, ctrlKey: true, shiftKey });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(send).toHaveBeenCalledWith(ROOM, expected, expect.any(Object)));
+  });
+
+  it("picks two mentions in one session and shifts them for an emoji pick before them", async () => {
+    Element.prototype.scrollIntoView = () => undefined;
+    vi.spyOn(composerActions, "suggestUsers").mockResolvedValue([
+      { user: userFixture(14, "A*_B[team]"), mentionToken: "<@14>" },
+    ]);
+    vi.spyOn(composerActions, "suggestIcons").mockResolvedValue([
+      {
+        name: "wave",
+        title: "Wave",
+        kind: "emoji",
+        character: "👋",
+        imageUrl: null,
+        animated: false,
+        stillUrl: null,
+      },
+    ]);
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Message" });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "@a" } });
+    fireEvent.click(await screen.findByRole("option", { name: "A*_B[team]" }));
+    fireEvent.change(input, {
+      target: {
+        value: "@A*_B[team] @a",
+        selectionStart: "@A*_B[team] @a".length,
+        selectionEnd: "@A*_B[team] @a".length,
+      },
+    });
+    await waitFor(() => expect(input.getAttribute("aria-controls")).not.toBeNull());
+    fireEvent.click(await screen.findByRole("option", { name: "A*_B[team]" }));
+    expect(input.value).toBe("@A*_B[team] @A*_B[team] ");
+    input.setSelectionRange(0, 0);
+    fireEvent(input, new InputEvent("beforeinput", { bubbles: true, inputType: "insertText" }));
+    fireEvent.change(input, {
+      target: { value: ":wa @A*_B[team] @A*_B[team] ", selectionStart: 3, selectionEnd: 3 },
+    });
+    fireEvent.click(await screen.findByRole("option", { name: /Wave/ }));
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() =>
+      expect(send).toHaveBeenCalledWith(ROOM, ":wave: <@14> <@14>", expect.any(Object)),
+    );
+  });
+
   it("hydrates legacy token drafts and sends mention tokens when scheduling", async () => {
     store.setState({ users: { 14: userFixture(14, "Jon Dixon") } });
     writeDraft(draftKey(ROOM, null), "Hello <@14>, typed @Jon");
