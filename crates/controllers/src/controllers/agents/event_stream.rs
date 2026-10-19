@@ -178,7 +178,10 @@ async fn monitor(
         tokio::select! {
             biased;
             _ = stopped.closed() => return,
-            _ = sleep_until(deadline.min(fresh_until)) => break,
+            _ = sleep_until(deadline.min(fresh_until)) => {
+                tracing::debug!(lifetime = Instant::now() >= deadline, "Agent event stream health deadline expired");
+                break;
+            },
             _ = sleep_until(next_check) => {}
         }
         let secret = secret.clone();
@@ -201,7 +204,10 @@ async fn monitor(
         let allowed = tokio::select! {
             biased;
             _ = stopped.closed() => return,
-            _ = sleep_until(deadline.min(fresh_until)) => break,
+            _ = sleep_until(deadline.min(fresh_until)) => {
+                tracing::debug!(lifetime = Instant::now() >= deadline, "Agent event stream health deadline expired during database check");
+                break;
+            },
             allowed = allowed => allowed,
         };
         match allowed {
@@ -209,7 +215,10 @@ async fn monitor(
                 fresh_until = checked_at + timing.recheck;
                 next_check = checked_at + timing.recheck / 2;
             }
-            Ok((false, _)) => break,
+            Ok((false, _)) => {
+                tracing::debug!("Agent event stream is no longer authorized");
+                break;
+            }
             Err(error) => {
                 tracing::warn!(%error, "Agent event stream credential check failed");
                 break;
