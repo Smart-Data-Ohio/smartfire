@@ -494,24 +494,46 @@
 
   /* ── Attachments ────────────────────────────────────────────────────────── */
 
+  /* Room for the action bubble below the message bar, which covers the top of the row. */
+  .attachment-image,
+  .attachment-grid {
+    --image-floor: 80;
+  }
+
   .attachment-image {
-    display: block;
-    max-width: 100%;
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: fit-content;
+    min-width: calc(var(--image-floor) * 1px);
+    max-width: min(100%, 400px);
+    min-height: calc(var(--image-floor) * 1px);
     margin-top: var(--message-accessory-gap, var(--space-1-5));
-    padding: 0;
-    overflow: hidden;
-    border: 0;
     border-radius: var(--radius-md);
     background: var(--bg-skeleton);
     box-shadow: inset 0 0 0 1px var(--shadow-ring);
+  }
+
+  .attachment-image-open {
+    display: grid;
+    place-items: center;
+    place-self: stretch;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: inherit;
+    background: none;
     cursor: zoom-in;
+  }
+
+  .attachment-image.attachment-pending {
+    overflow: hidden;
   }
 
   .attachment-image img {
     display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 300px;
     opacity: 0;
     transition: opacity var(--duration-small) var(--ease-enter);
   }
@@ -524,9 +546,51 @@
     opacity: 1;
   }
 
-  .attachment-image:focus-visible {
+  .attachment-image:has(> .attachment-image-open:focus-visible) {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
+  }
+
+  .attachment-image-open:focus-visible {
+    outline: none;
+  }
+
+  .attachment-image-actions {
+    position: absolute;
+    right: var(--space-1-5);
+    bottom: var(--space-1-5);
+    display: flex;
+    gap: 1px;
+    padding: 2px;
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow:
+      0 0 0 1px var(--border-strong),
+      var(--shadow-raised);
+    opacity: 0;
+    translate: 0 var(--distance-micro);
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    .attachment-image:hover > .attachment-image-actions {
+      opacity: 1;
+      translate: none;
+      pointer-events: auto;
+      transition:
+        opacity var(--duration-micro) var(--ease-enter) var(--duration-intent),
+        translate var(--duration-micro) var(--ease-enter) var(--duration-intent);
+    }
+  }
+
+  .attachment-image:has(:focus-visible) > .attachment-image-actions,
+  .attachment-image-actions:focus-within {
+    opacity: 1;
+    translate: none;
+    pointer-events: auto;
+    transition:
+      opacity var(--duration-micro) var(--ease-enter) var(--duration-intent),
+      translate var(--duration-micro) var(--ease-enter) var(--duration-intent);
   }
 
   .attachment-video {
@@ -591,16 +655,6 @@
     text-decoration: underline;
   }
 
-  .attachment-image.attachment-pending {
-    width: fit-content;
-    max-width: min(100%, 400px);
-    cursor: default;
-  }
-
-  .attachment-image.attachment-pending img {
-    max-height: 300px;
-  }
-
   .attachment-pending .attachment-file-name:hover {
     color: var(--text);
     text-decoration: none;
@@ -624,9 +678,22 @@
     max-width: 100%;
   }
 
+  /* At most --columns across, and fewer when a tile would come out smaller than the floor. */
   .attachment-grid {
+    --columns: 3;
+
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(
+          max(
+            calc(var(--image-floor) * 1px),
+            (100% - (var(--columns) - 1) * var(--space-1)) /
+            var(--columns)
+          ),
+          1fr
+        )
+      );
     gap: var(--space-1);
     width: min(100%, 480px);
     margin: var(--message-accessory-gap, var(--space-1-5)) 0 0;
@@ -635,7 +702,7 @@
   }
 
   .attachment-grid[data-columns="2"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    --columns: 2;
   }
 
   .attachment-cell {
@@ -653,13 +720,16 @@
     border-radius: var(--radius-sm);
   }
 
+  .attachment-tile.attachment-image img {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    object-fit: cover;
+  }
+
   .attachment-tile.attachment-video {
     object-fit: contain;
     background: var(--bg-skeleton);
-  }
-
-  .attachment-tile.attachment-image.attachment-pending img {
-    max-height: none;
   }
 
   /* ── Lightbox ───────────────────────────────────────────────────────────── */
@@ -945,6 +1015,12 @@
   @media (width < 720px) {
     .message-bar {
       display: none;
+    }
+
+    /* No message bar to clear, so small images keep their own size. */
+    .attachment-image,
+    .attachment-grid {
+      --image-floor: 0;
     }
 
     .button.reaction-add {
