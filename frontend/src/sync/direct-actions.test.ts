@@ -61,6 +61,10 @@ describe("direct actions", () => {
           directMemberIds: [3, 4],
         });
       });
+      yield* fake.reply(
+        "GET /sidebar",
+        sidebarFixture([sidebarRowFixture(20, "Launch crew", "direct", [3, 4])]),
+      );
 
       yield* directs.rename(20, "  Launch crew ");
 
@@ -77,11 +81,16 @@ describe("direct actions", () => {
       const fake = yield* FakeApi;
 
       yield* fake.reply("PATCH /directs/20", roomDetailFixture(20));
+      yield* fake.reply(
+        "GET /sidebar",
+        sidebarFixture([sidebarRowFixture(20, "Ada Lovelace, Grace Hopper", "direct", [3, 4])]),
+      );
       yield* directs.rename(20, "   ");
 
       const requests = yield* fake.requests;
 
-      expect(requests.at(-1)?.body).toEqual({ name: null });
+      expect(requests.find((request) => request.method === "PATCH")?.body).toEqual({ name: null });
+      expect(store.getState().sidebar.rows[20]?.displayName).toBe("Ada Lovelace, Grace Hopper");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -115,10 +124,19 @@ describe("direct actions", () => {
         directMemberIds: [3, 4, 5],
         users: [userFixture(5, "Ana Lima")],
       });
+      yield* fake.reply(
+        "GET /sidebar",
+        sidebarFixture([
+          sidebarRowFixture(20, "Ada Lovelace, Ana Lima, Grace Hopper", "direct", [3, 4, 5]),
+        ]),
+      );
 
       yield* directs.addMembers(20, [5]);
 
       expect(store.getState().sidebar.rows[20]?.directMemberIds).toEqual([3, 4, 5]);
+      expect(store.getState().sidebar.rows[20]?.displayName).toBe(
+        "Ada Lovelace, Ana Lima, Grace Hopper",
+      );
       expect(store.getState().users[5]?.name).toBe("Ana Lima");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );

@@ -36,16 +36,18 @@ describe("room metadata follows sidebar sync", () => {
     expect(next.timelines[20]).toBe(loaded.timelines[20]);
   });
 
-  it("updates direct display names and avatar ids, including a fresh sidebar snapshot", () => {
-    const row = sidebarRowFixture(20, "Ada and Grace", "direct", [8, 9]);
-    const loaded = setRoomDetail(initialState, roomDetailFixture(20));
+  it("updates direct sidebar names and avatar ids while keeping the header format", () => {
+    const row = sidebarRowFixture(20, "Ada Lovelace, Grace Hopper", "direct", [8, 9]);
+    const detail = { ...roomDetailFixture(20), room: row.room, displayName: "Ada, Grace" };
+    const loaded = setRoomDetail(initialState, detail);
     const synced = applyEvents(loaded, [rowEvent(row)], 0);
 
     expect(synced.rooms[20]?.detail?.directMemberIds).toEqual([8, 9]);
-    expect(synced.rooms[20]?.detail?.displayName).toBe("Ada and Grace");
+    expect(synced.sidebar.rows[20]?.displayName).toBe("Ada Lovelace, Grace Hopper");
+    expect(synced.rooms[20]?.detail?.displayName).toBe("Ada, Grace");
     expect(
       loadSidebar(loaded, sidebarFixture([row]), rowClock(loaded)).rooms[20]?.detail?.displayName,
-    ).toBe("Ada and Grace");
+    ).toBe("Ada, Grace");
   });
 
   it("does not create an unloaded detail or revoke access for a hidden row removal", () => {

@@ -14,6 +14,34 @@ import { collect, expectStatus, get, harness, messageBody, send } from "./testin
 const { rooms, users, threads, messages, viewer } = SEED_IDS;
 
 describe("directs", () => {
+  it("sorts full sidebar names and limits groups without changing the header", async () => {
+    const { server } = harness();
+    const events = collect(server);
+    const created = await expectStatus<SidebarRow>(
+      server,
+      "POST",
+      "/api/v1/directs",
+      {
+        userIds: [users.theo, users.sam, users.priya, users.maya, users.jonah],
+      },
+      201,
+    );
+    const label = "Jonah Lindqvist, Maya Okafor, Priya Raman +2";
+
+    expect(created.displayName).toBe(label);
+    expect(events.find((event) => event.type === "sidebar.row.upserted")).toMatchObject({
+      data: { displayName: label },
+    });
+    const sidebar = await get<Sidebar>(server, "/api/v1/sidebar");
+
+    expect(sidebar.rows.find((row) => row.room.id === created.room.id)?.displayName).toBe(label);
+    const header = await get<RoomDetail>(server, `/api/v1/rooms/${created.room.id}`);
+
+    expect(header.displayName).toBe(
+      "Maya Okafor, Jonah Lindqvist, Priya Raman, Sam Whitfield, Theo Nakamura",
+    );
+  });
+
   it("lists candidates, you then starred first", async () => {
     const { server } = harness();
     const list = await get<DirectCandidateList>(server, "/api/v1/directs/candidates");

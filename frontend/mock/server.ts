@@ -531,13 +531,25 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const sidebarRow = (record: RoomRecord): SidebarRow => {
     const unreadCount = unreadMessages(record).length;
+    const names = usersFor(directMemberIds(record))
+      .map((user) => user.name)
+      .sort((a, b) =>
+        a.toLowerCase() < b.toLowerCase() ? -1 : a.toLowerCase() > b.toLowerCase() ? 1 : 0,
+      );
+    const directLabel =
+      names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
 
     const row: SidebarRow = {
       revision: world.activityRevision,
       evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
-      displayName: displayName(record),
+      displayName:
+        record.room.kind === "direct"
+          ? record.room.name?.trim()
+            ? record.room.name
+            : directLabel
+          : displayName(record),
       directMemberIds: directMemberIds(record),
       unreadCount,
       mentionCount: record.mentionCount,

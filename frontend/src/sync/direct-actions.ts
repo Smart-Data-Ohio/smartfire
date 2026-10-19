@@ -8,6 +8,7 @@ import * as api from "../api/direct-endpoints.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { RoomDetail, SidebarRow } from "../store/model.ts";
 import { mutations, store } from "../store/store.ts";
+import { refetchSidebar } from "./organize-actions.ts";
 import { invalidateRoom } from "./room-refresh.ts";
 import { withRowTicket } from "./row-ticket.ts";
 
@@ -26,29 +27,15 @@ const upsertRow = Effect.fn("directs.upsertRow")(function* (row: SidebarRow, sin
   );
 });
 
-/** A renamed or grown DM's header data, mirrored onto its sidebar row (label and avatars). */
-const landDetail = Effect.fn("directs.landDetail")(function* (detail: RoomDetail, since: number) {
+const landDetail = Effect.fn("directs.landDetail")(function* (detail: RoomDetail) {
   const started = beginRoomRequest();
 
   if (!mutations.setRoomDetail(detail, started)) {
     return detail;
   }
 
-  const row = store.getState().sidebar.rows[detail.room.id];
-
-  if (row !== undefined) {
-    yield* upsertRow(
-      {
-        ...row,
-        room: detail.room,
-        displayName: detail.displayName,
-        directMemberIds: detail.directMemberIds,
-      },
-      since,
-    );
-  }
-
   invalidateRoom(detail.room.id);
+  yield* refetchSidebar;
 
   return detail;
 });
@@ -80,22 +67,16 @@ export const addMembers = Effect.fn("directs.addMembers")(function* (
   roomId: number,
   userIds: readonly number[],
 ) {
-  return yield* withRowTicket((since) =>
-    api
-      .addDirectMembers(roomId, userIds)
-      .pipe(Effect.flatMap((detail) => landDetail(detail, since))),
-  );
+  return yield* api.addDirectMembers(roomId, userIds).pipe(Effect.flatMap(landDetail));
 });
 
 /** Names a group DM (blank or `null` goes back to the members' names). */
 export const rename = Effect.fn("directs.rename")(function* (roomId: number, name: string | null) {
   const trimmed = name?.trim() ?? "";
 
-  return yield* withRowTicket((since) =>
-    api
-      .renameDirect(roomId, trimmed === "" ? null : trimmed)
-      .pipe(Effect.flatMap((detail) => landDetail(detail, since))),
-  );
+  return yield* api
+    .renameDirect(roomId, trimmed === "" ? null : trimmed)
+    .pipe(Effect.flatMap(landDetail));
 });
 
 /** The quick switcher's catalogue: rooms, people and recent threads, profiles in the store. */

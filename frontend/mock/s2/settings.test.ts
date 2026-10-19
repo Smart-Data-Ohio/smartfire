@@ -12,6 +12,7 @@ import type { PushPublicKey } from "../../src/gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../../src/gen/PushSubscriptionList.ts";
 import type { SessionList } from "../../src/gen/SessionList.ts";
 import type { Settings } from "../../src/gen/Settings.ts";
+import type { SidebarRow } from "../../src/gen/SidebarRow.ts";
 import type { Json } from "../json.ts";
 import { USER_IDS } from "../seed.ts";
 import { MOCK_PASSWORD } from "./settings.ts";
@@ -34,6 +35,35 @@ it("publishes the public identity when the profile nickname changes", async () =
     type: "user.updated",
     data: { id: USER_IDS.riel, name: "NickExample", pronouns: "they/them" },
   });
+});
+
+it("publishes full sidebar names when a member renames themselves", async () => {
+  const { server } = harness();
+  const notes = await expectStatus<SidebarRow>(
+    server,
+    "POST",
+    "/api/v1/directs",
+    { userIds: [] },
+    201,
+  );
+  const events = collect(server);
+
+  await expectStatus(
+    server,
+    "PATCH",
+    "/api/v1/settings/profile",
+    {
+      name: "Riel Full Surname",
+      nickname: null,
+    },
+    200,
+  );
+
+  expect(
+    events.find(
+      (event) => event.type === "sidebar.row.upserted" && event.data.room.id === notes.room.id,
+    ),
+  ).toMatchObject({ data: { displayName: "Riel Full Surname" } });
 });
 
 /** Every key of a write body, `null` unless given. */

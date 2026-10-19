@@ -42,6 +42,7 @@ import type {
 import { isNoteToSelf } from "./note-to-self.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
 import { removeCategory, replyCategories, upsertCategory } from "./organize.ts";
+import { withSidebarRow } from "./room-detail.ts";
 import {
   changedRowIds,
   claimDivider,
@@ -1053,13 +1054,7 @@ function setDetailRow(state: State, row: SidebarRow): State {
         ...loaded,
         // The patch retired the read that had set loading; that read must not land later.
         status: loaded.status === "loading" ? "ready" : loaded.status,
-        detail: {
-          ...loaded.detail,
-          room: row.room,
-          membership: row.membership,
-          displayName: row.displayName,
-          directMemberIds: row.directMemberIds,
-        },
+        detail: withSidebarRow(loaded.detail, row),
       },
     },
   };
