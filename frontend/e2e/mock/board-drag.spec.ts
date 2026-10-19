@@ -204,7 +204,7 @@ test("Escape and a drop outside every column put the card back", async ({ page }
   await expect(card(page, "Planned", /Launch week plan/)).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/r/${BOARD}\\?view=board$`));
 
-  const toolbar = await center(page.getByRole("button", { name: "New post" }));
+  const toolbar = await center(page.getByRole("button", { name: "New post", exact: true }));
 
   await holdOver(page, card(page, "Planned", /Launch week plan/), toolbar);
   await page.mouse.up();
@@ -487,4 +487,123 @@ test("a queued move landing in the same sync batch as a held card's move leaves 
   await expect(card(page, "Done", /Launch week plan/)).toBeFocused();
   await expect(column(page, "Done").locator('[data-dragging="keyboard"]')).toHaveCount(1);
   expect(writes).toHaveLength(1);
+});
+
+test("a release after the board scrolls under a held card saves the column under the pointer", async ({
+  page,
+}) => {
+  const writes = workWrites(page);
+
+  await openSyncedBoard(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+
+  const pointer = await center(column(page, "In progress"));
+
+  await holdOver(page, card(page, "Planned", /Launch week plan/), pointer);
+  await expect(column(page, "In progress").getByText("Moves here")).toBeVisible();
+
+  const blocked = await center(column(page, "Blocked"));
+
+  await page.locator(".board-columns").evaluate((board, by) => {
+    board.scrollLeft += by;
+  }, blocked.x - pointer.x);
+  await expect
+    .poll(async () => (await center(column(page, "Blocked"))).x)
+    .toBeCloseTo(pointer.x, -1);
+
+  await expect(column(page, "Blocked").getByText("Moves here")).toBeVisible();
+  await expect(column(page, "In progress").getByText("Moves here")).toHaveCount(0);
+  await page.mouse.up();
+
+  await expect(card(page, "Blocked", /Launch week plan/)).toBeVisible();
+  await expect.poll(() => writes.length).toBe(1);
+  expect(writes[0]?.postDataJSON()).toEqual({ status: "blocked" });
+});
+
+test("another pointer lifting or cancelling elsewhere doesn't end a held card's drag", async ({
+  page,
+}) => {
+  const writes = workWrites(page);
+
+  await openSyncedBoard(page);
+  await holdOver(
+    page,
+    card(page, "Planned", /Launch week plan/),
+    await center(column(page, "In progress")),
+  );
+  await expect(column(page, "In progress").getByText("Moves here")).toBeVisible();
+
+  const elsewhere = await center(column(page, "Done"));
+
+  await page.evaluate(({ x, y }) => {
+    const target = document.elementFromPoint(x, y) ?? document.body;
+
+    for (const type of ["pointerdown", "pointerup", "pointercancel"]) {
+      target.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId: 41,
+          pointerType: "touch",
+          isPrimary: false,
+          clientX: x,
+          clientY: y,
+          bubbles: true,
+        }),
+      );
+    }
+  }, elsewhere);
+  await page.waitForTimeout(300);
+
+  expect(writes).toHaveLength(0);
+  await expect(column(page, "In progress").getByText("Moves here")).toBeVisible();
+
+  await page.mouse.up();
+
+  await expect(card(page, "In progress", /Launch week plan/)).toBeVisible();
+  await expect.poll(() => writes.length).toBe(1);
+  expect(writes[0]?.postDataJSON()).toEqual({ status: "in_progress" });
+});
+
+test("a held card goes back when the page loses its pointer", async ({ page }) => {
+  const writes = workWrites(page);
+
+  await openSyncedBoard(page);
+  await page.evaluate(() => {
+    window.addEventListener(
+      "pointerdown",
+      (event) => {
+        document.documentElement.dataset.testPointer = String(event.pointerId);
+      },
+      { capture: true },
+    );
+  });
+  await holdOver(
+    page,
+    card(page, "Planned", /Launch week plan/),
+    await center(column(page, "In progress")),
+  );
+  await expect(column(page, "In progress").getByText("Moves here")).toBeVisible();
+
+  const released = await page.evaluate(() => {
+    const pointerId = Number(document.documentElement.dataset.testPointer);
+    const holder = [...document.querySelectorAll("*")].find((element) =>
+      element.hasPointerCapture(pointerId),
+    );
+
+    holder?.releasePointerCapture(pointerId);
+
+    return holder !== undefined;
+  });
+
+  expect(released).toBe(true);
+
+  const current = await center(column(page, "In progress"));
+
+  await page.mouse.move(current.x + 4, current.y + 4);
+  await expect(column(page, "In progress").getByText("Moves here")).toHaveCount(0);
+  await page.mouse.up();
+
+  await expect(card(page, "Planned", /Launch week plan/)).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/r/${BOARD}\\?view=board$`));
+  await page.waitForTimeout(300);
+  expect(writes).toHaveLength(0);
 });

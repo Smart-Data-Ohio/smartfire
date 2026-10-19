@@ -364,10 +364,12 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
     }
 
     const card = event.currentTarget;
+    const { pointerId } = event;
     const start = { x: event.clientX, y: event.clientY };
     let point = start;
     let grab = { x: 0, y: 0 };
     let ghost: HTMLElement | null = null;
+    let captor: HTMLElement | null = null;
     let frame = 0;
     let cancelled = false;
 
@@ -410,7 +412,6 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
         if (speed !== 0) {
           board.scrollLeft += speed;
-          retarget();
         }
       }
 
@@ -425,6 +426,8 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       place();
       window.getSelection()?.removeAllRanges();
       document.documentElement.dataset.boardDragging = "true";
+      captor = boardRef.current;
+      captor?.setPointerCapture(pointerId);
       update({
         phase: "lifted",
         threadId,
@@ -436,6 +439,10 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
     };
 
     const move = (moved: PointerEvent) => {
+      if (moved.pointerId !== pointerId) {
+        return;
+      }
+
       point = { x: moved.clientX, y: moved.clientY };
 
       if (ghost === null) {
@@ -454,13 +461,19 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("pointercancel", lose);
+      window.removeEventListener("lostpointercapture", lose);
+      window.removeEventListener("scroll", retarget, { capture: true });
       window.removeEventListener("blur", cancel);
       window.removeEventListener("keydown", onEscape, { capture: true });
       stopPointer.current = null;
     };
 
-    const up = () => {
+    const up = (released: PointerEvent) => {
+      if (released.pointerId !== pointerId) {
+        return;
+      }
+
       stop();
 
       if (ghost === null) {
@@ -473,8 +486,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
         return;
       }
 
-      const current = latest.current;
-      const over = current?.phase === "lifted" ? current.over : null;
+      const over = statusAt(boardRef.current, released.clientX, released.clientY);
 
       if (!tryLand(threadId, over, ghost)) {
         sendBack(threadId, ghost);
@@ -486,6 +498,17 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
       if (ghost !== null && !cancelled) {
         sendBack(threadId, ghost);
+      }
+    };
+
+    // A pen's implicit capture on the card moves to the board at the lift, which tells the card it
+    // lost the pointer; only the board losing it ends the drag.
+    const lose = (lost: PointerEvent) => {
+      if (
+        lost.pointerId === pointerId &&
+        (lost.type === "pointercancel" || (captor !== null && lost.target === captor))
+      ) {
+        cancel();
       }
     };
 
@@ -509,7 +532,9 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", cancel);
+    window.addEventListener("pointercancel", lose);
+    window.addEventListener("lostpointercapture", lose);
+    window.addEventListener("scroll", retarget, { capture: true, passive: true });
     window.addEventListener("blur", cancel);
     window.addEventListener("keydown", onEscape, { capture: true });
   };

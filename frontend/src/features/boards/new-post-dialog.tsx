@@ -113,6 +113,16 @@ interface Draft {
 
 const EMPTY: Draft = { name: "", brief: "", status: "planned", ownerId: "", tags: "" };
 
+/** Nothing typed or picked yet, the status aside. */
+function untouched(draft: Draft): boolean {
+  return (
+    draft.name === EMPTY.name &&
+    draft.brief === EMPTY.brief &&
+    draft.ownerId === EMPTY.ownerId &&
+    draft.tags === EMPTY.tags
+  );
+}
+
 /** The owner picker: Unassigned, then the board's people, then its agents, as the classic form. */
 function OwnerSelect({
   form,
@@ -212,18 +222,20 @@ function TagSuggestions({
 interface NewPostDialogProps {
   readonly roomId: number;
   readonly open: boolean;
+  /** The status a fresh draft starts in: the column it was opened from. */
+  readonly status: WorkStatus;
   readonly onClose: () => void;
   readonly onCreated: (threadId: number) => void;
 }
 
 /**
  * "New post" (classic `channel_threads#new` on a board): a title, an optional Markdown brief that
- * becomes the first message, the status (Planned by default), an owner (Unassigned by default)
+ * becomes the first message, the status (the column's when opened from one), an owner (Unassigned by default)
  * and up to five tags: the board's curated ones as chips (its default picked to start, at least
  * one needed when the board requires it), then free-text ones as before. The chips follow the
  * catalog live. Creating it opens the post in the right pane.
  */
-export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialogProps) {
+export function NewPostDialog({ roomId, open, status, onClose, onCreated }: NewPostDialogProps) {
   const roomName = useStore((state) => state.rooms[roomId]?.detail?.displayName ?? null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   // The picked curated tags; `null` until the viewer touches a chip, so the default (which may
@@ -295,6 +307,12 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
     };
   }, [open, roomId]);
 
+  useEffect(() => {
+    if (open) {
+      setDraft((previous) => (untouched(previous) ? { ...previous, status } : previous));
+    }
+  }, [open, status]);
+
   const set = (patch: Partial<Draft>) => setDraft((previous) => ({ ...previous, ...patch }));
   const freeTags = parseTags(draft.tags);
   const startSelection = initialSelection(catalog);
@@ -302,11 +320,8 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
   const tags = postTagNames(catalog.tags, selection, freeTags);
 
   const dirty =
-    draft.name !== EMPTY.name ||
-    draft.brief !== EMPTY.brief ||
-    draft.status !== EMPTY.status ||
-    draft.ownerId !== EMPTY.ownerId ||
-    draft.tags !== EMPTY.tags ||
+    !untouched(draft) ||
+    draft.status !== status ||
     selection.join(",") !== startSelection.join(",") ||
     attachments.files.length > 0;
 

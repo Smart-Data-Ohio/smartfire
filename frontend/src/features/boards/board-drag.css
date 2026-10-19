@@ -46,7 +46,7 @@
   }
 
   .board-drag-ghost[data-returning] > .board-card {
-    box-shadow: var(--shadow-ring);
+    box-shadow: 0 0 0 1px var(--shadow-ring);
     rotate: 0deg;
     scale: 1;
   }
@@ -94,7 +94,7 @@
 
   @keyframes board-ghost-lift {
     from {
-      box-shadow: var(--shadow-ring);
+      box-shadow: 0 0 0 1px var(--shadow-ring);
       rotate: 0deg;
       scale: 1;
     }

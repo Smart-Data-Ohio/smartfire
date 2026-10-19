@@ -62,7 +62,13 @@ describe("the new-post dialog", () => {
     const aborted = installUploads(true);
 
     const dialog = (open: boolean) => (
-      <NewPostDialog roomId={900} open={open} onClose={() => {}} onCreated={() => {}} />
+      <NewPostDialog
+        roomId={900}
+        open={open}
+        status="planned"
+        onClose={() => {}}
+        onCreated={() => {}}
+      />
     );
 
     const { container, rerender } = render(dialog(true));
@@ -85,7 +91,7 @@ describe("the new-post dialog", () => {
     vi.spyOn(actions.boards, "createPost").mockReturnValue(pending.promise);
 
     const { container } = render(
-      <NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />,
+      <NewPostDialog roomId={900} open status="planned" onClose={() => {}} onCreated={() => {}} />,
     );
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "The upload" } });
@@ -146,7 +152,13 @@ describe("the new-post dialog", () => {
     );
 
     const { container } = render(
-      <NewPostDialog roomId={900} open onClose={() => undefined} onCreated={() => undefined} />,
+      <NewPostDialog
+        roomId={900}
+        open
+        status="planned"
+        onClose={() => undefined}
+        onCreated={() => undefined}
+      />,
     );
 
     const picker = container.querySelector<HTMLInputElement>('input[type="file"]');
@@ -188,7 +200,13 @@ describe("the new-post dialog", () => {
     Object.defineProperty(large, "size", { value: 100 * 1024 * 1024 + 1 });
 
     const { container } = render(
-      <NewPostDialog roomId={900} open onClose={() => undefined} onCreated={() => undefined} />,
+      <NewPostDialog
+        roomId={900}
+        open
+        status="planned"
+        onClose={() => undefined}
+        onCreated={() => undefined}
+      />,
     );
 
     const picker = container.querySelector<HTMLInputElement>('input[type="file"]');
@@ -229,6 +247,7 @@ describe("the new-post dialog", () => {
         key={roomId}
         roomId={roomId}
         open
+        status="planned"
         onClose={() => undefined}
         onCreated={created}
       />
@@ -285,7 +304,15 @@ describe("the new-post dialog", () => {
       const create = catalog(false, 2);
       const user = userEvent.setup();
 
-      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+      render(
+        <NewPostDialog
+          roomId={900}
+          open
+          status="planned"
+          onClose={() => {}}
+          onCreated={() => {}}
+        />,
+      );
 
       expect(chip("Idea").getAttribute("aria-pressed")).toBe("true");
       expect(chip("Bug report").getAttribute("aria-pressed")).toBe("false");
@@ -308,7 +335,15 @@ describe("the new-post dialog", () => {
       const create = catalog(true, 2);
       const user = userEvent.setup();
 
-      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+      render(
+        <NewPostDialog
+          roomId={900}
+          open
+          status="planned"
+          onClose={() => {}}
+          onCreated={() => {}}
+        />,
+      );
 
       expect(screen.getByText("Idea is the board's default.")).toBeTruthy();
 
@@ -330,7 +365,15 @@ describe("the new-post dialog", () => {
       const create = catalog(true, null);
       const user = userEvent.setup();
 
-      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+      render(
+        <NewPostDialog
+          roomId={900}
+          open
+          status="planned"
+          onClose={() => {}}
+          onCreated={() => {}}
+        />,
+      );
 
       expect(screen.getByText("Required")).toBeTruthy();
       expect(screen.getByText("Pick at least one.")).toBeTruthy();
@@ -356,7 +399,15 @@ describe("the new-post dialog", () => {
     it("follows a live catalog change: a deleted default stops being picked", async () => {
       catalog(false, 2);
 
-      render(<NewPostDialog roomId={900} open onClose={() => {}} onCreated={() => {}} />);
+      render(
+        <NewPostDialog
+          roomId={900}
+          open
+          status="planned"
+          onClose={() => {}}
+          onCreated={() => {}}
+        />,
+      );
 
       expect(chip("Idea").getAttribute("aria-pressed")).toBe("true");
 
