@@ -601,3 +601,27 @@ async fn push_device_class_survives_overlapping_classic_and_explicit_enrollment(
     assert_eq!(overlap.saved, 1);
     assert_eq!(overlap.device_class, Some(campfire_db::DeviceClass::Mobile));
 }
+
+#[tokio::test]
+async fn push_device_class_refresh_reclassifies_existing_subscription_and_skips_unchanged_writes() {
+    let Some((app, clock, _)) = app(&[]).await else { return; };
+    let mut browser = app.sign_in(DAVID).await;
+    let mut saved = Vec::new();
+    for class in ["desktop", "mobile", "mobile"] {
+        clock.advance(jiff::SignedDuration::from_secs(60));
+        let mut input = body(ENDPOINT, "p256", "auth");
+        input["deviceClass"] = json!(class);
+        let reply = browser.write(json_body(Method::POST, PATH, input)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let rows = app.db().read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID)).await.unwrap();
+        let rows: Vec<_> = rows.into_iter().filter(|row| row.endpoint.as_deref() == Some(ENDPOINT)).collect();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].device_class.unwrap().name(), class);
+        saved.push(rows.into_iter().next().unwrap());
+    }
+    assert_eq!(saved[0].id, saved[1].id);
+    assert_eq!(saved[1].id, saved[2].id);
+    assert_eq!(saved[0].created_at, saved[2].created_at);
+    assert_ne!(saved[0].updated_at, saved[1].updated_at);
+    assert_eq!(saved[1].updated_at, saved[2].updated_at);
+}

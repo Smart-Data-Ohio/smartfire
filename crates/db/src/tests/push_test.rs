@@ -135,6 +135,39 @@ fn push_routing_explicit_mobile_subscription_overrides_a_desktop_user_agent() {
     assert_eq!(deliveries(&t, "designers", "Tablet subscription".into()), 1);
 }
 
+fn desktop_site_reported_class() -> crate::DeviceClass {
+    let reported = std::env::var("PUSH_ROUTING_DESKTOP_SITE_CLASS").unwrap_or_else(|_| "mobile".into());
+    crate::DeviceClass::from_name(&reported).expect("browser classifier must report a valid device class")
+}
+
+#[test]
+fn push_routing_desktop_site_phone_is_suppressed_while_a_laptop_is_active() {
+    let t = TestDb::new();
+    let class = desktop_site_reported_class();
+    routing_lease(&t, DESKTOP_UA);
+    t.write(move |tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET user_agent=?, device_class=? WHERE user_id=?",
+            rusqlite::params![DESKTOP_UA, class, id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Laptop in use".into()), 1);
+}
+
+#[test]
+fn push_routing_desktop_site_phone_or_tablet_cannot_suppress_another_phone() {
+    for agent in [DESKTOP_UA, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"] {
+        let t = TestDb::new();
+        let class = desktop_site_reported_class();
+        routing_phone(&t);
+        t.write(move |tx| {
+            let session = crate::Session::start(tx, id("jason"), Some(agent), None)?;
+            crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(class))?;
+            Ok(())
+        });
+        assert_eq!(deliveries(&t, "designers", "Only a mobile device in use".into()), 2);
+    }
+}
+
 #[test]
 fn push_routing_mobile_or_unknown_lease_never_counts_as_a_computer() {
     for class in [crate::DeviceClass::Mobile, crate::DeviceClass::Unknown] {

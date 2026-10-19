@@ -8,6 +8,7 @@ import {
   type PushBrowser,
   type PushEnrollmentApi,
   type PushRegistration,
+  refreshPushSubscription,
   unsubscribePushEndpoint,
 } from "./push-enrollment.ts";
 
@@ -113,6 +114,54 @@ function fixture(permission: NotificationPermission = "default") {
 }
 
 describe("explicit browser push enrollment", () => {
+  it("refreshes an existing granted subscription on startup without prompting or enrolling", async () => {
+    const f = fixture("granted");
+
+    f.getSubscription.mockResolvedValue(f.subscription);
+    await refreshPushSubscription(f.browser, f.api);
+    await refreshPushSubscription(f.browser, f.api);
+    expect(f.createPushSubscription).toHaveBeenCalledTimes(2);
+    expect(f.createPushSubscription).toHaveBeenLastCalledWith({
+      endpoint: ENDPOINT,
+      p256dhKey: "p256",
+      authKey: "auth",
+      deviceClass: "mobile",
+    });
+    expect(f.requestPermission).not.toHaveBeenCalled();
+    expect(f.register).not.toHaveBeenCalled();
+    expect(f.subscribe).not.toHaveBeenCalled();
+    expect(f.pushPublicKey).not.toHaveBeenCalled();
+  });
+
+  it.each(["default", "denied"] as const)("does not refresh with %s permission", async (permission) => {
+    const f = fixture(permission);
+
+    f.getSubscription.mockResolvedValue(f.subscription);
+    await refreshPushSubscription(f.browser, f.api);
+    expect(f.createPushSubscription).not.toHaveBeenCalled();
+    expect(f.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh unsupported browsers, missing workers or missing subscriptions", async () => {
+    const f = fixture("granted");
+
+    await refreshPushSubscription(null, f.api);
+    await refreshPushSubscription(f.browser, f.api);
+    f.currentRegistration.mockResolvedValue(undefined);
+    await refreshPushSubscription(f.browser, f.api);
+    expect(f.createPushSubscription).not.toHaveBeenCalled();
+    expect(f.register).not.toHaveBeenCalled();
+    expect(f.subscribe).not.toHaveBeenCalled();
+  });
+
+  it("keeps startup usable when refreshing an existing subscription fails", async () => {
+    const f = fixture("granted");
+
+    f.getSubscription.mockResolvedValue(f.subscription);
+    f.createPushSubscription.mockRejectedValue(new Error("offline"));
+    await expect(refreshPushSubscription(f.browser, f.api)).resolves.toBeUndefined();
+  });
+
   it("requests permission synchronously, then registers the selected root worker and saves typed keys", async () => {
     const f = fixture();
     const run = enablePushNotifications(f.browser, f.api);
