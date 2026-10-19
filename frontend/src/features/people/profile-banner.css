@@ -2,6 +2,7 @@
 @layer app {
   .profile-hero {
     --profile-hero-avatar: 96px;
+    --profile-hero-ring: var(--bg-pane);
 
     display: flex;
     flex-direction: column;
@@ -46,7 +47,7 @@
     display: inline-flex;
     margin-top: calc(var(--profile-hero-avatar) * -0.5);
     border-radius: clamp(4px, calc(var(--profile-hero-avatar) * 0.24), 16px);
-    box-shadow: 0 0 0 4px var(--bg-pane);
+    box-shadow: 0 0 0 4px var(--profile-hero-ring);
   }
 
   /* Phones: a taller strip, so a narrow column doesn't flatten it to a sliver. */

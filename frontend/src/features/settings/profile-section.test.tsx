@@ -58,13 +58,15 @@ it("shows the server's identity validation error beside its field", async () => 
 });
 
 it("previews the banner slot empty, with the avatar's tint and an upload control", async () => {
-  const { container } = render(<Harness initial={await settings.load()} />);
+  render(<Harness initial={await settings.load()} />);
 
   expect(screen.getByRole("heading", { name: "Profile banner" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "Upload banner" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Remove banner" })).toBeNull();
   expect(
-    container.querySelector<HTMLElement>(".settings-banner .profile-banner")?.dataset.empty,
+    screen
+      .getByRole("figure", { name: "Profile preview" })
+      .querySelector<HTMLElement>(".profile-banner")?.dataset.empty,
   ).toBe("true");
 });
 
