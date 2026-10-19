@@ -104,6 +104,46 @@ function ImageFrame({
   );
 }
 
+/**
+ * Moves the bubble of each image in `bar`'s message that the row's hover bar covers to just below
+ * the bar, and returns the undo. The bar sits inside the row's top edge, so it covers the top right
+ * of an image that opens a follow-up message in a narrow column.
+ */
+export function clearImageActions(bar: HTMLElement): () => void {
+  const covering = bar.getBoundingClientRect();
+  const frames = bar.closest(".message")?.querySelectorAll<HTMLElement>(".attachment-image") ?? [];
+
+  const moved = [...frames].filter((frame) => {
+    const actions = frame.querySelector<HTMLElement>(".attachment-image-actions");
+
+    if (actions === null) {
+      return false;
+    }
+
+    const box = frame.getBoundingClientRect();
+    const top = box.top + actions.offsetTop;
+    const left = box.left + actions.offsetLeft;
+
+    const covered =
+      top < covering.bottom &&
+      top + actions.offsetHeight > covering.top &&
+      left < covering.right &&
+      left + actions.offsetWidth > covering.left;
+
+    if (covered) {
+      frame.style.setProperty("--bar-reach", `${covering.bottom - box.top}px`);
+    }
+
+    return covered;
+  });
+
+  return () => {
+    for (const frame of moved) {
+      frame.style.removeProperty("--bar-reach");
+    }
+  };
+}
+
 function ImageAttachment({ attachment }: { readonly attachment: Attachment }) {
   const [lightbox, setLightbox] = useState(CLOSED);
   const size = fitWithin(attachment.width, attachment.height, MEDIA_MAX);

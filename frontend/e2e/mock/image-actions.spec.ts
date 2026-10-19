@@ -7,6 +7,7 @@ import {
   PHONE_TOUCH,
   ROOM_IDS,
   shot,
+  TABLET,
   THEMES,
   type Theme,
   test,
@@ -135,6 +136,43 @@ for (const theme of THEMES) {
     await expect(page.getByRole("dialog", { name: "third.png" })).toContainText("3 of 3");
   });
 }
+
+test("over a picture that opens a follow-up message, the bubble sits below the message bar", async ({
+  page,
+}) => {
+  await page.setViewportSize(TABLET);
+  await openGeneral(page);
+  await composer(page).fill("A picture follows");
+  await composer(page).press("Enter");
+  await page.locator('.composer input[type="file"]').setInputFiles([picture("follow.png", LIGHT)]);
+  await expect(page.locator('.tray-chip[data-phase="done"]')).toHaveCount(1, { timeout: 15_000 });
+  await composer(page).press("Enter");
+
+  const row = page
+    .getByRole("log", { name: "Messages" })
+    .locator("[data-message-id]", { has: page.getByRole("button", { name: "Open follow.png" }) });
+
+  const image = row.locator(".attachment-image[data-loaded]");
+
+  await image.hover();
+
+  const bar = row.getByRole("toolbar", { name: "Message actions" });
+
+  await expect(bar).toBeVisible();
+  await expect(actions(image)).toHaveCSS("opacity", "1");
+
+  const barBox = await bar.boundingBox();
+  const bubbleBox = await actions(image).boundingBox();
+
+  expect(bubbleBox?.y ?? 0).toBeGreaterThanOrEqual((barBox?.y ?? 0) + (barBox?.height ?? 0));
+  await shot(page, "image-actions-below-message-bar", "light");
+
+  const saved = await downloadFrom(page, () =>
+    image.getByRole("button", { name: "Download follow.png" }).click(),
+  );
+
+  expect(saved.name).toBe("follow.png");
+});
 
 test("the keyboard reaches the download from the image", async ({ page }) => {
   await openGeneral(page);

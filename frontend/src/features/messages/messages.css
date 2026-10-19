@@ -542,17 +542,21 @@
   }
 
   /* Download and open-original, on the image's top right like the message bar on the row's. It
-     shows on hover and on keyboard focus, never on a tap: on touch the lightbox has both. */
+     shows on hover and on keyboard focus, never on a tap: on touch the lightbox has both. Where
+     the bar covers that corner, the bar sets --bar-reach and the bubble sits below it. */
   .attachment-image-actions {
     position: absolute;
-    top: var(--space-1-5);
+    top: calc(var(--bar-reach, 0px) + var(--space-1-5));
     right: var(--space-1-5);
     display: flex;
     gap: 1px;
     padding: 2px;
     border-radius: var(--radius-md);
     background: var(--bg-raised);
-    box-shadow: var(--shadow-raised);
+    /* The firmer ring keeps the bubble's edge on an image as light or dark as the bubble. */
+    box-shadow:
+      0 0 0 1px var(--border-strong),
+      var(--shadow-raised);
     opacity: 0;
     translate: 0 calc(var(--distance-micro) * -1);
     pointer-events: none;
@@ -564,8 +568,8 @@
       translate: none;
       pointer-events: auto;
       transition:
-        opacity var(--duration-micro) var(--ease-enter),
-        translate var(--duration-micro) var(--ease-enter);
+        opacity var(--duration-micro) var(--ease-enter) var(--duration-intent),
+        translate var(--duration-micro) var(--ease-enter) var(--duration-intent);
     }
   }
 
@@ -574,8 +578,8 @@
     translate: none;
     pointer-events: auto;
     transition:
-      opacity var(--duration-micro) var(--ease-enter),
-      translate var(--duration-micro) var(--ease-enter);
+      opacity var(--duration-micro) var(--ease-enter) var(--duration-intent),
+      translate var(--duration-micro) var(--ease-enter) var(--duration-intent);
   }
 
   .attachment-video {
