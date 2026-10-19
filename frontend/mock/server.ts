@@ -8,6 +8,7 @@
  * reached through `dispatch` when no S1 route matches.
  */
 
+import type { DirectoryChannel } from "../src/gen/DirectoryChannel.ts";
 import type { Me } from "../src/gen/Me.ts";
 import type { MessageDTO } from "../src/gen/MessageDTO.ts";
 import type { MessageReactions } from "../src/gen/MessageReactions.ts";
@@ -730,6 +731,68 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return { id: JOINABLE_OPEN_ROOM.id, name: JOINABLE_OPEN_ROOM.name };
   };
 
+  /**
+   * `GET /rooms/browse`: the alive open rooms, the catalog room included until it is joined, as
+   * the server ranks them (exact name, prefix, anywhere in the name, then topic; newest first
+   * within each). The mock's handful fits one page.
+   */
+  const browseChannels = (q: string): DirectoryChannel[] => {
+    const needle = q.trim().toLowerCase();
+
+    const channels = [...world.rooms.values()].flatMap((record): DirectoryChannel[] => {
+      if (record.room.kind !== "open") return [];
+
+      return [
+        {
+          roomId: record.room.id,
+          name: record.room.name ?? "",
+          topic: record.room.topic,
+          memberCount: record.memberIds.length,
+          lastActiveAt: record.room.updatedAt,
+          joined:
+            record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
+        },
+      ];
+    });
+
+    if (!world.rooms.has(JOINABLE_OPEN_ROOM.id)) {
+      channels.push({
+        roomId: JOINABLE_OPEN_ROOM.id,
+        name: JOINABLE_OPEN_ROOM.name,
+        topic: null,
+        memberCount: JOINABLE_OPEN_ROOM.memberIds.length,
+        lastActiveAt: timestamp(now() - 60_000),
+        joined: false,
+      });
+    }
+
+    const rank = (channel: DirectoryChannel): number | null => {
+      const name = channel.name.toLowerCase();
+
+      if (needle === "" || name === needle) return 0;
+
+      if (name.startsWith(needle)) return 1;
+
+      if (name.includes(needle)) return 2;
+
+      return (channel.topic ?? "").toLowerCase().includes(needle) ? 3 : null;
+    };
+
+    return channels
+      .flatMap((channel) => {
+        const score = rank(channel);
+
+        return score === null ? [] : [{ channel, score }];
+      })
+      .sort(
+        (left, right) =>
+          left.score - right.score ||
+          right.channel.lastActiveAt.localeCompare(left.channel.lastActiveAt) ||
+          right.channel.roomId - left.channel.roomId,
+      )
+      .map(({ channel }) => channel);
+  };
+
   const publishJoined = (record: RoomRecord) => {
     hub.publish([
       {
@@ -759,6 +822,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
           favoritePosition: null,
           stageRole: null,
         };
+        publishJoined(existing);
+      } else if (existing.membership.involvement === "invisible") {
+        existing.membership = { ...existing.membership, involvement: "mentions" };
         publishJoined(existing);
       }
 
@@ -1363,6 +1429,13 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
           heldJoins.push(() => resolve({ status: 200, json: created }));
         });
       }
+    }
+
+    if (method === "GET" && path === "/rooms/browse") {
+      return {
+        status: 200,
+        json: { channels: browseChannels(query.get("q") ?? ""), nextCursor: null },
+      };
     }
 
     const room = /^\/rooms\/(\d+)(\/messages|\/read)?$/.exec(path);

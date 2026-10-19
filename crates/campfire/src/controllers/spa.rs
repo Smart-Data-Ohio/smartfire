@@ -145,6 +145,10 @@ mod api_room_integrations_tests;
 mod api_room_join_tests;
 
 #[cfg(test)]
+#[path = "spa_api_room_browse_tests.rs"]
+mod api_room_browse_tests;
+
+#[cfg(test)]
 #[path = "spa_api_events_tests.rs"]
 mod spa_api_events_tests;
 

@@ -52,7 +52,7 @@ pub struct DirectoryChannel {
     /// `rooms.name`, or `""` when the room is unnamed.
     pub name: String,
     pub topic: Option<String>,
-    /// Active people whose membership isn't hidden, as the room's members pane counts them.
+    /// Active people with a membership, hidden or not, as the room's members pane lists them.
     pub member_count: i64,
     /// `rooms.updated_at`, which every new message touches.
     pub last_active_at: Timestamp,
