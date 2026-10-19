@@ -25,6 +25,7 @@ import {
 import { PostCard, PostRow } from "./board-rows.tsx";
 import { BoardTagStrip, BoardToolbar } from "./board-toolbar.tsx";
 import { NewPostDialog } from "./new-post-dialog.tsx";
+import { DropSlot, useBoardDrag, withSlot } from "./use-board-drag.tsx";
 import { useBoardTagCatalog } from "./use-board-tags.ts";
 import { useLiveFlip } from "./use-live-flip.ts";
 import "./boards.css";
@@ -220,6 +221,8 @@ function BoardColumns({ roomId, query, onNewPost, onClear }: BodyProps) {
 
   useLiveFlip(boardRef, signature, `${query.owner}|${query.tag}`);
 
+  const dnd = useBoardDrag(roomId, boardRef);
+
   if (total === 0 && !anyPosts) {
     return (
       <div className="board-scroll">
@@ -231,13 +234,14 @@ function BoardColumns({ roomId, query, onNewPost, onClear }: BodyProps) {
   return (
     <div className="board-columns-wrap">
       <Digest roomId={roomId} />
-      <div className="board-columns" ref={boardRef}>
+      <div className="board-columns" ref={boardRef} data-dragging={dnd.drag ? true : undefined}>
         {WORK_STATUSES.map((status) => (
           <section
             key={status}
             className="board-column"
             data-status={status}
             data-flip-group={status}
+            data-drop-target={dnd.landing?.status === status || undefined}
             aria-labelledby={`board-column-${roomId}-${status}`}
           >
             <header className="board-column-head">
@@ -248,22 +252,28 @@ function BoardColumns({ roomId, query, onNewPost, onClear }: BodyProps) {
               <span className="board-column-count tabular">{columns[status].length}</span>
             </header>
             <ul className="board-column-list" data-flip-scroll>
-              {columns[status].map((id) => (
-                <PostCard
-                  key={id}
-                  roomId={roomId}
-                  threadId={id}
-                  open={id === openId}
-                  activeTag={query.tag}
-                />
-              ))}
-              {columns[status].length === 0 ? (
+              {withSlot(columns[status], status, dnd.landing).map((id) =>
+                id === "slot" ? (
+                  <DropSlot key="slot" drag={dnd.drag} />
+                ) : (
+                  <PostCard
+                    key={id}
+                    roomId={roomId}
+                    threadId={id}
+                    open={id === openId}
+                    activeTag={query.tag}
+                    drag={dnd.card}
+                  />
+                ),
+              )}
+              {columns[status].length === 0 && dnd.landing?.status !== status ? (
                 <li className="board-column-empty">No posts</li>
               ) : null}
             </ul>
           </section>
         ))}
       </div>
+      {dnd.region}
       <LoadMore roomId={roomId} />
     </div>
   );

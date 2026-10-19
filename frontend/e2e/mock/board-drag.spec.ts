@@ -30,11 +30,15 @@ function workWrites(page: Page): Request[] {
 }
 
 async function center(target: Locator): Promise<{ x: number; y: number }> {
-  let box: Awaited<ReturnType<Locator["boundingBox"]>> = null;
+  await expect.poll(() => target.boundingBox()).not.toBeNull();
 
-  await expect.poll(async () => (box = await target.boundingBox()) !== null).toBe(true);
+  const box = await target.boundingBox();
 
-  return box === null ? { x: 0, y: 0 } : { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  if (box === null) {
+    throw new Error("the target has no box");
+  }
+
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
 /** Presses on `from` with the mouse and moves in steps to `to`, leaving the button down. */
@@ -67,7 +71,11 @@ test("dragging a card to another column moves it and saves the status", async ({
   const writes = workWrites(page);
 
   await openBoard(page);
-  await dragTo(page, card(page, "Planned", /Launch week plan/), await center(column(page, "In progress")));
+  await dragTo(
+    page,
+    card(page, "Planned", /Launch week plan/),
+    await center(column(page, "In progress")),
+  );
 
   await expect(column(page, "In progress").getByText("Moves here")).toBeVisible();
   await page.mouse.up();
@@ -104,7 +112,11 @@ test("Escape and a drop outside every column put the card back", async ({ page }
   const writes = workWrites(page);
 
   await openBoard(page);
-  await dragTo(page, card(page, "Planned", /Launch week plan/), await center(column(page, "Blocked")));
+  await dragTo(
+    page,
+    card(page, "Planned", /Launch week plan/),
+    await center(column(page, "Blocked")),
+  );
   await expect(column(page, "Blocked").getByText("Moves here")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(column(page, "Blocked").getByText("Moves here")).toHaveCount(0);
@@ -204,7 +216,11 @@ test("a refused move goes back with a toast", async ({ page }) => {
 
 test("another member's moves still land while a card is held", async ({ page, request }) => {
   await openBoard(page);
-  await dragTo(page, card(page, "Planned", /Launch week plan/), await center(column(page, "In progress")));
+  await dragTo(
+    page,
+    card(page, "Planned", /Launch week plan/),
+    await center(column(page, "In progress")),
+  );
 
   const reply = await request.post("/__mock/board-update", {
     data: { threadId: BOARD_POST_IDS.searchIndex, status: "done" },
