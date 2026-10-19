@@ -380,10 +380,9 @@ async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
     assert!(signed_out.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
 }
 
-/// The `href` of a page's `<link rel>` of `type`, unescaped.
-fn icon_link(page: &str, rel: &str, kind: Option<&str>) -> Option<String> {
-    let kind = kind.map_or(String::new(), |kind| format!(r#" type="{}""#, regex::escape(kind)));
-    let pattern = Regex::new(&format!(r#"<link rel="{}"{kind} href="([^"]*)" />"#, regex::escape(rel))).unwrap();
+fn link_href(page: &str, rel: &str, link_type: Option<&str>) -> Option<String> {
+    let link_type = link_type.map_or(String::new(), |link_type| format!(r#" type="{}""#, regex::escape(link_type)));
+    let pattern = Regex::new(&format!(r#"<link rel="{}"{link_type} href="([^"]*)" />"#, regex::escape(rel))).unwrap();
     pattern.captures(page).map(|captures| captures[1].replace("&amp;", "&"))
 }
 
@@ -394,8 +393,8 @@ async fn pages_and_favicon_ico_show_smartfires_mark_until_a_logo_is_attached() {
     let mark = |name: &str| std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../spa/favicon").join(name)).unwrap();
     for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
         assert!(page.contains("<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />"), "{page}");
-        assert_eq!(icon_link(&page, "icon", Some("image/svg+xml")).as_deref(), Some("/favicon.svg"), "{page}");
-        assert_eq!(icon_link(&page, "apple-touch-icon", None).as_deref(), Some("/apple-touch-icon.png"), "{page}");
+        assert_eq!(link_href(&page, "icon", Some("image/svg+xml")).as_deref(), Some("/favicon.svg"), "{page}");
+        assert_eq!(link_href(&page, "apple-touch-icon", None).as_deref(), Some("/apple-touch-icon.png"), "{page}");
     }
     for (path, content_type) in [
         ("favicon.ico", "image/x-icon"),
@@ -416,8 +415,8 @@ async fn pages_and_favicon_ico_show_smartfires_mark_until_a_logo_is_attached() {
     let small = manifest["icons"][0]["src"].as_str().unwrap().replace("&amp;", "&");
     assert!(small.starts_with("/account/logo?v="), "{small}");
     for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
-        assert_eq!(icon_link(&page, "icon", Some("image/png")).as_deref(), Some(small.as_str()), "the manifest's small icon: {page}");
-        assert_eq!(icon_link(&page, "apple-touch-icon", None).as_deref(), Some(small.as_str()), "{page}");
+        assert_eq!(link_href(&page, "icon", Some("image/png")).as_deref(), Some(small.as_str()), "the manifest's small icon: {page}");
+        assert_eq!(link_href(&page, "apple-touch-icon", None).as_deref(), Some(small.as_str()), "{page}");
         assert!(!page.contains("/favicon."), "{page}");
     }
     let icon = a.anonymous().get(&small).await;

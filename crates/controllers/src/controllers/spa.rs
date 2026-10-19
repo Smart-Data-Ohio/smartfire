@@ -189,11 +189,9 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<(SignedOu
     Ok((boot, favicon))
 }
 
-/// The tab icon: the attached logo at the manifest's small icon URL, which changes with the
-/// account, else Smartfire's mark.
 fn favicon(account: Option<&Account>, logo_attached: bool) -> Favicon {
     match account {
-        Some(account) if logo_attached => Favicon::Logo(super::pwa::logo_path(Some(account), Some("small"))),
+        Some(account) if logo_attached => Favicon::Logo(super::pwa::manifest_logo_path(Some(account), Some("small"))),
         _ => Favicon::Mark,
     }
 }

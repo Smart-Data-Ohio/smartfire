@@ -41,12 +41,10 @@ pub async fn manifest(c: &mut Ctx) -> Result {
     render_manifest(c).await
 }
 
-/// `/favicon.ico`, which browsers and link previews ask for without reading the page: the
-/// logo's small icon once one is attached, as the manifest's, else Smartfire's mark.
 pub async fn favicon(c: &mut Ctx) -> Result {
     c.use_live_response();
     concerns::before_actions(c, before()).await?;
-    campfire_people::controllers::accounts::logos::send_logo(c, true, |c| {
+    campfire_people::controllers::accounts::logos::send_logo(c, 192, |c| {
         let mark = campfire_spa::favicon::file("favicon.ico").expect("the mark's icon");
         Ok(c.render_as(StatusCode::OK, mark.file.content_type, mark.body))
     })
@@ -60,8 +58,6 @@ pub async fn spa_manifest(c: &mut Ctx) -> Result {
     c.redirect_to("/webmanifest.json")
 }
 
-/// The offline shell, manifest illustrations and the mark's icons do not need sessions or classic
-/// assets.
 pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
     let files = move |State(kit): State<Kit>, request: Request| async move {
         let path = request
@@ -114,8 +110,8 @@ async fn render_manifest(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     let manifest = pwa::Manifest {
         account_name: account.as_ref().map(|account| account.name.clone()),
-        logo_path_small: logo_path(account.as_ref(), Some("small")),
-        logo_path: logo_path(account.as_ref(), None),
+        logo_path_small: manifest_logo_path(account.as_ref(), Some("small")),
+        logo_path: manifest_logo_path(account.as_ref(), None),
         base_url: c.url_for(""),
         root: "/",
         new_room_url: "/app/rooms/new/open".into(),
@@ -128,8 +124,7 @@ async fn render_manifest(c: &mut Ctx) -> Result {
     Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
 }
 
-/// `/account/logo` versioned by the account's UTC `updated_at`, which attaching a logo touches.
-pub(crate) fn logo_path(account: Option<&Account>, size: Option<&str>) -> String {
+pub(crate) fn manifest_logo_path(account: Option<&Account>, size: Option<&str>) -> String {
     let version = account.map(|account| account.updated_at.jiff().strftime("%Y%m%d%H%M%S").to_string());
     campfire_routes::fresh_account_logo(version.as_deref(), size)
 }

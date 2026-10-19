@@ -1,15 +1,10 @@
-//! The tab icon: the workspace logo once one is attached, else Smartfire's mark (`favicon/`,
-//! drawn by `favicon/render.py`).
-
 use crate::shell::escape;
 use crate::{File, Served};
 
-/// What a page's head links as its icon.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Favicon {
     /// The logo as the manifest's small icon: a 192px PNG whose URL changes with the logo.
     Logo(String),
-    /// Smartfire's mark, from [`file`] at the root.
     Mark,
 }
 
@@ -49,8 +44,7 @@ static MARK: &[File] = &[
     mark_file!("favicon.svg", "image/svg+xml"),
 ];
 
-/// The mark's file at `path` under the root (`favicon.svg`). `/favicon.ico` serves the logo
-/// instead once one is attached.
+/// The mark's file at `path` under the root (`favicon.svg`).
 pub fn file(path: &str) -> Option<Served> {
     crate::serve::find(MARK, path).map(|file| crate::serve::negotiate(file, None))
 }

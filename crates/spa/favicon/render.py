@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-"""Draw Smartfire's mark (favicon.svg) at the sizes browsers ask for.
-
-The mark is a white flame with an amber core (--amber-500) on an indigo tile (--indigo-500), the
-accent colours in frontend/src/styles/tokens.css. The tile keeps the flame legible on light and
-dark tab bars alike. Rerun this after editing favicon.svg and commit what it writes:
-
-  favicon.ico            16, 32 and 48px: /favicon.ico when the workspace has no logo
-  favicon.png            32px: the icon link where a browser can't use the SVG
-  apple-touch-icon.png   180px, full bleed, because iOS rounds the corners itself
-  frontend/src/features/offline/favicon.svg
-                         the offline page's copy, built into the precached assets so it shows
-                         without a network
-
-Needs rsvg-convert (librsvg).
-"""
-
 import shutil
 import struct
 import subprocess
@@ -37,6 +21,7 @@ def png(svg: bytes, size: int) -> bytes:
 
 
 def full_bleed(svg: bytes) -> bytes:
+    """iOS rounds an apple-touch-icon's corners itself."""
     ET.register_namespace("", SVG)
     root = ET.fromstring(svg)
     del root.find(f"{{{SVG}}}rect[@id='tile']").attrib["rx"]

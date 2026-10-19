@@ -26,12 +26,12 @@ pub async fn show(c: &mut Ctx) -> Result {
         return super::banners::show_image(c, "logo").await;
     }
     let small = c.param_str("size") == Some("small");
-    send_logo(c, small, |c| stock_icon(c, small)).await
+    send_logo(c, if small { 192 } else { 512 }, |c| stock_icon(c, small)).await
 }
 
-/// The attached logo as a PNG, 192px when `small` and 512px otherwise, with `show`'s caching.
-/// `fallback` answers when there's no logo or it can't be resized.
-pub async fn send_logo(c: &mut Ctx, small: bool, fallback: impl FnOnce(&mut Ctx) -> Result) -> Result {
+/// The attached logo as a PNG that fits in `size` pixels, with `show`'s caching. `fallback`
+/// answers when there's no logo or it can't be resized.
+pub async fn send_logo(c: &mut Ctx, size: i64, fallback: impl FnOnce(&mut Ctx) -> Result) -> Result {
     let account = c.app().db.read(Account::first).await.map_err(Error::internal)?;
     let blob = match &account {
         Some(account) => {
@@ -57,9 +57,8 @@ pub async fn send_logo(c: &mut Ctx, small: bool, fallback: impl FnOnce(&mut Ctx)
     c.expires_in(MAX_AGE, ExpiresIn { public: true, stale_while_revalidate: Some(STALE_WHILE_REVALIDATE), ..ExpiresIn::default() });
 
     let variant = match blob.filter(|blob| blob.is_variable()) {
-        // `logo.variant(size).processed if logo.variable?`: :small is 192, :large 512, both PNG.
+        // `logo.variant(size).processed if logo.variable?`
         Some(blob) => {
-            let size = if small { 192 } else { 512 };
             let timeout = campfire_storage::branding::processing_timeout(&blob);
             campfire_runtime::active_storage::processed_branding_variant_with_deadline(
                 c.app(),
@@ -86,7 +85,6 @@ pub async fn send_logo(c: &mut Ctx, small: bool, fallback: impl FnOnce(&mut Ctx)
             let path = c.app().storage.service.path_for(&variant.key);
             c.send_file(path, SendOptions::inline("image/png"))
         }
-        // send_stock_icon
         None => fallback(c),
     }?;
     Ok(if private { response.header("cache-control", "private, no-store") } else { response })
