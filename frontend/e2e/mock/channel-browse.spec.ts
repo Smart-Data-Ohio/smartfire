@@ -1,0 +1,101 @@
+import type { Page } from "@playwright/test";
+import { JOINABLE_OPEN_ROOM } from "../../mock/seed.ts";
+import { DESKTOP, expect, matrix, openApp, shot, test } from "./support.ts";
+
+const sidebar = (page: Page) => page.getByRole("complementary", { name: "Conversations" });
+
+const sidebarRoom = (page: Page, name: string) =>
+  sidebar(page).locator(".sidebar-row-name", { hasText: new RegExp(`^${name}$`) });
+
+test("the switcher finds a channel you aren't in and choosing it joins it into the sidebar", async ({
+  page,
+}) => {
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, "/");
+  await expect(sidebarRoom(page, "general")).toBeVisible();
+  await expect(sidebarRoom(page, JOINABLE_OPEN_ROOM.name)).toBeHidden();
+
+  await page.keyboard.press("ControlOrMeta+k");
+
+  const switcher = page.getByRole("dialog", { name: "Jump to a conversation" });
+
+  await switcher.getByRole("combobox").fill("camp");
+
+  const joinable = switcher.getByRole("group", { name: "Channels you can join" });
+
+  await expect(joinable.getByRole("option", { name: /campfire/ })).toBeVisible();
+  await expect(joinable.getByText("3 members")).toBeVisible();
+  await expect(joinable.getByText("Join", { exact: true })).toBeVisible();
+
+  await switcher.getByRole("combobox").fill("general");
+  await expect(switcher.getByRole("group", { name: "Channels" })).toBeVisible();
+  await expect(switcher.getByRole("group", { name: "Channels you can join" })).toBeHidden();
+
+  await switcher.getByRole("combobox").fill("campfire");
+  await expect(joinable.getByRole("option", { name: /campfire/ })).toBeVisible();
+  await shot(page, "switcher-joinable", "light");
+  await page.keyboard.press("Enter");
+
+  await expect(switcher).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`/r/${JOINABLE_OPEN_ROOM.id}$`));
+  await expect(page.getByRole("region", { name: "Conversation" })).toBeVisible();
+  await expect(sidebarRoom(page, JOINABLE_OPEN_ROOM.name)).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+k");
+  await switcher.getByRole("combobox").fill("campfire");
+  await expect(switcher.getByRole("group", { name: "Channels" })).toContainText("campfire");
+  await expect(switcher.getByRole("group", { name: "Channels you can join" })).toBeHidden();
+});
+
+test("the switcher's footer opens the channel browser", async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, "/");
+  await page.keyboard.press("ControlOrMeta+k");
+  await page
+    .getByRole("dialog", { name: "Jump to a conversation" })
+    .getByRole("button", { name: "Browse channels" })
+    .click();
+
+  await expect(page.getByRole("dialog", { name: "Browse channels" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Jump to a conversation" })).toBeHidden();
+});
+
+matrix(
+  "the channel browser searches, joins with Joined at once, and never lists a closed room",
+  async ({ page, theme }) => {
+    await openApp(page, "/", theme);
+    await sidebar(page).getByRole("button", { name: "Add channels" }).click();
+    await page.getByRole("menuitem", { name: "Browse channels" }).click();
+
+    const browser = page.getByRole("dialog", { name: "Browse channels" });
+    const list = browser.getByRole("list", { name: "Channels" });
+
+    const row = (name: string) =>
+      list.getByRole("listitem").filter({ has: page.getByText(name, { exact: true }) });
+
+    await expect(browser.getByRole("searchbox", { name: "Search channels" })).toBeFocused();
+    await expect(row("general")).toContainText("Joined");
+    await expect(row(JOINABLE_OPEN_ROOM.name)).toContainText("3 members");
+    await expect(list).not.toContainText("launch-planning");
+    await expect(list).not.toContainText("Lounge");
+    await shot(page, "browse-channels", theme);
+
+    await browser.getByRole("searchbox", { name: "Search channels" }).fill("launch");
+    await expect(browser.getByText("No channels match “launch”")).toBeVisible();
+    await expect(list.getByRole("listitem")).toHaveCount(0);
+
+    await browser.getByRole("searchbox", { name: "Search channels" }).fill("CAMP");
+    await expect(list.getByRole("listitem")).toHaveCount(1);
+    await expect(sidebarRoom(page, JOINABLE_OPEN_ROOM.name)).toHaveCount(0);
+
+    await browser.getByRole("button", { name: `Join #${JOINABLE_OPEN_ROOM.name}` }).click();
+    await expect(row(JOINABLE_OPEN_ROOM.name)).toContainText("Joined");
+    await expect(
+      browser.getByRole("button", { name: `Join #${JOINABLE_OPEN_ROOM.name}` }),
+    ).toBeHidden();
+    await shot(page, "browse-channels-joined", theme);
+
+    await browser.getByRole("button", { name: "Close" }).click();
+    await expect(sidebarRoom(page, JOINABLE_OPEN_ROOM.name)).toHaveCount(1);
+  },
+);

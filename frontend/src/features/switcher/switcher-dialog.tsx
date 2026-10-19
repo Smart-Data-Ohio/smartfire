@@ -2,8 +2,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useStore } from "../../store/store.ts";
 import { directs } from "../../sync/directs.ts";
+import { actions } from "../../sync/runtime.ts";
 import { Badge } from "../../ui/badge.tsx";
-import { Spinner } from "../../ui/button.tsx";
+import { Button, Spinner } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
@@ -12,11 +13,15 @@ import { namesWithYou, offersNoteToSelf } from "../directs/note-to-self.ts";
 import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
+import { memberCountLabel, useChannelDirectory } from "../rooms/channel-directory.ts";
 import { GroupAvatars } from "../sidebar/group-avatars.tsx";
 import { notificationLabel } from "../sidebar/sections.ts";
-import { matchRange, normalizeQuery } from "./match.ts";
+import { Highlighted } from "./highlighted.tsx";
+import { matchScore, normalizeQuery } from "./match.ts";
+import { openOverlay } from "./overlay-store.ts";
 import {
   flattenSections,
+  joinableSection,
   localItems,
   mergeItems,
   rankItems,
@@ -58,28 +63,13 @@ function ItemGlyph({ item }: { readonly item: SwitcherItem }) {
   return <Icon name={ROOM_KIND_ICON[item.roomKind ?? "open"]} size={16} />;
 }
 
-/** The label with the typed text marked, when it appears as one run (accents folded). */
-function Highlighted({ text, query }: { readonly text: string; readonly query: string }) {
-  const range = matchRange(text, normalizeQuery(query));
-
-  if (range === null) {
-    return text;
-  }
-
-  const [start, end] = range;
-
-  return (
-    <>
-      {text.slice(0, start)}
-      <mark className="switcher-mark">{text.slice(start, end)}</mark>
-      {text.slice(end)}
-    </>
-  );
-}
-
 function itemDetail(item: SwitcherItem): string | null {
   if (item.kind === "thread") {
     return item.detail === null ? "Thread" : `in #${item.detail}`;
+  }
+
+  if (item.kind === "joinable") {
+    return item.detail;
   }
 
   return item.kind === "person" && item.roomId === null ? "New message" : null;
@@ -122,13 +112,14 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
       {item.kind === "person" && item.userId !== null ? <AgentBadge userId={item.userId} /> : null}
       {detail === null ? null : <span className="switcher-detail">{detail}</span>}
       <span className="switcher-meta">
-        {busy ? <Spinner label="Opening" /> : null}
+        {busy ? <Spinner label={item.kind === "joinable" ? "Joining" : "Opening"} /> : null}
         {!busy && item.count > 0 ? (
           <Badge count={item.count} label={notificationLabel(item.count)} />
         ) : null}
         {!busy && item.count === 0 && item.unread ? (
           <span className="switcher-unread-dot" aria-label="Unread" role="img" />
         ) : null}
+        {item.kind === "joinable" && !busy ? <span className="switcher-join">Join</span> : null}
         <Kbd keys={["⏎"]} className="switcher-enter" />
       </span>
     </div>
@@ -139,7 +130,8 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
  * The quick switcher (⌘K): type to jump to any room, person or recent thread. The sidebar's
  * rooms answer the first keystroke; the server's catalogue joins as soon as it arrives. With no
  * query it opens on your recent picks and unread conversations. ↑/↓ move, Enter opens, Esc
- * closes; picking someone you have no DM with yet opens one.
+ * closes; picking someone you have no DM with yet opens one. Open channels you aren't in that
+ * match come last, under "Channels you can join": picking one joins it and opens it.
  */
 export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogProps) {
   const id = useId();
@@ -173,7 +165,26 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
     namesWithYou(users, viewerId),
   );
 
-  const sections = rankItems(items, query, recents);
+  const trimmed = query.trim();
+  const directory = useChannelDirectory(open && trimmed !== "", trimmed);
+  const needle = normalizeQuery(trimmed);
+
+  // The last answer stands in while the next is on its way, for as long as its names still match.
+  const joinable = directory.channels.flatMap((channel) =>
+    channel.joined ||
+    trimmed === "" ||
+    (directory.query !== trimmed && matchScore(channel.name, needle) === null)
+      ? []
+      : [
+          {
+            roomId: channel.roomId,
+            name: channel.name,
+            detail: memberCountLabel(channel.memberCount),
+          },
+        ],
+  );
+
+  const sections = [...rankItems(items, query, recents), ...joinableSection(joinable, items)];
   const flat = flattenSections(sections);
   const active = Math.min(activeIndex, Math.max(flat.length - 1, 0));
   const activeItem = flat[active];
@@ -202,10 +213,32 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
       return;
     }
 
-    recordRecent(item.key);
+    recordRecent(item.kind === "joinable" ? `room:${item.roomId}` : item.key);
 
     // Your notes while the sidebar offers them open as the offer does, back in the sidebar.
     const reopensNotes = notesOffered && item.kind === "person" && item.userId === viewerId;
+
+    if (item.kind === "joinable" && item.roomId !== null) {
+      const roomId = item.roomId;
+
+      setBusyKey(item.key);
+      actions.joinOpenRoom(roomId).then(
+        () => {
+          setBusyKey(null);
+          goTo(roomId, null);
+        },
+        (error: Error) => {
+          setBusyKey(null);
+          toast({
+            title: `Couldn't join #${item.label}`,
+            description: error.message,
+            tone: "danger",
+          });
+        },
+      );
+
+      return;
+    }
 
     if (item.roomId !== null && !reopensNotes) {
       goTo(item.roomId, item.threadId);
@@ -250,8 +283,6 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
       choose(activeItem);
     }
   };
-
-  const trimmed = query.trim();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title="Jump to a conversation">
@@ -320,16 +351,27 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
             </div>
           ) : null}
         </div>
-        <footer className="switcher-footer" aria-hidden="true">
-          <span>
-            <Kbd keys={["↑", "↓"]} /> to move
+        <footer className="switcher-footer">
+          <span className="switcher-hints" aria-hidden="true">
+            <span>
+              <Kbd keys={["↑", "↓"]} /> to move
+            </span>
+            <span>
+              <Kbd keys={["⏎"]} /> to open
+            </span>
+            <span>
+              <Kbd keys={["Esc"]} /> to close
+            </span>
           </span>
-          <span>
-            <Kbd keys={["⏎"]} /> to open
-          </span>
-          <span>
-            <Kbd keys={["Esc"]} /> to close
-          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="hash"
+            className="switcher-browse"
+            onClick={() => openOverlay("browse-channels")}
+          >
+            Browse channels
+          </Button>
         </footer>
       </div>
     </Dialog>

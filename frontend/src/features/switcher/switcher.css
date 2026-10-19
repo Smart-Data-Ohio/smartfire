@@ -147,16 +147,6 @@
     --avatar-ring: var(--bg-selected);
   }
 
-  .switcher-mark {
-    background: none;
-    color: var(--text);
-    font-weight: var(--weight-semibold);
-    text-decoration: underline;
-    text-decoration-color: color-mix(in oklch, var(--accent), transparent 40%);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 3px;
-  }
-
   /* The label gives way first, so "in #room" stays readable on a narrow screen. */
   .switcher-detail {
     flex-shrink: 0;
@@ -221,10 +211,38 @@
     font-size: var(--text-meta);
   }
 
-  .switcher-footer > span {
+  .switcher-hints {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  .switcher-hints > span {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1-5);
+  }
+
+  .switcher-browse {
+    margin-left: auto;
+  }
+
+  .switcher-join {
+    padding: 1px var(--space-2);
+    border-radius: var(--radius-pill);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter);
+  }
+
+  .switcher-option[data-active] .switcher-join {
+    background: var(--accent);
+    box-shadow: none;
+    color: var(--on-accent);
   }
 
   @media (width < 720px) {
@@ -237,6 +255,10 @@
     }
 
     .switcher-footer {
+      padding-bottom: calc(var(--space-2) + var(--safe-bottom));
+    }
+
+    .switcher-hints {
       display: none;
     }
 
