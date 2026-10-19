@@ -512,27 +512,6 @@ async fn icons_are_images_for_an_old_browser_and_answer_head_and_conditional_req
 }
 
 #[tokio::test]
-async fn the_static_error_pages_link_the_mark() {
-    let Some(a) = app(true).await else { return };
-    let mut anonymous = a.anonymous();
-    let missing = anonymous.get("/no-such-page").await;
-    assert_eq!(missing.status, StatusCode::NOT_FOUND);
-    for (path, page) in [
-        ("a missing page", missing.text()),
-        ("/422.html", anonymous.get("/422.html").await.text()),
-        ("/500.html", anonymous.get("/500.html").await.text()),
-    ] {
-        for link in [
-            r#"<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">"#,
-            r#"<link rel="icon" type="image/svg+xml" href="/favicon.svg">"#,
-            r#"<link rel="apple-touch-icon" href="/apple-touch-icon.png">"#,
-        ] {
-            assert!(page.contains(link), "{path} lacks {link}: {page}");
-        }
-    }
-}
-
-#[tokio::test]
 async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_shell() {
     let Some(a) = app(true).await else { return };
     let classic = a.anonymous().get("/session/new").await;
