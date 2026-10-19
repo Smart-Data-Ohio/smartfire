@@ -162,7 +162,7 @@ function PreviewedName({ row, last }: { readonly row: Row; readonly last: LastMe
 /** Your name with a muted "(you)": your note-to-self's label. */
 function YouName({ name }: { readonly name: string | null }) {
   return (
-    <span className="sidebar-row-name">
+    <span className="sidebar-row-name" title={withYou(name)}>
       <YouLabel name={name} tagClassName="sidebar-row-tag" />
     </span>
   );
@@ -173,9 +173,11 @@ function RowName({ row }: { readonly row: Row }) {
   const viewerName = useViewerName();
 
   return isNoteToSelf(row) ? (
-    <YouName name={viewerName ?? row.displayName} />
+    <YouName name={viewerName ?? row.sidebarDisplayName} />
   ) : (
-    <span className="sidebar-row-name">{row.displayName}</span>
+    <span className="sidebar-row-name" title={row.sidebarDisplayName}>
+      {row.sidebarDisplayName}
+    </span>
   );
 }
 
@@ -183,7 +185,7 @@ function RowName({ row }: { readonly row: Row }) {
 function useRowLabel(row: Row): string {
   const viewerName = useViewerName();
 
-  return isNoteToSelf(row) ? withYou(viewerName ?? row.displayName) : row.displayName;
+  return isNoteToSelf(row) ? withYou(viewerName ?? row.sidebarDisplayName) : row.sidebarDisplayName;
 }
 
 /**

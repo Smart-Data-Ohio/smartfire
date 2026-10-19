@@ -22,10 +22,13 @@ evaluatedAt: string, room: Room,
  */
 membership: Membership,
 /**
- * The row's label: the room's name, or for a direct message its other members' names
- * (or the room's own name when a group DM was renamed), as `sidebar_direct_label` builds it.
+ * The room label used outside the sidebar, with the short-name DM format.
  */
 displayName: string,
+/**
+ * The sidebar label: full DM member names, or the room's explicit name.
+ */
+sidebarDisplayName: string,
 /**
  * Direct messages only: the other members in membership order, or just the viewer for a
  * note-to-self; drives the avatar and presence dot. Empty for every other kind.

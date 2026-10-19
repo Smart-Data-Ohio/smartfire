@@ -19,6 +19,10 @@ membership: Membership,
  */
 displayName: string,
 /**
+ * The corresponding sidebar label, with full names for direct messages.
+ */
+sidebarDisplayName: string,
+/**
  * `memberships.count` for the room.
  */
 memberCount: number,
