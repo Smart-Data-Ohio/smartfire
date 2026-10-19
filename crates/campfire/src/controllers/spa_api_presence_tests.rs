@@ -35,10 +35,10 @@ impl<'a> Observer<'a> {
                     if event.seq == marker {
                         return;
                     }
-                    if let api::SyncPayload::Presence(row) = event.payload {
-                        if row.user_id == DAVID {
-                            rows.push(row);
-                        }
+                    if let api::SyncPayload::Presence(row) = event.payload
+                        && row.user_id == DAVID
+                    {
+                        rows.push(row);
                     }
                 }
                 match self.sync.next().await {
