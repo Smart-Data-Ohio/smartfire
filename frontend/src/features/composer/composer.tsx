@@ -510,7 +510,6 @@ export function Composer({
     setText(next);
     writeDraft(key, next, mentions);
     writeFieldsDraft(key, false);
-    actions.noteActivity();
     actions.setTyping(roomId, next.trim() !== "", threadId);
   };
 

@@ -25,7 +25,10 @@ export class Lifecycle extends Context.Service<
         Stream.fromEventListener<Event>(document, type, { capture: true, passive: true }),
       ),
       { concurrency: "unbounded" },
-    ).pipe(Stream.as(undefined));
+    ).pipe(
+      Stream.filter((event) => event.isTrusted && isVisible()),
+      Stream.as(undefined),
+    );
 
     return {
       wakeups: Stream.merge(online, Stream.filter(visibility, Boolean)).pipe(Stream.as(undefined)),

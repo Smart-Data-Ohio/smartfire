@@ -3,7 +3,6 @@
 //! restarts.
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 
 use campfire_api_types::{ClientFrame, ServerFrame};
 use futures_util::StreamExt;
@@ -36,7 +35,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     deflate: bool,
     request: ConnectRequest,
 ) {
-    let _open = OpenConnection::new(&engine);
+    let _open = SyncObserver::new(&engine);
     let (read, write) = tokio::io::split(io);
     let mut sink = Writer::new(write, deflate);
     let (reader, mut incoming) = spawn_reader(crate::socket::Reader::new(read, deflate));
@@ -291,19 +290,22 @@ impl<U: Send + Sync + 'static> Drop for OpenPerson<U> {
     }
 }
 
-/// Counts the socket in [`Engine::connections`] until it's dropped.
-struct OpenConnection<U: Send + Sync + 'static>(Arc<Engine<U>>);
+struct SyncObserver<U: Send + Sync + 'static>(Arc<Engine<U>>);
 
-impl<U: Send + Sync + 'static> OpenConnection<U> {
+impl<U: Send + Sync + 'static> SyncObserver<U> {
     fn new(engine: &Arc<Engine<U>>) -> Self {
-        engine.connections.fetch_add(1, Ordering::AcqRel);
+        engine.presence.lock().unwrap().observers += 1;
         Self(engine.clone())
     }
 }
 
-impl<U: Send + Sync + 'static> Drop for OpenConnection<U> {
+impl<U: Send + Sync + 'static> Drop for SyncObserver<U> {
     fn drop(&mut self) {
-        self.0.connections.fetch_sub(1, Ordering::AcqRel);
+        let mut state = self.0.presence.lock().unwrap();
+        state.observers -= 1;
+        if state.observers == 0 {
+            state.last_by_user.clear();
+        }
     }
 }
 
@@ -601,7 +603,7 @@ mod tests {
             engine: Arc::new(Engine {
                 ring: Ring::new(config),
                 handler: Arc::new(Nobody),
-                connections: Default::default(),
+                presence: Default::default(),
                 people: Default::default(),
                 fences: Default::default(),
             }),

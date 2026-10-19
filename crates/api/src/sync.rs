@@ -518,7 +518,7 @@ fn publish_presence_after_commit(
         match dto::presences(after.conn(), &[user_id], after.now()) {
             Ok(presences) => {
                 for presence in presences {
-                    twins::presence(&app.cable, presence);
+                    app.cable.sync_presence(presence);
                 }
             }
             Err(error) => tracing::warn!(%error, user_id, "sync: presence not read"),

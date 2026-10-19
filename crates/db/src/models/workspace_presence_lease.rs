@@ -55,7 +55,15 @@ impl WorkspacePresenceLease {
     }
 
     pub fn prune(tx: &mut Tx<'_>, limit: usize) -> Result<usize> {
-        Ok(tx.conn().execute_cached("DELETE FROM workspace_presence_leases WHERE id IN (SELECT id FROM workspace_presence_leases WHERE expires_at < ? OR NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.id=workspace_presence_leases.session_id AND sessions.user_id=workspace_presence_leases.user_id) LIMIT ?)", params![tx.now(), limit as i64])?)
+        let removed = tx.conn().prepare_cached(
+            "DELETE FROM workspace_presence_leases WHERE id IN (SELECT id FROM workspace_presence_leases WHERE expires_at < ? OR NOT EXISTS (SELECT 1 FROM sessions WHERE sessions.id=workspace_presence_leases.session_id AND sessions.user_id=workspace_presence_leases.user_id) LIMIT ?) RETURNING user_id",
+        )?.query_map(params![tx.now(), limit as i64], |row| row.get::<_, i64>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        let count = removed.len();
+        for user_id in removed.into_iter().collect::<std::collections::BTreeSet<_>>() {
+            tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::UserStatus { user_id });
+        }
+        Ok(count)
     }
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {

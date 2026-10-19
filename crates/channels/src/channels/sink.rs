@@ -98,7 +98,8 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::broadcasts::Broadcast::KIND => decode(request)
             .and_then(|change| messaging(cable, app, &change)),
         campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND =>
-            decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
+            decode::<campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast>(request)
+                .and_then(|broadcast| status_badge(cable, app, broadcast.user_id)),
         campfire_db::models::calendar_event::CardUpdate::KIND => decode::<campfire_db::models::calendar_event::CardUpdate>(request).and_then(|event| {
             let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
             super::event_cards::publish(app, event.event_id)
@@ -162,8 +163,17 @@ fn agent_steps(app: Option<&App>, change: &campfire_db::models::agent_step::Step
 
 
 
-fn status_badge(cable: &Cable, b: campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast) -> anyhow::Result<()> {
-    crate::cable::sync::status_badge(cable, b.user_id, &b.presence, b.status_text.as_deref());
+fn status_badge(cable: &Cable, app: Option<&App>, user_id: i64) -> anyhow::Result<()> {
+    if !cable.sync_wanted() {
+        return Ok(());
+    }
+    let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+    app.db.read_blocking(|conn| {
+        for presence in crate::controllers::presenters::status_settings::presences(conn, &[user_id], app.db.env().now())? {
+            cable.sync_presence(presence);
+        }
+        Ok(())
+    })?;
     Ok(())
 }
 
@@ -227,13 +237,7 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, change: &campfire_db::
             if let Some(app) = app { app.broadcasts.sync_membership_row(*membership_id); }
         }
         Broadcast::UserStatus { user_id } => {
-            if let Some(app) = app {
-                app.db.read_blocking(|conn| {
-                    let status = crate::controllers::presenters::status_settings::profile_status(conn, *user_id, *user_id, app.db.env().now())?;
-                    crate::cable::sync::status_badge(cable, *user_id, &status.presence, status.status_text.as_deref());
-                    Ok(())
-                })?;
-            }
+            status_badge(cable, app, *user_id)?;
         }
     }
     Ok(())
