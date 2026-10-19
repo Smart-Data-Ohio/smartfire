@@ -52,7 +52,7 @@ jobs:
         id: scope
         working-directory: .
         env:
-          PATTERN: '^(frontend/|crates/spa/|crates/api_types/|\.github/workflows/frontend\.yml$|\.github/scripts/)'
+          PATTERN: '^(frontend/|crates/spa/|crates/api_types/|crates/rails_compat/src/unicode_tables\.json$|vectors/unicode_casing_parity\.json$|\.github/workflows/frontend\.yml$|\.github/scripts/)'
         run: python3 .github/scripts/check-paths.py
 
       - name: Set up Node
@@ -196,6 +196,7 @@ jobs:
             frontend
             .github/workflows/frontend.yml
             .github/scripts
+            crates/rails_compat/src
 
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

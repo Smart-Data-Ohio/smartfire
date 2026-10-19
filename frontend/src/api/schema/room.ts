@@ -80,6 +80,7 @@ export const RoomDetail = Schema.Struct({
   room: Room,
   membership: Membership,
   displayName: Schema.String,
+  sidebarDisplayName: Schema.String,
   memberCount: Schema.Int,
   pinsCount: Schema.Int,
   directMemberIds: Schema.Array(UserId),

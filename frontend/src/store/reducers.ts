@@ -1061,6 +1061,7 @@ function setDetailRow(state: State, row: SidebarRow): State {
           room: row.room,
           membership: row.membership,
           displayName: row.displayName,
+          sidebarDisplayName: row.sidebarDisplayName,
           directMemberIds: row.directMemberIds,
         },
       },

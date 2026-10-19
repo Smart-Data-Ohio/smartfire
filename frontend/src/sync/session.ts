@@ -476,6 +476,7 @@ function withSidebarRow(detail: RoomDetail, row: SidebarRow | undefined): RoomDe
     room: row.room,
     membership: row.membership,
     displayName: row.displayName,
+    sidebarDisplayName: row.sidebarDisplayName,
     directMemberIds: row.directMemberIds,
   };
 }

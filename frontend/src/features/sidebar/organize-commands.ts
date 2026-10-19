@@ -63,7 +63,9 @@ function failed(title: string): (error: ActionError) => void {
 export function moveRoom(row: SidebarRow, slot: RoomSlot): void {
   beforeChange?.();
 
-  actions.organize.moveRoom(row.room.id, slot).catch(failed(`Couldn't move ${row.displayName}`));
+  actions.organize
+    .moveRoom(row.room.id, slot)
+    .catch(failed(`Couldn't move ${row.sidebarDisplayName}`));
 }
 
 export function toggleFavorite(row: SidebarRow): void {
@@ -181,7 +183,7 @@ export async function moveSharedRoom(
   const moved = await actions.workspaceLayout.moveRoom(roomId, categoryId, beforeRoomId).then(
     () => true,
     (error: ActionError) => {
-      failed(`Couldn't move ${row.displayName} for everyone`)(error);
+      failed(`Couldn't move ${row.sidebarDisplayName} for everyone`)(error);
 
       return false;
     },
@@ -196,7 +198,7 @@ export async function moveSharedRoom(
 
   actions.organize
     .moveRoom(roomId, { kind: "channels" })
-    .catch(failed(`Couldn't move ${row.displayName}`));
+    .catch(failed(`Couldn't move ${row.sidebarDisplayName}`));
 
   return true;
 }
@@ -244,5 +246,5 @@ export function reorderSharedCategories(categoryIds: readonly number[]): void {
 }
 
 export function markRead(row: SidebarRow): void {
-  actions.markRead(row.room.id).catch(failed(`Couldn't mark ${row.displayName} as read`));
+  actions.markRead(row.room.id).catch(failed(`Couldn't mark ${row.sidebarDisplayName} as read`));
 }

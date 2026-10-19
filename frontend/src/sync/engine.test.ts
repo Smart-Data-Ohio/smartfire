@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { vi } from "vitest";
+import { sidebarDirectLabel } from "../../mock/direct-label.ts";
 import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
 import {
   CreateMessage as CreateMessageSchema,
@@ -2113,6 +2114,85 @@ describe("resync", () => {
         yield* TestClock.adjust("2 seconds");
 
         expect((yield* api.requests).slice(before)).toEqual([]);
+      }),
+    ),
+  );
+
+  it.effect("loads both DM labels from the sidebar over stale room detail", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        const row = {
+          ...sidebarRowFixture(12, "Ada", "direct", [3]),
+          sidebarDisplayName: "Ada Lovelace",
+        };
+
+        yield* serve([]);
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /rooms/12", {
+          ...roomDetailFixture(12),
+          room: row.room,
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Byron",
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, null);
+
+        expect(store.getState().rooms[12]?.detail).toMatchObject({
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Lovelace",
+        });
+      }),
+    ),
+  );
+
+  it.effect("updates both cached DM labels after a user-only resync missed a profile rename", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        const row = {
+          ...sidebarRowFixture(12, "Ada", "direct", [3]),
+          sidebarDisplayName: sidebarDirectLabel(null, ["Ada Byron"]),
+        };
+
+        yield* serve([]);
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /rooms/12", {
+          ...roomDetailFixture(12),
+          room: row.room,
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Byron",
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, null);
+        expect(store.getState().rooms[12]?.detail).toMatchObject({
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Byron",
+        });
+
+        yield* api.reply(
+          "GET /sidebar",
+          sidebarFixture([
+            { ...row, sidebarDisplayName: sidebarDirectLabel(null, ["Ada Lovelace"]) },
+          ]),
+        );
+        yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+        yield* settle;
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[12]).toMatchObject({
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Lovelace",
+        });
+        expect(store.getState().rooms[12]?.detail).toMatchObject({
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Lovelace",
+        });
       }),
     ),
   );
@@ -4864,7 +4944,11 @@ describe("room access refresh", () => {
         yield* loaded;
         const api = yield* FakeApi;
         const release = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
-        const row = sidebarRowFixture(12, "general");
+
+        const row = {
+          ...sidebarRowFixture(12, "Ada", "direct", [3]),
+          sidebarDisplayName: "Ada Lovelace",
+        };
 
         yield* api.route("GET /rooms/12", () => Deferred.await(release));
         yield* pushEvents({
@@ -4887,10 +4971,19 @@ describe("room access refresh", () => {
             membership: { ...row.membership, involvement: "muted" },
           },
         });
-        yield* Deferred.succeed(release, { ...roomDetailFixture(12), memberCount: 9 });
+        yield* Deferred.succeed(release, {
+          ...roomDetailFixture(12),
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Byron",
+          memberCount: 9,
+        });
         yield* settle;
 
-        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(9);
+        expect(store.getState().rooms[12]?.detail).toMatchObject({
+          memberCount: 9,
+          displayName: "Ada",
+          sidebarDisplayName: "Ada Lovelace",
+        });
         expect(store.getState().sidebar.rows[12]?.unreadCount).toBe(4);
       }),
     ),
@@ -5680,12 +5773,19 @@ describe("joining an open room", () => {
           seq: 2,
           topic: "user",
           type: "sidebar.row.upserted",
-          data: { ...sidebarRowFixture(90, "campfire"), refreshRoom: true },
+          data: { ...sidebarRowFixture(90, "Renamed campfire"), refreshRoom: true },
         });
         yield* Deferred.succeed(release, undefined);
         yield* Fiber.join(joining);
 
-        expect(store.getState().sidebar.rows[90]?.displayName).toBe("campfire");
+        expect(store.getState().sidebar.rows[90]).toMatchObject({
+          displayName: "Renamed campfire",
+          sidebarDisplayName: "Renamed campfire",
+        });
+        expect(store.getState().rooms[90]?.detail).toMatchObject({
+          displayName: "Renamed campfire",
+          sidebarDisplayName: "Renamed campfire",
+        });
         expect(store.getState().rooms[90]?.detail?.membership.userId).toBe(7);
         expect(store.getState().timelines[90]?.ids ?? []).toEqual([]);
         expect(
@@ -6920,7 +7020,12 @@ describe("an open room visit settles within the cap while membership pushes keep
       withSync(
         Effect.gen(function* () {
           const api = yield* FakeApi;
-          const row = sidebarRowFixture(12, "general");
+
+          const row = {
+            ...sidebarRowFixture(12, "Ada", "direct", [3]),
+            sidebarDisplayName: "Ada Lovelace",
+          };
+
           const held: Deferred.Deferred<void>[] = [];
           let reads = 0;
           let seq = 0;
@@ -6986,7 +7091,16 @@ describe("an open room visit settles within the cap while membership pushes keep
             // Two refused reads read again; the third lands its own outcome.
             if (reads < 3) expect(store.getState().rooms[12]?.status).toBe("loading");
 
-            if (round === 2) expect(settled(answer)).toBe(true);
+            if (round === 2) {
+              expect(settled(answer)).toBe(true);
+
+              if (answer === "ok") {
+                expect(store.getState().rooms[12]?.detail).toMatchObject({
+                  displayName: "Ada",
+                  sidebarDisplayName: "Ada Lovelace",
+                });
+              }
+            }
           }
 
           yield* TestClock.adjust("5 seconds");

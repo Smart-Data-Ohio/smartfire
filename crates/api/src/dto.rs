@@ -1199,16 +1199,20 @@ fn sidebar_row_with(
     last_message: Option<api::SidebarLastMessage>,
     (revision, now): (i64, Timestamp),
 ) -> api::SidebarRow {
-    let (display_name, direct_member_ids) = match members {
+    let (sidebar_display_name, display_name, direct_member_ids) = match members {
         Some(members) => {
             let direct = direct_members(members, membership.user_id, viewer_name);
             let names: Vec<&str> = direct.iter().map(|(_, name)| name.as_str()).collect();
             (
                 accounts::sidebar_direct_label_for_names(room.name.as_deref(), &names),
+                accounts::direct_room_label_for_names(room.name.as_deref(), &names),
                 direct.iter().map(|(id, _)| *id).collect(),
             )
         }
-        None => (room.name.clone().unwrap_or_default(), Vec::new()),
+        None => {
+            let name = room.name.clone().unwrap_or_default();
+            (name.clone(), name, Vec::new())
+        }
     };
     api::SidebarRow {
         revision,
@@ -1216,6 +1220,7 @@ fn sidebar_row_with(
         room: self::room(room),
         membership: self::membership(membership),
         display_name,
+        sidebar_display_name,
         direct_member_ids,
         unread_count: counts.unread,
         mention_count: counts.mentions,
@@ -1368,13 +1373,17 @@ pub fn room_detail(
         [room.id],
         |row| row.get(0),
     )?;
-    let direct_member_ids: Vec<i64> = if room.direct() {
+    let direct = if room.direct() {
         direct_members(&members, viewer.id, viewer.display_name())
-            .into_iter()
-            .map(|(id, _)| id)
-            .collect()
     } else {
         Vec::new()
+    };
+    let direct_member_ids: Vec<i64> = direct.iter().map(|(id, _)| *id).collect();
+    let sidebar_display_name = if room.direct() {
+        let names: Vec<&str> = direct.iter().map(|(_, name)| name.as_str()).collect();
+        accounts::sidebar_direct_label_for_names(room.name.as_deref(), &names)
+    } else {
+        room.name.clone().unwrap_or_default()
     };
     let member_preview_ids: Vec<i64> = members.iter().take(5).map(|(id, _)| *id).collect();
     let unread =
@@ -1388,6 +1397,7 @@ pub fn room_detail(
         room: self::room(room),
         membership: self::membership(&membership),
         display_name: accounts::room_display_name(conn, room, viewer)?,
+        sidebar_display_name,
         member_count,
         pins_count: MessagePin::count_for_viewer(conn, room.id, viewer.id)?,
         users: users(
