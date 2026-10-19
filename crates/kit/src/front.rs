@@ -37,7 +37,7 @@ use tower::ServiceExt;
 
 pub use acme::{AcmeOptions, CertManager};
 pub use config::{FrontConfig, LETS_ENCRYPT_URL};
-pub use conn::{Options, Protocol, Service, Shutdown, bind};
+pub use conn::{Options, Protocol, Service, Shutdown, WriteDeadline, bind};
 pub use handler::{ConnInfo, Handler};
 
 /// How long connections get to finish after shutdown (Thruster's `Stop`).

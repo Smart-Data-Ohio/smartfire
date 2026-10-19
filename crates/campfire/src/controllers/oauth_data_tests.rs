@@ -68,7 +68,7 @@ async fn oauth_data_mcp_accepts_access_and_rest_search_and_cable_refuse_it() {
         owner.get("/api/v1/me/agents").await.json()["oauthAvailable"],
         false
     );
-    for path in ["/agents/events", "/agents/work", "/api/v1/search?q=test"] {
+    for path in ["/agents/events", "/agents/events/stream", "/agents/work", "/api/v1/search?q=test"] {
         let response = request(&app, ACCESS, Method::GET, path).await;
         assert_eq!(response.status.as_u16(), 401, "{path}: {}", response.text());
     }
