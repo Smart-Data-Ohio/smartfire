@@ -539,11 +539,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
-      roomDisplayName:
+      displayName:
         record.room.kind === "direct"
           ? directRoomLabel(record.room.name, names)
           : displayName(record),
-      displayName:
+      sidebarDisplayName:
         record.room.kind === "direct"
           ? sidebarDirectLabel(record.room.name, names)
           : displayName(record),
@@ -792,7 +792,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
-      sidebarDisplayName: sidebarRow(record).displayName,
+      sidebarDisplayName: sidebarRow(record).sidebarDisplayName,
       memberCount: record.memberIds.length,
       pinsCount: pinCount(world, record.room.id),
       directMemberIds: direct,

@@ -2131,7 +2131,7 @@ describe("resync", () => {
 
         yield* api.reply(
           "GET /sidebar",
-          sidebarFixture([{ ...row, displayName: "Release", roomDisplayName: "Release" }]),
+          sidebarFixture([{ ...row, displayName: "Release", sidebarDisplayName: "Release" }]),
         );
         yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
         yield* settle;

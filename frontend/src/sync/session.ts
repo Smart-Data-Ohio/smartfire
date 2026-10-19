@@ -27,7 +27,6 @@ import {
   resetJoinState,
   resetRoomRereads,
 } from "../store/join-state.ts";
-import { withSidebarRow } from "../store/room-detail.ts";
 import { mutations, store } from "../store/store.ts";
 import { Outbox, roomSendRevision, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
@@ -465,6 +464,21 @@ export const recoverResyncedRooms = Effect.fnUntraced(function* (roomIds: readon
     }
   }
 });
+
+/** The sidebar row's facts win over a room read that raced a rename or a membership change. */
+function withSidebarRow(detail: RoomDetail, row: SidebarRow | undefined): RoomDetail {
+  if (row === undefined) {
+    return detail;
+  }
+
+  return {
+    ...detail,
+    room: row.room,
+    membership: row.membership,
+    displayName: row.displayName,
+    directMemberIds: row.directMemberIds,
+  };
+}
 
 /**
  * Lands a join the server just confirmed. The visit on screen, if any, loads around its own

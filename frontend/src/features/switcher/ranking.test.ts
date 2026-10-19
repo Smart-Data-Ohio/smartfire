@@ -258,8 +258,8 @@ describe("one number on every surface", () => {
 describe("mergeItems", () => {
   it("keeps a DM's existing room label instead of its full sidebar label", () => {
     const row = {
-      ...sidebarRowFixture(20, "Ada Lovelace, Grace Hopper", "direct", [8, 9]),
-      roomDisplayName: "Ada, Grace",
+      ...sidebarRowFixture(20, "Ada, Grace", "direct", [8, 9]),
+      sidebarDisplayName: "Ada Lovelace, Grace Hopper",
     };
 
     const items = mergeItems(localItems(sidebarOf([row]), VIEWER), [], nameOf);

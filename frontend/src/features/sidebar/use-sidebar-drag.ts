@@ -74,7 +74,7 @@ export interface SidebarDrag {
 }
 
 function nameOf(item: DragItem): string {
-  return item.kind === "room" ? item.row.displayName : item.category.name;
+  return item.kind === "room" ? item.row.sidebarDisplayName : item.category.name;
 }
 
 function handleKey(item: DragItem): string {

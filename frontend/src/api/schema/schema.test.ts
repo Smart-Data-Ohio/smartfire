@@ -95,7 +95,7 @@ const sidebarRowJson = {
   room: roomJson,
   membership: membershipJson,
   displayName: "general",
-  roomDisplayName: "general",
+  sidebarDisplayName: "general",
   directMemberIds: [],
   unreadCount: 4,
   mentionCount: 1,

@@ -1201,7 +1201,7 @@ fn sidebar_row_with(
     last_message: Option<api::SidebarLastMessage>,
     (revision, now): (i64, Timestamp),
 ) -> api::SidebarRow {
-    let (display_name, room_display_name, direct_member_ids) = match members {
+    let (sidebar_display_name, display_name, direct_member_ids) = match members {
         Some(members) => {
             let direct = direct_members(members, membership.user_id, viewer_name);
             let names: Vec<&str> = direct.iter().map(|(_, name)| name.as_str()).collect();
@@ -1222,7 +1222,7 @@ fn sidebar_row_with(
         room: self::room(room),
         membership: self::membership(membership),
         display_name,
-        room_display_name,
+        sidebar_display_name,
         direct_member_ids,
         unread_count: counts.unread,
         mention_count: counts.mentions,

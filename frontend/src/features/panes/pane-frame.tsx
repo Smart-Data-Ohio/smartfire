@@ -97,7 +97,7 @@ export function PaneFrame({ title, subtitle, tools, toolbar, footer, children }:
 export function RoomName({ roomId }: { readonly roomId: number }) {
   const name = useStore(
     (state) =>
-      state.rooms[roomId]?.detail?.displayName ?? state.sidebar.rows[roomId]?.roomDisplayName ?? "",
+      state.rooms[roomId]?.detail?.displayName ?? state.sidebar.rows[roomId]?.displayName ?? "",
   );
 
   const direct = useStore(

@@ -77,7 +77,7 @@ export function HuddleLauncher({ roomId }: { readonly roomId: number }) {
   const active = here && activePhase(phase);
   const joining = here && phase === "connecting";
   const label = joining ? "Joining…" : active ? labels.active : labels.join;
-  const name = detailName ?? row.roomDisplayName;
+  const name = detailName ?? row.displayName;
 
   const onClick = () => {
     if (active && labels.toggle) {

@@ -41,8 +41,8 @@ const landDetail = Effect.fn("directs.landDetail")(function* (detail: RoomDetail
       {
         ...row,
         room: detail.room,
-        displayName: detail.sidebarDisplayName,
-        roomDisplayName: detail.displayName,
+        displayName: detail.displayName,
+        sidebarDisplayName: detail.sidebarDisplayName,
         directMemberIds: detail.directMemberIds,
       },
       since,

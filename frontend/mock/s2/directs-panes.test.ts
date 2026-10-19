@@ -30,14 +30,16 @@ describe("directs", () => {
 
     const label = "Jonah Lindqvist, Maya Okafor, Priya Raman +2";
 
-    expect(created.displayName).toBe(label);
-    expect(created.roomDisplayName).toBe("Jonah, Maya, Priya +2");
+    expect(created.sidebarDisplayName).toBe(label);
+    expect(created.displayName).toBe("Jonah, Maya, Priya +2");
     expect(events.find((event) => event.type === "sidebar.row.upserted")).toMatchObject({
-      data: { displayName: label },
+      data: { sidebarDisplayName: label },
     });
     const sidebar = await get<Sidebar>(server, "/api/v1/sidebar");
 
-    expect(sidebar.rows.find((row) => row.room.id === created.room.id)?.displayName).toBe(label);
+    expect(sidebar.rows.find((row) => row.room.id === created.room.id)?.sidebarDisplayName).toBe(
+      label,
+    );
     const header = await get<RoomDetail>(server, `/api/v1/rooms/${created.room.id}`);
 
     expect(header.displayName).toBe(
@@ -90,7 +92,7 @@ describe("directs", () => {
 
     expect(created.room.kind).toBe("direct");
     expect(created.directMemberIds).toEqual([users.sam]);
-    expect(created.displayName).toBe("Sam Whitfield");
+    expect(created.sidebarDisplayName).toBe("Sam Whitfield");
     expect(events.map((event) => event.type)).toEqual(["sidebar.row.upserted"]);
 
     const self = await expectStatus<SidebarRow>(

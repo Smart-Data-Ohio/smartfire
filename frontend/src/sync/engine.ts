@@ -25,7 +25,6 @@ import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
-import { withSidebarRow } from "../store/room-detail.ts";
 import { searchMutations } from "../store/search.ts";
 import type { SidebarState, State } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
@@ -209,7 +208,18 @@ function landRefreshedRoom(
   // A read/unread or placement row may have landed while this request was pending.
   const row = state.sidebar.rows[roomId];
 
-  const landed = mutations.setRoomDetail(withSidebarRow(detail, row), started);
+  const landed = mutations.setRoomDetail(
+    row === undefined
+      ? detail
+      : {
+          ...detail,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+    started,
+  );
 
   return landed ? "applied" : "rejected";
 }

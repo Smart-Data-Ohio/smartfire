@@ -11,7 +11,6 @@ import type { UpdateChannelWebhook } from "../gen/UpdateChannelWebhook.ts";
 import type { UpdateGithubSubscription } from "../gen/UpdateGithubSubscription.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
-import { withSidebarRow } from "../store/room-detail.ts";
 import { mutations, store } from "../store/store.ts";
 import { changedSince, invalidateRoom, managementEpoch, roomRevision } from "./room-refresh.ts";
 import { rowTicket, withRowTicket } from "./row-ticket.ts";
@@ -56,7 +55,18 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
 
   const row = store.getState().sidebar.rows[roomId];
 
-  mutations.setRoomDetail(withSidebarRow(fetched.success, row), started);
+  mutations.setRoomDetail(
+    row === undefined
+      ? fetched.success
+      : {
+          ...fetched.success,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+    started,
+  );
 }, Effect.scoped);
 
 /**

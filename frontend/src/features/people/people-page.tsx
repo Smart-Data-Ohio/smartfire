@@ -244,7 +244,7 @@ export function PeoplePage() {
         clear();
 
         if (huddle) {
-          void goJoin(row.room.id, row.roomDisplayName);
+          void goJoin(row.room.id, row.displayName);
         } else {
           void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } });
         }

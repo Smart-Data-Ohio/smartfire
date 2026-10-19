@@ -65,7 +65,7 @@ it("publishes full sidebar names when a member renames themselves", async () => 
     events.find(
       (event) => event.type === "sidebar.row.upserted" && event.data.room.id === notes.room.id,
     ),
-  ).toMatchObject({ data: { displayName: "Riel Full Surname" } });
+  ).toMatchObject({ data: { sidebarDisplayName: "Riel Full Surname" } });
 });
 
 /** Every key of a write body, `null` unless given. */

@@ -67,7 +67,7 @@ describe("direct actions", () => {
 
       expect(body).toEqual({ name: "Launch crew" });
       expect(store.getState().rooms[20]?.detail?.displayName).toBe("Launch crew");
-      expect(store.getState().sidebar.rows[20]?.displayName).toBe("Launch crew");
+      expect(store.getState().sidebar.rows[20]?.sidebarDisplayName).toBe("Launch crew");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -87,7 +87,10 @@ describe("direct actions", () => {
       const requests = yield* fake.requests;
 
       expect(requests.find((request) => request.method === "PATCH")?.body).toEqual({ name: null });
-      expect(store.getState().sidebar.rows[20]?.displayName).toBe("Ada Lovelace, Grace Hopper");
+      expect(store.getState().sidebar.rows[20]?.sidebarDisplayName).toBe(
+        "Ada Lovelace, Grace Hopper",
+      );
+      expect(store.getState().sidebar.rows[20]?.displayName).toBe("Ada, Grace");
       expect(requests.map((request) => request.path)).not.toContain("/sidebar");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
@@ -127,7 +130,7 @@ describe("direct actions", () => {
       yield* directs.addMembers(20, [5]);
 
       expect(store.getState().sidebar.rows[20]?.directMemberIds).toEqual([3, 4, 5]);
-      expect(store.getState().sidebar.rows[20]?.displayName).toBe(
+      expect(store.getState().sidebar.rows[20]?.sidebarDisplayName).toBe(
         "Ada Lovelace, Ana Lima, Grace Hopper",
       );
       expect(store.getState().users[5]?.name).toBe("Ana Lima");

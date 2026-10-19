@@ -315,7 +315,7 @@ describe("sidebar counts", () => {
       stageRole: null,
     },
     displayName: "general",
-    roomDisplayName: "general",
+    sidebarDisplayName: "general",
     directMemberIds: [],
     unreadCount: 0,
     mentionCount: 0,
