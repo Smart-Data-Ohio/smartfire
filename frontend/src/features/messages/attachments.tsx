@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { type CSSProperties, Suspense, useState } from "react";
 import type { Attachment } from "../../gen/Attachment.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { PendingAttachment } from "../../store/model.ts";
@@ -49,24 +49,41 @@ function MessageLightbox({
   );
 }
 
-function ImageAttachment({ attachment }: { readonly attachment: Attachment }) {
-  const [lightbox, setLightbox] = useState(CLOSED);
+/**
+ * The actions sit beside the button, not inside it, because HTML forbids interactive content in a
+ * button.
+ */
+function ImageFrame({
+  attachment,
+  tile,
+  onOpen,
+}: {
+  readonly attachment: Attachment;
+  readonly tile: boolean;
+  readonly onOpen: () => void;
+}) {
   const [loaded, setLoaded] = useState(false);
-  const size = fitWithin(attachment.width, attachment.height, MEDIA_MAX);
+  const fitted = tile ? null : fitWithin(attachment.width, attachment.height, MEDIA_MAX);
+
+  const style: CSSProperties | undefined =
+    fitted === null
+      ? undefined
+      : {
+          width: `calc(max(${fitted.width}, var(--image-floor)) * 1px)`,
+          aspectRatio: `max(${fitted.width}, var(--image-floor)) / max(${fitted.height}, var(--image-floor))`,
+        };
 
   return (
-    <>
+    <div
+      className={tile ? "attachment-tile attachment-image" : "attachment-image"}
+      data-loaded={loaded || undefined}
+      style={style}
+    >
       <button
         type="button"
-        className="attachment-image"
-        data-loaded={loaded || undefined}
-        style={
-          size === null
-            ? undefined
-            : { width: size.width, aspectRatio: `${size.width} / ${size.height}` }
-        }
+        className="attachment-image-open"
         aria-label={`Open ${attachment.filename}`}
-        onClick={() => setLightbox({ opened: true, open: true, index: 0 })}
+        onClick={onOpen}
       >
         <img
           src={attachment.thumbnailUrl ?? attachment.url}
@@ -77,6 +94,36 @@ function ImageAttachment({ attachment }: { readonly attachment: Attachment }) {
           onLoad={() => setLoaded(true)}
         />
       </button>
+      <div className="attachment-image-actions">
+        <IconButton
+          icon="download"
+          label={`Download ${attachment.filename}`}
+          size="sm"
+          tooltipPlacement="bottom"
+          onClick={() => download(attachment.downloadUrl, attachment.filename)}
+        />
+        <IconButton
+          icon="external-link"
+          label={`Open original ${attachment.filename}`}
+          size="sm"
+          tooltipPlacement="bottom"
+          onClick={() => window.open(attachment.url, "_blank", "noopener")}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ImageAttachment({ attachment }: { readonly attachment: Attachment }) {
+  const [lightbox, setLightbox] = useState(CLOSED);
+
+  return (
+    <>
+      <ImageFrame
+        attachment={attachment}
+        tile={false}
+        onOpen={() => setLightbox({ opened: true, open: true, index: 0 })}
+      />
       <MessageLightbox images={[attachment]} state={lightbox} onChange={setLightbox} />
     </>
   );
@@ -143,36 +190,6 @@ function FileAttachment({ attachment }: { readonly attachment: Attachment }) {
   );
 }
 
-/** An image tile in a gallery: square, cropped to fill, opening the lightbox at itself. */
-function GalleryImage({
-  attachment,
-  onOpen,
-}: {
-  readonly attachment: Attachment;
-  readonly onOpen: () => void;
-}) {
-  const [loaded, setLoaded] = useState(false);
-
-  return (
-    <button
-      type="button"
-      className="attachment-tile attachment-image"
-      data-loaded={loaded || undefined}
-      aria-label={`Open ${attachment.filename}`}
-      onClick={onOpen}
-    >
-      <img
-        src={attachment.thumbnailUrl ?? attachment.url}
-        alt={attachment.filename}
-        loading="lazy"
-        decoding="async"
-        draggable={false}
-        onLoad={() => setLoaded(true)}
-      />
-    </button>
-  );
-}
-
 function GalleryVideo({ attachment }: { readonly attachment: Attachment }) {
   return (
     // biome-ignore lint/a11y/useMediaCaption: user uploads carry no caption track
@@ -235,8 +252,9 @@ export function AttachmentGallery({
                 onReveal={() => setRevealed((current) => new Set([...current, index]))}
               />
             ) : attachment.preview === "image" ? (
-              <GalleryImage
+              <ImageFrame
                 attachment={attachment}
+                tile
                 onOpen={() =>
                   setLightbox({ opened: true, open: true, index: images.indexOf(attachment) })
                 }
