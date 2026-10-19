@@ -89,7 +89,6 @@ function created(data: MessageDTO, seq = 10): SyncEvent {
   return { seq, topic: `room:${data.roomId}`, type: "message.created", data };
 }
 
-/** The rooms a live batch chimes for, the row going from `before` to `after`. */
 function risen(before: SidebarRow | null, after: SidebarRow, liveAfter = 0): readonly number[] {
   return notifyingRooms(
     [upserted(after)],
@@ -231,7 +230,7 @@ describe("notifyingRooms for a room on screen in an unfocused window", () => {
 });
 
 describe("chimeAllowed", () => {
-  const open = { enabled: true, muted: false, desktop: true };
+  const open = { messageSound: true, soundsMuted: false, desktop: true };
   const state = stateWith([row(GENERAL), row(DM, { kind: "direct" })]);
 
   it("chimes on desktop with the setting on", () => {
@@ -239,8 +238,8 @@ describe("chimeAllowed", () => {
   });
 
   it("stays quiet with the setting off, while muted, or on a phone", () => {
-    expect(chimeAllowed(state, [DM], { ...open, enabled: false }, new Set())).toBe(false);
-    expect(chimeAllowed(state, [DM], { ...open, muted: true }, new Set())).toBe(false);
+    expect(chimeAllowed(state, [DM], { ...open, messageSound: false }, new Set())).toBe(false);
+    expect(chimeAllowed(state, [DM], { ...open, soundsMuted: true }, new Set())).toBe(false);
     expect(chimeAllowed(state, [DM], { ...open, desktop: false }, new Set())).toBe(false);
   });
 
@@ -274,13 +273,17 @@ describe("chimeGates", () => {
   });
 
   it("is open on desktop with the setting on and no do-not-disturb", () => {
-    expect(chimeGates(stateWith([]))).toEqual({ enabled: true, muted: false, desktop: true });
+    expect(chimeGates(stateWith([]))).toEqual({
+      messageSound: true,
+      soundsMuted: false,
+      desktop: true,
+    });
   });
 
   it("follows the setting", () => {
     const off = stateWith([], { preferences: { ...PREFERENCES, messageSound: false } });
 
-    expect(chimeGates(off).enabled).toBe(false);
+    expect(chimeGates(off).messageSound).toBe(false);
   });
 
   it("mutes under do not disturb or out of office, as the server folds them into chatSounds", () => {
@@ -289,7 +292,7 @@ describe("chimeGates", () => {
       me: { ...meFixture, chatSounds: { ...meFixture.chatSounds, muted: true } },
     };
 
-    expect(chimeGates(dnd).muted).toBe(true);
+    expect(chimeGates(dnd).soundsMuted).toBe(true);
   });
 
   it("treats a touch screen as a phone", () => {
@@ -321,7 +324,6 @@ describe("followMessageChimes", () => {
     store.setState(initialState);
   });
 
-  /** One DM arriving: the row's count goes up by one in the store, then the batch is emitted. */
   function dmArrives(seq: number): void {
     const before = store.getState();
     const held = before.sidebar.rows[DM];

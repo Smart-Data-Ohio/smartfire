@@ -1,29 +1,37 @@
 import type { Page } from "@playwright/test";
+import { B5_HZ } from "../../src/features/huddle/chime.ts";
 import { expect, openApp, postMessage, ROOM_IDS, syncWelcomed, test } from "./support.ts";
 
 const MAYA = 2;
 
 const JONAH = 3;
 
-/** Counts chimes: each one starts with the B5 partial (`playMessageChime` in huddle/sounds.ts). */
+declare global {
+  interface Window {
+    chimes: number;
+  }
+}
+
 async function spyOnChimes(page: Page, { focused = true } = {}): Promise<void> {
-  await page.addInitScript((windowFocused) => {
-    const start = OscillatorNode.prototype.start;
-    const counted = window as unknown as { chimes: number };
+  await page.addInitScript(
+    ({ windowFocused, note }) => {
+      const start = OscillatorNode.prototype.start;
 
-    counted.chimes = 0;
-    OscillatorNode.prototype.start = function (this: OscillatorNode, when?: number) {
-      if (Math.abs(this.frequency.value - 987.77) < 0.01) {
-        counted.chimes += 1;
+      window.chimes = 0;
+      OscillatorNode.prototype.start = function (this: OscillatorNode, when?: number) {
+        if (Math.abs(this.frequency.value - note) < 0.01) {
+          window.chimes += 1;
+        }
+
+        start.call(this, when);
+      };
+
+      if (!windowFocused) {
+        Document.prototype.hasFocus = () => false;
       }
-
-      start.call(this, when);
-    };
-
-    if (!windowFocused) {
-      Document.prototype.hasFocus = () => false;
-    }
-  }, focused);
+    },
+    { windowFocused: focused, note: B5_HZ },
+  );
 }
 
 async function open(page: Page, path: string): Promise<void> {
@@ -36,7 +44,7 @@ async function open(page: Page, path: string): Promise<void> {
   await expect.poll(() => page.evaluate(() => navigator.userActivation.hasBeenActive)).toBe(true);
 }
 
-const chimes = (page: Page) => page.evaluate(() => (window as unknown as { chimes: number }).chimes);
+const chimes = (page: Page) => page.evaluate(() => window.chimes);
 
 test("a direct message in a background room chimes once", async ({ page, request }) => {
   await spyOnChimes(page);

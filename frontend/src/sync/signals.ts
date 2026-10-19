@@ -6,8 +6,7 @@
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { State } from "../store/state.ts";
 
-/** `before` is the store as it was just before the batch, when the engine applied it. */
-type Listener = (events: readonly SyncEvent[], liveAfter: number, before?: State) => void;
+type Listener = (events: readonly SyncEvent[], liveAfter: number, stateBeforeBatch?: State) => void;
 
 type ResyncListener = (topics: readonly string[]) => void;
 
@@ -28,10 +27,10 @@ export function onSyncEvents(listener: Listener): () => void {
 export function emitSyncEvents(
   events: readonly SyncEvent[],
   liveAfter = Number.NEGATIVE_INFINITY,
-  before?: State,
+  stateBeforeBatch?: State,
 ): void {
   for (const listener of listeners) {
-    listener(events, liveAfter, before);
+    listener(events, liveAfter, stateBeforeBatch);
   }
 }
 

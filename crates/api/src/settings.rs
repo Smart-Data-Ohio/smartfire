@@ -414,7 +414,7 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
                     enabled: switch.enabled,
                 })
                 .collect(),
-            message_sound: status.notification_preferences.message_sound.unwrap_or(true),
+            message_sound: status.notification_preferences.plays_message_sound(),
         },
         status: api::StatusSettings {
             presence_setting: match status.presence_setting.as_str() {
