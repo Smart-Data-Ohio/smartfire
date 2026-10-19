@@ -109,6 +109,11 @@ impl Broadcasts {
         sync::activity_item_in_room_later(&self.server, &self.sync, recorded.user_id, recorded.id, recorded.room_id);
     }
 
+    /// `message.notified` for the people a new message's push policy notifies.
+    pub fn sync_message_notified(&self, rich_text: std::sync::Arc<dyn RichText>, message_id: i64) {
+        sync::message_notified_later(&self.server, &self.sync, rich_text, self.clock.now(), message_id);
+    }
+
     /// `activity.removed` for removed inbox items.
     pub fn sync_activity_removed(&self, removed: ActivityItemsRemoved) {
         sync::activity_removed_later(&self.server, &self.sync, removed);

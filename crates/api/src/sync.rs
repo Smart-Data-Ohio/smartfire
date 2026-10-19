@@ -550,6 +550,7 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
         | api::SyncPayload::SidebarRowRemoved(_)
         | api::SyncPayload::Presence(_)
         | api::SyncPayload::MessagePinned(_)
+        | api::SyncPayload::MessageNotified(_)
         | api::SyncPayload::ThreadRemoved(_)
         | api::SyncPayload::BoardAutomationsChanged(_)
         | api::SyncPayload::SavedChanged(_)

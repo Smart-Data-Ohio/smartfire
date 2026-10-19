@@ -325,17 +325,15 @@ impl PushSubscription {
         )
     }
 
-    /// `Room::MessagePusher#push`: union the recipient scopes before applying policy, so an
-    /// everything follower who is also mentioned/replied to receives one notification per device.
-    /// The last list is retained as an empty compatibility seam for existing callers.
-    pub fn pushes_for(
+    /// `Room::MessagePusher`'s policy over every visible member but the author: the members
+    /// `message` notifies, before presence and devices narrow them to pushes. The SPA's
+    /// `message.notified` goes to all of them.
+    pub fn room_notified(
         conn: &Connection,
         rich_text: &dyn RichText,
         message: &Message,
         now: Timestamp,
-    ) -> Result<(PushPayload, Vec<Self>, Vec<Self>)> {
-        let room = Room::find(conn, message.room_id)?;
-        let payload = Self::payload_for(conn, rich_text, &room, message)?;
+    ) -> Result<Vec<Membership>> {
         let mentionee_ids: Vec<i64> = message
             .mentionees(conn, rich_text)?
             .iter()
@@ -346,23 +344,42 @@ impl PushSubscription {
             _ => None,
         };
         let visible = super::ignore_policy::visible_sql("m.user_id", "?2");
-        let subscriptions = query_all(conn,
-            &format!("SELECT DISTINCT s.* FROM push_subscriptions s JOIN memberships m ON m.user_id=s.user_id WHERE m.room_id=? AND m.user_id!=? AND (m.involvement IS NULL OR m.involvement!='invisible') AND (m.connected_at IS NULL OR m.connected_at < ?) AND {visible}"),
-            params![room.id, message.creator_id, Membership::connection_cutoff(now)], Self::from_row)?;
-        let ids: Vec<i64> = subscriptions.iter().map(|s| s.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+        let members = query_all(conn,
+            &format!("SELECT m.* FROM memberships m WHERE m.room_id=?1 AND m.user_id!=?2 AND (m.involvement IS NULL OR m.involvement!='invisible') AND {visible}"),
+            params![message.room_id, message.creator_id], Membership::from_row)?;
+        let ids: Vec<i64> = members.iter().map(|m| m.user_id).collect();
         let users = UserStatusSettings::for_ids(conn, &ids)?;
         let exceptions = super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
-        let memberships: std::collections::HashMap<i64, Membership> = Membership::for_room(conn, room.id)?.into_iter().map(|m| (m.user_id, m)).collect();
-        let allowed = subscriptions.into_iter().filter(|s| {
+        Ok(members.into_iter().filter(|m| {
             NotificationPolicy {
                 room_id: Some(message.room_id),
-                recipient: users.get(&s.user_id), kind: NotificationKind::RoomMessage,
-                room_involvement: memberships.get(&s.user_id).map(|m| m.involvement), thread_involvement: None,
-                mentioned: mentionee_ids.contains(&s.user_id), reply_to_recipient: reply_author_id == Some(s.user_id),
-                keyword_matched: false, dnd_exception: exceptions.contains(&s.user_id), now,
+                recipient: users.get(&m.user_id), kind: NotificationKind::RoomMessage,
+                room_involvement: Some(m.involvement), thread_involvement: None,
+                mentioned: mentionee_ids.contains(&m.user_id), reply_to_recipient: reply_author_id == Some(m.user_id),
+                keyword_matched: false, dnd_exception: exceptions.contains(&m.user_id), now,
             }.push()
-        }).collect();
-        Ok((payload, allowed, Vec::new()))
+        }).collect())
+    }
+
+    /// `Room::MessagePusher#push`: the devices of the notified members who aren't watching the
+    /// room live, so an everything follower who is also mentioned or replied to receives one
+    /// notification per device. The last list is retained as an empty compatibility seam for
+    /// existing callers.
+    pub fn pushes_for(
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        message: &Message,
+        now: Timestamp,
+    ) -> Result<(PushPayload, Vec<Self>, Vec<Self>)> {
+        let room = Room::find(conn, message.room_id)?;
+        let payload = Self::payload_for(conn, rich_text, &room, message)?;
+        let cutoff = Membership::connection_cutoff(now);
+        let away: Vec<i64> = Self::room_notified(conn, rich_text, message, now)?
+            .into_iter()
+            .filter(|m| m.connected_at.is_none_or(|at| at < cutoff))
+            .map(|m| m.user_id)
+            .collect();
+        Ok((payload, Self::for_users(conn, &away)?, Vec::new()))
     }
 }
 

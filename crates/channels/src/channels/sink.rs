@@ -91,6 +91,9 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
                 app.broadcasts.sync_activity_recorded(recorded);
             }
         }),
+        campfire_db::models::notification_push::MessageNotified::KIND => decode::<campfire_db::models::notification_push::MessageNotified>(request).map(|notified| {
+            if let Some(app) = app { app.broadcasts.sync_message_notified(app.db.env().rich_text.clone(), notified.message_id); }
+        }),
         campfire_db::models::activity_item::ActivityItemsRemoved::KIND => decode::<campfire_db::models::activity_item::ActivityItemsRemoved>(request).map(|removed| {
             if let Some(app) = app { app.broadcasts.sync_activity_removed(removed); }
         }),

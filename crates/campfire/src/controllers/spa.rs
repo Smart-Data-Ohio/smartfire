@@ -72,6 +72,9 @@ mod spa_api_board_automations_tests;
 #[cfg(test)]
 #[path = "spa_settings_tests.rs"]
 mod settings_tests;
+#[cfg(test)]
+#[path = "spa_message_notified_tests.rs"]
+mod message_notified_tests;
 
 #[cfg(test)]
 #[path = "spa_push_enrollment_tests.rs"]

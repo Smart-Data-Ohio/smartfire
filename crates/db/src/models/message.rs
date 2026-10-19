@@ -1456,6 +1456,11 @@ impl Message {
             Some(thread_id) => ChannelThread::push_later(tx, thread_id, self),
             None => Room::push_later(tx, self.room_id, self),
         }
+        if !self.system_note {
+            tx.emit_after_commit(Event::broadcast(
+                &crate::models::notification_push::MessageNotified { message_id: self.id },
+            ));
+        }
     }
 
     /// `create_in_index`: never for a system note.
