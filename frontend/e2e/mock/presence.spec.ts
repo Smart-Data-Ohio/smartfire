@@ -129,3 +129,25 @@ test("automatic scrolling and visibility events leave the next heartbeat idle", 
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
   expect(await nextHeartbeat(sync), "the heartbeat after a visibility event").toBe(false);
 });
+
+test("synthetic document and composer input leave the next heartbeat idle", async ({
+  page,
+  request,
+}) => {
+  const sync = await openGeneral(page, request);
+
+  await page.evaluate(() => document.dispatchEvent(new Event("pointerdown", { bubbles: true })));
+  expect.soft(await nextHeartbeat(sync), "the heartbeat after a synthetic document event").toBe(
+    false,
+  );
+
+  await page.locator("textarea").first().evaluate((element) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+
+    if (!setter) throw new Error("textarea has no native value setter");
+
+    setter.call(element, "Synthetic activity");
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(await nextHeartbeat(sync), "the heartbeat after synthetic composer input").toBe(false);
+});
