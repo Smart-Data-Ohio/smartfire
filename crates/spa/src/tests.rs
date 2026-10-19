@@ -82,7 +82,7 @@ fn the_stub_stands_in_without_a_dist() {
     }
     assert!(files().is_empty());
     assert_eq!(file("assets/index.js", Some("br, gzip")), None);
-    let page = render_shell(&boot(), "token", Some("nonce"));
+    let page = render_shell(&boot(), "token", Some("nonce"), &Favicon::Mark);
     assert!(page.contains("isn't built into this server"), "{page}");
     assert!(page.contains("<meta name=\"csrf-token\" content=\"token\" />"));
     assert_eq!(boot_json(&page)["user"]["id"], 7);
@@ -100,7 +100,7 @@ fn built_dist_is_embedded_whole() {
     }
     assert!(!files().is_empty());
     assert!(files().windows(2).all(|pair| pair[0].path < pair[1].path), "sorted for lookup");
-    let page = render_shell(&boot(), "token", Some("nonce"));
+    let page = render_shell(&boot(), "token", Some("nonce"), &Favicon::Mark);
     assert!(page.contains("<script nonce=\"nonce\" type=\"module\""), "Vite's entry script carries the nonce: {page}");
     assert_eq!(boot_json(&page)["account"]["name"], "Smart Data");
     for file in files() {
@@ -273,7 +273,7 @@ fn built_dist_ships_each_fonts_licence() {
 fn workspace_styles_follow_the_base_sheets_without_html_breakout() {
     let mut boot = boot();
     boot.custom_styles = Some(":root { --accent: red; } .label::after { content: \"</style><script>&\\\"\"; }".into());
-    let page = render("<head><!--boot--><link rel=\"stylesheet\" href=\"base.css\"></head>", &boot, "token", Some("nonce"));
+    let page = render("<head><!--boot--><link rel=\"stylesheet\" href=\"base.css\"></head>", &boot, "token", Some("nonce"), &Favicon::Mark);
     let expected = "<style id=\"workspace-styles\">:root { --accent: red; } .label::after { content: \"\\3c /style><script>&\\\"\"; }</style>";
     assert!(page.contains(expected), "{page}");
     assert!(page.find("base.css").unwrap() < page.find(expected).unwrap());
@@ -287,7 +287,7 @@ fn workspace_styles_preserve_range_queries_and_attribute_selectors() {
     let css = "@media (width < 720px) { [data-label=\"<雪\"] { color: red; } }";
     let mut boot = boot();
     boot.custom_styles = Some(css.into());
-    let page = render("<head><!--boot--></head>", &boot, "token", None);
+    let page = render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark);
     assert!(page.contains(&format!("<style id=\"workspace-styles\">{css}</style>")), "{page}");
 }
 
@@ -295,7 +295,7 @@ fn workspace_styles_preserve_range_queries_and_attribute_selectors() {
 fn workspace_style_end_tags_are_case_insensitive_and_require_a_delimiter() {
     let mut boot = boot();
     boot.custom_styles = Some("body::after { content: \"</StYlE> </STYLE /> </style\n> </stylesheet>\"; }".into());
-    let page = render("<head><!--boot--></head>", &boot, "token", None);
+    let page = render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark);
     assert!(page.contains("content: \"\\3c /StYlE> \\3c /STYLE /> \\3c /style\n> </stylesheet>\"; }"), "{page}");
 }
 
@@ -304,20 +304,23 @@ fn empty_workspace_styles_emit_no_element() {
     for css in [None, Some(String::new())] {
         let mut boot = boot();
         boot.custom_styles = css;
-        assert!(!render("<head><!--boot--></head>", &boot, "token", None).contains("<style"));
+        assert!(!render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark).contains("<style"));
     }
 }
 
 #[test]
 fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
     let template = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixture/index.html")).unwrap();
-    let page = render(&template, &boot(), "masked+token/=", Some("n0nce+/="));
+    let page = render(&template, &boot(), "masked+token/=", Some("n0nce+/="), &Favicon::Mark);
     assert!(!page.contains("<!--boot-->"));
     assert!(page.contains(
         "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n\
          <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
          <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
          <link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n\
+         <link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />\n\
+         <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n\
+         <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\
          <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
     ), "{page}");
     assert!(page.contains("<script nonce=\"n0nce+/=\" type=\"module\" crossorigin src=\"/app/assets/index-B2x8Kq1f.js\"></script>"), "{page}");
@@ -340,12 +343,51 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
         })
     );
 
-    let without_nonce = render(&template, &boot(), "token", None);
+    let without_nonce = render(&template, &boot(), "token", None, &Favicon::Mark);
     assert!(!without_nonce.contains("nonce"));
     assert!(without_nonce.contains("<script type=\"application/json\" id=\"boot\">"));
 
-    let no_placeholder = render("<html><head><title>x</title></head></html>", &boot(), "token", None);
+    let no_placeholder = render("<html><head><title>x</title></head></html>", &boot(), "token", None, &Favicon::Mark);
     assert!(no_placeholder.contains("id=\"boot\">{") && no_placeholder.contains("</script>\n</head>"), "{no_placeholder}");
+}
+
+#[test]
+fn a_workspace_logo_replaces_the_mark_as_the_icon() {
+    let page = render("<head><!--boot--></head>", &boot(), "token", None, &Favicon::Logo("/account/logo?v=20261019120000&size=small".into()));
+    assert!(page.contains(
+        "<link rel=\"icon\" type=\"image/png\" href=\"/account/logo?v=20261019120000&amp;size=small\" />\n\
+         <link rel=\"apple-touch-icon\" href=\"/account/logo?v=20261019120000&amp;size=small\" />\n"
+    ), "{page}");
+    assert!(!page.contains("/favicon"), "{page}");
+}
+
+#[test]
+fn the_marks_files_are_the_sizes_their_links_promise() {
+    let png_size = |bytes: &[u8]| {
+        assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");
+        (u32::from_be_bytes(bytes[16..20].try_into().unwrap()), u32::from_be_bytes(bytes[20..24].try_into().unwrap()))
+    };
+    let served = |path| favicon::file(path).unwrap_or_else(|| panic!("{path}"));
+    assert_eq!(png_size(served("favicon.png").body), (32, 32));
+    assert_eq!(png_size(served("apple-touch-icon.png").body), (180, 180));
+    let svg = served("favicon.svg");
+    assert_eq!(svg.file.content_type, "image/svg+xml");
+    assert!(std::str::from_utf8(svg.body).unwrap().starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\">"));
+
+    let ico = served("favicon.ico").body;
+    assert_eq!(&ico[..4], [0, 0, 1, 0], "an icon resource");
+    let sizes: Vec<_> = (0..usize::from(u16::from_le_bytes([ico[4], ico[5]])))
+        .map(|index| {
+            let entry = &ico[6 + 16 * index..][..16];
+            let length = u32::from_le_bytes(entry[8..12].try_into().unwrap()) as usize;
+            let offset = u32::from_le_bytes(entry[12..16].try_into().unwrap()) as usize;
+            let size = png_size(&ico[offset..offset + length]);
+            assert_eq!((u32::from(entry[0]), u32::from(entry[1])), size, "entry {index} names its image's size");
+            size.0
+        })
+        .collect();
+    assert_eq!(sizes, [16, 32, 48]);
+    assert!(favicon::file("favicon.gif").is_none());
 }
 
 /// Every `<script>` start tag in `page`, up to its `>`.
@@ -359,9 +401,9 @@ fn script_tags(page: &str) -> Vec<&str> {
 #[test]
 fn every_script_in_the_spa_page_carries_the_nonce() {
     let source = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/index.html")).unwrap();
-    let mut pages = vec![("frontend/index.html", render(&source, &boot(), "token", Some("n0nce")))];
+    let mut pages = vec![("frontend/index.html", render(&source, &boot(), "token", Some("n0nce"), &Favicon::Mark))];
     if built() {
-        pages.push(("the embedded dist", render_shell(&boot(), "token", Some("n0nce"))));
+        pages.push(("the embedded dist", render_shell(&boot(), "token", Some("n0nce"), &Favicon::Mark)));
     }
     for (name, page) in pages {
         let tags = script_tags(&page);
@@ -383,7 +425,7 @@ fn boot_json_cannot_end_its_script_element() {
     }
     assert!(json.contains("\"name\":\"\\u003c/script\\u003e\\u003cscript\\u003ealert(1)\\u003c/script\\u003e\\u003c!-- \\u0026 \\u2028\\u2029\""), "{json}");
 
-    let page = render("<head><!--boot--></head>", &boot, "token", None);
+    let page = render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark);
     assert_eq!(page.matches("</script>").count(), 1);
     assert_eq!(boot_json(&page)["user"]["name"], boot.user.name, "the escapes decode to the name");
 }
@@ -446,7 +488,7 @@ fn optional_boot_flash_uses_camel_case_and_is_safe_in_the_shell() {
     assert!(value.get("flash").is_none());
     for (kind, wire) in [(FlashKind::Notice, "notice"), (FlashKind::Alert, "alert")] {
         boot.flash = Some(BootFlash { kind, message: "Connected <&> </script>.".into() });
-        let html = render_shell(&boot, "TOKEN", Some("NONCE"));
+        let html = render_shell(&boot, "TOKEN", Some("NONCE"), &Favicon::Mark);
         assert_eq!(boot_json(&html)["flash"], serde_json::json!({"kind":wire,"message":"Connected <&> </script>."}));
         assert!(!html.contains("Connected <&> </script>."));
     }

@@ -41,6 +41,18 @@ pub async fn manifest(c: &mut Ctx) -> Result {
     render_manifest(c).await
 }
 
+/// `/favicon.ico`, which browsers and link previews ask for without reading the page: the
+/// logo's small icon once one is attached, as the manifest's, else Smartfire's mark.
+pub async fn favicon(c: &mut Ctx) -> Result {
+    c.use_live_response();
+    concerns::before_actions(c, before()).await?;
+    campfire_people::controllers::accounts::logos::send_logo(c, true, |c| {
+        let mark = campfire_spa::favicon::file("favicon.ico").expect("the mark's icon");
+        Ok(c.render_as(StatusCode::OK, mark.file.content_type, mark.body))
+    })
+    .await
+}
+
 /// Compatibility for a manifest linked by an older SPA bundle; install identity stays at `/`.
 pub async fn spa_manifest(c: &mut Ctx) -> Result {
     // The /app manifest from #331 never shipped in a release, so no installed PWA carries
@@ -48,7 +60,8 @@ pub async fn spa_manifest(c: &mut Ctx) -> Result {
     c.redirect_to("/webmanifest.json")
 }
 
-/// The offline shell and manifest illustrations do not need sessions or classic assets.
+/// The offline shell, manifest illustrations and the mark's icons do not need sessions or classic
+/// assets.
 pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
     let files = move |State(kit): State<Kit>, request: Request| async move {
         let path = request
@@ -61,7 +74,7 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
             .headers()
             .get("accept-encoding")
             .and_then(|value| value.to_str().ok());
-        match pwa::file(path, encoding) {
+        match pwa::file(path, encoding).or_else(|| campfire_spa::favicon::file(path)) {
             Some(served) => {
                 let mut response =
                     super::spa::served_response(&kit, served, immutable_cache_control);
@@ -79,6 +92,10 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
     };
     Router::new()
         .route("/offline.html", axum::routing::get(files))
+        .route("/favicon.svg", axum::routing::get(files))
+        .route("/favicon.png", axum::routing::get(files))
+        .route("/apple-touch-icon.png", axum::routing::get(files))
+        .route("/favicon.ico", axum::routing::get(campfire_kit::action(favicon)))
         .route("/pwa/assets/{*path}", axum::routing::get(files))
         .route("/app/offline.html", axum::routing::get(files))
         .route("/app/service-worker.js", axum::routing::get(files))
@@ -95,18 +112,10 @@ async fn render_manifest(c: &mut Ctx) -> Result {
         .read(Account::first)
         .await
         .map_err(Error::internal)?;
-    // The logo endpoint and cache version survive the classic renderer. PWA versions use UTC.
-    let version = account.as_ref().map(|account| {
-        account
-            .updated_at
-            .jiff()
-            .strftime("%Y%m%d%H%M%S")
-            .to_string()
-    });
     let manifest = pwa::Manifest {
         account_name: account.as_ref().map(|account| account.name.clone()),
-        logo_path_small: campfire_routes::fresh_account_logo(version.as_deref(), Some("small")),
-        logo_path: campfire_routes::fresh_account_logo(version.as_deref(), None),
+        logo_path_small: logo_path(account.as_ref(), Some("small")),
+        logo_path: logo_path(account.as_ref(), None),
         base_url: c.url_for(""),
         root: "/",
         new_room_url: "/app/rooms/new/open".into(),
@@ -117,4 +126,10 @@ async fn render_manifest(c: &mut Ctx) -> Result {
     // Keep the historical content type and implicit manifest id (resolved from start_url).
     c.set_header("cache-control", "private, no-cache");
     Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
+}
+
+/// The logo endpoint and cache version survive the classic renderer. PWA versions use UTC.
+pub(crate) fn logo_path(account: Option<&Account>, size: Option<&str>) -> String {
+    let version = account.map(|account| account.updated_at.jiff().strftime("%Y%m%d%H%M%S").to_string());
+    campfire_routes::fresh_account_logo(version.as_deref(), size)
 }

@@ -380,6 +380,54 @@ async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
     assert!(signed_out.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
 }
 
+/// The `href` of a page's `<link rel>` of `type`, unescaped.
+fn icon_link(page: &str, rel: &str, kind: Option<&str>) -> Option<String> {
+    let kind = kind.map_or(String::new(), |kind| format!(r#" type="{kind}""#));
+    let pattern = Regex::new(&format!(r#"<link rel="{rel}"{kind} href="([^"]*)" />"#)).unwrap();
+    pattern.captures(page).map(|captures| captures[1].replace("&amp;", "&"))
+}
+
+#[tokio::test]
+async fn pages_and_favicon_ico_show_smartfires_mark_until_a_logo_is_attached() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mark = |name: &str| std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../spa/favicon").join(name)).unwrap();
+    for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
+        assert!(page.contains("<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />"), "{page}");
+        assert_eq!(icon_link(&page, "icon", Some("image/svg+xml")).as_deref(), Some("/favicon.svg"), "{page}");
+        assert_eq!(icon_link(&page, "apple-touch-icon", None).as_deref(), Some("/apple-touch-icon.png"), "{page}");
+    }
+    for (path, content_type) in [
+        ("favicon.ico", "image/x-icon"),
+        ("favicon.svg", "image/svg+xml"),
+        ("favicon.png", "image/png"),
+        ("apple-touch-icon.png", "image/png"),
+    ] {
+        let response = a.anonymous().get(&format!("/{path}")).await;
+        assert_eq!(response.status, StatusCode::OK, "{path}");
+        assert_eq!(response.content_type(), Some(content_type), "{path}");
+        assert_eq!(response.body, mark(path), "{path}");
+    }
+
+    let logo = std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/users_logos/moon.jpg")).unwrap();
+    let upload = david.write(Req::new(Method::PATCH, "/account").multipart(&[], ("account[logo]", "moon.jpg", "image/jpeg", &logo))).await;
+    assert_eq!(upload.status, StatusCode::FOUND);
+    let manifest = a.anonymous().get("/webmanifest.json").await.json();
+    let small = manifest["icons"][0]["src"].as_str().unwrap().replace("&amp;", "&");
+    assert!(small.starts_with("/account/logo?v="), "{small}");
+    for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
+        assert_eq!(icon_link(&page, "icon", Some("image/png")).as_deref(), Some(small.as_str()), "the manifest's small icon: {page}");
+        assert_eq!(icon_link(&page, "apple-touch-icon", None).as_deref(), Some(small.as_str()), "{page}");
+        assert!(!page.contains("/favicon."), "{page}");
+    }
+    let icon = a.anonymous().get(&small).await;
+    assert_eq!(icon.content_type(), Some("image/png"));
+    let favicon = a.anonymous().get("/favicon.ico").await;
+    assert_eq!(favicon.status, StatusCode::OK);
+    assert_eq!(favicon.content_type(), Some("image/png"));
+    assert_eq!(favicon.body, icon.body, "the logo's small icon");
+}
+
 #[tokio::test]
 async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_shell() {
     let Some(a) = app(true).await else { return };

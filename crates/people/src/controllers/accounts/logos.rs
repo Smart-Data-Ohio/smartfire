@@ -25,6 +25,13 @@ pub async fn show(c: &mut Ctx) -> Result {
     {
         return super::banners::show_image(c, "logo").await;
     }
+    let small = c.param_str("size") == Some("small");
+    send_logo(c, small, |c| stock_icon(c, small)).await
+}
+
+/// The attached logo as a PNG, 192px when `small` and 512px otherwise, with `show`'s caching.
+/// `fallback` answers when there's no logo or it can't be resized.
+pub async fn send_logo(c: &mut Ctx, small: bool, fallback: impl FnOnce(&mut Ctx) -> Result) -> Result {
     let account = c.app().db.read(Account::first).await.map_err(Error::internal)?;
     let blob = match &account {
         Some(account) => {
@@ -49,7 +56,6 @@ pub async fn show(c: &mut Ctx) -> Result {
     }
     c.expires_in(MAX_AGE, ExpiresIn { public: true, stale_while_revalidate: Some(STALE_WHILE_REVALIDATE), ..ExpiresIn::default() });
 
-    let small = c.param_str("size") == Some("small");
     let variant = match blob.filter(|blob| blob.is_variable()) {
         // `logo.variant(size).processed if logo.variable?`: :small is 192, :large 512, both PNG.
         Some(blob) => {
@@ -81,7 +87,7 @@ pub async fn show(c: &mut Ctx) -> Result {
             c.send_file(path, SendOptions::inline("image/png"))
         }
         // send_stock_icon
-        None => stock_icon(c, small),
+        None => fallback(c),
     }?;
     Ok(if private { response.header("cache-control", "private, no-store") } else { response })
 }
