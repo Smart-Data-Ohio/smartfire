@@ -147,6 +147,7 @@ RUN --mount=type=cache,id=campfire-pnpm-store,target=/pnpm-store \
     npm install --global --no-fund --no-audit "$(node -p 'require("./package.json").packageManager')" && \
     pnpm install --frozen-lockfile --store-dir /pnpm-store
 COPY frontend ./
+COPY crates/rails_compat/src/unicode_tables.json /src/crates/rails_compat/src/unicode_tables.json
 RUN pnpm build
 
 
