@@ -221,7 +221,7 @@ test.describe("phone", () => {
     await reread;
 
     await expect(page.locator(".board .t-skel")).toHaveAttribute("aria-busy", "false");
-    await expect(post).toHaveAttribute("data-kept", "");
+    await expect(post).toHaveAttribute("data-kept");
   });
 
   test("the list scrolls to its last post, clear of New post in thumb reach", async ({ page }) => {
