@@ -394,12 +394,8 @@ async fn agent_sse_review_slow_get_body_still_ends_cleanly_before_front_deadline
     use campfire_kit::front::FrontConfig;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let app = setup_with(&[("HTTP_WRITE_TIMEOUT", "1")]).await;
-    let http = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .unwrap();
-    let target = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .unwrap();
+    let http = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let target = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = http.local_addr().unwrap();
     let target_port = target.local_addr().unwrap().port();
     let config = FrontConfig::from_lookup(|name| match name {
