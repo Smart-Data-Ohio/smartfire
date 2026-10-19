@@ -22,7 +22,7 @@ import type { SudoMethod } from "../src/gen/SudoMethod.ts";
 import type { UnreadDivider } from "../src/gen/UnreadDivider.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserList } from "../src/gen/UserList.ts";
-import { directRoomLabel, sidebarDirectLabel } from "./direct-label.ts";
+import { sidebarDirectLabel } from "./direct-label.ts";
 import {
   forbidden,
   headerOf,
@@ -539,10 +539,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
-      displayName:
-        record.room.kind === "direct"
-          ? directRoomLabel(record.room.name, names)
-          : displayName(record),
+      displayName: displayName(record),
       sidebarDisplayName:
         record.room.kind === "direct"
           ? sidebarDirectLabel(record.room.name, names)

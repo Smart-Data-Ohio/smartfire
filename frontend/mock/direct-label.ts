@@ -17,22 +17,6 @@ function nameKey(name: string): number[] {
 }
 
 export function sidebarDirectLabel(customName: string | null, names: readonly string[]): string {
-  return directLabel(customName, names, (name) => name);
-}
-
-export function directRoomLabel(customName: string | null, names: readonly string[]): string {
-  return directLabel(
-    customName,
-    names,
-    (name) => name.split(/[ \t\n\r\v\f]/).find((part) => part !== "") ?? "",
-  );
-}
-
-function directLabel(
-  customName: string | null,
-  names: readonly string[],
-  labelName: (name: string) => string,
-): string {
   if (customName !== null && customName.trim() !== "") return customName;
 
   const ordered = names
@@ -49,7 +33,7 @@ function directLabel(
 
   const label = ordered
     .slice(0, 3)
-    .map(({ name }) => labelName(name))
+    .map(({ name }) => name)
     .join(", ");
 
   return label + (ordered.length > 3 ? ` +${ordered.length - 3}` : "");

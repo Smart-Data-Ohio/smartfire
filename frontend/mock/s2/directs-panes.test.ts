@@ -31,7 +31,9 @@ describe("directs", () => {
     const label = "Jonah Lindqvist, Maya Okafor, Priya Raman +2";
 
     expect(created.sidebarDisplayName).toBe(label);
-    expect(created.displayName).toBe("Jonah, Maya, Priya +2");
+    expect(created.displayName).toBe(
+      "Maya Okafor, Jonah Lindqvist, Priya Raman, Sam Whitfield, Theo Nakamura",
+    );
     expect(events.find((event) => event.type === "sidebar.row.upserted")).toMatchObject({
       data: { sidebarDisplayName: label },
     });

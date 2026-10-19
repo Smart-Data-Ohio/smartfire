@@ -67,7 +67,7 @@ test("DM sidebar labels keep full names and expose clipped labels on hover", asy
   expect(cleared.ok()).toBe(true);
   await expect(name).toHaveText(label);
   await name.click();
-  await expect(page.locator(".room-header .room-title-name")).toHaveText("Jonah, Maya, Priya +2");
-  await expect(page).toHaveTitle(/Jonah, Maya, Priya \+2 · Smartfire$/);
+  await expect(page.locator(".room-header .room-title-name")).toHaveText(row.displayName);
+  await expect.poll(() => page.title()).toContain(`${row.displayName} · Smartfire`);
   await expect(name).toHaveText(label);
 });
