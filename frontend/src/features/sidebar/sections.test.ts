@@ -76,6 +76,7 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
       stageRole: null,
     },
     displayName: name,
+    sidebarDisplayName: name,
     directMemberIds: [],
     unreadCount: unread,
     mentionCount: mentions,
