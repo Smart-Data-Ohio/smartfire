@@ -113,8 +113,7 @@ interface Draft {
 
 const EMPTY: Draft = { name: "", brief: "", status: "planned", ownerId: "", tags: "" };
 
-/** Nothing typed or picked yet, the status aside. */
-function untouched(draft: Draft): boolean {
+function blankApartFromStatus(draft: Draft): boolean {
   return (
     draft.name === EMPTY.name &&
     draft.brief === EMPTY.brief &&
@@ -222,8 +221,7 @@ function TagSuggestions({
 interface NewPostDialogProps {
   readonly roomId: number;
   readonly open: boolean;
-  /** The status a fresh draft starts in: the column it was opened from. */
-  readonly status: WorkStatus;
+  readonly initialStatus: WorkStatus;
   readonly onClose: () => void;
   readonly onCreated: (threadId: number) => void;
 }
@@ -235,7 +233,13 @@ interface NewPostDialogProps {
  * one needed when the board requires it), then free-text ones as before. The chips follow the
  * catalog live. Creating it opens the post in the right pane.
  */
-export function NewPostDialog({ roomId, open, status, onClose, onCreated }: NewPostDialogProps) {
+export function NewPostDialog({
+  roomId,
+  open,
+  initialStatus,
+  onClose,
+  onCreated,
+}: NewPostDialogProps) {
   const roomName = useStore((state) => state.rooms[roomId]?.detail?.displayName ?? null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   // The picked curated tags; `null` until the viewer touches a chip, so the default (which may
@@ -309,9 +313,11 @@ export function NewPostDialog({ roomId, open, status, onClose, onCreated }: NewP
 
   useEffect(() => {
     if (open) {
-      setDraft((previous) => (untouched(previous) ? { ...previous, status } : previous));
+      setDraft((previous) =>
+        blankApartFromStatus(previous) ? { ...previous, status: initialStatus } : previous,
+      );
     }
-  }, [open, status]);
+  }, [open, initialStatus]);
 
   const set = (patch: Partial<Draft>) => setDraft((previous) => ({ ...previous, ...patch }));
   const freeTags = parseTags(draft.tags);
@@ -320,8 +326,8 @@ export function NewPostDialog({ roomId, open, status, onClose, onCreated }: NewP
   const tags = postTagNames(catalog.tags, selection, freeTags);
 
   const dirty =
-    !untouched(draft) ||
-    draft.status !== status ||
+    !blankApartFromStatus(draft) ||
+    draft.status !== initialStatus ||
     selection.join(",") !== startSelection.join(",") ||
     attachments.files.length > 0;
 

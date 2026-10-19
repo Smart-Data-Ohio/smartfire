@@ -294,7 +294,7 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
       <NewPostDialog
         roomId={roomId}
         open={composing}
-        status={startStatus}
+        initialStatus={startStatus}
         onClose={closeComposer}
         onCreated={(threadId) =>
           void navigate({

@@ -177,7 +177,6 @@ function ColumnEmpty({
 /** The column each board last showed this session, so coming back lands where you left. */
 const lastColumn = new Map<number, WorkStatus>();
 
-/** The status a phone board is showing, where its New post starts. */
 export function showingColumn(roomId: number): WorkStatus {
   return lastColumn.get(roomId) ?? "planned";
 }

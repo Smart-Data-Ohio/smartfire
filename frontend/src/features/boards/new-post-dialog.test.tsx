@@ -65,7 +65,7 @@ describe("the new-post dialog", () => {
       <NewPostDialog
         roomId={900}
         open={open}
-        status="planned"
+        initialStatus="planned"
         onClose={() => {}}
         onCreated={() => {}}
       />
@@ -91,7 +91,13 @@ describe("the new-post dialog", () => {
     vi.spyOn(actions.boards, "createPost").mockReturnValue(pending.promise);
 
     const { container } = render(
-      <NewPostDialog roomId={900} open status="planned" onClose={() => {}} onCreated={() => {}} />,
+      <NewPostDialog
+        roomId={900}
+        open
+        initialStatus="planned"
+        onClose={() => {}}
+        onCreated={() => {}}
+      />,
     );
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "The upload" } });
@@ -155,7 +161,7 @@ describe("the new-post dialog", () => {
       <NewPostDialog
         roomId={900}
         open
-        status="planned"
+        initialStatus="planned"
         onClose={() => undefined}
         onCreated={() => undefined}
       />,
@@ -203,7 +209,7 @@ describe("the new-post dialog", () => {
       <NewPostDialog
         roomId={900}
         open
-        status="planned"
+        initialStatus="planned"
         onClose={() => undefined}
         onCreated={() => undefined}
       />,
@@ -247,7 +253,7 @@ describe("the new-post dialog", () => {
         key={roomId}
         roomId={roomId}
         open
-        status="planned"
+        initialStatus="planned"
         onClose={() => undefined}
         onCreated={created}
       />
@@ -308,7 +314,7 @@ describe("the new-post dialog", () => {
         <NewPostDialog
           roomId={900}
           open
-          status="planned"
+          initialStatus="planned"
           onClose={() => {}}
           onCreated={() => {}}
         />,
@@ -339,7 +345,7 @@ describe("the new-post dialog", () => {
         <NewPostDialog
           roomId={900}
           open
-          status="planned"
+          initialStatus="planned"
           onClose={() => {}}
           onCreated={() => {}}
         />,
@@ -369,7 +375,7 @@ describe("the new-post dialog", () => {
         <NewPostDialog
           roomId={900}
           open
-          status="planned"
+          initialStatus="planned"
           onClose={() => {}}
           onCreated={() => {}}
         />,
@@ -403,7 +409,7 @@ describe("the new-post dialog", () => {
         <NewPostDialog
           roomId={900}
           open
-          status="planned"
+          initialStatus="planned"
           onClose={() => {}}
           onCreated={() => {}}
         />,
