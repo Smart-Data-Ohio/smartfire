@@ -128,7 +128,7 @@ async fn render_manifest(c: &mut Ctx) -> Result {
     Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
 }
 
-/// The logo endpoint and cache version survive the classic renderer. PWA versions use UTC.
+/// `/account/logo` versioned by the account's UTC `updated_at`, which attaching a logo touches.
 pub(crate) fn logo_path(account: Option<&Account>, size: Option<&str>) -> String {
     let version = account.map(|account| account.updated_at.jiff().strftime("%Y%m%d%H%M%S").to_string());
     campfire_routes::fresh_account_logo(version.as_deref(), size)

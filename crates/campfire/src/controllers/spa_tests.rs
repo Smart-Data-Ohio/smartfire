@@ -382,8 +382,8 @@ async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
 
 /// The `href` of a page's `<link rel>` of `type`, unescaped.
 fn icon_link(page: &str, rel: &str, kind: Option<&str>) -> Option<String> {
-    let kind = kind.map_or(String::new(), |kind| format!(r#" type="{kind}""#));
-    let pattern = Regex::new(&format!(r#"<link rel="{rel}"{kind} href="([^"]*)" />"#)).unwrap();
+    let kind = kind.map_or(String::new(), |kind| format!(r#" type="{}""#, regex::escape(kind)));
+    let pattern = Regex::new(&format!(r#"<link rel="{}"{kind} href="([^"]*)" />"#, regex::escape(rel))).unwrap();
     pattern.captures(page).map(|captures| captures[1].replace("&amp;", "&"))
 }
 
