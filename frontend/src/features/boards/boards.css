@@ -1789,6 +1789,11 @@
       margin-bottom: var(--space-2);
     }
 
+    .board-tag {
+      font-size: var(--text-meta);
+      line-height: 20px;
+    }
+
     .automation-form-row {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -1853,6 +1858,10 @@
     .post-fact-button,
     .post-history .accordion-trigger {
       min-height: var(--touch-target);
+    }
+
+    .post-fact-edit {
+      min-width: var(--touch-target);
     }
 
     .post-fact-label {

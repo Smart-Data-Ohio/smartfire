@@ -238,11 +238,6 @@
     font-weight: var(--weight-semibold);
   }
 
-  .phone-card .board-tag {
-    font-size: var(--text-meta);
-    line-height: 20px;
-  }
-
   .phone-card-foot {
     display: flex;
     align-items: center;
@@ -321,6 +316,11 @@
       border-radius: var(--radius-pill);
       box-shadow: var(--shadow-raised);
       font-weight: var(--weight-semibold);
+    }
+
+    /* A toast rises above the button instead of covering it, as a snackbar does above a FAB. */
+    :root:has(.board-fab:not([inert] *)) .toaster {
+      bottom: calc(var(--space-4) + 52px + var(--space-3) + var(--viewport-bottom-inset));
     }
   }
 

@@ -164,6 +164,11 @@ test.describe("phone", () => {
     );
     await expect(page.getByText("Moved to In progress")).toBeVisible();
 
+    const toast = await page.locator(".toast").filter({ hasText: "Moved to" }).boundingBox();
+    const fab = await page.getByRole("button", { name: "New post" }).boundingBox();
+
+    expect(toast === null ? Infinity : toast.y + toast.height).toBeLessThanOrEqual(fab?.y ?? 0);
+
     await page.getByRole("button", { name: "Undo" }).tap();
     await expect(tab(page, /Planned/)).toContainText("3");
     await expect(panel(page, "Planned").getByText("Cursor pagination for the API")).toHaveCount(1);
