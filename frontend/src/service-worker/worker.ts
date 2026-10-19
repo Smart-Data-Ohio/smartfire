@@ -108,6 +108,7 @@ self.addEventListener("push", (event) => {
     (async () => {
       const data = event.data?.json();
       const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+
       const focused = clients.some(
         (client) =>
           client.visibilityState === "visible" &&

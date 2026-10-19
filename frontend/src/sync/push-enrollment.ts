@@ -1,6 +1,8 @@
 import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
+import type { DeviceClass } from "../gen/DeviceClass.ts";
 import type { PushPublicKey } from "../gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
+import { browserDeviceClass } from "../lib/device-class.ts";
 import { store } from "../store/store.ts";
 import { settings } from "./settings.ts";
 
@@ -34,6 +36,7 @@ export interface PushRegistration {
 export interface PushBrowser {
   readonly origin: string;
   readonly workerUrl: string;
+  readonly deviceClass: DeviceClass;
   permission(): NotificationPermission;
   requestPermission(): Promise<NotificationPermission>;
   register(): Promise<PushRegistration>;
@@ -60,6 +63,7 @@ export function pushBrowser(): PushBrowser | null {
   return {
     origin: window.location.origin,
     workerUrl,
+    deviceClass: browserDeviceClass(),
     permission: () => Notification.permission,
     requestPermission: () => Notification.requestPermission(),
     register: () =>
@@ -197,6 +201,7 @@ export async function enablePushNotifications(
       endpoint: subscription.endpoint,
       p256dhKey,
       authKey,
+      deviceClass: browser.deviceClass,
     });
 
     return { kind: "enabled", list, endpoint: subscription.endpoint };

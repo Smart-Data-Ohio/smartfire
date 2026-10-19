@@ -195,6 +195,7 @@ const workspaceBoot: Boot = {
 const timelineIds = (roomId: number) => store.getState().timelines[roomId]?.ids;
 
 beforeEach(() => {
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (X11; Linux x86_64)");
   beginSettingsEpoch();
   mutations.reset();
   session.resetRoomVisits();
@@ -1238,7 +1239,13 @@ describe("resuming", () => {
         yield* TestClock.adjust(250);
 
         expect(hellos(yield* socket.sent)).toEqual([
-          { t: "hello", v: 1, resume: { epoch: "e1", seq: 12 }, topics: [] },
+          {
+            t: "hello",
+            v: 1,
+            resume: { epoch: "e1", seq: 12 },
+            topics: [],
+            deviceClass: "desktop",
+          },
         ]);
 
         yield* welcome(12, true);

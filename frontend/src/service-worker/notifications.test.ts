@@ -51,7 +51,15 @@ async function worker(
 
     if (handler === undefined) throw new Error(`Missing ${name} worker handler`);
 
-    await handler({ ...event, waitUntil: (work: Promise<unknown>) => completions.push(work) });
+    const handled = handler({
+      ...event,
+      waitUntil: (work: Promise<unknown>) => completions.push(work),
+    });
+
+    expect(completions, "waitUntil must extend the event before the handler returns").toHaveLength(
+      1,
+    );
+    await handled;
     await Promise.all(completions);
   }
 
@@ -65,6 +73,7 @@ describe("shared worker notifications", () => {
       visibilityState: "visible",
       focused: true,
     });
+
     const options = { data: { badge: 7, path: "/rooms/12" }, tag: "room-12" };
 
     await f.dispatch("push", { data: { json: () => ({ title: "New message", options }) } });

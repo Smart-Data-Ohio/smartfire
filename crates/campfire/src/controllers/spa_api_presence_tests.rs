@@ -531,3 +531,32 @@ async fn revoking_sessions_publishes_only_the_final_device_going_offline() {
     }
     server.abort();
 }
+
+#[tokio::test]
+async fn push_device_class_from_hello_survives_lease_reestablishment() {
+    for class in [api::DeviceClass::Mobile, api::DeviceClass::Desktop, api::DeviceClass::Unknown] {
+        let Some(a) = app(true).await else { return; };
+        let (addr, server) = serve(&a).await;
+        let browser = a.sign_in(DAVID).await;
+        let mut sync = Sync::open_for_device(addr, &browser.cookie_header(), &[], Value::Null, Some(class)).await;
+        sync.welcome().await;
+        processed(&mut sync).await;
+        for recreate in [false, true] {
+            if recreate {
+                a.db().write(|tx| { tx.conn().execute("DELETE FROM workspace_presence_leases WHERE user_id=?", [DAVID])?; Ok(()) }).await.unwrap();
+                heartbeat(&mut sync, false).await;
+            }
+            let now = a.booted.app.db.env().now();
+            let (saved, activity) = a.db().read(move |conn| {
+                let saved = conn.query_row("SELECT device_class FROM workspace_presence_leases WHERE user_id=?", [DAVID], |row| row.get::<_, Option<String>>(0))?;
+                let activity = campfire_db::WorkspacePresenceLease::activity_by_user_id(conn, &[DAVID], now)?;
+                Ok((saved, activity[&DAVID]))
+            }).await.unwrap();
+            assert_eq!(saved.as_deref(), Some(match class { api::DeviceClass::Mobile => "mobile", api::DeviceClass::Desktop => "desktop", api::DeviceClass::Unknown => "unknown" }));
+            assert_eq!(activity.overall, campfire_db::models::workspace_presence_lease::Presence::Online);
+            assert_eq!(activity.active_desktop, class == api::DeviceClass::Desktop);
+        }
+        sync.socket.close(None).await.unwrap();
+        server.abort();
+    }
+}

@@ -14,6 +14,7 @@ use crate::database::Tx;
 use crate::error::{Error, Result};
 use crate::sql::{self, CachedStatements, query_one, query_all, placeholders};
 use crate::time::Timestamp;
+use super::DeviceClass;
 
 /// `WorkspacePresenceLease::TTL`
 pub const TTL: SignedDuration = SignedDuration::from_secs(90);
@@ -24,12 +25,28 @@ pub const IDLE_AFTER: SignedDuration = SignedDuration::from_mins(10);
 #[serde(rename_all = "lowercase")]
 pub enum Presence { Online, Idle, Offline, Dnd }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkspaceActivity {
+    pub overall: Presence,
+    pub active_desktop: bool,
+}
+
+impl WorkspaceActivity {
+    fn record(&mut self, presence: Presence, device: DeviceClass) {
+        if presence == Presence::Online || self.overall == Presence::Offline {
+            self.overall = presence;
+        }
+        self.active_desktop |= device == DeviceClass::Desktop && presence == Presence::Online;
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspacePresenceLease {
     pub id: i64,
     pub connection_id: String,
     pub expires_at: Timestamp,
     pub last_active_at: Option<Timestamp>,
+    pub device_class: Option<DeviceClass>,
     pub session_id: i64,
     pub user_id: i64,
     pub created_at: Timestamp,
@@ -41,15 +58,20 @@ pub struct WorkspacePresenceLease {
 impl WorkspacePresenceLease {
     /// Reads never prune: the hot presence poll must not take SQLite's write lock.
     pub fn presence_by_user_id(conn: &Connection, ids: &[i64], now: Timestamp) -> Result<std::collections::HashMap<i64, Presence>> {
+        Ok(Self::activity_by_user_id(conn, ids, now)?.into_iter().map(|(id, presence)| (id, presence.overall)).collect())
+    }
+
+    pub fn activity_by_user_id(conn: &Connection, ids: &[i64], now: Timestamp) -> Result<std::collections::HashMap<i64, WorkspaceActivity>> {
         if ids.is_empty() { return Ok(std::collections::HashMap::new()); }
-        let sql = format!("SELECT leases.user_id, leases.last_active_at FROM workspace_presence_leases leases JOIN sessions ON sessions.id=leases.session_id JOIN users ON users.id=leases.user_id WHERE leases.expires_at>=? AND users.status=0 AND sessions.user_id=leases.user_id AND leases.user_id IN ({})", placeholders(ids.len()));
+        let sql = format!("SELECT leases.user_id, leases.last_active_at, sessions.user_agent, leases.device_class FROM workspace_presence_leases leases JOIN sessions ON sessions.id=leases.session_id JOIN users ON users.id=leases.user_id WHERE leases.expires_at>=? AND users.status=0 AND sessions.user_id=leases.user_id AND leases.user_id IN ({})", placeholders(ids.len()));
         let mut values: Vec<rusqlite::types::Value> = vec![now.to_db().into()];
         values.extend(ids.iter().map(|id| (*id).into()));
-        let rows: Vec<(i64, Option<Timestamp>)> = query_all(conn, &sql, rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, row.get(1)?)))?;
+        let rows: Vec<(i64, Option<Timestamp>, Option<String>, Option<DeviceClass>)> = query_all(conn, &sql, rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?;
         let mut states = std::collections::HashMap::new();
-        for (user_id, last_active_at) in rows {
+        for (user_id, last_active_at, user_agent, reported_class) in rows {
             let state = if last_active_at.is_none_or(|at| at >= now.ago(IDLE_AFTER)) { Presence::Online } else { Presence::Idle };
-            states.entry(user_id).and_modify(|old| { if state == Presence::Online { *old = state; } }).or_insert(state);
+            states.entry(user_id).or_insert(WorkspaceActivity { overall: Presence::Offline, active_desktop: false })
+                .record(state, reported_class.unwrap_or_else(|| DeviceClass::from_user_agent(user_agent.as_deref())));
         }
         Ok(states)
     }
@@ -71,6 +93,7 @@ impl WorkspacePresenceLease {
             connection_id: row.get("connection_id")?,
             expires_at: row.get("expires_at")?,
             last_active_at: row.get("last_active_at")?,
+            device_class: row.get("device_class")?,
             session_id: row.get("session_id")?,
             user_id: row.get("user_id")?,
             created_at: row.get("created_at")?,
@@ -86,6 +109,10 @@ impl WorkspacePresenceLease {
     /// `WorkspacePresenceLease.establish(user:, session:)`: a new lease, or `None` when the user
     /// isn't active or the session is gone or someone else's.
     pub fn establish(tx: &mut Tx<'_>, user_id: i64, session_id: i64) -> Result<Option<Self>> {
+        Self::establish_for_device(tx, user_id, session_id, None)
+    }
+
+    pub fn establish_for_device(tx: &mut Tx<'_>, user_id: i64, session_id: i64, device_class: Option<DeviceClass>) -> Result<Option<Self>> {
         if !Self::identity_valid(tx.conn(), user_id, session_id)? {
             return Ok(None);
         }
@@ -93,11 +120,11 @@ impl WorkspacePresenceLease {
         let connection_id = sql::uuid();
         let expires_at = now.since(TTL);
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "workspace_presence_leases" ("connection_id", "created_at", "expires_at", "last_active_at", "session_id", "updated_at", "user_id") VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
-            params![connection_id, now, expires_at, now, session_id, now, user_id],
+            r#"INSERT INTO "workspace_presence_leases" ("connection_id", "created_at", "expires_at", "last_active_at", "session_id", "updated_at", "user_id", "device_class") VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            params![connection_id, now, expires_at, now, session_id, now, user_id, device_class],
             |row| row.get(0),
         )?;
-        Ok(Some(Self { id, connection_id, expires_at, last_active_at: Some(now), session_id, user_id, created_at: now, updated_at: now, destroyed: false }))
+        Ok(Some(Self { id, connection_id, expires_at, last_active_at: Some(now), device_class, session_id, user_id, created_at: now, updated_at: now, destroyed: false }))
     }
 
     /// `identity_valid?(user:, session:)`: `User.active.exists?(id:)` and

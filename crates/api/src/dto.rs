@@ -2046,3 +2046,11 @@ mod tests {
         assert_eq!(inline_mentions("<p>plain</p>"), "<p>plain</p>");
     }
 }
+
+pub(crate) fn device_class(class: api::DeviceClass) -> campfire_db::DeviceClass {
+    match class {
+        api::DeviceClass::Desktop => campfire_db::DeviceClass::Desktop,
+        api::DeviceClass::Mobile => campfire_db::DeviceClass::Mobile,
+        api::DeviceClass::Unknown => campfire_db::DeviceClass::Unknown,
+    }
+}

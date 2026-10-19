@@ -723,6 +723,16 @@ impl Sync {
         topics: &[String],
         resume: Value,
     ) -> Self {
+        Self::open_for_device(addr, cookie, topics, resume, None).await
+    }
+
+    async fn open_for_device(
+        addr: SocketAddr,
+        cookie: &str,
+        topics: &[String],
+        resume: Value,
+        device_class: Option<api::DeviceClass>,
+    ) -> Self {
         let mut request = format!("ws://{addr}/api/v1/sync")
             .into_client_request()
             .unwrap();
@@ -740,7 +750,7 @@ impl Sync {
             socket,
             pending: Default::default(),
         };
-        sync.send(json!({"t": "hello", "v": 1, "resume": resume, "topics": topics}))
+        sync.send(json!({"t": "hello", "v": 1, "resume": resume, "topics": topics, "deviceClass": device_class}))
             .await;
         sync
     }

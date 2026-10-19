@@ -550,4 +550,16 @@ pub struct CreatePushSubscription {
     pub endpoint: String,
     pub p256dh_key: String,
     pub auth_key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub device_class: Option<DeviceClass>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum DeviceClass {
+    Desktop,
+    Mobile,
+    Unknown,
 }

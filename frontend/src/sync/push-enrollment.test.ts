@@ -73,6 +73,7 @@ function fixture(permission: NotificationPermission = "default") {
   const browser: PushBrowser = {
     origin: "https://smartfire.test",
     workerUrl: "/service-worker.js",
+    deviceClass: "mobile",
     permission: () => permission,
     requestPermission,
     register,
@@ -127,6 +128,7 @@ describe("explicit browser push enrollment", () => {
       endpoint: ENDPOINT,
       p256dhKey: "p256",
       authKey: "auth",
+      deviceClass: "mobile",
     });
   });
 

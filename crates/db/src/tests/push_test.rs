@@ -83,12 +83,85 @@ fn push_routing_idle_threshold_is_inclusive_and_uses_send_time() {
     let t = TestDb::new();
     routing_phone(&t);
     let mut desktop = routing_lease(&t, DESKTOP_UA);
-    t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER);
+    t.clock.travel_to(desktop.last_active_at.unwrap().since(crate::models::workspace_presence_lease::IDLE_AFTER));
     desktop = t.write(move |tx| { desktop.refresh(tx, false)?; Ok(desktop) });
     assert_eq!(deliveries(&t, "designers", "At threshold".into()), 1);
     t.clock.travel(jiff::SignedDuration::from_micros(1));
     t.write(move |tx| desktop.refresh(tx, false));
     assert_eq!(deliveries(&t, "designers", "Past threshold".into()), 2);
+}
+
+#[test]
+fn push_routing_revoked_or_mismatched_desktop_session_does_not_suppress_phone() {
+    for revoke in [true, false] {
+        let t = TestDb::new();
+        routing_phone(&t);
+        let desktop = routing_lease(&t, DESKTOP_UA);
+        t.write(move |tx| {
+            if revoke {
+                tx.conn().execute("DELETE FROM sessions WHERE id=?", [desktop.session_id])?;
+            } else {
+                tx.conn().execute("UPDATE sessions SET user_id=? WHERE id=?", rusqlite::params![id("david"), desktop.session_id])?;
+            }
+            Ok(())
+        });
+        assert_eq!(deliveries(&t, "designers", "Session ended".into()), 2);
+    }
+}
+
+#[test]
+fn push_routing_unknown_device_identity_keeps_existing_delivery() {
+    let t = TestDb::new();
+    routing_phone(&t);
+    routing_lease(&t, "Unknown browser");
+    assert_eq!(deliveries(&t, "designers", "Unknown computer".into()), 2);
+
+    routing_lease(&t, DESKTOP_UA);
+    t.write(|tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET user_agent=NULL WHERE user_id=?", [id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Unknown subscription".into()), 2);
+}
+
+#[test]
+fn push_routing_explicit_mobile_subscription_overrides_a_desktop_user_agent() {
+    let t = TestDb::new();
+    routing_lease(&t, DESKTOP_UA);
+    t.write(|tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET device_class='mobile' WHERE user_id=?", [id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Tablet subscription".into()), 1);
+}
+
+#[test]
+fn push_routing_mobile_or_unknown_lease_never_counts_as_a_computer() {
+    for class in [crate::DeviceClass::Mobile, crate::DeviceClass::Unknown] {
+        let t = TestDb::new();
+        routing_phone(&t);
+        let lease = t.write(move |tx| {
+            let session = crate::Session::start(tx, id("jason"), Some(DESKTOP_UA), None)?;
+            Ok(crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(class))?.unwrap())
+        });
+        let activity = t.read(|conn| crate::WorkspacePresenceLease::activity_by_user_id(conn, &[id("jason")], t.now()));
+        assert_eq!(activity[&id("jason")].overall, crate::models::workspace_presence_lease::Presence::Online);
+        assert!(!activity[&id("jason")].active_desktop);
+        assert_eq!(lease.device_class, Some(class));
+        assert_eq!(deliveries(&t, "designers", "Using a tablet".into()), 2);
+    }
+}
+
+#[test]
+fn push_routing_explicit_unknown_subscription_keeps_delivery_without_ua_fallback() {
+    let t = TestDb::new();
+    routing_phone(&t);
+    routing_lease(&t, DESKTOP_UA);
+    t.write(|tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET device_class='unknown' WHERE user_id=?", [id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Uncertain device".into()), 2);
 }
 
 // WS17 regressions: these run through the actual room-recipient query, not a policy mock.

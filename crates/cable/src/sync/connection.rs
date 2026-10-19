@@ -70,7 +70,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
 
     // `hello` comes first; nothing else is accepted before it.
     let hello_deadline = Instant::now() + config.hello_timeout;
-    let (resume, topics) = loop {
+    let (resume, topics, device_class) = loop {
         let message = tokio::select! {
             message = incoming.recv() => message,
             () = sleep_until(hello_deadline) => {
@@ -85,7 +85,8 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
                     v: 1,
                     resume,
                     topics,
-                }) => break (resume, topics),
+                    device_class,
+                }) => break (resume, topics, device_class),
                 Ok(ClientFrame::Hello { .. }) => {
                     let bye = Bye {
                         reconnect: false,
@@ -119,7 +120,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     // Counted before the resume point is read, so a skip from here on is built instead, or its
     // gap marker lands past the point and is read.
     let _person = OpenPerson::new(&engine, user_id);
-    let session = engine.handler.open(user.clone()).await;
+    let session = engine.handler.open(user.clone(), device_class).await;
     let mut connection = Connection {
         engine: engine.clone(),
         session,
@@ -593,7 +594,7 @@ mod tests {
         fn user_id(&self, _: &()) -> i64 {
             1
         }
-        async fn open(&self, _: Arc<()>) -> Box<dyn SyncSession> {
+        async fn open(&self, _: Arc<()>, _: Option<campfire_api_types::DeviceClass>) -> Box<dyn SyncSession> {
             Box::new(Nobody)
         }
     }
