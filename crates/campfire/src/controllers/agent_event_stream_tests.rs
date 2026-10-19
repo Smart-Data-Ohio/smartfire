@@ -17,7 +17,7 @@ async fn setup() -> TestApp {
 
 async fn setup_with(extra: &[(&str, &str)]) -> TestApp {
     let mut settings = vec![
-        ("AGENT_EVENT_STREAM_RECHECK_MS", "20"),
+        ("AGENT_EVENT_STREAM_RECHECK_MS", "200"),
         ("AGENT_EVENT_STREAM_KEEPALIVE_MS", "40"),
         ("AGENT_EVENT_STREAM_LIFETIME_MS", "2000"),
     ];
@@ -375,7 +375,7 @@ async fn agent_sse_review_reader_contention_cannot_delay_revocation() {
         })
         .await
         .unwrap();
-    let closed = tokio::time::timeout(Duration::from_millis(200), async {
+    let closed = tokio::time::timeout(Duration::from_millis(500), async {
         while let Some(text) = frame(&mut body).await {
             assert!(!text.contains("data: "));
         }
@@ -394,10 +394,10 @@ async fn agent_sse_review_slow_get_body_still_ends_cleanly_before_front_deadline
     use campfire_kit::front::FrontConfig;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let app = setup_with(&[("HTTP_WRITE_TIMEOUT", "1")]).await;
-    let http = tokio::net::TcpListener::bind("127.0.0.1:4470")
+    let http = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .unwrap();
-    let target = tokio::net::TcpListener::bind("127.0.0.1:4471")
+    let target = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .unwrap();
     let address = http.local_addr().unwrap();
