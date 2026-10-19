@@ -99,3 +99,45 @@ it("shows a saved banner in the preview and removes it", async () => {
   await waitFor(() => expect(screen.queryByRole("img", { name })).toBeNull());
   expect(screen.getByRole("button", { name: "Upload banner" })).toBeTruthy();
 });
+
+it("shows the name, nickname and pronouns in the preview card as they are typed", async () => {
+  const loaded = await settings.load();
+
+  render(<Harness initial={loaded} />);
+
+  const card = screen.getByRole("figure", { name: "Profile preview" });
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Name" }), {
+    target: { value: "Rowan Vale" },
+  });
+  expect(card.querySelector(".profile-editor-name")?.textContent).toBe("Rowan Vale");
+  fireEvent.change(screen.getByRole("textbox", { name: "Display nickname" }), {
+    target: { value: "Ro" },
+  });
+  fireEvent.change(screen.getByRole("textbox", { name: "Pronouns" }), {
+    target: { value: "they/them" },
+  });
+  expect(card.querySelector(".profile-editor-name")?.textContent).toBe("Ro");
+  expect(card.querySelector(".profile-editor-aside")?.textContent).toBe("Rowan Vale · they/them");
+  expect((await settings.load()).profile.name).toBe(loaded.profile.name);
+});
+
+it("keeps the typed name in the preview card when saving it fails", async () => {
+  const loaded = await settings.load();
+
+  render(<Harness initial={loaded} />);
+  fireEvent.change(screen.getByRole("textbox", { name: "Name" }), {
+    target: { value: "Rowan Vale" },
+  });
+  fireEvent.change(screen.getByRole("textbox", { name: "Pronouns" }), {
+    target: { value: "they\tthem" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+  expect(await screen.findByText("Pronouns must not contain control characters.")).toBeTruthy();
+
+  const card = screen.getByRole("figure", { name: "Profile preview" });
+
+  expect(card.querySelector(".profile-editor-name")?.textContent).toBe("Rowan Vale");
+  expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty("value", "Rowan Vale");
+  expect((await settings.load()).profile.name).toBe(loaded.profile.name);
+});

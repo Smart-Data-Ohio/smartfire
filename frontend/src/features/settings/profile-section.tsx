@@ -5,7 +5,7 @@ import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { USER_AVATAR_SLOT, USER_BANNER_SLOT } from "../admin/profile-format.ts";
-import { ProfileSlot, type Shown, useImageSlot } from "../admin/profile-slot.tsx";
+import { ProfileSlot, type Shown, useImageSlot, useShownSrc } from "../admin/profile-slot.tsx";
 import { ProfileHero } from "../people/profile-banner.tsx";
 import { fieldError } from "./settings-format.ts";
 import {
@@ -46,6 +46,7 @@ function ProfilePreview({
   const pronouns = draft.pronouns.trim();
   const bio = draft.bio.trim();
   const aside = [nickname === "" ? "" : accountName, pronouns].filter((part) => part !== "");
+  const avatarSrc = useShownSrc(avatar);
 
   return (
     <figure className="profile-editor-card" aria-label="Profile preview">
@@ -58,10 +59,10 @@ function ProfilePreview({
         size="card"
       >
         <Avatar
-          key={avatar.url}
+          key={avatarSrc}
           name={name}
           userId={userId}
-          {...(avatar.url === null ? {} : { src: avatar.url })}
+          {...(avatarSrc === null ? {} : { src: avatarSrc })}
           size={64}
           decorative
         />

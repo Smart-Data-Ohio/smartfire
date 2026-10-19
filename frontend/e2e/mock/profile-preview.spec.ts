@@ -1,6 +1,15 @@
 import type { Locator, Page } from "@playwright/test";
-import { gradientPng } from "./png.ts";
-import { DESKTOP, expect, openApp, PHONE, ROOM_IDS, test, USER_IDS } from "./support.ts";
+import { gradientPng, twoFrameApng, twoFrameGif } from "./png.ts";
+import {
+  DESKTOP,
+  expect,
+  openApp,
+  PHONE,
+  ROOM_IDS,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 const PORTRAIT = {
   name: "portrait.png",
@@ -61,8 +70,8 @@ async function servePortraitFor(page: Page, userId: number): Promise<void> {
   );
 }
 
-async function openProfileSettings(page: Page): Promise<void> {
-  await openApp(page, "settings/profile");
+async function openProfileSettings(page: Page, theme: Theme = "light"): Promise<void> {
+  await openApp(page, "settings/profile", theme);
   await page.getByRole("button", { name: "Upload avatar" }).waitFor();
 }
 
@@ -72,10 +81,31 @@ async function uploadPortrait(page: Page): Promise<void> {
   await expect(preview(page).locator(".avatar img")).toHaveJSProperty("complete", true);
 }
 
-async function saveName(page: Page, name: string): Promise<void> {
+async function typeName(page: Page, name: string): Promise<void> {
   await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
-  await page.getByRole("button", { name: "Save profile" }).click();
-  await expect(page.getByText("Profile saved")).toBeVisible();
+}
+
+/** Holds every direct upload's bytes until the returned release is called. */
+async function holdUploads(page: Page): Promise<() => void> {
+  const { promise: held, resolve: release } = Promise.withResolvers<void>();
+
+  await page.route("**/rails/active_storage/disk/**", async (route) => {
+    await held;
+    await route.continue();
+  });
+
+  return release;
+}
+
+async function blobLoads(image: Locator, src: string): Promise<boolean> {
+  return image.evaluate(
+    (_: HTMLImageElement, url: string) =>
+      fetch(url).then(
+        () => true,
+        () => false,
+      ),
+    src,
+  );
 }
 
 function preview(page: Page): Locator {
@@ -105,14 +135,14 @@ for (const [label, viewport] of [
       expect(overlaps(await boxOf(previewAvatarPhoto(page)), await boxOf(name))).toBe(false);
     });
 
-    test("a long name wraps inside the preview card, clear of the avatar and banner", async ({
+    test("a long name wraps inside the preview card as it is typed, clear of the avatar and banner", async ({
       page,
     }) => {
       await openProfileSettings(page);
       await uploadPortrait(page);
       await page.getByLabel("Choose banner image").setInputFiles(BANNER);
       await expect(page.getByText("Profile banner updated")).toBeVisible();
-      await saveName(page, LONG_NAME);
+      await typeName(page, LONG_NAME);
 
       const card = await boxOf(preview(page));
       const name = await boxOf(preview(page).getByText(LONG_NAME, { exact: true }));
@@ -156,3 +186,82 @@ test.describe("a DM's details on a phone", () => {
     expect(overlaps(await boxOf(avatar), name)).toBe(false);
   });
 });
+
+for (const [label, file] of [
+  ["GIF", { name: "avatar.gif", mimeType: "image/gif", buffer: twoFrameGif(64, 64) }],
+  ["APNG", { name: "avatar.png", mimeType: "image/png", buffer: twoFrameApng(64, 64) }],
+] as const) {
+  test(`under reduced motion an animated ${label} avatar shows a still frame while uploading`, async ({
+    page,
+  }) => {
+    await openProfileSettings(page);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    const release = await holdUploads(page);
+
+    await page.getByLabel("Choose avatar image").setInputFiles(file);
+
+    const photo = previewAvatarPhoto(page);
+
+    await expect(photo).toHaveAttribute("src", /^blob:/);
+
+    const still = (await photo.getAttribute("src")) ?? "";
+    const drawn = await photo.evaluate(async (image: HTMLImageElement) => {
+      const text = String.fromCharCode(
+        ...new Uint8Array(await (await fetch(image.src)).arrayBuffer()),
+      );
+
+      return { png: text.slice(1, 4) === "PNG", animated: text.includes("acTL") };
+    });
+
+    expect(drawn).toEqual({ png: true, animated: false });
+
+    release();
+    await expect(page.getByText("Avatar updated")).toBeVisible();
+    await expect(photo).not.toHaveAttribute("src", still);
+    expect(await blobLoads(page.locator("body"), still), "the drawn still is released").toBe(false);
+  });
+}
+
+test("the uploading file's preview is released once the avatar is saved", async ({ page }) => {
+  await openProfileSettings(page);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+
+  const release = await holdUploads(page);
+
+  await page.getByLabel("Choose avatar image").setInputFiles(PORTRAIT);
+
+  const photo = previewAvatarPhoto(page);
+
+  await expect(photo).toHaveAttribute("src", /^blob:/);
+
+  const preview = (await photo.getAttribute("src")) ?? "";
+
+  expect(await blobLoads(photo, preview), "the preview loads while uploading").toBe(true);
+  release();
+  await expect(page.getByText("Avatar updated")).toBeVisible();
+  await expect(photo).not.toHaveAttribute("src", preview);
+  expect(await blobLoads(photo, preview), "the preview is released").toBe(false);
+});
+
+test("removing the avatar puts the initials back in the preview card", async ({ page }) => {
+  await openProfileSettings(page);
+  await uploadPortrait(page);
+  await page.getByRole("button", { name: "Remove avatar" }).click();
+  await expect(page.getByRole("button", { name: "Upload avatar" })).toBeVisible();
+  await expect(previewAvatarPhoto(page)).toHaveCount(0);
+  await expect(preview(page).locator(".profile-hero .avatar-initials")).toHaveText("RA");
+});
+
+for (const theme of ["light", "dark"] as const) {
+  test(`the avatar's ring is the preview card's own colour in ${theme} mode`, async ({ page }) => {
+    await openProfileSettings(page, theme);
+
+    const colours = await preview(page).evaluate((card) => ({
+      card: getComputedStyle(card).backgroundColor,
+      ring: getComputedStyle(card.querySelector(".profile-hero-avatar") ?? card).boxShadow,
+    }));
+
+    expect(colours.ring.startsWith(colours.card)).toBe(true);
+  });
+}
