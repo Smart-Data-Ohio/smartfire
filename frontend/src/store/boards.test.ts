@@ -467,4 +467,20 @@ describe("the board's skeleton", () => {
     expect(filtering.boards[BOARD]?.postIds).toEqual([99]);
     expect(boardAwaitsListing(filtering.boards[BOARD])).toBe(true);
   });
+
+  it("keeps waiting when a resync asks again for a query no listing has answered", () => {
+    const filtering = event(
+      setBoardLoading(loaded(), BOARD, bugs),
+      "thread.created",
+      boardThread(99),
+    );
+
+    const resynced = setBoardLoading(filtering, BOARD, bugs);
+
+    expect(boardAwaitsListing(resynced.boards[BOARD])).toBe(true);
+
+    const answered = loadBoardListing(resynced, { ...boardListing([]), ...bugs }, 3);
+
+    expect(boardAwaitsListing(answered.boards[BOARD])).toBe(false);
+  });
 });

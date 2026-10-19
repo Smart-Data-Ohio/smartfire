@@ -26,6 +26,8 @@ export interface BoardState {
   readonly page: number;
   /** The server's window, plus posts received through thread.created. */
   readonly postIds: readonly number[];
+  /** A listing has answered this query, so a re-read of it keeps those posts on screen. */
+  readonly listed: boolean;
   readonly hasMore: boolean;
   readonly loadingMore: boolean;
   readonly anyPosts: boolean;
@@ -81,6 +83,7 @@ export function setBoardLoading(
         query: normalized,
         page: more ? (held?.page ?? 1) : 1,
         postIds: same ? held.postIds : [],
+        listed: same && held.listed,
         hasMore: more && held !== undefined ? held.hasMore : false,
         loadingMore: more,
         anyPosts: held?.anyPosts ?? false,
@@ -98,15 +101,12 @@ export function setBoardLoading(
 }
 
 /**
- * Whether the board waits behind its skeleton: until its first listing, and while a new query
- * loads. A re-read of the same query (a resync) keeps the posts it read on screen, and a post
- * created meanwhile isn't a read, so it doesn't end the wait.
+ * Whether the board waits behind its skeleton: until a listing answers its query. A re-read of
+ * an answered query (a resync) keeps the posts on screen; a post created meanwhile isn't an
+ * answer, so it doesn't end the wait.
  */
 export function boardAwaitsListing(board: BoardState | undefined): boolean {
-  return (
-    board === undefined ||
-    (board.status === "loading" && board.postIds.every((id) => board.livePostIds.includes(id)))
-  );
+  return board === undefined || (board.status === "loading" && !board.listed);
 }
 
 export function setBoardError(
@@ -169,6 +169,7 @@ export function loadBoardListing(state: State, listing: BoardListing, generation
         query: { status: listing.status, owner: listing.owner, tag: listing.tag },
         page: listing.page,
         postIds: [...new Set([...posts.map(({ thread }) => thread.id), ...held.livePostIds])],
+        listed: true,
         hasMore: listing.hasMore,
         loadingMore: false,
         anyPosts: listing.anyPosts || held.livePostIds.length > 0,
