@@ -86,7 +86,13 @@ describe("the grouped gallery", () => {
       within(grid)
         .getAllByRole("button")
         .map((button) => button.ariaLabel),
-    ).toEqual(["Open one.png", "Open two.png", "Open three.png"]);
+    ).toEqual(
+      ["one.png", "two.png", "three.png"].flatMap((name) => [
+        `Open ${name}`,
+        `Download ${name}`,
+        `Open original ${name}`,
+      ]),
+    );
     expect(within(grid).queryByRole("link")).toBeNull();
     expect(screen.getByRole("link", { name: "first.txt" })).toBeTruthy();
     expect(container.querySelectorAll(".attachment-gallery")).toHaveLength(1);
