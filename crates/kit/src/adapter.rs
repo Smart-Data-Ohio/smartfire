@@ -150,6 +150,7 @@ where
     F: for<'a> ActionFn<'a>,
 {
     let (mut parts, body) = req.into_parts();
+    let write_deadline = parts.extensions.get::<crate::front::WriteDeadline>().copied();
     let path_params = RawPathParams::from_request_parts(&mut parts, &kit).await.map(|raw| {
         raw.iter().map(|(k, v)| (k.to_string(), Param::Str(v.to_string()))).collect::<ParamMap>()
     });
@@ -221,6 +222,9 @@ where
         body_params.unwrap_or_default(),
         cookies,
     );
+    if let Some(deadline) = write_deadline {
+        ctx.set_current(deadline);
+    }
     if let Some(body) = unread {
         ctx.leave_body_unread(body);
     }

@@ -372,7 +372,12 @@ export function RoomMenuItems({
                 .updateNotifications({ roomMute: { roomId: row.room.id, duration: "off" } })
                 .catch((error: Error) => toastFailure("Couldn't unmute room", error));
             } else {
-              setInvolvement(row.room.id, row.displayName, defaultInvolvement(row), involvement);
+              setInvolvement(
+                row.room.id,
+                row.sidebarDisplayName,
+                defaultInvolvement(row),
+                involvement,
+              );
             }
           }}
         >
@@ -511,7 +516,7 @@ export function RoomContextMenu({
 }: RoomContextMenuProps) {
   return (
     <Menu
-      label={`${row.displayName} options`}
+      label={`${row.sidebarDisplayName} options`}
       placement={request.placement}
       trigger={(trigger) => (
         <Anchor trigger={trigger} request={request} onClosed={() => onClosed(request.id)} />

@@ -180,8 +180,13 @@ describe("room management actions", () => {
     Effect.gen(function* () {
       seed();
       const fake = yield* FakeApi;
-      const stale = sidebarRowFixture(20, "Mine");
-      const newer = sidebarRowFixture(20, "Theirs");
+
+      const stale = {
+        ...sidebarRowFixture(20, "Ada", "direct", [8]),
+        sidebarDisplayName: "Ada Byron",
+      };
+
+      const newer = { ...stale, sidebarDisplayName: "Ada Lovelace" };
 
       yield* fake.route("PATCH /rooms/20", () =>
         Effect.sync(() => {
@@ -193,18 +198,31 @@ describe("room management actions", () => {
 
           return {
             room: stale.room,
-            detail: { ...roomDetailFixture(20), displayName: "Mine" },
+            detail: {
+              ...roomDetailFixture(20),
+              displayName: "Ada",
+              sidebarDisplayName: "Ada Byron",
+            },
             row: stale,
           };
         }),
       );
-      yield* fake.reply("GET /rooms/20", { ...roomDetailFixture(20), displayName: "Fetched" });
+      yield* fake.reply("GET /rooms/20", {
+        ...roomDetailFixture(20),
+        displayName: "Ada",
+        sidebarDisplayName: "Ada Byron",
+      });
 
       yield* rooms.update(20, { type: "open", name: "Mine" });
 
-      expect(store.getState().sidebar.rows[20]?.displayName).toBe("Theirs");
-      // The re-read detail carries the newer row's facts.
-      expect(store.getState().rooms[20]?.detail?.displayName).toBe("Theirs");
+      expect(store.getState().sidebar.rows[20]).toMatchObject({
+        displayName: "Ada",
+        sidebarDisplayName: "Ada Lovelace",
+      });
+      expect(store.getState().rooms[20]?.detail).toMatchObject({
+        displayName: "Ada",
+        sidebarDisplayName: "Ada Lovelace",
+      });
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

@@ -243,6 +243,7 @@ describe("pins", () => {
         stageRole: null,
       },
       displayName: "general",
+      sidebarDisplayName: "general",
       memberCount: 3,
       pinsCount: 2,
       directMemberIds: [],
