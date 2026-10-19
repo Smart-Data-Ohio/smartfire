@@ -179,7 +179,8 @@ export async function tryRefreshPushSubscription(
   browser = pushBrowser(),
   api: PushEnrollmentApi = settings,
 ): Promise<void> {
-  if (browser === null || browser.permission() !== "granted") return;
+  if (store.getState().me === null || browser === null || browser.permission() !== "granted")
+    return;
 
   try {
     const registration = await browser.currentRegistration();

@@ -121,6 +121,7 @@ import * as messageViewActions from "./message-view-actions.ts";
 import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import { tryRefreshPushSubscription } from "./push-enrollment.ts";
 import * as confirmationActions from "./reauthentication.ts";
 import * as roomActions from "./room-actions.ts";
 import { ActionError, type ActionFailure, asAction } from "./run.ts";
@@ -841,6 +842,7 @@ export const actions = {
     started ??= runtime.runPromise(session.start()).then(
       () => {
         runtime.runFork(runEngine);
+        void tryRefreshPushSubscription();
       },
       (error: Error) => {
         started = null;
