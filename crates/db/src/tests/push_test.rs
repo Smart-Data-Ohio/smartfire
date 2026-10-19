@@ -26,6 +26,36 @@ fn routing_phone(t: &TestDb) {
 }
 
 #[test]
+fn push_routing_null_subscription_keeps_pre_routing_delivery() {
+    let t = TestDb::new();
+    routing_phone(&t);
+    t.write(|tx| {
+        let session = crate::Session::start(tx, id("jason"), Some(DESKTOP_UA), None)?;
+        crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(crate::DeviceClass::Desktop))?;
+        tx.conn().execute("UPDATE push_subscriptions SET device_class=NULL WHERE user_id=?", [id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Legacy subscription".into()), 2);
+}
+
+#[test]
+fn push_routing_null_desktop_ua_lease_does_not_suppress_mobile_subscription() {
+    for agent in [DESKTOP_UA, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)"] {
+        let t = TestDb::new();
+        let lease = t.write(move |tx| {
+            tx.conn().execute("UPDATE push_subscriptions SET device_class='mobile' WHERE user_id=?", [id("jason")])?;
+            let session = crate::Session::start(tx, id("jason"), Some(agent), None)?;
+            Ok(crate::WorkspacePresenceLease::establish(tx, id("jason"), session.id)?.unwrap())
+        });
+        assert_eq!(lease.device_class, None);
+        assert_eq!(deliveries(&t, "designers", "Legacy tablet in use".into()), 2, "{agent}");
+        let activity = t.read(|conn| crate::WorkspacePresenceLease::activity_by_user_id(conn, &[id("jason")], t.now()));
+        assert_eq!(activity[&id("jason")].overall, crate::models::workspace_presence_lease::Presence::Online);
+        assert!(!activity[&id("jason")].active_desktop);
+    }
+}
+
+#[test]
 fn push_routing_active_desktop_suppresses_phone_in_another_room_without_desktop_push() {
     let t = TestDb::new();
     routing_phone(&t);
