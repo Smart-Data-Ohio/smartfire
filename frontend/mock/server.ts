@@ -22,6 +22,7 @@ import type { SudoMethod } from "../src/gen/SudoMethod.ts";
 import type { UnreadDivider } from "../src/gen/UnreadDivider.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserList } from "../src/gen/UserList.ts";
+import { sidebarDirectLabel } from "./direct-label.ts";
 import {
   forbidden,
   headerOf,
@@ -531,24 +532,19 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const sidebarRow = (record: RoomRecord): SidebarRow => {
     const unreadCount = unreadMessages(record).length;
-    const names = usersFor(directMemberIds(record))
-      .map((user) => user.name)
-      .sort((a, b) =>
-        a.toLowerCase() < b.toLowerCase() ? -1 : a.toLowerCase() > b.toLowerCase() ? 1 : 0,
-      );
-    const directLabel =
-      names.slice(0, 3).join(", ") + (names.length > 3 ? ` +${names.length - 3}` : "");
 
     const row: SidebarRow = {
       revision: world.activityRevision,
       evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
+      roomDisplayName: displayName(record),
       displayName:
         record.room.kind === "direct"
-          ? record.room.name?.trim()
-            ? record.room.name
-            : directLabel
+          ? sidebarDirectLabel(
+              record.room.name,
+              usersFor(directMemberIds(record)).map((user) => user.name),
+            )
           : displayName(record),
       directMemberIds: directMemberIds(record),
       unreadCount,
@@ -795,6 +791,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
+      sidebarDisplayName: sidebarRow(record).displayName,
       memberCount: record.memberIds.length,
       pinsCount: pinCount(world, record.room.id),
       directMemberIds: direct,

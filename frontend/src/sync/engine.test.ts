@@ -2110,6 +2110,39 @@ describe("resync", () => {
     ),
   );
 
+  it.effect("updates a loaded DM header after a user-only resync missed its rename", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const row = sidebarRowFixture(12, "Launch", "direct", [3, 4]);
+
+        yield* serve([]);
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /rooms/12", {
+          ...roomDetailFixture(12),
+          room: row.room,
+          displayName: "Launch",
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, null);
+        expect(store.getState().rooms[12]?.detail?.displayName).toBe("Launch");
+
+        yield* api.reply(
+          "GET /sidebar",
+          sidebarFixture([{ ...row, displayName: "Release", roomDisplayName: "Release" }]),
+        );
+        yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+        yield* settle;
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[12]?.displayName).toBe("Release");
+        expect(store.getState().rooms[12]?.detail?.displayName).toBe("Release");
+      }),
+    ),
+  );
+
   it.effect("drops a room's 404 that started before a user resync gave the room back", () =>
     withSync(
       Effect.gen(function* () {

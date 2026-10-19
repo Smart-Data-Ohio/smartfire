@@ -68,18 +68,20 @@ describe("public identity updates", () => {
           seq: 2,
           topic: "user",
           type: "sidebar.row.upserted",
-          data: { ...row, displayName: "Nick", revision: 1 },
+          data: { ...row, displayName: "Nick Example", roomDisplayName: "Nick", revision: 1 },
         },
       ],
       0,
     );
 
     expect(next.users[8]).toEqual(changed);
-    expect(next.sidebar.rows[20]?.displayName).toBe("Nick");
+    expect(next.sidebar.rows[20]?.displayName).toBe("Nick Example");
     expect(next.rooms[20]?.detail?.displayName).toBe("Nick");
     expect(conversationNameOf(next, 20, null)?.roomName).toBe("Nick");
     expect(mergeUsers(next, [original]).users[8]?.name).toBe("Nick Example");
-    expect(loadSidebar(next, sidebar, rowClock(loaded)).sidebar.rows[20]?.displayName).toBe("Nick");
+    expect(loadSidebar(next, sidebar, rowClock(loaded)).sidebar.rows[20]?.displayName).toBe(
+      "Nick Example",
+    );
 
     const refreshed = setRoomDetail(next, {
       ...detail,

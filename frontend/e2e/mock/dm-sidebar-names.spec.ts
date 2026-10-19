@@ -12,6 +12,7 @@ test("DM sidebar labels keep full names and expose clipped labels on hover", asy
 
   const state = await (await page.request.get("/__mock/state")).json();
   const headers = { "X-CSRF-Token": state.csrfToken };
+
   const created = await page.request.post("/api/v1/directs", {
     headers,
     data: { userIds: [USER_IDS.theo, USER_IDS.sam, USER_IDS.priya, USER_IDS.maya, USER_IDS.jonah] },

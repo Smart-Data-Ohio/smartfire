@@ -285,7 +285,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const kind = detail?.room.kind ?? row?.room.kind ?? null;
   const self = useNoteToSelf(roomId);
   const viewerName = useViewerName();
-  const name = (self ? viewerName : null) ?? detail?.displayName ?? row?.displayName ?? null;
+  const name = (self ? viewerName : null) ?? detail?.displayName ?? row?.roomDisplayName ?? null;
   const iconName = detail?.room.iconName ?? row?.room.iconName ?? null;
   const topic = detail === null ? (row?.room.topic ?? null) : detail.room.topic;
   const announcement = useAnnouncementRoom(roomId);

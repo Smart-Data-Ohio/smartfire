@@ -47,6 +47,7 @@ function row(id: number, name: string, kind: RoomKind = "open", favorite: number
       stageRole: null,
     },
     displayName: name,
+    roomDisplayName: name,
     directMemberIds: [],
     unreadCount: 0,
     mentionCount: 0,

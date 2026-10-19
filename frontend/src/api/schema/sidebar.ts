@@ -29,6 +29,7 @@ export const SidebarRow = Schema.Struct({
   room: Room,
   membership: Membership,
   displayName: Schema.String,
+  roomDisplayName: Schema.String,
   directMemberIds: Schema.Array(UserId),
   unreadCount: Schema.Int,
   mentionCount: Schema.Int,

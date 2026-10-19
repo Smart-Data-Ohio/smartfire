@@ -60,6 +60,8 @@ pub struct SidebarRow {
     /// The row's label: the room's name, or for a direct message its other members' names
     /// (or the room's own name when a group DM was renamed), as `sidebar_direct_label` builds it.
     pub display_name: String,
+    /// The room label used outside the sidebar, with the existing short-name DM format.
+    pub room_display_name: String,
     /// Direct messages only: the other members in membership order, or just the viewer for a
     /// note-to-self; drives the avatar and presence dot. Empty for every other kind.
     pub direct_member_ids: Vec<i64>,

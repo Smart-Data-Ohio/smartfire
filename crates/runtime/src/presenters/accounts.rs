@@ -382,17 +382,29 @@ pub fn sidebar_direct_label(name: Option<&str>, members: &[UserSummary]) -> Stri
 
 /// [`sidebar_direct_label`] from the members' names alone.
 pub fn sidebar_direct_label_for_names(name: Option<&str>, member_names: &[&str]) -> String {
+    direct_label_for_names(name, member_names, |name| name)
+}
+
+pub fn direct_room_label_for_names(name: Option<&str>, member_names: &[&str]) -> String {
+    direct_label_for_names(name, member_names, sidebar_first_name)
+}
+
+fn direct_label_for_names(name: Option<&str>, member_names: &[&str], label: fn(&str) -> &str) -> String {
     if let Some(name) = name.filter(|s| !campfire_richtext::ruby::is_blank(s)) {
         return name.into();
     }
     let mut names = member_names.to_vec();
     names.sort_by_key(|name| unicode::downcase(name));
-    let label = names.iter().take(3).copied().collect::<Vec<_>>().join(", ");
+    let label = names.iter().take(3).map(|name| label(name)).collect::<Vec<_>>().join(", ");
     if names.len() > 3 {
         format!("{label} +{}", names.len() - 3)
     } else {
         label
     }
+}
+
+fn sidebar_first_name(name: &str) -> &str {
+    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c']).find(|part| !part.is_empty()).unwrap_or_default()
 }
 
 pub mod audit_logs;
@@ -404,6 +416,7 @@ mod tests {
     #[test]
     fn sidebar_direct_labels_keep_full_names() {
         for (custom, members, expected) in [
+            (None, vec![], ""),
             (None, vec!["Ada Lovelace"], "Ada Lovelace"),
             (None, vec!["Grace Hopper", "ada Lovelace"], "ada Lovelace, Grace Hopper"),
             (
@@ -412,6 +425,9 @@ mod tests {
                 "ada Lovelace, Grace Hopper, Lin Chen +2",
             ),
             (Some("Launch crew"), vec!["Ada Lovelace", "Grace Hopper"], "Launch crew"),
+            (Some("  "), vec!["Ada Lovelace"], "Ada Lovelace"),
+            (None, vec!["Grace Hopper", "Lin Chen", "Ada Lovelace"], "Ada Lovelace, Grace Hopper, Lin Chen"),
+            (None, vec!["Zoe Rivera", "Grace Hopper", "Lin Chen", "Ada Lovelace"], "Ada Lovelace, Grace Hopper, Lin Chen +1"),
         ] {
             assert_eq!(sidebar_direct_label_for_names(custom, &members), expected);
         }

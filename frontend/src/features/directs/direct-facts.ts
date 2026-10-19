@@ -19,6 +19,6 @@ export function useDirectFacts(roomId: number): DirectFacts | null {
   return {
     memberIds: source.directMemberIds,
     name: source.room.name,
-    displayName: source.displayName,
+    displayName: detail?.displayName ?? row?.roomDisplayName ?? "",
   };
 }

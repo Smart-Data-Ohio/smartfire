@@ -83,7 +83,7 @@ export function conversationNameOf(
     roomId,
     threadId,
     roomKind: row?.room.kind ?? room?.roomKind ?? "open",
-    roomName: row?.displayName ?? room?.roomName ?? "",
+    roomName: row?.roomDisplayName ?? room?.roomName ?? "",
     roomIconName: row?.room.iconName ?? room?.roomIconName ?? null,
     threadName: threadId === null ? null : (state.threads[threadId]?.name ?? null),
   };

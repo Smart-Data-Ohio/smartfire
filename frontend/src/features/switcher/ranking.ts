@@ -84,7 +84,7 @@ function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
 
   const live = {
     ...BLANK,
-    label: row.displayName,
+    label: row.roomDisplayName,
     roomId: room.id,
     roomKind: room.kind,
     unread: rowUnread(row),

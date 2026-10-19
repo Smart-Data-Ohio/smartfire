@@ -9,7 +9,7 @@ export function withSidebarRow(detail: RoomDetail, row: SidebarRow | undefined):
     ...detail,
     room: row.room,
     membership: row.membership,
-    displayName: row.room.kind === "direct" ? detail.displayName : row.displayName,
+    displayName: row.roomDisplayName,
     directMemberIds: row.directMemberIds,
   };
 }

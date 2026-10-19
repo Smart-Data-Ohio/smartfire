@@ -1029,7 +1029,7 @@ function upsertRow(state: State, row: SidebarRow): State {
       },
       {
         roomId: row.room.id,
-        roomName: row.displayName,
+        roomName: row.roomDisplayName,
         roomKind: row.room.kind,
         roomIconName: row.room.iconName,
       },

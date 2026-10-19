@@ -58,13 +58,10 @@ describe("direct actions", () => {
         return Effect.succeed({
           ...roomDetailFixture(20),
           displayName: "Launch crew",
+          sidebarDisplayName: "Launch crew",
           directMemberIds: [3, 4],
         });
       });
-      yield* fake.reply(
-        "GET /sidebar",
-        sidebarFixture([sidebarRowFixture(20, "Launch crew", "direct", [3, 4])]),
-      );
 
       yield* directs.rename(20, "  Launch crew ");
 
@@ -80,17 +77,18 @@ describe("direct actions", () => {
 
       const fake = yield* FakeApi;
 
-      yield* fake.reply("PATCH /directs/20", roomDetailFixture(20));
-      yield* fake.reply(
-        "GET /sidebar",
-        sidebarFixture([sidebarRowFixture(20, "Ada Lovelace, Grace Hopper", "direct", [3, 4])]),
-      );
+      yield* fake.reply("PATCH /directs/20", {
+        ...roomDetailFixture(20),
+        displayName: "Ada, Grace",
+        sidebarDisplayName: "Ada Lovelace, Grace Hopper",
+      });
       yield* directs.rename(20, "   ");
 
       const requests = yield* fake.requests;
 
       expect(requests.find((request) => request.method === "PATCH")?.body).toEqual({ name: null });
       expect(store.getState().sidebar.rows[20]?.displayName).toBe("Ada Lovelace, Grace Hopper");
+      expect(requests.map((request) => request.path)).not.toContain("/sidebar");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -121,15 +119,10 @@ describe("direct actions", () => {
       yield* fake.reply("POST /directs/20/members", {
         ...roomDetailFixture(20),
         displayName: "Grace, Ada and Ana",
+        sidebarDisplayName: "Ada Lovelace, Ana Lima, Grace Hopper",
         directMemberIds: [3, 4, 5],
         users: [userFixture(5, "Ana Lima")],
       });
-      yield* fake.reply(
-        "GET /sidebar",
-        sidebarFixture([
-          sidebarRowFixture(20, "Ada Lovelace, Ana Lima, Grace Hopper", "direct", [3, 4, 5]),
-        ]),
-      );
 
       yield* directs.addMembers(20, [5]);
 

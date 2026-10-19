@@ -37,7 +37,11 @@ describe("room metadata follows sidebar sync", () => {
   });
 
   it("updates direct sidebar names and avatar ids while keeping the header format", () => {
-    const row = sidebarRowFixture(20, "Ada Lovelace, Grace Hopper", "direct", [8, 9]);
+    const row = {
+      ...sidebarRowFixture(20, "Ada Lovelace, Grace Hopper", "direct", [8, 9]),
+      roomDisplayName: "Ada, Grace",
+    };
+
     const detail = { ...roomDetailFixture(20), room: row.room, displayName: "Ada, Grace" };
     const loaded = setRoomDetail(initialState, detail);
     const synced = applyEvents(loaded, [rowEvent(row)], 0);
@@ -69,5 +73,38 @@ describe("room metadata follows sidebar sync", () => {
     expect(removed.sidebar.rows[20]).toBeUndefined();
     expect(removed.rooms[20]).toBe(loaded.rooms[20]);
     expect(removed.timelines[20]).toBe(loaded.timelines[20]);
+  });
+
+  it("keeps conversation references in the room-name format after sidebar updates", () => {
+    const row = {
+      ...sidebarRowFixture(20, "Ada Lovelace, Grace Hopper", "direct", [8, 9]),
+      roomDisplayName: "Ada, Grace",
+    };
+
+    const loaded = {
+      ...initialState,
+      conversationNames: {
+        "20:": {
+          roomId: 20,
+          threadId: null,
+          roomName: "Ada, Grace",
+          roomKind: row.room.kind,
+          roomIconName: null,
+          threadName: null,
+        },
+      },
+    };
+
+    const updated = applyEvents(loaded, [rowEvent(row)], 0);
+
+    expect(updated.conversationNames["20:"]?.roomName).toBe("Ada, Grace");
+
+    const renamed = applyEvents(
+      updated,
+      [rowEvent({ ...row, displayName: "Launch crew", roomDisplayName: "Launch crew" })],
+      0,
+    );
+
+    expect(renamed.conversationNames["20:"]?.roomName).toBe("Launch crew");
   });
 });

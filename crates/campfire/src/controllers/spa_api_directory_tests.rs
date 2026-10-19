@@ -62,6 +62,7 @@ async fn full_name_sidebar_rows_follow_a_members_profile_rename() {
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let event = sync.until(upserted(true, DIRECT_DAVID_JASON), |_| false).await;
     assert_eq!(row_of(&event).display_name, "Jason Full Name");
+    assert_eq!(row_of(&event).room_display_name, "Jason");
 
     let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
     assert_eq!(
@@ -71,6 +72,7 @@ async fn full_name_sidebar_rows_follow_a_members_profile_rename() {
     let reply = david
         .write(json_body(Method::POST, "/api/v1/directs", &json!({"userIds": [JASON]})))
         .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     assert_eq!(parse::<api::SidebarRow>(&reply).display_name, "Jason Full Name");
 
     server.abort();

@@ -27,6 +27,10 @@ membership: Membership,
  */
 displayName: string,
 /**
+ * The room label used outside the sidebar, with the existing short-name DM format.
+ */
+roomDisplayName: string,
+/**
  * Direct messages only: the other members in membership order, or just the viewer for a
  * note-to-self; drives the avatar and presence dot. Empty for every other kind.
  */

@@ -39,6 +39,7 @@ it("publishes the public identity when the profile nickname changes", async () =
 
 it("publishes full sidebar names when a member renames themselves", async () => {
   const { server } = harness();
+
   const notes = await expectStatus<SidebarRow>(
     server,
     "POST",
@@ -46,6 +47,7 @@ it("publishes full sidebar names when a member renames themselves", async () => 
     { userIds: [] },
     201,
   );
+
   const events = collect(server);
 
   await expectStatus(

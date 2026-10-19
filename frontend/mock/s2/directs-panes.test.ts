@@ -17,6 +17,7 @@ describe("directs", () => {
   it("sorts full sidebar names and limits groups without changing the header", async () => {
     const { server } = harness();
     const events = collect(server);
+
     const created = await expectStatus<SidebarRow>(
       server,
       "POST",
@@ -26,6 +27,7 @@ describe("directs", () => {
       },
       201,
     );
+
     const label = "Jonah Lindqvist, Maya Okafor, Priya Raman +2";
 
     expect(created.displayName).toBe(label);
