@@ -31,6 +31,8 @@ pub struct WorkspaceActivity {
     pub active_desktop: bool,
 }
 
+type ActivityRow = (i64, Option<Timestamp>, Option<String>, Option<DeviceClass>);
+
 impl WorkspaceActivity {
     fn record(&mut self, presence: Presence, device: DeviceClass) {
         if presence == Presence::Online || self.overall == Presence::Offline {
@@ -66,7 +68,7 @@ impl WorkspacePresenceLease {
         let sql = format!("SELECT leases.user_id, leases.last_active_at, sessions.user_agent, leases.device_class FROM workspace_presence_leases leases JOIN sessions ON sessions.id=leases.session_id JOIN users ON users.id=leases.user_id WHERE leases.expires_at>=? AND users.status=0 AND sessions.user_id=leases.user_id AND leases.user_id IN ({})", placeholders(ids.len()));
         let mut values: Vec<rusqlite::types::Value> = vec![now.to_db().into()];
         values.extend(ids.iter().map(|id| (*id).into()));
-        let rows: Vec<(i64, Option<Timestamp>, Option<String>, Option<DeviceClass>)> = query_all(conn, &sql, rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?;
+        let rows: Vec<ActivityRow> = query_all(conn, &sql, rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?;
         let mut states = std::collections::HashMap::new();
         for (user_id, last_active_at, user_agent, reported_class) in rows {
             let state = if last_active_at.is_none_or(|at| at >= now.ago(IDLE_AFTER)) { Presence::Online } else { Presence::Idle };
