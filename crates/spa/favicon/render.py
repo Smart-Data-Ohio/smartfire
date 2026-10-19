@@ -7,7 +7,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SOURCE = HERE / "favicon.svg"
-OFFLINE_COPY = HERE.parents[2] / "frontend/src/features/offline/favicon.svg"
+OFFLINE = HERE.parents[2] / "frontend/src/features/offline"
 SVG = "http://www.w3.org/2000/svg"
 
 
@@ -44,7 +44,8 @@ def main() -> None:
     (HERE / "favicon.ico").write_bytes(ico([(size, png(svg, size)) for size in (16, 32, 48)]))
     (HERE / "favicon.png").write_bytes(png(svg, 32))
     (HERE / "apple-touch-icon.png").write_bytes(png(full_bleed(svg), 180))
-    shutil.copyfile(SOURCE, OFFLINE_COPY)
+    for name in ("favicon.svg", "favicon.png", "apple-touch-icon.png"):
+        shutil.copyfile(HERE / name, OFFLINE / name)
 
 
 if __name__ == "__main__":

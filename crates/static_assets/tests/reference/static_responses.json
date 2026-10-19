@@ -40,10 +40,10 @@
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "4237",
+      "content-length": "4430",
       "content-type": "text/html"
     },
-    "body_sha256": "6e04b180174f49e36df7d4c24e65e0545575d68d69aadf094e4c697db299c477"
+    "body_sha256": "93be5e05b6ca19bc7445d5647e2009ffae06f0255a0c9a3762541c0f166d67f2"
   },
   {
     "method": "GET",
@@ -52,10 +52,10 @@
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "4237",
+      "content-length": "4430",
       "content-type": "text/html"
     },
-    "body_sha256": "6e04b180174f49e36df7d4c24e65e0545575d68d69aadf094e4c697db299c477"
+    "body_sha256": "93be5e05b6ca19bc7445d5647e2009ffae06f0255a0c9a3762541c0f166d67f2"
   },
   {
     "method": "GET",
@@ -64,10 +64,10 @@
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "4887",
+      "content-length": "5086",
       "content-type": "text/html"
     },
-    "body_sha256": "faa2c0fd9a62e4cf93e8358bb892632b870c46956ff9162f0fabaabdc7ddb92e"
+    "body_sha256": "4a22a8fac76f4613a8c65ca87f1741f80f7786b58a24dd4af4a8a4c32433e288"
   },
   {
     "method": "GET",

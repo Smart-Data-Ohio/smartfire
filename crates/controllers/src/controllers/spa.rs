@@ -191,7 +191,10 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<(SignedOu
 
 fn favicon(account: Option<&Account>, logo_attached: bool) -> Favicon {
     match account {
-        Some(account) if logo_attached => Favicon::Logo(super::pwa::manifest_logo_path(Some(account), Some("small"))),
+        Some(account) if logo_attached => Favicon::Logo {
+            icon: super::pwa::manifest_logo_path(Some(account), Some("small")),
+            touch_icon: super::pwa::manifest_logo_path(Some(account), Some("touch")),
+        },
         _ => Favicon::Mark,
     }
 }

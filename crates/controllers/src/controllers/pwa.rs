@@ -43,8 +43,9 @@ pub async fn manifest(c: &mut Ctx) -> Result {
 
 pub async fn favicon(c: &mut Ctx) -> Result {
     c.use_live_response();
-    concerns::before_actions(c, before()).await?;
-    campfire_people::controllers::accounts::logos::send_logo(c, 192, |c| {
+    concerns::before_actions(c, before().skip_allow_browser()).await?;
+    let variation = campfire_storage::Variation::resize_to_limit(192, 192, Some("png"));
+    campfire_people::controllers::accounts::logos::send_logo(c, variation, |c| {
         let mark = campfire_spa::favicon::file("favicon.ico").expect("the mark's icon");
         Ok(c.render_as(StatusCode::OK, mark.file.content_type, mark.body))
     })

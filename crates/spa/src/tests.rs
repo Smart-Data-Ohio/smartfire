@@ -353,10 +353,13 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
 
 #[test]
 fn a_workspace_logo_replaces_the_mark_as_the_icon() {
-    let page = render("<head><!--boot--></head>", &boot(), "token", None, &Favicon::Logo("/account/logo?v=20261019120000&size=small".into()));
+    let page = render("<head><!--boot--></head>", &boot(), "token", None, &Favicon::Logo {
+        icon: "/account/logo?v=20261019120000&size=small".into(),
+        touch_icon: "/account/logo?v=20261019120000&size=touch".into(),
+    });
     assert!(page.contains(
         "<link rel=\"icon\" type=\"image/png\" href=\"/account/logo?v=20261019120000&amp;size=small\" />\n\
-         <link rel=\"apple-touch-icon\" href=\"/account/logo?v=20261019120000&amp;size=small\" />\n"
+         <link rel=\"apple-touch-icon\" href=\"/account/logo?v=20261019120000&amp;size=touch\" />\n"
     ), "{page}");
     assert!(!page.contains("/favicon"), "{page}");
 }
