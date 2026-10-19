@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import { sidebarDirectLabel } from "../../mock/direct-label.ts";
 import type { ApiRequest } from "../api/client.ts";
 import {
   FakeApi,
@@ -33,14 +34,20 @@ describe("direct actions", () => {
 
       const fake = yield* FakeApi;
 
-      yield* fake.reply("POST /directs", sidebarRowFixture(30, "Ana", "direct", [5]));
+      yield* fake.reply("POST /directs", {
+        ...sidebarRowFixture(30, "Ana", "direct", [5]),
+        sidebarDisplayName: sidebarDirectLabel(null, ["Ana Lima"]),
+      });
 
       const row = yield* directs.create([5]);
       const requests = yield* fake.requests;
 
       expect(row.room.id).toBe(30);
       expect(requests.at(-1)?.body).toEqual({ userIds: [5] });
-      expect(store.getState().sidebar.rows[30]?.displayName).toBe("Ana");
+      expect(store.getState().sidebar.rows[30]).toMatchObject({
+        displayName: "Ana",
+        sidebarDisplayName: "Ana Lima",
+      });
       expect(store.getState().sidebar.order).toEqual([30, 1, 20]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
@@ -58,6 +65,7 @@ describe("direct actions", () => {
         return Effect.succeed({
           ...roomDetailFixture(20),
           displayName: "Launch crew",
+          sidebarDisplayName: "Launch crew",
           directMemberIds: [3, 4],
         });
       });
@@ -66,7 +74,7 @@ describe("direct actions", () => {
 
       expect(body).toEqual({ name: "Launch crew" });
       expect(store.getState().rooms[20]?.detail?.displayName).toBe("Launch crew");
-      expect(store.getState().sidebar.rows[20]?.displayName).toBe("Launch crew");
+      expect(store.getState().sidebar.rows[20]?.sidebarDisplayName).toBe("Launch crew");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -76,12 +84,21 @@ describe("direct actions", () => {
 
       const fake = yield* FakeApi;
 
-      yield* fake.reply("PATCH /directs/20", roomDetailFixture(20));
+      yield* fake.reply("PATCH /directs/20", {
+        ...roomDetailFixture(20),
+        displayName: "Ada, Grace",
+        sidebarDisplayName: "Ada Lovelace, Grace Hopper",
+      });
       yield* directs.rename(20, "   ");
 
       const requests = yield* fake.requests;
 
-      expect(requests.at(-1)?.body).toEqual({ name: null });
+      expect(requests.find((request) => request.method === "PATCH")?.body).toEqual({ name: null });
+      expect(store.getState().sidebar.rows[20]?.sidebarDisplayName).toBe(
+        "Ada Lovelace, Grace Hopper",
+      );
+      expect(store.getState().sidebar.rows[20]?.displayName).toBe("Ada, Grace");
+      expect(requests.map((request) => request.path)).not.toContain("/sidebar");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -112,6 +129,7 @@ describe("direct actions", () => {
       yield* fake.reply("POST /directs/20/members", {
         ...roomDetailFixture(20),
         displayName: "Grace, Ada and Ana",
+        sidebarDisplayName: "Ada Lovelace, Ana Lima, Grace Hopper",
         directMemberIds: [3, 4, 5],
         users: [userFixture(5, "Ana Lima")],
       });
@@ -119,6 +137,9 @@ describe("direct actions", () => {
       yield* directs.addMembers(20, [5]);
 
       expect(store.getState().sidebar.rows[20]?.directMemberIds).toEqual([3, 4, 5]);
+      expect(store.getState().sidebar.rows[20]?.sidebarDisplayName).toBe(
+        "Ada Lovelace, Ana Lima, Grace Hopper",
+      );
       expect(store.getState().users[5]?.name).toBe("Ana Lima");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );

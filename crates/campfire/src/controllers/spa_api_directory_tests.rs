@@ -44,6 +44,41 @@ fn row_of(event: &api::SyncEvent) -> &api::SidebarRow {
 }
 
 #[tokio::test]
+async fn full_name_sidebar_rows_follow_a_members_profile_rename() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    let reply = jason
+        .write(json_body(
+            Method::PATCH,
+            "/api/v1/settings/profile",
+            &json!({"name": "Jason Full Name", "nickname": null}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let event = sync.until(upserted(true, DIRECT_DAVID_JASON), |_| false).await;
+    assert_eq!(row_of(&event).sidebar_display_name, "Jason Full Name");
+    assert_eq!(row_of(&event).display_name, "Jason");
+
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    assert_eq!(
+        sidebar.rows.iter().find(|row| row.room.id == DIRECT_DAVID_JASON).unwrap().sidebar_display_name,
+        "Jason Full Name"
+    );
+    let reply = david
+        .write(json_body(Method::POST, "/api/v1/directs", &json!({"userIds": [JASON]})))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(parse::<api::SidebarRow>(&reply).sidebar_display_name, "Jason Full Name");
+
+    server.abort();
+}
+
+#[tokio::test]
 async fn direct_candidates_and_stars() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
