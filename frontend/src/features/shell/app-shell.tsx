@@ -11,6 +11,7 @@ import { useTwoFactorSetupGate } from "../auth/two-factor-gate.ts";
 import { ProductTour } from "../help/tour.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { HuddleRoot } from "../huddle/huddle-root.tsx";
+import { playMessageChime } from "../huddle/sounds.ts";
 import { SearchHotkey } from "../search/search-hotkey.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
@@ -89,6 +90,8 @@ export function AppShell() {
   const reduced = useReducedMotion();
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? null;
+
+  useEffect(() => actions.messageChimes.follow(playMessageChime), []);
 
   // Reduced motion shows the placeholder at once; otherwise the current screen stays briefly.
   useEffect(() => {

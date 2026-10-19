@@ -13,4 +13,5 @@ export const notificationPreferencesFixture: NotificationSettings = {
   allowedPeople: [],
   keywordAlerts: [],
   inbox: [],
+  messageSound: true,
 };

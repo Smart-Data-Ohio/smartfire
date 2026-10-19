@@ -70,6 +70,7 @@ const settingsJson = {
         enabled: true,
       },
     ],
+    messageSound: true,
   },
   status: {
     presenceSetting: "auto",
@@ -173,6 +174,7 @@ describe("S7 settings schemas", () => {
       oooNotifyEnabled: null,
       keywordAlerts: ["prod"],
       inbox: { mentions: false },
+      messageSound: null,
     });
     roundTrips(UpdateStatus, {
       presenceSetting: "dnd",

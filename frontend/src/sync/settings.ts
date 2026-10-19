@@ -125,6 +125,7 @@ const UNCHANGED = {
     oooNotifyEnabled: null,
     keywordAlerts: null,
     inbox: null,
+    messageSound: null,
   },
   status: {
     presenceSetting: null,

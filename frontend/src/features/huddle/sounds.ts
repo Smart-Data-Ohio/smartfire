@@ -1,9 +1,10 @@
 /**
  * The call's sounds, as the classic app makes them: the join blip (`incoming.mp3`, through the
  * same gates as every chat sound), the two-tone ring of an incoming huddle (440 + 480 Hz for a
- * second, every three seconds), and the hosts' raised-hand chime (660 then 880 Hz). The tones
- * are synthesized, so there is no asset to load. Autoplay policies suspend audio until the first
- * gesture: a ring waits for one instead of failing (the banner shows meanwhile).
+ * second, every three seconds), and the hosts' raised-hand chime (660 then 880 Hz); and, outside
+ * calls, the soft new-message chime. The tones are synthesized, so there is no asset to load.
+ * Autoplay policies suspend audio until the first gesture: a ring waits for one instead of
+ * failing (the banner shows meanwhile), and a message chime before it stays silent.
  */
 import type { Me } from "../../gen/Me.ts";
 import incomingUrl from "./sounds/incoming.mp3";
@@ -139,6 +140,69 @@ export function playHandChime(): void {
   }
 
   play();
+}
+
+/** One struck sine: a near-instant attack, then an exponential tail like a small bell's. */
+function strike(
+  audio: BaseAudioContext,
+  frequency: number,
+  at: number,
+  peak: number,
+  decay: number,
+): void {
+  const oscillator = audio.createOscillator();
+  const envelope = audio.createGain();
+
+  oscillator.type = "sine";
+  oscillator.frequency.value = frequency;
+  envelope.gain.setValueAtTime(0.0001, at);
+  envelope.gain.exponentialRampToValueAtTime(peak, at + 0.006);
+  envelope.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+  oscillator.connect(envelope);
+  envelope.connect(audio.destination);
+  oscillator.start(at);
+  oscillator.stop(at + decay + 0.02);
+}
+
+/** B5 then E6 a fourth above, each with a faint octave partial for shine; 0.7 s in all. */
+export function chime(audio: BaseAudioContext, at: number): void {
+  strike(audio, 987.77, at, 0.09, 0.5);
+  strike(audio, 1975.53, at, 0.012, 0.18);
+  strike(audio, 1318.51, at + 0.09, 0.08, 0.6);
+  strike(audio, 2637.02, at + 0.09, 0.01, 0.2);
+}
+
+const CHIME_LATE_MS = 1000;
+
+/** The new-message chime. Before the page's first gesture it can't sound, so it doesn't try. */
+export function playMessageChime(): void {
+  if (navigator.userActivation?.hasBeenActive === false) {
+    return;
+  }
+
+  const audio = audioContext();
+
+  if (audio === null) {
+    return;
+  }
+
+  if (audio.state !== "suspended") {
+    chime(audio, audio.currentTime);
+
+    return;
+  }
+
+  const asked = performance.now();
+
+  void audio
+    .resume()
+    .then(() => {
+      // A resume held until a later gesture would sound a stale chime then.
+      if (performance.now() - asked < CHIME_LATE_MS) {
+        chime(audio, audio.currentTime);
+      }
+    })
+    .catch(() => undefined);
 }
 
 const RING_EVERY_MS = 3000;

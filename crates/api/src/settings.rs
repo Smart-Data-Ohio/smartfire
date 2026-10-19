@@ -414,6 +414,7 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
                     enabled: switch.enabled,
                 })
                 .collect(),
+            message_sound: status.notification_preferences.message_sound.unwrap_or(true),
         },
         status: api::StatusSettings {
             presence_setting: match status.presence_setting.as_str() {
@@ -930,14 +931,18 @@ async fn save_notifications(c: &mut Ctx) -> Result {
     let room_notification = update.room_notification;
     let room_mute = update.room_mute;
     let keywords = update.keyword_alerts;
+    let message_sound = update.message_sound;
     c.app()
         .db
         .write(move |tx| {
             settings.save_with_keywords(tx, keywords.as_deref())?;
-            if default_level.is_some() || room_notification.is_some() || room_mute.is_some() {
+            if default_level.is_some() || room_notification.is_some() || room_mute.is_some() || message_sound.is_some() {
                 let mut preferences = campfire_db::models::notification_policy::NotificationPreferences::load(tx.conn(), id)?;
                 if let Some(level) = default_level {
                     preferences.default_notification_level = stored_notification_level(level);
+                }
+                if message_sound.is_some() {
+                    preferences.message_sound = message_sound;
                 }
                 if let Some(change) = room_notification {
                     Membership::find_by_room_and_user(tx.conn(), change.room_id, id)?

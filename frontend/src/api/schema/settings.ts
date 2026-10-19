@@ -125,6 +125,7 @@ export const NotificationSettings = Schema.Struct({
   allowedPeople: Schema.Array(DndAllowedPerson),
   keywordAlerts: Schema.Array(Schema.String),
   inbox: Schema.Array(InboxSwitch),
+  messageSound: Schema.Boolean,
 });
 
 export type NotificationSettings = typeof NotificationSettings.Type;
@@ -302,6 +303,7 @@ export const UpdateNotifications = Schema.Struct({
   oooNotifyEnabled: Schema.NullOr(Schema.Boolean),
   keywordAlerts: Schema.NullOr(Schema.Array(Schema.String)),
   inbox: Schema.NullOr(Schema.Record(Schema.String, Schema.Boolean)),
+  messageSound: Schema.NullOr(Schema.Boolean),
 });
 
 export type UpdateNotifications = typeof UpdateNotifications.Type;

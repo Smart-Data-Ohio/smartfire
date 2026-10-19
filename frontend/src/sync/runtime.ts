@@ -117,6 +117,7 @@ import { SyncServices } from "./layers.ts";
 import * as ledgerActions from "./ledger-actions.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
+import { followMessageChimes, holdChimeView } from "./message-chime.ts";
 import * as messageViewActions from "./message-view-actions.ts";
 import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
@@ -769,6 +770,7 @@ export function onWelcomeStale(listener: () => void): () => void {
 
 export const actions = {
   chatSounds: { listen: listenForChatSounds, play: playChatSound },
+  messageChimes: { follow: followMessageChimes, view: holdChimeView },
   boards: {
     automations: (roomId: number): Promise<BoardAutomations> =>
       runAction(boardActions.automations(roomId)),
