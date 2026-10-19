@@ -22,7 +22,7 @@ import type { SudoMethod } from "../src/gen/SudoMethod.ts";
 import type { UnreadDivider } from "../src/gen/UnreadDivider.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserList } from "../src/gen/UserList.ts";
-import { sidebarDirectLabel } from "./direct-label.ts";
+import { directRoomLabel, sidebarDirectLabel } from "./direct-label.ts";
 import {
   forbidden,
   headerOf,
@@ -532,19 +532,20 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const sidebarRow = (record: RoomRecord): SidebarRow => {
     const unreadCount = unreadMessages(record).length;
+    const names = usersFor(directMemberIds(record)).map((user) => user.name);
 
     const row: SidebarRow = {
       revision: world.activityRevision,
       evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
-      roomDisplayName: displayName(record),
+      roomDisplayName:
+        record.room.kind === "direct"
+          ? directRoomLabel(record.room.name, names)
+          : displayName(record),
       displayName:
         record.room.kind === "direct"
-          ? sidebarDirectLabel(
-              record.room.name,
-              usersFor(directMemberIds(record)).map((user) => user.name),
-            )
+          ? sidebarDirectLabel(record.room.name, names)
           : displayName(record),
       directMemberIds: directMemberIds(record),
       unreadCount,

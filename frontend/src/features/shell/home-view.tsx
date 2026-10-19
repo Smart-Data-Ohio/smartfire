@@ -65,7 +65,7 @@ function WelcomeHome({ lastRoomId }: { readonly lastRoomId: number | null }) {
             Pick up where you left off in{" "}
             <Link to="/r/$roomId" params={{ roomId: lastRoom.room.id }}>
               {lastRoom.room.kind === "direct" ? "" : "#"}
-              {lastRoom.displayName}
+              {lastRoom.roomDisplayName}
             </Link>
           </p>
         )}

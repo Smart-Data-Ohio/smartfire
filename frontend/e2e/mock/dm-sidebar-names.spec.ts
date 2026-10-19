@@ -67,8 +67,7 @@ test("DM sidebar labels keep full names and expose clipped labels on hover", asy
   expect(cleared.ok()).toBe(true);
   await expect(name).toHaveText(label);
   await name.click();
-  await expect(page.locator(".room-header .room-title-name")).toHaveText(
-    "Maya Okafor, Jonah Lindqvist, Priya Raman, Sam Whitfield, Theo Nakamura",
-  );
+  await expect(page.locator(".room-header .room-title-name")).toHaveText("Jonah, Maya, Priya +2");
+  await expect(page).toHaveTitle(/Jonah, Maya, Priya \+2 · Smartfire$/);
   await expect(name).toHaveText(label);
 });

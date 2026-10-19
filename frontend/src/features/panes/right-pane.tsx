@@ -273,7 +273,7 @@ export function RightPane({ roomId }: { readonly roomId: number }) {
   const roomName = useStore((state) => {
     const detail = state.rooms[roomId]?.detail;
 
-    return detail?.displayName ?? state.sidebar.rows[roomId]?.displayName ?? "the conversation";
+    return detail?.displayName ?? state.sidebar.rows[roomId]?.roomDisplayName ?? "the conversation";
   });
 
   const kind = useStore(

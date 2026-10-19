@@ -247,7 +247,7 @@ function ForwardSource({ copy }: { readonly copy: MessageDTO }) {
   const author = forwardedAuthor(copy, source);
 
   const roomName = useStore((state) =>
-    source === undefined ? undefined : state.sidebar.rows[source.roomId]?.displayName,
+    source === undefined ? undefined : state.sidebar.rows[source.roomId]?.roomDisplayName,
   );
 
   return (

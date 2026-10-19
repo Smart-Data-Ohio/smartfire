@@ -31,7 +31,7 @@ export function useNotificationTarget(roomId: number): NotificationTarget | null
     return null;
   }
 
-  const displayName = row?.displayName ?? detail?.displayName ?? "";
+  const displayName = row?.roomDisplayName ?? detail?.displayName ?? "";
 
   const effective = roomMuted(preferences, roomId, now)
     ? "muted"

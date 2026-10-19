@@ -194,7 +194,9 @@ function useConversationName(roomId: number): ConversationName {
 
   const name = useStore(
     (state) =>
-      state.rooms[roomId]?.detail?.displayName ?? state.sidebar.rows[roomId]?.displayName ?? null,
+      state.rooms[roomId]?.detail?.displayName ??
+      state.sidebar.rows[roomId]?.roomDisplayName ??
+      null,
   );
 
   return { kind, name };
@@ -250,7 +252,7 @@ const loadedName: NameOf = (type, id) => {
 
   return type === "user"
     ? (state.users[id]?.name ?? null)
-    : (state.sidebar.rows[id]?.displayName ?? null);
+    : (state.sidebar.rows[id]?.roomDisplayName ?? null);
 };
 
 /**

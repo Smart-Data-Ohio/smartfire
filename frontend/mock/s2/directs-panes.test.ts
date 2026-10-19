@@ -31,6 +31,7 @@ describe("directs", () => {
     const label = "Jonah Lindqvist, Maya Okafor, Priya Raman +2";
 
     expect(created.displayName).toBe(label);
+    expect(created.roomDisplayName).toBe("Jonah, Maya, Priya +2");
     expect(events.find((event) => event.type === "sidebar.row.upserted")).toMatchObject({
       data: { displayName: label },
     });

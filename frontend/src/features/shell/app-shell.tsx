@@ -44,7 +44,7 @@ function useDocumentTitle(roomId: number | null, page: Page): void {
         ? `${page} · Smartfire`
         : room === null
           ? "Smartfire"
-          : `${room.room.kind === "direct" ? "" : "#"}${room.displayName} · Smartfire`;
+          : `${room.room.kind === "direct" ? "" : "#"}${room.roomDisplayName} · Smartfire`;
 
     document.title = `${prefix}${name}`;
   }, [mentions, unread, room, page]);
