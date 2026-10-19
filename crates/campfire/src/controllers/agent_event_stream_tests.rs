@@ -121,8 +121,12 @@ async fn event(body: &mut Body) -> Value {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn agent_sse_new_mention_arrives_live_with_polling_payload_and_ack() {
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter("campfire_controllers::controllers::agents::event_stream=debug")
+        .with_test_writer()
+        .try_init();
     let app = setup().await;
     let mut body = stream(&app, "", None).await;
     assert!(frame(&mut body).await.unwrap().contains("retry: "));
@@ -134,6 +138,7 @@ async fn agent_sse_new_mention_arrives_live_with_polling_payload_and_ack() {
                 .header("authorization", &format!("Bearer {SECRET}")),
         )
         .await;
+    assert_eq!(polling.status.as_u16(), 200, "{}", polling.text());
     let data = event(&mut body).await;
     assert_eq!(data, polling.json()[0]);
     assert_eq!(data["id"], id);
