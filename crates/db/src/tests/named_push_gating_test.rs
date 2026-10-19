@@ -24,10 +24,8 @@ fn room_message(t: &TestDb) -> Message {
 }
 fn room_push(t: &TestDb, message: &Message) -> (PushPayload, Vec<i64>) {
     t.read(|conn| {
-        let (payload, mut everything, mentions) =
-            PushSubscription::pushes_for(conn, &BasicRichText, message, t.now())?;
-        everything.extend(mentions);
-        Ok((payload, everything.into_iter().map(|s| s.user_id).collect()))
+        let (payload, pushes) = PushSubscription::pushes_for(conn, &BasicRichText, message, t.now())?;
+        Ok((payload, pushes.into_iter().map(|s| s.user_id).collect()))
     })
 }
 fn item(t: &TestDb, message: &Message) -> Option<ActivityItem> {

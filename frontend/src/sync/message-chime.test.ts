@@ -17,7 +17,6 @@ const GENERAL = 3;
 
 const THREAD = 40;
 
-/** Longer than any focus record may go without its tab's heartbeat. */
 const LONG_AFTER_A_CRASH_MS = 60_000;
 
 const PREFERENCES: NotificationSettings = {
@@ -93,7 +92,6 @@ function notified(message: MessageDTO, seq: number): SyncEvent {
 const fromMaya = (id: number, roomId: number, change: Partial<MessageDTO> = {}) =>
   messageFixture(id, roomId, { creatorId: MAYA, ...change });
 
-/** A batch as the engine hands it over: the rows it carries are in the store by then. */
 interface Batch {
   readonly events: readonly SyncEvent[];
   readonly rows?: readonly SidebarRow[];
@@ -111,10 +109,6 @@ const open: Tab[] = [];
 
 let focused = false;
 
-/**
- * Loads the module afresh, as another tab of the app would: tabs share only `localStorage`.
- * A tab left open without `close` is one that crashed.
- */
 async function openTab(state: State): Promise<Tab> {
   vi.resetModules();
   const chime = await import("./message-chime.ts");

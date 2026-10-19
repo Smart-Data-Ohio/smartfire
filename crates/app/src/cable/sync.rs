@@ -397,8 +397,7 @@ fn send(
 }
 
 /// `message.notified` on the `user` topic of each person the message's push policy notifies,
-/// read afresh later. Only people with a sync socket open are looked up: a missed chime needs
-/// no replay.
+/// read afresh later. Only people with a sync socket open are looked up.
 pub fn message_notified_later(
     server: &Cable,
     slot: &RendererSlot,

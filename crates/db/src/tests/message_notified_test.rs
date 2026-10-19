@@ -1,5 +1,3 @@
-//! `message.notified`: who the push policy notifies of a new message, and the moments it's
-//! emitted (with the push job, never for an edit or a quiet finalize).
 use super::*;
 use crate::models::notification_push::MessageNotified;
 use crate::rich_text::mention_attachment_for;

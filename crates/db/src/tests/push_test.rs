@@ -70,9 +70,8 @@ fn deliveries(t: &TestDb, room: &str, body: String) -> usize {
     };
     let message = t.write(move |tx| Message::create(tx, attributes));
     let now = t.now();
-    let (_, everything, mentions) =
-        t.read(|c| PushSubscription::pushes_for(c, &BasicRichText, &message, now));
-    everything.len() + mentions.len()
+    let (_, pushes) = t.read(|c| PushSubscription::pushes_for(c, &BasicRichText, &message, now));
+    pushes.len()
 }
 
 #[test]
@@ -338,9 +337,9 @@ fn a_note_to_self_never_pushes_to_or_unreads_its_author() {
         };
         let message = t.write(move |tx| Message::create(tx, attributes));
         let now = t.now();
-        let (_, pushes, mentions) =
+        let (_, pushes) =
             t.read(|c| PushSubscription::pushes_for(c, &BasicRichText, &message, now));
-        assert!(pushes.is_empty() && mentions.is_empty(), "{pushes:?} {mentions:?}");
+        assert!(pushes.is_empty(), "{pushes:?}");
         let membership = t
             .read(|c| Membership::find_by_room_and_user(c, room.id, david))
             .expect("David is its member");

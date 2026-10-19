@@ -1263,8 +1263,6 @@ impl ChannelThread {
         Ok(candidates)
     }
 
-    /// The candidates `policy` allows, less those who ignore the author: who the message
-    /// notifies.
     fn notified(
         conn: &Connection,
         rich_text: &dyn RichText,

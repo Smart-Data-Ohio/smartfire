@@ -363,14 +363,13 @@ impl PushSubscription {
 
     /// `Room::MessagePusher#push`: the devices of the notified members who aren't watching the
     /// room live, so an everything follower who is also mentioned or replied to receives one
-    /// notification per device. The last list is retained as an empty compatibility seam for
-    /// existing callers.
+    /// notification per device.
     pub fn pushes_for(
         conn: &Connection,
         rich_text: &dyn RichText,
         message: &Message,
         now: Timestamp,
-    ) -> Result<(PushPayload, Vec<Self>, Vec<Self>)> {
+    ) -> Result<(PushPayload, Vec<Self>)> {
         let room = Room::find(conn, message.room_id)?;
         let payload = Self::payload_for(conn, rich_text, &room, message)?;
         let cutoff = Membership::connection_cutoff(now);
@@ -379,7 +378,7 @@ impl PushSubscription {
             .filter(|m| m.connected_at.is_none_or(|at| at < cutoff))
             .map(|m| m.user_id)
             .collect();
-        Ok((payload, Self::for_users(conn, &away)?, Vec::new()))
+        Ok((payload, Self::for_users(conn, &away)?))
     }
 }
 

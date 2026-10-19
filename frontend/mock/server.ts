@@ -820,12 +820,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     record.mentionCount = 0;
   };
 
-  /**
-   * `message.notified` for the viewer when the server's push policy would notify them
-   * (`MessageNotified::user_ids`): someone else's finished message in a room whose involvement
-   * takes every message, or one that mentions them in a mentions or muted room.
-   */
-  const notified = (record: RoomRecord, message: MessageDTO): Outgoing[] => {
+  const pushPolicyNotified = (record: RoomRecord, message: MessageDTO): Outgoing[] => {
     const involvement = record.membership.involvement;
 
     if (
@@ -901,7 +896,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       events.push({ topic: "user", type: "sidebar.row.upserted", data: sidebarRow(record) });
     }
 
-    events.push(...notified(record, message));
+    events.push(...pushPolicyNotified(record, message));
     hub.publish(events);
 
     const forBot = record.room.id === ROOM_IDS.dmEmber || mentionsUser(message.bodyHtml, BOT_ID);
@@ -954,7 +949,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         type: "message.updated",
         data: message,
       },
-      ...(finished ? notified(record, message) : []),
+      ...(finished ? pushPolicyNotified(record, message) : []),
     ]);
   };
 

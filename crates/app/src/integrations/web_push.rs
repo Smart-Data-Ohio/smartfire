@@ -227,10 +227,8 @@ pub async fn deliver_test_notification(
 /// distinct union of eligible subscriptions, as one pool handoff. Badges are counted here;
 /// delivery happens on the pool.
 pub fn push_message(pool: &Pool, conn: &Connection, rich_text: &dyn RichText, message: &Message, now: Timestamp) -> campfire_db::Result<PushPayload> {
-    let (payload, mut subscriptions, mentions) = PushSubscription::pushes_for(conn, rich_text, message, now)?;
-    subscriptions.extend(mentions);
+    let (payload, mut subscriptions) = PushSubscription::pushes_for(conn, rich_text, message, now)?;
     subscriptions.sort_by_key(|s| s.id);
-    subscriptions.dedup_by_key(|s| s.id);
     pool.queue(conn, &payload, subscriptions, now)?;
     Ok(payload)
 }

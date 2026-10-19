@@ -1,6 +1,3 @@
-//! `message.notified` on the sync socket: the recipient's `user` topic hears about a new message
-//! the push policy notifies them of, and its author never does.
-
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use serde_json::json;

@@ -18,7 +18,6 @@ const LAST_KEY = "smartfire:message-chime:at";
 
 const FOCUS_KEY = "smartfire:message-chime:focused";
 
-/** `room:<id>` for a room's own timeline, `thread:<id>` for a thread: the sync topic names. */
 type Conversation = `room:${number}` | `thread:${number}`;
 
 function conversation(roomId: number, threadId: number | null): Conversation {
@@ -91,7 +90,6 @@ function shareFocus(): void {
   }
 }
 
-/** What the focused tab of any window shows. Only a focused, visible tab silences a chime. */
 function focusedConversations(): ReadonlySet<string> {
   if (focused()) {
     return new Set(onScreen.keys());
