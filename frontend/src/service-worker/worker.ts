@@ -103,15 +103,23 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// The classic push payload and badge behaviour stay shared with installed subscriptions.
-self.addEventListener("push", async (event) => {
-  const data = await event.data?.json();
-
+self.addEventListener("push", (event) => {
   event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(data.title, data.options),
-      updateBadgeCount(data.options),
-    ]),
+    (async () => {
+      const data = event.data?.json();
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const focused = clients.some(
+        (client) =>
+          client.visibilityState === "visible" &&
+          client.focused &&
+          new URL(client.url).origin === self.location.origin,
+      );
+
+      await Promise.all([
+        focused ? Promise.resolve() : self.registration.showNotification(data.title, data.options),
+        updateBadgeCount(data.options),
+      ]);
+    })(),
   );
 });
 

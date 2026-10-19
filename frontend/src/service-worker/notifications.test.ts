@@ -13,7 +13,9 @@ interface WorkerEvent {
   readonly waitUntil?: (completion: Promise<unknown>) => void;
 }
 
-async function worker(client = { url: "https://smartfire.test/app/r/12", visibilityState: "hidden", focused: false }) {
+async function worker(
+  client = { url: "https://smartfire.test/app/r/12", visibilityState: "hidden", focused: false },
+) {
   const handlers = new Map<string, (event: WorkerEvent) => Promise<void> | void>();
   const navigate = vi.fn(async () => undefined);
   const focus = vi.fn(async () => null);
@@ -58,7 +60,11 @@ async function worker(client = { url: "https://smartfire.test/app/r/12", visibil
 
 describe("shared worker notifications", () => {
   it("suppresses the OS notification for a visible focused client and still updates its badge", async () => {
-    const f = await worker({ url: "https://smartfire.test/app/r/99", visibilityState: "visible", focused: true });
+    const f = await worker({
+      url: "https://smartfire.test/app/r/99",
+      visibilityState: "visible",
+      focused: true,
+    });
     const options = { data: { badge: 7, path: "/rooms/12" }, tag: "room-12" };
 
     await f.dispatch("push", { data: { json: () => ({ title: "New message", options }) } });
