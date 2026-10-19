@@ -1,4 +1,3 @@
-import { useLayoutEffect, useRef } from "react";
 import { EmojiImage } from "../../lib/emoji/emoji-image.tsx";
 import { preloadEmojiPicker } from "../../lib/emoji/lazy-emoji-picker.tsx";
 import { type EmojiChoice, quickReactions, useRecentEmoji } from "../../lib/emoji/recent.ts";
@@ -6,7 +5,6 @@ import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
-import { clearImageActions } from "./attachments.tsx";
 import type { MenuCommand } from "./message-menu.tsx";
 import type { MessagePermissions } from "./permissions.ts";
 
@@ -38,12 +36,9 @@ export function HoverBar({
 }: HoverBarProps) {
   const recent = useRecentEmoji();
   const quick = permissions.react ? quickReactions(recent, 3) : [];
-  const bar = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => (bar.current === null ? undefined : clearImageActions(bar.current)), []);
 
   return (
-    <div ref={bar} className="message-bar enter-bar" role="toolbar" aria-label="Message actions">
+    <div className="message-bar enter-bar" role="toolbar" aria-label="Message actions">
       {quick.map((choice) => (
         <Tooltip key={choice.content} content={`React with ${choice.title}`} describe={false}>
           <Button

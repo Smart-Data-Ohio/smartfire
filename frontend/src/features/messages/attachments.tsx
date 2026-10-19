@@ -1,4 +1,4 @@
-import { type CSSProperties, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import type { Attachment } from "../../gen/Attachment.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { PendingAttachment } from "../../store/model.ts";
@@ -50,24 +50,43 @@ function MessageLightbox({
 }
 
 /**
+ * The smallest box an inline image is drawn in (messages.css repeats it for images of unknown
+ * size). It holds the action bubble, and keeps the bubble's top below the message bar, which covers
+ * the top of the row. A smaller image sits at its own size inside the box.
+ */
+const IMAGE_FLOOR = 80;
+
+/**
  * An image that opens the lightbox. Its action bubble sits beside the button, not inside it,
  * because a button can't hold another.
  */
 function ImageFrame({
   attachment,
-  className,
-  style,
+  tile,
   onOpen,
 }: {
   readonly attachment: Attachment;
-  readonly className: string;
-  readonly style?: CSSProperties | undefined;
+  readonly tile: boolean;
   readonly onOpen: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const fitted = tile ? null : fitWithin(attachment.width, attachment.height, MEDIA_MAX);
+  const box =
+    fitted === null
+      ? null
+      : {
+          width: Math.max(fitted.width, IMAGE_FLOOR),
+          height: Math.max(fitted.height, IMAGE_FLOOR),
+        };
 
   return (
-    <div className={className} data-loaded={loaded || undefined} style={style}>
+    <div
+      className={tile ? "attachment-tile attachment-image" : "attachment-image"}
+      data-loaded={loaded || undefined}
+      style={
+        box === null ? undefined : { width: box.width, aspectRatio: `${box.width} / ${box.height}` }
+      }
+    >
       <button
         type="button"
         className="attachment-image-open"
@@ -103,60 +122,14 @@ function ImageFrame({
   );
 }
 
-/**
- * The row's hover bar reaches into the top of its message, where it can cover the bubble of an
- * image that opens a follow-up message. This moves each covered bubble below the bar and returns
- * the undo.
- */
-export function clearImageActions(bar: HTMLElement): () => void {
-  const covering = bar.getBoundingClientRect();
-  const frames = bar.closest(".message")?.querySelectorAll<HTMLElement>(".attachment-image") ?? [];
-
-  const moved = [...frames].filter((frame) => {
-    const actions = frame.querySelector<HTMLElement>(".attachment-image-actions");
-
-    if (actions === null) {
-      return false;
-    }
-
-    const box = frame.getBoundingClientRect();
-    const top = box.top + actions.offsetTop;
-    const left = box.left + actions.offsetLeft;
-
-    const covered =
-      top < covering.bottom &&
-      top + actions.offsetHeight > covering.top &&
-      left < covering.right &&
-      left + actions.offsetWidth > covering.left;
-
-    if (covered) {
-      frame.style.setProperty("--bar-reach", `${covering.bottom - box.top}px`);
-    }
-
-    return covered;
-  });
-
-  return () => {
-    for (const frame of moved) {
-      frame.style.removeProperty("--bar-reach");
-    }
-  };
-}
-
 function ImageAttachment({ attachment }: { readonly attachment: Attachment }) {
   const [lightbox, setLightbox] = useState(CLOSED);
-  const size = fitWithin(attachment.width, attachment.height, MEDIA_MAX);
 
   return (
     <>
       <ImageFrame
         attachment={attachment}
-        className="attachment-image"
-        style={
-          size === null
-            ? undefined
-            : { width: size.width, aspectRatio: `${size.width} / ${size.height}` }
-        }
+        tile={false}
         onOpen={() => setLightbox({ opened: true, open: true, index: 0 })}
       />
       <MessageLightbox images={[attachment]} state={lightbox} onChange={setLightbox} />
@@ -289,7 +262,7 @@ export function AttachmentGallery({
             ) : attachment.preview === "image" ? (
               <ImageFrame
                 attachment={attachment}
-                className="attachment-tile attachment-image"
+                tile
                 onOpen={() =>
                   setLightbox({ opened: true, open: true, index: images.indexOf(attachment) })
                 }
