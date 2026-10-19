@@ -8,6 +8,20 @@
     min-width: 0;
   }
 
+  /* The skeleton and the board share one grid cell. The cell takes the room's height and keeps
+     its width, so the list and the columns scroll inside it instead of overflowing the room. */
+  .board > .t-skel {
+    flex: 1;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .board > .t-skel > .t-skel-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   /* ── Toolbar ───────────────────────────────────────────────────────────── */
 
   .board-toolbar {
@@ -470,6 +484,8 @@
   .board-columns {
     display: grid;
     flex: 1;
+    /* As tall as the longest column, up to the board's height; past that each column scrolls. */
+    grid-template-rows: fit-content(100%);
     grid-template-columns: repeat(4, minmax(240px, 1fr));
     gap: var(--space-3);
     min-height: 0;
@@ -1771,15 +1787,6 @@
 
     .board-chips:empty {
       display: none;
-    }
-
-    .board-scroll {
-      padding-inline: var(--space-1);
-    }
-
-    .board-columns {
-      grid-template-columns: repeat(4, minmax(78vw, 1fr));
-      scroll-snap-type: x mandatory;
     }
 
     .board-form-row {
