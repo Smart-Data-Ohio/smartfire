@@ -50,9 +50,8 @@ function MessageLightbox({
 }
 
 /**
- * An image that opens the lightbox, with a bubble at its top right on hover or keyboard focus to
- * download the original or open it in a new tab. The bubble sits beside the image's button, not
- * inside it, so no button nests in another.
+ * An image that opens the lightbox. Its action bubble sits beside the button, not inside it,
+ * because a button can't hold another.
  */
 function ImageFrame({
   attachment,
@@ -105,9 +104,9 @@ function ImageFrame({
 }
 
 /**
- * Moves the bubble of each image in `bar`'s message that the row's hover bar covers to just below
- * the bar, and returns the undo. The bar sits inside the row's top edge, so it covers the top right
- * of an image that opens a follow-up message in a narrow column.
+ * The row's hover bar reaches into the top of its message, where it can cover the bubble of an
+ * image that opens a follow-up message. This moves each covered bubble below the bar and returns
+ * the undo.
  */
 export function clearImageActions(bar: HTMLElement): () => void {
   const covering = bar.getBoundingClientRect();

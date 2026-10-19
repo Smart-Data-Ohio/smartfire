@@ -541,9 +541,8 @@
     outline: none;
   }
 
-  /* Download and open-original, on the image's top right like the message bar on the row's. It
-     shows on hover and on keyboard focus, never on a tap: on touch the lightbox has both. Where
-     the bar covers that corner, the bar sets --bar-reach and the bubble sits below it. */
+  /* A tap never shows it, because on touch the lightbox has both actions. clearImageActions
+     (attachments.tsx) sets --bar-reach where the message bar covers this corner. */
   .attachment-image-actions {
     position: absolute;
     top: calc(var(--bar-reach, 0px) + var(--space-1-5));

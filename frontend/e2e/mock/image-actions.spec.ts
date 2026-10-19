@@ -31,7 +31,7 @@ function picture(name: string, [from, to]: readonly [Rgb, Rgb]) {
   return { name, mimeType: "image/png", buffer: gradientPng(640, 400, from, to) };
 }
 
-/** Sends `files` with `text` from #general's composer and returns the message's row. */
+/** Sends from #general and returns the message's row once every image has loaded. */
 async function send(
   page: Page,
   text: string,
@@ -62,7 +62,6 @@ function actions(image: Locator): Locator {
   return image.locator(".attachment-image-actions");
 }
 
-/** Runs `press` and returns the file the browser saved, with the name it suggested. */
 async function downloadFrom(page: Page, press: () => Promise<void>) {
   const [download] = await Promise.all([page.waitForEvent("download"), press()]);
 
