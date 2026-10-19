@@ -350,3 +350,40 @@ test("a queued move doesn't pull focus back after the viewer tabs away", async (
   await page.waitForTimeout(300);
   await expect(card(page, "Blocked", /Cursor pagination/)).not.toBeFocused();
 });
+
+test("a queued move doesn't take focus from a card picked up after another member moved it", async ({
+  page,
+  request,
+}) => {
+  const writes = workWrites(page);
+
+  await page.route(`**/api/v1/threads/${BOARD_POST_IDS.apiPagination}/work`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  await openSyncedBoard(page);
+  await card(page, "Planned", /Cursor pagination/).focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(card(page, "In progress", /Cursor pagination/)).toBeFocused();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+
+  const reply = await request.post("/__mock/board-update", {
+    data: { threadId: BOARD_POST_IDS.apiPagination, status: "done" },
+  });
+
+  expect(reply.ok()).toBe(true);
+  await expect(card(page, "Done", /Cursor pagination/)).toBeVisible();
+  await card(page, "Planned", /Launch week plan/).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByText(/^Picked up Launch week plan/)).toBeAttached();
+
+  await expect.poll(() => writes.length, { timeout: 10_000 }).toBe(2);
+  await expect(card(page, "Blocked", /Cursor pagination/)).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(card(page, "Planned", /Launch week plan/)).toBeFocused();
+  await expect(page.getByText(/^Picked up Launch week plan/)).toBeAttached();
+});

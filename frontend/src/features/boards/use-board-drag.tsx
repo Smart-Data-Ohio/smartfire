@@ -51,7 +51,7 @@ interface Arrival {
   readonly status: WorkStatus;
   readonly from: DOMRect;
   ghost: HTMLElement | null;
-  focus: boolean;
+  readonly focus: boolean;
 }
 
 export interface CardDrag {
@@ -166,7 +166,7 @@ function settle(item: HTMLElement, { from, ghost, focus }: Arrival): void {
 
   reveal(item, item.closest<HTMLElement>(".board-column-list"), "y");
 
-  if (focus) {
+  if (focus && (document.activeElement === null || document.activeElement === document.body)) {
     item.querySelector<HTMLElement>("a")?.focus({ preventScroll: true });
   }
 
@@ -306,18 +306,6 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       focus: ghost === null,
     };
 
-    const link = pending.focus ? item.querySelector<HTMLElement>("a") : null;
-
-    link?.addEventListener(
-      "focusout",
-      () =>
-        queueMicrotask(() => {
-          if (link.isConnected) {
-            pending.focus = false;
-          }
-        }),
-      { once: true },
-    );
     arrival.current = pending;
     update(null);
     announce(`Moved ${title} to ${WORK_STATUS_LABEL[to]}.`);
