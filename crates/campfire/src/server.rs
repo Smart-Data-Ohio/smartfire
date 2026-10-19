@@ -184,6 +184,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         fizzy,
         klipy,
         agent_message_payload: crate::controllers::presenters::agent_payload::State::live(),
+        agent_event_streams: campfire_app::state::agent_streams::State::default(),
         agent_repositories,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
@@ -291,6 +292,7 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/github/webhooks", github_webhook())
         .route("/github/webhooks.{format}", github_webhook())
         .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)))
+        .route("/agents/events/stream", axum::routing::get(campfire_kit::action(controllers::agents::event_stream)))
         .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)))
         .merge(controllers::pwa::routes(IMMUTABLE_CACHE_CONTROL))
         .merge(controllers::spa::routes(IMMUTABLE_CACHE_CONTROL))
