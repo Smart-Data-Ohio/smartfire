@@ -33,7 +33,12 @@ pub async fn event_stream(c: &mut Ctx) -> Result {
         .map(|value| ruby_i64(&json!(value)))
         .unwrap_or_else(|| field(c, "since").as_ref().map_or(0, ruby_i64));
     let timing = c.app().config.agent_event_stream;
-    let deadline = started + timing.lifetime;
+    let deadline = c
+        .current::<campfire_kit::front::WriteDeadline>()
+        .map(|front| front.started + (front.end - front.started).mul_f64(0.8))
+        .map_or(started + timing.lifetime, |front| {
+            front.min(started + timing.lifetime)
+        });
     let (stopped, receiver) = watch::channel(false);
     let secret = concerns::agent_bearer_secret(c.request.header("authorization"))
         .expect("authenticated Bearer credential")
@@ -131,18 +136,21 @@ impl EventStream {
                 page = self.pending.as_mut().unwrap() => {
                     self.pending = None;
                     let page = page?;
-                    let next = page["next_since"].as_i64().expect("polling cursor");
+                    let invalid_page = || campfire_kit::Error::internal(anyhow::anyhow!("Invalid agent polling page"));
+                    let next = page["next_since"].as_i64().ok_or_else(invalid_page)?;
                     self.next_poll = if next == self.cursor {
                         Instant::now() + self.timing.recheck
                     } else { Instant::now() };
                     self.cursor = next;
                     if *self.stopped.borrow() { return Ok(None); }
                     let mut bytes = String::new();
-                    for event in page["events"].as_array().expect("polling events") {
+                    for event in page["events"].as_array().ok_or_else(invalid_page)? {
                         use std::fmt::Write;
-                        write!(bytes, "id: {}\nevent: {}\ndata: {}\n\n", event["id"],
-                            event["event_type"].as_str().expect("polling event type"), event).unwrap();
+                        let id = event["id"].as_i64().ok_or_else(invalid_page)?;
+                        let kind = event["event_type"].as_str().ok_or_else(invalid_page)?;
+                        write!(bytes, "id: {id}\nevent: {kind}\ndata: {event}\n\n").unwrap();
                     }
+                    if *self.stopped.borrow() || Instant::now() >= self.deadline { return Ok(None); }
                     if !bytes.is_empty() { return Ok(Some(Bytes::from(bytes))); }
                 }
             }
@@ -164,38 +172,44 @@ async fn monitor(
     deadline: Instant,
     stopped: watch::Sender<bool>,
 ) {
-    let mut tick = tokio::time::interval(timing.recheck);
-    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut fresh_until = Instant::now() + timing.recheck;
+    let mut next_check = Instant::now();
     loop {
         tokio::select! {
+            biased;
             _ = stopped.closed() => return,
-            _ = sleep_until(deadline) => break,
-            _ = tick.tick() => {}
+            _ = sleep_until(deadline.min(fresh_until)) => break,
+            _ = sleep_until(next_check) => {}
         }
         let secret = secret.clone();
-        let now = campfire_db::Timestamp::from_jiff(app.clock.now());
+        let clock = app.clock.clone();
         let app_url = app.db.env().default_url_origin.clone();
-        let allowed = app
-            .db
-            .read(move |conn| {
-                let _snapshot = campfire_db::Snapshot::begin(conn)?;
-                let authenticated = agent_access::verify_identity(conn, &secret, now, &app_url)?
-                    .is_some_and(|current| {
-                        !current.oauth
-                            && current.agent_id == identity.agent_id
-                            && current.credential_id == identity.credential_id
-                    });
-                Ok(authenticated
-                    && agent_access::has_capability_anywhere(
-                        conn,
-                        identity.agent_id,
-                        "read_messages",
-                    )?)
-            })
-            .await;
+        let allowed = app.db.read(move |conn| {
+            let checked_at = Instant::now();
+            let now = campfire_db::Timestamp::from_jiff(clock.now());
+            let _snapshot = campfire_db::Snapshot::begin(conn)?;
+            let authenticated = agent_access::verify_identity(conn, &secret, now, &app_url)?
+                .is_some_and(|current| {
+                    !current.oauth
+                        && current.agent_id == identity.agent_id
+                        && current.credential_id == identity.credential_id
+                });
+            let allowed = authenticated
+                && agent_access::has_capability_anywhere(conn, identity.agent_id, "read_messages")?;
+            Ok((allowed, checked_at))
+        });
+        let allowed = tokio::select! {
+            biased;
+            _ = stopped.closed() => return,
+            _ = sleep_until(deadline.min(fresh_until)) => break,
+            allowed = allowed => allowed,
+        };
         match allowed {
-            Ok(true) => {}
-            Ok(false) => break,
+            Ok((true, checked_at)) => {
+                fresh_until = checked_at + timing.recheck;
+                next_check = checked_at + timing.recheck / 2;
+            }
+            Ok((false, _)) => break,
             Err(error) => {
                 tracing::warn!(%error, "Agent event stream credential check failed");
                 break;

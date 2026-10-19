@@ -248,8 +248,9 @@ but before you persist its cursor.
 Streaming leaves delivery state unchanged, just like polling. The
 delivery job owns `pending` to `delivered` transitions and webhook work.
 Use `POST /agents/events/:id/ack` to record acknowledgment. A credential
-revocation, expiry, or agent deactivation closes the stream at its next
-database check, within one second during normal delivery.
+revocation, expiry, or agent deactivation closes the stream within one
+second. A database check that cannot finish within that interval also
+closes the stream, so reconnect after temporary database contention.
 
 Each server process allows three concurrent streams per credential,
 matching the credential identity and process boundary of API rate limits.
@@ -258,6 +259,11 @@ releases its slot. Production uses one Rust process per container.
 Database checks also observe writes from another process, including an
 overlapping ONCE replacement container, without relying on local wakeups.
 Responses disable caching, compression, and proxy buffering.
+
+For tests, `AGENT_EVENT_STREAM_RECHECK_MS`,
+`AGENT_EVENT_STREAM_KEEPALIVE_MS`, and `AGENT_EVENT_STREAM_LIFETIME_MS`
+can shorten these intervals. Values above the production defaults are
+capped at those defaults.
 
 ### Webhooks
 

@@ -96,6 +96,16 @@ async fn frame(body: &mut Body) -> Option<String> {
     .expect("stream must produce a frame or close")
 }
 
+async fn closed_promptly(body: &mut Body) {
+    tokio::time::timeout(Duration::from_millis(500), async {
+        while let Some(text) = frame(body).await {
+            assert_eq!(text, ": ping\n\n");
+        }
+    })
+    .await
+    .expect("revoked stream must close before its normal lifetime");
+}
+
 async fn event(body: &mut Body) -> Value {
     loop {
         let text = frame(body).await.expect("event before stream closes");
@@ -268,7 +278,7 @@ async fn agent_sse_deactivated_agent_closes_stream() {
         })
         .await
         .unwrap();
-    assert_eq!(frame(&mut body).await, None);
+    closed_promptly(&mut body).await;
 }
 
 #[tokio::test]
@@ -286,7 +296,7 @@ async fn agent_sse_revoked_credential_closes_stream() {
         })
         .await
         .unwrap();
-    assert_eq!(frame(&mut body).await, None);
+    closed_promptly(&mut body).await;
 }
 
 #[tokio::test]
