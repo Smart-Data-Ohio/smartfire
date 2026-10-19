@@ -137,6 +137,8 @@ pub mod work_threads;
 #[cfg(test)]
 mod agent_http_tests;
 #[cfg(test)]
+mod agent_event_stream_tests;
+#[cfg(test)]
 mod agent_mcp_tests;
 #[cfg(test)]
 mod oauth_data_tests;

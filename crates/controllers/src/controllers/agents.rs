@@ -9,6 +9,8 @@ use super::presenters::page::db_error;
 pub mod approvals;
 pub mod conversations;
 mod id_args;
+mod event_stream;
+pub use event_stream::event_stream;
 pub mod integrations;
 pub mod mcp;
 pub mod pending;
@@ -141,41 +143,55 @@ pub async fn poll(
     since: Option<Value>,
     limit: Option<Value>,
 ) -> Result<Value> {
-    let now = campfire_db::Timestamp::from_jiff(c.now());
-    let since_id = since.as_ref().map_or(0, ruby_i64);
-    let page_limit = limit.as_ref().filter(|v| !mcp::blank(v)).map(ruby_i64);
-    let events = c
-        .app()
-        .db
-        .read(move |conn| {
-            Ok(campfire_db::models::agent_event_access::readable_page(
-                conn, agent_id, since_id, page_limit,
-            )?
-            .into_iter()
-            .map(|event| event.id)
-            .collect())
+    EventPolling::for_request(c)?.page(agent_id, since, limit).await
+}
+
+#[derive(Clone)]
+struct EventPolling {
+    app: crate::app::App,
+    presentation: super::messages::Presentation,
+}
+
+impl EventPolling {
+    fn for_request(c: &Ctx) -> Result<Self> {
+        Ok(Self { app: c.app().clone(), presentation: super::messages::Presentation::for_request(c)? })
+    }
+
+    async fn page(&self, agent_id: i64, since: Option<Value>, limit: Option<Value>) -> Result<Value> {
+        let now = campfire_db::Timestamp::from_jiff(self.app.clock.now());
+        let since_id = since.as_ref().map_or(0, ruby_i64);
+        let page_limit = limit.as_ref().filter(|v| !mcp::blank(v)).map(ruby_i64);
+        let events = self.app
+            .db
+            .read(move |conn| {
+                Ok(campfire_db::models::agent_event_access::readable_page(
+                    conn, agent_id, since_id, page_limit,
+                )?
+                .into_iter()
+                .map(|event| event.id)
+                .collect())
+            })
+            .await
+            .map_err(db_error)?;
+        let access = self.app
+            .agent_repositories
+            .resolve_events(&self.app.db, agent_id, events)
+            .await
+            .map_err(db_error)?;
+        self.presentation.run(move |presenter| {
+            let _snapshot = campfire_db::Snapshot::begin(presenter.conn)?;
+            agent_event_polling::poll(
+                presenter.conn,
+                agent_id,
+                since.as_ref(),
+                limit.as_ref(),
+                now,
+                &access,
+                |message| presenter.agent_message_payload(message),
+            )
         })
         .await
-        .map_err(db_error)?;
-    let access = c
-        .app()
-        .agent_repositories
-        .resolve_events(&c.app().db, agent_id, events)
-        .await
-        .map_err(db_error)?;
-    super::messages::present(c, move |presenter| {
-        let _snapshot = campfire_db::Snapshot::begin(presenter.conn)?;
-        agent_event_polling::poll(
-            presenter.conn,
-            agent_id,
-            since.as_ref(),
-            limit.as_ref(),
-            now,
-            &access,
-            |message| presenter.agent_message_payload(message),
-        )
-    })
-    .await
+    }
 }
 
 pub async fn ack(c: &mut Ctx) -> Result {
