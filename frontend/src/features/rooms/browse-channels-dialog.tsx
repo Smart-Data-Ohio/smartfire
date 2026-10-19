@@ -95,7 +95,7 @@ function NextPage({ loading, onVisible }: { loading: boolean; onVisible: () => v
   useEffect(() => {
     const node = ref.current;
 
-    if (node === null || !("IntersectionObserver" in window)) {
+    if (node === null || loading || !("IntersectionObserver" in window)) {
       return;
     }
 
@@ -111,7 +111,7 @@ function NextPage({ loading, onVisible }: { loading: boolean; onVisible: () => v
     observer.observe(node);
 
     return () => observer.disconnect();
-  }, []);
+  }, [loading]);
 
   return (
     <div ref={ref} className="browse-end">
@@ -203,7 +203,8 @@ export default function BrowseChannelsDialog({ open, onOpenChange }: BrowseChann
             ))}
           </ul>
           {directory.loadMore === null || directory.nextCursor === null ? null : (
-            // A new observer reports at once, so a page that leaves this in view loads the next.
+            // A new observer reports at once, so a page that leaves this in view loads the next,
+            // and so does a load that ends with it still in view.
             <NextPage
               key={directory.nextCursor}
               loading={directory.loadingMore}

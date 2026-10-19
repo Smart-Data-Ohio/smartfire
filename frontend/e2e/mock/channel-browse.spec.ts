@@ -2,6 +2,17 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { JOINABLE_OPEN_ROOM } from "../../mock/seed.ts";
 import { DESKTOP, expect, matrix, openApp, shot, test } from "./support.ts";
 
+/** A promise the test resolves by hand, to hold a response until a chosen moment. */
+function gate() {
+  let open = () => {};
+
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+
+  return { open, opened };
+}
+
 const sidebar = (page: Page) => page.getByRole("complementary", { name: "Conversations" });
 
 const sidebarRoom = (page: Page, name: string) =>
@@ -158,4 +169,56 @@ test("the channel browser loads the next page after it is closed and opened agai
   await expect(rows.filter({ has: page.getByText("lot-1", { exact: true }) })).toHaveCount(1);
   await expect(rows).not.toHaveCount(50);
   await shot(page, "browse-channels-reopened-page-two", "light");
+});
+
+test("the channel browser loads page two when its first page lands after you reach the end", async ({
+  page,
+  request,
+}) => {
+  await seedChannels(request, { count: 60, prefix: "lot", hidden: true });
+  await page.setViewportSize(DESKTOP);
+
+  const pageTwoAsked = gate();
+  const pageTwo = gate();
+  const refresh = gate();
+  let firstPages = 0;
+
+  await page.route("**/api/v1/rooms/browse?**", async (route) => {
+    if (new URL(route.request().url()).searchParams.get("cursor")) {
+      pageTwoAsked.open();
+      await pageTwo.opened;
+    } else if (++firstPages === 2) {
+      await refresh.opened;
+    }
+
+    await route.continue();
+  });
+
+  await openApp(page, "/");
+
+  const browser = page.getByRole("dialog", { name: "Browse channels" });
+  const rows = browser.getByRole("list", { name: "Channels" }).getByRole("listitem");
+
+  const openBrowser = async () => {
+    await sidebar(page).getByRole("button", { name: "Add channels" }).click();
+    await page.getByRole("menuitem", { name: "Browse channels" }).click();
+    await expect(rows).toHaveCount(50);
+  };
+
+  await openBrowser();
+  await rows.last().scrollIntoViewIfNeeded();
+  await pageTwoAsked.opened;
+  await browser.getByRole("button", { name: "Close" }).click();
+  await expect(browser).toBeHidden();
+  await openBrowser();
+  await rows.last().scrollIntoViewIfNeeded();
+  // The sentinel's observer reports on a frame, and it must report while the refresh is held.
+  await page.evaluate(
+    () => new Promise((settled) => requestAnimationFrame(() => requestAnimationFrame(settled))),
+  );
+  pageTwo.open();
+  await expect.poll(() => firstPages).toBe(2);
+  refresh.open();
+  await expect(rows.filter({ has: page.getByText("lot-1", { exact: true }) })).toHaveCount(1);
+  await expect(rows).not.toHaveCount(50);
 });
