@@ -75,7 +75,10 @@ async fn stream(app: &TestApp, query: &str, last: Option<i64>) -> Body {
         "SSE endpoint must accept the polling credential"
     );
     assert_eq!(response.headers()["content-type"], "text/event-stream");
-    assert_eq!(response.headers()["cache-control"], "no-cache, no-transform");
+    assert_eq!(
+        response.headers()["cache-control"],
+        "no-cache, no-transform"
+    );
     assert_eq!(response.headers()["x-accel-buffering"], "no");
     response.into_body()
 }
@@ -332,4 +335,159 @@ async fn agent_sse_front_does_not_buffer_or_compress_and_stream_ends_before_writ
     assert!(frame(&mut body).await.unwrap().contains("retry: "));
     while frame(&mut body).await.is_some() {}
     assert!(started.elapsed() < Duration::from_secs(1));
+}
+
+#[tokio::test]
+async fn agent_sse_review_reader_contention_cannot_delay_revocation() {
+    let app = setup_with(&[("RAILS_MAX_THREADS", "1")]).await;
+    let mut body = stream(&app, "", None).await;
+    frame(&mut body).await.unwrap();
+    let db = app.db().clone();
+    let (entered, ready) = tokio::sync::oneshot::channel();
+    let (release, held) = std::sync::mpsc::channel();
+    let reader = tokio::spawn(async move {
+        db.read(move |_| {
+            entered.send(()).unwrap();
+            held.recv().unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    ready.await.unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agent_credentials SET revoked_at=? WHERE agent_id=?",
+                rusqlite::params![tx.now(), AGENT],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let closed = tokio::time::timeout(Duration::from_millis(200), async {
+        while let Some(text) = frame(&mut body).await {
+            assert!(!text.contains("data: "));
+        }
+    })
+    .await;
+    release.send(()).unwrap();
+    reader.await.unwrap();
+    assert!(
+        closed.is_ok(),
+        "a queued database read must not keep a revoked stream alive"
+    );
+}
+
+#[tokio::test]
+async fn agent_sse_review_slow_get_body_still_ends_cleanly_before_front_deadline() {
+    use campfire_kit::front::FrontConfig;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let app = setup_with(&[("HTTP_WRITE_TIMEOUT", "1")]).await;
+    let http = tokio::net::TcpListener::bind("127.0.0.1:4470")
+        .await
+        .unwrap();
+    let target = tokio::net::TcpListener::bind("127.0.0.1:4471")
+        .await
+        .unwrap();
+    let address = http.local_addr().unwrap();
+    let target_port = target.local_addr().unwrap().port();
+    let config = FrontConfig::from_lookup(|name| match name {
+        "HTTP_PORT" => Some(address.port().to_string()),
+        "TARGET_PORT" => Some(target_port.to_string()),
+        "HTTP_WRITE_TIMEOUT" => Some("1".into()),
+        "LOG_REQUESTS" => Some("false".into()),
+        _ => None,
+    });
+    let (ready, started) = tokio::sync::oneshot::channel();
+    let (stop, stopped) = tokio::sync::oneshot::channel();
+    let server = tokio::spawn(campfire_kit::front::serve_with_bound_listeners(
+        config,
+        app.booted.router.clone(),
+        None,
+        (http, target),
+        move || {
+            let _ = ready.send(());
+        },
+        async move {
+            let _ = stopped.await;
+        },
+    ));
+    started.await.unwrap();
+    let mut socket = tokio::net::TcpStream::connect(address).await.unwrap();
+    let headers = format!(
+        "GET /agents/events/stream HTTP/1.1\r\nHost: campfire.test\r\nAuthorization: Bearer {SECRET}\r\nAccept: text/event-stream\r\nContent-Type: application/octet-stream\r\nContent-Length: 1\r\nConnection: close\r\n\r\n"
+    );
+    socket.write_all(headers.as_bytes()).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(350)).await;
+    socket.write_all(b"x").await.unwrap();
+    let mut response = Vec::new();
+    let read =
+        tokio::time::timeout(Duration::from_secs(2), socket.read_to_end(&mut response)).await;
+    drop(socket);
+    let _ = stop.send(());
+    server.await.unwrap().unwrap();
+    assert!(read.is_ok());
+    assert!(
+        response.starts_with(b"HTTP/1.1 200"),
+        "{}",
+        String::from_utf8_lossy(&response)
+    );
+    assert!(
+        response.ends_with(b"0\r\n\r\n"),
+        "SSE must finish its chunked body before the connection write deadline"
+    );
+}
+
+#[tokio::test]
+async fn agent_sse_review_external_commit_arrives_after_stream_catches_up() {
+    let app = setup().await;
+    let message = app
+        .db()
+        .write(|tx| {
+            Ok(Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("Independent event context".into()),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    let queries = app.db().capture_read_queries();
+    let mut body = stream(&app, "", None).await;
+    let waiting = tokio::spawn(async move {
+        let data = event(&mut body).await;
+        (data, body)
+    });
+    tokio::time::timeout(Duration::from_secs(1), async {
+        loop {
+            if queries
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|sql| sql.starts_with("SELECT e.* FROM agent_events"))
+                .count()
+                >= 3
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    })
+    .await
+    .expect("stream must complete an empty page and query again");
+    app.db().stop_capturing_read_queries();
+    let path = app.db().path().to_path_buf();
+    let id = tokio::task::spawn_blocking(move || {
+        let conn = rusqlite::Connection::open(path).unwrap();
+        conn.query_row("INSERT INTO agent_events(agent_id,room_id,message_id,actor_id,event_type,outcome,metadata,created_at) VALUES(?,?,?,?,'mention','pending','{}','2026-03-02 16:00:00') RETURNING id", rusqlite::params![AGENT, ALL_TALK, message, DAVID], |row| row.get::<_, i64>(0)).unwrap()
+    }).await.unwrap();
+    let (data, mut body) = waiting.await.unwrap();
+    assert_eq!(data["id"], id);
+    assert!(frame(&mut body).await.unwrap().starts_with(": ping"));
 }
