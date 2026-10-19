@@ -357,6 +357,21 @@ export function createSettings(
 
       users.set(VIEWER_ID, user);
       ctx.publish([{ topic: "user", type: "user.updated", data: user }]);
+      ctx.publish(
+        [...ctx.world().rooms.values()].flatMap((record) =>
+          record.room.kind === "direct" &&
+          record.memberIds.includes(VIEWER_ID) &&
+          record.membership.involvement !== "invisible"
+            ? [
+                {
+                  topic: "user",
+                  type: "sidebar.row.upserted",
+                  data: { ...ctx.sidebarRow(record), refreshRoom: true },
+                },
+              ]
+            : [],
+        ),
+      );
     }
   };
 
