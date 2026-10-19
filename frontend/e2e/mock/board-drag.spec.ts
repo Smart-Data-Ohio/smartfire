@@ -49,10 +49,68 @@ async function holdOver(page: Page, from: Locator, to: { x: number; y: number })
   await page.mouse.move(to.x, to.y, { steps: 12 });
 }
 
-async function openSyncedBoard(page: Page): Promise<void> {
+interface SyncEvent {
+  readonly type: string;
+  readonly data: { readonly id?: number };
+}
+
+interface GatheredSync {
+  readonly hold: (page: Page) => Promise<() => void>;
+  readonly gather: () => void;
+  readonly holds: (threadId: number) => boolean;
+  readonly deliver: () => void;
+}
+
+function gatherSync(): GatheredSync {
+  let gathering = false;
+  let events: SyncEvent[] = [];
+  let send: (message: string) => void = () => {};
+
+  return {
+    async hold(page) {
+      const held = Promise.withResolvers<void>();
+
+      await page.routeWebSocket(/\/api\/v1\/sync/, (socket) => {
+        const server = socket.connectToServer();
+
+        send = (message) => socket.send(message);
+        server.onMessage(async (message) => {
+          await held.promise;
+
+          const frame: { readonly t: string; readonly events?: SyncEvent[] } = JSON.parse(
+            String(message),
+          );
+
+          if (gathering && frame.t === "batch") {
+            events.push(...(frame.events ?? []));
+          } else {
+            socket.send(message);
+          }
+        });
+      });
+
+      return () => held.resolve();
+    },
+    gather() {
+      gathering = true;
+    },
+    holds: (threadId) =>
+      events.some((event) => event.type === "thread.updated" && event.data.id === threadId),
+    deliver() {
+      gathering = false;
+      send(JSON.stringify({ t: "batch", events }));
+      events = [];
+    },
+  };
+}
+
+async function openSyncedBoard(
+  page: Page,
+  hold: (page: Page) => Promise<() => void> = holdSync,
+): Promise<void> {
   await page.setViewportSize(DESKTOP);
 
-  const release = await holdSync(page);
+  const release = await hold(page);
 
   await openApp(page, `r/${BOARD}?view=board`);
   await expect(card(page, "Planned", /Launch week plan/)).toBeVisible({ timeout: 15_000 });
@@ -386,4 +444,47 @@ test("a queued move doesn't take focus from a card picked up after another membe
   await page.waitForTimeout(300);
   await expect(card(page, "Planned", /Launch week plan/)).toBeFocused();
   await expect(page.getByText(/^Picked up Launch week plan/)).toBeAttached();
+});
+
+test("a queued move landing in the same sync batch as a held card's move leaves it held", async ({
+  page,
+  request,
+}) => {
+  const writes = workWrites(page);
+  const sync = gatherSync();
+
+  await page.route(`**/api/v1/threads/${BOARD_POST_IDS.apiPagination}/work`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    await route.continue();
+  });
+  await openSyncedBoard(page, sync.hold);
+  await card(page, "Planned", /Cursor pagination/).focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(card(page, "In progress", /Cursor pagination/)).toBeFocused();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await card(page, "Planned", /Launch week plan/).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByText(/^Picked up Launch week plan/)).toBeAttached();
+
+  const moveAway = async (threadId: number, status: string) => {
+    const reply = await request.post("/__mock/board-update", { data: { threadId, status } });
+
+    expect(reply.ok()).toBe(true);
+    await expect.poll(() => sync.holds(threadId)).toBe(true);
+  };
+
+  sync.gather();
+  await moveAway(BOARD_POST_IDS.apiPagination, "blocked");
+  await moveAway(BOARD_POST_IDS.launchWeek, "done");
+  sync.deliver();
+  await expect(card(page, "Blocked", /Cursor pagination/)).toBeVisible();
+  await expect(card(page, "Done", /Launch week plan/)).toBeFocused();
+  await page.waitForTimeout(300);
+  await expect(card(page, "Done", /Launch week plan/)).toBeFocused();
+  await expect(column(page, "Done").locator('[data-dragging="keyboard"]')).toHaveCount(1);
+  expect(writes).toHaveLength(1);
 });

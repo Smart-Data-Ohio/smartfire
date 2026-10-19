@@ -157,7 +157,7 @@ function statusOf(threadId: number): WorkStatus | undefined {
   return store.getState().threads[threadId]?.work?.status;
 }
 
-function settle(item: HTMLElement, { from, ghost, focus }: Arrival): void {
+function settle(item: HTMLElement, { from, ghost }: Arrival, focus: boolean): void {
   ghost?.remove();
 
   for (const liveSettle of item.getAnimations()) {
@@ -257,7 +257,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
     }
 
     arrival.current = null;
-    settle(item, pending);
+    settle(item, pending, pending.focus && latest.current?.phase !== "lifted");
   });
 
   const slotAt = landing === null ? "" : `${landing.status}:${landing.index}`;
