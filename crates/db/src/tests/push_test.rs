@@ -11,16 +11,16 @@ const WEB_PUSH_PUBLIC_TEST_IP: &str = "142.250.185.206";
 const PHONE_UA: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1";
 const DESKTOP_UA: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36";
 
-fn routing_lease(t: &TestDb, user_agent: &'static str) -> crate::WorkspacePresenceLease {
+fn routing_lease(t: &TestDb, device_class: crate::DeviceClass) -> crate::WorkspacePresenceLease {
     t.write(move |tx| {
-        let session = crate::Session::start(tx, id("jason"), Some(user_agent), None)?;
-        Ok(crate::WorkspacePresenceLease::establish(tx, id("jason"), session.id)?.unwrap())
+        let session = crate::Session::start(tx, id("jason"), Some(DESKTOP_UA), None)?;
+        Ok(crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(device_class))?.unwrap())
     })
 }
 
 fn routing_phone(t: &TestDb) {
     t.write(|tx| {
-        tx.conn().execute("UPDATE push_subscriptions SET user_agent=? WHERE user_id=?", rusqlite::params![PHONE_UA, id("jason")])?;
+        tx.conn().execute("UPDATE push_subscriptions SET user_agent=?, device_class='mobile' WHERE user_id=?", rusqlite::params![PHONE_UA, id("jason")])?;
         Ok(())
     });
 }
@@ -59,7 +59,7 @@ fn push_routing_null_desktop_ua_lease_does_not_suppress_mobile_subscription() {
 fn push_routing_active_desktop_suppresses_phone_in_another_room_without_desktop_push() {
     let t = TestDb::new();
     routing_phone(&t);
-    routing_lease(&t, DESKTOP_UA);
+    routing_lease(&t, crate::DeviceClass::Desktop);
     t.write(|tx| Membership::find(tx.conn(), id("jason_hq"))?.connected(tx));
     assert_eq!(deliveries(&t, "designers", "On the computer".into()), 1);
 }
@@ -68,10 +68,10 @@ fn push_routing_active_desktop_suppresses_phone_in_another_room_without_desktop_
 fn push_routing_idle_desktop_allows_phone_even_with_an_active_phone_lease() {
     let t = TestDb::new();
     routing_phone(&t);
-    let mut desktop = routing_lease(&t, DESKTOP_UA);
+    let mut desktop = routing_lease(&t, crate::DeviceClass::Desktop);
     t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER + jiff::SignedDuration::from_secs(1));
     t.write(move |tx| desktop.refresh(tx, false));
-    routing_lease(&t, PHONE_UA);
+    routing_lease(&t, crate::DeviceClass::Mobile);
     assert_eq!(deliveries(&t, "designers", "Away from computer".into()), 2);
 }
 
@@ -80,7 +80,7 @@ fn push_routing_expired_or_deleted_desktop_allows_phone_at_send_time() {
     for delete in [false, true] {
         let t = TestDb::new();
         routing_phone(&t);
-        let mut desktop = routing_lease(&t, DESKTOP_UA);
+        let mut desktop = routing_lease(&t, crate::DeviceClass::Desktop);
         if delete {
             t.write(move |tx| desktop.delete(tx));
         } else {
@@ -93,7 +93,11 @@ fn push_routing_expired_or_deleted_desktop_allows_phone_at_send_time() {
 #[test]
 fn push_routing_active_desktop_preserves_desktop_subscriptions() {
     let t = TestDb::new();
-    routing_lease(&t, DESKTOP_UA);
+    routing_lease(&t, crate::DeviceClass::Desktop);
+    t.write(|tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET device_class='desktop' WHERE user_id=?", [id("jason")])?;
+        Ok(())
+    });
     assert_eq!(deliveries(&t, "designers", "Desktop notification".into()), 2);
 }
 
@@ -101,10 +105,10 @@ fn push_routing_active_desktop_preserves_desktop_subscriptions() {
 fn push_routing_one_active_desktop_wins_over_an_idle_desktop() {
     let t = TestDb::new();
     routing_phone(&t);
-    let mut idle = routing_lease(&t, DESKTOP_UA);
+    let mut idle = routing_lease(&t, crate::DeviceClass::Desktop);
     t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER + jiff::SignedDuration::from_secs(1));
     t.write(move |tx| idle.refresh(tx, false));
-    routing_lease(&t, DESKTOP_UA);
+    routing_lease(&t, crate::DeviceClass::Desktop);
     assert_eq!(deliveries(&t, "designers", "Another computer".into()), 1);
 }
 
@@ -112,7 +116,7 @@ fn push_routing_one_active_desktop_wins_over_an_idle_desktop() {
 fn push_routing_idle_threshold_is_inclusive_and_uses_send_time() {
     let t = TestDb::new();
     routing_phone(&t);
-    let mut desktop = routing_lease(&t, DESKTOP_UA);
+    let mut desktop = routing_lease(&t, crate::DeviceClass::Desktop);
     t.clock.travel_to(desktop.last_active_at.unwrap().since(crate::models::workspace_presence_lease::IDLE_AFTER));
     desktop = t.write(move |tx| { desktop.refresh(tx, false)?; Ok(desktop) });
     assert_eq!(deliveries(&t, "designers", "At threshold".into()), 1);
@@ -126,7 +130,7 @@ fn push_routing_revoked_or_mismatched_desktop_session_does_not_suppress_phone() 
     for revoke in [true, false] {
         let t = TestDb::new();
         routing_phone(&t);
-        let desktop = routing_lease(&t, DESKTOP_UA);
+        let desktop = routing_lease(&t, crate::DeviceClass::Desktop);
         t.write(move |tx| {
             if revoke {
                 tx.conn().execute("DELETE FROM sessions WHERE id=?", [desktop.session_id])?;
@@ -143,21 +147,21 @@ fn push_routing_revoked_or_mismatched_desktop_session_does_not_suppress_phone() 
 fn push_routing_unknown_device_identity_keeps_existing_delivery() {
     let t = TestDb::new();
     routing_phone(&t);
-    routing_lease(&t, "Unknown browser");
+    routing_lease(&t, crate::DeviceClass::Unknown);
     assert_eq!(deliveries(&t, "designers", "Unknown computer".into()), 2);
 
-    routing_lease(&t, DESKTOP_UA);
+    routing_lease(&t, crate::DeviceClass::Desktop);
     t.write(|tx| {
-        tx.conn().execute("UPDATE push_subscriptions SET user_agent=NULL WHERE user_id=?", [id("jason")])?;
+        tx.conn().execute("UPDATE push_subscriptions SET user_agent=NULL, device_class=NULL WHERE user_id=?", [id("jason")])?;
         Ok(())
     });
     assert_eq!(deliveries(&t, "designers", "Unknown subscription".into()), 2);
 }
 
 #[test]
-fn push_routing_explicit_mobile_subscription_overrides_a_desktop_user_agent() {
+fn push_routing_explicit_mobile_subscription_with_desktop_user_agent_waits_for_computer() {
     let t = TestDb::new();
-    routing_lease(&t, DESKTOP_UA);
+    routing_lease(&t, crate::DeviceClass::Desktop);
     t.write(|tx| {
         tx.conn().execute("UPDATE push_subscriptions SET device_class='mobile' WHERE user_id=?", [id("jason")])?;
         Ok(())
@@ -174,7 +178,7 @@ fn desktop_site_reported_class() -> crate::DeviceClass {
 fn push_routing_desktop_site_phone_is_suppressed_while_a_laptop_is_active() {
     let t = TestDb::new();
     let class = desktop_site_reported_class();
-    routing_lease(&t, DESKTOP_UA);
+    routing_lease(&t, crate::DeviceClass::Desktop);
     t.write(move |tx| {
         tx.conn().execute("UPDATE push_subscriptions SET user_agent=?, device_class=? WHERE user_id=?",
             rusqlite::params![DESKTOP_UA, class, id("jason")])?;
@@ -216,10 +220,10 @@ fn push_routing_mobile_or_unknown_lease_never_counts_as_a_computer() {
 }
 
 #[test]
-fn push_routing_explicit_unknown_subscription_keeps_delivery_without_ua_fallback() {
+fn push_routing_explicit_unknown_subscription_keeps_existing_delivery() {
     let t = TestDb::new();
     routing_phone(&t);
-    routing_lease(&t, DESKTOP_UA);
+    routing_lease(&t, crate::DeviceClass::Desktop);
     t.write(|tx| {
         tx.conn().execute("UPDATE push_subscriptions SET device_class='unknown' WHERE user_id=?", [id("jason")])?;
         Ok(())

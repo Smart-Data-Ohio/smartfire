@@ -194,7 +194,7 @@ impl PushSubscription {
     }
 
     pub fn device_class(&self) -> DeviceClass {
-        self.device_class.unwrap_or_else(|| DeviceClass::from_user_agent(self.user_agent.as_deref()))
+        self.device_class.unwrap_or(DeviceClass::Unknown)
     }
 
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {

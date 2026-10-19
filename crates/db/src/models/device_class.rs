@@ -24,17 +24,6 @@ impl DeviceClass {
             _ => None,
         }
     }
-
-    pub fn from_user_agent(user_agent: Option<&str>) -> Self {
-        let agent = user_agent.unwrap_or_default().to_ascii_lowercase();
-        if ["iphone", "ipad", "ipod", "android", "mobile"].iter().any(|part| agent.contains(part)) {
-            Self::Mobile
-        } else if ["windows", "macintosh", "x11", "cros", "linux"].iter().any(|part| agent.contains(part)) {
-            Self::Desktop
-        } else {
-            Self::Unknown
-        }
-    }
 }
 
 impl ToSql for DeviceClass {
@@ -51,26 +40,11 @@ impl FromSql for DeviceClass {
 
 #[cfg(test)]
 mod tests {
-    use super::DeviceClass::{self, Desktop, Mobile, Unknown};
+    use super::DeviceClass::{self, Unknown};
 
     #[test]
     fn future_stored_metadata_is_unknown_instead_of_failing_a_recipient_batch() {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
         assert_eq!(conn.query_row("SELECT 'future-device'", [], |row| row.get::<_, DeviceClass>(0)).unwrap(), Unknown);
-    }
-
-    #[test]
-    fn legacy_device_classes_require_known_user_agent_markers() {
-        for (agent, expected) in [
-            (None, Unknown), (Some(""), Unknown), (Some("test"), Unknown),
-            (Some("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"), Mobile),
-            (Some("Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X)"), Mobile),
-            (Some("Mozilla/5.0 (Linux; Android 15; Pixel 9)"), Mobile),
-            (Some("Mozilla/5.0 (X11; Linux x86_64)"), Desktop),
-            (Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"), Desktop),
-            (Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"), Desktop),
-        ] {
-            assert_eq!(DeviceClass::from_user_agent(agent), expected, "{agent:?}");
-        }
     }
 }
