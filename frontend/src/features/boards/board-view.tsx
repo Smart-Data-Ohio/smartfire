@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
+import { boardAwaitsListing } from "../../store/boards.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
@@ -177,12 +178,7 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
   const phone = usePhoneLayout();
   const composing = pathname.endsWith("/posts/new");
 
-  // A resync re-reads the same posts and keeps them on screen; only an empty board waits.
-  const waiting = useStore((state) => {
-    const board = state.boards[roomId];
-
-    return board === undefined || (board.status === "loading" && board.postIds.length === 0);
-  });
+  const waiting = useStore((state) => boardAwaitsListing(state.boards[roomId]));
 
   useEffect(() => {
     void actions.boards

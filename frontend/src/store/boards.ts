@@ -97,6 +97,18 @@ export function setBoardLoading(
   };
 }
 
+/**
+ * Whether the board waits behind its skeleton: until its first listing, and while a new query
+ * loads. A re-read of the same query (a resync) keeps the posts it read on screen, and a post
+ * created meanwhile isn't a read, so it doesn't end the wait.
+ */
+export function boardAwaitsListing(board: BoardState | undefined): boolean {
+  return (
+    board === undefined ||
+    (board.status === "loading" && board.postIds.every((id) => board.livePostIds.includes(id)))
+  );
+}
+
 export function setBoardError(
   state: State,
   roomId: number,

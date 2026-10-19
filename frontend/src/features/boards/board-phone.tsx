@@ -84,7 +84,8 @@ export function PhonePostCard({
         draggable={false}
         {...gestures}
         onClick={(event) => {
-          if (longPress.fired()) {
+          // A keyboard's click (detail 0) isn't the end of a press, whatever the last press did.
+          if (event.detail > 0 && longPress.fired()) {
             event.preventDefault();
           }
         }}
@@ -182,13 +183,35 @@ function columnIndex(status: WorkStatus): number {
 
 /**
  * The column view on a phone: one status at a time, the full width, under a switcher that shows
- * every status with its count. Swiping sideways pages between the statuses (scroll snap), and the
- * switcher's pill follows the finger; tapping a status slides there. Each column scrolls on its
- * own. Opens on the column this board last showed, else the first with posts.
+ * every status with its count. An empty board says so instead.
  */
-export function PhoneBoardColumns({ roomId, query, onNewPost, onClear }: BodyProps) {
-  const columns = useColumns(roomId);
-  const anyPosts = useStore((state) => state.boards[roomId]?.anyPosts ?? false);
+export function PhoneBoardColumns(props: BodyProps) {
+  const columns = useColumns(props.roomId);
+  const anyPosts = useStore((state) => state.boards[props.roomId]?.anyPosts ?? false);
+  const total = WORK_STATUSES.reduce((sum, status) => sum + columns[status].length, 0);
+
+  if (total === 0 && !anyPosts) {
+    return (
+      <div className="board-scroll">
+        <BoardEmpty anyPosts={false} onNewPost={props.onNewPost} onClear={props.onClear} />
+      </div>
+    );
+  }
+
+  return <StatusPager {...props} columns={columns} />;
+}
+
+/**
+ * Swiping sideways pages between the statuses (scroll snap), and the switcher's pill follows the
+ * finger; tapping a status slides there. Each column scrolls on its own. Opens on the column this
+ * board last showed, else the first with posts.
+ */
+function StatusPager({
+  roomId,
+  query,
+  onClear,
+  columns,
+}: BodyProps & { readonly columns: Readonly<Record<WorkStatus, readonly number[]>> }) {
   const openId = useOpenPostId();
   const pagerRef = useRef<HTMLDivElement | null>(null);
   const tabsRef = useRef<HTMLDivElement | null>(null);
@@ -204,7 +227,6 @@ export function PhoneBoardColumns({ roomId, query, onNewPost, onClear }: BodyPro
   );
 
   const opening = useRef(active);
-  const total = WORK_STATUSES.reduce((sum, status) => sum + columns[status].length, 0);
 
   const signature = WORK_STATUSES.map((status) => `${status}:${columns[status].join(",")}`).join(
     "|",
@@ -272,14 +294,6 @@ export function PhoneBoardColumns({ roomId, query, onNewPost, onClear }: BodyPro
     document.getElementById(`${id}-${status}`)?.focus({ preventScroll: true });
   };
 
-  if (total === 0 && !anyPosts) {
-    return (
-      <div className="board-scroll">
-        <BoardEmpty anyPosts={false} onNewPost={onNewPost} onClear={onClear} />
-      </div>
-    );
-  }
-
   return (
     <div className="phone-board">
       <Digest roomId={roomId} />
@@ -318,6 +332,7 @@ export function PhoneBoardColumns({ roomId, query, onNewPost, onClear }: BodyPro
             data-flip-group={status}
             data-flip-scroll
             aria-labelledby={`${id}-${status}`}
+            inert={status !== active}
           >
             {columns[status].length === 0 ? (
               <ColumnEmpty status={status} filtered={filtered} onClear={onClear} />

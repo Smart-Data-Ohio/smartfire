@@ -99,6 +99,9 @@ test.describe("phone", () => {
     await expect(tab(page, /In progress/)).toContainText("3");
     await expect(card(page, /Cursor pagination/)).toBeInViewport();
     await expect(card(page, /Onboarding checklist/)).not.toBeInViewport();
+    // Only the showing column takes focus and reaches assistive tech, as one tab panel does.
+    await expect(panel(page, "In progress")).toHaveAttribute("inert");
+    await expect(panel(page, "Planned")).not.toHaveAttribute("inert");
 
     const width = page.viewportSize()?.width ?? 0;
     const planned = await panel(page, "Planned").boundingBox();
@@ -174,18 +177,40 @@ test.describe("phone", () => {
     await expect(panel(page, "Planned").getByText("Cursor pagination for the API")).toHaveCount(1);
   });
 
-  test("a long press on a card opens the same sheet", async ({ page }) => {
+  test("a long press on a card opens the same sheet, not the post or the browser's menu", async ({
+    page,
+  }) => {
     await openBoard(page);
-    await longPress(card(page, /Rebuild the search index/));
+
+    const pressed = card(page, /Rebuild the search index/);
+
+    await longPress(pressed);
 
     const sheet = page.getByRole("menu", { name: "Rebuild the search index actions" });
 
     await expect(sheet).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/r/${BOARD_ROOM_ID}\\?view=board$`));
-    await sheet.getByRole("menuitemradio", { name: "Done" }).tap();
 
-    await expect(tab(page, /Done/)).toContainText("4");
-    await expect(panel(page, "Done").getByText("Rebuild the search index")).toHaveCount(1);
+    // The context menu and the click a lifted finger brings are both refused.
+    const refused = await pressed.evaluate((element) =>
+      ["contextmenu", "click"].map(
+        (type) =>
+          !element.dispatchEvent(
+            new MouseEvent(type, { bubbles: true, cancelable: true, detail: 1 }),
+          ),
+      ),
+    );
+
+    expect(refused).toEqual([true, true]);
+    await expect(page).toHaveURL(new RegExp(`/r/${BOARD_ROOM_ID}\\?view=board$`));
+    await expect(sheet).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    await pressed.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(
+      new RegExp(`/r/${BOARD_ROOM_ID}/t/${BOARD_POST_IDS.searchIndex}\\?view=board`),
+    );
   });
 
   test("filters open as a sheet; a column they empty says so", async ({ page }) => {
