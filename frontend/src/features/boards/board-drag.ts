@@ -1,14 +1,11 @@
-/** The rules a board card's drag follows: who may move it and where it lands. */
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import { boardPostIds } from "../../store/boards.ts";
 import type { State } from "../../store/state.ts";
 import { WORK_STATUSES } from "./board-format.ts";
 
 /**
- * Whether the viewer may move the post to another status, as the server's
- * `canUpdateWorkStatus` decides it for a board post: the board's creator or an administrator
- * (`canAdminister`), the post's creator, or its owner. The listing carries no per-post
- * permissions, so this follows the owner live.
+ * Whether the viewer may move the post to another status: the board's creator or an administrator
+ * (`canAdminister`), the post's creator, or its owner.
  */
 export function canMoveWork(state: State, roomId: number, threadId: number): boolean {
   const board = state.boards[roomId];

@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import { readDurationMs } from "../../motion/durations.ts";
@@ -22,14 +23,13 @@ import { WORK_STATUS_LABEL, WORK_STATUSES } from "./board-format.ts";
 import { cssValue } from "./use-live-flip.ts";
 import "./board-drag.css";
 
-/** How far the pointer travels before a press becomes a drag (a shorter one opens the card). */
-const DRAG_THRESHOLD = 5;
+const DRAG_THRESHOLD_PX = 5;
 
-/** How close to the board's left or right edge the pointer scrolls it. */
-const SCROLL_EDGE = 56;
+const SCROLL_EDGE_PX = 56;
 
-/** The most the board scrolls per frame, with the pointer at its very edge. */
-const SCROLL_SPEED = 18;
+const SCROLL_SPEED_PX_PER_FRAME = 18;
+
+const FINE_POINTER = "(any-pointer: fine)";
 
 /**
  * A card being moved: lifted (following the pointer, or the arrow keys), or flying back to its
@@ -42,12 +42,10 @@ export type BoardDragState =
       readonly threadId: number;
       readonly mode: "pointer" | "keyboard";
       readonly over: WorkStatus | null;
-      /** The card's height, for the slot it would take. */
-      readonly height: number;
+      readonly slotHeight: number;
     }
   | { readonly phase: "returning"; readonly threadId: number };
 
-/** A dropped card on its way into its new column: where it starts from, and the copy held. */
 interface Arrival {
   readonly threadId: number;
   readonly status: WorkStatus;
@@ -64,11 +62,31 @@ export interface CardDrag {
   readonly onBlur: () => void;
 }
 
+/** jsdom (the unit tests) has a `matchMedia` property but no function behind it. */
+function canMatchMedia(): boolean {
+  return "matchMedia" in window && window.matchMedia instanceof Function;
+}
+
+function subscribeFinePointer(onChange: () => void): () => void {
+  if (!canMatchMedia()) {
+    return () => {};
+  }
+
+  const media = window.matchMedia(FINE_POINTER);
+
+  media.addEventListener("change", onChange);
+
+  return () => media.removeEventListener("change", onChange);
+}
+
+function hasFinePointer(): boolean {
+  return canMatchMedia() && window.matchMedia(FINE_POINTER).matches;
+}
+
 function isStatus(value: string | undefined): value is WorkStatus {
   return WORK_STATUSES.some((status) => status === value);
 }
 
-/** The column under the point, if it's one of this board's. */
 function statusAt(board: HTMLElement | null, x: number, y: number): WorkStatus | null {
   const column = document.elementFromPoint(x, y)?.closest<HTMLElement>(".board-column");
   const status = column?.dataset.status;
@@ -78,7 +96,6 @@ function statusAt(board: HTMLElement | null, x: number, y: number): WorkStatus |
     : null;
 }
 
-/** A copy of the card that follows the pointer, as wide as the card. */
 function liftGhost(card: HTMLElement, rect: DOMRect): HTMLElement {
   const ghost = document.createElement("div");
 
@@ -97,7 +114,6 @@ function liftGhost(card: HTMLElement, rect: DOMRect): HTMLElement {
   return ghost;
 }
 
-/** Scrolls `container` along one axis just enough to show `element`. */
 function reveal(element: Element, container: HTMLElement | null, axis: "x" | "y"): void {
   if (container === null) {
     return;
@@ -131,7 +147,6 @@ function swallowNextClick(): void {
   window.setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
 }
 
-/** "Launch week plan", or a stand-in for a post that left the store. */
 function titleOf(threadId: number): string {
   const thread = store.getState().threads[threadId];
 
@@ -142,13 +157,11 @@ function statusOf(threadId: number): WorkStatus | undefined {
   return store.getState().threads[threadId]?.work?.status;
 }
 
-/** The dropped card glides from where it was held into its slot; the copy goes as it arrives. */
 function settle(item: HTMLElement, { from, ghost, focus }: Arrival): void {
   ghost?.remove();
 
-  // The drop's own glide replaces the live settle-in the column change started.
-  for (const animation of item.getAnimations()) {
-    animation.cancel();
+  for (const liveSettle of item.getAnimations()) {
+    liveSettle.cancel();
   }
 
   reveal(item, item.closest<HTMLElement>(".board-column-list"), "y");
@@ -175,25 +188,26 @@ function settle(item: HTMLElement, { from, ghost, focus }: Arrival): void {
 
 export interface BoardDrag {
   readonly drag: BoardDragState | null;
-  /** Where the held card would land, for its column to show the slot. */
   readonly landing: Landing | null;
-  readonly card: CardDrag;
+  /** The cards' part, `undefined` without a fine pointer. */
+  readonly card: CardDrag | undefined;
   /** The live region and the keyboard hint the cards point to. */
   readonly region: ReactNode;
 }
 
 /**
- * Moving a board's cards between its status columns, in house as the sidebar's drag is: with a
- * mouse or pen, a press that travels a few pixels lifts a copy of the card that follows the
- * pointer; the column under it lights up with the slot the card would take, and dropping there
- * changes the post's status at once (rolled back with a toast if the server refuses). Escape or
- * a drop outside the columns sends it back. On the keyboard, Space picks the focused card up,
- * the arrows choose a column, Enter or Space drops and Escape cancels, each step announced.
- * Touch keeps opening cards: a phone changes status from the post. Only cards the viewer may
- * move (`canMoveWork`) take part.
+ * Moves a board's cards between its status columns. With a mouse or pen, a press that travels a
+ * few pixels lifts a copy of the card, and the copy follows the pointer. The column under it
+ * lights up and shows the slot the card would take. A drop there changes the post's status at
+ * once, and a refused change rolls back with a toast. Escape, or a drop outside the columns,
+ * sends the card back. On the keyboard, Space picks up the focused card, the arrows choose a
+ * column, Enter or Space drops it, and Escape cancels. A live region announces each step. Only
+ * cards the viewer may move (`canMoveWork`) take part, and only with a fine pointer: a phone
+ * changes status from the post.
  */
 export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | null>): BoardDrag {
   const [drag, setDrag] = useState<BoardDragState | null>(null);
+  const fine = useSyncExternalStore(subscribeFinePointer, hasFinePointer, () => false);
   const { announce, region } = useAnnouncer("assertive");
   const hintId = useId();
   const latest = useRef<BoardDragState | null>(null);
@@ -223,19 +237,25 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
   useLayoutEffect(() => {
     const pending = arrival.current;
 
+    if (pending === null) {
+      return;
+    }
+
+    arrival.current = null;
+
     const item = boardRef.current?.querySelector<HTMLElement>(
-      `.board-column[data-status="${pending?.status}"] [data-flip="${pending?.threadId}"]`,
+      `.board-column[data-status="${pending.status}"] [data-flip="${pending.threadId}"]`,
     );
 
-    if (pending !== null && item != null) {
-      arrival.current = null;
+    if (item == null) {
+      pending.ghost?.remove();
+    } else {
       settle(item, pending);
     }
   });
 
   const slotAt = landing === null ? "" : `${landing.status}:${landing.index}`;
 
-  // The slot the card would take stays in sight in a long column.
   useEffect(() => {
     const slot = slotAt === "" ? null : boardRef.current?.querySelector(".board-drop-slot");
 
@@ -245,7 +265,6 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
   }, [boardRef, slotAt]);
 
   const update = (next: BoardDragState | null) => {
-    // Settled now, not at the next render: a blur from the drop's own re-render mustn't cancel.
     latest.current = next;
     setDrag(next);
 
@@ -257,8 +276,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
   const cardItem = (threadId: number) =>
     boardRef.current?.querySelector<HTMLElement>(`[data-flip="${threadId}"]`) ?? null;
 
-  /** Moves the post to `to`; `false` when that's no move at all. */
-  const land = (threadId: number, to: WorkStatus | null, ghost: HTMLElement | null): boolean => {
+  const tryLand = (threadId: number, to: WorkStatus | null, ghost: HTMLElement | null): boolean => {
     const from = statusOf(threadId);
     const item = cardItem(threadId);
 
@@ -274,36 +292,22 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
     const title = titleOf(threadId);
 
-    const pending: Arrival = {
+    arrival.current = {
       threadId,
       status: to,
       from: (ghost ?? item).getBoundingClientRect(),
       ghost,
       focus: ghost === null,
     };
-
-    arrival.current = pending;
     update(null);
     announce(`Moved ${title} to ${WORK_STATUS_LABEL[to]}.`);
-
-    const unclaimed = () => {
-      if (arrival.current === pending) {
-        arrival.current = null;
-        ghost?.remove();
-      }
-    };
-
-    // A card that never shows up in the column (moved again meanwhile) doesn't leave its copy.
-    window.setTimeout(unclaimed, 1000);
     actions.work.setStatus(threadId, to).catch((error: Error) => {
-      unclaimed();
       toast({ title: `Couldn't move ${title}`, description: error.message, tone: "danger" });
     });
 
     return true;
   };
 
-  /** A cancelled pointer drag: the copy flies back to the card's slot, which stays held meanwhile. */
   const sendBack = (threadId: number, ghost: HTMLElement) => {
     const home = cardItem(threadId);
 
@@ -377,10 +381,15 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
         const speed = !inside
           ? 0
-          : left < SCROLL_EDGE
-            ? -Math.ceil(((SCROLL_EDGE - Math.max(left, 0)) / SCROLL_EDGE) * SCROLL_SPEED)
-            : right < SCROLL_EDGE
-              ? Math.ceil(((SCROLL_EDGE - Math.max(right, 0)) / SCROLL_EDGE) * SCROLL_SPEED)
+          : left < SCROLL_EDGE_PX
+            ? -Math.ceil(
+                ((SCROLL_EDGE_PX - Math.max(left, 0)) / SCROLL_EDGE_PX) * SCROLL_SPEED_PX_PER_FRAME,
+              )
+            : right < SCROLL_EDGE_PX
+              ? Math.ceil(
+                  ((SCROLL_EDGE_PX - Math.max(right, 0)) / SCROLL_EDGE_PX) *
+                    SCROLL_SPEED_PX_PER_FRAME,
+                )
               : 0;
 
         if (speed !== 0) {
@@ -405,7 +414,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
         threadId,
         mode: "pointer",
         over: statusAt(boardRef.current, point.x, point.y),
-        height: rect.height,
+        slotHeight: rect.height,
       });
       frame = requestAnimationFrame(edgeScroll);
     };
@@ -414,7 +423,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       point = { x: moved.clientX, y: moved.clientY };
 
       if (ghost === null) {
-        if (Math.hypot(point.x - start.x, point.y - start.y) >= DRAG_THRESHOLD) {
+        if (Math.hypot(point.x - start.x, point.y - start.y) >= DRAG_THRESHOLD_PX) {
           lift();
         }
 
@@ -447,7 +456,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       const current = latest.current;
       const over = current?.phase === "lifted" ? current.over : null;
 
-      if (!land(threadId, over, ghost)) {
+      if (!tryLand(threadId, over, ghost)) {
         sendBack(threadId, ghost);
       }
     };
@@ -535,7 +544,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
         threadId,
         mode: "keyboard",
         over: status,
-        height: item.getBoundingClientRect().height,
+        slotHeight: item.getBoundingClientRect().height,
       });
       announce(
         `Picked up ${titleOf(threadId)}, in ${WORK_STATUS_LABEL[status]}. Left and right arrows choose a column, Space or Enter drops it, Escape cancels.`,
@@ -567,7 +576,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       case " ":
         event.preventDefault();
 
-        if (!land(current.threadId, current.over, null)) {
+        if (!tryLand(current.threadId, current.over, null)) {
           putBack(current.threadId);
         }
 
@@ -601,7 +610,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
   return {
     drag,
     landing,
-    card: { held, hintId, onPointerDown, onKeyDown, onBlur },
+    card: fine ? { held, hintId, onPointerDown, onKeyDown, onBlur } : undefined,
     region: (
       <>
         {region}
@@ -651,15 +660,12 @@ export function withSlot(
     : ids;
 }
 
-/**
- * Where the held card would land, as tall as the card. Columns keep their latest-activity order,
- * so the slot says so rather than following the pointer up and down.
- */
+/** Where the held card would land, as tall as the card. */
 export function DropSlot({ drag }: { readonly drag: BoardDragState | null }) {
   return (
     <li
       className="board-drop-slot"
-      style={{ height: drag?.phase === "lifted" ? drag.height : undefined }}
+      style={{ height: drag?.phase === "lifted" ? drag.slotHeight : undefined }}
       aria-hidden="true"
     >
       Moves here

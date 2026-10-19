@@ -16,7 +16,6 @@ function card(page: Page, columnName: string, title: RegExp): Locator {
   return column(page, columnName).getByRole("link", { name: title });
 }
 
-/** Every status write the page sends, in order. */
 function workWrites(page: Page): Request[] {
   const writes: Request[] = [];
 
@@ -41,8 +40,7 @@ async function center(target: Locator): Promise<{ x: number; y: number }> {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 
-/** Presses on `from` with the mouse and moves in steps to `to`, leaving the button down. */
-async function dragTo(page: Page, from: Locator, to: { x: number; y: number }): Promise<void> {
+async function holdOver(page: Page, from: Locator, to: { x: number; y: number }): Promise<void> {
   const start = await center(from);
 
   await page.mouse.move(start.x, start.y);
@@ -51,8 +49,7 @@ async function dragTo(page: Page, from: Locator, to: { x: number; y: number }): 
   await page.mouse.move(to.x, to.y, { steps: 12 });
 }
 
-/** Opens the columns once the sync welcome's reload has landed, so no drag starts on a board about to reload. */
-async function openBoard(page: Page): Promise<void> {
+async function openSyncedBoard(page: Page): Promise<void> {
   await page.setViewportSize(DESKTOP);
 
   const release = await holdSync(page);
@@ -67,11 +64,35 @@ async function openBoard(page: Page): Promise<void> {
   await expect(card(page, "Planned", /Launch week plan/)).toBeVisible();
 }
 
+async function viewAsPlainMember(page: Page): Promise<void> {
+  await page.route(LISTING, async (route) => {
+    const response = await route.fetch();
+    const listing: BoardListing = await response.json();
+
+    await route.fulfill({ response, json: { ...listing, canAdminister: false } });
+  });
+}
+
+test.describe("on a touch screen", () => {
+  test.use({ hasTouch: true });
+
+  test("a tap opens the card and no card offers a drag", async ({ page }) => {
+    await openSyncedBoard(page);
+
+    const target = card(page, "Planned", /Launch week plan/);
+
+    await expect(target).not.toHaveAttribute("aria-describedby", /.+/);
+    await expect(page.locator(".board-card[data-movable]")).toHaveCount(0);
+    await target.tap();
+    await expect(page).toHaveURL(new RegExp(`/r/${BOARD}/t/${BOARD_POST_IDS.launchWeek}`));
+  });
+});
+
 test("dragging a card to another column moves it and saves the status", async ({ page }) => {
   const writes = workWrites(page);
 
-  await openBoard(page);
-  await dragTo(
+  await openSyncedBoard(page);
+  await holdOver(
     page,
     card(page, "Planned", /Launch week plan/),
     await center(column(page, "In progress")),
@@ -94,7 +115,7 @@ test("dragging a card to another column moves it and saves the status", async ({
 test("a short press still opens the card", async ({ page }) => {
   const writes = workWrites(page);
 
-  await openBoard(page);
+  await openSyncedBoard(page);
 
   const target = card(page, "Planned", /Launch week plan/);
   const start = await center(target);
@@ -111,8 +132,8 @@ test("a short press still opens the card", async ({ page }) => {
 test("Escape and a drop outside every column put the card back", async ({ page }) => {
   const writes = workWrites(page);
 
-  await openBoard(page);
-  await dragTo(
+  await openSyncedBoard(page);
+  await holdOver(
     page,
     card(page, "Planned", /Launch week plan/),
     await center(column(page, "Blocked")),
@@ -127,7 +148,7 @@ test("Escape and a drop outside every column put the card back", async ({ page }
 
   const toolbar = await center(page.getByRole("button", { name: "New post" }));
 
-  await dragTo(page, card(page, "Planned", /Launch week plan/), toolbar);
+  await holdOver(page, card(page, "Planned", /Launch week plan/), toolbar);
   await page.mouse.up();
 
   await expect(card(page, "Planned", /Launch week plan/)).toBeVisible();
@@ -139,29 +160,23 @@ test("Escape and a drop outside every column put the card back", async ({ page }
 test("a card the viewer can't move has no drag", async ({ page }) => {
   const writes = workWrites(page);
 
-  // Not the board's creator or an administrator: only posts they created or own move.
-  await page.route(LISTING, async (route) => {
-    const response = await route.fetch();
-    const listing: BoardListing = await response.json();
+  await viewAsPlainMember(page);
+  await openSyncedBoard(page);
 
-    await route.fulfill({ response, json: { ...listing, canAdminister: false } });
-  });
-  await openBoard(page);
+  const someoneElsesPost = card(page, "Planned", /Launch week plan/);
+  const agentOwnedPostTheViewerCreated = card(page, "Blocked", /Fix retries/);
 
-  // Maya created and owns Launch week plan; the viewer created Fix retries, which an agent owns.
-  const locked = card(page, "Planned", /Launch week plan/);
-
-  await expect(locked).not.toHaveAttribute("aria-describedby", /.+/);
-  await locked.focus();
+  await expect(someoneElsesPost).not.toHaveAttribute("aria-describedby", /.+/);
+  await someoneElsesPost.focus();
   await page.keyboard.press("Space");
   await expect(page.getByText(/^Picked up/)).toHaveCount(0);
 
-  await dragTo(page, locked, await center(column(page, "In progress")));
+  await holdOver(page, someoneElsesPost, await center(column(page, "In progress")));
   await expect(column(page, "In progress").getByText("Moves here")).toHaveCount(0);
   await page.mouse.up();
   await expect(card(page, "Planned", /Launch week plan/)).toBeVisible();
 
-  await dragTo(page, card(page, "Blocked", /Fix retries/), await center(column(page, "Done")));
+  await holdOver(page, agentOwnedPostTheViewerCreated, await center(column(page, "Done")));
   await page.mouse.up();
   await expect(card(page, "Done", /Fix retries/)).toBeVisible();
   await expect.poll(() => writes.length).toBe(1);
@@ -171,7 +186,7 @@ test("a card the viewer can't move has no drag", async ({ page }) => {
 test("the keyboard picks a card up and moves it between columns", async ({ page }) => {
   const writes = workWrites(page);
 
-  await openBoard(page);
+  await openSyncedBoard(page);
 
   const target = card(page, "Planned", /Cursor pagination/);
 
@@ -205,8 +220,12 @@ test("a refused move goes back with a toast", async ({ page }) => {
       body: JSON.stringify({ error: forbidden().error }),
     }),
   );
-  await openBoard(page);
-  await dragTo(page, card(page, "Planned", /Launch week plan/), await center(column(page, "Done")));
+  await openSyncedBoard(page);
+  await holdOver(
+    page,
+    card(page, "Planned", /Launch week plan/),
+    await center(column(page, "Done")),
+  );
   await page.mouse.up();
 
   await expect(page.getByText("Couldn't move Launch week plan")).toBeVisible();
@@ -215,8 +234,8 @@ test("a refused move goes back with a toast", async ({ page }) => {
 });
 
 test("another member's moves still land while a card is held", async ({ page, request }) => {
-  await openBoard(page);
-  await dragTo(
+  await openSyncedBoard(page);
+  await holdOver(
     page,
     card(page, "Planned", /Launch week plan/),
     await center(column(page, "In progress")),

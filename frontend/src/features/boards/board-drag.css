@@ -1,5 +1,3 @@
-/* Moving board cards between status columns: the held card, its copy under the pointer, the
-   column it would go to and the slot it would take. */
 @layer app {
   :root[data-board-dragging],
   :root[data-board-dragging] * {
@@ -7,11 +5,9 @@
     user-select: none;
   }
 
-  @media (pointer: fine) {
-    .board-card[data-movable] {
-      cursor: grab;
-      user-select: none;
-    }
+  .board-card[data-movable] {
+    cursor: grab;
+    user-select: none;
   }
 
   .board-columns[data-dragging] {
@@ -55,7 +51,6 @@
     scale: 1;
   }
 
-  /* Under the pointer the card leaves an empty slot behind until it's dropped or flies back. */
   .board-card-item:is([data-dragging="pointer"], [data-dragging="returning"]) {
     border-radius: var(--radius-md);
     background: color-mix(in oklch, var(--text) 4%, transparent);
@@ -66,7 +61,6 @@
     visibility: hidden;
   }
 
-  /* On the keyboard the card stays in place, raised, while the arrows choose its column. */
   .board-card-item[data-dragging="keyboard"] > .board-card {
     box-shadow:
       var(--shadow-raised),
@@ -118,8 +112,6 @@
     }
   }
 
-  /* Reduced motion (the OS setting, unless the app says full, or the app's own "reduce"): the
-     copy doesn't tilt or lift and nothing slides. */
   @media (prefers-reduced-motion: reduce) {
     :root:not([data-motion="full"]) .board-drag-ghost > .board-card {
       rotate: none;

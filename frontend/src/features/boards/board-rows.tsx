@@ -105,8 +105,7 @@ export function PostRow({ roomId, threadId, open, activeTag }: PostProps) {
 }
 
 interface CardProps extends PostProps {
-  /** The board's drag, which a card the viewer may move joins. */
-  readonly drag?: CardDrag;
+  readonly drag?: CardDrag | undefined;
 }
 
 /** One post in a status column: a compact card with the title, tags, owner and counts. */
