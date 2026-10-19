@@ -8,6 +8,20 @@
     min-width: 0;
   }
 
+  /* The skeleton and the board share one grid cell. The cell takes the room's height and keeps
+     its width, so the list and the columns scroll inside it instead of overflowing the room. */
+  .board > .t-skel {
+    flex: 1;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .board > .t-skel > .t-skel-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   /* ── Toolbar ───────────────────────────────────────────────────────────── */
 
   .board-toolbar {
@@ -470,6 +484,8 @@
   .board-columns {
     display: grid;
     flex: 1;
+    /* As tall as the longest column, up to the board's height; past that each column scrolls. */
+    grid-template-rows: fit-content(100%);
     grid-template-columns: repeat(4, minmax(240px, 1fr));
     gap: var(--space-3);
     min-height: 0;
@@ -1751,6 +1767,33 @@
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
   @media (width < 720px) {
+    .board {
+      position: relative;
+    }
+
+    /* The floating New post button (board-phone.css) takes the toolbar's "+". */
+    .board-new {
+      display: none;
+    }
+
+    /* Cards with room between them; the bottom clears the floating button. */
+    .board-scroll {
+      padding: var(--space-2) var(--space-2) calc(var(--space-6) + 52px + var(--safe-bottom));
+    }
+
+    .board-list {
+      gap: var(--space-2);
+    }
+
+    .board-digest {
+      margin-bottom: var(--space-2);
+    }
+
+    .board-tag {
+      font-size: var(--text-meta);
+      line-height: 20px;
+    }
+
     .automation-form-row {
       grid-template-columns: minmax(0, 1fr);
     }
@@ -1771,15 +1814,6 @@
 
     .board-chips:empty {
       display: none;
-    }
-
-    .board-scroll {
-      padding-inline: var(--space-1);
-    }
-
-    .board-columns {
-      grid-template-columns: repeat(4, minmax(78vw, 1fr));
-      scroll-snap-type: x mandatory;
     }
 
     .board-form-row {
@@ -1811,8 +1845,43 @@
     }
   }
 
-  /* Touch phones: every tag control is a full 44 px target; the pills inside keep their size. */
+  /* Touch phones: every board control is a full 44 px target; the pills inside keep their size. */
   @media (width < 720px) and (pointer: coarse) {
+    .board-toolbar,
+    .post-work,
+    .board-form {
+      --control-sm: var(--touch-target);
+    }
+
+    .board-digest-summary,
+    .post-fact-value,
+    .post-fact-button,
+    .post-history .accordion-trigger {
+      min-height: var(--touch-target);
+    }
+
+    .post-fact-edit {
+      min-width: var(--touch-target);
+    }
+
+    .post-fact-label {
+      align-self: center;
+      padding-top: 0;
+    }
+
+    .board-suggestions {
+      gap: 0;
+      margin: calc(var(--space-1) * -2) calc(var(--space-1) * -1) 0;
+    }
+
+    /* A clear border grows the chip to 44 px; its ring and fill stay inside it, 36 px tall. */
+    .board-suggestion {
+      padding-inline: var(--space-3);
+      border: 4px solid transparent;
+      background-clip: padding-box;
+      line-height: 36px;
+    }
+
     .board-tag-strip {
       padding-block: 0;
     }

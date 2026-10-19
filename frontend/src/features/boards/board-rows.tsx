@@ -24,7 +24,7 @@ interface PostProps {
 }
 
 /** Locked or closed, beside the title (an active post says nothing). */
-function Lifecycle({ threadId }: { readonly threadId: number }) {
+export function Lifecycle({ threadId }: { readonly threadId: number }) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
 
   if (status === "active") {
@@ -42,11 +42,11 @@ function Lifecycle({ threadId }: { readonly threadId: number }) {
 const NO_TAGS: readonly BoardTag[] = [];
 
 /** The board's curated tags, so a post's pills show their emoji and order. */
-function useCatalogTags(roomId: number): readonly BoardTag[] {
+export function useCatalogTags(roomId: number): readonly BoardTag[] {
   return useStore((state) => state.boardTagCatalogs[roomId]?.tags ?? NO_TAGS);
 }
 
-function useUnread(threadId: number): boolean {
+export function useUnread(threadId: number): boolean {
   return useStore((state) => (state.threadMemberships[threadId]?.unreadAt ?? null) !== null);
 }
 
