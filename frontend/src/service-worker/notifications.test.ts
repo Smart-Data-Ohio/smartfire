@@ -13,7 +13,7 @@ interface WorkerEvent {
   readonly waitUntil?: (completion: Promise<unknown>) => void;
 }
 
-async function worker() {
+async function worker(client = { url: "https://smartfire.test/app/r/12", visibilityState: "hidden", focused: false }) {
   const handlers = new Map<string, (event: WorkerEvent) => Promise<void> | void>();
   const navigate = vi.fn(async () => undefined);
   const focus = vi.fn(async () => null);
@@ -32,7 +32,7 @@ async function worker() {
     navigator: { setAppBadge },
     registration: { showNotification },
     clients: {
-      matchAll: async () => [{ url: "https://smartfire.test/app/r/12", navigate, focus }],
+      matchAll: vi.fn(async () => [{ ...client, navigate, focus }]),
       openWindow,
     },
     addEventListener: (name: string, handler: (event: WorkerEvent) => Promise<void> | void) => {
@@ -57,6 +57,29 @@ async function worker() {
 }
 
 describe("shared worker notifications", () => {
+  it("suppresses the OS notification for a visible focused client and still updates its badge", async () => {
+    const f = await worker({ url: "https://smartfire.test/app/r/99", visibilityState: "visible", focused: true });
+    const options = { data: { badge: 7, path: "/rooms/12" }, tag: "room-12" };
+
+    await f.dispatch("push", { data: { json: () => ({ title: "New message", options }) } });
+
+    expect(f.showNotification).not.toHaveBeenCalled();
+    expect(f.setAppBadge).toHaveBeenCalledExactlyOnceWith(7);
+  });
+
+  it.each([
+    { url: "https://smartfire.test/app/", visibilityState: "visible", focused: false },
+    { url: "https://smartfire.test/app/", visibilityState: "hidden", focused: true },
+    { url: "https://other.test/app/", visibilityState: "visible", focused: true },
+  ])("still shows a push for $url $visibilityState focused=$focused", async (client) => {
+    const f = await worker(client);
+    const options = { data: { badge: 3, path: "/rooms/12" }, tag: "room-12" };
+
+    await f.dispatch("push", { data: { json: () => ({ title: "New message", options }) } });
+
+    expect(f.showNotification).toHaveBeenCalledExactlyOnceWith("New message", options);
+  });
+
   it("opens an old classic click URL unchanged, for the server to send on to the SPA", async () => {
     const f = await worker();
     const close = vi.fn();

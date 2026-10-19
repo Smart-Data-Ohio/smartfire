@@ -8,6 +8,89 @@ use crate::{Membership, Message, NewMessage};
 
 const WEB_PUSH_PUBLIC_TEST_IP: &str = "142.250.185.206";
 
+const PHONE_UA: &str = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1";
+const DESKTOP_UA: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36";
+
+fn routing_lease(t: &TestDb, user_agent: &'static str) -> crate::WorkspacePresenceLease {
+    t.write(move |tx| {
+        let session = crate::Session::start(tx, id("jason"), Some(user_agent), None)?;
+        Ok(crate::WorkspacePresenceLease::establish(tx, id("jason"), session.id)?.unwrap())
+    })
+}
+
+fn routing_phone(t: &TestDb) {
+    t.write(|tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET user_agent=? WHERE user_id=?", rusqlite::params![PHONE_UA, id("jason")])?;
+        Ok(())
+    });
+}
+
+#[test]
+fn push_routing_active_desktop_suppresses_phone_in_another_room_without_desktop_push() {
+    let t = TestDb::new();
+    routing_phone(&t);
+    routing_lease(&t, DESKTOP_UA);
+    t.write(|tx| Membership::find(tx.conn(), id("jason_hq"))?.connected(tx));
+    assert_eq!(deliveries(&t, "designers", "On the computer".into()), 1);
+}
+
+#[test]
+fn push_routing_idle_desktop_allows_phone_even_with_an_active_phone_lease() {
+    let t = TestDb::new();
+    routing_phone(&t);
+    let mut desktop = routing_lease(&t, DESKTOP_UA);
+    t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER + jiff::SignedDuration::from_secs(1));
+    t.write(move |tx| desktop.refresh(tx, false));
+    routing_lease(&t, PHONE_UA);
+    assert_eq!(deliveries(&t, "designers", "Away from computer".into()), 2);
+}
+
+#[test]
+fn push_routing_expired_or_deleted_desktop_allows_phone_at_send_time() {
+    for delete in [false, true] {
+        let t = TestDb::new();
+        routing_phone(&t);
+        let mut desktop = routing_lease(&t, DESKTOP_UA);
+        if delete {
+            t.write(move |tx| desktop.delete(tx));
+        } else {
+            t.clock.travel(crate::models::workspace_presence_lease::TTL + jiff::SignedDuration::from_micros(1));
+        }
+        assert_eq!(deliveries(&t, "designers", "Desktop gone".into()), 2);
+    }
+}
+
+#[test]
+fn push_routing_active_desktop_preserves_desktop_subscriptions() {
+    let t = TestDb::new();
+    routing_lease(&t, DESKTOP_UA);
+    assert_eq!(deliveries(&t, "designers", "Desktop notification".into()), 2);
+}
+
+#[test]
+fn push_routing_one_active_desktop_wins_over_an_idle_desktop() {
+    let t = TestDb::new();
+    routing_phone(&t);
+    let mut idle = routing_lease(&t, DESKTOP_UA);
+    t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER + jiff::SignedDuration::from_secs(1));
+    t.write(move |tx| idle.refresh(tx, false));
+    routing_lease(&t, DESKTOP_UA);
+    assert_eq!(deliveries(&t, "designers", "Another computer".into()), 1);
+}
+
+#[test]
+fn push_routing_idle_threshold_is_inclusive_and_uses_send_time() {
+    let t = TestDb::new();
+    routing_phone(&t);
+    let mut desktop = routing_lease(&t, DESKTOP_UA);
+    t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER);
+    desktop = t.write(move |tx| { desktop.refresh(tx, false)?; Ok(desktop) });
+    assert_eq!(deliveries(&t, "designers", "At threshold".into()), 1);
+    t.clock.travel(jiff::SignedDuration::from_micros(1));
+    t.write(move |tx| desktop.refresh(tx, false));
+    assert_eq!(deliveries(&t, "designers", "Past threshold".into()), 2);
+}
+
 // WS17 regressions: these run through the actual room-recipient query, not a policy mock.
 #[test]
 fn ws17_room_push_respects_dnd_and_non_allowed_sender() {
