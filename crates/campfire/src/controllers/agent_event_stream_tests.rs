@@ -172,6 +172,20 @@ async fn agent_sse_new_mention_arrives_live_with_polling_payload_and_ack() {
 }
 
 #[tokio::test]
+async fn agent_sse_expired_health_closes_before_monitor_is_scheduled() {
+    use futures_util::FutureExt;
+
+    let app = setup().await;
+    let mut body = stream(&app, "", None).await;
+    assert!(frame(&mut body).await.unwrap().contains("retry: "));
+    std::thread::sleep(Duration::from_millis(250));
+    assert!(
+        body.frame().now_or_never().is_some_and(|next| next.is_none()),
+        "expired authorization must close even before the monitor can run"
+    );
+}
+
+#[tokio::test]
 async fn agent_sse_last_event_id_wins_and_only_later_rows_replay() {
     let app = setup().await;
     let first = mention(&app).await;
