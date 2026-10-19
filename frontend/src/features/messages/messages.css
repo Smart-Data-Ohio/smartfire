@@ -494,13 +494,12 @@
 
   /* ── Attachments ────────────────────────────────────────────────────────── */
 
-  /* The floor is IMAGE_FLOOR (attachments.tsx), for an image whose size the server doesn't know. */
   .attachment-image {
     position: relative;
     width: fit-content;
-    min-width: 80px;
+    min-width: var(--image-floor, 0);
     max-width: 100%;
-    min-height: 80px;
+    min-height: var(--image-floor, 0);
     margin-top: var(--message-accessory-gap, var(--space-1-5));
     border-radius: var(--radius-md);
     background: var(--bg-skeleton);
@@ -549,7 +548,6 @@
     outline: none;
   }
 
-  /* A tap never shows it, because on touch the lightbox has both actions. */
   .attachment-image-actions {
     position: absolute;
     right: var(--space-1-5);
@@ -559,7 +557,6 @@
     padding: 2px;
     border-radius: var(--radius-md);
     background: var(--bg-raised);
-    /* The firmer ring keeps the bubble's edge on an image as light or dark as the bubble. */
     box-shadow:
       0 0 0 1px var(--border-strong),
       var(--shadow-raised);
@@ -710,11 +707,6 @@
     max-height: none;
     margin: 0;
     border-radius: var(--radius-sm);
-  }
-
-  .attachment-tile.attachment-image {
-    min-width: 0;
-    min-height: 0;
   }
 
   .attachment-tile.attachment-image img {

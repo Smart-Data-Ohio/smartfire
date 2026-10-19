@@ -34,7 +34,6 @@ function picture(name: string, [from, to]: readonly [Rgb, Rgb], width = 640, hei
   return { name, mimeType: "image/png", buffer: gradientPng(width, height, from, to) };
 }
 
-/** Sends from #general, after `text` if any, and returns the message's row once every image has loaded. */
 async function send(
   page: Page,
   text: string | null,
@@ -56,8 +55,7 @@ async function send(
   return row;
 }
 
-/** Sends an image-only message under a text one, so the message bar reaches over its image. */
-async function sendFollowUp(page: Page, files: readonly ReturnType<typeof picture>[]) {
+async function sendImagesUnderMessageBar(page: Page, files: readonly ReturnType<typeof picture>[]) {
   await composer(page).fill("Pictures follow");
   await composer(page).press("Enter");
 
@@ -82,7 +80,10 @@ async function downloadFrom(page: Page, press: () => Promise<void>) {
   return { name: download.suggestedFilename(), bytes: await readFile(await download.path()) };
 }
 
-/** Clicks where the button is drawn, as a person would, so whatever covers it takes the click. */
+/**
+ * Clicks by coordinates, skipping Playwright's hit-target check, so whatever covers the button takes
+ * the click.
+ */
 async function clickCentre(page: Page, button: Locator): Promise<void> {
   const box = await button.boundingBox();
 
@@ -188,7 +189,7 @@ for (const viewport of [DESKTOP, TABLET, NARROW]) {
     await page.setViewportSize(viewport);
     await openGeneral(page);
 
-    const row = await sendFollowUp(page, [picture("follow.png", LIGHT)]);
+    const row = await sendImagesUnderMessageBar(page, [picture("follow.png", LIGHT)]);
     const image = row.locator(".attachment-image");
 
     await image.hover();
@@ -211,7 +212,7 @@ test("the bubble stays clear of a message bar that was already up when the windo
   await page.setViewportSize(DESKTOP);
   await openGeneral(page);
 
-  const row = await sendFollowUp(page, [picture("narrowed.png", LIGHT)]);
+  const row = await sendImagesUnderMessageBar(page, [picture("narrowed.png", LIGHT)]);
   const image = row.locator(".attachment-image");
 
   await image.getByRole("button", { name: "Open narrowed.png" }).focus();
@@ -287,7 +288,7 @@ for (const viewport of [DESKTOP, TABLET, NARROW]) {
     await openGeneral(page);
 
     const tiny = picture("tiny.png", DARK, 32, 32);
-    const row = await sendFollowUp(page, [tiny]);
+    const row = await sendImagesUnderMessageBar(page, [tiny]);
     const image = row.locator(".attachment-image");
 
     await image.hover();

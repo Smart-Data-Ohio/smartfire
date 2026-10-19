@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { type CSSProperties, Suspense, useState } from "react";
 import type { Attachment } from "../../gen/Attachment.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { PendingAttachment } from "../../store/model.ts";
@@ -50,15 +50,13 @@ function MessageLightbox({
 }
 
 /**
- * The smallest box an inline image is drawn in (messages.css repeats it for images of unknown
- * size). It holds the action bubble, and keeps the bubble's top below the message bar, which covers
- * the top of the row. A smaller image sits at its own size inside the box.
+ * Room for the action bubble, with its top below the message bar, which covers the top of the row.
  */
 const IMAGE_FLOOR = 80;
 
 /**
- * An image that opens the lightbox. Its action bubble sits beside the button, not inside it,
- * because a button can't hold another.
+ * The actions sit beside the button, not inside it, because HTML forbids interactive content in a
+ * button.
  */
 function ImageFrame({
   attachment,
@@ -71,22 +69,21 @@ function ImageFrame({
 }) {
   const [loaded, setLoaded] = useState(false);
   const fitted = tile ? null : fitWithin(attachment.width, attachment.height, MEDIA_MAX);
+  const style: CSSProperties = { "--image-floor": `${IMAGE_FLOOR}px` };
 
-  const box =
-    fitted === null
-      ? null
-      : {
-          width: Math.max(fitted.width, IMAGE_FLOOR),
-          height: Math.max(fitted.height, IMAGE_FLOOR),
-        };
+  if (fitted !== null) {
+    const width = Math.max(fitted.width, IMAGE_FLOOR);
+    const height = Math.max(fitted.height, IMAGE_FLOOR);
+
+    style.width = width;
+    style.aspectRatio = `${width} / ${height}`;
+  }
 
   return (
     <div
       className={tile ? "attachment-tile attachment-image" : "attachment-image"}
       data-loaded={loaded || undefined}
-      style={
-        box === null ? undefined : { width: box.width, aspectRatio: `${box.width} / ${box.height}` }
-      }
+      style={tile ? undefined : style}
     >
       <button
         type="button"
