@@ -43,13 +43,16 @@ describe("room metadata follows sidebar sync", () => {
         ...sidebarRowFixture(20, "Ada, Grace", "direct", [8, 9]),
         sidebarDisplayName: "Ada Lovelace, Grace Hopper",
       };
+
       const detail = {
         ...roomDetailFixture(20),
         room: row.room,
         displayName: "Ada, Grace",
         sidebarDisplayName: "Ada Byron, Grace Hopper",
       };
+
       const loaded = setRoomDetail(initialState, detail);
+
       const synced =
         source === "event"
           ? applyEvents(loaded, [rowEvent(row)], 0)

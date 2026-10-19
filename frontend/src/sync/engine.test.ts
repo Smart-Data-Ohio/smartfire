@@ -2115,6 +2115,7 @@ describe("resync", () => {
     withSync(
       Effect.gen(function* () {
         const api = yield* FakeApi;
+
         const row = {
           ...sidebarRowFixture(12, "Ada", "direct", [3]),
           sidebarDisplayName: "Ada Lovelace",
@@ -2145,6 +2146,7 @@ describe("resync", () => {
       Effect.gen(function* () {
         const socket = yield* MemorySocket;
         const api = yield* FakeApi;
+
         const row = {
           ...sidebarRowFixture(12, "Ada", "direct", [3]),
           sidebarDisplayName: sidebarDirectLabel(null, ["Ada Byron"]),
@@ -4935,6 +4937,7 @@ describe("room access refresh", () => {
         yield* loaded;
         const api = yield* FakeApi;
         const release = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+
         const row = {
           ...sidebarRowFixture(12, "Ada", "direct", [3]),
           sidebarDisplayName: "Ada Lovelace",
@@ -7010,10 +7013,12 @@ describe("an open room visit settles within the cap while membership pushes keep
       withSync(
         Effect.gen(function* () {
           const api = yield* FakeApi;
+
           const row = {
             ...sidebarRowFixture(12, "Ada", "direct", [3]),
             sidebarDisplayName: "Ada Lovelace",
           };
+
           const held: Deferred.Deferred<void>[] = [];
           let reads = 0;
           let seq = 0;

@@ -63,6 +63,7 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
           room: row.room,
           membership: row.membership,
           displayName: row.displayName,
+          sidebarDisplayName: row.sidebarDisplayName,
           directMemberIds: row.directMemberIds,
         },
     started,

@@ -180,10 +180,12 @@ describe("room management actions", () => {
     Effect.gen(function* () {
       seed();
       const fake = yield* FakeApi;
+
       const stale = {
         ...sidebarRowFixture(20, "Ada", "direct", [8]),
         sidebarDisplayName: "Ada Byron",
       };
+
       const newer = { ...stale, sidebarDisplayName: "Ada Lovelace" };
 
       yield* fake.route("PATCH /rooms/20", () =>
