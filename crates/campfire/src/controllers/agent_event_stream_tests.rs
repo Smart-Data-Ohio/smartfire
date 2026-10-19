@@ -75,7 +75,7 @@ async fn stream(app: &TestApp, query: &str, last: Option<i64>) -> Body {
         "SSE endpoint must accept the polling credential"
     );
     assert_eq!(response.headers()["content-type"], "text/event-stream");
-    assert_eq!(response.headers()["cache-control"], "no-cache");
+    assert_eq!(response.headers()["cache-control"], "no-cache, no-transform");
     assert_eq!(response.headers()["x-accel-buffering"], "no");
     response.into_body()
 }
@@ -308,7 +308,7 @@ async fn agent_sse_front_does_not_buffer_or_compress_and_stream_ends_before_writ
         .uri("/agents/events/stream")
         .header("host", "campfire.test")
         .header("accept", "text/event-stream")
-        .header("accept-encoding", "gzip")
+        .header("accept-encoding", "gzip, zstd")
         .header("authorization", format!("Bearer {SECRET}"))
         .body(Body::empty())
         .unwrap();
@@ -326,7 +326,7 @@ async fn agent_sse_front_does_not_buffer_or_compress_and_stream_ends_before_writ
     .await
     .expect("front must flush SSE headers without waiting for its compression buffer");
     assert_eq!(response.status(), 200);
-    assert_eq!(response.headers()["content-encoding"], "identity");
+    assert!(!response.headers().contains_key("content-encoding"));
     assert!(!response.headers().contains_key("etag"));
     let mut body = response.into_body();
     assert!(frame(&mut body).await.unwrap().contains("retry: "));

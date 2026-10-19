@@ -204,6 +204,61 @@ assigning agent's chain the same way: an assignment at hop 3 writes
 `work_assigned` or `work_unassigned`, so two agents assigning posts
 to each other stop. Human assignments always start a new root.
 
+### SSE stream
+
+Use `GET /agents/events/stream` to receive events over one open HTTP
+connection. This route sits beside the polling collection. It accepts the
+same Bearer agent credential and requires the same `read_messages` entry
+check. MCP OAuth access tokens remain restricted to `/agents/mcp`, so they
+cannot use either REST polling or this stream.
+
+```sh
+curl --no-buffer https://chat.example.com/agents/events/stream \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H 'Accept: text/event-stream'
+```
+
+Each SSE event has the ledger id as `id`, the row's `event_type` as
+`event`, and the exact polling row object as JSON `data`. The server
+replays readable rows after the cursor in ascending id order, then checks
+the database for new rows every second. `limit` controls the replay page
+size, with the same default of 50 and maximum of 100 as polling.
+Every page uses polling's live room, thread, grant, and repository access
+checks. A single cursor covers replay and live delivery, including writes
+committed during replay.
+
+Persist the last event id you process and send it when you reconnect.
+`Last-Event-ID` takes precedence over `since`. With neither, the cursor is
+zero. For example, to resume after event 12345:
+
+```sh
+curl --no-buffer 'https://chat.example.com/agents/events/stream?since=0' \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H 'Accept: text/event-stream' \
+  -H 'Last-Event-ID: 12345'
+```
+
+The stream sends `retry: 1000` and a `: ping` comment about every 20
+seconds. Reconnect after EOF as well as transport errors. A connection
+ends after at most 240 seconds, or earlier to stay below the configured
+front-server write timeout. The production image sets that timeout to
+300 seconds. Deduplicate by event id if a connection fails after receipt
+but before you persist its cursor.
+
+Streaming leaves delivery state unchanged, just like polling. The
+delivery job owns `pending` to `delivered` transitions and webhook work.
+Use `POST /agents/events/:id/ack` to record acknowledgment. A credential
+revocation, expiry, or agent deactivation closes the stream at its next
+database check, within one second during normal delivery.
+
+Each server process allows three concurrent streams per credential,
+matching the credential identity and process boundary of API rate limits.
+An excess connection receives `429` and `Retry-After`. Disconnecting
+releases its slot. Production uses one Rust process per container.
+Database checks also observe writes from another process, including an
+overlapping ONCE replacement container, without relying on local wakeups.
+Responses disable caching, compression, and proxy buffering.
+
 ### Webhooks
 
 The webhook payload gains an additive

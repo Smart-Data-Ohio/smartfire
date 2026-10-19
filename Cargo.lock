@@ -606,6 +606,7 @@ dependencies = [
  "campfire_runtime",
  "campfire_spa",
  "campfire_storage",
+ "futures-util",
  "jiff",
  "rails_compat",
  "rand 0.9.5",
