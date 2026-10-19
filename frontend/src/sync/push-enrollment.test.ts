@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { addressBar } from "../api/client.ts";
+import { meFixture } from "../api/testing.ts";
 import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
+import { mutations } from "../store/store.ts";
 import {
   applicationServerKey,
   enablePushNotifications,
@@ -114,6 +117,23 @@ function fixture(permission: NotificationPermission = "default") {
 }
 
 describe("explicit browser push enrollment", () => {
+  beforeEach(() => mutations.setMe(meFixture));
+  afterEach(() => {
+    mutations.reset();
+    vi.restoreAllMocks();
+  });
+
+  it("does not refresh or navigate a signed-out browser with a granted subscription", async () => {
+    const f = fixture("granted");
+    const navigate = vi.spyOn(addressBar, "assign").mockImplementation(() => undefined);
+
+    mutations.reset();
+    f.getSubscription.mockResolvedValue(f.subscription);
+    await tryRefreshPushSubscription(f.browser, f.api);
+    expect(f.createPushSubscription).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it("refreshes an existing granted subscription on startup without prompting or enrolling", async () => {
     const f = fixture("granted");
 
