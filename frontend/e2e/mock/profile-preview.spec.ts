@@ -206,6 +206,7 @@ for (const [label, file] of [
     await expect(photo).toHaveAttribute("src", /^blob:/);
 
     const still = (await photo.getAttribute("src")) ?? "";
+
     const drawn = await photo.evaluate(async (image: HTMLImageElement) => {
       const text = String.fromCharCode(
         ...new Uint8Array(await (await fetch(image.src)).arrayBuffer()),
