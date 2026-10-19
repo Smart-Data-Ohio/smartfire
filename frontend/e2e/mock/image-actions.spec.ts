@@ -573,6 +573,7 @@ test.describe("on a touch-primary screen with a mouse and keyboard", () => {
       picture("mixed-centre.png", DARK),
       picture("right.png", LIGHT),
     ];
+
     const row = await sendImagesUnderMessageBar(page, files);
     const tile = row.locator(".attachment-tile.attachment-image").nth(1);
 

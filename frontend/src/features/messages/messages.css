@@ -583,7 +583,8 @@
     }
   }
 
-  .attachment-image:has(:focus-visible) > .attachment-image-actions {
+  .attachment-image:has(:focus-visible) > .attachment-image-actions,
+  .attachment-image-actions:focus-within {
     opacity: 1;
     translate: none;
     pointer-events: auto;
