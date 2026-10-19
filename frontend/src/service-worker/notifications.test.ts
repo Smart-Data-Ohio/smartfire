@@ -67,7 +67,7 @@ async function worker(
 }
 
 describe("shared worker notifications", () => {
-  it("suppresses the OS notification for a visible focused client and still updates its badge", async () => {
+  it("shows every delivered push even with a visible focused client and updates its badge", async () => {
     const f = await worker({
       url: "https://smartfire.test/app/r/99",
       visibilityState: "visible",
@@ -78,7 +78,7 @@ describe("shared worker notifications", () => {
 
     await f.dispatch("push", { data: { json: () => ({ title: "New message", options }) } });
 
-    expect(f.showNotification).not.toHaveBeenCalled();
+    expect(f.showNotification).toHaveBeenCalledExactlyOnceWith("New message", options);
     expect(f.setAppBadge).toHaveBeenCalledExactlyOnceWith(7);
   });
 
