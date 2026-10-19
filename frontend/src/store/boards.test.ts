@@ -5,6 +5,7 @@ import type { Thread } from "../gen/Thread.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import {
   addBoardPost,
+  boardAwaitsListing,
   boardColumns,
   boardPostIds,
   defaultBoardQuery,
@@ -432,5 +433,54 @@ describe("agent steps on a post", () => {
     const state = loadThreadDetail(loaded(), boardDetail(boardThread(1)), 0);
 
     expect(steps(state, [step(1, "done", "2026-10-07T10:01:00Z")], 44)).toBe(state);
+  });
+});
+
+describe("the board's skeleton", () => {
+  const all = { ...defaultBoardQuery, status: "all" as const };
+  const bugs = { ...all, tag: "bug" };
+
+  it("waits for the first listing, and for a new query's", () => {
+    expect(boardAwaitsListing(undefined)).toBe(true);
+    expect(boardAwaitsListing(setBoardLoading(initialState, BOARD, all).boards[BOARD])).toBe(true);
+    expect(boardAwaitsListing(loaded().boards[BOARD])).toBe(false);
+    expect(boardAwaitsListing(setBoardLoading(loaded(), BOARD, bugs).boards[BOARD])).toBe(true);
+  });
+
+  it("keeps the posts on screen while the same query is read again", () => {
+    const rereading = event(
+      setBoardLoading(loaded(), BOARD, all),
+      "thread.created",
+      boardThread(99),
+    );
+
+    expect(boardAwaitsListing(rereading.boards[BOARD])).toBe(false);
+  });
+
+  it("isn't ended by a post created while a new query loads", () => {
+    const filtering = event(
+      setBoardLoading(loaded(), BOARD, bugs),
+      "thread.created",
+      boardThread(99),
+    );
+
+    expect(filtering.boards[BOARD]?.postIds).toEqual([99]);
+    expect(boardAwaitsListing(filtering.boards[BOARD])).toBe(true);
+  });
+
+  it("keeps waiting when a resync asks again for a query no listing has answered", () => {
+    const filtering = event(
+      setBoardLoading(loaded(), BOARD, bugs),
+      "thread.created",
+      boardThread(99),
+    );
+
+    const resynced = setBoardLoading(filtering, BOARD, bugs);
+
+    expect(boardAwaitsListing(resynced.boards[BOARD])).toBe(true);
+
+    const answered = loadBoardListing(resynced, { ...boardListing([]), ...bugs }, 3);
+
+    expect(boardAwaitsListing(answered.boards[BOARD])).toBe(false);
   });
 });
