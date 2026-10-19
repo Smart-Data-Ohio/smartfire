@@ -4,9 +4,8 @@
  * applied batch here after its store commit, in order. Plain TypeScript; listeners must not throw.
  */
 import type { SyncEvent } from "../gen/SyncEvent.ts";
-import type { State } from "../store/state.ts";
 
-type Listener = (events: readonly SyncEvent[], liveAfter: number, stateBeforeBatch?: State) => void;
+type Listener = (events: readonly SyncEvent[], liveAfter: number) => void;
 
 type ResyncListener = (topics: readonly string[]) => void;
 
@@ -27,10 +26,9 @@ export function onSyncEvents(listener: Listener): () => void {
 export function emitSyncEvents(
   events: readonly SyncEvent[],
   liveAfter = Number.NEGATIVE_INFINITY,
-  stateBeforeBatch?: State,
 ): void {
   for (const listener of listeners) {
-    listener(events, liveAfter, stateBeforeBatch);
+    listener(events, liveAfter);
   }
 }
 

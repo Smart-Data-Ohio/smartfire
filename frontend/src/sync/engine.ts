@@ -895,7 +895,7 @@ export class Engine extends Context.Service<
           yield* Effect.forkIn(resync(scope, ["user"]), scope);
         }
 
-        emitSyncEvents(fresh, yield* Ref.get(replayThrough), before);
+        emitSyncEvents(fresh, yield* Ref.get(replayThrough));
         const open = new Set(yield* topics.subscribed);
 
         const workIds = new Set(

@@ -6,20 +6,8 @@ import type { NotificationSettings } from "../gen/NotificationSettings.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { initialState, type State } from "../store/state.ts";
-import { store } from "../store/store.ts";
 import { notificationPreferencesFixture } from "../test/notification-fixtures.ts";
-import {
-  chimeAllowed,
-  chimeGates,
-  followMessageChimes,
-  notifyingRooms,
-  THROTTLE_MS,
-} from "./message-chime.ts";
-import { emitSyncEvents } from "./signals.ts";
-
-const playMessageChime = vi.fn();
-
-const VIEWER = meFixture.user.id;
+import { THROTTLE_MS } from "./message-chime.ts";
 
 const MAYA = 2;
 
@@ -27,12 +15,16 @@ const DM = 9;
 
 const GENERAL = 3;
 
-const NOBODY_ON_SCREEN: ReadonlySet<number> = new Set();
+const THREAD = 40;
+
+/** Longer than any focus record may go without its tab's heartbeat. */
+const LONG_AFTER_A_CRASH_MS = 60_000;
 
 const PREFERENCES: NotificationSettings = {
   ...notificationPreferencesFixture,
   roomNotificationLevels: {},
   roomMuteUntil: {},
+  messageSound: true,
 };
 
 function row(
@@ -42,7 +34,6 @@ function row(
     readonly involvement?: Involvement;
     readonly notificationCount?: number;
     readonly threadNotificationCount?: number;
-    readonly lastReadMessageId?: number | null;
   } = {},
 ): SidebarRow {
   const base = sidebarRowFixture(roomId, `Room ${roomId}`, change.kind ?? "open");
@@ -52,7 +43,7 @@ function row(
     membership: {
       ...base.membership,
       involvement: change.involvement ?? "everything",
-      lastReadMessageId: change.lastReadMessageId === undefined ? 100 : change.lastReadMessageId,
+      lastReadMessageId: 100,
     },
     notificationCount: change.notificationCount ?? 0,
     threadNotificationCount: change.threadNotificationCount ?? 0,
@@ -61,18 +52,11 @@ function row(
 
 function stateWith(
   rows: readonly SidebarRow[],
-  {
-    preferences = PREFERENCES,
-    messages = [],
-  }: {
-    readonly preferences?: NotificationSettings;
-    readonly messages?: readonly MessageDTO[];
-  } = {},
+  preferences: NotificationSettings = PREFERENCES,
 ): State {
   return {
     ...initialState,
     me: meFixture,
-    messages: Object.fromEntries(messages.map((message) => [message.id, message])),
     sidebar: {
       ...initialState.sidebar,
       rows: Object.fromEntries(rows.map((entry) => [entry.room.id, entry])),
@@ -81,293 +65,332 @@ function stateWith(
   };
 }
 
-function upserted(data: SidebarRow, seq = 10): SyncEvent {
+function upserted(data: SidebarRow, seq: number): SyncEvent {
   return { seq, topic: "user", type: "sidebar.row.upserted", data };
 }
 
-function created(data: MessageDTO, seq = 10): SyncEvent {
-  return { seq, topic: `room:${data.roomId}`, type: "message.created", data };
+function created(data: MessageDTO, seq: number): SyncEvent {
+  const topic = data.threadId === null ? `room:${data.roomId}` : `thread:${data.threadId}`;
+
+  return { seq, topic, type: "message.created", data };
 }
 
-function risen(before: SidebarRow | null, after: SidebarRow, liveAfter = 0): readonly number[] {
-  return notifyingRooms(
-    [upserted(after)],
-    liveAfter,
-    stateWith(before === null ? [] : [before]),
-    stateWith([after]),
-    NOBODY_ON_SCREEN,
-  );
+function updated(data: MessageDTO, seq: number): SyncEvent {
+  const topic = data.threadId === null ? `room:${data.roomId}` : `thread:${data.threadId}`;
+
+  return { seq, topic, type: "message.updated", data };
 }
 
-describe("notifyingRooms from the server's push count", () => {
-  it("chimes for a direct message, including the one that opens a new conversation", () => {
-    const dm = { kind: "direct" } as const;
+function notified(message: MessageDTO, seq: number): SyncEvent {
+  return {
+    seq,
+    topic: "user",
+    type: "message.notified",
+    data: { messageId: message.id, roomId: message.roomId, threadId: message.threadId },
+  };
+}
 
-    expect(
-      risen(row(DM, { ...dm, notificationCount: 1 }), row(DM, { ...dm, notificationCount: 2 })),
-    ).toEqual([DM]);
-    expect(risen(null, row(DM, { ...dm, notificationCount: 1 }))).toEqual([DM]);
+const fromMaya = (id: number, roomId: number, change: Partial<MessageDTO> = {}) =>
+  messageFixture(id, roomId, { creatorId: MAYA, ...change });
+
+/** A batch as the engine hands it over: the rows it carries are in the store by then. */
+interface Batch {
+  readonly events: readonly SyncEvent[];
+  readonly rows?: readonly SidebarRow[];
+  readonly liveAfter?: number;
+}
+
+interface Tab {
+  readonly played: () => number;
+  readonly deliver: (batch: Batch) => void;
+  readonly view: (roomId: number, threadId?: number | null) => () => void;
+  readonly close: () => void;
+}
+
+const open: Tab[] = [];
+
+let focused = false;
+
+/**
+ * Loads the module afresh, as another tab of the app would: tabs share only `localStorage`.
+ * A tab left open without `close` is one that crashed.
+ */
+async function openTab(state: State): Promise<Tab> {
+  vi.resetModules();
+  const chime = await import("./message-chime.ts");
+  const { emitSyncEvents } = await import("./signals.ts");
+  const { store } = await import("../store/store.ts");
+  const play = vi.fn();
+
+  store.setState(state);
+  const stop = chime.followMessageChimes(play);
+
+  const tab: Tab = {
+    played: () => play.mock.calls.length,
+    deliver({ events, rows = [], liveAfter = 0 }) {
+      const before = store.getState();
+
+      store.setState({
+        sidebar: {
+          ...before.sidebar,
+          rows: { ...before.sidebar.rows, ...Object.fromEntries(rows.map((r) => [r.room.id, r])) },
+        },
+      });
+      emitSyncEvents(events, liveAfter);
+    },
+    view: (roomId, threadId) => chime.holdChimeView(roomId, threadId),
+    close: stop,
+  };
+
+  open.push(tab);
+
+  return tab;
+}
+
+function canSound(active: boolean): void {
+  Object.defineProperty(navigator, "userActivation", {
+    configurable: true,
+    value: { hasBeenActive: active, isActive: false },
   });
+}
 
-  it("chimes for a new message in an everything room", () => {
-    expect(risen(row(GENERAL), row(GENERAL, { notificationCount: 1 }))).toEqual([GENERAL]);
-  });
-
-  it("chimes in a mentions-only room only when the count rises for a mention", () => {
-    const mentions = { involvement: "mentions" } as const;
-
-    expect(risen(row(GENERAL, mentions), row(GENERAL, mentions))).toEqual([]);
-    expect(
-      risen(row(GENERAL, mentions), row(GENERAL, { ...mentions, notificationCount: 1 })),
-    ).toEqual([GENERAL]);
-  });
-
-  it("chimes for a reply in a followed thread", () => {
-    expect(
-      risen(row(GENERAL), row(GENERAL, { notificationCount: 1, threadNotificationCount: 1 })),
-    ).toEqual([GENERAL]);
-  });
-
-  it("stays quiet when the count holds, as it does for the viewer's own message", () => {
-    expect(
-      risen(row(GENERAL, { notificationCount: 2 }), row(GENERAL, { notificationCount: 2 })),
-    ).toEqual([]);
-    expect(
-      risen(row(GENERAL, { notificationCount: 2 }), row(GENERAL, { notificationCount: 0 })),
-    ).toEqual([]);
-  });
-
-  it("stays quiet for rows replayed from before the connection's welcome", () => {
-    expect(risen(row(GENERAL), row(GENERAL, { notificationCount: 1 }), 10)).toEqual([]);
-  });
-
-  it("stays quiet when the rise comes from marking the room unread", () => {
-    expect(
-      risen(row(GENERAL), row(GENERAL, { notificationCount: 3, lastReadMessageId: 90 })),
-    ).toEqual([]);
-  });
-
-  it("stays quiet when the rise comes from changing the room's level", () => {
-    const before = stateWith([row(GENERAL, { notificationCount: 1 })], {
-      preferences: { ...PREFERENCES, roomNotificationLevels: { [GENERAL]: "mentions" } },
-    });
-
-    const after = stateWith([row(GENERAL, { notificationCount: 4 })]);
-
-    expect(
-      notifyingRooms(
-        [upserted(row(GENERAL, { notificationCount: 4 }))],
-        0,
-        before,
-        after,
-        NOBODY_ON_SCREEN,
-      ),
-    ).toEqual([]);
-  });
-
-  it("stays quiet for a room that joins the sidebar with history already unread", () => {
-    expect(risen(null, row(GENERAL, { notificationCount: 5 }))).toEqual([]);
-  });
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+  vi.setSystemTime(1_000_000);
+  focused = false;
+  vi.spyOn(document, "hasFocus").mockImplementation(() => focused);
+  vi.stubGlobal("matchMedia", () => ({ matches: false }));
+  canSound(true);
+  localStorage.clear();
 });
 
-describe("notifyingRooms for a room on screen in an unfocused window", () => {
-  const onScreen: ReadonlySet<number> = new Set([GENERAL]);
-
-  function arrives(
-    message: MessageDTO,
-    {
-      involvement = "everything",
-      screen = onScreen,
-      messages = [],
-      liveAfter = 0,
-    }: {
-      readonly involvement?: Involvement;
-      readonly screen?: ReadonlySet<number>;
-      readonly messages?: readonly MessageDTO[];
-      readonly liveAfter?: number;
-    } = {},
-  ): readonly number[] {
-    const state = stateWith([row(GENERAL, { involvement })], { messages });
-
-    return notifyingRooms([created(message)], liveAfter, state, state, screen);
+afterEach(() => {
+  for (const tab of open.splice(0)) {
+    tab.close();
   }
 
-  const fromMaya = (change: Partial<MessageDTO> = {}) =>
-    messageFixture(200, GENERAL, { creatorId: MAYA, ...change });
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  Reflect.deleteProperty(navigator, "userActivation");
+});
 
-  it("chimes for someone else's message in an everything room", () => {
-    expect(arrives(fromMaya())).toEqual([GENERAL]);
+function directMessage(id: number, count: number, seq: number): Batch {
+  const message = fromMaya(id, DM);
+  const next = row(DM, { kind: "direct", notificationCount: count });
+
+  return {
+    events: [created(message, seq), upserted(next, seq + 1), notified(message, seq + 2)],
+    rows: [next],
+  };
+}
+
+describe("followMessageChimes plays when the server notified this person", () => {
+  it("chimes for a second reply in a followed thread that is already unread", async () => {
+    const unread = row(GENERAL, { notificationCount: 1, threadNotificationCount: 1 });
+    const tab = await openTab(stateWith([unread]));
+    const reply = fromMaya(201, GENERAL, { threadId: THREAD });
+
+    tab.deliver({
+      events: [created(reply, 1), upserted(unread, 2), notified(reply, 3)],
+      rows: [unread],
+    });
+
+    expect(tab.played()).toBe(1);
   });
 
-  it("chimes in a mentions-only room for a mention or a reply to the viewer, and nothing else", () => {
+  it("stays quiet when an old activity item is marked unread", async () => {
+    const tab = await openTab(stateWith([row(GENERAL)]));
+    const marked = row(GENERAL, { notificationCount: 1 });
+
+    tab.deliver({ events: [upserted(marked, 1)], rows: [marked] });
+
+    expect(tab.played()).toBe(0);
+  });
+
+  it("stays quiet when an unread message is edited to mention this person", async () => {
     const mentions = { involvement: "mentions" } as const;
-    const mine = messageFixture(150, GENERAL, { creatorId: VIEWER });
+    const tab = await openTab(stateWith([row(GENERAL, mentions)]));
+    const edited = fromMaya(200, GENERAL, {
+      bodyHtml: `<p><span data-user-id="${meFixture.user.id}">@Ada</span></p>`,
+    });
 
-    expect(arrives(fromMaya(), mentions)).toEqual([]);
-    expect(
-      arrives(
-        fromMaya({ bodyHtml: `<p><span data-user-id="${VIEWER}">@Ada</span></p>` }),
-        mentions,
-      ),
-    ).toEqual([GENERAL]);
-    expect(arrives(fromMaya({ replyToMessageId: 150 }), { ...mentions, messages: [mine] })).toEqual(
-      [GENERAL],
+    const raised = row(GENERAL, { ...mentions, notificationCount: 1 });
+
+    tab.deliver({ events: [updated(edited, 1), upserted(raised, 2)], rows: [raised] });
+
+    expect(tab.played()).toBe(0);
+  });
+
+  it("stays quiet for a user id inside a code block in a mentions-only room on screen", async () => {
+    const mentions = row(GENERAL, { involvement: "mentions" });
+    const tab = await openTab(stateWith([mentions]));
+    const code = fromMaya(200, GENERAL, {
+      bodyHtml: `<pre><code>data-user-id="${meFixture.user.id}"</code></pre>`,
+    });
+
+    tab.view(GENERAL);
+    tab.deliver({ events: [created(code, 1), upserted(mentions, 2)], rows: [mentions] });
+
+    expect(tab.played()).toBe(0);
+  });
+
+  it("chimes once for a streaming agent message, when it's finalised", async () => {
+    const tab = await openTab(stateWith([row(GENERAL)]));
+    const placeholder = fromMaya(200, GENERAL, { streaming: true, bodyHtml: "" });
+
+    tab.view(GENERAL);
+    tab.deliver({ events: [created(placeholder, 1)] });
+
+    expect(tab.played()).toBe(0);
+
+    const final = { ...placeholder, streaming: false, bodyHtml: "<p>Done</p>" };
+
+    tab.deliver({ events: [updated(final, 2), notified(final, 3)] });
+
+    expect(tab.played()).toBe(1);
+  });
+
+  it("stays quiet for notifications replayed from before the welcome", async () => {
+    const tab = await openTab(stateWith([row(DM, { kind: "direct" })]));
+
+    tab.deliver({ ...directMessage(200, 1, 1), liveAfter: 10 });
+
+    expect(tab.played()).toBe(0);
+  });
+
+  it("plays once for a burst, then again after the throttle", async () => {
+    const tab = await openTab(stateWith([row(DM, { kind: "direct" })]));
+
+    tab.deliver(directMessage(200, 1, 1));
+    vi.advanceTimersByTime(500);
+    tab.deliver(directMessage(201, 2, 4));
+
+    expect(tab.played()).toBe(1);
+
+    vi.advanceTimersByTime(THROTTLE_MS);
+    tab.deliver(directMessage(202, 3, 7));
+
+    expect(tab.played()).toBe(2);
+  });
+
+  it("stays quiet with the setting off or on a touch screen", async () => {
+    const off = await openTab(
+      stateWith([row(DM, { kind: "direct" })], { ...PREFERENCES, messageSound: false }),
     );
-  });
 
-  it("stays quiet for the viewer's own message, system notes, thread replies and ignored people", () => {
-    expect(arrives(messageFixture(200, GENERAL, { creatorId: VIEWER }))).toEqual([]);
-    expect(arrives(fromMaya({ systemNote: true }))).toEqual([]);
-    expect(arrives(fromMaya({ threadId: 40 }))).toEqual([]);
-    expect(arrives(fromMaya({ ignored: true }))).toEqual([]);
-  });
+    off.deliver(directMessage(200, 1, 1));
 
-  it("stays quiet for a nothing room, a replay, or a room this tab doesn't show", () => {
-    expect(arrives(fromMaya(), { involvement: "nothing" })).toEqual([]);
-    expect(arrives(fromMaya(), { liveAfter: 10 })).toEqual([]);
-    expect(arrives(fromMaya(), { screen: NOBODY_ON_SCREEN })).toEqual([]);
+    expect(off.played()).toBe(0);
+
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("coarse") }));
+    const phone = await openTab(stateWith([row(DM, { kind: "direct" })]));
+
+    phone.deliver(directMessage(201, 1, 1));
+
+    expect(phone.played()).toBe(0);
   });
 });
 
-describe("chimeAllowed", () => {
-  const open = { messageSound: true, soundsMuted: false, desktop: true };
-  const state = stateWith([row(GENERAL), row(DM, { kind: "direct" })]);
+describe("followMessageChimes and the conversation on screen", () => {
+  it("chimes for a thread whose pane is closed while its room is on screen in a focused tab", async () => {
+    focused = true;
+    const raised = row(GENERAL, { notificationCount: 1, threadNotificationCount: 1 });
+    const tab = await openTab(stateWith([row(GENERAL)]));
+    const reply = fromMaya(201, GENERAL, { threadId: THREAD });
 
-  it("chimes on desktop with the setting on", () => {
-    expect(chimeAllowed(state, [DM], open, new Set())).toBe(true);
-  });
-
-  it("stays quiet with the setting off, while muted, or on a phone", () => {
-    expect(chimeAllowed(state, [DM], { ...open, messageSound: false }, new Set())).toBe(false);
-    expect(chimeAllowed(state, [DM], { ...open, soundsMuted: true }, new Set())).toBe(false);
-    expect(chimeAllowed(state, [DM], { ...open, desktop: false }, new Set())).toBe(false);
-  });
-
-  it("stays quiet for a snoozed room", () => {
-    const snoozed = stateWith([row(DM, { kind: "direct" })], {
-      preferences: { ...PREFERENCES, roomMuteUntil: { [DM]: null } },
+    tab.view(GENERAL);
+    tab.deliver({
+      events: [created(reply, 1), upserted(raised, 2), notified(reply, 3)],
+      rows: [raised],
     });
 
-    expect(chimeAllowed(snoozed, [DM], open, new Set())).toBe(false);
+    expect(tab.played()).toBe(1);
   });
 
-  it("stays quiet for the room a focused tab shows, not for another one", () => {
-    expect(chimeAllowed(state, [DM], open, new Set([DM]))).toBe(false);
-    expect(chimeAllowed(state, [DM], open, new Set([GENERAL]))).toBe(true);
-    expect(chimeAllowed(state, [DM, GENERAL], open, new Set([DM]))).toBe(true);
+  it("stays quiet for the room or the thread a focused tab shows", async () => {
+    focused = true;
+    const tab = await openTab(stateWith([row(GENERAL)]));
+    const inRoom = fromMaya(200, GENERAL);
+    const inThread = fromMaya(201, GENERAL, { threadId: THREAD });
+
+    tab.view(GENERAL);
+    tab.view(GENERAL, THREAD);
+    tab.deliver({ events: [created(inRoom, 1), notified(inRoom, 2)] });
+    vi.advanceTimersByTime(THROTTLE_MS);
+    tab.deliver({ events: [created(inThread, 3), notified(inThread, 4)] });
+
+    expect(tab.played()).toBe(0);
+  });
+
+  it("chimes for the conversation on screen while the window is out of focus", async () => {
+    const tab = await openTab(stateWith([row(GENERAL)]));
+    const message = fromMaya(200, GENERAL);
+
+    tab.view(GENERAL);
+    tab.deliver({ events: [created(message, 1), notified(message, 2)] });
+
+    expect(tab.played()).toBe(1);
   });
 });
 
-describe("chimeGates", () => {
-  let coarse = false;
+describe("followMessageChimes across tabs", () => {
+  it("lets a tab that can sound play when a tab that can't saw the message first", async () => {
+    const state = stateWith([row(DM, { kind: "direct" })]);
+    const silent = await openTab(state);
+    const audible = await openTab(state);
+    const batch = directMessage(200, 1, 1);
 
-  beforeEach(() => {
-    coarse = false;
-    vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: coarse && query.includes("coarse"),
-    }));
+    canSound(false);
+    silent.deliver(batch);
+    canSound(true);
+    audible.deliver(batch);
+
+    expect([silent.played(), audible.played()]).toEqual([0, 1]);
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+  it("plays once between two tabs that both can", async () => {
+    const state = stateWith([row(DM, { kind: "direct" })]);
+    const first = await openTab(state);
+    const second = await openTab(state);
+    const batch = directMessage(200, 1, 1);
+
+    first.deliver(batch);
+    second.deliver(batch);
+
+    expect(first.played() + second.played()).toBe(1);
   });
 
-  it("is open on desktop with the setting on and no do-not-disturb", () => {
-    expect(chimeGates(stateWith([]))).toEqual({
-      messageSound: true,
-      soundsMuted: false,
-      desktop: true,
-    });
+  it("stays quiet while another tab shows that conversation focused, beat after beat", async () => {
+    const state = stateWith([row(DM, { kind: "direct" })]);
+    const background = await openTab(state);
+
+    vi.clearAllTimers();
+    focused = true;
+    const reading = await openTab(state);
+
+    reading.view(DM);
+    vi.advanceTimersByTime(LONG_AFTER_A_CRASH_MS);
+    focused = false;
+    background.deliver(directMessage(200, 1, 1));
+
+    expect(background.played()).toBe(0);
   });
 
-  it("follows the setting", () => {
-    const off = stateWith([], { preferences: { ...PREFERENCES, messageSound: false } });
+  it("forgets a focused tab that crashed without cleaning up", async () => {
+    const state = stateWith([row(DM, { kind: "direct" })]);
 
-    expect(chimeGates(off).messageSound).toBe(false);
-  });
+    focused = true;
+    const crashed = await openTab(state);
 
-  it("mutes under do not disturb or out of office, as the server folds them into chatSounds", () => {
-    const dnd = {
-      ...stateWith([]),
-      me: { ...meFixture, chatSounds: { ...meFixture.chatSounds, muted: true } },
-    };
+    crashed.view(DM);
+    vi.clearAllTimers();
+    focused = false;
+    const survivor = await openTab(state);
 
-    expect(chimeGates(dnd).soundsMuted).toBe(true);
-  });
+    vi.setSystemTime(Date.now() + LONG_AFTER_A_CRASH_MS);
+    survivor.deliver(directMessage(200, 1, 1));
 
-  it("treats a touch screen as a phone", () => {
-    coarse = true;
-
-    expect(chimeGates(stateWith([])).desktop).toBe(false);
-  });
-});
-
-describe("followMessageChimes", () => {
-  let stop: (() => void) | null = null;
-  let now = 1_000_000;
-
-  beforeEach(() => {
-    now = 1_000_000;
-    vi.spyOn(Date, "now").mockImplementation(() => now);
-    vi.spyOn(document, "hasFocus").mockReturnValue(false);
-    vi.stubGlobal("matchMedia", () => ({ matches: false }));
-    localStorage.clear();
-    playMessageChime.mockClear();
-    store.setState(stateWith([row(DM, { kind: "direct", notificationCount: 0 })]));
-    stop = followMessageChimes(playMessageChime);
-  });
-
-  afterEach(() => {
-    stop?.();
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-    store.setState(initialState);
-  });
-
-  function dmArrives(seq: number): void {
-    const before = store.getState();
-    const held = before.sidebar.rows[DM];
-    const next = row(DM, { kind: "direct", notificationCount: (held?.notificationCount ?? 0) + 1 });
-
-    store.setState({
-      sidebar: { ...before.sidebar, rows: { ...before.sidebar.rows, [DM]: next } },
-    });
-    emitSyncEvents([upserted(next, seq)], 0, before);
-  }
-
-  it("plays once for a burst, then again after the throttle", () => {
-    dmArrives(1);
-    now += 500;
-    dmArrives(2);
-
-    expect(playMessageChime).toHaveBeenCalledTimes(1);
-
-    now += THROTTLE_MS;
-    dmArrives(3);
-
-    expect(playMessageChime).toHaveBeenCalledTimes(2);
-  });
-
-  it("leaves the chime to another tab that just played one", () => {
-    localStorage.setItem("smartfire:message-chime:at", String(now - 100));
-    dmArrives(1);
-
-    expect(playMessageChime).not.toHaveBeenCalled();
-  });
-
-  it("stays quiet while a focused tab shows that room", () => {
-    localStorage.setItem(
-      "smartfire:message-chime:focused",
-      JSON.stringify({ tab: "another-tab", rooms: [DM] }),
-    );
-    dmArrives(1);
-
-    expect(playMessageChime).not.toHaveBeenCalled();
-  });
-
-  it("ignores a batch without the store as it was before it", () => {
-    emitSyncEvents([upserted(row(DM, { kind: "direct", notificationCount: 1 }), 1)], 0);
-
-    expect(playMessageChime).not.toHaveBeenCalled();
+    expect(survivor.played()).toBe(1);
   });
 });

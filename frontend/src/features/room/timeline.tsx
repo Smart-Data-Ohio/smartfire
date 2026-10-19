@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
-import { mentionsViewer } from "../../lib/mentions.ts";
 import { toMillis } from "../../lib/time.ts";
 import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
 import type { PendingMessage } from "../../store/model.ts";
@@ -69,6 +68,10 @@ function focusKey(focusMessageId: number | null, generation: number): string | n
 const NO_PENDING: readonly string[] = [];
 
 const LIST_STYLE = { display: "flex", flexDirection: "column" } as const;
+
+function mentionsViewer(bodyHtml: string, viewerId: number | null): boolean {
+  return viewerId !== null && bodyHtml.includes(`data-user-id="${viewerId}"`);
+}
 
 /** The label of the nearest day divider at or above `index`. */
 function dayAt(items: readonly TimelineItem[], index: number): string | null {

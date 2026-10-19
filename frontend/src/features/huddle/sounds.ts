@@ -145,10 +145,6 @@ export function playHandChime(): void {
 const CHIME_LATE_MS = 1000;
 
 export function playMessageChime(): void {
-  if (navigator.userActivation?.hasBeenActive === false) {
-    return;
-  }
-
   const audio = audioContext();
 
   if (audio === null) {

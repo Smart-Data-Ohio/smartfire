@@ -1,18 +1,16 @@
 import { Option, Schema } from "effect";
-import type { MessageDTO } from "../gen/MessageDTO.ts";
-import type { SidebarRow } from "../gen/SidebarRow.ts";
+import type { MessageNotified } from "../gen/MessageNotified.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { COARSE_QUERY } from "../lib/breakpoints.ts";
-import { mentionsViewer } from "../lib/mentions.ts";
-import { messageIgnored } from "../store/ignores.ts";
-import { roomMuted, roomNotificationLevel } from "../store/notification-preferences.ts";
-import { serverNow } from "../store/server-clock.ts";
-import type { State } from "../store/state.ts";
 import { store } from "../store/store.ts";
-import { chatSoundsMuted } from "./chat-sounds.ts";
 import { onSyncEvents } from "./signals.ts";
 
 export const THROTTLE_MS = 2000;
+
+/** How long another tab's focus record counts without a heartbeat, so a crashed tab's lapses. */
+export const FOCUS_TTL_MS = 10_000;
+
+const HEARTBEAT_MS = 3000;
 
 const LOCK = "smartfire:message-chime";
 
@@ -20,140 +18,34 @@ const LAST_KEY = "smartfire:message-chime:at";
 
 const FOCUS_KEY = "smartfire:message-chime:focused";
 
-function level(state: State, row: SidebarRow) {
-  return roomNotificationLevel(
-    state.sidebar.notificationPreferences,
-    row.room.id,
-    row.membership.involvement,
-  );
+/** `room:<id>` for a room's own timeline, `thread:<id>` for a thread: the sync topic names. */
+type Conversation = `room:${number}` | `thread:${number}`;
+
+function conversation(roomId: number, threadId: number | null): Conversation {
+  return threadId === null ? `room:${roomId}` : `thread:${threadId}`;
 }
 
-function pushCountRose(before: State, after: State, roomId: number): boolean {
-  const next = after.sidebar.rows[roomId];
-  const prev = before.sidebar.rows[roomId];
-
-  if (next === undefined) {
-    return false;
-  }
-
-  if (prev === undefined) {
-    return next.room.kind === "direct" && next.notificationCount > 0;
-  }
-
-  return (
-    next.notificationCount > prev.notificationCount &&
-    next.membership.lastReadMessageId === prev.membership.lastReadMessageId &&
-    level(before, prev) === level(after, next)
-  );
-}
-
-function serverWouldPush(after: State, message: MessageDTO, viewerId: number): boolean {
-  const row = after.sidebar.rows[message.roomId];
-
-  if (
-    row === undefined ||
-    message.threadId !== null ||
-    message.creatorId === viewerId ||
-    message.systemNote ||
-    messageIgnored(after.ignores, message)
-  ) {
-    return false;
-  }
-
-  const mentioned = mentionsViewer(message.bodyHtml, viewerId);
-
-  const repliesToViewer =
-    message.replyToMessageId !== null &&
-    after.messages[message.replyToMessageId]?.creatorId === viewerId;
-
-  switch (level(after, row)) {
-    case "everything":
-      return true;
-    case "mentions":
-      return mentioned || repliesToViewer;
-    case "muted":
-      return mentioned;
-    default:
-      return false;
-  }
-}
-
-export function notifyingRooms(
+function liveNotifications(
   events: readonly SyncEvent[],
   liveAfter: number,
-  before: State,
-  after: State,
-  unfocusedOnScreen: ReadonlySet<number>,
-): readonly number[] {
-  const viewerId = after.me?.user.id;
-
-  if (viewerId === undefined) {
-    return [];
-  }
-
-  const rooms = new Set<number>();
-
-  for (const event of events) {
-    if (event.seq <= liveAfter) {
-      continue;
-    }
-
-    if (event.type === "sidebar.row.upserted" && pushCountRose(before, after, event.data.room.id)) {
-      rooms.add(event.data.room.id);
-    }
-
-    if (
-      event.type === "message.created" &&
-      unfocusedOnScreen.has(event.data.roomId) &&
-      serverWouldPush(after, event.data, viewerId)
-    ) {
-      rooms.add(event.data.roomId);
-    }
-  }
-
-  return [...rooms];
-}
-
-export interface ChimeGates {
-  readonly messageSound: boolean;
-  readonly soundsMuted: boolean;
-  readonly desktop: boolean;
-}
-
-export function chimeAllowed(
-  state: State,
-  rooms: readonly number[],
-  gates: ChimeGates,
-  focusedRooms: ReadonlySet<number>,
-): boolean {
-  if (!gates.messageSound || gates.soundsMuted || !gates.desktop) {
-    return false;
-  }
-
-  const now = serverNow(state.sidebar.serverClock);
-
-  return rooms.some(
-    (roomId) =>
-      !focusedRooms.has(roomId) && !roomMuted(state.sidebar.notificationPreferences, roomId, now),
+): readonly MessageNotified[] {
+  return events.flatMap((event) =>
+    event.type === "message.notified" && event.seq > liveAfter ? [event.data] : [],
   );
 }
 
-export function chimeGates(state: State): ChimeGates {
-  return {
-    messageSound: state.sidebar.notificationPreferences?.messageSound ?? false,
-    soundsMuted:
-      state.me === null ||
-      chatSoundsMuted(state.me.chatSounds, new Date(serverNow(state.sidebar.serverClock))),
-    desktop: !window.matchMedia(COARSE_QUERY).matches,
-  };
-}
-
-const onScreen = new Map<number, number>();
+const onScreen = new Map<Conversation, number>();
 
 const tabId = crypto.randomUUID();
 
 const decodeFocus = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ tab: Schema.String, rooms: Schema.Array(Schema.Number) })),
+  Schema.fromJsonString(
+    Schema.Struct({
+      tab: Schema.String,
+      conversations: Schema.Array(Schema.String),
+      at: Schema.Number,
+    }),
+  ),
 );
 
 function tryRead(key: string): string | null {
@@ -188,31 +80,42 @@ function forgetFocus(): void {
   }
 }
 
-function shareFocusedRooms(): void {
+function shareFocus(): void {
   if (focused()) {
-    tryWrite(FOCUS_KEY, JSON.stringify({ tab: tabId, rooms: [...onScreen.keys()] }));
+    tryWrite(
+      FOCUS_KEY,
+      JSON.stringify({ tab: tabId, conversations: [...onScreen.keys()], at: Date.now() }),
+    );
   } else {
     forgetFocus();
   }
 }
 
-function focusedRooms(): ReadonlySet<number> {
+/** What the focused tab of any window shows. Only a focused, visible tab silences a chime. */
+function focusedConversations(): ReadonlySet<string> {
   if (focused()) {
     return new Set(onScreen.keys());
   }
 
-  return new Set(
-    Option.match(sharedFocus(), { onNone: () => [], onSome: (record) => record.rooms }),
+  return Option.match(
+    Option.filter(sharedFocus(), (record) => Date.now() - record.at < FOCUS_TTL_MS),
+    { onNone: () => new Set(), onSome: (record) => new Set(record.conversations) },
   );
+}
+
+/** Browsers play sound only on a page someone has interacted with. */
+function audible(): boolean {
+  return navigator.userActivation?.hasBeenActive !== false;
 }
 
 let lastLocal = 0;
 
-function claimThrottledChime(state: State, rooms: readonly number[], gates: ChimeGates): boolean {
+function claimThrottledChime(notified: readonly MessageNotified[]): boolean {
   const now = Date.now();
+  const silenced = focusedConversations();
 
   if (
-    !chimeAllowed(state, rooms, gates, focusedRooms()) ||
+    notified.every((each) => silenced.has(conversation(each.roomId, each.threadId))) ||
     now - Math.max(lastLocal, Number(tryRead(LAST_KEY) ?? 0)) < THROTTLE_MS
   ) {
     return false;
@@ -224,14 +127,9 @@ function claimThrottledChime(state: State, rooms: readonly number[], gates: Chim
   return true;
 }
 
-function claimAndPlay(
-  state: State,
-  rooms: readonly number[],
-  gates: ChimeGates,
-  play: () => void,
-): void {
+function claimAndPlay(notified: readonly MessageNotified[], play: () => void): void {
   const run = () => {
-    if (claimThrottledChime(state, rooms, gates)) {
+    if (claimThrottledChime(notified)) {
       play();
     }
   };
@@ -245,55 +143,65 @@ function claimAndPlay(
   void navigator.locks.request(LOCK, run).catch(() => undefined);
 }
 
+/**
+ * Plays `play` once for each live batch telling this person the server notified them of a new
+ * message, unless the setting is off, the device is touch-first, the conversation is on screen
+ * in a focused tab, or another tab played within {@link THROTTLE_MS}. A tab that can't sound
+ * yet never takes the turn, so a tab that can still plays.
+ */
 export function followMessageChimes(play: () => void): () => void {
-  const stopEvents = onSyncEvents((events, liveAfter, before) => {
-    if (before === undefined) {
+  const stopEvents = onSyncEvents((events, liveAfter) => {
+    const notified = liveNotifications(events, liveAfter);
+
+    if (
+      notified.length === 0 ||
+      store.getState().sidebar.notificationPreferences?.messageSound !== true ||
+      window.matchMedia(COARSE_QUERY).matches ||
+      !audible()
+    ) {
       return;
     }
 
-    const after = store.getState();
-
-    const unfocused =
-      document.visibilityState === "visible" && !document.hasFocus()
-        ? new Set(onScreen.keys())
-        : new Set<number>();
-
-    const rooms = notifyingRooms(events, liveAfter, before, after, unfocused);
-
-    if (rooms.length > 0) {
-      claimAndPlay(after, rooms, chimeGates(after), play);
-    }
+    claimAndPlay(notified, play);
   });
 
-  window.addEventListener("focus", shareFocusedRooms);
-  window.addEventListener("blur", shareFocusedRooms);
+  const heartbeat = window.setInterval(shareFocus, HEARTBEAT_MS);
+
+  window.addEventListener("focus", shareFocus);
+  window.addEventListener("blur", shareFocus);
   window.addEventListener("pagehide", forgetFocus);
-  document.addEventListener("visibilitychange", shareFocusedRooms);
-  shareFocusedRooms();
+  document.addEventListener("visibilitychange", shareFocus);
+  shareFocus();
 
   return () => {
     stopEvents();
-    window.removeEventListener("focus", shareFocusedRooms);
-    window.removeEventListener("blur", shareFocusedRooms);
+    window.clearInterval(heartbeat);
+    window.removeEventListener("focus", shareFocus);
+    window.removeEventListener("blur", shareFocus);
     window.removeEventListener("pagehide", forgetFocus);
-    document.removeEventListener("visibilitychange", shareFocusedRooms);
+    document.removeEventListener("visibilitychange", shareFocus);
   };
 }
 
-/** Marks `roomId` as on screen in this tab until the returned release. */
-export function holdChimeView(roomId: number): () => void {
-  onScreen.set(roomId, (onScreen.get(roomId) ?? 0) + 1);
-  shareFocusedRooms();
+/**
+ * Marks a conversation as on screen in this tab until the returned release: the room's own
+ * timeline, or `threadId`'s thread in it.
+ */
+export function holdChimeView(roomId: number, threadId: number | null = null): () => void {
+  const held = conversation(roomId, threadId);
+
+  onScreen.set(held, (onScreen.get(held) ?? 0) + 1);
+  shareFocus();
 
   return () => {
-    const held = (onScreen.get(roomId) ?? 1) - 1;
+    const count = (onScreen.get(held) ?? 1) - 1;
 
-    if (held === 0) {
-      onScreen.delete(roomId);
+    if (count === 0) {
+      onScreen.delete(held);
     } else {
-      onScreen.set(roomId, held);
+      onScreen.set(held, count);
     }
 
-    shareFocusedRooms();
+    shareFocus();
   };
 }
