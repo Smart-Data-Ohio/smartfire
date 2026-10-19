@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import { sidebarDirectLabel } from "../../mock/direct-label.ts";
 import type { ApiRequest } from "../api/client.ts";
 import {
   FakeApi,
@@ -33,14 +34,20 @@ describe("direct actions", () => {
 
       const fake = yield* FakeApi;
 
-      yield* fake.reply("POST /directs", sidebarRowFixture(30, "Ana", "direct", [5]));
+      yield* fake.reply("POST /directs", {
+        ...sidebarRowFixture(30, "Ana", "direct", [5]),
+        sidebarDisplayName: sidebarDirectLabel(null, ["Ana Lima"]),
+      });
 
       const row = yield* directs.create([5]);
       const requests = yield* fake.requests;
 
       expect(row.room.id).toBe(30);
       expect(requests.at(-1)?.body).toEqual({ userIds: [5] });
-      expect(store.getState().sidebar.rows[30]?.displayName).toBe("Ana");
+      expect(store.getState().sidebar.rows[30]).toMatchObject({
+        displayName: "Ana",
+        sidebarDisplayName: "Ana Lima",
+      });
       expect(store.getState().sidebar.order).toEqual([30, 1, 20]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
