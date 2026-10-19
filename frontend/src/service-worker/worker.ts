@@ -107,17 +107,9 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     (async () => {
       const data = event.data?.json();
-      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-
-      const focused = clients.some(
-        (client) =>
-          client.visibilityState === "visible" &&
-          client.focused &&
-          new URL(client.url).origin === self.location.origin,
-      );
 
       await Promise.all([
-        focused ? Promise.resolve() : self.registration.showNotification(data.title, data.options),
+        self.registration.showNotification(data.title, data.options),
         updateBadgeCount(data.options),
       ]);
     })(),
