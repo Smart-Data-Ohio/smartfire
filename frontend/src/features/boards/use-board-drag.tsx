@@ -50,7 +50,7 @@ interface Arrival {
   readonly threadId: number;
   readonly status: WorkStatus;
   readonly from: DOMRect;
-  readonly ghost: HTMLElement | null;
+  ghost: HTMLElement | null;
   readonly focus: boolean;
 }
 
@@ -214,6 +214,10 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
   const stopPointer = useRef<(() => void) | null>(null);
   const arrival = useRef<Arrival | null>(null);
 
+  const heldMovable = useStore(
+    (state) => drag !== null && canMoveWork(state, roomId, drag.threadId),
+  );
+
   const index = useStore((state) =>
     drag?.phase === "lifted"
       ? (landingFor(state, roomId, drag.threadId, drag.over)?.index ?? -1)
@@ -241,17 +245,19 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       return;
     }
 
-    arrival.current = null;
-
     const item = boardRef.current?.querySelector<HTMLElement>(
       `.board-column[data-status="${pending.status}"] [data-flip="${pending.threadId}"]`,
     );
 
     if (item == null) {
       pending.ghost?.remove();
-    } else {
-      settle(item, pending);
+      pending.ghost = null;
+
+      return;
     }
+
+    arrival.current = null;
+    settle(item, pending);
   });
 
   const slotAt = landing === null ? "" : `${landing.status}:${landing.index}`;
@@ -292,18 +298,27 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
     const title = titleOf(threadId);
 
-    arrival.current = {
+    const pending: Arrival = {
       threadId,
       status: to,
       from: (ghost ?? item).getBoundingClientRect(),
       ghost,
       focus: ghost === null,
     };
+
+    arrival.current = pending;
     update(null);
     announce(`Moved ${title} to ${WORK_STATUS_LABEL[to]}.`);
-    actions.work.setStatus(threadId, to).catch((error: Error) => {
-      toast({ title: `Couldn't move ${title}`, description: error.message, tone: "danger" });
-    });
+    actions.work
+      .setStatus(threadId, to)
+      .catch((error: Error) => {
+        toast({ title: `Couldn't move ${title}`, description: error.message, tone: "danger" });
+      })
+      .finally(() => {
+        if (arrival.current === pending) {
+          arrival.current = null;
+        }
+      });
 
     return true;
   };
@@ -354,6 +369,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
     let grab = { x: 0, y: 0 };
     let ghost: HTMLElement | null = null;
     let frame = 0;
+    let cancelled = false;
 
     const place = () => {
       if (ghost !== null) {
@@ -453,6 +469,10 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
       swallowNextClick();
 
+      if (cancelled) {
+        return;
+      }
+
       const current = latest.current;
       const over = current?.phase === "lifted" ? current.over : null;
 
@@ -464,17 +484,22 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
     const cancel = () => {
       stop();
 
-      if (ghost !== null) {
+      if (ghost !== null && !cancelled) {
         sendBack(threadId, ghost);
       }
     };
 
     const onEscape = (pressed: globalThis.KeyboardEvent) => {
-      if (pressed.key === "Escape" && ghost !== null) {
-        pressed.preventDefault();
-        pressed.stopPropagation();
-        cancel();
+      if (pressed.key !== "Escape" || ghost === null || cancelled) {
+        return;
       }
+
+      pressed.preventDefault();
+      pressed.stopPropagation();
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", move);
+      sendBack(threadId, ghost);
     };
 
     stopPointer.current = () => {
@@ -557,6 +582,12 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       return;
     }
 
+    if (current.threadId !== threadId) {
+      putBack(current.threadId);
+
+      return;
+    }
+
     const over = current.over ?? statusOf(threadId) ?? "planned";
 
     switch (event.key) {
@@ -593,6 +624,22 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
         break;
     }
   };
+
+  useLayoutEffect(() => {
+    const current = latest.current;
+
+    if (current?.phase !== "lifted" || current.mode !== "keyboard") {
+      return;
+    }
+
+    const link = cardItem(current.threadId)?.querySelector<HTMLElement>("a");
+
+    if (link == null || !heldMovable) {
+      putBack(current.threadId);
+    } else if (document.activeElement !== link) {
+      link.focus({ preventScroll: true });
+    }
+  });
 
   const onBlur = () => {
     const current = latest.current;

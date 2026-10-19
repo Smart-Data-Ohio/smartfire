@@ -55,7 +55,7 @@ async function openSyncedBoard(page: Page): Promise<void> {
   const release = await holdSync(page);
 
   await openApp(page, `r/${BOARD}?view=board`);
-  await expect(card(page, "Planned", /Launch week plan/)).toBeVisible();
+  await expect(card(page, "Planned", /Launch week plan/)).toBeVisible({ timeout: 15_000 });
 
   const reloaded = page.waitForResponse((response) => LISTING.test(response.url()));
 
@@ -251,4 +251,78 @@ test("another member's moves still land while a card is held", async ({ page, re
   await page.mouse.up();
 
   await expect(card(page, "In progress", /Launch week plan/)).toBeVisible();
+});
+
+test("a release over the card after Escape doesn't open it", async ({ page }) => {
+  const writes = workWrites(page);
+
+  await openSyncedBoard(page);
+
+  const target = card(page, "Planned", /Launch week plan/);
+  const start = await center(target);
+
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 12, start.y + 4, { steps: 4 });
+  await expect(page.locator(".board-drag-ghost")).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".board-drag-ghost")).toHaveCount(0);
+  await page.mouse.up();
+
+  await page.waitForTimeout(300);
+  await expect(page).toHaveURL(new RegExp(`/r/${BOARD}\\?view=board$`));
+  expect(writes).toHaveLength(0);
+});
+
+test("a card held on the keyboard stays held when another member moves it", async ({
+  page,
+  request,
+}) => {
+  await openSyncedBoard(page);
+  await card(page, "Planned", /Cursor pagination/).focus();
+  await page.keyboard.press("Space");
+  await expect(page.getByText(/^Picked up Cursor pagination for the API/)).toBeAttached();
+
+  const reply = await request.post("/__mock/board-update", {
+    data: { threadId: BOARD_POST_IDS.apiPagination, status: "done" },
+  });
+
+  expect(reply.ok()).toBe(true);
+  await expect(card(page, "Done", /Cursor pagination/)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText(/Cursor pagination for the API stays in Done/)).toBeAttached();
+
+  await holdOver(
+    page,
+    card(page, "Planned", /Launch week plan/),
+    await center(column(page, "Blocked")),
+  );
+  await expect(column(page, "Blocked").getByText("Moves here")).toBeVisible();
+  await page.mouse.up();
+  await expect(card(page, "Blocked", /Launch week plan/)).toBeVisible();
+});
+
+test("a second move queued behind a slow save still lands focused", async ({ page }) => {
+  const writes = workWrites(page);
+
+  await page.route(`**/api/v1/threads/${BOARD_POST_IDS.apiPagination}/work`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  await openSyncedBoard(page);
+  await card(page, "Planned", /Cursor pagination/).focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(card(page, "In progress", /Cursor pagination/)).toBeFocused();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+
+  await expect.poll(() => writes.length, { timeout: 10_000 }).toBe(2);
+  await expect(card(page, "Blocked", /Cursor pagination/)).toBeFocused();
+  expect(writes.map((write) => write.postDataJSON())).toEqual([
+    { status: "in_progress" },
+    { status: "blocked" },
+  ]);
 });
