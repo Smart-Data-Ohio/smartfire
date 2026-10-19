@@ -71,6 +71,7 @@ function ImageFrame({
 }) {
   const [loaded, setLoaded] = useState(false);
   const fitted = tile ? null : fitWithin(attachment.width, attachment.height, MEDIA_MAX);
+
   const box =
     fitted === null
       ? null

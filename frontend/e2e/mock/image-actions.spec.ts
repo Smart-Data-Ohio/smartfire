@@ -253,6 +253,7 @@ test("a gallery tile revealed under the message bar keeps its download clear of 
   const row = page
     .getByRole("log", { name: "Messages" })
     .locator("[data-message-id]", { has: page.getByRole("button", { name: "Open left.png" }) });
+
   const cover = row.getByRole("button", { name: "Spoiler, activate to reveal" });
 
   await expect(row.locator(".attachment-image[data-loaded]")).toHaveCount(2);
