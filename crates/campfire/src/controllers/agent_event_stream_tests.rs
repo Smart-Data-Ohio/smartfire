@@ -180,7 +180,9 @@ async fn agent_sse_expired_health_closes_before_monitor_is_scheduled() {
     assert!(frame(&mut body).await.unwrap().contains("retry: "));
     std::thread::sleep(Duration::from_millis(250));
     assert!(
-        body.frame().now_or_never().is_some_and(|next| next.is_none()),
+        body.frame()
+            .now_or_never()
+            .is_some_and(|next| next.is_none()),
         "expired authorization must close even before the monitor can run"
     );
 }

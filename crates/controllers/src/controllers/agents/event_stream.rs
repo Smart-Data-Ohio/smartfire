@@ -39,7 +39,7 @@ pub async fn event_stream(c: &mut Ctx) -> Result {
         .map_or(started + timing.lifetime, |front| {
             front.min(started + timing.lifetime)
         });
-    let (stopped, receiver) = watch::channel(false);
+    let (health, receiver) = watch::channel(Some(Instant::now() + timing.recheck));
     let secret = concerns::agent_bearer_secret(c.request.header("authorization"))
         .expect("authenticated Bearer credential")
         .to_owned();
@@ -50,7 +50,7 @@ pub async fn event_stream(c: &mut Ctx) -> Result {
         secret,
         timing,
         deadline,
-        stopped,
+        health,
     ));
     let state = EventStream {
         polling,
@@ -62,7 +62,7 @@ pub async fn event_stream(c: &mut Ctx) -> Result {
         next_poll: started,
         next_ping: started + timing.keepalive,
         initial: true,
-        stopped: receiver,
+        health: receiver,
         monitor,
         _permit: permit,
         pending: None,
@@ -96,20 +96,31 @@ struct EventStream {
     next_poll: Instant,
     next_ping: Instant,
     initial: bool,
-    stopped: watch::Receiver<bool>,
+    health: watch::Receiver<Option<Instant>>,
     monitor: JoinHandle<()>,
     _permit: Permit,
     pending: Option<futures_util::future::BoxFuture<'static, Result<Value>>>,
 }
 
 impl EventStream {
+    fn expires_at(&self) -> Instant {
+        self.health
+            .borrow()
+            .unwrap_or_else(Instant::now)
+            .min(self.deadline)
+    }
+
     async fn next(&mut self) -> Result<Option<Bytes>> {
+        if Instant::now() >= self.expires_at() {
+            return Ok(None);
+        }
         if self.initial {
             self.initial = false;
             return Ok(Some(Bytes::from_static(b"retry: 1000\n\n")));
         }
         loop {
-            if *self.stopped.borrow() || Instant::now() >= self.deadline {
+            let expires_at = self.expires_at();
+            if Instant::now() >= expires_at {
                 return Ok(None);
             }
             if self.pending.is_none() {
@@ -127,8 +138,11 @@ impl EventStream {
             }
             tokio::select! {
                 biased;
-                _ = self.stopped.changed() => return Ok(None),
-                _ = sleep_until(self.deadline) => return Ok(None),
+                changed = self.health.changed() => {
+                    if changed.is_err() { return Ok(None); }
+                    continue;
+                },
+                _ = sleep_until(expires_at) => return Ok(None),
                 _ = sleep_until(self.next_ping) => {
                     self.next_ping = Instant::now() + self.timing.keepalive;
                     return Ok(Some(Bytes::from_static(b": ping\n\n")));
@@ -142,7 +156,7 @@ impl EventStream {
                         Instant::now() + self.timing.recheck
                     } else { Instant::now() };
                     self.cursor = next;
-                    if *self.stopped.borrow() { return Ok(None); }
+                    if Instant::now() >= self.expires_at() { return Ok(None); }
                     let mut bytes = String::new();
                     for event in page["events"].as_array().ok_or_else(invalid_page)? {
                         use std::fmt::Write;
@@ -150,7 +164,7 @@ impl EventStream {
                         let kind = event["event_type"].as_str().ok_or_else(invalid_page)?;
                         write!(bytes, "id: {id}\nevent: {kind}\ndata: {event}\n\n").unwrap();
                     }
-                    if *self.stopped.borrow() || Instant::now() >= self.deadline { return Ok(None); }
+                    if Instant::now() >= self.expires_at() { return Ok(None); }
                     if !bytes.is_empty() { return Ok(Some(Bytes::from(bytes))); }
                 }
             }
@@ -170,14 +184,14 @@ async fn monitor(
     secret: String,
     timing: Timing,
     deadline: Instant,
-    stopped: watch::Sender<bool>,
+    health: watch::Sender<Option<Instant>>,
 ) {
-    let mut fresh_until = Instant::now() + timing.recheck;
+    let mut fresh_until = health.borrow().unwrap_or_else(Instant::now);
     let mut next_check = Instant::now();
     loop {
         tokio::select! {
             biased;
-            _ = stopped.closed() => return,
+            _ = health.closed() => return,
             _ = sleep_until(deadline.min(fresh_until)) => {
                 tracing::debug!(lifetime = Instant::now() >= deadline, "Agent event stream health deadline expired");
                 break;
@@ -203,7 +217,7 @@ async fn monitor(
         });
         let allowed = tokio::select! {
             biased;
-            _ = stopped.closed() => return,
+            _ = health.closed() => return,
             _ = sleep_until(deadline.min(fresh_until)) => {
                 tracing::debug!(lifetime = Instant::now() >= deadline, "Agent event stream health deadline expired during database check");
                 break;
@@ -214,6 +228,7 @@ async fn monitor(
             Ok((true, checked_at)) => {
                 fresh_until = checked_at + timing.recheck;
                 next_check = checked_at + timing.recheck / 2;
+                health.send_replace(Some(fresh_until));
             }
             Ok((false, _)) => {
                 tracing::debug!("Agent event stream is no longer authorized");
@@ -225,5 +240,5 @@ async fn monitor(
             }
         }
     }
-    stopped.send_replace(true);
+    health.send_replace(None);
 }
