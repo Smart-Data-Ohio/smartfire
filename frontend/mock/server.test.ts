@@ -350,13 +350,22 @@ describe("live messages from others", () => {
     const events = collect(server);
     const message: MessageDTO = server.post(rooms.engineering, SEED_IDS.users.jonah, "ping @Riel");
 
-    expect(events.map((event) => event.type)).toEqual(["room.unread", "sidebar.row.upserted"]);
+    expect(events.map((event) => event.type)).toEqual([
+      "room.unread",
+      "sidebar.row.upserted",
+      "message.notified",
+    ]);
     expect(events[0]?.data).toEqual({
       roomId: rooms.engineering,
       messageId: message.id,
       mentioned: true,
     });
     expect(events[1]?.data).toMatchObject({ unreadCount: 1, mentionCount: 1 });
+    expect(events[2]?.data).toEqual({
+      messageId: message.id,
+      roomId: rooms.engineering,
+      threadId: null,
+    });
   });
 
   it("leave a room the viewer is looking at read", () => {

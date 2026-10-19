@@ -130,13 +130,22 @@ describe("replying", () => {
     const events = collect(server);
 
     await send(server, "POST", `/api/v1/threads/${threads.generalActive}/read`);
-    server.threadPost(threads.generalActive, users.priya, "Numbers are back up");
+    const reply = server.threadPost(threads.generalActive, users.priya, "Numbers are back up");
 
-    expect(events.map((event) => event.type)).toEqual(["thread.read", "thread.unread"]);
+    expect(events.map((event) => event.type)).toEqual([
+      "thread.read",
+      "thread.unread",
+      "message.notified",
+    ]);
     expect(events[1]?.data).toEqual({
       threadId: threads.generalActive,
       roomId: rooms.general,
       refreshOnly: false,
+    });
+    expect(events[2]?.data).toEqual({
+      messageId: reply.id,
+      roomId: rooms.general,
+      threadId: threads.generalActive,
     });
 
     const detail = await get<ThreadDetail>(server, `/api/v1/threads/${threads.generalActive}`);

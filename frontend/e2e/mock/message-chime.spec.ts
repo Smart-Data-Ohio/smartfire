@@ -1,4 +1,5 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
+import { THREAD_IDS } from "../../mock/s2/seed.ts";
 import { B5_HZ } from "../../src/features/huddle/chime.ts";
 import { expect, openApp, postMessage, ROOM_IDS, syncWelcomed, test } from "./support.ts";
 
@@ -12,9 +13,9 @@ declare global {
   }
 }
 
-async function spyOnChimes(page: Page, { focused = true } = {}): Promise<void> {
+async function spyOnChimes(page: Page, { focused = true, gestured = true } = {}): Promise<void> {
   await page.addInitScript(
-    ({ windowFocused, note }) => {
+    ({ windowFocused, pageGestured, note }) => {
       const start = OscillatorNode.prototype.start;
 
       window.chimes = 0;
@@ -29,19 +30,36 @@ async function spyOnChimes(page: Page, { focused = true } = {}): Promise<void> {
       if (!windowFocused) {
         Document.prototype.hasFocus = () => false;
       }
+
+      if (!pageGestured) {
+        Object.defineProperty(navigator, "userActivation", {
+          value: { hasBeenActive: false, isActive: false },
+        });
+      }
     },
-    { windowFocused: focused, note: B5_HZ },
+    { windowFocused: focused, pageGestured: gestured, note: B5_HZ },
   );
 }
 
-async function open(page: Page, path: string): Promise<void> {
+const activated = (page: Page) => page.evaluate(() => navigator.userActivation.hasBeenActive);
+
+async function open(page: Page, path: string, { gestured = true } = {}): Promise<void> {
   const welcomed = syncWelcomed(page);
 
   await openApp(page, path);
   await welcomed;
   // Browsers allow sound only after a gesture on the page.
   await page.keyboard.press("Shift");
-  await expect.poll(() => page.evaluate(() => navigator.userActivation.hasBeenActive)).toBe(true);
+  await expect.poll(() => activated(page)).toBe(gestured);
+}
+
+async function replyInThread(request: APIRequestContext, markdown: string): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  await request.post("/__mock/thread-post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { threadId: THREAD_IDS.generalActive, userId: MAYA, markdown },
+  });
 }
 
 const chimes = (page: Page) => page.evaluate(() => window.chimes);
@@ -98,4 +116,44 @@ test("two open tabs chime once between them", async ({ context, page, request })
   await expect.poll(async () => (await chimes(page)) + (await chimes(second))).toBe(1);
   await page.waitForTimeout(1000);
   expect((await chimes(page)) + (await chimes(second))).toBe(1);
+});
+
+test("a tab that can't play yet leaves the chime to one that can", async ({
+  context,
+  page,
+  request,
+}) => {
+  const silent = await context.newPage();
+
+  await spyOnChimes(page);
+  await spyOnChimes(silent, { gestured: false });
+  await open(silent, `r/${ROOM_IDS.general}`, { gestured: false });
+  await open(page, `r/${ROOM_IDS.general}`);
+
+  for (const [index, markdown] of ["First", "Second", "Third"].entries()) {
+    await postMessage(request, { roomId: ROOM_IDS.dmMaya, userId: MAYA, markdown });
+    await expect.poll(() => chimes(page)).toBe(index + 1);
+    await page.waitForTimeout(2100);
+  }
+
+  expect(await chimes(silent)).toBe(0);
+});
+
+test("a reply in a followed thread chimes while you read its room", async ({ page, request }) => {
+  await spyOnChimes(page);
+  await open(page, `r/${ROOM_IDS.general}`);
+
+  await replyInThread(request, "Over in the thread");
+
+  await expect.poll(() => chimes(page)).toBe(1);
+});
+
+test("a reply in the thread pane you're reading doesn't chime", async ({ page, request }) => {
+  await spyOnChimes(page);
+  await open(page, `r/${ROOM_IDS.general}/t/${THREAD_IDS.generalActive}`);
+
+  await replyInThread(request, "Right here in the pane");
+  await expect(page.getByText("Right here in the pane")).toBeVisible();
+  await page.waitForTimeout(1000);
+  expect(await chimes(page)).toBe(0);
 });

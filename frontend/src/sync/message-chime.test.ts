@@ -211,6 +211,7 @@ describe("followMessageChimes plays when the server notified this person", () =>
   it("stays quiet when an unread message is edited to mention this person", async () => {
     const mentions = { involvement: "mentions" } as const;
     const tab = await openTab(stateWith([row(GENERAL, mentions)]));
+
     const edited = fromMaya(200, GENERAL, {
       bodyHtml: `<p><span data-user-id="${meFixture.user.id}">@Ada</span></p>`,
     });
@@ -225,6 +226,7 @@ describe("followMessageChimes plays when the server notified this person", () =>
   it("stays quiet for a user id inside a code block in a mentions-only room on screen", async () => {
     const mentions = row(GENERAL, { involvement: "mentions" });
     const tab = await openTab(stateWith([mentions]));
+
     const code = fromMaya(200, GENERAL, {
       bodyHtml: `<pre><code>data-user-id="${meFixture.user.id}"</code></pre>`,
     });
