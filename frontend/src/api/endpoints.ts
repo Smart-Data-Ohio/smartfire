@@ -71,16 +71,28 @@ export const joinOpenRoom = Effect.fn("api.joinOpenRoom")(function* (roomId: num
   );
 });
 
+export interface ChannelFilter {
+  readonly joinableOnly: boolean;
+  readonly limit: number;
+}
+
 /** `GET /rooms/browse`: a page of the open rooms, filtered by `query` when it isn't blank. */
 export const browseChannels = Effect.fn("api.browseChannels")(function* (
   query: string,
   cursor: string | null,
+  filter: ChannelFilter,
 ) {
   const params: Record<string, string> = {};
 
   if (query !== "") {
     params.q = query;
   }
+
+  if (filter.joinableOnly) {
+    params.joinable = "1";
+  }
+
+  params.limit = String(filter.limit);
 
   if (cursor !== null) {
     params.cursor = cursor;

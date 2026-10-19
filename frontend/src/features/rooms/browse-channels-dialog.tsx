@@ -88,6 +88,38 @@ function ChannelRow({ channel, query, joined, now, onOpen, onJoin, onKeyDown }: 
   );
 }
 
+function NextPage({ loading, onVisible }: { loading: boolean; onVisible: () => void }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const reached = useEffectEvent(onVisible);
+
+  useEffect(() => {
+    const node = ref.current;
+
+    if (node === null || !("IntersectionObserver" in window)) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          reached();
+        }
+      },
+      { root: node.closest(".browse-results"), rootMargin: "0px 0px 240px 0px" },
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="browse-end">
+      {loading ? <Spinner label="Loading more channels" /> : null}
+    </div>
+  );
+}
+
 /**
  * Browse channels: every open room, searched by name or topic, with Join beside each one you
  * aren't in (a hidden one counts as left). Joining shows Joined at once and adds the sidebar row
@@ -103,7 +135,6 @@ export default function BrowseChannelsDialog({ open, onOpenChange }: BrowseChann
   const canCreateRooms = useStore((state) => state.sidebar.canCreateRooms);
   const now = useNow();
   const listRef = useRef<HTMLUListElement | null>(null);
-  const endRef = useRef<HTMLDivElement | null>(null);
 
   if (open !== wasOpen) {
     setWasOpen(open);
@@ -115,29 +146,6 @@ export default function BrowseChannelsDialog({ open, onOpenChange }: BrowseChann
 
   const trimmed = query.trim();
   const searching = directory.status === "loading" || directory.query !== trimmed;
-  const onVisible = useEffectEvent(() => directory.loadMore());
-  const armed = directory.nextCursor !== null;
-
-  useEffect(() => {
-    const node = endRef.current;
-
-    if (node === null || !armed || !("IntersectionObserver" in window)) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          onVisible();
-        }
-      },
-      { root: node.closest(".browse-results"), rootMargin: "0px 0px 240px 0px" },
-    );
-
-    observer.observe(node);
-
-    return () => observer.disconnect();
-  }, [armed]);
 
   const openChannel = (channel: DirectoryChannel) => {
     void navigate({ to: "/r/$roomId", params: { roomId: channel.roomId } });
@@ -194,9 +202,14 @@ export default function BrowseChannelsDialog({ open, onOpenChange }: BrowseChann
               />
             ))}
           </ul>
-          <div ref={endRef} className="browse-end">
-            {directory.loadingMore ? <Spinner label="Loading more channels" /> : null}
-          </div>
+          {directory.loadMore === null || directory.nextCursor === null ? null : (
+            // A new observer reports at once, so a page that leaves this in view loads the next.
+            <NextPage
+              key={directory.nextCursor}
+              loading={directory.loadingMore}
+              onVisible={directory.loadMore}
+            />
+          )}
           {directory.status === "failed" ? (
             <div className="browse-empty" role="status">
               <span className="browse-empty-title">Couldn't load channels</span>

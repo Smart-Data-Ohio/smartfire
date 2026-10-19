@@ -24,6 +24,7 @@ import {
   joinableSection,
   localItems,
   mergeItems,
+  PER_JOIN_SECTION,
   rankItems,
   readsUnread,
   remoteItems,
@@ -126,6 +127,8 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
   );
 }
 
+const JOINABLE = { joinableOnly: true, limit: PER_JOIN_SECTION } as const;
+
 /**
  * The quick switcher (⌘K): type to jump to any room, person or recent thread. The sidebar's
  * rooms answer the first keystroke; the server's catalogue joins as soon as it arrives. With no
@@ -166,14 +169,12 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
   );
 
   const trimmed = query.trim();
-  const directory = useChannelDirectory(open && trimmed !== "", trimmed);
+  const directory = useChannelDirectory(open && trimmed !== "", trimmed, JOINABLE);
   const needle = normalizeQuery(trimmed);
 
   // The last answer stands in while the next is on its way, for as long as its names still match.
   const joinable = directory.channels.flatMap((channel) =>
-    channel.joined ||
-    trimmed === "" ||
-    (directory.query !== trimmed && matchScore(channel.name, needle) === null)
+    trimmed === "" || (directory.query !== trimmed && matchScore(channel.name, needle) === null)
       ? []
       : [
           {

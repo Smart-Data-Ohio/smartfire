@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DirectoryChannel } from "../../gen/DirectoryChannel.ts";
 import { useStore } from "../../store/store.ts";
-import { actions } from "../../sync/runtime.ts";
+import { actions, type ChannelFilter } from "../../sync/runtime.ts";
 import { toast } from "../../ui/toast-store.ts";
 
 /** How long typing has to pause before the directory asks the server. */
@@ -17,6 +17,8 @@ export interface ChannelDirectoryState {
   readonly loadingMore: boolean;
 }
 
+const EVERY_CHANNEL: ChannelFilter = { joinableOnly: false, limit: 50 };
+
 const LOADING: ChannelDirectoryState = {
   query: "",
   channels: [],
@@ -27,12 +29,14 @@ const LOADING: ChannelDirectoryState = {
 
 /**
  * `GET /rooms/browse` for `query` while `active`, a short pause after the last keystroke. An
- * answer to an older query never lands over a newer one. `loadMore` appends the next page.
+ * answer to an older query never lands over a newer one. `loadMore` appends the next page, and is
+ * null while the channels shown answer an older query.
  */
 export function useChannelDirectory(
   active: boolean,
   query: string,
-): ChannelDirectoryState & { readonly loadMore: () => void } {
+  { joinableOnly, limit }: ChannelFilter = EVERY_CHANNEL,
+): ChannelDirectoryState & { readonly loadMore: (() => void) | null } {
   const [state, setState] = useState<ChannelDirectoryState>(LOADING);
   const latest = useRef(0);
   const needle = query.trim();
@@ -46,7 +50,7 @@ export function useChannelDirectory(
 
     const timer = window.setTimeout(
       () => {
-        actions.browseChannels(needle, null).then(
+        actions.browseChannels(needle, null, { joinableOnly, limit }).then(
           (page) => {
             if (latest.current === request) {
               setState({
@@ -69,10 +73,10 @@ export function useChannelDirectory(
     );
 
     return () => window.clearTimeout(timer);
-  }, [active, needle]);
+  }, [active, needle, joinableOnly, limit]);
 
   const loadMore = () => {
-    const { nextCursor, loadingMore, status } = state;
+    const { query: shown, nextCursor, loadingMore, status } = state;
 
     if (nextCursor === null || loadingMore || status !== "ready") {
       return;
@@ -80,32 +84,31 @@ export function useChannelDirectory(
 
     const request = latest.current;
 
+    const settle = (next: (held: ChannelDirectoryState) => ChannelDirectoryState) => {
+      if (latest.current === request) {
+        setState((held) => (held.query === shown ? next(held) : held));
+      }
+    };
+
     setState((held) => ({ ...held, loadingMore: true }));
-    actions.browseChannels(state.query, nextCursor).then(
-      (page) => {
-        if (latest.current === request) {
-          setState((held) => ({
-            ...held,
-            channels: [
-              ...held.channels,
-              ...page.channels.filter(
-                (channel) => !held.channels.some((shown) => shown.roomId === channel.roomId),
-              ),
-            ],
-            nextCursor: page.nextCursor,
-            loadingMore: false,
-          }));
-        }
-      },
-      () => {
-        if (latest.current === request) {
-          setState((held) => ({ ...held, loadingMore: false }));
-        }
-      },
+    actions.browseChannels(shown, nextCursor, { joinableOnly, limit }).then(
+      (page) =>
+        settle((held) => ({
+          ...held,
+          channels: [
+            ...held.channels,
+            ...page.channels.filter(
+              (channel) => !held.channels.some((listed) => listed.roomId === channel.roomId),
+            ),
+          ],
+          nextCursor: page.nextCursor,
+          loadingMore: false,
+        })),
+      () => settle((held) => ({ ...held, loadingMore: false })),
     );
   };
 
-  return { ...state, loadMore };
+  return { ...state, loadMore: state.query === needle ? loadMore : null };
 }
 
 /**

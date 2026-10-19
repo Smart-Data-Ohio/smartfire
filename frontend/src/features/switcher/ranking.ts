@@ -428,18 +428,22 @@ export interface JoinableChannel {
   readonly detail: string;
 }
 
-const PER_JOIN_SECTION = 5;
+export const PER_JOIN_SECTION = 5;
 
 /**
  * The channels you can join, after the member results and in the server's order (best match
- * first). One the switcher already reaches (it's in your sidebar) is left out, so a channel you
- * just joined moves up into Channels.
+ * first). A room the switcher already lists is left out, so a channel you just joined moves up
+ * into Channels.
  */
 export function joinableSection(
   channels: readonly JoinableChannel[],
   reachable: readonly SwitcherItem[],
 ): SwitcherSection[] {
-  const reached = new Set(reachable.flatMap((item) => (item.roomId === null ? [] : [item.roomId])));
+  const reached = new Set(
+    reachable.flatMap((item) =>
+      item.kind === "room" && item.roomId !== null ? [item.roomId] : [],
+    ),
+  );
 
   const items = channels
     .filter((channel) => !reached.has(channel.roomId))

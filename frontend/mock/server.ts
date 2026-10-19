@@ -8,6 +8,7 @@
  * reached through `dispatch` when no S1 route matches.
  */
 
+import type { ChannelDirectory } from "../src/gen/ChannelDirectory.ts";
 import type { DirectoryChannel } from "../src/gen/DirectoryChannel.ts";
 import type { Me } from "../src/gen/Me.ts";
 import type { MessageDTO } from "../src/gen/MessageDTO.ts";
@@ -734,9 +735,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   /**
    * `GET /rooms/browse`: the alive open rooms, the catalog room included until it is joined, as
    * the server ranks them (exact name, prefix, anywhere in the name, then topic; newest first
-   * within each). The mock's handful fits one page.
+   * within each).
    */
-  const browseChannels = (q: string): DirectoryChannel[] => {
+  const browseChannels = (
+    q: string,
+    cursor: string | null,
+    limit: number,
+    joinableOnly: boolean,
+  ): ChannelDirectory => {
     const needle = q.trim().toLowerCase();
 
     const channels = [...world.rooms.values()].flatMap((record): DirectoryChannel[] => {
@@ -778,19 +784,72 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       return (channel.topic ?? "").toLowerCase().includes(needle) ? 3 : null;
     };
 
-    return channels
+    const ranked = channels
       .flatMap((channel) => {
         const score = rank(channel);
 
-        return score === null ? [] : [{ channel, score }];
+        return score === null || (joinableOnly && channel.joined) ? [] : [{ channel, score }];
       })
       .sort(
         (left, right) =>
           left.score - right.score ||
           right.channel.lastActiveAt.localeCompare(left.channel.lastActiveAt) ||
           right.channel.roomId - left.channel.roomId,
-      )
-      .map(({ channel }) => channel);
+      );
+
+    const start =
+      cursor === null
+        ? 0
+        : ranked.findIndex(({ channel }) => String(channel.roomId) === cursor) + 1;
+
+    if (start === 0 && cursor !== null) throw validation("cursor", "is invalid");
+
+    const page = ranked.slice(start, start + limit);
+    const last = page.at(-1);
+
+    return {
+      channels: page.map(({ channel }) => channel),
+      nextCursor:
+        last !== undefined && start + limit < ranked.length ? String(last.channel.roomId) : null,
+    };
+  };
+
+  const seedOpenChannels = (count: number, prefix: string, hidden: boolean) => {
+    const at = timestamp(now());
+
+    for (let index = 1; index <= count; index += 1) {
+      const id = world.nextRoomId++;
+
+      world.rooms.set(id, {
+        room: {
+          id,
+          kind: "open",
+          name: `${prefix}-${index}`,
+          iconName: null,
+          creatorId: USER_IDS.maya,
+          createdAt: at,
+          updatedAt: at,
+          topic: null,
+          voiceBitrate: null,
+          voiceUserLimit: null,
+          announcement: false,
+        },
+        memberIds: [USER_IDS.maya, VIEWER_ID],
+        membership: {
+          id: world.nextMembershipId++,
+          roomId: id,
+          userId: VIEWER_ID,
+          involvement: hidden ? "invisible" : "mentions",
+          unreadAt: null,
+          lastReadMessageId: null,
+          roomCategoryId: null,
+          favoritePosition: null,
+          stageRole: null,
+        },
+        messages: [],
+        mentionCount: 0,
+      });
+    }
   };
 
   const publishJoined = (record: RoomRecord) => {
@@ -1432,9 +1491,19 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     }
 
     if (method === "GET" && path === "/rooms/browse") {
+      const limit = Number(query.get("limit") ?? 50);
+
+      if (!Number.isInteger(limit) || limit < 1 || limit > 50)
+        throw validation("limit", "is invalid");
+
       return {
         status: 200,
-        json: { channels: browseChannels(query.get("q") ?? ""), nextCursor: null },
+        json: browseChannels(
+          query.get("q") ?? "",
+          query.get("cursor"),
+          limit,
+          query.get("joinable") === "1",
+        ),
       };
     }
 
@@ -1556,6 +1625,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       case "hold-sends":
         holdSends(flag("on", true));
+
+        return ok;
+      case "open-channels":
+        seedOpenChannels(int("count"), text("prefix"), flag("hidden", false));
 
         return ok;
       case "hold-join":

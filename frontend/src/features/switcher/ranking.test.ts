@@ -396,4 +396,16 @@ describe("joinableSection", () => {
     expect(joinableSection(many, [])[0]?.items).toHaveLength(5);
     expect(joinableSection([channel(1, "general")], localItems(SIDEBAR, VIEWER))).toEqual([]);
   });
+
+  it("keeps a hidden channel whose recent thread the catalogue still lists", () => {
+    const threads = remoteItems({
+      rooms: [],
+      people: [],
+      threads: [{ threadId: 5, name: "Offsite plan", roomId: 90, roomName: "campfire" }],
+    });
+
+    expect(
+      joinableSection([channel(90, "campfire")], threads)[0]?.items.map((item) => item.key),
+    ).toEqual(["join:90"]);
+  });
 });
