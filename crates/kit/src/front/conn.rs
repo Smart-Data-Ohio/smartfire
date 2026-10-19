@@ -44,6 +44,13 @@ pub struct Options {
     pub date: bool,
 }
 
+/// Absolute response budget, including time spent reading the request body.
+#[derive(Debug, Clone, Copy)]
+pub struct WriteDeadline {
+    pub started: Instant,
+    pub end: Instant,
+}
+
 /// Which protocols a connection may speak.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Protocol {
@@ -163,7 +170,10 @@ where
             let started = Instant::now();
             let read_deadline = options.read_timeout.map(|t| started + t);
             let write_deadline = options.write_timeout.map(|t| started + t);
-            let request = request.map(|body| Body::new(Deadline::new(body, read_deadline, "read")));
+            let mut request = request.map(|body| Body::new(Deadline::new(body, read_deadline, "read")));
+            if let Some(end) = write_deadline {
+                request.extensions_mut().insert(WriteDeadline { started, end });
+            }
             async move {
                 let response = service(request, info);
                 let response = match write_deadline {
