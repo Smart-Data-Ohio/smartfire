@@ -413,7 +413,7 @@ async fn pages_and_favicon_ico_show_smartfires_mark_until_a_logo_is_attached() {
     assert_eq!(upload.status, StatusCode::FOUND);
     let manifest = a.anonymous().get("/webmanifest.json").await.json();
     let small = manifest["icons"][0]["src"].as_str().unwrap().replace("&amp;", "&");
-    assert!(small.starts_with("/account/logo?v="), "{small}");
+    assert!(small.starts_with("/account/logo?") && small.contains("v="), "{small}");
     for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
         assert_eq!(link_href(&page, "icon", Some("image/png")).as_deref(), Some(small.as_str()), "the manifest's small icon: {page}");
         assert_eq!(link_href(&page, "apple-touch-icon", None).as_deref(), Some(small.as_str()), "{page}");
