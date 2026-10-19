@@ -31,22 +31,44 @@ describe("room metadata follows sidebar sync", () => {
       room: edited.room,
       membership: edited.membership,
       displayName: edited.displayName,
+      sidebarDisplayName: edited.sidebarDisplayName,
       directMemberIds: edited.directMemberIds,
     });
     expect(next.timelines[20]).toBe(loaded.timelines[20]);
   });
 
-  it("updates direct display names and avatar ids, including a fresh sidebar snapshot", () => {
-    const row = sidebarRowFixture(20, "Ada and Grace", "direct", [8, 9]);
-    const loaded = setRoomDetail(initialState, roomDetailFixture(20));
-    const synced = applyEvents(loaded, [rowEvent(row)], 0);
+  for (const source of ["event", "snapshot"] as const) {
+    it(`updates both cached DM labels from a sidebar ${source}`, () => {
+      const row = {
+        ...sidebarRowFixture(20, "Ada, Grace", "direct", [8, 9]),
+        sidebarDisplayName: "Ada Lovelace, Grace Hopper",
+      };
 
-    expect(synced.rooms[20]?.detail?.directMemberIds).toEqual([8, 9]);
-    expect(synced.rooms[20]?.detail?.displayName).toBe("Ada and Grace");
-    expect(
-      loadSidebar(loaded, sidebarFixture([row]), rowClock(loaded)).rooms[20]?.detail?.displayName,
-    ).toBe("Ada and Grace");
-  });
+      const detail = {
+        ...roomDetailFixture(20),
+        room: row.room,
+        displayName: "Ada, Grace",
+        sidebarDisplayName: "Ada Byron, Grace Hopper",
+      };
+
+      const loaded = setRoomDetail(initialState, detail);
+
+      const synced =
+        source === "event"
+          ? applyEvents(loaded, [rowEvent(row)], 0)
+          : loadSidebar(loaded, sidebarFixture([row]), rowClock(loaded));
+
+      expect(synced.rooms[20]?.detail).toMatchObject({
+        displayName: "Ada, Grace",
+        sidebarDisplayName: "Ada Lovelace, Grace Hopper",
+        directMemberIds: [8, 9],
+      });
+      expect(synced.sidebar.rows[20]).toMatchObject({
+        displayName: "Ada, Grace",
+        sidebarDisplayName: "Ada Lovelace, Grace Hopper",
+      });
+    });
+  }
 
   it("does not create an unloaded detail or revoke access for a hidden row removal", () => {
     const row = sidebarRowFixture(20, "Room");
@@ -67,5 +89,38 @@ describe("room metadata follows sidebar sync", () => {
     expect(removed.sidebar.rows[20]).toBeUndefined();
     expect(removed.rooms[20]).toBe(loaded.rooms[20]);
     expect(removed.timelines[20]).toBe(loaded.timelines[20]);
+  });
+
+  it("keeps conversation references in the room-name format after sidebar updates", () => {
+    const row = {
+      ...sidebarRowFixture(20, "Ada, Grace", "direct", [8, 9]),
+      sidebarDisplayName: "Ada Lovelace, Grace Hopper",
+    };
+
+    const loaded = {
+      ...initialState,
+      conversationNames: {
+        "20:": {
+          roomId: 20,
+          threadId: null,
+          roomName: "Ada, Grace",
+          roomKind: row.room.kind,
+          roomIconName: null,
+          threadName: null,
+        },
+      },
+    };
+
+    const updated = applyEvents(loaded, [rowEvent(row)], 0);
+
+    expect(updated.conversationNames["20:"]?.roomName).toBe("Ada, Grace");
+
+    const renamed = applyEvents(
+      updated,
+      [rowEvent({ ...row, displayName: "Launch crew", sidebarDisplayName: "Launch crew" })],
+      0,
+    );
+
+    expect(renamed.conversationNames["20:"]?.roomName).toBe("Launch crew");
   });
 });

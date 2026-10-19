@@ -896,27 +896,50 @@ pub async fn present<T: Send + 'static>(
     c: &Ctx,
     f: impl FnOnce(&Presenter) -> campfire_db::Result<T> + Send + 'static,
 ) -> Result<T> {
-    let app = c.app().clone();
-    let request_host = Some(c.request.host());
-    let cache_base_url = c.url_for("");
-    let current_user_id = require_current_user(c)?.id;
-    let (value, fetches, twitter_fetches, refreshes) = c.app()
-        .db
-        .read(move |conn| {
-            let mut presenter = Presenter::new(conn, &app, request_host);
-            presenter.cache_base_url = Some(cache_base_url);
-            presenter.current_user_id = Some(current_user_id);
-            presenter.use_viewer_zone(current_user_id)?;
-            let value = f(&presenter)?;
-            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_render_refreshes()))
+    Presentation::for_request(c)?.run(f).await
+}
+
+#[derive(Clone)]
+pub struct Presentation {
+    app: crate::app::App,
+    request_host: Option<String>,
+    cache_base_url: String,
+    current_user_id: i64,
+}
+
+impl Presentation {
+    pub fn for_request(c: &Ctx) -> Result<Self> {
+        Ok(Self {
+            app: c.app().clone(),
+            request_host: Some(c.request.host()),
+            cache_base_url: c.url_for(""),
+            current_user_id: require_current_user(c)?.id,
         })
-        .await
-        .map_err(db_error)?;
-    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
-        .await
-        .map_err(db_error)?;
-    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
-    Ok(value)
+    }
+
+    pub async fn run<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&Presenter) -> campfire_db::Result<T> + Send + 'static,
+    ) -> Result<T> {
+        let Self { app, request_host, cache_base_url, current_user_id } = self.clone();
+        let (value, fetches, twitter_fetches, refreshes) = self.app
+            .db
+            .read(move |conn| {
+                let mut presenter = Presenter::new(conn, &app, request_host);
+                presenter.cache_base_url = Some(cache_base_url);
+                presenter.current_user_id = Some(current_user_id);
+                presenter.use_viewer_zone(current_user_id)?;
+                let value = f(&presenter)?;
+                Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_render_refreshes()))
+            })
+            .await
+            .map_err(db_error)?;
+        super::presenters::link_embeds::enqueue_render_fetches(&self.app, fetches, twitter_fetches)
+            .await
+            .map_err(db_error)?;
+        crate::controllers::presenters::refresh_after_render(&self.app.db, refreshes).await;
+        Ok(value)
+    }
 }
 
 async fn render_room_not_found(c: &mut Ctx) -> Result {

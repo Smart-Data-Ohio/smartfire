@@ -34,6 +34,7 @@ rusqlite.workspace = true
 tokio.workspace = true
 regex.workspace = true
 axum.workspace = true
+futures-util.workspace = true
 rand.workspace = true
 subtle.workspace = true
 url.workspace = true

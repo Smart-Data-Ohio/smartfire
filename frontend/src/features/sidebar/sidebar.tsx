@@ -696,7 +696,7 @@ function DragGhost({
       {item.kind === "room" ? (
         <>
           <RowGlyph row={item.row} />
-          <span className="sidebar-row-name">{item.row.displayName}</span>
+          <span className="sidebar-row-name">{item.row.sidebarDisplayName}</span>
         </>
       ) : (
         <>
@@ -733,7 +733,9 @@ function newCategoryLabel(
     return "New shared category name";
   }
 
-  return editing.row === null ? "New category name" : `New category for ${editing.row.displayName}`;
+  return editing.row === null
+    ? "New category name"
+    : `New category for ${editing.row.sidebarDisplayName}`;
 }
 
 /** Where focus should go once the sidebar has rendered the change that calls for it. */
