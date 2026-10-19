@@ -272,7 +272,7 @@ function gaps(
     label:
       index === 0
         ? `Top of ${title}`
-        : `${title}, after ${others[index - 1]?.displayName ?? "the last one"}`,
+        : `${title}, after ${others[index - 1]?.sidebarDisplayName ?? "the last one"}`,
   }));
 }
 

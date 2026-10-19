@@ -3,6 +3,7 @@
 //! them; the controllers, concerns and presenters that use them re-export them where they were.
 
 pub mod agent_payload;
+pub mod agent_streams;
 pub mod mail;
 pub mod sudo;
 pub mod two_factor;

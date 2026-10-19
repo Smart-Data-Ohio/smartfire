@@ -31,6 +31,7 @@ use anyhow::{Context, bail};
 
 #[derive(Debug, Clone)]
 pub struct Config {
+    pub agent_event_stream: crate::state::agent_streams::Timing,
     /// SMARTFIRE_MCP_OAUTH; on by default. Only 0, false, off, or no disable it.
     pub mcp_oauth: bool,
     pub secret_key_base: String,
@@ -176,6 +177,7 @@ impl Config {
             log_level: present("RAILS_LOG_LEVEL").unwrap_or_else(|| "info".into()),
             livekit_url: get("LIVEKIT_URL"),
             huddle: crate::huddle::Config::from_lookup(&get),
+            agent_event_stream: crate::state::agent_streams::Timing::from_lookup(&get),
             huddles_configured: crate::huddle_readiness::huddles_configured(&get),
             google_picker: crate::picker_configuration::picker(&get),
             admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),

@@ -22,6 +22,7 @@ import type { SudoMethod } from "../src/gen/SudoMethod.ts";
 import type { UnreadDivider } from "../src/gen/UnreadDivider.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserList } from "../src/gen/UserList.ts";
+import { sidebarDirectLabel } from "./direct-label.ts";
 import {
   forbidden,
   headerOf,
@@ -531,6 +532,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const sidebarRow = (record: RoomRecord): SidebarRow => {
     const unreadCount = unreadMessages(record).length;
+    const names = usersFor(directMemberIds(record)).map((user) => user.name);
 
     const row: SidebarRow = {
       revision: world.activityRevision,
@@ -538,6 +540,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
+      sidebarDisplayName:
+        record.room.kind === "direct"
+          ? sidebarDirectLabel(record.room.name, names)
+          : displayName(record),
       directMemberIds: directMemberIds(record),
       unreadCount,
       mentionCount: record.mentionCount,
@@ -783,6 +789,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
+      sidebarDisplayName: sidebarRow(record).sidebarDisplayName,
       memberCount: record.memberIds.length,
       pinsCount: pinCount(world, record.room.id),
       directMemberIds: direct,

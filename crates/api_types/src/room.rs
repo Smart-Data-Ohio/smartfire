@@ -92,6 +92,8 @@ pub struct RoomDetail {
     /// What the header shows: the room's name, or for a direct message its other members'
     /// names (`room_display_name(room, for_user:)`).
     pub display_name: String,
+    /// The corresponding sidebar label, with full names for direct messages.
+    pub sidebar_display_name: String,
     /// `memberships.count` for the room.
     pub member_count: i64,
     /// `MessagePin::count_for_room`.
