@@ -177,6 +177,13 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
   const phone = usePhoneLayout();
   const composing = pathname.endsWith("/posts/new");
 
+  // A resync re-reads the same posts and keeps them on screen; only an empty board waits.
+  const waiting = useStore((state) => {
+    const board = state.boards[roomId];
+
+    return board === undefined || (board.status === "loading" && board.postIds.length === 0);
+  });
+
   useEffect(() => {
     void actions.boards
       .open(roomId, { status: query.status, owner: query.owner, tag: query.tag })
@@ -244,8 +251,8 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
           }
         />
       ) : (
-        <SkeletonReveal loading={status === "loading"} skeleton={<BoardSkeleton />}>
-          {status === "loading" ? (
+        <SkeletonReveal loading={waiting} skeleton={<BoardSkeleton />}>
+          {waiting ? (
             <div className="board-scroll" />
           ) : query.view === "board" ? (
             phone ? (

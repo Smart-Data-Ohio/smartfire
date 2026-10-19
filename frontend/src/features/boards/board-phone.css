@@ -309,30 +309,8 @@
     gap: var(--space-2);
   }
 
-  /* ── The rest of the board on a phone ──────────────────────────────────── */
-
+  /* Bottom right, in thumb reach, clear of the home indicator; the board is its containing block. */
   @media (width < 720px) {
-    .board {
-      position: relative;
-    }
-
-    /* The floating button below takes the toolbar's "+". */
-    .board-new {
-      display: none;
-    }
-
-    .board-scroll {
-      padding: var(--space-2) var(--space-2) calc(var(--space-6) + 52px + var(--safe-bottom));
-    }
-
-    .board-list {
-      gap: var(--space-2);
-    }
-
-    .board-scroll > .board-digest {
-      margin-bottom: var(--space-2);
-    }
-
     .board-fab {
       position: absolute;
       z-index: 2;
@@ -343,44 +321,6 @@
       border-radius: var(--radius-pill);
       box-shadow: var(--shadow-raised);
       font-weight: var(--weight-semibold);
-    }
-  }
-
-  /* Touch phones: the toolbar, a post's work controls and the new-post form are 44 px targets. */
-  @media (width < 720px) and (pointer: coarse) {
-    .board-toolbar,
-    .post-work,
-    .board-form {
-      --control-sm: var(--touch-target);
-    }
-
-    .board-digest-summary,
-    .post-fact-value,
-    .post-fact-button,
-    .post-history .accordion-trigger {
-      min-height: var(--touch-target);
-    }
-
-    .post-fact-label {
-      align-self: center;
-      padding-top: 0;
-    }
-
-    .board-suggestions {
-      gap: var(--space-2);
-    }
-
-    /* The pill stays 36 px; its hit area reaches into the gaps around it. */
-    .board-suggestion {
-      position: relative;
-      padding-inline: var(--space-3);
-      line-height: 36px;
-    }
-
-    .board-suggestion::after {
-      position: absolute;
-      inset: -4px -4px;
-      content: "";
     }
   }
 
