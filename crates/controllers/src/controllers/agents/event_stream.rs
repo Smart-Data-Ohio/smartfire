@@ -39,7 +39,7 @@ pub async fn event_stream(c: &mut Ctx) -> Result {
         .map_or(started + timing.lifetime, |front| {
             front.min(started + timing.lifetime)
         });
-    let (health, receiver) = watch::channel(Some(Instant::now() + timing.recheck));
+    let (health, receiver) = watch::channel(Some(started + timing.recheck));
     let secret = concerns::agent_bearer_secret(c.request.header("authorization"))
         .expect("authenticated Bearer credential")
         .to_owned();
