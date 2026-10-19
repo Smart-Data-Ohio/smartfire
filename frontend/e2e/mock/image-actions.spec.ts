@@ -527,9 +527,11 @@ for (const { viewport, bar } of [
       const tiny = picture("pebble.png", DARK, 32, 32);
       const row = await sendImagesUnderMessageBar(page, [tiny]);
       const image = row.locator(".attachment-image");
-      const box = await image.boundingBox();
+      const frame = await image.boundingBox();
+      const drawn = await image.locator("img").boundingBox();
 
-      expect([box?.width, box?.height]).toEqual([32, 32]);
+      expect([drawn?.width, drawn?.height]).toEqual([32, 32]);
+      expect([frame?.width, frame?.height]).toEqual(bar ? [80, 80] : [32, 32]);
 
       await image.getByRole("button", { name: "Open pebble.png" }).focus();
       await page.keyboard.press("Tab");
@@ -554,6 +556,44 @@ for (const { viewport, bar } of [
     });
   });
 }
+
+test.describe("on a touch-primary screen with a mouse and keyboard", () => {
+  test.use({ viewport: WITH_PANE, hasTouch: true, isMobile: true });
+
+  test("a keyboard-focused gallery tile squeezed by the side pane keeps its download clear of the message bar", async ({
+    page,
+  }) => {
+    await openGeneral(page);
+    expect(await page.evaluate(() => matchMedia("(hover: none)").matches)).toBe(true);
+    await openHeaderTool(page, /^Files/);
+    await widenSidePane(page, 552);
+
+    const files = [
+      picture("left.png", LIGHT),
+      picture("mixed-centre.png", DARK),
+      picture("right.png", LIGHT),
+    ];
+    const row = await sendImagesUnderMessageBar(page, files);
+    const tile = row.locator(".attachment-tile.attachment-image").nth(1);
+
+    await tile.hover();
+    await expect(row.getByRole("toolbar", { name: "Message actions" })).toBeVisible();
+    await tile.getByRole("button", { name: "Open mixed-centre.png" }).focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    await expect(actions(tile)).toHaveCSS("opacity", "1");
+    await expectClearOfBar(row, tile);
+    await expectInside(actions(tile), tile);
+    await shot(page, "image-actions-touch-primary-mixed-input", "light");
+
+    const saved = await downloadFrom(page, () =>
+      clickCentre(page, tile.getByRole("button", { name: "Download mixed-centre.png" })),
+    );
+
+    expect(saved.name).toBe("mixed-centre.png");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+});
 
 test.describe("on a touch phone", () => {
   test.use(PHONE_TOUCH);

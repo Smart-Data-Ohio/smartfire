@@ -494,18 +494,10 @@
 
   /* ── Attachments ────────────────────────────────────────────────────────── */
 
-  /* Room for the action bubble below the message bar, which covers the top of the row. A pointer
-     that can't hover only shows the bubble on keyboard focus, so it keeps an image's own size. */
+  /* Room for the action bubble below the message bar, which covers the top of the row. */
   .attachment-image,
   .attachment-grid {
-    --image-floor: 0;
-  }
-
-  @media (hover: hover) {
-    .attachment-image,
-    .attachment-grid {
-      --image-floor: 80;
-    }
+    --image-floor: 80;
   }
 
   .attachment-image {
@@ -1022,6 +1014,12 @@
   @media (width < 720px) {
     .message-bar {
       display: none;
+    }
+
+    /* No message bar to clear, so small images keep their own size. */
+    .attachment-image,
+    .attachment-grid {
+      --image-floor: 0;
     }
 
     .button.reaction-add {
