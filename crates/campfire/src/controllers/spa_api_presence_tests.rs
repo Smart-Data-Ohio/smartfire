@@ -241,7 +241,11 @@ async fn unchanged_heartbeats_do_not_publish_or_consume_replay_entries() {
         0,
         "eight unchanged heartbeats must consume zero replay entries"
     );
-    assert_eq!(connected - before, 0, "second connection leaves the aggregate unchanged");
+    assert_eq!(
+        connected - before,
+        0,
+        "second connection leaves the aggregate unchanged"
+    );
     assert_eq!(observer.sequence(&a).await, []);
     close_device(&a, first, 1).await;
     assert_eq!(observer.sequence(&a).await, []);
@@ -249,6 +253,72 @@ async fn unchanged_heartbeats_do_not_publish_or_consume_replay_entries() {
     observer
         .sees(&a, api::Presence::Offline, "final device closed")
         .await;
+    let stale_badge = || campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast {
+        user_id: DAVID,
+        presence: "online".into(),
+        status_text: Some("outdated badge snapshot".into()),
+    };
+    let before = head(&a);
+    a.db()
+        .write(move |tx| {
+            tx.emit_after_commit(campfire_db::Event::broadcast(&stale_badge()));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        head(&a) - before,
+        0,
+        "a badge trigger rereads the unchanged offline aggregate"
+    );
+    assert_eq!(observer.sequence(&a).await, []);
+    drop(observer);
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while a.booted.app.cable.sync_wanted() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("all sync observers disconnected");
+    let mut observer = Observer::open(&a, addr).await;
+    let before = head(&a);
+    a.db()
+        .write(|tx| {
+            tx.broadcast_after_commit_once(&campfire_db::broadcasts::Broadcast::UserStatus {
+                user_id: DAVID,
+            });
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        head(&a) - before,
+        1,
+        "the first value after an observer gap is published"
+    );
+    observer
+        .sees(
+            &a,
+            api::Presence::Offline,
+            "a new observer after the global connection gap",
+        )
+        .await;
+    let before = head(&a);
+    a.db()
+        .write(|tx| {
+            tx.broadcast_after_commit_once(&campfire_db::broadcasts::Broadcast::UserStatus {
+                user_id: DAVID,
+            });
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        head(&a) - before,
+        0,
+        "the new observer lifetime dedupes repeated offline values"
+    );
+    assert_eq!(observer.sequence(&a).await, []);
     server.abort();
 }
 
@@ -409,5 +479,55 @@ async fn expired_leases_publish_offline_once_and_a_live_device_can_reestablish()
             "a pruned device reestablished its lease",
         )
         .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn revoking_sessions_publishes_only_the_final_device_going_offline() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut observer = Observer::open(&a, addr).await;
+    let _first = device(&a, addr).await;
+    let _second = device(&a, addr).await;
+    observer
+        .sees(&a, api::Presence::Online, "both connected")
+        .await;
+    let sessions = a
+        .db()
+        .read(|conn| {
+            Ok(conn
+                .prepare(
+                    "SELECT session_id FROM workspace_presence_leases WHERE user_id=? ORDER BY id",
+                )?
+                .query_map([DAVID], |row| row.get::<_, i64>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(sessions.len(), 2);
+    for (index, session_id) in sessions.into_iter().enumerate() {
+        let before = head(&a);
+        a.db()
+            .write(move |tx| campfire_db::Session::find(tx.conn(), session_id)?.destroy(tx))
+            .await
+            .unwrap();
+        if index == 0 {
+            assert_eq!(
+                head(&a) - before,
+                0,
+                "revoking one of two active sessions does not change presence"
+            );
+            assert_eq!(observer.sequence(&a).await, []);
+        } else {
+            assert_eq!(
+                head(&a) - before,
+                1,
+                "session revocation publishes one final offline change"
+            );
+            observer
+                .sees(&a, api::Presence::Offline, "the final session was revoked")
+                .await;
+        }
+    }
     server.abort();
 }
