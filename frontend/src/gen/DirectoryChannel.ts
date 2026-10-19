@@ -6,7 +6,7 @@ export type DirectoryChannel = { roomId: number,
  */
 name: string, topic: string | null,
 /**
- * Active people whose membership isn't hidden, as the room's members pane counts them.
+ * Active people with a membership, hidden or not, as the room's members pane lists them.
  */
 memberCount: number,
 /**
