@@ -585,6 +585,7 @@ test("a held card goes back when the page loses its pointer", async ({ page }) =
 
   const released = await page.evaluate(() => {
     const pointerId = Number(document.documentElement.dataset.testPointer);
+
     const holder = [...document.querySelectorAll("*")].find((element) =>
       element.hasPointerCapture(pointerId),
     );
