@@ -38,6 +38,7 @@ FROM (
       WHEN LOWER(rooms.topic) LIKE :anywhere ESCAPE '\' THEN 3
     END AS match_rank
     FROM rooms WHERE rooms.type = 'Rooms::Open' AND rooms.deleted_at IS NULL
+      AND NOT (:joinable_only AND EXISTS(SELECT 1 FROM memberships WHERE memberships.room_id = rooms.id AND memberships.user_id = :viewer AND memberships.involvement != 'invisible'))
   )
   WHERE match_rank IS NOT NULL
     AND (:after_id IS NULL OR match_rank > :after_rank OR (match_rank = :after_rank AND (updated_at < :after_at OR (updated_at = :after_at AND id < :after_id))))
@@ -52,6 +53,7 @@ pub fn open_rooms(
     conn: &Connection,
     viewer: i64,
     query: &str,
+    joinable_only: bool,
     after: Option<DirectoryKey>,
     limit: usize,
 ) -> Result<Vec<DirectoryRoom>> {
@@ -66,6 +68,7 @@ pub fn open_rooms(
         OPEN_ROOMS,
         named_params! {
             ":viewer": viewer,
+            ":joinable_only": joinable_only,
             ":query": query,
             ":prefix": format!("{literal}%"),
             ":anywhere": format!("%{literal}%"),

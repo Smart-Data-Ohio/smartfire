@@ -397,3 +397,64 @@ async fn member_count_is_what_the_members_pane_lists() {
         .expect("HQ listed");
     assert_eq!(hq.member_count, listed.len() as i64);
 }
+
+#[tokio::test]
+async fn joinable_leaves_out_joined_rooms_before_paging() {
+    let app = app(true).await.expect("seed required");
+    let mut joined = Vec::new();
+    for index in 0..3 {
+        let room = open_room(
+            &app,
+            &format!("crowd {index}"),
+            None,
+            &format!("2026-04-0{} 00:00:00.000000", 3 + index),
+        )
+        .await;
+        set_membership(&app, room, DAVID, Involvement::Everything).await;
+        joined.push(room);
+    }
+    let hidden = open_room(&app, "crowd hidden", None, "2026-04-02 00:00:00.000000").await;
+    set_membership(&app, hidden, DAVID, Involvement::Invisible).await;
+    let outside = open_room(&app, "crowd outside", None, "2026-04-01 00:00:00.000000").await;
+    let mut david = app.sign_in(DAVID).await;
+
+    let crowded = david
+        .send(get("/api/v1/rooms/browse?q=crowd&limit=2"))
+        .await;
+    assert_eq!(
+        ids(&parse::<api::ChannelDirectory>(&crowded).channels),
+        [joined[2], joined[1]]
+    );
+
+    let first: api::ChannelDirectory = parse(
+        &david
+            .send(get("/api/v1/rooms/browse?q=crowd&joinable=1&limit=1"))
+            .await,
+    );
+    assert_eq!(ids(&first.channels), [hidden]);
+    let cursor = first.next_cursor.expect("a second page");
+    let second: api::ChannelDirectory = parse(
+        &david
+            .send(get(&format!(
+                "/api/v1/rooms/browse?q=crowd&joinable=1&limit=1&cursor={cursor}"
+            )))
+            .await,
+    );
+    assert_eq!(
+        (ids(&second.channels), second.next_cursor),
+        (vec![outside], None)
+    );
+
+    for limit in ["0", "51", "x"] {
+        let invalid = david
+            .send(get(&format!("/api/v1/rooms/browse?limit={limit}")))
+            .await;
+        assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY, "{limit}");
+        let api::ApiError::Validation { fields, .. } =
+            parse::<api::ApiErrorResponse>(&invalid).error
+        else {
+            panic!("{}", invalid.text())
+        };
+        assert_eq!(fields.keys().collect::<Vec<_>>(), ["limit"], "{limit}");
+    }
+}

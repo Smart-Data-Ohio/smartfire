@@ -30,11 +30,13 @@ pub struct RoomJoin {
     pub row: Option<SidebarRow>,
 }
 
-/// `GET /api/v1/rooms/browse?q=&cursor=`: the alive open rooms, the only rooms anyone may join.
-/// Closed, direct, voice, stage, board and deleted rooms never appear, not even by name. `q`
-/// matches the name or topic case-insensitively; name matches come first (exact, then prefix,
-/// then anywhere), then topic-only matches, each by latest activity. No `q` lists every open room
-/// by latest activity. 50 per page.
+/// `GET /api/v1/rooms/browse?q=&joinable=&limit=&cursor=`: the alive open rooms, the only rooms
+/// anyone may join. Closed, direct, voice, stage, board and deleted rooms never appear, not even
+/// by name. `q` matches the name or topic case-insensitively; name matches come first (exact,
+/// then prefix, then anywhere), then topic-only matches, each by latest activity. No `q` lists
+/// every open room by latest activity. `joinable=1` leaves out the rooms the viewer has joined.
+/// `limit` per page, 1 to 50 (default 50). A cursor belongs to the `q` and `joinable` it came
+/// from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

@@ -105,6 +105,14 @@ async fn browse_rooms(c: &mut Ctx) -> Result {
         .chars()
         .take(QUERY_LIMIT)
         .collect();
+    let joinable_only = c.param_str("joinable") == Some("1");
+    let limit = match c.param_str("limit").filter(|raw| !raw.is_empty()) {
+        None => PAGE,
+        Some(raw) => match raw.parse::<usize>() {
+            Ok(limit @ 1..=PAGE) => limit,
+            _ => return Err(fail(c, validation("limit", "is invalid"))),
+        },
+    };
     let after = match c.param_str("cursor").filter(|raw| !raw.is_empty()) {
         None => None,
         Some(raw) => match crate::cursor::decode_ranked(raw) {
@@ -120,12 +128,19 @@ async fn browse_rooms(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            room_directory::open_rooms(conn, viewer, query.trim_end(), after, PAGE + 1)
+            room_directory::open_rooms(
+                conn,
+                viewer,
+                query.trim_end(),
+                joinable_only,
+                after,
+                limit + 1,
+            )
         })
         .await
         .map_err(db_error)?;
-    let more = rooms.len() > PAGE;
-    rooms.truncate(PAGE);
+    let more = rooms.len() > limit;
+    rooms.truncate(limit);
     let next_cursor = rooms
         .last()
         .filter(|_| more)
