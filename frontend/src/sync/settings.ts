@@ -96,6 +96,7 @@ export {
   inspectPush,
   type PushEnrollmentOutcome,
   type PushPermission,
+  tryRefreshPushSubscription,
   unsubscribePushEndpoint,
 } from "./push-enrollment.ts";
 

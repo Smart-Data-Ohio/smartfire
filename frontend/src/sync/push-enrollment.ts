@@ -154,6 +154,43 @@ async function selectedWorker(registration: PushRegistration, browser: PushBrows
   });
 }
 
+async function savePushSubscription(
+  subscription: Subscription,
+  deviceClass: DeviceClass,
+  api: PushEnrollmentApi,
+): Promise<PushSubscriptionList> {
+  const json = subscription.toJSON();
+  const p256dhKey = json.keys?.p256dh;
+  const authKey = json.keys?.auth;
+
+  if (p256dhKey === undefined || authKey === undefined) {
+    throw new Error("The browser did not provide push encryption keys.");
+  }
+
+  return api.createPushSubscription({
+    endpoint: subscription.endpoint,
+    p256dhKey,
+    authKey,
+    deviceClass,
+  });
+}
+
+export async function tryRefreshPushSubscription(
+  browser = pushBrowser(),
+  api: PushEnrollmentApi = settings,
+): Promise<void> {
+  if (browser === null || browser.permission() !== "granted") return;
+
+  try {
+    const registration = await browser.currentRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+
+    if (subscription != null) await savePushSubscription(subscription, browser.deviceClass, api);
+  } catch {
+    return;
+  }
+}
+
 /**
  * Call directly in the click handler. The permission request runs before the first await,
  * preserving browser user activation; mounting or inspecting state never prompts.
@@ -189,20 +226,7 @@ export async function enablePushNotifications(
         applicationServerKey: key,
       }));
 
-    const json = subscription.toJSON();
-    const p256dhKey = json.keys?.p256dh;
-    const authKey = json.keys?.auth;
-
-    if (p256dhKey === undefined || authKey === undefined) {
-      throw new Error("The browser did not provide push encryption keys.");
-    }
-
-    const list = await api.createPushSubscription({
-      endpoint: subscription.endpoint,
-      p256dhKey,
-      authKey,
-      deviceClass: browser.deviceClass,
-    });
+    const list = await savePushSubscription(subscription, browser.deviceClass, api);
 
     return { kind: "enabled", list, endpoint: subscription.endpoint };
   } catch (error) {

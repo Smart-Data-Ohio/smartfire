@@ -187,7 +187,7 @@ impl PushSubscription {
 
     pub fn touch_for_device(&self, tx: &mut Tx<'_>, device_class: Option<DeviceClass>) -> Result<()> {
         tx.conn().execute_cached(
-            "UPDATE push_subscriptions SET updated_at=?, device_class=COALESCE(?,device_class) WHERE id=?",
+            "UPDATE push_subscriptions SET updated_at=?1, device_class=COALESCE(?2,device_class) WHERE id=?3 AND (?2 IS NULL OR device_class IS NOT ?2)",
             params![tx.now(), device_class, self.id],
         )?;
         Ok(())
