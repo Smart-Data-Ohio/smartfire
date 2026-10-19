@@ -19,7 +19,6 @@ interface PageSync {
   readonly heartbeats: readonly boolean[];
 }
 
-// The mock's real-time ping cannot keep up with the page clock.
 async function nextHeartbeat({
   page,
   request,

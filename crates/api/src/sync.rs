@@ -392,11 +392,9 @@ impl SyncHandler<CableUser> for Handler {
             user,
             lease: None,
             present: BTreeSet::new(),
-            published: None,
         };
         if let Some(app) = session.app.upgrade() {
             session.establish(&app).await;
-            session.publish_presence(&app).await;
         }
         Box::new(session)
     }
@@ -408,8 +406,6 @@ pub struct Session {
     user: Arc<CableUser>,
     lease: Option<WorkspacePresenceLease>,
     present: BTreeSet<i64>,
-    /// The presence last published for the person, so a heartbeat only speaks up on a change.
-    published: Option<api::UserPresence>,
 }
 
 /// A conversation topic: `room:<id>` or `thread:<id>`.
@@ -459,34 +455,21 @@ impl Session {
     /// `WorkspacePresenceChannel#subscribed`: a lease for this connection.
     async fn establish(&mut self, app: &AppState) {
         let (user_id, session_id) = (self.user.id, self.user.session_id);
+        let user = self.user.clone();
+        let presence_app = self.app.clone();
         match app
             .db
-            .write(move |tx| WorkspacePresenceLease::establish(tx, user_id, session_id))
+            .write(move |tx| {
+                let lease = WorkspacePresenceLease::establish(tx, user_id, session_id)?;
+                if lease.is_some() {
+                    publish_presence_after_commit(tx, presence_app, &user);
+                }
+                Ok(lease)
+            })
             .await
         {
             Ok(lease) => self.lease = lease,
             Err(error) => tracing::warn!(%error, user_id, "sync: presence lease not established"),
-        }
-    }
-
-    /// The person's presence, published to everyone when it differs from the last one sent.
-    async fn publish_presence(&mut self, app: &AppState) {
-        if !self.user.active_human() {
-            return;
-        }
-        let (user_id, now) = (self.user.id, app.db.env().now());
-        let presence = match app
-            .db
-            .read(move |conn| dto::presences(conn, &[user_id], now))
-            .await
-        {
-            Ok(mut presences) if !presences.is_empty() => presences.remove(0),
-            Ok(_) => return,
-            Err(error) => return tracing::warn!(%error, user_id, "sync: presence not read"),
-        };
-        if self.published.as_ref() != Some(&presence) {
-            twins::presence(&app.cable, presence.clone());
-            self.published = Some(presence);
         }
     }
 
@@ -514,6 +497,34 @@ impl Session {
             false
         })
     }
+}
+
+fn publish_presence_after_commit(
+    tx: &mut campfire_db::Tx<'_>,
+    app: Weak<AppState>,
+    user: &CableUser,
+) {
+    if !user.active_human() {
+        return;
+    }
+    let user_id = user.id;
+    tx.after_commit(move |after| {
+        let Some(app) = app.upgrade() else {
+            return Ok(());
+        };
+        if !app.cable.sync_wanted() {
+            return Ok(());
+        }
+        match dto::presences(after.conn(), &[user_id], after.now()) {
+            Ok(presences) => {
+                for presence in presences {
+                    twins::presence(&app.cable, presence);
+                }
+            }
+            Err(error) => tracing::warn!(%error, user_id, "sync: presence not read"),
+        }
+        Ok(())
+    });
 }
 
 fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
@@ -798,6 +809,8 @@ impl SyncSession for Session {
             app.config.admin_session_idle_timeout,
             self.lease.clone(),
         );
+        let user = self.user.clone();
+        let presence_app = self.app.clone();
         let result = app
             .db
             .write(move |tx| {
@@ -810,6 +823,9 @@ impl SyncSession for Session {
                 match lease {
                     Some(mut lease) => {
                         let refreshed = lease.refresh(tx, active)?;
+                        if refreshed || lease.destroyed {
+                            publish_presence_after_commit(tx, presence_app, &user);
+                        }
                         Ok(Some((Some(lease), refreshed)))
                     }
                     None => Ok(Some((None, false))),
@@ -830,7 +846,6 @@ impl SyncSession for Session {
             })
             .await;
         }
-        self.publish_presence(&app).await;
         true
     }
 
@@ -842,12 +857,21 @@ impl SyncSession for Session {
             self.with_membership(&app, room_id, |membership, tx| membership.disconnected(tx))
                 .await;
         }
-        if let Some(mut lease) = self.lease.take()
-            && let Err(error) = app.db.write(move |tx| lease.delete(tx)).await
-        {
-            tracing::warn!(%error, user_id = self.user.id, "sync: presence lease not removed");
+        if let Some(mut lease) = self.lease.take() {
+            let user = self.user.clone();
+            let presence_app = self.app.clone();
+            if let Err(error) = app
+                .db
+                .write(move |tx| {
+                    lease.delete(tx)?;
+                    publish_presence_after_commit(tx, presence_app, &user);
+                    Ok(())
+                })
+                .await
+            {
+                tracing::warn!(%error, user_id = self.user.id, "sync: presence lease not removed");
+            }
         }
-        self.publish_presence(&app).await;
     }
 }
 

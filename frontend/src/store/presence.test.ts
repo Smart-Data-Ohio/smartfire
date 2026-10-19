@@ -10,6 +10,7 @@ const other: UserPresence = { userId: 8, presence: "idle", statusText: "Reading"
 describe("repeated presence heartbeats", () => {
   it("keeps the store and presence entries unchanged for an identical sync event", () => {
     const state = setPresence(initialState, [online, other]);
+
     const next = applyEvents(
       state,
       [{ seq: 2, topic: "user", type: "presence", data: { ...online } }],
