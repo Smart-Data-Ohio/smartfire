@@ -326,3 +326,27 @@ test("a second move queued behind a slow save still lands focused", async ({ pag
     { status: "blocked" },
   ]);
 });
+
+test("a queued move doesn't pull focus back after the viewer tabs away", async ({ page }) => {
+  const writes = workWrites(page);
+
+  await page.route(`**/api/v1/threads/${BOARD_POST_IDS.apiPagination}/work`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  await openSyncedBoard(page);
+  await card(page, "Planned", /Cursor pagination/).focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await expect(card(page, "In progress", /Cursor pagination/)).toBeFocused();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+
+  await expect.poll(() => writes.length, { timeout: 10_000 }).toBe(2);
+  await expect(card(page, "Blocked", /Cursor pagination/)).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(card(page, "Blocked", /Cursor pagination/)).not.toBeFocused();
+});
