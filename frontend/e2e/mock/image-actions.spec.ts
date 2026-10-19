@@ -5,6 +5,8 @@ import {
   DESKTOP,
   expect,
   openApp,
+  openHeaderTool,
+  PHONE_SMALL,
   PHONE_TOUCH,
   ROOM_IDS,
   shot,
@@ -15,6 +17,8 @@ import {
 } from "./support.ts";
 
 const NARROW = { width: 760, height: 1000 } as const;
+
+const WITH_PANE = { width: 1100, height: 900 } as const;
 
 const LIGHT: readonly [Rgb, Rgb] = [
   [250, 248, 240],
@@ -112,6 +116,69 @@ async function expectClearOfBar(row: Locator, image: Locator): Promise<void> {
     bubble.x + bubble.width <= bar.x;
 
   expect(apart, `bubble ${JSON.stringify(bubble)} overlaps bar ${JSON.stringify(bar)}`).toBe(true);
+}
+
+async function expectInside(inner: Locator, outer: Locator): Promise<void> {
+  const box = await inner.boundingBox();
+  const frame = await outer.boundingBox();
+
+  expect(box).not.toBeNull();
+  expect(frame).not.toBeNull();
+
+  if (box === null || frame === null) {
+    return;
+  }
+
+  expect(box.x, "left edge").toBeGreaterThanOrEqual(frame.x);
+  expect(box.y, "top edge").toBeGreaterThanOrEqual(frame.y);
+  expect(box.x + box.width, "right edge").toBeLessThanOrEqual(frame.x + frame.width);
+  expect(box.y + box.height, "bottom edge").toBeLessThanOrEqual(frame.y + frame.height);
+}
+
+async function widenSidePane(page: Page, width: number): Promise<void> {
+  const handle = page.getByRole("separator", { name: "Resize the side pane" });
+  const box = await handle.boundingBox();
+  const start = Number(await handle.getAttribute("aria-valuenow"));
+
+  expect(box).not.toBeNull();
+
+  const x = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+  const y = (box?.y ?? 0) + (box?.height ?? 0) / 2;
+
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - (width - start), y, { steps: 4 });
+  await page.mouse.up();
+  await expect(handle).toHaveAttribute("aria-valuenow", String(width));
+}
+
+/** Holds the room's message posts until the returned function is called. */
+async function holdSend(page: Page): Promise<() => void> {
+  const held = Promise.withResolvers<void>();
+
+  await page.route(`**/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+
+      return;
+    }
+
+    await held.promise;
+    await route.fallback();
+  });
+
+  return held.resolve;
+}
+
+async function geometry(row: Locator): Promise<number[]> {
+  return row.evaluate((element) => [
+    element.getBoundingClientRect().height,
+    ...[...element.querySelectorAll(".attachment-image")].flatMap((frame) => {
+      const box = frame.getBoundingClientRect();
+
+      return [box.width, box.height];
+    }),
+  ]);
 }
 
 for (const theme of THEMES) {
@@ -232,6 +299,45 @@ test("the bubble stays clear of a message bar that was already up when the windo
   expect(saved.name).toBe("narrowed.png");
 });
 
+test("gallery tiles squeezed by a widened side pane keep their downloads clear of the message bar", async ({
+  page,
+}) => {
+  await page.setViewportSize(WITH_PANE);
+  await openGeneral(page);
+  await openHeaderTool(page, /^Files/);
+  await widenSidePane(page, 552);
+
+  const files = [
+    picture("north.png", LIGHT),
+    picture("centre.png", DARK),
+    picture("south.png", LIGHT),
+  ];
+
+  const row = await sendImagesUnderMessageBar(page, files);
+  const tiles = row.locator(".attachment-tile.attachment-image");
+
+  for (const [index, file] of files.entries()) {
+    const tile = tiles.nth(index);
+
+    await tile.hover();
+    await expect(row.getByRole("toolbar", { name: "Message actions" })).toBeVisible();
+    await expect(actions(tile)).toHaveCSS("opacity", "1");
+    await expectClearOfBar(row, tile);
+    await expectInside(actions(tile), tile);
+
+    if (index === 0) {
+      await shot(page, "image-actions-gallery-narrow-pane", "light");
+    }
+
+    const saved = await downloadFrom(page, () =>
+      clickCentre(page, tile.getByRole("button", { name: `Download ${file.name}` })),
+    );
+
+    expect(saved.name).toBe(file.name);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }
+});
+
 test("a gallery tile revealed under the message bar keeps its download clear of the bar", async ({
   page,
 }) => {
@@ -330,6 +436,124 @@ test("the keyboard reaches the download from the image", async ({ page }) => {
   await page.keyboard.press("Tab");
   await expect(image.getByRole("button", { name: "Open original keys.png" })).toBeFocused();
 });
+
+function slug(label: string): string {
+  return label.replaceAll(" ", "-");
+}
+
+const ACKNOWLEDGED = [
+  { label: "a picture smaller than the bubble", files: [picture("speck.png", DARK, 32, 32)] },
+  { label: "a sliver", files: [picture("sliver.png", LIGHT, 24, 300)] },
+  { label: "a strip", files: [picture("strip.png", LIGHT, 240, 40)] },
+];
+
+for (const pointer of ["mouse", "touch"] as const) {
+  test.describe(`with a ${pointer}`, () => {
+    test.use(pointer === "touch" ? PHONE_TOUCH : {});
+
+    for (const { label, files } of ACKNOWLEDGED) {
+      test(`${label} keeps its size when the server acknowledges it`, async ({ page }) => {
+        await openGeneral(page);
+        await composer(page).fill("Pictures follow");
+        await composer(page).press("Enter");
+        await expect(
+          page.getByRole("log", { name: "Messages" }).locator("[data-message-id]", {
+            hasText: "Pictures follow",
+          }),
+        ).toHaveCount(1);
+
+        await page.locator('.composer input[type="file"]').setInputFiles(files);
+        await expect(page.locator('.tray-chip[data-phase="done"]')).toHaveCount(files.length, {
+          timeout: 15_000,
+        });
+
+        const release = await holdSend(page);
+
+        await composer(page).press("Enter");
+
+        const row = page
+          .getByRole("log", { name: "Messages" })
+          .locator(".message", { has: page.getByAltText(files[0]?.name ?? "", { exact: true }) });
+
+        await expect(row).toHaveAttribute("data-pending", "sending");
+        await expect
+          .poll(() =>
+            row
+              .locator("img")
+              .evaluateAll((images) =>
+                images.every(
+                  (image) => image instanceof HTMLImageElement && image.naturalWidth > 0,
+                ),
+              ),
+          )
+          .toBe(true);
+
+        const pending = await geometry(row);
+
+        await shot(page, `image-actions-pending-${slug(label)}-${pointer}`, "light");
+        release();
+        await expect(row).toHaveAttribute("data-message-id", /\d+/);
+        await expect(row.locator(".attachment-image[data-loaded]")).toHaveCount(files.length);
+
+        const sent = await geometry(row);
+
+        await shot(page, `image-actions-sent-${slug(label)}-${pointer}`, "light");
+        expect(sent).toHaveLength(pending.length);
+
+        for (const [index, value] of sent.entries()) {
+          expect(
+            Math.abs(value - (pending[index] ?? 0)),
+            `pending ${JSON.stringify(pending)} became ${JSON.stringify(sent)}`,
+          ).toBeLessThanOrEqual(1);
+        }
+      });
+    }
+  });
+}
+
+for (const { viewport, bar } of [
+  { viewport: TABLET, bar: true },
+  { viewport: PHONE_SMALL, bar: false },
+]) {
+  test.describe(`on a ${viewport.width} px touch screen`, () => {
+    test.use({ viewport, hasTouch: true, isMobile: true });
+
+    test("an image keeps its own size, and the keyboard still reaches a download clear of the message bar", async ({
+      page,
+    }) => {
+      await openGeneral(page);
+      expect(await page.evaluate(() => matchMedia("(hover: none)").matches)).toBe(true);
+
+      const tiny = picture("pebble.png", DARK, 32, 32);
+      const row = await sendImagesUnderMessageBar(page, [tiny]);
+      const image = row.locator(".attachment-image");
+      const box = await image.boundingBox();
+
+      expect([box?.width, box?.height]).toEqual([32, 32]);
+
+      await image.getByRole("button", { name: "Open pebble.png" }).focus();
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Shift+Tab");
+      await expect(actions(image)).toHaveCSS("opacity", "1");
+
+      if (bar) {
+        await expect(row.getByRole("toolbar", { name: "Message actions" })).toBeVisible();
+        await expectClearOfBar(row, image);
+      } else {
+        await expect(row.getByRole("toolbar", { name: "Message actions" })).toHaveCount(0);
+      }
+
+      await shot(page, `image-actions-touch-keyboard-${viewport.width}`, "light");
+
+      await page.keyboard.press("Tab");
+      await expect(image.getByRole("button", { name: "Download pebble.png" })).toBeFocused();
+
+      const saved = await downloadFrom(page, () => page.keyboard.press("Enter"));
+
+      expect(saved.name).toBe("pebble.png");
+    });
+  });
+}
 
 test.describe("on a touch phone", () => {
   test.use(PHONE_TOUCH);

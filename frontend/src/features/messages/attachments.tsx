@@ -50,11 +50,6 @@ function MessageLightbox({
 }
 
 /**
- * Room for the action bubble, with its top below the message bar, which covers the top of the row.
- */
-const IMAGE_FLOOR = 80;
-
-/**
  * The actions sit beside the button, not inside it, because HTML forbids interactive content in a
  * button.
  */
@@ -69,21 +64,20 @@ function ImageFrame({
 }) {
   const [loaded, setLoaded] = useState(false);
   const fitted = tile ? null : fitWithin(attachment.width, attachment.height, MEDIA_MAX);
-  const style: CSSProperties = { "--image-floor": `${IMAGE_FLOOR}px` };
 
-  if (fitted !== null) {
-    const width = Math.max(fitted.width, IMAGE_FLOOR);
-    const height = Math.max(fitted.height, IMAGE_FLOOR);
-
-    style.width = width;
-    style.aspectRatio = `${width} / ${height}`;
-  }
+  const style: CSSProperties | undefined =
+    fitted === null
+      ? undefined
+      : {
+          width: `calc(max(${fitted.width}, var(--image-floor)) * 1px)`,
+          aspectRatio: `max(${fitted.width}, var(--image-floor)) / max(${fitted.height}, var(--image-floor))`,
+        };
 
   return (
     <div
       className={tile ? "attachment-tile attachment-image" : "attachment-image"}
       data-loaded={loaded || undefined}
-      style={tile ? undefined : style}
+      style={style}
     >
       <button
         type="button"
