@@ -136,6 +136,8 @@ pub struct Before {
     pub deny_agent_tokens: bool,
     /// `verify_authenticity_token` (skipped by `skip_forgery_protection`).
     pub forgery_protection: bool,
+    /// `allow_browser` (skipped by `skip_allow_browser`).
+    pub allow_browser: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -159,6 +161,7 @@ impl Default for Before {
             deny_bots: true,
             deny_agent_tokens: true,
             forgery_protection: true,
+            allow_browser: true,
         }
     }
 }
@@ -196,6 +199,14 @@ impl Before {
     pub fn skip_forgery_protection(self) -> Self {
         Self {
             forgery_protection: false,
+            ..self
+        }
+    }
+
+    /// For images a page links: the incompatible-browser page in their place is never shown.
+    pub fn skip_allow_browser(self) -> Self {
+        Self {
+            allow_browser: false,
             ..self
         }
     }
@@ -247,7 +258,9 @@ pub async fn before_actions_with_authentication(
     if forgery_protection && !authenticated_by(c).skips_forgery_protection() {
         c.verify_authenticity_token()?;
     }
-    allow_browser(c).await?;
+    if before.allow_browser {
+        allow_browser(c).await?;
+    }
     enforce_two_factor_for_restored_session(c).await?;
     if before.authentication == Authentication::RequireUnauthenticated {
         restore_authentication(c).await?;

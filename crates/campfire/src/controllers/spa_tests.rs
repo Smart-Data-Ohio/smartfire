@@ -380,6 +380,137 @@ async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
     assert!(signed_out.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
 }
 
+fn link_href(page: &str, rel: &str, link_type: Option<&str>) -> Option<String> {
+    let link_type = link_type.map_or(String::new(), |link_type| format!(r#" type="{}""#, regex::escape(link_type)));
+    let pattern = Regex::new(&format!(r#"<link rel="{}"{link_type} href="([^"]*)" />"#, regex::escape(rel))).unwrap();
+    pattern.captures(page).map(|captures| captures[1].replace("&amp;", "&"))
+}
+
+#[tokio::test]
+async fn pages_and_favicon_ico_show_smartfires_mark_until_a_logo_is_attached() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mark = |name: &str| std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../spa/favicon").join(name)).unwrap();
+    for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
+        assert!(page.contains("<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />"), "{page}");
+        assert_eq!(link_href(&page, "icon", Some("image/svg+xml")).as_deref(), Some("/favicon.svg"), "{page}");
+        assert_eq!(link_href(&page, "apple-touch-icon", None).as_deref(), Some("/apple-touch-icon.png"), "{page}");
+    }
+    for (path, content_type) in [
+        ("favicon.ico", "image/x-icon"),
+        ("favicon.svg", "image/svg+xml"),
+        ("favicon.png", "image/png"),
+        ("apple-touch-icon.png", "image/png"),
+    ] {
+        let response = a.anonymous().get(&format!("/{path}")).await;
+        assert_eq!(response.status, StatusCode::OK, "{path}");
+        assert_eq!(response.content_type(), Some(content_type), "{path}");
+        assert_eq!(response.body, mark(path), "{path}");
+    }
+
+    let logo = std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/users_logos/moon.jpg")).unwrap();
+    let upload = david.write(Req::new(Method::PATCH, "/account").multipart(&[], ("account[logo]", "moon.jpg", "image/jpeg", &logo))).await;
+    assert_eq!(upload.status, StatusCode::FOUND);
+    let manifest = a.anonymous().get("/webmanifest.json").await.json();
+    let small = manifest["icons"][0]["src"].as_str().unwrap().replace("&amp;", "&");
+    assert!(small.starts_with("/account/logo?") && small.contains("v="), "{small}");
+    for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
+        assert_eq!(link_href(&page, "icon", Some("image/png")).as_deref(), Some(small.as_str()), "the manifest's small icon: {page}");
+        let touch = link_href(&page, "apple-touch-icon", None).unwrap();
+        assert_eq!(touch, small.replace("size=small", "size=touch"), "versioned like the manifest's icon: {page}");
+        assert!(!page.contains("/favicon."), "{page}");
+    }
+    let icon = a.anonymous().get(&small).await;
+    assert_eq!(icon.content_type(), Some("image/png"));
+    let favicon = a.anonymous().get("/favicon.ico").await;
+    assert_eq!(favicon.status, StatusCode::OK);
+    assert_eq!(favicon.content_type(), Some("image/png"));
+    assert_eq!(favicon.body, icon.body, "the logo's small icon");
+}
+
+fn decode_png(bytes: &[u8]) -> (u32, u32, Vec<[u8; 3]>) {
+    let mut decoder = png::Decoder::new(std::io::Cursor::new(bytes));
+    decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
+    let mut reader = decoder.read_info().unwrap();
+    let mut buffer = vec![0; reader.output_buffer_size().unwrap()];
+    let info = reader.next_frame(&mut buffer).unwrap();
+    let channels = info.color_type.samples();
+    assert!(channels >= 3, "{:?}", info.color_type);
+    let pixels = buffer[..info.buffer_size()].chunks(channels).map(|pixel| [pixel[0], pixel[1], pixel[2]]).collect();
+    (info.width, info.height, pixels)
+}
+
+#[tokio::test]
+async fn a_wide_logos_apple_touch_icon_is_a_180_square_with_the_logo_centred_on_white() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let (width, height) = (300, 100);
+    let mut wide = Vec::new();
+    {
+        let mut encoder = png::Encoder::new(&mut wide, width, height);
+        encoder.set_color(png::ColorType::Rgba);
+        let mut writer = encoder.write_header().unwrap();
+        writer.write_image_data(&[200, 0, 0, 255].repeat((width * height) as usize)).unwrap();
+    }
+    let upload = david.write(Req::new(Method::PATCH, "/account").multipart(&[], ("account[logo]", "wide.png", "image/png", &wide))).await;
+    assert_eq!(upload.status, StatusCode::FOUND);
+    let page = david.get("/app/").await.text();
+    let touch = link_href(&page, "apple-touch-icon", None).expect("an apple-touch-icon");
+    let icon = a.anonymous().get(&touch).await;
+    assert_eq!((icon.status, icon.content_type()), (StatusCode::OK, Some("image/png")));
+    let (width, height, pixels) = decode_png(&icon.body);
+    assert_eq!((width, height), (180, 180));
+    let at = |x: u32, y: u32| pixels[(y * width + x) as usize];
+    let red = |[r, g, b]: [u8; 3]| r > 150 && g < 50 && b < 50;
+    assert_eq!(at(0, 0), [255, 255, 255], "padding, not the logo stretched");
+    assert_eq!(at(179, 179), [255, 255, 255]);
+    assert!(red(at(0, 90)) && red(at(179, 90)) && red(at(90, 90)), "the logo spans the width");
+    let rows = (0..height).filter(|&y| red(at(90, y))).count();
+    assert!((58..=62).contains(&rows), "a 3:1 logo keeps its shape: {rows} rows");
+}
+
+const OLD_CHROME: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
+
+async fn assert_images_for_an_old_browser(browser: &mut Browser<'_>, icons: &[(&str, &str)]) {
+    for (path, content_type) in icons {
+        for method in [Method::GET, Method::HEAD] {
+            let response = browser.send(Req::new(method.clone(), path).header("user-agent", OLD_CHROME).header("accept", "*/*")).await;
+            assert_eq!((response.status, response.content_type()), (StatusCode::OK, Some(*content_type)), "{method} {path}");
+            assert_eq!(response.body.is_empty(), method == Method::HEAD, "{method} {path}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn icons_are_images_for_an_old_browser_and_answer_head_and_conditional_requests() {
+    let Some(a) = app(true).await else { return };
+    let mut anonymous = a.anonymous();
+    let blocked = anonymous.send(Req::new(Method::GET, "/session/new").header("user-agent", OLD_CHROME)).await;
+    assert!(blocked.text().contains("Upgrade to a supported web browser"), "the gate still applies to pages");
+    assert_images_for_an_old_browser(&mut anonymous, &[
+        ("/favicon.ico", "image/x-icon"),
+        ("/favicon.svg", "image/svg+xml"),
+        ("/favicon.png", "image/png"),
+        ("/apple-touch-icon.png", "image/png"),
+    ]).await;
+
+    let mut david = a.sign_in(DAVID).await;
+    let logo = std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/users_logos/moon.jpg")).unwrap();
+    let upload = david.write(Req::new(Method::PATCH, "/account").multipart(&[], ("account[logo]", "moon.jpg", "image/jpeg", &logo))).await;
+    assert_eq!(upload.status, StatusCode::FOUND);
+    let page = david.get("/app/").await.text();
+    let (icon, touch) = (link_href(&page, "icon", Some("image/png")).unwrap(), link_href(&page, "apple-touch-icon", None).unwrap());
+    assert_images_for_an_old_browser(&mut anonymous, &[("/favicon.ico", "image/png"), (&icon, "image/png"), (&touch, "image/png")]).await;
+
+    let first = anonymous.get("/favicon.ico").await;
+    let etag = first.header("etag").expect("an ETag").to_string();
+    let revalidated = anonymous.send(Req::new(Method::GET, "/favicon.ico").header("if-none-match", &etag)).await;
+    assert_eq!(revalidated.status, StatusCode::NOT_MODIFIED);
+    assert!(revalidated.body.is_empty());
+    let changed = anonymous.send(Req::new(Method::GET, "/favicon.ico").header("if-none-match", "W/\"stale\"")).await;
+    assert_eq!((changed.status, changed.body), (StatusCode::OK, first.body));
+}
+
 #[tokio::test]
 async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_shell() {
     let Some(a) = app(true).await else { return };

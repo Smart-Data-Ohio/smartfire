@@ -298,10 +298,10 @@ async fn the_application_chain_blocks_banned_ips_forgeries_and_old_browsers() {
         assert!(page.contains(&format!("/browsers/{browser}")) && page.contains(name) && page.contains(&format!("{version}+")), "{browser}: {page}");
     }
     assert!(!page.contains("unsupported"), "no retained unsupported.js: {page}");
-    // In a Live controller (`include ActiveStorage::Streaming`) Rack::ETag can't digest the body.
+    // Pages link the logo as their icon: an image in its place is never shown.
     let request = Request::get("/account/logo").header(header::HOST, "campfire.test").header(header::USER_AGENT, outdated);
-    let blocked = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;
-    assert_eq!((blocked.status, blocked.header("cache-control"), blocked.header("etag")), (StatusCode::OK, Some("no-cache"), None));
+    let logo = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;
+    assert_eq!((logo.status, logo.header("content-type")), (StatusCode::OK, Some("image/png")));
 }
 
 #[tokio::test]

@@ -459,18 +459,22 @@ fn transform(
     let image = match variation
         .transformations()
         .iter()
-        .find(|(key, _)| key == "resize_to_limit")
+        .find(|(key, _)| key == "resize_to_limit" || key == "resize_and_pad")
     {
-        Some((_, crate::marshal::Value::Array(dimensions))) => {
+        Some((key, crate::marshal::Value::Array(dimensions))) => {
             let dimension = |i| match dimensions.get(i) {
                 Some(crate::marshal::Value::Int(n)) => Some(*n as i32),
                 _ => None,
             };
-            image.resize_to_limit(dimension(0), dimension(1))?
+            match (key.as_str(), dimension(0), dimension(1)) {
+                ("resize_and_pad", Some(width), Some(height)) => image.resize_and_pad(width, height)?,
+                ("resize_to_limit", width, height) => image.resize_to_limit(width, height)?,
+                _ => return Err(crate::Error::InvalidVariation("resize_and_pad needs both dimensions".into())),
+            }
         }
         _ => {
             return Err(crate::Error::InvalidVariation(
-                "expected resize_to_limit".into(),
+                "expected resize_to_limit or resize_and_pad".into(),
             ));
         }
     };
