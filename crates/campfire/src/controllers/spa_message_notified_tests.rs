@@ -158,3 +158,57 @@ async fn private_thread_notification_after_revocation(replay_only: bool) {
         server.abort();
     }
 }
+
+#[tokio::test]
+async fn a_recipient_who_ignores_the_author_still_gets_the_notification_marked_ignored() {
+    let Some(a) = app(true).await else { panic!("restored default seed required") };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let jason = a.sign_in(JASON).await;
+    let reply = david
+        .write(json_body(Method::POST, "/api/v1/directs", &json!({"userIds": [KEVIN, JASON]})))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+    a.db()
+        .write(|tx| campfire_db::models::user_block::UserBlock::set(tx, KEVIN, DAVID, true))
+        .await
+        .unwrap();
+    a.booted.app.broadcasts.settle_sync().await;
+    let mut kevins_sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    kevins_sync.welcome().await;
+    let mut jasons_sync = Sync::connect(addr, &jason.cookie_header(), &[]).await;
+    jasons_sync.welcome().await;
+
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &json!({"clientMessageId": "ignored", "markdownSource": "Lunch?"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let message = parse::<api::MessageDTO>(&reply).id;
+    a.booted.app.broadcasts.settle_sync().await;
+    let marker = |event: &api::SyncEvent| {
+        matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("after-notified"))
+    };
+    for user in [KEVIN, JASON] {
+        a.booted.app.cable.sync_publish(campfire_cable::sync::SyncPublication::new(
+            campfire_cable::sync::Audience::User(user),
+            serde_json::to_string(&api::SyncPayload::WorkspaceStylesUpdated(api::CustomStyles {
+                css: Some("after-notified".into()),
+            }))
+            .unwrap(),
+        ));
+    }
+    let data = |event: api::SyncEvent| serde_json::to_value(event.payload).unwrap()["data"].clone();
+
+    let jasons = data(jasons_sync.until(notified(message), marker).await);
+    assert_eq!(jasons["messageId"], json!(message), "{jasons}");
+    assert_eq!(jasons["ignored"], serde_json::Value::Null, "a recipient who doesn't ignore David: {jasons}");
+    let kevins = data(kevins_sync.until(notified(message), marker).await);
+    assert_eq!(kevins["ignored"], json!(true), "{kevins}");
+    server.abort();
+}
