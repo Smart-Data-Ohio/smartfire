@@ -608,3 +608,116 @@ test("a held card goes back when the page loses its pointer", async ({ page }) =
   await page.waitForTimeout(300);
   expect(writes).toHaveLength(0);
 });
+
+async function pen(page: Page) {
+  const cdp = await page.context().newCDPSession(page);
+
+  const send = (type: "mousePressed" | "mouseMoved" | "mouseReleased", { x, y }: Point) =>
+    cdp.send("Input.dispatchMouseEvent", {
+      type,
+      x,
+      y,
+      button: "left",
+      buttons: type === "mouseReleased" ? 0 : 1,
+      clickCount: type === "mouseMoved" ? 0 : 1,
+      pointerType: "pen",
+    });
+
+  return {
+    down: (at: Point) => send("mousePressed", at),
+    move: async (from: Point, to: Point) => {
+      for (let step = 1; step <= 12; step += 1) {
+        await send("mouseMoved", {
+          x: from.x + ((to.x - from.x) * step) / 12,
+          y: from.y + ((to.y - from.y) * step) / 12,
+        });
+      }
+    },
+    up: (at: Point) => send("mouseReleased", at),
+  };
+}
+
+type Point = { readonly x: number; readonly y: number };
+
+async function recordPointers(page: Page): Promise<() => Promise<string[]>> {
+  await page.evaluate(() => {
+    const seen = new Set<string>();
+
+    window.addEventListener(
+      "pointerdown",
+      (event) => {
+        seen.add(`${event.pointerType}:${event.pointerId}`);
+        document.documentElement.dataset.testPointers = [...seen].join(",");
+      },
+      { capture: true },
+    );
+  });
+
+  return () =>
+    page.evaluate(() => (document.documentElement.dataset.testPointers ?? "").split(","));
+}
+
+test("a second pointer pressed while a first is still pending doesn't start its own drag", async ({
+  page,
+}) => {
+  const writes = workWrites(page);
+
+  await openSyncedBoard(page);
+
+  const pointers = await recordPointers(page);
+  const mouseAt = await center(card(page, "Planned", /Launch week plan/));
+  const penAt = await center(card(page, "Planned", /Cursor pagination/));
+  const blocked = await center(column(page, "Blocked"));
+  const done = await center(column(page, "Done"));
+  const stylus = await pen(page);
+
+  await page.mouse.move(mouseAt.x, mouseAt.y);
+  await page.mouse.down();
+  await stylus.down(penAt);
+  expect(new Set(await pointers()).size).toBe(2);
+
+  await page.mouse.move(blocked.x, blocked.y, { steps: 12 });
+  await stylus.move(penAt, done);
+  await expect(page.locator(".board-drag-ghost")).toHaveCount(1);
+
+  await page.mouse.up();
+  await stylus.up(done);
+
+  await expect(card(page, "Blocked", /Launch week plan/)).toBeVisible();
+  await expect(card(page, "Planned", /Cursor pagination/)).toBeVisible();
+  await expect(page.locator(".board-drag-ghost")).toHaveCount(0);
+  await page.waitForTimeout(300);
+  expect(writes).toHaveLength(1);
+  expect(writes[0]?.postDataJSON()).toEqual({ status: "blocked" });
+});
+
+test("a second pointer released during a drag leaves nothing behind when the board unmounts", async ({
+  page,
+}) => {
+  const writes = workWrites(page);
+
+  await openSyncedBoard(page);
+
+  const mouseAt = await center(card(page, "Planned", /Launch week plan/));
+  const penAt = await center(card(page, "Planned", /Cursor pagination/));
+  const done = await center(column(page, "Done"));
+  const stylus = await pen(page);
+
+  await stylus.down(penAt);
+  await page.mouse.move(mouseAt.x, mouseAt.y);
+  await page.mouse.down();
+  await stylus.move(penAt, done);
+  await expect(column(page, "Done").getByText("Moves here")).toBeVisible();
+  await page.mouse.up();
+
+  await page.getByRole("tab", { name: "List" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".board-column")).toHaveCount(0);
+  await page.waitForTimeout(300);
+  await expect(page.locator(".board-drag-ghost")).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveAttribute("data-board-dragging", /.*/);
+
+  await stylus.up(done);
+  await page.waitForTimeout(300);
+  expect(writes).toHaveLength(0);
+});

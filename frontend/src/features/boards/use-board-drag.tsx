@@ -211,7 +211,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
   const { announce, region } = useAnnouncer("assertive");
   const hintId = useId();
   const latest = useRef<BoardDragState | null>(null);
-  const stopPointer = useRef<(() => void) | null>(null);
+  const pointer = useRef<{ readonly stop: () => void } | null>(null);
   const arrival = useRef<Arrival | null>(null);
 
   const heldMovable = useStore(
@@ -231,7 +231,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
 
   useEffect(
     () => () => {
-      stopPointer.current?.();
+      pointer.current?.stop();
       arrival.current?.ghost?.remove();
       delete document.documentElement.dataset.boardDragging;
     },
@@ -357,6 +357,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
     if (
       event.button !== 0 ||
       event.pointerType === "touch" ||
+      pointer.current !== null ||
       latest.current !== null ||
       !canMoveWork(store.getState(), roomId, threadId)
     ) {
@@ -466,7 +467,10 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       window.removeEventListener("scroll", retarget, { capture: true });
       window.removeEventListener("blur", cancel);
       window.removeEventListener("keydown", onEscape, { capture: true });
-      stopPointer.current = null;
+
+      if (pointer.current === owner) {
+        pointer.current = null;
+      }
     };
 
     const up = (released: PointerEvent) => {
@@ -525,10 +529,14 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       sendBack(threadId, ghost);
     };
 
-    stopPointer.current = () => {
-      stop();
-      ghost?.remove();
+    const owner = {
+      stop: () => {
+        stop();
+        ghost?.remove();
+      },
     };
+
+    pointer.current = owner;
 
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -581,6 +589,7 @@ export function useBoardDrag(roomId: number, boardRef: RefObject<HTMLElement | n
       if (
         event.key !== " " ||
         !plain ||
+        pointer.current !== null ||
         status === undefined ||
         item === null ||
         !canMoveWork(store.getState(), roomId, threadId)
