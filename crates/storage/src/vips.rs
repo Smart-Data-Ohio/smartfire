@@ -26,6 +26,8 @@ const VIPS_SIZE_DOWN: c_int = 2;
 const VIPS_PRECISION_INTEGER: c_int = 0;
 const VIPS_FAIL_ON_ERROR: c_int = 2;
 const VIPS_FAIL_ON_WARNING: c_int = 3;
+const VIPS_INTERPRETATION_SRGB: c_int = 22;
+const VIPS_EXTEND_WHITE: c_int = 4;
 const G_TYPE_INVALID: usize = 0;
 
 #[link(name = "vips")]
@@ -57,6 +59,12 @@ unsafe extern "C" {
     fn vips_autorot(input: *mut VipsImage, out: *mut *mut VipsImage, ...) -> c_int;
     fn vips_thumbnail_image(input: *mut VipsImage, out: *mut *mut VipsImage, width: c_int, ...) -> c_int;
     fn vips_conv(input: *mut VipsImage, out: *mut *mut VipsImage, mask: *mut VipsImage, ...) -> c_int;
+    fn vips_colourspace(input: *mut VipsImage, out: *mut *mut VipsImage, space: c_int, ...) -> c_int;
+    fn vips_image_hasalpha(image: *mut VipsImage) -> c_int;
+    fn vips_array_double_new(array: *const c_double, n: c_int) -> *mut c_void;
+    fn vips_area_unref(area: *mut c_void);
+    fn vips_flatten(input: *mut VipsImage, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_embed(input: *mut VipsImage, out: *mut *mut VipsImage, x: c_int, y: c_int, width: c_int, height: c_int, ...) -> c_int;
     fn vips_image_write_to_file(image: *mut VipsImage, name: *const c_char, ...) -> c_int;
     fn vips_avg(image: *mut VipsImage, out: *mut c_double, ...) -> c_int;
     fn g_object_unref(object: *mut c_void);
@@ -255,6 +263,36 @@ impl Image {
             vips_conv(thumbnail.0, &mut sharpened, mask.0, c"precision".as_ptr(), VIPS_PRECISION_INTEGER, std::ptr::null::<c_char>())
         };
         Image::wrap_out(status, sharpened)
+    }
+
+    /// `resize_and_pad(width, height, background: white)`: fit inside the box, then centre it on
+    /// an opaque white canvas of exactly that size.
+    pub fn resize_and_pad(&self, width: i32, height: i32) -> Result<Image> {
+        let mut thumbnail = std::ptr::null_mut();
+        let status = unsafe {
+            vips_thumbnail_image(self.0, &mut thumbnail, width as c_int, c"height".as_ptr(), height as c_int, c"no_rotate".as_ptr(), 1 as c_int, std::ptr::null::<c_char>())
+        };
+        let thumbnail = Image::wrap_out(status, thumbnail)?;
+        let mut srgb = std::ptr::null_mut();
+        let status = unsafe { vips_colourspace(thumbnail.0, &mut srgb, VIPS_INTERPRETATION_SRGB, std::ptr::null::<c_char>()) };
+        let mut image = Image::wrap_out(status, srgb)?;
+        if unsafe { vips_image_hasalpha(image.0) } != 0 {
+            let white: [c_double; 3] = [255.0; 3];
+            let mut flat = std::ptr::null_mut();
+            let status = unsafe {
+                let background = vips_array_double_new(white.as_ptr(), 3);
+                let status = vips_flatten(image.0, &mut flat, c"background".as_ptr(), background, std::ptr::null::<c_char>());
+                vips_area_unref(background);
+                status
+            };
+            image = Image::wrap_out(status, flat)?;
+        }
+        let (x, y) = ((width - image.width()) / 2, (height - image.height()) / 2);
+        let mut padded = std::ptr::null_mut();
+        let status = unsafe {
+            vips_embed(image.0, &mut padded, x, y, width, height, c"extend".as_ptr(), VIPS_EXTEND_WHITE, std::ptr::null::<c_char>())
+        };
+        Image::wrap_out(status, padded)
     }
 
     /// `write_to_file(path)`: the saver and its defaults are picked from the extension.

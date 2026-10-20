@@ -1325,8 +1325,7 @@
       "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Keep signed avatar URLs, /account/logo, and /icons/:name. Existing stored HTML and bot payloads keep old asset URLs."},
       "bookmarks": true,
       "notifications": true,
-    "known_bug": {"fix_before": "none", "reason": "The automatic favicon request returns 404; it does not block cutover."},
-    "notes": "Malformed QR input answers 404, the same empty response as a bad avatar token. The seed account has no logo, so /account/logo serves the stock PNG. The automatic /favicon.ico request currently returns 404; normal page icons use /account/logo.",
+    "notes": "Malformed QR input answers 404, the same empty response as a bad avatar token. The seed account has no logo, so /account/logo serves the stock PNG and /favicon.ico serves Smartfire's mark; with a logo, /favicon.ico is the logo's small PNG.",
       "bookmark_notes": "PWA icons use the logo route.",
       "notification_notes": "Push icon uses the logo route.",
       "cases": [
@@ -1337,7 +1336,7 @@
         {"id": "images.qr.valid", "method": "GET", "path": "/qr_code/{QR_URL_ID}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "image/svg+xml", "markers": ["<svg"]}},
         {"id": "images.qr.malformed500", "method": "GET", "path": "/qr_code/!!!", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}},
         {"id": "images.embeds.bad", "method": "GET", "path": "/embeds/image/not-signed", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
-        {"id": "images.favicon.missing", "method": "GET", "path": "/favicon.ico", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}},
+        {"id": "images.favicon", "method": "GET", "path": "/favicon.ico", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "image/x-icon", "body_nonempty": true}},
         {"auth": "david", "expect": {"body_nonempty": true, "content_type_prefix": "image/webp", "status": 200, "body_sha256": "{AVATAR_SHA256}"}, "fixture_profile": "retained", "id": "images.avatar.ok", "method": "GET", "path": "/users/{AVATAR_TOKEN}/avatar", "preference": "classic", "spa_enabled": true}
       ]
     },
