@@ -307,7 +307,7 @@ impl<U: Send + Sync + 'static> Server<U> {
         let _ = self.inner.sync.set(Arc::new(Engine {
             ring: Ring::new(config),
             handler: Arc::new(handler),
-            connections: std::sync::atomic::AtomicUsize::new(0),
+            presence: Default::default(),
             people: Default::default(),
             fences: Default::default(),
         }));
@@ -324,7 +324,7 @@ impl<U: Send + Sync + 'static> Server<U> {
         let Some(engine) = self.inner.sync.get() else {
             return false;
         };
-        if engine.connections.load(std::sync::atomic::Ordering::Acquire) > 0 {
+        if engine.presence.lock().unwrap().observers > 0 {
             return true;
         }
         if engine.ring.gap_needed() {
@@ -374,6 +374,28 @@ impl<U: Send + Sync + 'static> Server<U> {
             engine.ring.push(seq, publication);
             seq
         }))
+    }
+
+    /// Publishes only changes to a person's effective presence and status text.
+    pub fn sync_presence(&self, presence: campfire_api_types::UserPresence) -> Option<u64> {
+        let engine = self.inner.sync.get()?;
+        let mut state = engine.presence.lock().unwrap();
+        if state.observers == 0 {
+            if engine.ring.gap_needed() {
+                self.inner.hub.sequenced(|seq| engine.ring.skip(seq));
+            }
+            return None;
+        }
+        if state.last_by_user.get(&presence.user_id) == Some(&presence) {
+            return None;
+        }
+        let payload = serde_json::to_string(&campfire_api_types::SyncPayload::Presence(presence.clone()))
+            .expect("sync payloads serialize");
+        let mut publication = SyncPublication::new(crate::sync::Audience::Everyone, payload);
+        publication.coalesce = Some(format!("presence:{}", presence.user_id));
+        let seq = self.sync_publish(publication)?;
+        state.last_by_user.insert(presence.user_id, presence);
+        Some(seq)
     }
 
     /// [`Server::sync_publish`], recording the event's sequence under `fence`: a publication
