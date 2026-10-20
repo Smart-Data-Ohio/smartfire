@@ -556,6 +556,9 @@ function WorkspaceHeader({
             Create a channel…
           </MenuItem>
         ) : null}
+        <MenuItem icon="hash" onSelect={() => openOverlay("browse-channels")}>
+          Browse channels
+        </MenuItem>
         <MenuItem
           icon="search"
           shortcut={shortcutKeys("switcher")}
@@ -1168,7 +1171,28 @@ export function Sidebar() {
       case "channels":
         return (
           <>
-            {createButton("open", "Create a channel")}
+            <Menu
+              label="Add channels"
+              placement="bottom-end"
+              trigger={(props) => (
+                <IconButton
+                  {...props}
+                  icon="plus"
+                  label="Add channels"
+                  size="sm"
+                  className="sidebar-section-action"
+                />
+              )}
+            >
+              {canCreateRooms ? (
+                <MenuItem icon="plus" onSelect={() => openNewRoom("open")}>
+                  Create a channel…
+                </MenuItem>
+              ) : null}
+              <MenuItem icon="hash" onSelect={() => openOverlay("browse-channels")}>
+                Browse channels
+              </MenuItem>
+            </Menu>
             {newCategoryButton}
           </>
         );

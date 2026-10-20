@@ -4,9 +4,10 @@ import type { SidebarRow } from "./SidebarRow";
 
 /**
  * `POST /api/v1/rooms/:id/join` (`rooms#join`, `Membership::join_open`). Idempotent: a viewer who
- * already belongs gets the same membership and no second broadcast. `row` is the joiner's
- * sidebar row when the membership is visible, and null when their involvement is `invisible`
- * (the room stays out of the sidebar; classic still redirects into it). A created membership
- * also publishes `sidebar.row.upserted`. 404 unless the room is an alive open room.
+ * already belongs gets the same membership and no second broadcast. A hidden membership
+ * (`invisible`, the only way to leave an open room) comes back at the room's default involvement
+ * and publishes the change, as a created membership publishes `sidebar.row.upserted`. `row` is
+ * the joiner's sidebar row, null only if the membership was hidden again before the reply was
+ * read. 404 unless the room is an alive open room.
  */
 export type RoomJoin = { detail: RoomDetail, row: SidebarRow | null, };

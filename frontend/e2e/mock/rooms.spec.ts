@@ -130,7 +130,8 @@ test.describe("creating rooms", () => {
     page,
   }) => {
     await openApp(page, "/");
-    await sidebar(page).getByRole("button", { name: "Create a channel", exact: true }).click();
+    await sidebar(page).getByRole("button", { name: "Add channels" }).click();
+    await page.getByRole("menuitem", { name: "Create a channel…" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Create a channel" });
 

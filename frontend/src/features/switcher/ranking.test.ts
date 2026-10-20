@@ -12,6 +12,7 @@ import {
 import { matchRange, matchScore, normalizeQuery } from "./match.ts";
 import {
   flattenSections,
+  joinableSection,
   localItems,
   mergeItems,
   type RemoteCatalogue,
@@ -379,5 +380,42 @@ describe("withoutRemovedThreads", () => {
 
     expect(items.some((item) => item.kind === "thread")).toBe(false);
     expect(withoutRemovedThreads(CATALOGUE, { 71: 1 })).toBe(CATALOGUE);
+  });
+});
+
+describe("joinableSection", () => {
+  const channel = (roomId: number, name: string) => ({ roomId, name, detail: "3 members" });
+
+  it("lists the channels in the server's order, leaving out rooms the sidebar already reaches", () => {
+    const [section] = joinableSection(
+      [channel(90, "campfire"), channel(1, "general"), channel(91, "camping")],
+      localItems(SIDEBAR, VIEWER),
+    );
+
+    expect(section?.title).toBe("Channels you can join");
+    expect(section?.items.map((item) => [item.key, item.kind, item.label, item.detail])).toEqual([
+      ["join:90", "joinable", "campfire", "3 members"],
+      ["join:91", "joinable", "camping", "3 members"],
+    ]);
+    expect(section?.items.every((item) => item.roomKind === "open")).toBe(true);
+  });
+
+  it("shows at most five, and nothing when every match is already yours", () => {
+    const many = Array.from({ length: 8 }, (_, index) => channel(100 + index, `c${index}`));
+
+    expect(joinableSection(many, [])[0]?.items).toHaveLength(5);
+    expect(joinableSection([channel(1, "general")], localItems(SIDEBAR, VIEWER))).toEqual([]);
+  });
+
+  it("keeps a hidden channel whose recent thread the catalogue still lists", () => {
+    const threads = remoteItems({
+      rooms: [],
+      people: [],
+      threads: [{ threadId: 5, name: "Offsite plan", roomId: 90, roomName: "campfire" }],
+    });
+
+    expect(
+      joinableSection([channel(90, "campfire")], threads)[0]?.items.map((item) => item.key),
+    ).toEqual(["join:90"]);
   });
 });

@@ -1,0 +1,12 @@
+/* A search match inside a result label: the quick switcher and the channel browser. */
+@layer app {
+  .match-mark {
+    background: none;
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--accent), transparent 40%);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+}
