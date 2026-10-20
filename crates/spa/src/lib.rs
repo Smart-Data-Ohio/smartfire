@@ -6,14 +6,15 @@
 //! never need Node ([`built`] says which).
 //!
 //! - [`file`]: an embedded file by its path under `/app/`, in the encoding the client prefers.
-//! - [`render_shell`]: `index.html` with the CSRF meta tags, the CSP nonce and the [`Boot`] JSON
-//!   the app starts from.
+//! - [`render_shell`]: `index.html` with the CSRF meta tags, the CSP nonce, the [`Favicon`] links
+//!   and the [`Boot`] JSON the app starts from.
 //! - [`screens`]: which classic pages the SPA has ported, and their URLs on both sides.
 //!
 //! The HTTP side (routes, authentication, headers) is the app's (`crates/campfire`,
 //! `controllers/spa.rs`); this crate knows nothing of requests or sessions.
 
 mod boot;
+pub mod favicon;
 pub mod pwa;
 pub mod screens;
 mod serve;
@@ -27,6 +28,7 @@ mod embedded {
     include!(concat!(env!("OUT_DIR"), "/spa.rs"));
 }
 
+pub use favicon::Favicon;
 pub use boot::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKind, script_json, text_size, theme};
 pub use serve::{File, Served, file};
 pub use shell::{render_shell, render_signed_out_shell};

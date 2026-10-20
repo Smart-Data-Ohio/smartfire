@@ -18,13 +18,27 @@ const STALE_WHILE_REVALIDATE: u64 = 7 * 24 * 60 * 60;
 /// `allow_unauthenticated_access only: :show`
 pub async fn show(c: &mut Ctx) -> Result {
     c.use_live_response(); // `include ActiveStorage::Streaming`
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    concerns::before_actions(c, Before::default().allow_unauthenticated_access().skip_allow_browser()).await?;
     if c.param_str("animated") == Some("1")
         || c.param_str("still") == Some("1")
         || c.param_str("blob").is_some()
     {
         return super::banners::show_image(c, "logo").await;
     }
+    let (variation, small) = match c.param_str("size") {
+        Some("small") => (Variation::resize_to_limit(192, 192, Some("png")), true),
+        Some("touch") => (Variation::resize_and_pad(TOUCH_ICON_SIZE, TOUCH_ICON_SIZE), true),
+        _ => (Variation::resize_to_limit(512, 512, Some("png")), false),
+    };
+    send_logo(c, variation, |c| stock_icon(c, small)).await
+}
+
+/// The apple-touch-icon's side: iOS shows a square tile and fills a transparent one with black.
+const TOUCH_ICON_SIZE: i64 = 180;
+
+/// The attached logo as the PNG `variation` makes, with `show`'s caching. `fallback` answers when
+/// there's no logo or it can't be resized.
+pub async fn send_logo(c: &mut Ctx, variation: Variation, fallback: impl FnOnce(&mut Ctx) -> Result) -> Result {
     let account = c.app().db.read(Account::first).await.map_err(Error::internal)?;
     let blob = match &account {
         Some(account) => {
@@ -49,16 +63,14 @@ pub async fn show(c: &mut Ctx) -> Result {
     }
     c.expires_in(MAX_AGE, ExpiresIn { public: true, stale_while_revalidate: Some(STALE_WHILE_REVALIDATE), ..ExpiresIn::default() });
 
-    let small = c.param_str("size") == Some("small");
     let variant = match blob.filter(|blob| blob.is_variable()) {
-        // `logo.variant(size).processed if logo.variable?`: :small is 192, :large 512, both PNG.
+        // `logo.variant(size).processed if logo.variable?`
         Some(blob) => {
-            let size = if small { 192 } else { 512 };
             let timeout = campfire_storage::branding::processing_timeout(&blob);
             campfire_runtime::active_storage::processed_branding_variant_with_deadline(
                 c.app(),
                 blob,
-                Variation::resize_to_limit(size, size, Some("png")),
+                variation,
                 timeout,
                 |storage, blob, variation, cancel| {
                     campfire_storage::branding::transform_variant(
@@ -80,8 +92,7 @@ pub async fn show(c: &mut Ctx) -> Result {
             let path = c.app().storage.service.path_for(&variant.key);
             c.send_file(path, SendOptions::inline("image/png"))
         }
-        // send_stock_icon
-        None => stock_icon(c, small),
+        None => fallback(c),
     }?;
     Ok(if private { response.header("cache-control", "private, no-store") } else { response })
 }
