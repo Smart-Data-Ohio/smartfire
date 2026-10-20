@@ -3,7 +3,7 @@
 //!
 //! `SPA_DIST=frontend/dist cargo run -p campfire_spa --example render_shell -- <theme> <text size> <nonce>`
 
-use campfire_spa::{Boot, BootAccount, BootUser, built, render_shell, text_size, theme};
+use campfire_spa::{Boot, BootAccount, BootUser, Favicon, built, render_shell, text_size, theme};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -35,5 +35,5 @@ fn main() {
         flash: None,
         appearance_preferences: None,
     };
-    print!("{}", render_shell(&boot, "test-csrf-token", Some(nonce)));
+    print!("{}", render_shell(&boot, "test-csrf-token", Some(nonce), &Favicon::Mark));
 }

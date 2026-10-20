@@ -2,29 +2,30 @@
 
 use crate::boot::{Boot, script_json};
 use crate::embedded;
+use crate::favicon::Favicon;
 use serde::Serialize;
 
 /// Where Vite's `index.html` (and the stub) want the request's tags.
 const PLACEHOLDER: &str = "<!--boot-->";
 
 /// `index.html` with, in place of `<!--boot-->`: `csrf_meta_tags` (the masked global token), the
-/// `csp_meta_tag`, the manifest link, and the boot JSON in
+/// `csp_meta_tag`, the manifest and icon links, and the boot JSON in
 /// `<script type="application/json" id="boot">`. With a nonce, every script and `modulepreload`
 /// link carries it, as the classic layout's import-map tags do.
-pub fn render_shell(boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>) -> String {
-    render(embedded::INDEX_HTML, boot, csrf_token, csp_nonce)
+pub fn render_shell(boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>, favicon: &Favicon) -> String {
+    render(embedded::INDEX_HTML, boot, csrf_token, csp_nonce, favicon)
 }
 
-pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>) -> String {
-    render_boot(template, boot, csrf_token, csp_nonce, boot.custom_styles.as_deref())
+pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>, favicon: &Favicon) -> String {
+    render_boot(template, boot, csrf_token, csp_nonce, boot.custom_styles.as_deref(), favicon)
 }
 
 /// Signed-out boot has its own DTO and carries no authenticated workspace or user facts.
-pub fn render_signed_out_shell(boot: &campfire_api_types::SignedOutBoot, csp_nonce: Option<&str>) -> String {
-    render_boot(embedded::INDEX_HTML, boot, &boot.csrf_token, csp_nonce, None)
+pub fn render_signed_out_shell(boot: &campfire_api_types::SignedOutBoot, csp_nonce: Option<&str>, favicon: &Favicon) -> String {
+    render_boot(embedded::INDEX_HTML, boot, &boot.csrf_token, csp_nonce, None, favicon)
 }
 
-fn render_boot(template: &str, boot: &impl Serialize, csrf_token: &str, csp_nonce: Option<&str>, custom_styles: Option<&str>) -> String {
+fn render_boot(template: &str, boot: &impl Serialize, csrf_token: &str, csp_nonce: Option<&str>, custom_styles: Option<&str>, favicon: &Favicon) -> String {
     let nonce = csp_nonce.map(|nonce| format!(" nonce=\"{}\"", escape(nonce))).unwrap_or_default();
     let mut tags = format!(
         "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n<meta name=\"csrf-token\" content=\"{}\" />\n",
@@ -34,6 +35,7 @@ fn render_boot(template: &str, boot: &impl Serialize, csrf_token: &str, csp_nonc
         tags.push_str(&format!("<meta name=\"csp-nonce\" content=\"{}\" />\n", escape(csp_nonce)));
     }
     tags.push_str("<link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n");
+    tags.push_str(&favicon.links());
     tags.push_str(&format!("<script type=\"application/json\" id=\"boot\"{nonce}>{}</script>", script_json(boot)));
 
     let page = with_nonce(template, &nonce);
@@ -112,6 +114,6 @@ fn next_tag(text: &str, tag: &str) -> Option<usize> {
 }
 
 /// `ERB::Util.html_escape`
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&#39;")
 }
