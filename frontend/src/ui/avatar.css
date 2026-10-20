@@ -7,6 +7,8 @@
     position: relative;
     display: inline-grid;
     flex-shrink: 0;
+    /* An auto row would grow to a portrait photo's own height and spill below the tile. */
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
     place-items: center;
     width: var(--avatar-size);
     height: var(--avatar-size);

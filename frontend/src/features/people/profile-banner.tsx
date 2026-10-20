@@ -30,7 +30,8 @@ export function ProfileBanner({ userId, name, url, stillUrl, file = null }: Prof
     >
       {shown ? (
         <img
-          className="profile-banner-image"
+          key={src}
+          className="profile-banner-image enter-fade"
           src={src}
           alt={`${name}'s profile banner`}
           decoding="async"
