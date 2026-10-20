@@ -18,6 +18,13 @@ const LAST_KEY = "smartfire:message-chime:at";
 
 const FOCUS_KEY = "smartfire:message-chime:focused";
 
+const HANDLED_KEY = "smartfire:message-chime:handled";
+
+/** How long a tab remembers a message it chimed for or let pass, so a late tab skips it too. */
+const HANDLED_TTL_MS = 5 * 60_000;
+
+const HANDLED_MAX = 200;
+
 type Conversation = `room:${number}` | `thread:${number}`;
 
 function conversation(roomId: number, threadId: number | null): Conversation {
@@ -47,6 +54,10 @@ const decodeFocus = Schema.decodeUnknownOption(
       at: Schema.Number,
     }),
   ),
+);
+
+const decodeHandled = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Array(Schema.Tuple([Schema.Number, Schema.Number]))),
 );
 
 function tryRead(key: string): string | null {
@@ -110,12 +121,35 @@ function audible(): boolean {
 
 let lastLocal = 0;
 
+let handledLocal = new Map<number, number>();
+
+/** Message ids any tab has already chimed for or let pass, with when, newest last. */
+function handledRecently(now: number): Map<number, number> {
+  const shared = Option.getOrElse(
+    Option.flatMap(Option.fromNullishOr(tryRead(HANDLED_KEY)), decodeHandled),
+    () => [],
+  );
+
+  return new Map(
+    [...shared, ...handledLocal].filter(([, at]) => now - at < HANDLED_TTL_MS).slice(-HANDLED_MAX),
+  );
+}
+
 function claimThrottledChime(notified: readonly MessageNotified[]): boolean {
   const now = Date.now();
+  const handled = handledRecently(now);
+  const fresh = notified.filter((each) => !handled.has(each.messageId));
+
+  for (const each of fresh) {
+    handled.set(each.messageId, now);
+  }
+
+  handledLocal = handled;
+  tryWrite(HANDLED_KEY, JSON.stringify([...handled]));
   const silenced = focusedConversations();
 
   if (
-    notified.every((each) => silenced.has(conversation(each.roomId, each.threadId))) ||
+    fresh.every((each) => silenced.has(conversation(each.roomId, each.threadId))) ||
     now - Math.max(lastLocal, Number(tryRead(LAST_KEY) ?? 0)) < THROTTLE_MS
   ) {
     return false;

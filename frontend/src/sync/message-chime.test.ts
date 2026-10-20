@@ -371,6 +371,34 @@ describe("followMessageChimes across tabs", () => {
     expect(first.played() + second.played()).toBe(1);
   });
 
+  it("plays once when a busy tab handles the same message after the throttle", async () => {
+    const state = stateWith([row(DM, { kind: "direct" })]);
+    const first = await openTab(state);
+    const busy = await openTab(state);
+    const batch = directMessage(200, 1, 1);
+
+    first.deliver(batch);
+    vi.advanceTimersByTime(THROTTLE_MS + 100);
+    busy.deliver(batch);
+
+    expect([first.played(), busy.played()]).toEqual([1, 0]);
+  });
+
+  it("stays quiet in a late tab for a message the throttle swallowed in another", async () => {
+    const state = stateWith([row(DM, { kind: "direct" })]);
+    const first = await openTab(state);
+    const busy = await openTab(state);
+    const swallowed = directMessage(201, 2, 4);
+
+    first.deliver(directMessage(200, 1, 1));
+    vi.advanceTimersByTime(500);
+    first.deliver(swallowed);
+    vi.advanceTimersByTime(THROTTLE_MS);
+    busy.deliver(swallowed);
+
+    expect([first.played(), busy.played()]).toEqual([1, 0]);
+  });
+
   it("stays quiet while another tab shows that conversation focused, beat after beat", async () => {
     const state = stateWith([row(DM, { kind: "direct" })]);
     const background = await openTab(state);
