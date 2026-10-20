@@ -20,7 +20,6 @@ const FOCUS_KEY = "smartfire:message-chime:focused";
 
 const HANDLED_KEY = "smartfire:message-chime:handled";
 
-/** How long a tab remembers a message it chimed for or let pass, so a late tab skips it too. */
 const HANDLED_TTL_MS = 5 * 60_000;
 
 const HANDLED_MAX = 200;
@@ -123,21 +122,23 @@ let lastLocal = 0;
 
 let handledLocal = new Map<number, number>();
 
-/** Message ids any tab has already chimed for or let pass, with when, newest last. */
-function handledRecently(now: number): Map<number, number> {
+function handledAtByMessageId(now: number): Map<number, number> {
   const shared = Option.getOrElse(
     Option.flatMap(Option.fromNullishOr(tryRead(HANDLED_KEY)), decodeHandled),
     () => [],
   );
 
   return new Map(
-    [...shared, ...handledLocal].filter(([, at]) => now - at < HANDLED_TTL_MS).slice(-HANDLED_MAX),
+    [...shared, ...handledLocal]
+      .filter(([, at]) => now - at < HANDLED_TTL_MS)
+      .sort(([, a], [, b]) => a - b)
+      .slice(-HANDLED_MAX),
   );
 }
 
 function claimThrottledChime(notified: readonly MessageNotified[]): boolean {
   const now = Date.now();
-  const handled = handledRecently(now);
+  const handled = handledAtByMessageId(now);
   const fresh = notified.filter((each) => !handled.has(each.messageId));
 
   for (const each of fresh) {
