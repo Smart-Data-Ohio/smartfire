@@ -138,6 +138,7 @@ export class TestLifecycle extends Context.Service<
           Stream.map((event) => event === "visible"),
         ),
         isVisible: Ref.get(visible),
+        input: Stream.never,
       });
 
       return Context.make(TestLifecycle, TestLifecycle.of({ fire })).pipe(

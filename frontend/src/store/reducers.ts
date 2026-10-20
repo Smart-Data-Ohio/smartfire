@@ -87,17 +87,20 @@ export function mergeUsers(state: State, users: readonly User[]): State {
 }
 
 export function setPresence(state: State, list: readonly UserPresence[]): State {
-  if (list.length === 0) {
-    return state;
-  }
-
-  const presence = { ...state.presence };
+  let next: Record<number, UserPresence> | null = null;
 
   for (const entry of list) {
-    presence[entry.userId] = entry;
+    const current = (next ?? state.presence)[entry.userId];
+
+    if (current?.presence === entry.presence && current.statusText === entry.statusText) {
+      continue;
+    }
+
+    next ??= { ...state.presence };
+    next[entry.userId] = entry;
   }
 
-  return { ...state, presence };
+  return next === null ? state : { ...state, presence: next };
 }
 
 function sortSidebarOrder(rows: Readonly<Record<number, SidebarRow>>): readonly number[] {

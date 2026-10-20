@@ -220,10 +220,13 @@ impl Session {
             self.id,
             &crate::models::room_delete::HuddleConfig::from_env(),
         )?;
-        tx.conn().execute_cached(
+        let leases = tx.conn().execute_cached(
             r#"DELETE FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."session_id" = ?"#,
             [self.id],
         )?;
+        if leases > 0 {
+            tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::UserStatus { user_id: self.user_id });
+        }
         tx.conn().execute_cached(
             r#"DELETE FROM "two_factor_setup_secrets" WHERE "two_factor_setup_secrets"."session_id" = ?"#,
             [self.id],
