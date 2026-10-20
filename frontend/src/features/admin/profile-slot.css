@@ -1,5 +1,5 @@
-/* An image slot (the workspace icon and banner, a person's profile banner): a drop target with
-   its thumbnail, progress, refusal and actions. */
+/* An image slot (the workspace icon and banner, a person's avatar and profile banner): a drop
+   target with its thumbnail, progress, refusal and actions. */
 @layer app {
   .profile-invite-preview {
     position: relative;
@@ -115,7 +115,7 @@
     font-weight: var(--weight-semibold);
   }
 
-  .settings-group-body .profile-slot-hint {
+  .profile-slot-hint {
     color: var(--text-muted);
   }
 
@@ -149,7 +149,7 @@
     background: var(--accent-solid);
   }
 
-  .settings-group-body .profile-slot-error {
+  .profile-slot-error {
     display: flex;
     align-items: center;
     gap: var(--space-1);

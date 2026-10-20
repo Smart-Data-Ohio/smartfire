@@ -25,7 +25,7 @@ use axum::http::{HeaderName, HeaderValue, header};
 use axum::response::Response;
 use campfire_db::{Account, UserStatusSettings};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode};
-use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKind};
+use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, Favicon, FlashKind};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
@@ -91,9 +91,9 @@ pub async fn show(c: &mut Ctx) -> Result {
     // here and a saved return destination stays as it was. They show no flash, so they leave a
     // pending one for the page that does, as the retained pages do.
     if is_public_page(c.request.path()) {
-        let boot = load_signed_out_boot(c, false).await?;
+        let (boot, favicon) = load_signed_out_boot(c, false).await?;
         let nonce = c.content_security_policy_nonce();
-        let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
+        let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref(), &favicon);
         c.no_store();
         return Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html));
     }
@@ -122,9 +122,9 @@ pub async fn show(c: &mut Ctx) -> Result {
             SignedOutRoute::Invite => users::page_status(c, true).await?,
             _ => StatusCode::OK,
         };
-        let boot = load_signed_out_boot(c, true).await?;
+        let (boot, favicon) = load_signed_out_boot(c, true).await?;
         let nonce = c.content_security_policy_nonce();
-        let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref());
+        let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref(), &favicon);
         c.no_store();
         return Ok(c.render_as(status, "text/html; charset=utf-8", html));
     } else if c.request.path() == SETUP_SHELL && !concerns::sudo::json_request(c)? {
@@ -132,14 +132,14 @@ pub async fn show(c: &mut Ctx) -> Result {
     } else {
         concerns::before_actions(c, Before::default()).await?;
     }
-    let mut boot = load_boot(c).await?;
+    let (mut boot, favicon) = load_boot(c).await?;
     let flash = c.flash();
     boot.flash = flash.notice().map(|message| BootFlash { kind: FlashKind::Notice, message: message.to_owned() })
         .or_else(|| flash.alert().map(|message| BootFlash { kind: FlashKind::Alert, message: message.to_owned() }));
     flash.discard(None);
     let csrf_token = c.authenticity_tokens().global();
     let nonce = c.content_security_policy_nonce();
-    let html = campfire_spa::render_shell(&boot, &csrf_token, nonce.as_deref());
+    let html = campfire_spa::render_shell(&boot, &csrf_token, nonce.as_deref(), &favicon);
     Ok(c.render_as(StatusCode::OK, "text/html; charset=utf-8", html))
 }
 
@@ -149,17 +149,18 @@ pub async fn show(c: &mut Ctx) -> Result {
 /// ask for it.
 pub async fn signed_out_boot(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
-    let boot = load_signed_out_boot(c, true).await?;
+    let (boot, _) = load_signed_out_boot(c, true).await?;
     auth::json(c, StatusCode::OK, &boot)
 }
 
 /// The signed-out boot. With `take_flash`, a redirect's pending notice or alert goes with it and is
 /// discarded; without, the flash isn't read and stays for the next page.
-async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<SignedOutBoot> {
+async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<(SignedOutBoot, Favicon)> {
     let (account, first_run_pending, help_contact) = c.app().db.read(|conn| {
         Ok((Account::first(conn)?, presenters::accounts::no_users(conn)?, presenters::accounts::help_contact(conn)?))
     }).await.map_err(Error::internal)?;
     let workspace = presenters::workspace_branding::public_for_account(c.app(), account.as_ref()).await?;
+    let favicon = favicon(account.as_ref(), workspace.logo_url.is_some());
     // A redirect's notice or alert (a refused Google sign-in), shown by this load only.
     let message = if take_flash {
         let flash = c.flash();
@@ -170,7 +171,7 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<SignedOut
     } else {
         None
     };
-    Ok(SignedOutBoot {
+    let boot = SignedOutBoot {
         kind: SignedOut::SignedOut,
         workspace,
         sign_in_methods: {
@@ -184,7 +185,18 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<SignedOut
         version: c.app().config.app_version.clone(),
         csrf_token: c.authenticity_tokens().global(),
         flash: message,
-    })
+    };
+    Ok((boot, favicon))
+}
+
+fn favicon(account: Option<&Account>, logo_attached: bool) -> Favicon {
+    match account {
+        Some(account) if logo_attached => Favicon::Logo {
+            icon: super::pwa::manifest_logo_path(Some(account), Some("small")),
+            touch_icon: super::pwa::manifest_logo_path(Some(account), Some("touch")),
+        },
+        _ => Favicon::Mark,
+    }
 }
 
 /// `GET /api/v1/boot`. Signed out, a JSON request gets an empty 401 and a page navigation the
@@ -192,7 +204,7 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<SignedOut
 pub async fn boot(c: &mut Ctx) -> Result {
     let before = Before { authentication: Authentication::JsonUnauthorized, ..Before::default() };
     concerns::before_actions(c, before).await?;
-    let boot = load_boot(c).await?;
+    let (boot, _) = load_boot(c).await?;
     let csrf_token = c.authenticity_tokens().global();
     let body = serde_json::to_string(&BootResponse { boot: &boot, csrf_token: &csrf_token }).map_err(Error::internal)?;
     // It carries the session's token: never kept by a cache.
@@ -200,7 +212,7 @@ pub async fn boot(c: &mut Ctx) -> Result {
     Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
 }
 
-async fn load_boot(c: &mut Ctx) -> Result<Boot> {
+async fn load_boot(c: &mut Ctx) -> Result<(Boot, Favicon)> {
     let user = concerns::require_current_user(c)?.clone();
     let app = c.app();
     let service_worker_url = Some("/service-worker.js".into());
@@ -219,7 +231,8 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         Some(account) => Some(presenters::workspace_branding::for_account(app, account).await?),
         None => None,
     };
-    Ok(Boot {
+    let favicon = favicon(account.as_ref(), branding.as_ref().is_some_and(|branding| branding.logo_url.is_some()));
+    let boot = Boot {
         user: BootUser { id: user.id, name: user.display_name().to_owned(), avatar_url },
         custom_styles: account.as_ref().and_then(|account| account.custom_styles.clone()),
         account: BootAccount {
@@ -241,7 +254,8 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         revision,
         flash: None,
         appearance_preferences: appearance.appearance_preferences,
-    })
+    };
+    Ok((boot, favicon))
 }
 
 /// The embedded file a request under `/app/` names, if there is one.

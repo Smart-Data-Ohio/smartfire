@@ -36,6 +36,16 @@ impl Variation {
         Self { transformations }
     }
 
+    /// `resize_and_pad: [width, height]` as a PNG.
+    pub fn resize_and_pad(width: i64, height: i64) -> Self {
+        Self {
+            transformations: vec![
+                ("resize_and_pad".to_string(), Value::Array(vec![Value::Int(width), Value::Int(height)])),
+                ("format".to_string(), Value::Symbol("png".to_string())),
+            ],
+        }
+    }
+
     /// `preview(format: :webp)` and friends.
     pub fn format_only(format: &str) -> Self {
         Self { transformations: vec![("format".to_string(), Value::Symbol(format.to_string()))] }

@@ -170,7 +170,7 @@ export function WorkspaceProfile() {
           {(["logo", "banner", "invite_splash"] as const).map((kind) => (
             <ProfileSlot
               key={kind}
-              kind={kind}
+              thumbnail={kind}
               slot={PROFILE_SLOTS[kind]}
               image={serverImage(workspace, kind)}
               pending={slots[kind].pending}

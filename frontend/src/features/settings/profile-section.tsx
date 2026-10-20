@@ -1,18 +1,11 @@
-import { type FormEvent, useRef, useState } from "react";
-import {
-  browserDeps,
-  DEFAULT_UPLOAD_LIMIT_BYTES,
-  UploadTask,
-} from "../../lib/upload/direct-upload.ts";
-import { store } from "../../store/store.ts";
-import { actions } from "../../sync/runtime.ts";
+import { type FormEvent, useState } from "react";
 import { settings as settingsActions } from "../../sync/settings.ts";
 import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { PROFILE_FORMATS, USER_BANNER_SLOT } from "../admin/profile-format.ts";
-import { ProfileSlot, type Shown, useImageSlot } from "../admin/profile-slot.tsx";
+import { USER_AVATAR_SLOT, USER_BANNER_SLOT } from "../admin/profile-format.ts";
+import { ProfileSlot, type Shown, useImageSlot, useShownSrc } from "../admin/profile-slot.tsx";
 import { ProfileHero } from "../people/profile-banner.tsx";
 import { fieldError } from "./settings-format.ts";
 import {
@@ -25,158 +18,122 @@ import {
 
 type Fields = Readonly<Record<string, readonly string[]>>;
 
-/** The avatar: the picture, a way to upload a new one, and Remove when one is attached. */
-function AvatarPicker() {
-  const { settings, replace } = useSettings();
-  const input = useRef<HTMLInputElement | null>(null);
-  const [busy, setBusy] = useState<"uploading" | "removing" | null>(null);
-  const { profile } = settings;
+interface Draft {
+  readonly name: string;
+  readonly nickname: string;
+  readonly pronouns: string;
+  readonly bio: string;
+}
 
-  const upload = (file: File) => {
-    setBusy("uploading");
+const avatarProblem = (file: File) => (file.type.startsWith("image/") ? null : "Choose an image.");
 
-    const task = new UploadTask(
-      file,
-      browserDeps(
-        actions.messages.startUpload,
-        store.getState().boot?.account.uploadLimitBytes ?? DEFAULT_UPLOAD_LIMIT_BYTES,
-      ),
-      () => undefined,
-    );
-
-    task
-      .start()
-      .then(() => {
-        const { phase, signedId, error } = task.snapshot;
-
-        if (phase !== "done" || signedId === null) {
-          throw new Error(error ?? "The upload didn't finish.");
-        }
-
-        return settingsActions.setAvatar(signedId);
-      })
-      .then(
-        (next) => {
-          replace(next);
-          toast({ title: "Avatar updated", tone: "success" });
-        },
-        (error: Error) => toastFailure("Couldn't update your avatar", error),
-      )
-      .finally(() => setBusy(null));
-  };
-
-  const remove = () => {
-    setBusy("removing");
-    settingsActions
-      .removeAvatar()
-      .then(replace, (error: Error) => toastFailure("Couldn't remove your avatar", error))
-      .finally(() => setBusy(null));
-  };
+function ProfilePreview({
+  userId,
+  draft,
+  savedName,
+  avatar,
+  banner,
+}: {
+  readonly userId: number;
+  readonly draft: Draft;
+  readonly savedName: string;
+  readonly avatar: Shown;
+  readonly banner: Shown;
+}) {
+  const accountName = draft.name.trim() || savedName;
+  const nickname = draft.nickname.trim();
+  const name = nickname || accountName;
+  const pronouns = draft.pronouns.trim();
+  const bio = draft.bio.trim();
+  const aside = [nickname === "" ? "" : accountName, pronouns].filter((part) => part !== "");
+  const avatarSrc = useShownSrc(avatar);
 
   return (
-    <div className="settings-avatar">
-      <Avatar
-        key={profile.avatarUrl}
-        name={profile.name}
-        userId={profile.userId}
-        src={profile.avatarUrl}
-        size={80}
-      />
-      <div className="settings-avatar-actions">
-        <input
-          ref={input}
-          type="file"
-          accept="image/*"
-          hidden
-          aria-label="Upload avatar"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-
-            event.target.value = "";
-
-            if (file !== undefined) {
-              upload(file);
-            }
-          }}
+    <figure className="profile-editor-card" aria-label="Profile preview">
+      <ProfileHero
+        userId={userId}
+        name={name}
+        url={banner.url}
+        stillUrl={banner.stillUrl}
+        file={banner.file ?? null}
+        size="card"
+      >
+        <Avatar
+          key={avatarSrc}
+          name={name}
+          userId={userId}
+          {...(avatarSrc === null ? {} : { src: avatarSrc })}
+          size={64}
+          decorative
         />
-        <Button
-          variant="secondary"
-          size="sm"
-          icon="cloud-upload"
-          loading={busy === "uploading"}
-          loadingLabel="Uploading…"
-          disabled={busy !== null}
-          onClick={() => input.current?.click()}
-        >
-          Upload photo
-        </Button>
-        {profile.avatarAttached ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon="trash"
-            loading={busy === "removing"}
-            disabled={busy !== null}
-            onClick={remove}
-          >
-            Remove
-          </Button>
-        ) : null}
-      </div>
-    </div>
+      </ProfileHero>
+      <figcaption className="profile-editor-identity">
+        <span className="profile-editor-name">{name}</span>
+        {aside.length === 0 ? null : (
+          <span className="profile-editor-aside">{aside.join(" · ")}</span>
+        )}
+        {bio === "" ? null : <span className="profile-editor-bio">{bio}</span>}
+      </figcaption>
+    </figure>
   );
 }
 
-/**
- * The profile banner: how it sits over your avatar, as others see it, then a way to upload,
- * replace or remove it. The chosen file shows at once while it uploads; a refusal shows in place.
- */
-function BannerPicker() {
+function ProfileEditor({ draft }: { readonly draft: Draft }) {
   const { settings, replace } = useSettings();
   const { profile } = settings;
 
-  const slot = useImageSlot({
+  const avatar = useImageSlot({
+    save: settingsActions.setAvatar,
+    remove: settingsActions.removeAvatar,
+    onChange: replace,
+    savedTitle: "Avatar updated",
+    problem: avatarProblem,
+  });
+
+  const banner = useImageSlot({
     save: settingsActions.setBanner,
     remove: settingsActions.removeBanner,
     onChange: replace,
     savedTitle: `${USER_BANNER_SLOT.title} updated`,
   });
 
-  const server: Shown = { url: profile.bannerUrl, stillUrl: profile.bannerStillUrl };
-  const shown = slot.shown(server);
+  const savedAvatar: Shown = {
+    url: profile.avatarAttached ? profile.avatarUrl : null,
+    stillUrl: null,
+  };
+
+  const savedBanner: Shown = { url: profile.bannerUrl, stillUrl: profile.bannerStillUrl };
 
   return (
-    <div className="settings-banner">
-      <figure className="settings-banner-preview">
-        <ProfileHero
+    <div className="profile-editor">
+      <div className="profile-editor-layout">
+        <ProfilePreview
           userId={profile.userId}
-          name={profile.name}
-          url={shown.url}
-          stillUrl={shown.stillUrl}
-          file={shown.file ?? null}
-          size="card"
-        >
-          <Avatar
-            key={profile.avatarUrl}
-            name={profile.name}
-            userId={profile.userId}
-            src={profile.avatarUrl}
-            size={64}
-            decorative
+          draft={draft}
+          savedName={profile.name}
+          avatar={avatar.shown({ url: profile.avatarUrl, stillUrl: null })}
+          banner={banner.shown(savedBanner)}
+        />
+        <div className="profile-editor-slots">
+          <ProfileSlot
+            slot={USER_AVATAR_SLOT}
+            accept="image/*"
+            image={savedAvatar}
+            pending={avatar.pending}
+            error={avatar.error}
+            onFile={avatar.upload}
+            onRemove={avatar.remove}
           />
-        </ProfileHero>
-        <figcaption className="settings-banner-name">{profile.name}</figcaption>
-      </figure>
-      <ProfileSlot
-        kind="banner"
-        slot={USER_BANNER_SLOT}
-        image={server}
-        pending={slot.pending}
-        error={slot.error}
-        onFile={slot.upload}
-        onRemove={slot.remove}
-      />
-      <p className="profile-formats text-meta">{PROFILE_FORMATS}</p>
+          <ProfileSlot
+            slot={USER_BANNER_SLOT}
+            image={savedBanner}
+            pending={banner.pending}
+            error={banner.error}
+            onFile={banner.upload}
+            onRemove={banner.remove}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -256,8 +213,7 @@ export function ProfileSection() {
 
   return (
     <SettingsPage title="Profile" description="How you appear to everyone in the workspace.">
-      <AvatarPicker />
-      <BannerPicker />
+      <ProfileEditor draft={{ name, nickname, pronouns, bio }} />
       <form className="settings-form" onSubmit={submit} noValidate>
         <TextField
           label="Name"
