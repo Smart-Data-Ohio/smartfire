@@ -15,9 +15,9 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 pub use campfire_api_types::WorkspaceBranding;
 use campfire_api_types::{
     BoardAutomationsChanged, CustomStyles, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState,
-    PollBallot, PollUpdated, Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow,
+    PollBallot, PollUpdated, RoomRead, RoomUnread, SavedChanged, SidebarRow,
     SidebarRowRemoved, SyncPayload, Thread, ThreadIndicator, ThreadIndicatorChanged, ThreadRead,
-    ThreadRemoved, ThreadUnread, Typing, UserPresence,
+    ThreadRemoved, ThreadUnread, Typing,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
 use campfire_db::models::activity_item::ActivityItemsRemoved;
@@ -1794,23 +1794,6 @@ pub fn typing(server: &Cable, topic: &str, user_id: i64, on: bool) {
     );
 }
 
-/// `presence` on every connection's `user` topic, latest per person in a batch.
-pub fn presence(server: &Cable, presence: UserPresence) {
-    if !server.sync_wanted() {
-        return;
-    }
-    let user_id = presence.user_id;
-    send(
-        server,
-        Audience::Everyone,
-        &SyncPayload::Presence(presence),
-        |publication| SyncPublication {
-            coalesce: Some(format!("presence:{user_id}")),
-            ..publication
-        },
-    );
-}
-
 /// Latest workspace name and images on everyone's `user` topic.
 pub fn workspace_updated(server: &Cable, branding: WorkspaceBranding) {
     if !server.sync_wanted() {
@@ -1866,29 +1849,6 @@ pub fn user_updated(server: &Cable, user: campfire_api_types::User) {
         coalesce: Some(format!("user:{user_id}")),
         ..publication
     });
-}
-
-/// The twin of a status badge update (`StatusBadgeBroadcast`), whose presence is the badge's
-/// word.
-pub fn status_badge(server: &Cable, user_id: i64, presence_word: &str, status_text: Option<&str>) {
-    if !server.sync_wanted() {
-        return;
-    }
-    let presence_value = match presence_word {
-        "online" => Presence::Online,
-        "idle" => Presence::Idle,
-        "dnd" => Presence::Dnd,
-        _ => Presence::Offline,
-    };
-    let status_text = status_text.map(str::to_string);
-    presence(
-        server,
-        UserPresence {
-            user_id,
-            presence: presence_value,
-            status_text,
-        },
-    );
 }
 
 /// `agent.status` on every active human's `user` topic (the classic `agents:all` stream, which
