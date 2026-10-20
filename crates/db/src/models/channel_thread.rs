@@ -1349,9 +1349,17 @@ impl ChannelThread {
             return Ok(Vec::new());
         };
         let policy = ThreadPolicy::load(conn, thread_id, &message, now)?;
-        Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
+        let mut pushes = Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
             policy.push(candidate)
-        })
+        })?;
+        let subscriptions = pushes.iter().flat_map(|push| push.subscriptions.iter().cloned()).collect();
+        let allowed: std::collections::HashSet<i64> = PushSubscription::route_message(conn, subscriptions, now)?
+            .into_iter().map(|s| s.id).collect();
+        for push in &mut pushes {
+            push.subscriptions.retain(|s| allowed.contains(&s.id));
+        }
+        pushes.retain(|push| !push.subscriptions.is_empty());
+        Ok(pushes)
     }
 
     /// Everyone the production policy notifies of `message`, devices or not, including people

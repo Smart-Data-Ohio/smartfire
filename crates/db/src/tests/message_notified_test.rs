@@ -202,3 +202,50 @@ fn a_streaming_message_emits_it_once_at_its_finalize() {
     t.write(move |tx| quiet.finalize_stream_quietly(tx));
     assert_eq!(emitted(&t), Vec::<i64>::new(), "a quiet finalize notifies no one");
 }
+
+#[test]
+fn an_active_computer_silences_the_phone_push_but_not_the_notification() {
+    let t = TestDb::new();
+    let jason = id("jason");
+    t.write(|tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET device_class='mobile' WHERE user_id=?", [id("jason")])?;
+        Ok(())
+    });
+    let thread = t.write(|tx| {
+        let thread = ChannelThread::create(
+            tx,
+            NewChannelThread { room_id: id("designers"), creator_id: id("david"), name: Some("Plans".into()), ..Default::default() },
+        )?;
+        ThreadMembership::join(tx, thread.id, id("jason"))?.update_involvement(tx, ThreadInvolvement::Everything)?;
+        Ok(thread)
+    });
+    let reply = |text: &str| {
+        let mut thread = thread.clone();
+        let attributes = NewMessage { markdown_source: Some(text.into()), ..Default::default() };
+        t.write(move |tx| thread.post_message(tx, id("david"), attributes))
+    };
+    let thread_pushed = |message: &Message| {
+        t.read(|c| ChannelThread::push_recipients_with_policy(c, &BasicRichText, thread.id, message.id, t.now()))
+            .into_iter()
+            .map(|push| push.user_id)
+            .collect::<Vec<_>>()
+    };
+
+    let room_before = post(&t, "designers", "david", "Away".into());
+    let thread_before = reply("Away");
+    assert!(pushed(&t, &room_before).contains(&jason), "the phone gets the room push");
+    assert!(thread_pushed(&thread_before).contains(&jason), "the phone gets the thread push");
+
+    t.write(|tx| {
+        let session = crate::Session::start(tx, id("jason"), Some("Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0"), None)?;
+        crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(crate::DeviceClass::Desktop))?;
+        Ok(())
+    });
+    let room = post(&t, "designers", "david", "At the computer".into());
+    let in_thread = reply("At the computer");
+
+    assert!(!pushed(&t, &room).contains(&jason), "{:?}", pushed(&t, &room));
+    assert!(!thread_pushed(&in_thread).contains(&jason), "{:?}", thread_pushed(&in_thread));
+    assert!(notified(&t, &room).contains(&jason), "{:?}", notified(&t, &room));
+    assert!(notified(&t, &in_thread).contains(&jason), "{:?}", notified(&t, &in_thread));
+}

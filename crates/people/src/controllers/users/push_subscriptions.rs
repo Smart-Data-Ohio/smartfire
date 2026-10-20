@@ -6,13 +6,12 @@ pub mod test_notifications;
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use campfire_db::{CachedStatements, Connection, PushSubscription};
+use campfire_db::{CachedStatements, Connection, DeviceClass, PushSubscription};
 use campfire_kit::{Ctx, Error, ParamMap, Result, StatusCode, permit_keys};
 use rusqlite::types::Value;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, cast_integer};
-use crate::controllers::presenters;
 use crate::net::{Network, guard};
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -24,6 +23,10 @@ pub async fn create(c: &mut Ctx) -> Result {
 
 /// The classic save path after the caller has authenticated the owner and supplied its params.
 pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
+    enroll_for_device(c, user_id, None).await
+}
+
+pub async fn enroll_for_device(c: &mut Ctx, user_id: i64, device_class: Option<DeviceClass>) -> Result {
     let params = push_subscription_params(c)?;
 
     let network = c.app().subscription_network.clone();
@@ -39,11 +42,10 @@ pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
         // Existing endpoints must pass current validations
         Some(subscription) => {
             if validate(&subscription, &network).await.is_empty() {
-                let id = subscription.id;
                 c.app()
                     .db
                     .write(move |tx| {
-                        presenters::accounts::touch(tx.conn(), "push_subscriptions", id, tx.now())
+                        subscription.touch_for_device(tx, device_class)
                     })
                     .await
                     .map_err(Error::internal)?;
@@ -54,13 +56,14 @@ pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
         }
         None => {
             let value = |key: &str| params.get(key).and_then(|p| p.to_s());
-            let subscription = PushSubscription::new(
+            let mut subscription = PushSubscription::new(
                 user_id,
                 value("endpoint").as_deref(),
                 value("p256dh_key").as_deref(),
                 value("auth_key").as_deref(),
                 c.request.user_agent(),
             );
+            subscription.device_class = device_class;
             let resolved = resolve_endpoint(&subscription, &network).await;
             let result = c
                 .app()
@@ -76,12 +79,7 @@ pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
                         if !subscription.validate(&resolve).is_empty() {
                             return Ok(Enrolled::OverlapRefused);
                         }
-                        presenters::accounts::touch(
-                            tx.conn(),
-                            "push_subscriptions",
-                            saved.id,
-                            tx.now(),
-                        )?;
+                        saved.touch_for_device(tx, device_class)?;
                         return Ok(Enrolled::OverlapTouched);
                     }
                     PushSubscription::create(tx, &subscription, &resolve)?;

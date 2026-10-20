@@ -1,6 +1,8 @@
 import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
+import type { DeviceClass } from "../gen/DeviceClass.ts";
 import type { PushPublicKey } from "../gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
+import { browserDeviceClass } from "../lib/device-class.ts";
 import { store } from "../store/store.ts";
 import { settings } from "./settings.ts";
 
@@ -34,6 +36,7 @@ export interface PushRegistration {
 export interface PushBrowser {
   readonly origin: string;
   readonly workerUrl: string;
+  readonly deviceClass: DeviceClass;
   permission(): NotificationPermission;
   requestPermission(): Promise<NotificationPermission>;
   register(): Promise<PushRegistration>;
@@ -60,6 +63,7 @@ export function pushBrowser(): PushBrowser | null {
   return {
     origin: window.location.origin,
     workerUrl,
+    deviceClass: browserDeviceClass(),
     permission: () => Notification.permission,
     requestPermission: () => Notification.requestPermission(),
     register: () =>
@@ -150,6 +154,44 @@ async function selectedWorker(registration: PushRegistration, browser: PushBrows
   });
 }
 
+async function savePushSubscription(
+  subscription: Subscription,
+  deviceClass: DeviceClass,
+  api: PushEnrollmentApi,
+): Promise<PushSubscriptionList> {
+  const json = subscription.toJSON();
+  const p256dhKey = json.keys?.p256dh;
+  const authKey = json.keys?.auth;
+
+  if (p256dhKey === undefined || authKey === undefined) {
+    throw new Error("The browser did not provide push encryption keys.");
+  }
+
+  return api.createPushSubscription({
+    endpoint: subscription.endpoint,
+    p256dhKey,
+    authKey,
+    deviceClass,
+  });
+}
+
+export async function tryRefreshPushSubscription(
+  browser = pushBrowser(),
+  api: PushEnrollmentApi = settings,
+): Promise<void> {
+  if (store.getState().me === null || browser === null || browser.permission() !== "granted")
+    return;
+
+  try {
+    const registration = await browser.currentRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+
+    if (subscription != null) await savePushSubscription(subscription, browser.deviceClass, api);
+  } catch {
+    return;
+  }
+}
+
 /**
  * Call directly in the click handler. The permission request runs before the first await,
  * preserving browser user activation; mounting or inspecting state never prompts.
@@ -185,19 +227,7 @@ export async function enablePushNotifications(
         applicationServerKey: key,
       }));
 
-    const json = subscription.toJSON();
-    const p256dhKey = json.keys?.p256dh;
-    const authKey = json.keys?.auth;
-
-    if (p256dhKey === undefined || authKey === undefined) {
-      throw new Error("The browser did not provide push encryption keys.");
-    }
-
-    const list = await api.createPushSubscription({
-      endpoint: subscription.endpoint,
-      p256dhKey,
-      authKey,
-    });
+    const list = await savePushSubscription(subscription, browser.deviceClass, api);
 
     return { kind: "enabled", list, endpoint: subscription.endpoint };
   } catch (error) {

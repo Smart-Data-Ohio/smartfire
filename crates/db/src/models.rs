@@ -1,6 +1,8 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod device_class;
+pub use device_class::DeviceClass;
 pub mod announcement;
 pub mod ignore_policy;
 pub mod user_block;
@@ -111,6 +113,7 @@ pub mod webhook;
 pub mod workspace_presence_lease;
 
 pub mod room_members;
+pub mod room_directory;
 pub mod workspace_icon;
 
 pub use account::{Account, AccountSettings};

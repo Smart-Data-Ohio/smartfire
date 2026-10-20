@@ -21,7 +21,6 @@ export class Presence extends Context.Service<
     readonly noteActivity: Effect.Effect<void>;
     /** What a new connection needs after `hello`: `present` for each open room, when shown. */
     readonly greeting: Effect.Effect<readonly ClientFrame[]>;
-    /** Heartbeats and tab visibility; runs until interrupted. */
     readonly run: Effect.Effect<void>;
   }
 >()("smartfire/sync/Presence") {
@@ -80,12 +79,19 @@ export class Presence extends Context.Service<
         ),
       );
 
+      const noteActivity = Ref.set(active, true);
+
+      const input = lifecycle.input.pipe(Stream.runForEach(() => noteActivity));
+
       return Presence.of({
         enter,
         leave,
-        noteActivity: Ref.set(active, true),
+        noteActivity,
         greeting,
-        run: Effect.all([heartbeat, visibility], { concurrency: "unbounded", discard: true }),
+        run: Effect.all([heartbeat, visibility, input], {
+          concurrency: "unbounded",
+          discard: true,
+        }),
       });
     }),
   );

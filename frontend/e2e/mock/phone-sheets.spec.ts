@@ -56,7 +56,8 @@ const SHEETS: readonly Sheet[] = [
     title: "Create a channel",
     open: async (page, dialog, theme = "light") => {
       await openApp(page, "", theme);
-      await page.getByRole("button", { name: "Create a channel", exact: true }).first().click();
+      await page.getByRole("button", { name: "Add channels" }).first().click();
+      await page.getByRole("menuitem", { name: "Create a channel…" }).click();
       await expect(dialog.getByLabel("Name", { exact: true })).toBeVisible();
     },
   },

@@ -261,3 +261,23 @@ fn ws17_forwarded_note_uses_mention_push_while_snapshot_does_not() {
     assert_eq!(payload.title, "All Talk");
     assert_eq!(users, [id("jason")]);
 }
+
+#[test]
+fn push_routing_thread_messages_wait_for_idle_computers() {
+    let t = TestDb::new();
+    let thread = thread(&t, "Routing thread", ThreadInvolvement::Everything);
+    let message = post(&t, &thread, "jz", "Thread notification", None);
+    t.write(|tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET user_agent='iPhone', device_class='mobile' WHERE user_id=?", [id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(thread_push(&t, &thread, &message).len(), 1);
+    let mut desktop = t.write(|tx| {
+        let session = crate::Session::start(tx, id("jason"), Some("Mozilla/5.0 (X11; Linux x86_64)"), None)?;
+        Ok(crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(crate::DeviceClass::Desktop))?.unwrap())
+    });
+    assert!(thread_push(&t, &thread, &message).is_empty());
+    t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER + jiff::SignedDuration::from_secs(1));
+    t.write(move |tx| desktop.refresh(tx, false));
+    assert_eq!(thread_push(&t, &thread, &message).len(), 1);
+}

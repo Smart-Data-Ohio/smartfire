@@ -5,11 +5,9 @@ use std::collections::{BTreeSet, HashMap};
 
 use campfire_api_types as api;
 use campfire_app::app::AppState;
-use campfire_db::models::workspace_presence_lease::Presence as LeasePresence;
 use campfire_db::{
     CachedStatements, Connection, Involvement, Membership, Message, MessagePin, Result, Role, Room,
     RoomType, Snapshot, StageRole, Status, Timestamp, User, UserStatusSettings,
-    WorkspacePresenceLease,
 };
 use campfire_runtime::presenters::{self, Presenter, accounts, room_unread};
 use rails_compat::Secrets;
@@ -1522,33 +1520,7 @@ fn minute(value: i64) -> u16 {
 }
 
 /// Presence for the active humans among `ids`, in id order (`users/presences#show`).
-pub fn presences(conn: &Connection, ids: &[i64], now: Timestamp) -> Result<Vec<api::UserPresence>> {
-    let mut people: Vec<UserStatusSettings> = UserStatusSettings::for_ids(conn, ids)?
-        .into_values()
-        .filter(UserStatusSettings::active_human)
-        .collect();
-    people.sort_by_key(|settings| settings.user.id);
-    let ids: Vec<i64> = people.iter().map(|settings| settings.user.id).collect();
-    let leases = WorkspacePresenceLease::presence_by_user_id(conn, &ids, now)?;
-    Ok(people
-        .iter()
-        .map(|settings| api::UserPresence {
-            user_id: settings.user.id,
-            presence: match settings.effective_presence(
-                leases
-                    .get(&settings.user.id)
-                    .copied()
-                    .unwrap_or(LeasePresence::Offline),
-            ) {
-                LeasePresence::Online => api::Presence::Online,
-                LeasePresence::Idle => api::Presence::Idle,
-                LeasePresence::Dnd => api::Presence::Dnd,
-                LeasePresence::Offline => api::Presence::Offline,
-            },
-            status_text: settings.status_text_display(now),
-        })
-        .collect())
-}
+pub use campfire_runtime::presenters::status_settings::presences;
 
 /// A thread's status as the wire names it.
 pub fn thread_status(status: campfire_db::models::channel_thread::ThreadStatus) -> api::ThreadStatus {
@@ -1908,6 +1880,14 @@ pub(crate) fn announcement_sources(conn: &Connection, messages: &mut [api::Messa
         });
     }
     Ok(())
+}
+
+pub(crate) fn device_class(class: api::DeviceClass) -> campfire_db::DeviceClass {
+    match class {
+        api::DeviceClass::Desktop => campfire_db::DeviceClass::Desktop,
+        api::DeviceClass::Mobile => campfire_db::DeviceClass::Mobile,
+        api::DeviceClass::Unknown => campfire_db::DeviceClass::Unknown,
+    }
 }
 
 #[cfg(test)]

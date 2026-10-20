@@ -23,6 +23,9 @@ pub enum ClientFrame {
         v: u32,
         resume: Option<ResumePoint>,
         topics: Vec<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        device_class: Option<crate::DeviceClass>,
     },
     Sub {
         topics: Vec<String>,

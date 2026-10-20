@@ -26,7 +26,6 @@
 mod connection;
 
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -393,20 +392,25 @@ pub trait SyncSession: Send {
 pub trait SyncHandler<U>: Send + Sync + 'static {
     /// The person's id, as [`Audience::User`] names them.
     fn user_id(&self, user: &U) -> i64;
-    async fn open(&self, user: Arc<U>) -> Box<dyn SyncSession>;
+    async fn open(&self, user: Arc<U>, device_class: Option<campfire_api_types::DeviceClass>) -> Box<dyn SyncSession>;
 }
 
 /// The engine a [`crate::Server`] runs once [`crate::Server::install_sync`] is called.
 pub(crate) struct Engine<U> {
     pub ring: Ring,
     pub handler: Arc<dyn SyncHandler<U>>,
-    /// Sync sockets open, from the upgrade until they close.
-    pub connections: AtomicUsize,
+    pub presence: Mutex<PresencePublications>,
     /// Who has a sync socket open (from its `hello` until it closes), and who has a gap marker
     /// in the ring since their last one opened.
     pub people: Mutex<People>,
     /// The latest event published for each fence key: see [`crate::Server::sync_publish_fresh`].
     pub fences: Mutex<Fences>,
+}
+
+#[derive(Default)]
+pub(crate) struct PresencePublications {
+    pub observers: usize,
+    pub last_by_user: HashMap<i64, campfire_api_types::UserPresence>,
 }
 
 /// [`crate::Server::sync_publish_fresh`] refused a publication read before an event under its

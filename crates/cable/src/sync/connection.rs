@@ -3,7 +3,6 @@
 //! restarts.
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 
 use campfire_api_types::{ClientFrame, ServerFrame};
 use futures_util::StreamExt;
@@ -36,7 +35,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     deflate: bool,
     request: ConnectRequest,
 ) {
-    let _open = OpenConnection::new(&engine);
+    let _open = SyncObserver::new(&engine);
     let (read, write) = tokio::io::split(io);
     let mut sink = Writer::new(write, deflate);
     let (reader, mut incoming) = spawn_reader(crate::socket::Reader::new(read, deflate));
@@ -71,7 +70,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
 
     // `hello` comes first; nothing else is accepted before it.
     let hello_deadline = Instant::now() + config.hello_timeout;
-    let (resume, topics) = loop {
+    let (resume, topics, device_class) = loop {
         let message = tokio::select! {
             message = incoming.recv() => message,
             () = sleep_until(hello_deadline) => {
@@ -86,7 +85,8 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
                     v: 1,
                     resume,
                     topics,
-                }) => break (resume, topics),
+                    device_class,
+                }) => break (resume, topics, device_class),
                 Ok(ClientFrame::Hello { .. }) => {
                     let bye = Bye {
                         reconnect: false,
@@ -120,7 +120,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     // Counted before the resume point is read, so a skip from here on is built instead, or its
     // gap marker lands past the point and is read.
     let _person = OpenPerson::new(&engine, user_id);
-    let session = engine.handler.open(user.clone()).await;
+    let session = engine.handler.open(user.clone(), device_class).await;
     let mut connection = Connection {
         engine: engine.clone(),
         session,
@@ -291,19 +291,22 @@ impl<U: Send + Sync + 'static> Drop for OpenPerson<U> {
     }
 }
 
-/// Counts the socket in [`Engine::connections`] until it's dropped.
-struct OpenConnection<U: Send + Sync + 'static>(Arc<Engine<U>>);
+struct SyncObserver<U: Send + Sync + 'static>(Arc<Engine<U>>);
 
-impl<U: Send + Sync + 'static> OpenConnection<U> {
+impl<U: Send + Sync + 'static> SyncObserver<U> {
     fn new(engine: &Arc<Engine<U>>) -> Self {
-        engine.connections.fetch_add(1, Ordering::AcqRel);
+        engine.presence.lock().unwrap().observers += 1;
         Self(engine.clone())
     }
 }
 
-impl<U: Send + Sync + 'static> Drop for OpenConnection<U> {
+impl<U: Send + Sync + 'static> Drop for SyncObserver<U> {
     fn drop(&mut self) {
-        self.0.connections.fetch_sub(1, Ordering::AcqRel);
+        let mut state = self.0.presence.lock().unwrap();
+        state.observers -= 1;
+        if state.observers == 0 {
+            state.last_by_user.clear();
+        }
     }
 }
 
@@ -591,7 +594,7 @@ mod tests {
         fn user_id(&self, _: &()) -> i64 {
             1
         }
-        async fn open(&self, _: Arc<()>) -> Box<dyn SyncSession> {
+        async fn open(&self, _: Arc<()>, _: Option<campfire_api_types::DeviceClass>) -> Box<dyn SyncSession> {
             Box::new(Nobody)
         }
     }
@@ -601,7 +604,7 @@ mod tests {
             engine: Arc::new(Engine {
                 ring: Ring::new(config),
                 handler: Arc::new(Nobody),
-                connections: Default::default(),
+                presence: Default::default(),
                 people: Default::default(),
                 fences: Default::default(),
             }),
