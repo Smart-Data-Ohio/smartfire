@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { searchKey } from "../../store/search.ts";
 import { useStore } from "../../store/store.ts";
 import { useNoteToSelf } from "../directs/note-to-self.ts";
@@ -38,7 +38,11 @@ export function HeaderSearch({ roomId }: { readonly roomId: number }) {
   const [prefill, setPrefill] = useState<string | null>(null);
   // The filter filled in for this room since the last search, which a submit makes exact.
   const [inserted, setInserted] = useState<string | null>(null);
+  // Whether the person changed the text during this focus (typed, or deleted the filter).
+  const [edited, setEdited] = useState(false);
   const [shownFor, setShownFor] = useState(roomId);
+  // The field while it has focus.
+  const focusedInput = useRef<HTMLInputElement | null>(null);
 
   // Another room: nothing typed for the last one, its filter least of all, carries over.
   if (shownFor !== roomId) {
@@ -46,37 +50,63 @@ export function HeaderSearch({ roomId }: { readonly roomId: number }) {
     setValue("");
     setPrefill(null);
     setInserted(null);
+    setEdited(false);
   }
+
+  const fill = (input: HTMLInputElement, filter: string) => {
+    const next = `${filter} `;
+
+    setPrefill(next);
+    setInserted(filter);
+    setValue(next);
+    // A click places the caret where it lands, after this; put it after the filter.
+    requestAnimationFrame(() => {
+      if (document.activeElement === input && input.value === next) {
+        input.setSelectionRange(next.length, next.length);
+      }
+    });
+  };
+
+  // Focused before the room had loaded: fill its filter in once it has, if the field is still
+  // empty and untouched.
+  const fillLate = useEffectEvent(() => {
+    const input = focusedInput.current;
+
+    if (input !== null && token !== null && value === "" && prefill === null && !edited) {
+      fill(input, token);
+    }
+  });
+
+  useEffect(() => {
+    if (token !== null) {
+      fillLate();
+    }
+  }, [token]);
 
   return (
     <div className="header-search">
       <SearchBox
         variant="header"
         value={value}
-        onValueChange={setValue}
+        onValueChange={(next) => {
+          setValue(next);
+          setEdited(true);
+        }}
         placeholder="Search Messages"
         onFocus={(input) => {
-          const next = prefillOnFocus(value, token);
+          focusedInput.current = input;
+          setEdited(false);
+          setPrefill(null);
 
-          if (next === value) {
-            setPrefill(null);
-
-            return;
+          if (token !== null && prefillOnFocus(value, token) !== value) {
+            fill(input, token);
           }
-
-          setPrefill(next);
-          setInserted(token);
-          setValue(next);
-          // A click places the caret where it lands, after this; put it after the filter.
-          requestAnimationFrame(() => {
-            if (document.activeElement === input && input.value === next) {
-              input.setSelectionRange(next.length, next.length);
-            }
-          });
         }}
         onBlur={() => {
+          focusedInput.current = null;
           setValue((current) => settleOnBlur(current, prefill));
           setPrefill(null);
+          setEdited(false);
         }}
         onSearch={(query) => {
           const key = searchKey(scopeQuery(query, inserted, roomId));

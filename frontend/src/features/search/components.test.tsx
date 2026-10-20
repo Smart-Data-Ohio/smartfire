@@ -446,6 +446,64 @@ describe("HeaderSearch", () => {
     expect(router.state.location.search).toEqual({ q: "in:@grace-hoppe launch" });
   });
 
+  it("searches a DM by its id", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={9} />);
+
+    await user.click(input());
+    expect(input().value).toBe("in:@grace-hopper ");
+    await user.keyboard("launch{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "in_id:9 launch" });
+  });
+
+  it("fills the filter in once the room loads, if focused before it did", async () => {
+    searchStore.setState({ recents: { status: "ready", searches: [] } });
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={7} />);
+
+    await user.click(input());
+    expect(input().value).toBe("");
+
+    act(() => seedRooms());
+    expect(input().value).toBe("in:#launch-planning ");
+    expect(input().selectionStart).toBe("in:#launch-planning ".length);
+
+    await user.keyboard("launch{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "in_id:7 launch" });
+  });
+
+  it("leaves what was typed before the room loaded alone", async () => {
+    searchStore.setState({ recents: { status: "ready", searches: [] } });
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={7} />);
+
+    await user.click(input());
+    await user.keyboard("launch");
+
+    act(() => seedRooms());
+    expect(input().value).toBe("launch");
+
+    await user.keyboard("{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "launch" });
+  });
+
+  it("doesn't fill the filter in once the room loads if the person typed and deleted", async () => {
+    searchStore.setState({ recents: { status: "ready", searches: [] } });
+
+    const user = userEvent.setup();
+
+    await renderRouted(() => <HeaderSearch roomId={7} />);
+    await user.click(input());
+    await user.keyboard("a{Backspace}");
+
+    act(() => seedRooms());
+    expect(input().value).toBe("");
+  });
+
   it("doesn't put the filter back once deleted, and searches everywhere", async () => {
     seedRooms();
 

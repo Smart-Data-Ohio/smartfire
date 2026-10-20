@@ -418,6 +418,19 @@ describe("the header's room filter", () => {
     expect(scopeQuery("in:@ada-lovelace ", "in:@ada-lovelace", 3)).toBe("in_id:3 ");
   });
 
+  it("submits every whole copy of the filter as the id, special characters and all", () => {
+    expect(scopeQuery("in:#general launch in:#general", "in:#general", 1)).toBe(
+      "in_id:1 launch in_id:1",
+    );
+
+    const odd = roomFilterToken({ kind: "open", name: "c++ (ops)", noteToSelf: false });
+
+    expect(odd).toBe("in:#c++-(ops)");
+    expect(scopeQuery(`${odd} launch`, odd, 5)).toBe("in_id:5 launch");
+    expect(scopeQuery("in:#c+-(ops) launch", odd, 5)).toBe("in:#c+-(ops) launch");
+    expect(scopeQuery("in:#cc++-(ops) launch", odd, 5)).toBe("in:#cc++-(ops) launch");
+  });
+
   it("submits an edited or deleted filter as typed", () => {
     expect(scopeQuery("in:#launch-plan launch", "in:#launch-planning", 7)).toBe(
       "in:#launch-plan launch",
