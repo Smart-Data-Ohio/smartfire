@@ -14,6 +14,8 @@ const HEARTBEAT_MS = 3000;
 
 const LOCK = "smartfire:message-chime";
 
+const LEADER_LOCK = "smartfire:message-chime:leader";
+
 const LAST_KEY = "smartfire:message-chime:at";
 
 const FOCUS_KEY = "smartfire:message-chime:focused";
@@ -59,22 +61,36 @@ const decodeHandled = Schema.decodeUnknownOption(
   Schema.fromJsonString(Schema.Array(Schema.Tuple([Schema.Number, Schema.Number]))),
 );
 
-function tryRead(key: string): string | null {
+/** Two accounts signed in on one origin keep separate records. */
+function scoped(key: string): string {
+  return `${key}:${store.getState().me?.user.id ?? "signed-out"}`;
+}
+
+/** None when storage is out of reach (blocked, or private mode in some browsers). */
+function readStorage(key: string): Option.Option<string | null> {
   try {
-    return window.localStorage.getItem(key);
+    return Option.some(window.localStorage.getItem(scoped(key)));
   } catch {
-    return null;
+    return Option.none();
   }
 }
 
-function tryWrite(key: string, value: string | null): void {
+function tryRead(key: string): string | null {
+  return Option.getOrNull(readStorage(key));
+}
+
+function tryWrite(key: string, value: string | null): boolean {
   try {
     if (value === null) {
-      window.localStorage.removeItem(key);
+      window.localStorage.removeItem(scoped(key));
     } else {
-      window.localStorage.setItem(key, value);
+      window.localStorage.setItem(scoped(key), value);
     }
-  } catch {}
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function focused(): boolean {
@@ -122,34 +138,57 @@ let lastLocal = 0;
 
 let handledLocal = new Map<number, number>();
 
-function handledAtByMessageId(now: number): Map<number, number> {
-  const shared = Option.getOrElse(
-    Option.flatMap(Option.fromNullishOr(tryRead(HANDLED_KEY)), decodeHandled),
-    () => [],
-  );
+/**
+ * Whether this tab holds the leader lock, which decides the one tab that plays while the shared
+ * record can't be read or written.
+ */
+let leading = false;
 
-  return new Map(
-    [...shared, ...handledLocal]
-      .filter(([, at]) => now - at < HANDLED_TTL_MS)
-      .sort(([, a], [, b]) => a - b)
-      .slice(-HANDLED_MAX),
-  );
+function handledAtByMessageId(
+  shared: readonly (readonly [number, number])[],
+  now: number,
+): Map<number, number> {
+  const handled = new Map<number, number>();
+
+  for (const [messageId, at] of [...shared, ...handledLocal]) {
+    if (now - at < HANDLED_TTL_MS) {
+      handled.set(messageId, Math.max(at, handled.get(messageId) ?? at));
+    }
+  }
+
+  return handled;
+}
+
+function newest(handled: Map<number, number>): Map<number, number> {
+  return new Map([...handled].sort(([, a], [, b]) => a - b).slice(-HANDLED_MAX));
 }
 
 function claimThrottledChime(notified: readonly MessageNotified[]): boolean {
   const now = Date.now();
-  const handled = handledAtByMessageId(now);
+  const stored = readStorage(HANDLED_KEY);
+
+  const handled = handledAtByMessageId(
+    Option.getOrElse(
+      Option.flatMap(Option.flatMap(stored, Option.fromNullishOr), decodeHandled),
+      () => [],
+    ),
+    now,
+  );
+
   const fresh = notified.filter((each) => !handled.has(each.messageId));
 
   for (const each of fresh) {
     handled.set(each.messageId, now);
   }
 
-  handledLocal = handled;
-  tryWrite(HANDLED_KEY, JSON.stringify([...handled]));
+  handledLocal = newest(handled);
+
+  const shared = Option.isSome(stored) && tryWrite(HANDLED_KEY, JSON.stringify([...handledLocal]));
+
   const silenced = focusedConversations();
 
   if (
+    (!shared && !leading && navigator.locks !== undefined) ||
     fresh.every((each) => silenced.has(conversation(each.roomId, each.threadId))) ||
     now - Math.max(lastLocal, Number(tryRead(LAST_KEY) ?? 0)) < THROTTLE_MS
   ) {
@@ -178,13 +217,42 @@ function claimAndPlay(notified: readonly MessageNotified[], play: () => void): v
   void navigator.locks.request(LOCK, run).catch(() => undefined);
 }
 
+/** Queues for the leader lock until the returned resignation, held for the tab's lifetime. */
+function lead(): () => void {
+  if (navigator.locks === undefined) {
+    return () => undefined;
+  }
+
+  const controller = new AbortController();
+  let release = () => {};
+
+  void navigator.locks
+    .request(scoped(LEADER_LOCK), { signal: controller.signal }, () => {
+      leading = true;
+
+      return new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    })
+    .catch(() => undefined);
+
+  return () => {
+    controller.abort();
+    leading = false;
+    release();
+  };
+}
+
 /**
  * Plays `play` once for each live batch telling this person the server notified them of a new
  * message, unless the setting is off, the device is touch-first, the conversation is on screen
  * in a focused tab, or another tab played within {@link THROTTLE_MS}. A tab that can't sound
- * yet never takes the turn, so a tab that can still plays.
+ * yet never takes the turn, so a tab that can still plays. While the shared record is out of
+ * reach, only the tab holding the leader lock plays.
  */
 export function followMessageChimes(play: () => void): () => void {
+  let resign = audible() ? lead() : undefined;
+
   const stopEvents = onSyncEvents((events, liveAfter) => {
     const notified = liveNotifications(events, liveAfter);
 
@@ -197,6 +265,7 @@ export function followMessageChimes(play: () => void): () => void {
       return;
     }
 
+    resign ??= lead();
     claimAndPlay(notified, play);
   });
 
@@ -209,6 +278,7 @@ export function followMessageChimes(play: () => void): () => void {
   shareFocus();
 
   return () => {
+    resign?.();
     stopEvents();
     window.clearInterval(heartbeat);
     window.removeEventListener("focus", shareFocus);

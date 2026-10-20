@@ -143,6 +143,62 @@ async function openTab(state: State): Promise<Tab> {
   return tab;
 }
 
+/** One lock manager shared by every tab, as the browser shares it across an origin. */
+function shareLocks(): void {
+  const held = new Set<string>();
+  const waiting = new Map<string, (() => void)[]>();
+
+  const request = async (
+    name: string,
+    ...args:
+      | [() => Promise<void> | void]
+      | [{ readonly signal?: AbortSignal }, () => Promise<void> | void]
+  ) => {
+    const [options, callback] = args.length === 1 ? [{}, args[0]] : args;
+
+    if (held.has(name)) {
+      await new Promise<void>((resolve, reject) => {
+        waiting.set(name, [...(waiting.get(name) ?? []), resolve]);
+        options.signal?.addEventListener("abort", () => reject(options.signal?.reason));
+      });
+    }
+
+    held.add(name);
+
+    try {
+      return await callback();
+    } finally {
+      held.delete(name);
+      const [next, ...rest] = waiting.get(name) ?? [];
+
+      waiting.set(name, rest);
+      next?.();
+    }
+  };
+
+  Object.defineProperty(navigator, "locks", { configurable: true, value: { request } });
+}
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+function blockStorage(failure: "blocked" | "quota"): void {
+  const denied = () => {
+    throw new DOMException("denied", failure === "quota" ? "QuotaExceededError" : "SecurityError");
+  };
+
+  if (failure === "blocked") {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(denied);
+  }
+
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(denied);
+}
+
+function handledRecord(): readonly unknown[] {
+  const key = Object.keys(localStorage).find((each) => each.includes("message-chime:handled"));
+
+  return key === undefined ? [] : JSON.parse(localStorage.getItem(key) ?? "[]");
+}
+
 function canSound(active: boolean): void {
   Object.defineProperty(navigator, "userActivation", {
     configurable: true,
@@ -169,6 +225,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   Reflect.deleteProperty(navigator, "userActivation");
+  Reflect.deleteProperty(navigator, "locks");
 });
 
 function directMessage(id: number, count: number, seq: number): Batch {
@@ -430,5 +487,77 @@ describe("followMessageChimes across tabs", () => {
     survivor.deliver(directMessage(200, 1, 1));
 
     expect(survivor.played()).toBe(1);
+  });
+});
+
+describe("followMessageChimes when the shared record is out of reach", () => {
+  for (const failure of ["blocked", "quota"] as const) {
+    it(`plays once between two tabs with ${failure} storage`, async () => {
+      shareLocks();
+      blockStorage(failure);
+      const state = stateWith([row(DM, { kind: "direct" })]);
+      const first = await openTab(state);
+      const second = await openTab(state);
+      const batch = directMessage(200, 1, 1);
+
+      await settle();
+      first.deliver(batch);
+      second.deliver(batch);
+      await settle();
+
+      expect(first.played() + second.played()).toBe(1);
+    });
+  }
+
+  it("hands the turn to another tab when the one playing closes", async () => {
+    shareLocks();
+    blockStorage("blocked");
+    const state = stateWith([row(DM, { kind: "direct" })]);
+    const first = await openTab(state);
+    const second = await openTab(state);
+
+    await settle();
+    first.close();
+    await settle();
+    second.deliver(directMessage(200, 1, 1));
+    await settle();
+
+    expect(second.played()).toBe(1);
+  });
+
+  it("still plays in a lone tab with blocked storage and no locks", async () => {
+    blockStorage("blocked");
+    const tab = await openTab(stateWith([row(DM, { kind: "direct" })]));
+
+    tab.deliver(directMessage(200, 1, 1));
+
+    expect(tab.played()).toBe(1);
+  });
+});
+
+describe("followMessageChimes remembers what it handled", () => {
+  it("stays quiet in a late tab for the first of a rapid run of messages", async () => {
+    const state = stateWith([row(DM, { kind: "direct" })]);
+    const first = await openTab(state);
+    const late = await openTab(state);
+
+    for (let id = 1; id <= 120; id += 1) {
+      first.deliver(directMessage(id, id, id * 3));
+      vi.advanceTimersByTime(10);
+    }
+
+    vi.advanceTimersByTime(THROTTLE_MS);
+    late.deliver(directMessage(1, 1, 3));
+
+    expect(late.played()).toBe(0);
+  });
+
+  it("keeps the shared record within its cap after a large batch", async () => {
+    const tab = await openTab(stateWith([row(DM, { kind: "direct" })]));
+    const ids = Array.from({ length: 250 }, (_, index) => index + 1);
+
+    tab.deliver({ events: ids.map((id) => notified(fromMaya(id, DM), id)) });
+
+    expect(handledRecord().length).toBeLessThanOrEqual(200);
   });
 });
