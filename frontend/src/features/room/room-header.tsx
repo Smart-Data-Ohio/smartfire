@@ -350,7 +350,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
               {self ? null : <NotificationsButton roomId={roomId} />}
               {kind === null ? null : <EventsLink roomId={roomId} />}
               <PaneButtons roomId={roomId} />
-              <HeaderSearch />
+              <HeaderSearch roomId={roomId} />
             </>
           )
         }

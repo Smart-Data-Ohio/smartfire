@@ -14,6 +14,13 @@ import {
   setFilter,
   textWords,
 } from "./query.ts";
+import {
+  prefillOnFocus,
+  roomFilterToken,
+  roomIdToken,
+  scopeQuery,
+  settleOnBlur,
+} from "./room-filter.ts";
 import { isEditable, searchShortcut } from "./search-keys.ts";
 import { flattenTypeahead, typeaheadSections } from "./typeahead.ts";
 
@@ -363,4 +370,62 @@ it("replaces sort without changing ID filters or free text", () => {
     "launch from_id:2 in_id:7 sort:oldest",
   );
   expect(setFilter("from_id:2 in_id:7", "from_id", "")).toBe("in_id:7");
+});
+
+describe("the header's room filter", () => {
+  it("names a channel by the handle the typeahead writes, spaces and all", () => {
+    expect(roomFilterToken({ kind: "open", name: "launch-planning", noteToSelf: false })).toBe(
+      "in:#launch-planning",
+    );
+    expect(roomFilterToken({ kind: "closed", name: "Launch  Planning", noteToSelf: false })).toBe(
+      "in:#launch-planning",
+    );
+    expect(roomFilterToken({ kind: "open", name: "  ", noteToSelf: false })).toBeNull();
+  });
+
+  it("names a DM by its person, and your notes as you", () => {
+    expect(roomFilterToken({ kind: "direct", name: "Ada Lovelace", noteToSelf: false })).toBe(
+      "in:@ada-lovelace",
+    );
+    expect(roomFilterToken({ kind: "direct", name: "", noteToSelf: true })).toBe("in:@me");
+  });
+
+  it("fills an empty field with the filter and a space, and leaves typed text alone", () => {
+    expect(prefillOnFocus("", "in:#general")).toBe("in:#general ");
+    expect(prefillOnFocus("", null)).toBe("");
+    expect(prefillOnFocus("launch", "in:#general")).toBe("launch");
+    expect(prefillOnFocus(" ", "in:#general")).toBe(" ");
+  });
+
+  it("empties an untouched filter on blur, and keeps anything the person changed", () => {
+    expect(settleOnBlur("in:#general ", "in:#general ")).toBe("");
+    expect(settleOnBlur("in:#general", "in:#general ")).toBe("");
+    expect(settleOnBlur("in:#general launch", "in:#general ")).toBe("in:#general launch");
+    expect(settleOnBlur("launch", "in:#general ")).toBe("launch");
+    expect(settleOnBlur("", "in:#general ")).toBe("");
+    expect(settleOnBlur("in:#general ", null)).toBe("in:#general ");
+  });
+
+  it("submits an untouched filter as the room's exact id, wherever it sits", () => {
+    expect(roomIdToken(7)).toBe("in_id:7");
+    expect(scopeQuery("in:#launch-planning launch", "in:#launch-planning", 7)).toBe(
+      "in_id:7 launch",
+    );
+    expect(scopeQuery("launch in:#launch-planning has:file", "in:#launch-planning", 7)).toBe(
+      "launch in_id:7 has:file",
+    );
+    expect(scopeQuery("in:@me milk", "in:@me", 40)).toBe("in_id:40 milk");
+    expect(scopeQuery("in:@ada-lovelace ", "in:@ada-lovelace", 3)).toBe("in_id:3 ");
+  });
+
+  it("submits an edited or deleted filter as typed", () => {
+    expect(scopeQuery("in:#launch-plan launch", "in:#launch-planning", 7)).toBe(
+      "in:#launch-plan launch",
+    );
+    expect(scopeQuery("in:#launch-planning-2 launch", "in:#launch-planning", 7)).toBe(
+      "in:#launch-planning-2 launch",
+    );
+    expect(scopeQuery("launch", "in:#launch-planning", 7)).toBe("launch");
+    expect(scopeQuery("in:#launch-planning launch", null, 7)).toBe("in:#launch-planning launch");
+  });
 });

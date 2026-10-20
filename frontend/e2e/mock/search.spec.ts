@@ -13,6 +13,11 @@ function field(page: Page) {
   return page.getByRole("combobox", { name: "Search messages" }).locator("visible=true");
 }
 
+/** The room header's title, there once the room has loaded (and the field knows its filter). */
+function roomTitle(page: Page, name: string) {
+  return page.locator(".room-header").getByRole("heading", { name, exact: true });
+}
+
 function suggestions(page: Page) {
   return page.getByRole("listbox", { name: "Suggestions" });
 }
@@ -40,7 +45,11 @@ matrix(
       await expect(field(page)).toBeFocused();
     } else {
       await open(page, `r/${ROOM_IDS.general}`, theme);
+      await expect(roomTitle(page, "general")).toBeVisible();
       await field(page).click();
+      // The header's field starts scoped to its room; clearing it searches everywhere.
+      await expect(field(page)).toHaveValue("in:#general ");
+      await field(page).clear();
     }
 
     await expect(
@@ -73,6 +82,36 @@ matrix("a result opens its message", async ({ page, theme, phone }) => {
   if (phone) {
     await expect(page.getByRole("main")).toBeVisible();
   }
+});
+
+test("the header's search starts in its room, and the page shows that filter", async ({ page }) => {
+  await open(page, `r/${ROOM_IDS.launchPlanning}`);
+  await expect(roomTitle(page, "launch-planning")).toBeVisible();
+  await expect(page.getByText("Search Messages")).toBeVisible();
+  await field(page).click();
+  await expect(field(page)).toHaveValue("in:#launch-planning ");
+
+  // Typing goes after the filter, which reaches the server as the room's exact id.
+  await page.keyboard.type("launch");
+  await expect(field(page)).toHaveValue("in:#launch-planning launch");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(
+    new RegExp(`/app/search\\?q=in_id(%3A|:)${ROOM_IDS.launchPlanning}(\\+|%20)launch$`),
+  );
+
+  const filters = page.getByRole("toolbar", { name: "Filters" });
+
+  await expect(filters.getByText("In: launch-planning")).toBeVisible();
+  await expect(hits(page).first()).toBeVisible();
+
+  // An untouched filter doesn't stay behind in the collapsed field.
+  await open(page, `r/${ROOM_IDS.general}`);
+  await expect(roomTitle(page, "general")).toBeVisible();
+  await field(page).click();
+  await expect(field(page)).toHaveValue("in:#general ");
+  await page.locator(":focus").blur();
+  await expect(field(page)).toHaveValue("");
 });
 
 test("older results load as the list scrolls", async ({ page }) => {
