@@ -13,6 +13,7 @@ import {
 import { useNow } from "../threads/use-now.ts";
 import { linkedLabel } from "./board-format.ts";
 import { OwnerLine, StatusChip, TagList } from "./board-parts.tsx";
+import { type CardDrag, useCardDrag } from "./use-board-drag.tsx";
 
 interface PostProps {
   readonly roomId: number;
@@ -103,12 +104,17 @@ export function PostRow({ roomId, threadId, open, activeTag }: PostProps) {
   );
 }
 
+interface CardProps extends PostProps {
+  readonly drag?: CardDrag | undefined;
+}
+
 /** One post in a status column: a compact card with the title, tags, owner and counts. */
-export function PostCard({ roomId, threadId, open, activeTag }: PostProps) {
+export function PostCard({ roomId, threadId, open, activeTag, drag }: CardProps) {
   const thread = useStore((state) => state.threads[threadId]);
   const unread = useUnread(threadId);
   const catalog = useCatalogTags(roomId);
   const now = useNow();
+  const { look, handle } = useCardDrag(drag, roomId, threadId);
 
   if (thread === undefined || thread.work === null) {
     return null;
@@ -117,7 +123,7 @@ export function PostCard({ roomId, threadId, open, activeTag }: PostProps) {
   const work = thread.work;
 
   return (
-    <li className="board-card-item" data-flip={threadId}>
+    <li className="board-card-item" data-flip={threadId} data-dragging={look}>
       <Link
         to="/r/$roomId/t/$threadId"
         params={{ roomId, threadId }}
@@ -126,6 +132,7 @@ export function PostCard({ roomId, threadId, open, activeTag }: PostProps) {
         data-open={open || undefined}
         data-unread={unread || undefined}
         aria-current={open ? "true" : undefined}
+        {...handle}
       >
         <span className="board-card-head">
           {unread ? <span className="board-unread-dot" role="img" aria-label="Unread" /> : null}

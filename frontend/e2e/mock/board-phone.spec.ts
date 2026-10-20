@@ -89,6 +89,23 @@ async function droppableSync(page: Page): Promise<() => Promise<void>> {
 test.describe("phone", () => {
   test.use(PHONE_TOUCH);
 
+  test("New post starts in the status the board is showing", async ({ page }) => {
+    await openBoard(page);
+
+    const fab = page.getByRole("button", { name: "New post" });
+    const dialog = page.getByRole("dialog", { name: "New post" });
+
+    await fab.tap();
+    await expect(dialog.getByLabel("Status")).toHaveValue("planned");
+    await dialog.getByRole("button", { name: "Cancel" }).tap();
+    await expect(dialog).toBeHidden();
+
+    await tab(page, /Blocked/).tap();
+    await expect(tab(page, /Blocked/)).toHaveAttribute("aria-selected", "true");
+    await fab.tap();
+    await expect(dialog.getByLabel("Status")).toHaveValue("blocked");
+  });
+
   test("the board shows one status at a time; the switcher and a swipe page between them", async ({
     page,
   }) => {

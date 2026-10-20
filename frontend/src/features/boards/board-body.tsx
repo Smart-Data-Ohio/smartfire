@@ -136,6 +136,6 @@ export function LoadMore({ roomId }: { readonly roomId: number }) {
 export interface BodyProps {
   readonly roomId: number;
   readonly query: BoardQuery;
-  readonly onNewPost: () => void;
+  readonly onNewPost: (status: WorkStatus) => void;
   readonly onClear: () => void;
 }

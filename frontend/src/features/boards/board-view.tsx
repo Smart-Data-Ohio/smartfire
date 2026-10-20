@@ -1,9 +1,11 @@
 import { useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import { boardAwaitsListing } from "../../store/boards.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
+import { IconButton } from "../../ui/icon-button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { isPaneShowing } from "../panes/pane-selection.ts";
 import { PaneError } from "../panes/pane-states.tsx";
@@ -25,10 +27,11 @@ import {
   WORK_STATUS_LABEL,
   WORK_STATUSES,
 } from "./board-format.ts";
-import { NewPostFab, PhoneBoardColumns, PhonePostCard } from "./board-phone.tsx";
+import { NewPostFab, PhoneBoardColumns, PhonePostCard, showingColumn } from "./board-phone.tsx";
 import { PostCard, PostRow } from "./board-rows.tsx";
 import { BoardTagStrip, BoardToolbar } from "./board-toolbar.tsx";
 import { NewPostDialog } from "./new-post-dialog.tsx";
+import { DropSlot, useBoardDrag, withSlot } from "./use-board-drag.tsx";
 import { useBoardTagCatalog } from "./use-board-tags.ts";
 import { useLiveFlip } from "./use-live-flip.ts";
 import "./boards.css";
@@ -64,7 +67,11 @@ function BoardList({ roomId, query, onNewPost, onClear }: BodyProps) {
     <div className="board-scroll" ref={listRef}>
       <Digest roomId={roomId} />
       {ids.length === 0 ? (
-        <BoardEmpty anyPosts={anyPosts || ids.length > 0} onNewPost={onNewPost} onClear={onClear} />
+        <BoardEmpty
+          anyPosts={anyPosts || ids.length > 0}
+          onNewPost={() => onNewPost("planned")}
+          onClear={onClear}
+        />
       ) : (
         <ul className="board-list" aria-label="Posts">
           {ids.map((id) =>
@@ -107,10 +114,12 @@ function BoardColumns({ roomId, query, onNewPost, onClear }: BodyProps) {
 
   useLiveFlip(boardRef, signature, `${query.owner}|${query.tag}`);
 
+  const dnd = useBoardDrag(roomId, boardRef);
+
   if (total === 0 && !anyPosts) {
     return (
       <div className="board-scroll">
-        <BoardEmpty anyPosts={false} onNewPost={onNewPost} onClear={onClear} />
+        <BoardEmpty anyPosts={false} onNewPost={() => onNewPost("planned")} onClear={onClear} />
       </div>
     );
   }
@@ -118,13 +127,14 @@ function BoardColumns({ roomId, query, onNewPost, onClear }: BodyProps) {
   return (
     <div className="board-columns-wrap">
       <Digest roomId={roomId} />
-      <div className="board-columns" ref={boardRef}>
+      <div className="board-columns" ref={boardRef} data-dragging={dnd.drag ? true : undefined}>
         {WORK_STATUSES.map((status) => (
           <section
             key={status}
             className="board-column"
             data-status={status}
             data-flip-group={status}
+            data-drop-target={dnd.landing?.status === status || undefined}
             aria-labelledby={`board-column-${roomId}-${status}`}
           >
             <header className="board-column-head">
@@ -133,24 +143,37 @@ function BoardColumns({ roomId, query, onNewPost, onClear }: BodyProps) {
                 {WORK_STATUS_LABEL[status]}
               </h2>
               <span className="board-column-count tabular">{columns[status].length}</span>
+              <IconButton
+                icon="plus"
+                size="sm"
+                label={`New post in ${WORK_STATUS_LABEL[status]}`}
+                className="board-column-new"
+                onClick={() => onNewPost(status)}
+              />
             </header>
             <ul className="board-column-list" data-flip-scroll>
-              {columns[status].map((id) => (
-                <PostCard
-                  key={id}
-                  roomId={roomId}
-                  threadId={id}
-                  open={id === openId}
-                  activeTag={query.tag}
-                />
-              ))}
-              {columns[status].length === 0 ? (
+              {withSlot(columns[status], status, dnd.landing).map((id) =>
+                id === "slot" ? (
+                  <DropSlot key="slot" drag={dnd.drag} />
+                ) : (
+                  <PostCard
+                    key={id}
+                    roomId={roomId}
+                    threadId={id}
+                    open={id === openId}
+                    activeTag={query.tag}
+                    drag={dnd.card}
+                  />
+                ),
+              )}
+              {columns[status].length === 0 && dnd.landing?.status !== status ? (
                 <li className="board-column-empty">No posts</li>
               ) : null}
             </ul>
           </section>
         ))}
       </div>
+      {dnd.region}
       <LoadMore roomId={roomId} />
     </div>
   );
@@ -177,6 +200,7 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
   const panes = usePaneNavigation(roomId);
   const phone = usePhoneLayout();
   const composing = pathname.endsWith("/posts/new");
+  const [startStatus, setStartStatus] = useState<WorkStatus>("planned");
 
   const waiting = useStore((state) => boardAwaitsListing(state.boards[roomId]));
 
@@ -200,7 +224,8 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
     });
   };
 
-  const openComposer = () => {
+  const openComposer = (status: WorkStatus) => {
+    setStartStatus(status);
     void navigate({
       to: "/r/$roomId/posts/new",
       params: { roomId },
@@ -222,7 +247,7 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
         ownerOptions={ownerOptions}
         tagCounts={tagCounts}
         onChange={change}
-        onNewPost={openComposer}
+        onNewPost={() => openComposer("planned")}
         canAdminister={canAdminister}
         automationsOpen={isPaneShowing(panes.view, "automations")}
         onAutomations={() => panes.toggle("automations")}
@@ -261,10 +286,15 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
           )}
         </SkeletonReveal>
       )}
-      {phone ? <NewPostFab onNewPost={openComposer} /> : null}
+      {phone ? (
+        <NewPostFab
+          onNewPost={() => openComposer(query.view === "board" ? showingColumn(roomId) : "planned")}
+        />
+      ) : null}
       <NewPostDialog
         roomId={roomId}
         open={composing}
+        initialStatus={startStatus}
         onClose={closeComposer}
         onCreated={(threadId) =>
           void navigate({
