@@ -9,7 +9,7 @@ interface Placed {
   readonly group: string;
 }
 
-function cssValue(token: string, fallback: string): string {
+export function cssValue(token: string, fallback: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || fallback;
 }
 

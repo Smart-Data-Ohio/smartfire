@@ -358,3 +358,45 @@ test("a board post uses the shared work handoff dialog", async ({ page }) => {
     .click();
   await expect(pane(page).getByText(/handed off owner .* → Ember/)).toBeVisible();
 });
+
+for (const theme of ["light", "dark"] as const) {
+  test(`every column's dot and the open card's ring show in ${theme}`, async ({ page }) => {
+    await page.setViewportSize(DESKTOP);
+    await openApp(page, `r/${BOARD}/t/${BOARD_POST_IDS.launchWeek}?view=board`, theme);
+
+    const open = column(page, "Planned").locator(".board-card[data-open]");
+
+    await expect(open).toBeVisible();
+
+    for (const name of ["Planned", "In progress", "Blocked", "Done"]) {
+      await expect(
+        column(page, name).locator(".board-column-head .board-status-dot"),
+      ).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    }
+
+    await expect(open).toHaveCSS("box-shadow", /2px/);
+    await expect(column(page, "Planned").locator(".board-card:not([data-open])").first()).toHaveCSS(
+      "box-shadow",
+      /1px/,
+    );
+  });
+}
+
+test("New post from a column starts in that column's status", async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, `r/${BOARD}?view=board`);
+
+  const dialog = page.getByRole("dialog", { name: "New post" });
+
+  await column(page, "Blocked").getByRole("button", { name: "New post in Blocked" }).click();
+  await expect(dialog.getByLabel("Status")).toHaveValue("blocked");
+  await dialog.getByLabel("Title").fill("Unblock the release train");
+  await dialog.getByRole("button", { name: "Create post" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    column(page, "Blocked").getByRole("link", { name: /Unblock the release train/ }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "New post", exact: true }).click();
+  await expect(dialog.getByLabel("Status")).toHaveValue("planned");
+});

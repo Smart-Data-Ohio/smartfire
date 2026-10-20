@@ -177,6 +177,10 @@ function ColumnEmpty({
 /** The column each board last showed this session, so coming back lands where you left. */
 const lastColumn = new Map<number, WorkStatus>();
 
+export function showingColumn(roomId: number): WorkStatus {
+  return lastColumn.get(roomId) ?? "planned";
+}
+
 function columnIndex(status: WorkStatus): number {
   return WORK_STATUSES.indexOf(status);
 }
@@ -193,7 +197,11 @@ export function PhoneBoardColumns(props: BodyProps) {
   if (total === 0 && !anyPosts) {
     return (
       <div className="board-scroll">
-        <BoardEmpty anyPosts={false} onNewPost={props.onNewPost} onClear={props.onClear} />
+        <BoardEmpty
+          anyPosts={false}
+          onNewPost={() => props.onNewPost("planned")}
+          onClear={props.onClear}
+        />
       </div>
     );
   }
@@ -233,6 +241,10 @@ function StatusPager({
   );
 
   useLiveFlip(pagerRef, signature, `${query.owner}|${query.tag}`);
+
+  useLayoutEffect(() => {
+    lastColumn.set(roomId, opening.current);
+  }, [roomId]);
 
   useLayoutEffect(() => {
     const pager = pagerRef.current;
