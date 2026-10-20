@@ -10,15 +10,18 @@ import type { SidebarState } from "../../store/state.ts";
 import { rowPillCount, rowUnread, sidebarSections } from "../sidebar/sections.ts";
 import { matchScore, normalizeQuery } from "./match.ts";
 
-/** Something the switcher can open: a room, a person (their DM, made on demand) or a thread. */
-export type SwitcherItemKind = "room" | "person" | "thread";
+/**
+ * Something the switcher can open: a room, a person (their DM, made on demand), a thread, or an
+ * open channel the viewer isn't in (choosing it joins it).
+ */
+export type SwitcherItemKind = "room" | "person" | "thread" | "joinable";
 
 export interface SwitcherItem {
   /** Unique across kinds: `room:12`, `person:5`, `thread:3`. */
   readonly key: string;
   readonly kind: SwitcherItemKind;
   readonly label: string;
-  /** A thread's room, shown faint after the label. */
+  /** A thread's room, or a joinable channel's member count, shown faint after the label. */
   readonly detail: string | null;
   /** Where it goes; `null` for a person you have no DM with yet. */
   readonly roomId: number | null;
@@ -266,7 +269,7 @@ export function mergeItems(
 
 /** One titled group of results. */
 export interface SwitcherSection {
-  readonly key: "recent" | "unread" | "channels" | "people" | "threads";
+  readonly key: "recent" | "unread" | "channels" | "people" | "threads" | "joinable";
   readonly title: string;
   readonly items: readonly SwitcherItem[];
 }
@@ -277,6 +280,7 @@ const SECTION_TITLES = {
   channels: "Channels",
   people: "People",
   threads: "Threads",
+  joinable: "Channels you can join",
 } as const satisfies Record<SwitcherSection["key"], string>;
 
 const PER_SECTION = 8;
@@ -414,4 +418,47 @@ export function rankItems(
 /** The sections' items in display order, for ↑/↓. */
 export function flattenSections(sections: readonly SwitcherSection[]): SwitcherItem[] {
   return sections.flatMap((entry) => entry.items);
+}
+
+/** An open channel the server found for the query, as the join group needs it. */
+export interface JoinableChannel {
+  readonly roomId: number;
+  readonly name: string;
+  /** e.g. "12 members". */
+  readonly detail: string;
+}
+
+export const PER_JOIN_SECTION = 5;
+
+/**
+ * The channels you can join, after the member results and in the server's order (best match
+ * first). A room the switcher already lists is left out, so a channel you just joined moves up
+ * into Channels.
+ */
+export function joinableSection(
+  channels: readonly JoinableChannel[],
+  reachable: readonly SwitcherItem[],
+): SwitcherSection[] {
+  const reached = new Set(
+    reachable.flatMap((item) =>
+      item.kind === "room" && item.roomId !== null ? [item.roomId] : [],
+    ),
+  );
+
+  const items = channels
+    .filter((channel) => !reached.has(channel.roomId))
+    .slice(0, PER_JOIN_SECTION)
+    .map(
+      (channel): SwitcherItem => ({
+        ...BLANK,
+        key: `join:${channel.roomId}`,
+        kind: "joinable",
+        label: channel.name,
+        detail: channel.detail,
+        roomId: channel.roomId,
+        roomKind: "open",
+      }),
+    );
+
+  return section("joinable", items);
 }

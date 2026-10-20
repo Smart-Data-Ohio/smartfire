@@ -1,0 +1,223 @@
+/* Browse channels: a search field over a scrolling list of open rooms, Join at each row's end. */
+@layer app {
+  @media (720px <= width) {
+    .dialog:has(.browse) {
+      width: min(560px, calc(100vw - var(--space-8)));
+    }
+  }
+
+  .dialog:has(.browse) .dialog-body {
+    display: flex;
+    overflow: hidden;
+  }
+
+  .browse {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+    height: min(520px, calc(100dvh - var(--space-10) * 2 - 96px));
+  }
+
+  .browse-search {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-2);
+    height: 40px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .browse-search:focus-within {
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  .browse-search-icon {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .browse-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-ui);
+    outline: none;
+  }
+
+  .browse-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .browse-input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  .browse-results {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    margin-inline: calc(var(--space-2) * -1);
+    padding-inline: var(--space-2);
+    overscroll-behavior: contain;
+  }
+
+  .browse-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    transition: opacity var(--duration-small) var(--ease-enter);
+  }
+
+  /* The last answer stays put, a little quieter, until the next one replaces it. */
+  .browse-list[data-stale] {
+    opacity: 0.6;
+  }
+
+  .browse-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-right: var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .browse-row:hover,
+  .browse-row:has(.browse-open:focus-visible) {
+    background: var(--bg-hover);
+  }
+
+  .browse-row + .browse-row {
+    box-shadow: 0 -1px 0 var(--border);
+  }
+
+  .browse-open {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: var(--space-2) var(--space-3);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .browse-open:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  .browse-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .browse-hash {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .browse-label,
+  .browse-topic {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .browse-topic {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .browse-meta {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .browse-join,
+  .browse-joined {
+    flex-shrink: 0;
+    min-width: 76px;
+  }
+
+  .browse-joined {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    transition: opacity var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  .browse-joined .t-success-check {
+    color: var(--success);
+  }
+
+  .browse-end {
+    display: flex;
+    justify-content: center;
+    min-height: var(--space-2);
+    padding-block: var(--space-2);
+  }
+
+  .browse-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-8) var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    text-align: center;
+  }
+
+  .browse-empty-title {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  @media (width < 720px) {
+    .browse {
+      height: 100%;
+    }
+
+    .browse-search {
+      height: var(--touch-target);
+    }
+
+    .browse-input {
+      font-size: max(16px, var(--text-ui));
+    }
+
+    .browse-join {
+      --button-height: var(--touch-target);
+    }
+  }
+}

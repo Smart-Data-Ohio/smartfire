@@ -113,6 +113,7 @@ pub mod webhook;
 pub mod workspace_presence_lease;
 
 pub mod room_members;
+pub mod room_directory;
 pub mod workspace_icon;
 
 pub use account::{Account, AccountSettings};

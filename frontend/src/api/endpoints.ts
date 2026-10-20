@@ -3,6 +3,7 @@
  * the wire value typed as the generated DTO (what the store keeps).
  */
 import { Effect } from "effect";
+import type { ChannelDirectory } from "../gen/ChannelDirectory.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { Me } from "../gen/Me.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
@@ -17,6 +18,7 @@ import type { UserList } from "../gen/UserList.ts";
 import { call, get } from "./call.ts";
 import { BootReply } from "./schema/boot.ts";
 import {
+  ChannelDirectory as ChannelDirectorySchema,
   OpenRoomPreview as OpenRoomPreviewSchema,
   RoomJoin as RoomJoinSchema,
 } from "./schema/join.ts";
@@ -67,6 +69,36 @@ export const joinOpenRoom = Effect.fn("api.joinOpenRoom")(function* (roomId: num
     { method: "POST", path: `/rooms/${roomId}/join` },
     wire<RoomJoin>(RoomJoinSchema),
   );
+});
+
+export interface ChannelFilter {
+  readonly joinableOnly: boolean;
+  readonly limit: number;
+}
+
+/** `GET /rooms/browse`: a page of the open rooms, filtered by `query` when it isn't blank. */
+export const browseChannels = Effect.fn("api.browseChannels")(function* (
+  query: string,
+  cursor: string | null,
+  filter: ChannelFilter,
+) {
+  const params: Record<string, string> = {};
+
+  if (query !== "") {
+    params.q = query;
+  }
+
+  if (filter.joinableOnly) {
+    params.joinable = "1";
+  }
+
+  params.limit = String(filter.limit);
+
+  if (cursor !== null) {
+    params.cursor = cursor;
+  }
+
+  return yield* call(get("/rooms/browse", params), wire<ChannelDirectory>(ChannelDirectorySchema));
 });
 
 export function cursorQuery(cursor: PageCursor): Readonly<Record<string, string>> | undefined {

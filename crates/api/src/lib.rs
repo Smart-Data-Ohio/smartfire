@@ -118,6 +118,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route("/api/v1/messages/{message_id}/publish", post(action(announcements::publish)))
         .route("/api/v1/rooms", post(unparsed_action(room_management::create)))
         .route("/api/v1/rooms/new", get(action(room_management::new)))
+        .route("/api/v1/rooms/browse", get(action(join::browse)))
         .route("/api/v1/rooms/{room_id}/edit", get(action(room_management::edit)))
         .route(
             "/api/v1/rooms/{room_id}/github_subscriptions",

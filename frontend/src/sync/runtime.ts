@@ -8,6 +8,7 @@ import {
   searchDriveFiles,
   shareDriveFile,
 } from "../api/drive-endpoints.ts";
+import { browseChannels, type ChannelFilter } from "../api/endpoints.ts";
 import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { prepareGooglePicker } from "../api/google-picker.ts";
@@ -24,6 +25,7 @@ import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
 import type { BoardTagCatalog } from "../gen/BoardTagCatalog.ts";
 import type { CancelEvent } from "../gen/CancelEvent.ts";
+import type { ChannelDirectory } from "../gen/ChannelDirectory.ts";
 import type { ChannelWebhook } from "../gen/ChannelWebhook.ts";
 import type { ChannelWebhookCredential } from "../gen/ChannelWebhookCredential.ts";
 import type { ChannelWebhookList } from "../gen/ChannelWebhookList.ts";
@@ -149,7 +151,7 @@ export type {
 
 export { afterConfirming, spaReturnPath } from "./reauthentication.ts";
 
-export type { EventPrefill, GithubCardScope };
+export type { ChannelFilter, EventPrefill, GithubCardScope };
 
 const API_BASE = "/api/v1";
 
@@ -866,6 +868,13 @@ export const actions = {
    * focus) and adds the sidebar row when the membership is visible.
    */
   joinOpenRoom: (roomId: number): Promise<void> => runtime.runPromise(session.joinOpenRoom(roomId)),
+
+  /** A page of the open rooms anyone may join, best match for `query` first. */
+  browseChannels: (
+    query: string,
+    cursor: string | null,
+    filter: ChannelFilter,
+  ): Promise<ChannelDirectory> => runAction(browseChannels(query, cursor, filter)),
 
   /** The workspace's welcome card and server guide, with only the rooms this viewer can reach. */
   welcome: (): Promise<WorkspaceWelcome> => runAction(readWelcome()),
