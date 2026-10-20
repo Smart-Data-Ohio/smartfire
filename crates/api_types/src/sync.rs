@@ -326,6 +326,10 @@ pub struct MessageNotified {
     pub message_id: i64,
     pub room_id: i64,
     pub thread_id: Option<i64>,
+    /// The recipient ignores the author; consume the publication without a chime.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ignored: Option<bool>,
 }
 
 /// Viewer-neutral invalidation of a discussion header, including a deleted starter message.

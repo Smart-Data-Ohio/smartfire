@@ -29,7 +29,9 @@ function liveNotifications(
   liveAfter: number,
 ): readonly MessageNotified[] {
   return events.flatMap((event) =>
-    event.type === "message.notified" && event.seq > liveAfter ? [event.data] : [],
+    event.type === "message.notified" && event.seq > liveAfter && event.data.ignored !== true
+      ? [event.data]
+      : [],
   );
 }
 

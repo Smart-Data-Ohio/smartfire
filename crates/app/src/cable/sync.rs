@@ -415,20 +415,21 @@ pub fn message_notified_later(
         };
         let notified = Message::find_by_id(conn, message_id).and_then(|message| {
             let Some(message) = message else { return Ok(None) };
-            let ids = campfire_db::models::notification_push::MessageNotified::user_ids(
+            let recipients = campfire_db::models::notification_push::MessageNotified::recipients(
                 conn, &*rich_text, &message, now,
             )?;
-            Ok(Some((message, ids)))
+            Ok(Some((message, recipients)))
         });
         match notified {
-            Ok(Some((message, ids))) => {
-                let payload = SyncPayload::MessageNotified(campfire_api_types::MessageNotified {
-                    message_id,
-                    room_id: message.room_id,
-                    thread_id: message.thread_id,
-                });
-                for user_id in ids.into_iter().filter(|id| server.sync_connected(*id)) {
-                    send(&server, Audience::User(user_id), &payload, |publication| publication);
+            Ok(Some((message, recipients))) => {
+                for recipient in recipients.into_iter().filter(|r| server.sync_connected(r.user_id)) {
+                    let payload = SyncPayload::MessageNotified(campfire_api_types::MessageNotified {
+                        message_id,
+                        room_id: message.room_id,
+                        thread_id: message.thread_id,
+                        ignored: recipient.ignores_author.then_some(true),
+                    });
+                    send(&server, Audience::User(recipient.user_id), &payload, |publication| publication);
                 }
             }
             Ok(None) => {}

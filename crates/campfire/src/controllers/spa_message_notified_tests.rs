@@ -41,6 +41,7 @@ async fn a_group_message_notifies_its_recipient_on_the_user_topic_and_not_its_au
             message_id: davids,
             room_id: room,
             thread_id: None,
+            ignored: None,
         })
     );
 

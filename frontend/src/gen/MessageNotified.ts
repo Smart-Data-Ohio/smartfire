@@ -4,4 +4,8 @@
  * A new message the server notified the recipient of: a create, or a streaming agent message's
  * finalize. Never an edit.
  */
-export type MessageNotified = { messageId: number, roomId: number, threadId: number | null, };
+export type MessageNotified = { messageId: number, roomId: number, threadId: number | null,
+/**
+ * The recipient ignores the author; consume the publication without a chime.
+ */
+ignored?: boolean, };

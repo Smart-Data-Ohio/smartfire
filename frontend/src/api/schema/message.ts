@@ -136,6 +136,7 @@ export const MessageNotified = Schema.Struct({
   messageId: MessageId,
   roomId: RoomId,
   threadId: Schema.NullOr(ThreadId),
+  ignored: Schema.optionalKey(Schema.Boolean),
 });
 
 export type MessageNotified = typeof MessageNotified.Type;

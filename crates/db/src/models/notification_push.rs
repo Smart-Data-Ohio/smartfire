@@ -21,22 +21,36 @@ impl crate::events::Broadcast for MessageNotified {
     const KIND: &'static str = "Message#sync_notified";
 }
 
+/// One person the push policy notifies of a message, and whether they ignore its author. An
+/// ignoring person still gets a publication, so the sync sequence the author sees can't reveal
+/// the ignore.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NotifiedUser {
+    pub user_id: i64,
+    pub ignores_author: bool,
+}
+
 impl MessageNotified {
     /// Who the push policy notifies of `message`, whether or not they watch it live or have a
     /// device to push to.
-    pub fn user_ids(
+    pub fn recipients(
         conn: &Connection,
         rich_text: &dyn crate::rich_text::RichText,
         message: &crate::Message,
         now: Timestamp,
-    ) -> Result<Vec<i64>> {
-        match message.thread_id {
-            Some(_) => crate::ChannelThread::notified_user_ids(conn, rich_text, message, now),
-            None => Ok(PushSubscription::room_notified(conn, rich_text, message, now)?
+    ) -> Result<Vec<NotifiedUser>> {
+        let user_ids = match message.thread_id {
+            Some(_) => crate::ChannelThread::notified_user_ids(conn, rich_text, message, now)?,
+            None => PushSubscription::room_notified(conn, rich_text, message, now)?
                 .into_iter()
                 .map(|membership| membership.user_id)
-                .collect()),
-        }
+                .collect(),
+        };
+        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?;
+        Ok(user_ids
+            .into_iter()
+            .map(|user_id| NotifiedUser { user_id, ignores_author: blockers.contains(&user_id) })
+            .collect())
     }
 }
 

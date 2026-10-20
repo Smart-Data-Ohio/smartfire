@@ -326,8 +326,7 @@ impl PushSubscription {
     }
 
     /// `Room::MessagePusher`'s policy over every visible member but the author: the members
-    /// `message` notifies, before presence and devices narrow them to pushes. The SPA's
-    /// `message.notified` goes to all of them.
+    /// `message` notifies, before ignores, presence and devices narrow them to pushes.
     pub fn room_notified(
         conn: &Connection,
         rich_text: &dyn RichText,
@@ -343,9 +342,8 @@ impl PushSubscription {
             Some(id) if message.reply_notify_author => Message::find_by_id(conn, id)?.map(|m| m.creator_id),
             _ => None,
         };
-        let visible = super::ignore_policy::visible_sql("m.user_id", "?2");
         let members = query_all(conn,
-            &format!("SELECT m.* FROM memberships m WHERE m.room_id=?1 AND m.user_id!=?2 AND (m.involvement IS NULL OR m.involvement!='invisible') AND {visible}"),
+            "SELECT m.* FROM memberships m WHERE m.room_id=?1 AND m.user_id!=?2 AND (m.involvement IS NULL OR m.involvement!='invisible')",
             params![message.room_id, message.creator_id], Membership::from_row)?;
         let ids: Vec<i64> = members.iter().map(|m| m.user_id).collect();
         let users = UserStatusSettings::for_ids(conn, &ids)?;
@@ -373,8 +371,10 @@ impl PushSubscription {
         let room = Room::find(conn, message.room_id)?;
         let payload = Self::payload_for(conn, rich_text, &room, message)?;
         let cutoff = Membership::connection_cutoff(now);
+        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?;
         let away: Vec<i64> = Self::room_notified(conn, rich_text, message, now)?
             .into_iter()
+            .filter(|m| !blockers.contains(&m.user_id))
             .filter(|m| m.connected_at.is_none_or(|at| at < cutoff))
             .map(|m| m.user_id)
             .collect();

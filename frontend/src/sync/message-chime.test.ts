@@ -80,12 +80,14 @@ function updated(data: MessageDTO, seq: number): SyncEvent {
   return { seq, topic, type: "message.updated", data };
 }
 
-function notified(message: MessageDTO, seq: number): SyncEvent {
+function notified(message: MessageDTO, seq: number, { ignored = false } = {}): SyncEvent {
+  const data = { messageId: message.id, roomId: message.roomId, threadId: message.threadId };
+
   return {
     seq,
     topic: "user",
     type: "message.notified",
-    data: { messageId: message.id, roomId: message.roomId, threadId: message.threadId },
+    data: ignored ? { ...data, ignored } : data,
   };
 }
 
@@ -253,6 +255,18 @@ describe("followMessageChimes plays when the server notified this person", () =>
     tab.deliver({ ...directMessage(200, 1, 1), liveAfter: 10 });
 
     expect(tab.played()).toBe(0);
+  });
+
+  it("stays quiet for a message from someone this person ignores", async () => {
+    const tab = await openTab(stateWith([row(DM, { kind: "direct" })]));
+
+    tab.deliver({ events: [notified(fromMaya(200, DM), 1, { ignored: true })] });
+
+    expect(tab.played()).toBe(0);
+
+    tab.deliver({ events: [notified(fromMaya(201, DM), 2)] });
+
+    expect(tab.played()).toBe(1);
   });
 
   it("plays once for a burst, then again after the throttle", async () => {

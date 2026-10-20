@@ -1270,20 +1270,9 @@ impl ChannelThread {
         message: &Message,
         policy: &dyn Fn(&ThreadPushCandidate) -> bool,
     ) -> Result<Vec<ThreadPushCandidate>> {
-        let candidates: Vec<ThreadPushCandidate> =
-            Self::push_candidates(conn, rich_text, thread, message)?
-                .into_iter()
-                .filter(|c| policy(c))
-                .collect();
-        if candidates.is_empty() {
-            return Ok(candidates);
-        }
-        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?
+        Ok(Self::push_candidates(conn, rich_text, thread, message)?
             .into_iter()
-            .collect::<HashSet<_>>();
-        Ok(candidates
-            .into_iter()
-            .filter(|candidate| !blockers.contains(&candidate.recipient.id))
+            .filter(|c| policy(c))
             .collect())
     }
 
@@ -1306,6 +1295,12 @@ impl ChannelThread {
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
+        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let candidates = candidates
+            .into_iter()
+            .filter(|candidate| !blockers.contains(&candidate.recipient.id));
         let creator = message.creator(conn)?;
         let body = format!(
             "{}: {}",
@@ -1359,7 +1354,8 @@ impl ChannelThread {
         })
     }
 
-    /// Everyone the production policy notifies of `message`, devices or not.
+    /// Everyone the production policy notifies of `message`, devices or not, including people
+    /// who ignore its author.
     pub fn notified_user_ids(
         conn: &Connection,
         rich_text: &dyn RichText,

@@ -1,5 +1,6 @@
 use super::*;
-use crate::models::notification_push::MessageNotified;
+use crate::models::notification_push::{MessageNotified, NotifiedUser};
+use crate::models::user_block::UserBlock;
 use crate::rich_text::mention_attachment_for;
 use crate::{
     ChannelThread, Involvement, Membership, Message, MessageChanges, NewChannelThread,
@@ -16,8 +17,22 @@ fn post(t: &TestDb, room: &str, creator: &str, body: String) -> Message {
     t.write(move |tx| Message::create(tx, attributes))
 }
 
+fn recipients(t: &TestDb, message: &Message) -> Vec<NotifiedUser> {
+    t.read(|c| MessageNotified::recipients(c, &BasicRichText, message, t.now()))
+}
+
 fn notified(t: &TestDb, message: &Message) -> Vec<i64> {
-    t.read(|c| MessageNotified::user_ids(c, &BasicRichText, message, t.now()))
+    recipients(t, message).into_iter().map(|r| r.user_id).collect()
+}
+
+fn pushed(t: &TestDb, message: &Message) -> Vec<i64> {
+    t.read(|c| {
+        Ok(PushSubscription::pushes_for(c, &BasicRichText, message, t.now())?
+            .1
+            .into_iter()
+            .map(|s| s.user_id)
+            .collect())
+    })
 }
 
 fn emitted(t: &TestDb) -> Vec<i64> {
@@ -47,14 +62,27 @@ fn a_room_message_notifies_members_watching_live_whom_web_push_skips() {
     let ids = notified(&t, &message);
     assert!(ids.contains(&id("jason")), "{ids:?}");
     assert!(!ids.contains(&id("david")), "never the author: {ids:?}");
-    let pushed: Vec<i64> = t.read(|c| {
-        Ok(PushSubscription::pushes_for(c, &BasicRichText, &message, t.now())?
-            .1
-            .into_iter()
-            .map(|s| s.user_id)
-            .collect())
-    });
+    let pushed = pushed(&t, &message);
     assert!(!pushed.contains(&id("jason")), "web push skips a live viewer: {pushed:?}");
+}
+
+#[test]
+fn a_member_who_ignores_the_author_is_flagged_and_gets_no_web_push() {
+    let t = TestDb::new();
+    let jason = id("jason");
+    let before = post(&t, "designers", "david", "Before".into());
+    assert!(pushed(&t, &before).contains(&jason), "{:?}", pushed(&t, &before));
+
+    t.write(|tx| UserBlock::set(tx, id("jason"), id("david"), true));
+    let message = post(&t, "designers", "david", "After".into());
+
+    let flagged = recipients(&t, &message);
+    assert!(
+        flagged.contains(&NotifiedUser { user_id: jason, ignores_author: true }),
+        "{flagged:?}"
+    );
+    assert!(flagged.iter().filter(|r| r.user_id != jason).all(|r| !r.ignores_author), "{flagged:?}");
+    assert!(!pushed(&t, &message).contains(&jason), "{:?}", pushed(&t, &message));
 }
 
 #[test]
