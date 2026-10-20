@@ -278,6 +278,8 @@ pub struct NotificationSettings {
     /// One word or phrase each, up to 20.
     pub keyword_alerts: Vec<String>,
     pub inbox: Vec<InboxSwitch>,
+    /// The SPA's chime on desktop for a new message that would notify you; on until turned off.
+    pub message_sound: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -319,6 +321,7 @@ pub struct UpdateNotifications {
     pub keyword_alerts: Option<Vec<String>>,
     /// Inbox switches by key; keys not named keep their value.
     pub inbox: Option<BTreeMap<String, bool>>,
+    pub message_sound: Option<bool>,
 }
 
 /// Presence, custom status, meeting status and out of office (the status form).

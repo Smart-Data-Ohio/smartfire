@@ -52,6 +52,7 @@ fn settings() -> Settings {
                 description: "When someone asks you to review a pull request.".into(),
                 enabled: true,
             }],
+            message_sound: true,
         },
         status: StatusSettings {
             presence_setting: PresenceSetting::Auto,
@@ -132,7 +133,8 @@ fn settings_wire() {
                     "label": "GitHub review requests",
                     "description": "When someone asks you to review a pull request.",
                     "enabled": true
-                }]
+                }],
+                "messageSound": true
             },
             "status": {
                 "presenceSetting": "auto",
@@ -207,7 +209,8 @@ fn settings_writes_wire() {
             "meetingDndEnabled": null,
             "oooNotifyEnabled": null,
             "keywordAlerts": ["prod"],
-            "inbox": { "mentions": false }
+            "inbox": { "mentions": false },
+            "messageSound": null
         }),
     );
     assert_wire(

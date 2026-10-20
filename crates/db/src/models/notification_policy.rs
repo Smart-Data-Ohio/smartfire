@@ -62,6 +62,8 @@ pub struct NotificationPreferences {
     pub default_notification_level: NotificationLevel,
     pub room_notification_levels: BTreeMap<i64, Option<NotificationLevel>>,
     pub room_mute_until: BTreeMap<i64, Option<jiff::Timestamp>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message_sound: Option<bool>,
     #[serde(flatten)]
     pub legacy: BTreeMap<String, serde_json::Value>,
 }
@@ -81,6 +83,10 @@ impl NotificationPreferences {
     pub fn parse(raw: Option<&str>) -> Self {
         raw.and_then(|raw| serde_json::from_str(raw).ok())
             .unwrap_or_default()
+    }
+
+    pub fn plays_message_sound(&self) -> bool {
+        self.message_sound.unwrap_or(true)
     }
 
     pub fn muted(&self, room_id: i64, now: Timestamp) -> bool {
@@ -105,6 +111,7 @@ pub const NOTIFICATION_PREFERENCE_KEYS: &[&str] = &[
     "default_notification_level",
     "room_notification_levels",
     "room_mute_until",
+    "message_sound",
 ];
 
 pub fn valid_preference(key: &str, value: &serde_json::Value) -> bool {
@@ -120,6 +127,7 @@ pub fn valid_preference(key: &str, value: &serde_json::Value) -> bool {
             serde_json::from_value::<BTreeMap<i64, Option<jiff::Timestamp>>>(value.clone())
                 .is_ok_and(|mutes| mutes.keys().all(|id| *id > 0))
         }
+        "message_sound" => value.is_boolean(),
         _ => false,
     }
 }

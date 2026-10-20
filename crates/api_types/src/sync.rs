@@ -146,6 +146,10 @@ pub enum SyncPayload {
     /// On the message's conversation topic: the message was deleted.
     #[serde(rename = "message.removed")]
     MessageRemoved(MessageRemoved),
+    /// On the recipient's `user` topic: the server notified them of a new message, as it
+    /// decides for web push, whether or not they have a device or watch the conversation live.
+    #[serde(rename = "message.notified")]
+    MessageNotified(MessageNotified),
     /// On `room:<id>` or `thread:<id>`: someone started or stopped typing there. The client
     /// drops a typist after 6 s without a refresh.
     #[serde(rename = "typing")]
@@ -314,6 +318,21 @@ pub struct Typing {
     pub user_id: i64,
     /// `false` when they sent, cleared the composer or left.
     pub on: bool,
+}
+
+/// A new message the server notified the recipient of: a create, or a streaming agent message's
+/// finalize. Never an edit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MessageNotified {
+    pub message_id: i64,
+    pub room_id: i64,
+    pub thread_id: Option<i64>,
+    /// The recipient ignores the author; consume the publication without a chime.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ignored: Option<bool>,
 }
 
 /// Viewer-neutral invalidation of a discussion header, including a deleted starter message.

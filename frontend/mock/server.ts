@@ -945,6 +945,31 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     record.mentionCount = 0;
   };
 
+  const pushPolicyNotified = (record: RoomRecord, message: MessageDTO): Outgoing[] => {
+    const involvement = record.membership.involvement;
+
+    if (
+      message.creatorId === VIEWER_ID ||
+      message.systemNote ||
+      message.streaming ||
+      !record.memberIds.includes(VIEWER_ID) ||
+      !(
+        involvement === "everything" ||
+        ((involvement === "mentions" || involvement === "muted") &&
+          mentionsUser(message.bodyHtml, VIEWER_ID))
+      )
+    )
+      return [];
+
+    return [
+      {
+        topic: "user",
+        type: "message.notified",
+        data: { messageId: message.id, roomId: message.roomId, threadId: null },
+      },
+    ];
+  };
+
   /** Everything that happens when someone posts: the message, unreads, sidebar, the bot. */
   const createMessage = (record: RoomRecord, draft: MessageDraft): MessageDTO => {
     const createdAt = timestamp(Math.max(now(), Date.parse(record.room.updatedAt) + 1));
@@ -996,6 +1021,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       events.push({ topic: "user", type: "sidebar.row.upserted", data: sidebarRow(record) });
     }
 
+    events.push(...pushPolicyNotified(record, message));
     hub.publish(events);
 
     const forBot = record.room.id === ROOM_IDS.dmEmber || mentionsUser(message.bodyHtml, BOT_ID);
@@ -1037,12 +1063,18 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       return;
     }
 
+    const record = world.rooms.get(message.roomId);
+
+    const finished =
+      record !== undefined && message.threadId === null && current.streaming && !streaming;
+
     hub.publish([
       {
         topic: message.threadId === null ? `room:${message.roomId}` : `thread:${message.threadId}`,
         type: "message.updated",
         data: message,
       },
+      ...(finished ? pushPolicyNotified(record, message) : []),
     ]);
   };
 

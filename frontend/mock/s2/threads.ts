@@ -28,6 +28,7 @@ import {
   validation,
 } from "../http.ts";
 import { booleanField, field, intField, isRecord, type Json, stringField } from "../json.ts";
+import { mentionsUser } from "../markdown.ts";
 import { workDetail, workUserIds } from "../s4/work-model.ts";
 import { threadPermissions } from "../s6/work.ts";
 import { VIEWER_ID } from "../seed.ts";
@@ -292,13 +293,26 @@ export function createThreads(
       return [];
     thread.viewerMembership = { ...membership, unreadAt: message.updatedAt };
 
-    return [
+    const events: Outgoing[] = [
       {
         topic: "user",
         type: "thread.unread",
         data: { threadId: thread.id, roomId: thread.roomId, refreshOnly: false },
       },
     ];
+
+    if (
+      membership.involvement === "everything" ||
+      (membership.involvement === "mentions" && mentionsUser(message.bodyHtml, VIEWER_ID))
+    ) {
+      events.push({
+        topic: "user",
+        type: "message.notified",
+        data: { messageId: message.id, roomId: thread.roomId, threadId: thread.id },
+      });
+    }
+
+    return events;
   };
 
   const refresh = (thread: ThreadRecord): Outgoing => ({

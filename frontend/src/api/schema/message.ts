@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { CreateMessage as GeneratedCreateMessage } from "../../gen/CreateMessage.ts";
 import type { MessageDTO as GeneratedMessageDTO } from "../../gen/MessageDTO.ts";
+import type { MessageNotified as GeneratedMessageNotified } from "../../gen/MessageNotified.ts";
 import type { MessagePage as GeneratedMessagePage } from "../../gen/MessagePage.ts";
 import type { MessageRead as GeneratedMessageRead } from "../../gen/MessageRead.ts";
 import type { MessageRemoved as GeneratedMessageRemoved } from "../../gen/MessageRemoved.ts";
@@ -129,6 +130,18 @@ export const MessageRemoved = Schema.Struct({
 export type MessageRemoved = typeof MessageRemoved.Type;
 
 export type MessageRemovedPin = Assert<Pinned<typeof MessageRemoved, GeneratedMessageRemoved>>;
+
+/** The `message.notified` event's data: a new message the server notified this person of. */
+export const MessageNotified = Schema.Struct({
+  messageId: MessageId,
+  roomId: RoomId,
+  threadId: Schema.NullOr(ThreadId),
+  ignored: Schema.optionalKey(Schema.Boolean),
+});
+
+export type MessageNotified = typeof MessageNotified.Type;
+
+export type MessageNotifiedPin = Assert<Pinned<typeof MessageNotified, GeneratedMessageNotified>>;
 
 /** One of a page's messages the viewer saved, and the saved item (to unsave it). */
 export const SavedMark = Schema.Struct({ messageId: MessageId, savedItemId: SavedItemId });

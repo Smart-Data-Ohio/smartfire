@@ -449,7 +449,7 @@ fn ignore_suppresses_message_mentions_and_pushes_only_for_blocker() {
         let message = Message::last_page(conn, crate::Timeline::Room(id("designers")))?
             .pop()
             .unwrap();
-        let (_, pushes, _) = PushSubscription::pushes_for(conn, &BasicRichText, &message, t.now())?;
+        let (_, pushes) = PushSubscription::pushes_for(conn, &BasicRichText, &message, t.now())?;
         assert!(pushes.iter().all(|s| s.user_id != viewer));
         assert!(
             !pushes.is_empty(),

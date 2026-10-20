@@ -33,4 +33,8 @@ allowedPeople: Array<DndAllowedPerson>,
 /**
  * One word or phrase each, up to 20.
  */
-keywordAlerts: Array<string>, inbox: Array<InboxSwitch>, };
+keywordAlerts: Array<string>, inbox: Array<InboxSwitch>,
+/**
+ * The SPA's chime on desktop for a new message that would notify you; on until turned off.
+ */
+messageSound: boolean, };

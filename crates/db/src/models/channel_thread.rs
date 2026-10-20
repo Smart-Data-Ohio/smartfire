@@ -1263,8 +1263,21 @@ impl ChannelThread {
         Ok(candidates)
     }
 
-    /// `ChannelThread::MessagePusher#push`: the pushes to send, one per recipient `policy`
-    /// allows who has a push subscription.
+    fn notified(
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        thread: &ChannelThread,
+        message: &Message,
+        policy: &dyn Fn(&ThreadPushCandidate) -> bool,
+    ) -> Result<Vec<ThreadPushCandidate>> {
+        Ok(Self::push_candidates(conn, rich_text, thread, message)?
+            .into_iter()
+            .filter(|c| policy(c))
+            .collect())
+    }
+
+    /// `ChannelThread::MessagePusher#push`: the pushes to send, one per notified recipient who
+    /// has a push subscription.
     pub fn push_recipients(
         conn: &Connection,
         rich_text: &dyn RichText,
@@ -1278,14 +1291,16 @@ impl ChannelThread {
         ) else {
             return Ok(Vec::new());
         };
-        let candidates: Vec<ThreadPushCandidate> =
-            Self::push_candidates(conn, rich_text, &thread, &message)?
-                .into_iter()
-                .filter(|c| policy(c))
-                .collect();
+        let candidates = Self::notified(conn, rich_text, &thread, &message, policy)?;
         if candidates.is_empty() {
             return Ok(Vec::new());
         }
+        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?
+            .into_iter()
+            .collect::<HashSet<_>>();
+        let candidates = candidates
+            .into_iter()
+            .filter(|candidate| !blockers.contains(&candidate.recipient.id));
         let creator = message.creator(conn)?;
         let body = format!(
             "{}: {}",
@@ -1297,11 +1312,7 @@ impl ChannelThread {
             thread.room_id, message.id, thread.id
         );
         let mut pushes = Vec::new();
-        let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?
-            .into_iter()
-            .collect::<HashSet<_>>();
         for candidate in candidates {
-            if blockers.contains(&candidate.recipient.id) { continue; }
             let subscriptions = PushSubscription::for_user(conn, candidate.recipient.id)?;
             if subscriptions.is_empty() {
                 continue;
@@ -1337,29 +1348,9 @@ impl ChannelThread {
         let Some(message) = Message::find_by_id(conn, message_id)? else {
             return Ok(Vec::new());
         };
-        let ids: Vec<i64> = query_all(
-            conn,
-            "SELECT user_id FROM thread_memberships WHERE thread_id=?",
-            [thread_id],
-            |row| row.get(0),
-        )?;
-        let users = crate::UserStatusSettings::for_ids(conn, &ids)?;
-        let exceptions =
-            super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
+        let policy = ThreadPolicy::load(conn, thread_id, &message, now)?;
         let mut pushes = Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
-            crate::NotificationPolicy {
-                room_id: Some(message.room_id),
-                recipient: users.get(&candidate.recipient.id),
-                kind: crate::NotificationKind::ThreadMessage,
-                room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement),
-                thread_involvement: Some(candidate.thread_membership.involvement),
-                mentioned: candidate.mentioned,
-                reply_to_recipient: candidate.reply_to_recipient,
-                keyword_matched: false,
-                dnd_exception: exceptions.contains(&candidate.recipient.id),
-                now,
-            }
-            .push()
+            policy.push(candidate)
         })?;
         let subscriptions = pushes.iter().flat_map(|push| push.subscriptions.iter().cloned()).collect();
         let allowed: std::collections::HashSet<i64> = PushSubscription::route_message(conn, subscriptions, now)?
@@ -1369,6 +1360,64 @@ impl ChannelThread {
         }
         pushes.retain(|push| !push.subscriptions.is_empty());
         Ok(pushes)
+    }
+
+    /// Everyone the production policy notifies of `message`, devices or not, including people
+    /// who ignore its author.
+    pub fn notified_user_ids(
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        message: &Message,
+        now: Timestamp,
+    ) -> Result<Vec<i64>> {
+        let Some(thread) = message.thread_id.map(|id| Self::find_by_id(conn, id)).transpose()?.flatten() else {
+            return Ok(Vec::new());
+        };
+        let policy = ThreadPolicy::load(conn, thread.id, message, now)?;
+        Ok(Self::notified(conn, rich_text, &thread, message, &|candidate| policy.push(candidate))?
+            .into_iter()
+            .map(|candidate| candidate.recipient.id)
+            .collect())
+    }
+}
+
+struct ThreadPolicy {
+    room_id: i64,
+    users: HashMap<i64, crate::UserStatusSettings>,
+    exceptions: HashSet<i64>,
+    now: Timestamp,
+}
+
+impl ThreadPolicy {
+    fn load(conn: &Connection, thread_id: i64, message: &Message, now: Timestamp) -> Result<Self> {
+        let ids: Vec<i64> = query_all(
+            conn,
+            "SELECT user_id FROM thread_memberships WHERE thread_id=?",
+            [thread_id],
+            |row| row.get(0),
+        )?;
+        Ok(Self {
+            room_id: message.room_id,
+            users: crate::UserStatusSettings::for_ids(conn, &ids)?,
+            exceptions: super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?,
+            now,
+        })
+    }
+
+    fn push(&self, candidate: &ThreadPushCandidate) -> bool {
+        crate::NotificationPolicy {
+            room_id: Some(self.room_id),
+            recipient: self.users.get(&candidate.recipient.id),
+            kind: crate::NotificationKind::ThreadMessage,
+            room_involvement: candidate.room_membership.as_ref().map(|m| m.involvement),
+            thread_involvement: Some(candidate.thread_membership.involvement),
+            mentioned: candidate.mentioned,
+            reply_to_recipient: candidate.reply_to_recipient,
+            keyword_matched: false,
+            dnd_exception: self.exceptions.contains(&candidate.recipient.id),
+            now: self.now,
+        }
+        .push()
     }
 }
 

@@ -196,6 +196,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     sentKeyRef.current = messageKey(lastPending.clientMessageId);
   }
 
+  useEffect(() => actions.messageChimes.view(roomId), [roomId]);
   useChatSounds(roomId, () => {
     const list = listRef.current;
     const latestIds = new Set(timeline.ids.slice(-LATEST_PAGE_MESSAGES));

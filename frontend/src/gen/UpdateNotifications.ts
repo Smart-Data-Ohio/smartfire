@@ -19,4 +19,4 @@ keywordAlerts: Array<string> | null,
 /**
  * Inbox switches by key; keys not named keep their value.
  */
-inbox: { [key in string]: boolean } | null, };
+inbox: { [key in string]: boolean } | null, messageSound: boolean | null, };

@@ -284,6 +284,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("channel_thread::ThreadAccessChange", &["thread.updated", "thread.removed", "sidebar.row.upserted"]),
     ("Broadcasts::thread_access_changed", &["thread.updated", "thread.removed", "sidebar.row.upserted"]),
     ("activity_item::ActivityItemRecorded", &["activity.item"]),
+    ("notification_push::MessageNotified", &["message.notified"]),
+    ("Broadcasts::sync_message_notified", &["message.notified"]),
     ("Broadcasts::sync_activity_recorded", &["activity.item", "sidebar.row.upserted", "sidebar.row.removed"]),
     ("membership::PresentRead", &["sidebar.row.upserted"]),
     (
@@ -392,6 +394,48 @@ fn send(
 ) {
     let payload = serde_json::to_string(payload).expect("sync payloads serialize");
     server.sync_publish(adjust(SyncPublication::new(audience, payload)));
+}
+
+/// `message.notified` on the `user` topic of each person the message's push policy notifies,
+/// read afresh later. Only people with a sync socket open are looked up.
+pub fn message_notified_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    rich_text: std::sync::Arc<dyn campfire_db::rich_text::RichText>,
+    now: campfire_db::Timestamp,
+    message_id: i64,
+) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let server = server.downgrade();
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let notified = Message::find_by_id(conn, message_id).and_then(|message| {
+            let Some(message) = message else { return Ok(None) };
+            let recipients = campfire_db::models::notification_push::MessageNotified::recipients(
+                conn, &*rich_text, &message, now,
+            )?;
+            Ok(Some((message, recipients)))
+        });
+        match notified {
+            Ok(Some((message, recipients))) => {
+                for recipient in recipients.into_iter().filter(|r| server.sync_connected(r.user_id)) {
+                    let payload = SyncPayload::MessageNotified(campfire_api_types::MessageNotified {
+                        message_id,
+                        room_id: message.room_id,
+                        thread_id: message.thread_id,
+                        ignored: recipient.ignores_author.then_some(true),
+                    });
+                    send(&server, Audience::User(recipient.user_id), &payload, |publication| publication);
+                }
+            }
+            Ok(None) => {}
+            Err(error) => tracing::warn!(%error, message_id, "sync: notified people not read"),
+        }
+    }));
 }
 
 /// `message.created` or `message.updated` on the message's conversation.

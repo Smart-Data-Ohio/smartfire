@@ -644,6 +644,8 @@ export function ThreadPane({
   const thread = useStore((state) => state.threads[threadId]);
   const pane = useStore((state) => state.threadPanes[threadId]);
 
+  useEffect(() => actions.messageChimes.view(roomId, threadId), [roomId, threadId]);
+
   const unread = useStore(
     (state) => (state.threadMemberships[threadId]?.unreadAt ?? null) !== null,
   );

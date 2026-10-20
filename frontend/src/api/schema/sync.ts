@@ -21,7 +21,7 @@ import {
   HuddleRoleChanged,
 } from "./huddle.ts";
 import { RoomId, ThreadId, UserId } from "./ids.ts";
-import { MessageDTO, MessageRemoved } from "./message.ts";
+import { MessageDTO, MessageNotified, MessageRemoved } from "./message.ts";
 import { RoomCategoryRemoved } from "./organize.ts";
 import { RoomFilesChanged } from "./panes.ts";
 import { BlockState } from "./people.ts";
@@ -90,6 +90,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ type: Schema.Literal("message.updated"), data: MessageDTO }),
   Schema.Struct({ type: Schema.Literal("message.removed"), data: MessageRemoved }),
+  Schema.Struct({ type: Schema.Literal("message.notified"), data: MessageNotified }),
   Schema.Struct({ type: Schema.Literal("typing"), data: Typing }),
   Schema.Struct({ type: Schema.Literal("room.unread"), data: RoomUnread }),
   Schema.Struct({ type: Schema.Literal("room.read"), data: RoomRead }),
@@ -154,6 +155,11 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.created"), data: MessageDTO }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.updated"), data: MessageDTO }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.removed"), data: MessageRemoved }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("message.notified"),
+    data: MessageNotified,
+  }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("typing"), data: Typing }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("room.unread"), data: RoomUnread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("room.read"), data: RoomRead }),

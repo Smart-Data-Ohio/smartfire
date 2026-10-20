@@ -146,6 +146,7 @@ function initialState(world: World, now: number): State {
         allowedPeople: [],
         keywordAlerts: ["deploy freeze"],
         inbox: INBOX.map((entry) => ({ ...entry, enabled: entry.key !== "agent_work" })),
+        messageSound: true,
       },
       status: {
         presenceSetting: "auto",
@@ -598,6 +599,7 @@ export function createSettings(
 
             return isBoolean(value) ? { ...entry, enabled: value } : entry;
           }),
+          messageSound: flag("messageSound", n.messageSound),
         },
       };
     });

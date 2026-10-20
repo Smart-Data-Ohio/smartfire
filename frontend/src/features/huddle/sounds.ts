@@ -6,6 +6,7 @@
  * gesture: a ring waits for one instead of failing (the banner shows meanwhile).
  */
 import type { Me } from "../../gen/Me.ts";
+import { chime } from "./chime.ts";
 import incomingUrl from "./sounds/incoming.mp3";
 
 function minutesInZone(now: Date, zone: string): number | null {
@@ -139,6 +140,34 @@ export function playHandChime(): void {
   }
 
   play();
+}
+
+const CHIME_LATE_MS = 1000;
+
+export function playMessageChime(): void {
+  const audio = audioContext();
+
+  if (audio === null) {
+    return;
+  }
+
+  if (audio.state !== "suspended") {
+    chime(audio, audio.currentTime);
+
+    return;
+  }
+
+  const asked = performance.now();
+
+  void audio
+    .resume()
+    .then(() => {
+      // A resume held until a later gesture would sound a stale chime then.
+      if (performance.now() - asked < CHIME_LATE_MS) {
+        chime(audio, audio.currentTime);
+      }
+    })
+    .catch(() => undefined);
 }
 
 const RING_EVERY_MS = 3000;

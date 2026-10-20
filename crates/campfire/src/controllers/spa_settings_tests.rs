@@ -742,6 +742,25 @@ async fn notifications_save_as_the_classic_forms_do() {
 }
 
 #[tokio::test]
+async fn the_message_sound_starts_on_and_survives_the_other_notification_writes() {
+    let Some(a) = app().await else { panic!("restored default seed required") };
+    let mut b = a.sign_in(DAVID).await;
+    assert!(read(&mut b).await.notifications.message_sound);
+
+    let off = spa(&mut b, Method::PATCH, "/api/v1/settings/notifications", json!({"messageSound": false})).await;
+    assert!(!off.notifications.message_sound);
+
+    let level = spa(&mut b, Method::PATCH, "/api/v1/settings/notifications", json!({"defaultNotificationLevel": "mentions", "inbox": {"agent_work": false}})).await;
+    assert!(!level.notifications.message_sound, "a level or inbox save keeps it");
+    classic(&mut b, form("/users/me/profile", Method::PATCH, &[("user[inbox_preferences][event_reminders]", "0")])).await;
+    assert!(!read(&mut b).await.notifications.message_sound, "the classic profile form keeps it");
+
+    let on = spa(&mut b, Method::PATCH, "/api/v1/settings/notifications", json!({"messageSound": true})).await;
+    assert!(on.notifications.message_sound);
+    assert_eq!(on.notifications.default_notification_level, api::NotificationLevel::Mentions);
+}
+
+#[tokio::test]
 async fn a_status_change_saves_and_broadcasts_as_the_classic_form_does() {
     let Some((_classic_side, _)) = assert_parity(
         async |b| {

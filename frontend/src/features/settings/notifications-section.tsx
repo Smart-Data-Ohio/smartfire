@@ -220,6 +220,13 @@ export function NotificationsSection() {
             save("default-level", { defaultNotificationLevel })
           }
         />
+        <Toggle
+          checked={notifications.messageSound}
+          disabled={busy("message-sound")}
+          label="Play a sound for new messages"
+          description="A soft chime on your computer when a message would notify you. Silent while DND is on."
+          onCheckedChange={(messageSound) => save("message-sound", { messageSound })}
+        />
       </SettingsGroup>
       <SettingsGroup
         title="Do not disturb"

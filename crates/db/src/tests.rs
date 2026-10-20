@@ -111,6 +111,7 @@ mod message_test;
 mod mail_merge_test;
 mod poll_test;
 mod push_test;
+mod message_notified_test;
 mod notification_policy_test;
 mod named_policy_test;
 mod named_calendar_status_test;

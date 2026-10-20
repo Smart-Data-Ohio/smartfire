@@ -49,10 +49,15 @@ fn creating_a_message_touches_the_room_marks_disconnected_members_unread_and_ind
     assert_eq!(fts_body(&t, message.id).as_deref(), Some("Hello there"));
     assert_eq!(
         t.events(),
-        vec![Event::PushMessage {
-            room_id: id("designers"),
-            message_id: message.id
-        }]
+        vec![
+            Event::PushMessage {
+                room_id: id("designers"),
+                message_id: message.id
+            },
+            Event::broadcast(&crate::models::notification_push::MessageNotified {
+                message_id: message.id
+            }),
+        ]
     );
 
     let body: (String, String, i64) = t.read(|c| {
