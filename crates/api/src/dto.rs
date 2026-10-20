@@ -1882,6 +1882,14 @@ pub(crate) fn announcement_sources(conn: &Connection, messages: &mut [api::Messa
     Ok(())
 }
 
+pub(crate) fn device_class(class: api::DeviceClass) -> campfire_db::DeviceClass {
+    match class {
+        api::DeviceClass::Desktop => campfire_db::DeviceClass::Desktop,
+        api::DeviceClass::Mobile => campfire_db::DeviceClass::Mobile,
+        api::DeviceClass::Unknown => campfire_db::DeviceClass::Unknown,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Timestamp, api, avatar_icon, inline_mentions, notification_counts_sql, row_version, time};

@@ -429,7 +429,7 @@ FOREIGN KEY ("message_id")
   REFERENCES "messages" ("id")
 );
 CREATE UNIQUE INDEX "index_polls_on_message_id" ON "polls" ("message_id");
-CREATE TABLE "push_subscriptions" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "auth_key" varchar, "created_at" datetime(6) NOT NULL, "endpoint" varchar, "p256dh_key" varchar, "updated_at" datetime(6) NOT NULL, "user_agent" varchar, "user_id" integer NOT NULL, CONSTRAINT "fk_rails_43d43720fc"
+CREATE TABLE "push_subscriptions" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "auth_key" varchar, "created_at" datetime(6) NOT NULL, "endpoint" varchar, "p256dh_key" varchar, "updated_at" datetime(6) NOT NULL, "user_agent" varchar, "user_id" integer NOT NULL, device_class TEXT, CONSTRAINT "fk_rails_43d43720fc"
 FOREIGN KEY ("user_id")
   REFERENCES "users" ("id")
 );
@@ -643,7 +643,7 @@ FOREIGN KEY ("creator_id")
 );
 CREATE INDEX "index_workspace_icons_on_creator_id" ON "workspace_icons" ("creator_id");
 CREATE UNIQUE INDEX "index_workspace_icons_on_name" ON "workspace_icons" ("name");
-CREATE TABLE "workspace_presence_leases" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "connection_id" varchar NOT NULL, "created_at" datetime(6) NOT NULL, "expires_at" datetime(6) NOT NULL, "last_active_at" datetime(6), "session_id" integer NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL, CONSTRAINT "fk_rails_029856a6c3"
+CREATE TABLE "workspace_presence_leases" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "connection_id" varchar NOT NULL, "created_at" datetime(6) NOT NULL, "expires_at" datetime(6) NOT NULL, "last_active_at" datetime(6), "session_id" integer NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL, device_class TEXT, CONSTRAINT "fk_rails_029856a6c3"
 FOREIGN KEY ("session_id")
   REFERENCES "sessions" ("id")
  ON DELETE CASCADE, CONSTRAINT "fk_rails_b16164ece4"

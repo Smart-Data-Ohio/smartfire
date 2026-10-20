@@ -5,7 +5,7 @@ use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
-use crate::models::{Membership, Message, Room, User, NotificationKind, NotificationPolicy, UserStatusSettings};
+use crate::models::{DeviceClass, Membership, Message, Room, User, NotificationKind, NotificationPolicy, UserStatusSettings, WorkspacePresenceLease};
 use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
@@ -27,6 +27,7 @@ pub struct PushSubscription {
     pub p256dh_key: Option<String>,
     pub auth_key: Option<String>,
     pub user_agent: Option<String>,
+    pub device_class: Option<DeviceClass>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -84,6 +85,7 @@ impl PushSubscription {
             p256dh_key: row.get("p256dh_key")?,
             auth_key: row.get("auth_key")?,
             user_agent: row.get("user_agent")?,
+            device_class: row.get("device_class")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
@@ -104,6 +106,7 @@ impl PushSubscription {
             p256dh_key: p256dh_key.map(Into::into),
             auth_key: auth_key.map(Into::into),
             user_agent: user_agent.map(Into::into),
+            device_class: None,
             created_at: Timestamp::from_second(0),
             updated_at: Timestamp::from_second(0),
         }
@@ -170,8 +173,8 @@ impl PushSubscription {
         subscription.validate(resolve).into_result()?;
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "push_subscriptions" ("auth_key", "created_at", "endpoint", "p256dh_key", "updated_at", "user_agent", "user_id") VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
-            params![subscription.auth_key, now, subscription.endpoint, subscription.p256dh_key, now, subscription.user_agent, subscription.user_id],
+            r#"INSERT INTO "push_subscriptions" ("auth_key", "created_at", "endpoint", "p256dh_key", "updated_at", "user_agent", "user_id", "device_class") VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            params![subscription.auth_key, now, subscription.endpoint, subscription.p256dh_key, now, subscription.user_agent, subscription.user_id, subscription.device_class],
             |r| r.get(0),
         )?;
         Ok(Self {
@@ -180,6 +183,18 @@ impl PushSubscription {
             updated_at: now,
             ..subscription.clone()
         })
+    }
+
+    pub fn touch_for_device(&self, tx: &mut Tx<'_>, device_class: Option<DeviceClass>) -> Result<()> {
+        tx.conn().execute_cached(
+            "UPDATE push_subscriptions SET updated_at=?1, device_class=COALESCE(?2,device_class) WHERE id=?3 AND (?2 IS NULL OR device_class IS NOT ?2)",
+            params![tx.now(), device_class, self.id],
+        )?;
+        Ok(())
+    }
+
+    pub fn device_class(&self) -> DeviceClass {
+        self.device_class.unwrap_or(DeviceClass::Unknown)
     }
 
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
@@ -362,8 +377,17 @@ impl PushSubscription {
                 keyword_matched: false, dnd_exception: exceptions.contains(&s.user_id), now,
             }.push()
         }).collect();
-        Ok((payload, allowed, Vec::new()))
+        Ok((payload, Self::route_message(conn, allowed, now)?, Vec::new()))
     }
+    pub fn route_message(conn: &Connection, subscriptions: Vec<Self>, now: Timestamp) -> Result<Vec<Self>> {
+        let ids: Vec<i64> = subscriptions.iter().filter(|s| s.device_class() == DeviceClass::Mobile)
+            .map(|s| s.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+        let activity = WorkspacePresenceLease::activity_by_user_id(conn, &ids, now)?;
+        Ok(subscriptions.into_iter().filter(|s| {
+            s.device_class() != DeviceClass::Mobile || !activity.get(&s.user_id).is_some_and(|a| a.active_desktop)
+        }).collect())
+    }
+
 }
 
 /// `text`, cut short with an ellipsis if it takes more than `max_bytes` as a JSON string's

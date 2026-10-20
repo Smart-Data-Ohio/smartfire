@@ -1346,7 +1346,7 @@ impl ChannelThread {
         let users = crate::UserStatusSettings::for_ids(conn, &ids)?;
         let exceptions =
             super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
-        Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
+        let mut pushes = Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
             crate::NotificationPolicy {
                 room_id: Some(message.room_id),
                 recipient: users.get(&candidate.recipient.id),
@@ -1360,7 +1360,15 @@ impl ChannelThread {
                 now,
             }
             .push()
-        })
+        })?;
+        let subscriptions = pushes.iter().flat_map(|push| push.subscriptions.iter().cloned()).collect();
+        let allowed: std::collections::HashSet<i64> = PushSubscription::route_message(conn, subscriptions, now)?
+            .into_iter().map(|s| s.id).collect();
+        for push in &mut pushes {
+            push.subscriptions.retain(|s| allowed.contains(&s.id));
+        }
+        pushes.retain(|push| !push.subscriptions.is_empty());
+        Ok(pushes)
     }
 }
 

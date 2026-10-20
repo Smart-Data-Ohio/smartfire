@@ -386,11 +386,12 @@ impl SyncHandler<CableUser> for Handler {
         user.id
     }
 
-    async fn open(&self, user: Arc<CableUser>) -> Box<dyn SyncSession> {
+    async fn open(&self, user: Arc<CableUser>, device_class: Option<api::DeviceClass>) -> Box<dyn SyncSession> {
         let mut session = Session {
             app: self.app.clone(),
             user,
             lease: None,
+            device_class: device_class.map(dto::device_class),
             present: BTreeSet::new(),
         };
         if let Some(app) = session.app.upgrade() {
@@ -405,6 +406,7 @@ pub struct Session {
     app: Weak<AppState>,
     user: Arc<CableUser>,
     lease: Option<WorkspacePresenceLease>,
+    device_class: Option<campfire_db::DeviceClass>,
     present: BTreeSet<i64>,
 }
 
@@ -457,10 +459,11 @@ impl Session {
         let (user_id, session_id) = (self.user.id, self.user.session_id);
         let user = self.user.clone();
         let presence_app = self.app.clone();
+        let device_class = self.device_class;
         match app
             .db
             .write(move |tx| {
-                let lease = WorkspacePresenceLease::establish(tx, user_id, session_id)?;
+                let lease = WorkspacePresenceLease::establish_for_device(tx, user_id, session_id, device_class)?;
                 if lease.is_some() {
                     publish_presence_after_commit(tx, presence_app, &user);
                 }
