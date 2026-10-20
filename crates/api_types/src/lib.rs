@@ -169,7 +169,7 @@ pub use huddle::{
     HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
     HuddleRoleChanged, HuddleActivity, HuddleAfkMoved, ModerateHuddle,
 };
-pub use join::{OpenRoomPreview, RoomJoin};
+pub use join::{ChannelDirectory, DirectoryChannel, OpenRoomPreview, RoomJoin};
 pub use invites::{CreateWorkspaceInvite, WorkspaceInvite, WorkspaceInviteCreated, WorkspaceInviteCreator, WorkspaceInviteExpiry, WorkspaceInviteList, WorkspaceInviteState};
 pub use me::{
     ChatSounds, DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize,

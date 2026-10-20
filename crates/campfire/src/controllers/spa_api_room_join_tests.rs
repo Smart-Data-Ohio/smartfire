@@ -294,7 +294,7 @@ async fn join_publishes_the_sidebar_row_once() {
 }
 
 #[tokio::test]
-async fn joining_again_while_invisible_enters_the_room_without_a_sidebar_row() {
+async fn joining_a_hidden_room_brings_it_back_at_the_default_involvement() {
     let app = app(true).await.expect("seed required");
     let before = member(&app, HQ, DAVID).await.expect("david belongs to HQ");
     app.db()
@@ -324,28 +324,52 @@ async fn joining_again_while_invisible_enters_the_room_without_a_sidebar_row() {
             .await
             .expect("still a member")
             .involvement,
-        Some(campfire_db::Involvement::Invisible)
+        Some(campfire_db::Involvement::Invisible),
+        "classic leaves the membership hidden"
     );
 
+    let (addr, server) = serve(&app).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
     let joined = david
         .write(post_join(&format!("/api/v1/rooms/{HQ}/join")))
         .await;
     assert_eq!(joined.status, StatusCode::OK, "{}", joined.text());
     let body: api::RoomJoin = parse(&joined);
+    let row = body.row.expect("the sidebar row");
     assert_eq!(
         (
             body.detail.room.id,
             body.detail.membership.id,
             body.detail.membership.involvement,
-            body.row.is_none(),
+            row.room.id,
+            row.membership.id,
+            row.membership.involvement,
         ),
-        (HQ, before.id, api::Involvement::Invisible, true)
+        (HQ, before.id, api::Involvement::Mentions, HQ, before.id, api::Involvement::Mentions)
     );
+    let after = member(&app, HQ, DAVID).await.expect("unchanged");
     assert_eq!(
-        member(&app, HQ, DAVID).await.expect("unchanged").id,
-        before.id
+        (after.id, after.involvement),
+        (before.id, Some(campfire_db::Involvement::Mentions))
     );
+    let event = sync
+        .until(
+            |event| {
+                matches!(
+                    &event.payload,
+                    api::SyncPayload::SidebarRowUpserted(row) if row.room.id == HQ
+                )
+            },
+            |_| false,
+        )
+        .await;
+    let api::SyncPayload::SidebarRowUpserted(row) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(row.membership.involvement, api::Involvement::Mentions);
 
     let room = david.send(get(&format!("/api/v1/rooms/{HQ}"))).await;
     assert_eq!(room.status, StatusCode::OK, "{}", room.text());
+    server.abort();
 }

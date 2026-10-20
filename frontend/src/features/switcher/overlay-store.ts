@@ -1,13 +1,13 @@
 /**
- * Which app-wide overlay is open: the quick switcher, the shortcuts dialog, the new-DM picker or
- * the create-a-room dialog. One at a time; any button in the app can open one (the sidebar's "+", the user panel's
+ * Which app-wide overlay is open: the quick switcher, the shortcuts dialog, the new-DM picker,
+ * the create-a-room dialog or the channel browser. One at a time; any button in the app can open one (the sidebar's "+", the user panel's
  * keyboard button) and `GlobalOverlays` renders it.
  */
 import { useStore as useZustand } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
 
-export type Overlay = "switcher" | "shortcuts" | "new-direct" | "new-room";
+export type Overlay = "switcher" | "shortcuts" | "new-direct" | "new-room" | "browse-channels";
 
 interface OverlayState {
   readonly open: Overlay | null;
@@ -41,4 +41,5 @@ export const overlayChunks = {
   shortcuts: () => loadForUpdate(() => import("./shortcuts-dialog.tsx")),
   "new-direct": () => loadForUpdate(() => import("../directs/new-direct-dialog.tsx")),
   "new-room": () => loadForUpdate(() => import("../rooms/new-room-dialog.tsx")),
+  "browse-channels": () => loadForUpdate(() => import("../rooms/browse-channels-dialog.tsx")),
 } as const;

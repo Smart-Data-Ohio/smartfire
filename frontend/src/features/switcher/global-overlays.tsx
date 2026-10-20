@@ -24,6 +24,8 @@ const NewDirectDialog = lazy(overlayChunks["new-direct"]);
 
 const NewRoomDialog = lazy(overlayChunks["new-room"]);
 
+const BrowseChannelsDialog = lazy(overlayChunks["browse-channels"]);
+
 const OVERLAY_FOR = {
   switcher: "switcher",
   shortcuts: "shortcuts",
@@ -152,6 +154,14 @@ export function GlobalOverlays() {
       <Suspense fallback={null}>
         {seen.has("new-room") ? (
           <NewRoomDialog open={open === "new-room"} onOpenChange={onOpenChange("new-room")} />
+        ) : null}
+      </Suspense>
+      <Suspense fallback={null}>
+        {seen.has("browse-channels") ? (
+          <BrowseChannelsDialog
+            open={open === "browse-channels"}
+            onOpenChange={onOpenChange("browse-channels")}
+          />
         ) : null}
       </Suspense>
     </>

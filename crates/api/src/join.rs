@@ -1,15 +1,26 @@
-//! Nonmember preview and join for an alive open room (`rooms#show`'s join preview and `rooms#join`).
+//! Nonmember preview and join for an alive open room (`rooms#show`'s join preview and `rooms#join`),
+//! and the directory of every such room.
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_db::{Membership, Room, RoomType};
+use campfire_db::models::room_directory::{self, DirectoryKey};
+use campfire_db::{Involvement, Membership, Room, RoomType};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
-use campfire_rooms::controllers::rooms::{find_joinable_open_room, join_open_room};
+use campfire_rooms::controllers::rooms::{find_joinable_open_room, involvements, join_open_room};
 use campfire_runtime::concerns::{self, require_current_user};
 use campfire_runtime::context::db_error;
 
 use crate::dto;
 use crate::endpoints::{before_actions, now};
+use crate::error::{fail, validation};
+
+const PAGE: usize = 50;
+const QUERY_LIMIT: usize = 100;
+
+endpoint!(
+    /// `GET /api/v1/rooms/browse`
+    browse => browse_rooms
+);
 
 endpoint!(
     /// `GET /api/v1/rooms/:room_id/preview`
@@ -46,8 +57,16 @@ async fn join_room(c: &mut Ctx) -> Result {
     let Some(id) = room_id(c) else {
         return Err(Error::NotFound);
     };
-    if join_open_room(c, id).await?.is_none() {
+    let Some((room, membership)) = join_open_room(c, id).await? else {
         return Err(Error::NotFound);
+    };
+    // Hiding is the only way to leave an open room, so joining one brings it back to the sidebar.
+    if !membership
+        .involvement
+        .is_some_and(|involvement| involvement != Involvement::Invisible)
+    {
+        let default = Involvement::from_name(room.default_involvement());
+        involvements::change(c, &room, membership.id, default).await?;
     }
     let viewer = require_current_user(c)?.clone();
     let (secrets, now) = (c.app().secrets.clone(), now(c));
@@ -66,8 +85,7 @@ async fn join_room(c: &mut Ctx) -> Result {
                 return Ok(None);
             };
             let detail = dto::room_detail(conn, &secrets, &viewer, &room, &membership, now)?;
-            // `None` for an invisible involvement: that membership has no sidebar row.
-            // Classic still redirects into the room, so the detail is the whole answer.
+            // `None` only when the membership was hidden again since the join.
             let row = dto::sidebar_row(conn, &room, &membership, now)?;
             Ok(Some(api::RoomJoin { detail, row }))
         })
@@ -75,6 +93,76 @@ async fn join_room(c: &mut Ctx) -> Result {
         .map_err(db_error)?
         .ok_or(Error::NotFound)?;
     c.json(StatusCode::OK, &joined)
+}
+
+async fn browse_rooms(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let viewer = require_current_user(c)?.id;
+    let query: String = c
+        .param_str("q")
+        .unwrap_or_default()
+        .trim()
+        .chars()
+        .take(QUERY_LIMIT)
+        .collect();
+    let joinable_only = c.param_str("joinable") == Some("1");
+    let limit = match c.param_str("limit").filter(|raw| !raw.is_empty()) {
+        None => PAGE,
+        Some(raw) => match raw.parse::<usize>() {
+            Ok(limit @ 1..=PAGE) => limit,
+            _ => return Err(fail(c, validation("limit", "is invalid"))),
+        },
+    };
+    let after = match c.param_str("cursor").filter(|raw| !raw.is_empty()) {
+        None => None,
+        Some(raw) => match crate::cursor::decode_ranked(raw) {
+            Some((rank, updated_at, id)) => Some(DirectoryKey {
+                rank,
+                updated_at,
+                id,
+            }),
+            None => return Err(fail(c, validation("cursor", "is invalid"))),
+        },
+    };
+    let mut rooms = c
+        .app()
+        .db
+        .read(move |conn| {
+            room_directory::open_rooms(
+                conn,
+                viewer,
+                query.trim_end(),
+                joinable_only,
+                after,
+                limit + 1,
+            )
+        })
+        .await
+        .map_err(db_error)?;
+    let more = rooms.len() > limit;
+    rooms.truncate(limit);
+    let next_cursor = rooms
+        .last()
+        .filter(|_| more)
+        .map(|room| crate::cursor::encode_ranked(room.key.rank, room.key.updated_at, room.key.id));
+    let channels = rooms
+        .into_iter()
+        .map(|room| api::DirectoryChannel {
+            room_id: room.key.id,
+            name: room.name.unwrap_or_default(),
+            topic: room.topic,
+            member_count: room.member_count,
+            last_active_at: dto::time(room.key.updated_at),
+            joined: room.joined,
+        })
+        .collect();
+    c.json(
+        StatusCode::OK,
+        &api::ChannelDirectory {
+            channels,
+            next_cursor,
+        },
+    )
 }
 
 /// What `find_joinable_open_room` accepts: an alive open room.

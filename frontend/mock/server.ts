@@ -8,6 +8,8 @@
  * reached through `dispatch` when no S1 route matches.
  */
 
+import type { ChannelDirectory } from "../src/gen/ChannelDirectory.ts";
+import type { DirectoryChannel } from "../src/gen/DirectoryChannel.ts";
 import type { Me } from "../src/gen/Me.ts";
 import type { MessageDTO } from "../src/gen/MessageDTO.ts";
 import type { MessageReactions } from "../src/gen/MessageReactions.ts";
@@ -736,6 +738,126 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return { id: JOINABLE_OPEN_ROOM.id, name: JOINABLE_OPEN_ROOM.name };
   };
 
+  /**
+   * `GET /rooms/browse`: the alive open rooms, the catalog room included until it is joined, as
+   * the server ranks them (exact name, prefix, anywhere in the name, then topic; newest first
+   * within each).
+   */
+  const browseChannels = (
+    q: string,
+    cursor: string | null,
+    limit: number,
+    joinableOnly: boolean,
+  ): ChannelDirectory => {
+    const needle = q.trim().toLowerCase();
+
+    const channels = [...world.rooms.values()].flatMap((record): DirectoryChannel[] => {
+      if (record.room.kind !== "open") return [];
+
+      return [
+        {
+          roomId: record.room.id,
+          name: record.room.name ?? "",
+          topic: record.room.topic,
+          memberCount: record.memberIds.length,
+          lastActiveAt: record.room.updatedAt,
+          joined:
+            record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
+        },
+      ];
+    });
+
+    if (!world.rooms.has(JOINABLE_OPEN_ROOM.id)) {
+      channels.push({
+        roomId: JOINABLE_OPEN_ROOM.id,
+        name: JOINABLE_OPEN_ROOM.name,
+        topic: null,
+        memberCount: JOINABLE_OPEN_ROOM.memberIds.length,
+        lastActiveAt: timestamp(now() - 60_000),
+        joined: false,
+      });
+    }
+
+    const rank = (channel: DirectoryChannel): number | null => {
+      const name = channel.name.toLowerCase();
+
+      if (needle === "" || name === needle) return 0;
+
+      if (name.startsWith(needle)) return 1;
+
+      if (name.includes(needle)) return 2;
+
+      return (channel.topic ?? "").toLowerCase().includes(needle) ? 3 : null;
+    };
+
+    const ranked = channels
+      .flatMap((channel) => {
+        const score = rank(channel);
+
+        return score === null || (joinableOnly && channel.joined) ? [] : [{ channel, score }];
+      })
+      .sort(
+        (left, right) =>
+          left.score - right.score ||
+          right.channel.lastActiveAt.localeCompare(left.channel.lastActiveAt) ||
+          right.channel.roomId - left.channel.roomId,
+      );
+
+    const start =
+      cursor === null
+        ? 0
+        : ranked.findIndex(({ channel }) => String(channel.roomId) === cursor) + 1;
+
+    if (start === 0 && cursor !== null) throw validation("cursor", "is invalid");
+
+    const page = ranked.slice(start, start + limit);
+    const last = page.at(-1);
+
+    return {
+      channels: page.map(({ channel }) => channel),
+      nextCursor:
+        last !== undefined && start + limit < ranked.length ? String(last.channel.roomId) : null,
+    };
+  };
+
+  const seedOpenChannels = (count: number, prefix: string, hidden: boolean) => {
+    const at = timestamp(now());
+
+    for (let index = 1; index <= count; index += 1) {
+      const id = world.nextRoomId++;
+
+      world.rooms.set(id, {
+        room: {
+          id,
+          kind: "open",
+          name: `${prefix}-${index}`,
+          iconName: null,
+          creatorId: USER_IDS.maya,
+          createdAt: at,
+          updatedAt: at,
+          topic: null,
+          voiceBitrate: null,
+          voiceUserLimit: null,
+          announcement: false,
+        },
+        memberIds: [USER_IDS.maya, VIEWER_ID],
+        membership: {
+          id: world.nextMembershipId++,
+          roomId: id,
+          userId: VIEWER_ID,
+          involvement: hidden ? "invisible" : "mentions",
+          unreadAt: null,
+          lastReadMessageId: null,
+          roomCategoryId: null,
+          favoritePosition: null,
+          stageRole: null,
+        },
+        messages: [],
+        mentionCount: 0,
+      });
+    }
+  };
+
   const publishJoined = (record: RoomRecord) => {
     hub.publish([
       {
@@ -765,6 +887,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
           favoritePosition: null,
           stageRole: null,
         };
+        publishJoined(existing);
+      } else if (existing.membership.involvement === "invisible") {
+        existing.membership = { ...existing.membership, involvement: "mentions" };
         publishJoined(existing);
       }
 
@@ -1372,6 +1497,23 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       }
     }
 
+    if (method === "GET" && path === "/rooms/browse") {
+      const limit = Number(query.get("limit") ?? 50);
+
+      if (!Number.isInteger(limit) || limit < 1 || limit > 50)
+        throw validation("limit", "is invalid");
+
+      return {
+        status: 200,
+        json: browseChannels(
+          query.get("q") ?? "",
+          query.get("cursor"),
+          limit,
+          query.get("joinable") === "1",
+        ),
+      };
+    }
+
     const room = /^\/rooms\/(\d+)(\/messages|\/read)?$/.exec(path);
     const route = `${method} ${room === null ? path : `/rooms/:id${room[2] ?? ""}`}`;
     const roomId = Number(room?.[1]);
@@ -1490,6 +1632,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       case "hold-sends":
         holdSends(flag("on", true));
+
+        return ok;
+      case "open-channels":
+        seedOpenChannels(int("count"), text("prefix"), flag("hidden", false));
 
         return ok;
       case "hold-join":
