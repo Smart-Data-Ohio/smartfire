@@ -17,7 +17,7 @@ async function openSettings(page: Page): Promise<void> {
 }
 
 function settingsBanner(page: Page) {
-  return page.locator(".settings-banner .profile-banner");
+  return page.getByRole("figure", { name: "Profile preview" }).locator(".profile-banner");
 }
 
 function personBanner(page: Page) {
