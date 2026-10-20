@@ -12,7 +12,12 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { stoppedAtConfirmation } from "../auth/confirmation.ts";
 import { useFirstFrame } from "./first-frame.ts";
-import { imageProblem, PROFILE_IMAGE_TYPES, uploadPercent } from "./profile-format.ts";
+import {
+  imageProblem,
+  PROFILE_IMAGE_TYPES,
+  type ProfileImageKind,
+  uploadPercent,
+} from "./profile-format.ts";
 import "./profile-slot.css";
 
 /** A slot's upload in flight: the chosen file shown at once, and how far its bytes have got. */
@@ -57,9 +62,9 @@ export interface SlotCopy {
 }
 
 interface SlotProps {
-  /** Shapes the thumbnail: a square icon, or a wide banner. */
-  readonly kind: "logo" | "banner" | "invite_splash";
+  readonly thumbnail?: ProfileImageKind;
   readonly slot: SlotCopy;
+  readonly accept?: string;
   readonly image: Shown;
   readonly pending: Pending | null;
   readonly error: string | null;
@@ -71,7 +76,16 @@ interface SlotProps {
  * One image's controls: drop a file on it or choose one, replace it, or remove it. The upload's
  * progress and any refusal show in place.
  */
-export function ProfileSlot({ kind, slot, image, pending, error, onFile, onRemove }: SlotProps) {
+export function ProfileSlot({
+  thumbnail,
+  slot,
+  accept = PROFILE_IMAGE_TYPES.join(","),
+  image,
+  pending,
+  error,
+  onFile,
+  onRemove,
+}: SlotProps) {
   const input = useRef<HTMLInputElement | null>(null);
   const [over, setOver] = useState(false);
   const hintId = useId();
@@ -111,7 +125,7 @@ export function ProfileSlot({ kind, slot, image, pending, error, onFile, onRemov
     // biome-ignore lint/a11y/noStaticElementInteractions: a drop target for mice; the buttons inside are the keyboard's way
     <div
       className="profile-slot"
-      data-kind={kind}
+      data-kind={thumbnail}
       data-over={over || undefined}
       data-busy={busy || undefined}
       onDragEnter={onDragOver}
@@ -125,13 +139,15 @@ export function ProfileSlot({ kind, slot, image, pending, error, onFile, onRemov
       }}
       onDrop={onDrop}
     >
-      <div className="profile-slot-thumb" data-empty={src === null || undefined}>
-        {src === null ? (
-          <Icon name="image" size={20} />
-        ) : (
-          <img src={src} alt={`Current ${slot.noun}`} draggable={false} />
-        )}
-      </div>
+      {thumbnail === undefined ? null : (
+        <div className="profile-slot-thumb" data-empty={src === null || undefined}>
+          {src === null ? (
+            <Icon name="image" size={20} />
+          ) : (
+            <img src={src} alt={`Current ${slot.noun}`} draggable={false} />
+          )}
+        </div>
+      )}
       <div className="profile-slot-body">
         <h3 className="profile-slot-title">{slot.title}</h3>
         <p id={hintId} className="profile-slot-hint text-meta">
@@ -159,7 +175,7 @@ export function ProfileSlot({ kind, slot, image, pending, error, onFile, onRemov
           <input
             ref={input}
             type="file"
-            accept={PROFILE_IMAGE_TYPES.join(",")}
+            accept={accept}
             hidden
             aria-label={`Choose ${slot.noun} image`}
             onChange={(event) => {
@@ -210,6 +226,7 @@ interface ImageSlotOptions<T> {
   readonly onChange: (next: T) => void;
   /** The toast once a new image is saved. */
   readonly savedTitle: string;
+  readonly problem?: (file: File) => string | null;
 }
 
 /** A slot's state and actions, for [`ProfileSlot`]. */
@@ -232,6 +249,7 @@ export function useImageSlot<T>({
   remove,
   onChange,
   savedTitle,
+  problem = imageProblem,
 }: ImageSlotOptions<T>): ImageSlot {
   const [state, setState] = useState<SlotState>(IDLE);
   const previews = useRef(new Set<string>());
@@ -256,10 +274,10 @@ export function useImageSlot<T>({
   };
 
   const upload = (file: File) => {
-    const problem = imageProblem(file);
+    const refusal = problem(file);
 
-    if (problem !== null) {
-      setState({ pending: null, error: problem });
+    if (refusal !== null) {
+      setState({ pending: null, error: refusal });
 
       return;
     }

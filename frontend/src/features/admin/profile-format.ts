@@ -27,11 +27,17 @@ export const PROFILE_SLOTS: Readonly<
   },
 };
 
+export const USER_AVATAR_SLOT = {
+  title: "Avatar",
+  noun: "avatar",
+  hint: "Cropped to a square everywhere. Use at least 512 × 512.",
+} as const;
+
 /** A person's own profile banner, in their settings. */
 export const USER_BANNER_SLOT = {
   title: "Profile banner",
   noun: "banner",
-  hint: "Wide, at least 960 × 320. Shown across the top of your profile; the sides crop on phones.",
+  hint: "Wide, at least 960 × 320; phones crop the sides. PNG, JPEG, GIF or WebP, up to 10 MB.",
 } as const;
 
 /** The file types and size, said once under the slots. */
