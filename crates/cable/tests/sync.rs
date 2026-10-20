@@ -29,7 +29,7 @@ impl SyncHandler<User> for Handler {
         user.id as i64
     }
 
-    async fn open(&self, user: Arc<User>) -> Box<dyn SyncSession> {
+    async fn open(&self, user: Arc<User>, _: Option<campfire_api_types::DeviceClass>) -> Box<dyn SyncSession> {
         self.0.lock().unwrap().push(format!("open {}", user.id));
         Box::new(Session {
             user,

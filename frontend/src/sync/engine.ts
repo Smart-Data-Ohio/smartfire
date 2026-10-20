@@ -21,6 +21,7 @@ import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { browserDeviceClass } from "../lib/device-class.ts";
 import { ignoresStale } from "../store/ignores.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
@@ -1066,6 +1067,7 @@ export class Engine extends Context.Service<
           v: 1,
           resume: yield* cursor.get,
           topics: [...(yield* topics.subscribed)],
+          deviceClass: browserDeviceClass(),
         };
 
         return [hello, ...(yield* presence.greeting)];

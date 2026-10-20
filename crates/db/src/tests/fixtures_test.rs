@@ -94,6 +94,10 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
             .iter()
             .enumerate()
             .filter(|(i, name)| {
+                if matches!(table, "push_subscriptions" | "workspace_presence_leases") && name.as_str() == "device_class" {
+                    assert_eq!(row.get::<_, Option<String>>(*i).unwrap(), None);
+                    return false;
+                }
                 if (table == "rooms" && name.as_str() == "client_room_id")
                     || (table == "channel_threads" && name.as_str() == "client_post_id")
                 {

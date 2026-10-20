@@ -392,7 +392,7 @@ pub trait SyncSession: Send {
 pub trait SyncHandler<U>: Send + Sync + 'static {
     /// The person's id, as [`Audience::User`] names them.
     fn user_id(&self, user: &U) -> i64;
-    async fn open(&self, user: Arc<U>) -> Box<dyn SyncSession>;
+    async fn open(&self, user: Arc<U>, device_class: Option<campfire_api_types::DeviceClass>) -> Box<dyn SyncSession>;
 }
 
 /// The engine a [`crate::Server`] runs once [`crate::Server::install_sync`] is called.

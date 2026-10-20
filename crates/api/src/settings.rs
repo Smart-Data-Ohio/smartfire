@@ -1287,6 +1287,7 @@ async fn show_push_public_key(c: &mut Ctx) -> Result {
 async fn enroll_push_subscription(c: &mut Ctx) -> Result {
     let user = human_viewer(c).await?;
     let input: api::CreatePushSubscription = body(c).await?;
+    let device_class = input.device_class.map(crate::dto::device_class);
     let params = [
         ("endpoint".into(), Param::Str(input.endpoint)),
         ("p256dh_key".into(), Param::Str(input.p256dh_key)),
@@ -1295,7 +1296,7 @@ async fn enroll_push_subscription(c: &mut Ctx) -> Result {
     .into_iter()
     .collect();
     c.params.insert("push_subscription", Param::Hash(params));
-    let response = push_subscriptions::enroll(c, user.id).await?;
+    let response = push_subscriptions::enroll_for_device(c, user.id, device_class).await?;
     if response.status == StatusCode::UNPROCESSABLE_ENTITY {
         return Err(fail(
             c,
