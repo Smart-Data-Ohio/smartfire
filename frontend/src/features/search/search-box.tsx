@@ -166,6 +166,10 @@ export interface SearchBoxProps {
   readonly autoFocus?: boolean;
   /** ↓ with the suggestions closed (the page moves into its results). */
   readonly onArrowOut?: () => void;
+  /** The field gains focus (the header fills in its room's filter). */
+  readonly onFocus?: (input: HTMLInputElement) => void;
+  /** The field loses focus. */
+  readonly onBlur?: () => void;
 }
 
 /**
@@ -181,6 +185,8 @@ export function SearchBox({
   placeholder,
   autoFocus = false,
   onArrowOut,
+  onFocus,
+  onBlur,
 }: SearchBoxProps) {
   const id = useId();
   const navigate = useNavigate();
@@ -396,8 +402,14 @@ export function SearchBox({
           enterKeyHint="search"
           data-search-input
           value={value}
-          onFocus={() => setOpen(true)}
-          onBlur={close}
+          onFocus={(event) => {
+            setOpen(true);
+            onFocus?.(event.currentTarget);
+          }}
+          onBlur={() => {
+            close();
+            onBlur?.();
+          }}
           onChange={(event) => {
             onValueChange(event.target.value);
             setActiveIndex(-1);

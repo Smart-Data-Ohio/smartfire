@@ -39,8 +39,15 @@ export function SearchHotkey() {
       return;
     }
 
+    // Select what's there to type over it; an empty header field fills in its room's filter on
+    // focus, and the caret stays after that.
+    const typed = field.value !== "";
+
     field.focus();
-    field.select();
+
+    if (typed) {
+      field.select();
+    }
   });
 
   useEffect(() => {

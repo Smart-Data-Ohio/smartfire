@@ -137,7 +137,7 @@ function operatorItem(value: string, operator: SearchOperator): TypeaheadItem {
 }
 
 /** A channel name as `in:#` takes it (no spaces either). */
-function inHandle(name: string): string {
+export function inHandle(name: string): string {
   return name.replace(/\s+/gu, "-").toLowerCase();
 }
 

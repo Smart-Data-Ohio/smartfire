@@ -9,12 +9,15 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { meFixture, sidebarFixture, sidebarRowFixture } from "../../api/testing.ts";
 import type { SearchChip } from "../../gen/SearchChip.ts";
+import { loadSidebar, setMe } from "../../store/reducers.ts";
 import { emptyResultList, initialSearchState, searchStore } from "../../store/search.ts";
 import type { SearchResultsView } from "../../store/search-hooks.ts";
 import { initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { messageFixture } from "../threads/test-fixtures.ts";
+import { HeaderSearch } from "./header-search.tsx";
 import { SearchBox } from "./search-box.tsx";
 import { SearchResults } from "./search-results.tsx";
 
@@ -366,5 +369,189 @@ describe("SearchBox", () => {
     await renderRouted(() => <Field variant="page" onSearch={vi.fn()} />);
     await user.click(screen.getByRole("combobox", { name: "Search messages" }));
     expect(screen.queryByRole("listbox")).toBeNull();
+  });
+});
+
+describe("HeaderSearch", () => {
+  const input = () => screen.getByRole<HTMLInputElement>("combobox", { name: "Search messages" });
+
+  /** The viewer's rooms: #launch-planning (7), Launch Ops (8), a DM (9) and their notes (40). */
+  function seedRooms() {
+    const sidebar = sidebarFixture([
+      sidebarRowFixture(7, "launch-planning", "closed"),
+      sidebarRowFixture(8, "Launch Ops"),
+      sidebarRowFixture(9, "Grace Hopper", "direct", [12]),
+      { ...sidebarRowFixture(40, "Ada Lovelace", "direct", [meFixture.user.id]), noteToSelf: true },
+    ]);
+
+    sidebar.noteToSelfRoomId = 40;
+    store.setState(loadSidebar(setMe(initialState, meFixture), sidebar, 0), true);
+    searchStore.setState({ recents: { status: "ready", searches: [] } });
+  }
+
+  function Header({ next = 8 }: { readonly next?: number }) {
+    const [roomId, setRoomId] = useState(7);
+
+    return (
+      <>
+        <HeaderSearch roomId={roomId} />
+        <button type="button" onClick={() => setRoomId(next)}>
+          Next room
+        </button>
+      </>
+    );
+  }
+
+  it("says what it searches while empty", async () => {
+    seedRooms();
+    await renderRouted(() => <HeaderSearch roomId={7} />);
+    expect(screen.getByText("Search Messages")).toBeTruthy();
+  });
+
+  it("starts in the channel on focus, caret after it, and searches it by id", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={7} />);
+
+    await user.click(input());
+    expect(input().value).toBe("in:#launch-planning ");
+    expect(input().selectionStart).toBe("in:#launch-planning ".length);
+
+    await user.keyboard("launch{Escape}{Enter}");
+    expect(router.state.location.pathname).toBe("/search");
+    expect(router.state.location.search).toEqual({ q: "in_id:7 launch" });
+  });
+
+  it("names a DM by its person and your notes as you", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+
+    await renderRouted(() => <Header next={40} />);
+    await user.click(screen.getByRole("button", { name: "Next room" }));
+    await user.click(input());
+    expect(input().value).toBe("in:@me ");
+  });
+
+  it("submits an edited filter as typed", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={9} />);
+
+    await user.click(input());
+    expect(input().value).toBe("in:@grace-hopper ");
+    await user.keyboard("{Backspace}{Backspace} launch{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "in:@grace-hoppe launch" });
+  });
+
+  it("searches a DM by its id", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={9} />);
+
+    await user.click(input());
+    expect(input().value).toBe("in:@grace-hopper ");
+    await user.keyboard("launch{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "in_id:9 launch" });
+  });
+
+  it("fills the filter in once the room loads, if focused before it did", async () => {
+    searchStore.setState({ recents: { status: "ready", searches: [] } });
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={7} />);
+
+    await user.click(input());
+    expect(input().value).toBe("");
+
+    act(() => seedRooms());
+    expect(input().value).toBe("in:#launch-planning ");
+    expect(input().selectionStart).toBe("in:#launch-planning ".length);
+
+    await user.keyboard("launch{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "in_id:7 launch" });
+  });
+
+  it("leaves what was typed before the room loaded alone", async () => {
+    searchStore.setState({ recents: { status: "ready", searches: [] } });
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={7} />);
+
+    await user.click(input());
+    await user.keyboard("launch");
+
+    act(() => seedRooms());
+    expect(input().value).toBe("launch");
+
+    await user.keyboard("{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "launch" });
+  });
+
+  it("doesn't fill the filter in once the room loads if the person typed and deleted", async () => {
+    searchStore.setState({ recents: { status: "ready", searches: [] } });
+
+    const user = userEvent.setup();
+
+    await renderRouted(() => <HeaderSearch roomId={7} />);
+    await user.click(input());
+    await user.keyboard("a{Backspace}");
+
+    act(() => seedRooms());
+    expect(input().value).toBe("");
+  });
+
+  it("doesn't put the filter back once deleted, and searches everywhere", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <HeaderSearch roomId={7} />);
+
+    await user.click(input());
+    await user.clear(input());
+    expect(input().value).toBe("");
+    await user.keyboard("launch");
+    expect(input().value).toBe("launch");
+
+    await user.keyboard("{Escape}{Enter}");
+    expect(router.state.location.search).toEqual({ q: "launch" });
+  });
+
+  it("empties an untouched filter on blur and fills it again on the next focus", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+
+    await renderRouted(() => <Header />);
+    await user.click(input());
+    expect(input().value).toBe("in:#launch-planning ");
+
+    await user.tab();
+    expect(input().value).toBe("");
+
+    await user.click(input());
+    expect(input().value).toBe("in:#launch-planning ");
+  });
+
+  it("never carries one room's filter to the next", async () => {
+    seedRooms();
+
+    const user = userEvent.setup();
+    const router = await renderRouted(() => <Header />);
+
+    await user.click(input());
+    await user.keyboard("launch");
+    expect(input().value).toBe("in:#launch-planning launch");
+
+    await user.click(screen.getByRole("button", { name: "Next room" }));
+    expect(input().value).toBe("");
+
+    await user.click(input());
+    expect(input().value).toBe("in:#launch-ops ");
+    await user.keyboard("{Enter}");
+    expect(router.state.location.search).toEqual({ q: "in_id:8" });
   });
 });
