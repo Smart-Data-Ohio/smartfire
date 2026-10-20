@@ -527,6 +527,7 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
         api::SyncPayload::ThreadCreated(thread) | api::SyncPayload::ThreadUpdated(thread) => Some(thread.id),
         api::SyncPayload::ThreadIndicator(change) => change.thread.as_ref().map(|thread| thread.thread_id),
         api::SyncPayload::ThreadUnread(change) => Some(change.thread_id),
+        api::SyncPayload::MessageNotified(notified) => notified.thread_id,
         api::SyncPayload::RoomFilesChanged(change) => Some(change.thread_id),
         api::SyncPayload::ThreadRead(change) => Some(change.thread_id),
         api::SyncPayload::ThreadGithubUpdated(change) => Some(change.thread_id),
@@ -550,7 +551,6 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
         | api::SyncPayload::SidebarRowRemoved(_)
         | api::SyncPayload::Presence(_)
         | api::SyncPayload::MessagePinned(_)
-        | api::SyncPayload::MessageNotified(_)
         | api::SyncPayload::ThreadRemoved(_)
         | api::SyncPayload::BoardAutomationsChanged(_)
         | api::SyncPayload::SavedChanged(_)
@@ -586,10 +586,8 @@ impl SyncSession for Session {
             })
             .collect();
         #[cfg(feature = "test-support")]
-        if events.iter().any(|(_, event)| matches!(event.payload, api::SyncPayload::RoomFilesChanged(_)))
-            && let Some(app) = self.app.upgrade()
-        {
-            crate::test_hooks::before_sync_delivery(app.db.path(), self.user.id).await;
+        if let Some(app) = self.app.upgrade() {
+            crate::test_hooks::before_sync_delivery(app.db.path(), self.user.id, &events).await;
         }
         let mut room_ids = BTreeSet::new();
         let mut message_ids = BTreeSet::new();

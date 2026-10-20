@@ -1797,7 +1797,9 @@ async fn private_files_notifications_after_revocation(replay_only: bool) {
         let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
             panic!("welcome")
         };
-        let hold = campfire_api::test_hooks::hold_before_sync_delivery(a.db().path(), KEVIN);
+        let hold = campfire_api::test_hooks::hold_before_sync_delivery(a.db().path(), KEVIN, |payload| {
+            matches!(payload, api::SyncPayload::RoomFilesChanged(_))
+        });
         let signed_id = upload_file(&mut david, "private-revocation.txt", b"private").await;
         let response = david.write(json_body(Method::POST, &format!("/api/v1/threads/{id}/messages"),
             &json!({"clientMessageId":"private-files-revoke", "markdownSource":"Private file", "attachmentSignedId":signed_id}))).await;

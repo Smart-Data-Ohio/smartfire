@@ -264,34 +264,50 @@ pub(crate) fn read_after_sidebar_snapshot(database: &Path, room_id: i64) -> bool
     true
 }
 
-type DeliveryHolds = Mutex<Option<HashMap<(PathBuf, i64), WriteHold>>>;
+type DeliveryHolds = Mutex<Option<HashMap<(PathBuf, i64), (WriteHold, fn(&campfire_api_types::SyncPayload) -> bool)>>>;
 static BEFORE_SYNC_DELIVERY: DeliveryHolds = Mutex::new(None);
 
-/// Pauses a viewer's next file-change batch before its delivery authorization.
-pub fn hold_before_sync_delivery(database: &Path, viewer: i64) -> WriteHold {
-    let held = WriteHold {
+/// Pauses a viewer's next batch holding an event `held` matches, before its delivery
+/// authorization.
+pub fn hold_before_sync_delivery(
+    database: &Path,
+    viewer: i64,
+    held: fn(&campfire_api_types::SyncPayload) -> bool,
+) -> WriteHold {
+    let hold = WriteHold {
         reached: Arc::new(Barrier::new(2)),
         release: Arc::new(Barrier::new(2)),
     };
     let copy = WriteHold {
-        reached: held.reached.clone(),
-        release: held.release.clone(),
+        reached: hold.reached.clone(),
+        release: hold.release.clone(),
     };
     BEFORE_SYNC_DELIVERY
         .lock()
         .unwrap()
         .get_or_insert_with(HashMap::new)
-        .insert((database.to_owned(), viewer), held);
+        .insert((database.to_owned(), viewer), (hold, held));
     copy
 }
 
-pub(crate) async fn before_sync_delivery(database: &Path, viewer: i64) {
-    let held = BEFORE_SYNC_DELIVERY
-        .lock()
-        .unwrap()
-        .as_mut()
-        .and_then(|holds| holds.remove(&(database.to_owned(), viewer)));
-    if let Some(held) = held {
+pub(crate) async fn before_sync_delivery(
+    database: &Path,
+    viewer: i64,
+    events: &[(&str, campfire_api_types::SyncEvent)],
+) {
+    let held = {
+        let mut holds = BEFORE_SYNC_DELIVERY.lock().unwrap();
+        let key = (database.to_owned(), viewer);
+        holds
+            .as_mut()
+            .filter(|holds| {
+                holds
+                    .get(&key)
+                    .is_some_and(|(_, held)| events.iter().any(|(_, event)| held(&event.payload)))
+            })
+            .and_then(|holds| holds.remove(&key))
+    };
+    if let Some((held, _)) = held {
         held.reached.wait().await;
         held.release.wait().await;
     }
