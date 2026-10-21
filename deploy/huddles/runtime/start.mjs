@@ -5,6 +5,9 @@ import net from "node:net";
 import { supervise } from "./supervisor.mjs";
 
 const CONFIG_PATH = "/run/campfire-huddles/livekit.yaml";
+// The gateway trusts only the roots behind GATEWAY_CAMPFIRE_URL, not Node's bundled CA list
+// (gateway-roots.pem explains why and what to do if the app's certificate changes CA).
+const GATEWAY_ROOTS_PATH = "/opt/campfire-huddles/runtime/gateway-roots.pem";
 
 function required(name, minimum = 1, environment = process.env) {
   const value = environment[name];
@@ -92,9 +95,9 @@ async function main() {
     {
       name: "authorization gateway",
       command: process.execPath,
-      args: ["/opt/campfire-huddles/gateway/server.mjs"],
+      args: ["--use-openssl-ca", "/opt/campfire-huddles/gateway/server.mjs"],
       cwd: "/opt/campfire-huddles/gateway",
-      env: process.env,
+      env: { ...process.env, SSL_CERT_FILE: GATEWAY_ROOTS_PATH, SSL_CERT_DIR: "/nonexistent" },
     },
   ]);
   process.exitCode = code;

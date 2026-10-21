@@ -23,7 +23,7 @@ COPY huddle-gateway/package.json huddle-gateway/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY huddle-gateway/gateway.mjs huddle-gateway/server.mjs ./
-COPY deploy/huddles/runtime/start.mjs deploy/huddles/runtime/supervisor.mjs /opt/campfire-huddles/runtime/
+COPY deploy/huddles/runtime/start.mjs deploy/huddles/runtime/supervisor.mjs deploy/huddles/runtime/gateway-roots.pem /opt/campfire-huddles/runtime/
 COPY --from=livekit /livekit-server /usr/local/bin/livekit-server
 
 USER node
