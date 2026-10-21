@@ -7,3 +7,4 @@
 !huddle-gateway/server.mjs
 !deploy/huddles/runtime/start.mjs
 !deploy/huddles/runtime/supervisor.mjs
+!deploy/huddles/runtime/gateway-roots.pem
