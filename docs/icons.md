@@ -8,7 +8,7 @@ search keep working on the typed text.
 
 ## The set
 
-The workspace ships 33 built-in brand icons, registered in `crates/app/vendor/icons.yml`
+The workspace ships 63 built-in brand icons, registered in `crates/app/vendor/icons.yml`
 with a `name`, `file`, `title`, and optional `aliases` (for example `gpt` for
 `openai`, `gemini` for `googlegemini`, `hf` for `huggingface`):
 
@@ -16,7 +16,11 @@ with a `name`, `file`, `title`, and optional `aliases` (for example `gpt` for
 `figma`, `github`, `githubcopilot`, `googlegemini`, `google`, `huggingface`,
 `kubernetes`, `linear`, `linux`, `meta`, `mistralai`, `notion`, `nvidia`,
 `ollama`, `openai`, `perplexity`, `slack`, `stripe`, `vercel`, `x`,
-`microsoft`, `azure`, `aws`, `xai`, `grok`, `deepseek`.
+`microsoft`, `azure`, `aws`, `xai`, `grok`, `deepseek`, `qwen`, `alibaba`,
+`alibabacloud`, `moonshot`, `kimi`, `xiaomi`, `mimo`, `tencent`, `hunyuan`,
+`bytedance`, `doubao`, `trae`, `tiktok`, `zhipu`, `zai`, `minimax`, `hailuo`,
+`stepfun`, `baichuan`, `yi`, `baidu`, `ernie`, `huawei`, `kling`, `longcat`,
+`internlm`, `sensenova`, `manus`, `spacex`, `wechat`.
 
 Brand names win over gemoji aliases on conflict: `:x:` and `:apple:` render
 the company logos, not ❌ and 🍎. Shortcodes expand after Markdown renders,
@@ -145,15 +149,23 @@ the `message_payload` creator and room hashes.
 ## License
 
 The SVGs come from two sources; see
-`crates/static_assets/media/images/icons/brands/LICENSE.md` for provenance. Twenty-seven are
+`crates/static_assets/media/images/icons/brands/LICENSE.md` for provenance. Thirty-one are
 from [Simple Icons](https://github.com/simple-icons/simple-icons), vendored
 from version **15.22.0** of the `simple-icons` npm package under the
 [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
 dedication; that version was the newest release still shipping `openai.svg`.
-The other six (`microsoft`, `azure`, `aws`, `xai`, `grok`, `deepseek`) are the
-monochrome files from version **1.95.0** of the `@lobehub/icons-static-svg`
-npm package, published under the
+`spacex`, `xiaomi`, `tiktok` and `wechat` come from the same release. The
+rest are the monochrome files from the `@lobehub/icons-static-svg` npm package,
+published under the
 [MIT license](https://github.com/lobehub/lobe-icons) by LobeHub; see
-`crates/static_assets/media/images/icons/brands/LICENSE-lobehub.md`. Amazon (retail) exists in
+`crates/static_assets/media/images/icons/brands/LICENSE-lobehub.md`.
+`microsoft`, `azure`, `aws`, `xai`, `grok` and `deepseek` are from version
+**1.95.0**. The Chinese AI labs and their parent companies are from version
+**1.98.0** (`icons/<file>.svg`, unmodified): `qwen`, `alibaba`, `alibabacloud`,
+`moonshot`, `kimi`, `xiaomimimo`, `tencent`, `hunyuan`, `bytedance`, `doubao`,
+`trae`, `zhipu`, `zai`, `minimax`, `hailuo`, `stepfun`, `baichuan`, `yi`,
+`baidu`, `wenxin`, `huawei`, `kling`, `longcat`, `internlm`, `sensenova` and
+`manus`. `LICENSE.md` predates these additions and its bytes are pinned as a
+served asset, so this section is the record for them. Amazon (retail) exists in
 neither source and has no icon. The depicted logos remain trademarks of their
 respective owners.
