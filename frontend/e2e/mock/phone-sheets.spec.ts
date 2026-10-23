@@ -322,6 +322,21 @@ test.describe("on a 360 px touch phone", () => {
     expect((await box(dialog)).bottom).toBe(PHONE_SMALL.height);
   });
 
+  test("the new message list scrolls to the last person", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "New message" });
+
+    await sheet("New message").open(page, dialog);
+
+    const body = await box(dialog.locator(".dialog-body"));
+    const list = dialog.locator(".picker-list");
+
+    expect((await box(list)).bottom).toBeLessThanOrEqual(body.bottom);
+    await list.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await expect(dialog.getByRole("option").last()).toBeInViewport();
+  });
+
   test("a sideways drag on the header doesn't close the sheet", async ({ page }) => {
     const dialog = page.getByRole("dialog", { name: "New message" });
 
