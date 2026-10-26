@@ -21,7 +21,10 @@ fn read_fixnum(bytes: &[u8]) -> Option<(i64, &[u8])> {
         1..=4 => {
             let n = first as usize;
             let digits = rest.get(..n)?;
-            let value = digits.iter().rev().fold(0i64, |acc, &b| (acc << 8) | b as i64);
+            let value = digits
+                .iter()
+                .rev()
+                .fold(0i64, |acc, &b| (acc << 8) | b as i64);
             Some((value, &rest[n..]))
         }
         -4..=-1 => {

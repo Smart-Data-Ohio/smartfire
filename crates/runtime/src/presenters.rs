@@ -1,52 +1,50 @@
-pub mod page;
-pub mod icons;
-pub mod bots;
-pub mod slack;
-pub mod work_links;
-pub mod current;
 pub mod accounts;
-pub mod workspace_branding;
-pub mod status_settings;
 pub mod activity;
-pub mod agents;
 pub mod agent_payload;
+pub mod agents;
 pub mod attachments;
-pub mod layout_preferences;
-pub mod pagination;
-pub mod people;
-pub mod rich_text;
-pub mod switcher;
-pub mod message_parts;
-pub mod params;
-pub mod profile_sections;
-pub mod fizzy_profile;
-pub mod room_unread;
-pub mod calls;
-pub mod message_payload;
-pub mod stickers;
 pub mod bot_input_casts;
-pub mod message_freshness;
-pub mod github;
+pub mod bots;
+pub mod calls;
+pub mod current;
 pub mod events;
-pub mod twitter_cards;
+pub mod fizzy_profile;
+pub mod github;
+pub mod icons;
+pub mod layout_preferences;
+pub mod message_freshness;
+pub mod message_parts;
+pub mod message_payload;
+pub mod page;
+pub mod pagination;
+pub mod params;
+pub mod people;
+pub mod profile_sections;
+pub mod rich_text;
+pub mod room_unread;
 pub mod search_preloads;
+pub mod slack;
+pub mod status_settings;
+pub mod stickers;
+pub mod switcher;
+pub mod twitter_cards;
+pub mod work_links;
+pub mod workspace_branding;
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
 use std::sync::LazyLock;
 
 use campfire_db::{Boost, Connection, Message, RichText, Room, RoomType, User};
-use campfire_richtext::Presentation;
-use campfire_storage::{Storage, Variation};
-use campfire_presentation::messages::json::{
-    BoostJson, BoostMessageJson, UserJson,
-};
+use campfire_presentation::messages::json::{BoostJson, BoostMessageJson, UserJson};
 use campfire_presentation::messages::support::RubyNumber;
 use campfire_presentation::messages::support::json_time;
 use campfire_presentation::messages::{
-    AttachmentPreview, AttachmentView, BoostView, MessageContent,
-    RoomKind, SoundImage, SoundView, UserView,
+    AttachmentPreview, AttachmentView, BoostView, MessageContent, RoomKind, SoundImage, SoundView,
+    UserView,
 };
+use campfire_richtext::Presentation;
+use campfire_storage::{Storage, Variation};
 use rails_compat::Secrets;
 use regex::Regex;
 use rusqlite::OptionalExtension;
@@ -69,10 +67,16 @@ pub fn all_emoji(text: &str) -> bool {
 
 pub fn all_emoji_with_icons(text: &str, is_icon: impl Fn(&str) -> bool) -> bool {
     static ALL_EMOJI: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"\A((\p{Emoji_Presentation}|\p{Extended_Pictographic}|\x{FE0F})|(:[a-z0-9_]+:))+\z").unwrap()
+        Regex::new(
+            r"\A((\p{Emoji_Presentation}|\p{Extended_Pictographic}|\x{FE0F})|(:[a-z0-9_]+:))+\z",
+        )
+        .unwrap()
     });
     static SHORTCODES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
-    ALL_EMOJI.is_match(text) && SHORTCODES.captures_iter(text).all(|capture| is_icon(&capture[1]))
+    ALL_EMOJI.is_match(text)
+        && SHORTCODES
+            .captures_iter(text)
+            .all(|capture| is_icon(&capture[1]))
 }
 
 /// `Time#to_fs(:number)`: `%Y%m%d%H%M%S` in UTC (the app's time zone).
@@ -94,7 +98,11 @@ pub fn avatar_path(secrets: &Secrets, user: &User) -> String {
     avatar_path_in_zone(secrets, user, &campfire_presentation::time::Zone::utc())
 }
 
-pub fn avatar_path_in_zone(secrets: &Secrets, user: &User, zone: &campfire_presentation::time::Zone) -> String {
+pub fn avatar_path_in_zone(
+    secrets: &Secrets,
+    user: &User,
+    zone: &campfire_presentation::time::Zone,
+) -> String {
     campfire_routes::fresh_user_avatar(
         avatar_token(secrets, user.id),
         zone.to_fs(user.updated_at.jiff(), "number"),
@@ -123,7 +131,10 @@ pub fn user_view(secrets: &Secrets, user: &User) -> UserView {
 }
 
 impl campfire_presentation::helpers::IconSource for Presenter<'_> {
-    fn resolve_avatar_icon(&self, name: &str) -> Option<campfire_presentation::helpers::AvatarIcon> {
+    fn resolve_avatar_icon(
+        &self,
+        name: &str,
+    ) -> Option<campfire_presentation::helpers::AvatarIcon> {
         use campfire_presentation::{helpers::AvatarIcon, messages::reactions::static_icon};
         let icon = static_icon(name);
         if matches!(icon, Some(AvatarIcon::Image { brand: true, .. })) {
@@ -160,12 +171,31 @@ impl campfire_presentation::helpers::IconSource for Presenter<'_> {
     }
 }
 
-pub fn resolve_avatar_icon(conn: &Connection, name: &str) -> Option<campfire_presentation::helpers::AvatarIcon> {
-        use campfire_presentation::{helpers::AvatarIcon, messages::reactions::static_icon};
-        let icon = static_icon(name);
-        if matches!(icon, Some(AvatarIcon::Image { brand: true, .. })) { return icon; }
-        let custom: Option<String> = conn.query_row("SELECT title FROM workspace_icons WHERE name = ?1", [name], |row| row.get(0)).optional().ok().flatten();
-        custom.map(|title| AvatarIcon::Image { title, url: format!("/icons/{name}"), brand: false }).or(icon)
+pub fn resolve_avatar_icon(
+    conn: &Connection,
+    name: &str,
+) -> Option<campfire_presentation::helpers::AvatarIcon> {
+    use campfire_presentation::{helpers::AvatarIcon, messages::reactions::static_icon};
+    let icon = static_icon(name);
+    if matches!(icon, Some(AvatarIcon::Image { brand: true, .. })) {
+        return icon;
+    }
+    let custom: Option<String> = conn
+        .query_row(
+            "SELECT title FROM workspace_icons WHERE name = ?1",
+            [name],
+            |row| row.get(0),
+        )
+        .optional()
+        .ok()
+        .flatten();
+    custom
+        .map(|title| AvatarIcon::Image {
+            title,
+            url: format!("/icons/{name}"),
+            brand: false,
+        })
+        .or(icon)
 }
 
 /// `users/_user.json.jbuilder` (`json.cache! user`).
@@ -177,7 +207,8 @@ pub fn cached_user_json(app: &AppState, base_url: &str, user: &User) -> UserJson
             base_url,
         )
     };
-    app.json_cache.fetch_value(&key, || user_json(&app.secrets, base_url, user))
+    app.json_cache
+        .fetch_value(&key, || user_json(&app.secrets, base_url, user))
 }
 
 /// Legacy JSON cache keys include the serializer version and request origin so a Host header
@@ -210,12 +241,14 @@ pub struct RenderRefreshes {
 /// Persist rendering's recovery requests after releasing the reader, just like PR refreshes.
 pub async fn refresh_after_render(db: &campfire_db::Database, refreshes: RenderRefreshes) {
     if !refreshes.attachments.is_empty()
-        && let Err(error) = db.write(move |tx| {
-            for (message, blob) in refreshes.attachments {
-                campfire_db::models::message_attachment_processing::recover(tx, message, blob)?;
-            }
-            Ok(())
-        }).await
+        && let Err(error) = db
+            .write(move |tx| {
+                for (message, blob) in refreshes.attachments {
+                    campfire_db::models::message_attachment_processing::recover(tx, message, blob)?;
+                }
+                Ok(())
+            })
+            .await
     {
         tracing::warn!(%error, "Skipping attachment preview recovery");
     }
@@ -280,7 +313,11 @@ impl<'a> Presenter<'a> {
     }
 
     pub fn use_viewer_zone(&mut self, user_id: i64) -> Result<()> {
-        let zone: Option<String> = self.conn.query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| row.get(0))?;
+        let zone: Option<String> =
+            self.conn
+                .query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| {
+                    row.get(0)
+                })?;
         self.render_zone = campfire_presentation::time::Zone::for_user(zone.as_deref());
         Ok(())
     }
@@ -300,8 +337,12 @@ impl<'a> Presenter<'a> {
 
     pub fn remember_message_refreshes(&self, message: &Message) -> Result<()> {
         let now = self.app.db.env().now();
-        for pr in crate::integrations::github::pull_requests::PullRequest::for_message(self.conn, message.id)? {
-            if pr.stale(now) { self.remember_github_refresh(pr.id); }
+        for pr in crate::integrations::github::pull_requests::PullRequest::for_message(
+            self.conn, message.id,
+        )? {
+            if pr.stale(now) {
+                self.remember_github_refresh(pr.id);
+            }
         }
         let _ = self.attachment(message)?;
         Ok(())
@@ -318,13 +359,16 @@ impl<'a> Presenter<'a> {
             preloads: self.search_preloads.as_ref(),
         }
     }
-    pub fn preload_payload(&self,messages:&[Message]) -> Result<Self> {
-        self.with_preloads(search_preloads::Preloads::load_payload(self,messages)?,messages)
+    pub fn preload_payload(&self, messages: &[Message]) -> Result<Self> {
+        self.with_preloads(
+            search_preloads::Preloads::load_payload(self, messages)?,
+            messages,
+        )
     }
-    pub fn preload_plain_text(&self,messages:&[Message]) -> Result<Self> {
-        Ok(self.with_preloaded_facts(search_preloads::Preloads::load_plain_text(self,messages)?))
+    pub fn preload_plain_text(&self, messages: &[Message]) -> Result<Self> {
+        Ok(self.with_preloaded_facts(search_preloads::Preloads::load_plain_text(self, messages)?))
     }
-    fn with_preloads(&self,data:search_preloads::Preloads,messages:&[Message]) -> Result<Self> {
+    fn with_preloads(&self, data: search_preloads::Preloads, messages: &[Message]) -> Result<Self> {
         let ids = data.records.body_ids(messages);
         let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
         for id in &ids {
@@ -342,7 +386,7 @@ impl<'a> Presenter<'a> {
         self.twitter_posts.borrow_mut().extend(posts);
         Ok(self.with_preloaded_facts(data))
     }
-    fn with_preloaded_facts(&self,data:search_preloads::Preloads) -> Self {
+    fn with_preloaded_facts(&self, data: search_preloads::Preloads) -> Self {
         Self {
             app: self.app,
             conn: self.conn,
@@ -513,7 +557,10 @@ impl<'a> Presenter<'a> {
             all_emoji: all_emoji_with_icons(&boost.content, |name| {
                 use campfire_presentation::helpers::{AvatarIcon, IconSource};
                 crate::rich_text::builtin_icon(name)
-                    || matches!(self.resolve_avatar_icon(name), Some(AvatarIcon::Image { .. }))
+                    || matches!(
+                        self.resolve_avatar_icon(name),
+                        Some(AvatarIcon::Image { .. })
+                    )
             }),
             booster: self.user_view(boost.booster_id)?,
             reaction: campfire_presentation::messages::reactions::resolve(&boost.content, self),
@@ -582,18 +629,35 @@ impl<'a> Presenter<'a> {
     pub fn attachment(&self, message: &Message) -> Result<Option<AttachmentView>> {
         let file = self.message_files(message)?.files.into_iter().next();
         let Some(file) = file else { return Ok(None) };
-        self.attachment_blob(message, &file.blob, file.spoiler).map(Some)
+        self.attachment_blob(message, &file.blob, file.spoiler)
+            .map(Some)
     }
 
-    pub fn message_files(&self, message: &Message) -> Result<campfire_storage::blob::MessageAttachments> {
+    pub fn message_files(
+        &self,
+        message: &Message,
+    ) -> Result<campfire_storage::blob::MessageAttachments> {
         if let Some(data) = &self.search_preloads {
-            return Ok(data.attachments.get(&message.id).cloned().unwrap_or_default());
+            return Ok(data
+                .attachments
+                .get(&message.id)
+                .cloned()
+                .unwrap_or_default());
         }
-        Ok(campfire_storage::Blob::attached_messages(self.conn, &[message.id])
-            .map_err(storage_error)?.remove(&message.id).unwrap_or_default())
+        Ok(
+            campfire_storage::Blob::attached_messages(self.conn, &[message.id])
+                .map_err(storage_error)?
+                .remove(&message.id)
+                .unwrap_or_default(),
+        )
     }
 
-    pub fn attachment_blob(&self, message: &Message, blob: &campfire_storage::Blob, spoiler: bool) -> Result<AttachmentView> {
+    pub fn attachment_blob(
+        &self,
+        message: &Message,
+        blob: &campfire_storage::Blob,
+        spoiler: bool,
+    ) -> Result<AttachmentView> {
         if !spoiler && blob.is_video() && (blob.is_previewable() || blob.is_variable()) {
             self.recover_attachment_preview(message, blob)?;
         }
@@ -621,13 +685,17 @@ impl<'a> Presenter<'a> {
                     ),
                 ]);
                 AttachmentPreview::Video {
-                    poster_url: self.preview_attached(blob)?.then(|| campfire_storage::paths::representation_redirect_path(
-                        verifier, blob, &poster,
-                    )),
+                    poster_url: self.preview_attached(blob)?.then(|| {
+                        campfire_storage::paths::representation_redirect_path(
+                            verifier, blob, &poster,
+                        )
+                    }),
                 }
             } else {
                 AttachmentPreview::Image {
-                    thumb_url: if campfire_storage::klipy::verified_image_import(verifier, blob, self.now) {
+                    thumb_url: if campfire_storage::klipy::verified_image_import(
+                        verifier, blob, self.now,
+                    ) {
                         campfire_storage::paths::blob_redirect_path(verifier, blob, None)
                     } else {
                         self.thumb_path(blob)?
@@ -660,9 +728,15 @@ impl<'a> Presenter<'a> {
         Ok(self.conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND name='preview_image' AND record_id=?)", [blob.id], |r| r.get(0))?)
     }
 
-    pub fn recover_attachment_preview(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<()> {
+    pub fn recover_attachment_preview(
+        &self,
+        message: &Message,
+        blob: &campfire_storage::Blob,
+    ) -> Result<()> {
         if blob.is_video() && !self.preview_attached(blob)? {
-            self.attachment_recoveries.borrow_mut().insert((message.id, blob.id));
+            self.attachment_recoveries
+                .borrow_mut()
+                .insert((message.id, blob.id));
         }
         Ok(())
     }
@@ -692,7 +766,10 @@ impl<'a> Presenter<'a> {
         let Some(body) = self.stored_body(message)? else {
             return Ok(String::new());
         };
-        self.render_body_html(&body, message.markdown() || message.forwarded_markdown_snapshot())
+        self.render_body_html(
+            &body,
+            message.markdown() || message.forwarded_markdown_snapshot(),
+        )
     }
 
     fn render_body_html(&self, body: &str, markdown: bool) -> Result<String> {
@@ -746,7 +823,9 @@ impl<'a> Presenter<'a> {
                 base_url,
             )
         };
-        self.app.json_cache.try_fetch_value(&key, || self.render_boost_json(boost, message, base_url))
+        self.app
+            .json_cache
+            .try_fetch_value(&key, || self.render_boost_json(boost, message, base_url))
     }
 
     fn render_boost_json(
@@ -769,7 +848,6 @@ impl<'a> Presenter<'a> {
             },
         })
     }
-
 }
 
 /// A `User` row as the users views see it.
@@ -777,7 +855,11 @@ pub fn user_summary(secrets: &Secrets, user: &User) -> campfire_presentation::us
     user_summary_in_zone(secrets, user, &campfire_presentation::time::Zone::utc())
 }
 
-pub fn user_summary_in_zone(secrets: &Secrets, user: &User, zone: &campfire_presentation::time::Zone) -> campfire_presentation::users::UserSummary {
+pub fn user_summary_in_zone(
+    secrets: &Secrets,
+    user: &User,
+    zone: &campfire_presentation::time::Zone,
+) -> campfire_presentation::users::UserSummary {
     use campfire_presentation::users::{Role, Status};
     campfire_presentation::users::UserSummary {
         id: user.id,
@@ -840,12 +922,15 @@ pub fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> 
     crate::rich_text::client_icon_names(conn)
 }
 
-
 pub mod link_embeds;
 
 /// Refreshes formerly discovered while rendering a detached message. Publication must retain
 /// these requests even when no browser is subscribed.
-pub fn broadcast_refreshes(conn: &Connection, app: &AppState, message: &Message) -> Result<RenderRefreshes> {
+pub fn broadcast_refreshes(
+    conn: &Connection,
+    app: &AppState,
+    message: &Message,
+) -> Result<RenderRefreshes> {
     let presenter = Presenter::new(conn, app, None);
     presenter.remember_message_refreshes(message)?;
     Ok(presenter.take_render_refreshes())

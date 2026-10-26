@@ -17,34 +17,34 @@ use crate::queue::{Registry, discard_missing};
 pub(crate) mod reminders;
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
-mod peer_callback_tests;
-#[cfg(test)]
-mod huddle_render_tests;
+mod huddle_neighbor_mention_test;
 #[cfg(test)]
 mod huddle_policy_integration_tests;
 #[cfg(test)]
-mod huddle_neighbor_mention_test;
+mod huddle_render_tests;
+#[cfg(test)]
+mod peer_callback_tests;
+#[cfg(test)]
+mod tests;
 
 #[cfg(test)]
 pub(crate) mod agent_jobs {
     pub(crate) use campfire_channels::jobs::agent_jobs::*;
 
-    mod tests;
-    mod publication_tests;
+    mod case_tests;
+    mod delivery_path_cases;
+    mod drive_attachment_cases;
     mod indicator_tests;
+    mod message_controller_tests;
+    pub(crate) mod next6_named;
     #[path = "../agent_payload_tests.rs"]
     mod payload_tests;
-    mod case_tests;
-    mod webhook_cases;
+    mod publication_tests;
     mod recovery_cases;
-    mod delivery_path_cases;
-    mod webhook_key_cases;
-    mod drive_attachment_cases;
-    mod message_controller_tests;
     mod remaining_cases;
-    pub(crate) mod next6_named;
+    mod tests;
+    mod webhook_cases;
+    mod webhook_key_cases;
 }
 
 #[cfg(test)]

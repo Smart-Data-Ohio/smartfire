@@ -45,22 +45,66 @@ pub const MARKDOWN_TAGS: &[&str] = &[
     "tr",
     "ul",
 ];
-pub const MARKDOWN_ATTRIBUTES: &[&str] =
-    &["align", "checked", "class", "data-spoiler", "disabled", "href", "rel", "start", "target", "title", "type"];
-pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "spoiler", "task-list-item"];
-const BLOCK_TAGS: &[&str] = &["blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ol", "p", "pre", "table", "tr", "ul"];
-static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]|<@([1-9][0-9]*)>").unwrap());
+pub const MARKDOWN_ATTRIBUTES: &[&str] = &[
+    "align",
+    "checked",
+    "class",
+    "data-spoiler",
+    "disabled",
+    "href",
+    "rel",
+    "start",
+    "target",
+    "title",
+    "type",
+];
+pub const ALLOWED_CLASSES: &[&str] = &[
+    "contains-task-list",
+    "markdown-body",
+    "spoiler",
+    "task-list-item",
+];
+const BLOCK_TAGS: &[&str] = &[
+    "blockquote",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "table",
+    "tr",
+    "ul",
+];
+static MENTION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]|<@([1-9][0-9]*)>").unwrap());
 static SHORTCODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
 static ICON_ALT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^:([a-z0-9_]+):$").unwrap());
-static LANGUAGE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^language-[a-zA-Z0-9_+#.\-]+$").unwrap());
-static AVATAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^/users/[^/?#]+/avatar(?:[?#]|$)").unwrap());
-static EMOJI_ALIASES: LazyLock<HashMap<String, String>> =
-    LazyLock::new(|| serde_json::from_str(include_str!("../data/gemoji-4.1.0.json")).expect("Ruby-generated gemoji alias table"));
+static LANGUAGE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^language-[a-zA-Z0-9_+#.\-]+$").unwrap());
+static AVATAR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^/users/[^/?#]+/avatar(?:[?#]|$)").unwrap());
+static EMOJI_ALIASES: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../data/gemoji-4.1.0.json"))
+        .expect("Ruby-generated gemoji alias table")
+});
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Icon {
-    Brand { name: String, title: String, url: Option<String> },
-    Custom { name: String, title: String, url: String },
+    Brand {
+        name: String,
+        title: String,
+        url: Option<String>,
+    },
+    Custom {
+        name: String,
+        title: String,
+        url: String,
+    },
     Emoji(String),
 }
 
@@ -127,20 +171,42 @@ impl<F: Fn(&str) -> Option<MentionUser>> MentionResolver for F {
 }
 
 pub fn markdown_allowlist() -> SafeList {
-    SafeList { tags: MARKDOWN_TAGS.to_vec(), attributes: MARKDOWN_ATTRIBUTES.to_vec() }
+    SafeList {
+        tags: MARKDOWN_TAGS.to_vec(),
+        attributes: MARKDOWN_ATTRIBUTES.to_vec(),
+    }
 }
 pub fn presentation_allowlist() -> SafeList {
     let mut tags = MARKDOWN_TAGS.to_vec();
-    tags.extend(["action-text-attachment", "div", "figure", "figcaption", "img", "span"]);
+    tags.extend([
+        "action-text-attachment",
+        "div",
+        "figure",
+        "figcaption",
+        "img",
+        "span",
+    ]);
     let mut attributes = MARKDOWN_ATTRIBUTES.to_vec();
     attributes.extend(ATTACHMENT_ATTRIBUTES);
-    attributes.extend(["alt", "aria-hidden", "data-user-id", "draggable", "height", "src", "width"]);
+    attributes.extend([
+        "alt",
+        "aria-hidden",
+        "data-user-id",
+        "draggable",
+        "height",
+        "src",
+        "width",
+    ]);
     SafeList { tags, attributes }
 }
 
 /// The validation boundary in `Message#render_markdown_body` counts Unicode characters, not bytes.
 /// The source is never truncated. Rails validates blank source separately, considering attachments.
-pub fn render(source: &str, mentions: &dyn MentionResolver, icons: &dyn IconResolver) -> Result<String, Error> {
+pub fn render(
+    source: &str,
+    mentions: &dyn MentionResolver,
+    icons: &dyn IconResolver,
+) -> Result<String, Error> {
     if source.chars().count() > SOURCE_LIMIT {
         return Err(Error::SourceTooLong);
     }
@@ -204,7 +270,10 @@ fn end_autolinks_at_spoilers<'s>(source: &'s str, options: &Options) -> Cow<'s, 
             };
             // A link's text never holds a break: the `<` in it ends the URL.
             let start = source_offset(at, &breaks);
-            if node.ancestors().any(|ancestor| matches!(ancestor.data().value, NodeValue::SpoileredText)) {
+            if node
+                .ancestors()
+                .any(|ancestor| matches!(ancestor.data().value, NodeValue::SpoileredText))
+            {
                 spoilered.insert(start);
             }
             if let Some(bar) = text.find("||") {
@@ -229,7 +298,11 @@ fn end_autolinks_at_spoilers<'s>(source: &'s str, options: &Options) -> Cow<'s, 
             break;
         }
     }
-    if breaks.is_empty() { source.into() } else { with_breaks(source, &breaks).into() }
+    if breaks.is_empty() {
+        source.into()
+    } else {
+        with_breaks(source, &breaks).into()
+    }
 }
 
 /// `source` with `AUTOLINK_BREAK` inserted at each break offset.
@@ -247,13 +320,21 @@ fn with_breaks(source: &str, breaks: &BTreeMap<usize, usize>) -> String {
 
 /// An offset in `with_breaks(source, breaks)`, outside any break, mapped back to `source`.
 fn source_offset(at: usize, breaks: &BTreeMap<usize, usize>) -> usize {
-    let before = breaks.keys().enumerate().take_while(|&(index, &position)| position + index * AUTOLINK_BREAK.len() < at).count();
+    let before = breaks
+        .keys()
+        .enumerate()
+        .take_while(|&(index, &position)| position + index * AUTOLINK_BREAK.len() < at)
+        .count();
     at - before * AUTOLINK_BREAK.len()
 }
 
 /// A link the autolink extension made: its label is its own source text (`https://…`, or
 /// `www.…` for `http://www.…`), found at its source position. Returns that byte offset and text.
-fn autolink_at<'n>(node: &'n AstNode<'n>, source: &str, lines: &[usize]) -> Option<(usize, String)> {
+fn autolink_at<'n>(
+    node: &'n AstNode<'n>,
+    source: &str,
+    lines: &[usize],
+) -> Option<(usize, String)> {
     let data = node.data();
     let NodeValue::Link(link) = &data.value else {
         return None;
@@ -270,11 +351,16 @@ fn autolink_at<'n>(node: &'n AstNode<'n>, source: &str, lines: &[usize]) -> Opti
     }
     let position = data.sourcepos.start;
     let start = lines.get(position.line.checked_sub(1)?)? + position.column.checked_sub(1)?;
-    source.get(start..)?.starts_with(text.as_ref()).then(|| (start, text.to_string()))
+    source
+        .get(start..)?
+        .starts_with(text.as_ref())
+        .then(|| (start, text.to_string()))
 }
 
 fn line_starts(source: &str) -> Vec<usize> {
-    std::iter::once(0).chain(source.match_indices('\n').map(|(at, _)| at + 1)).collect()
+    std::iter::once(0)
+        .chain(source.match_indices('\n').map(|(at, _)| at + 1))
+        .collect()
 }
 
 pub fn mention_token(name: &str) -> Option<String> {
@@ -289,7 +375,10 @@ fn protect_mentions(source: &str) -> (String, Vec<String>, Regex) {
     // Unpredictable and absent from the input, so a user cannot forge an attachment placeholder.
     let prefix = loop {
         let bytes: [u8; 12] = rand::random();
-        let hex = bytes.iter().map(|byte| format!("{byte:02X}")).collect::<String>();
+        let hex = bytes
+            .iter()
+            .map(|byte| format!("{byte:02X}"))
+            .collect::<String>();
         let prefix = format!("SMARTFIREMENTION{hex}");
         if !source.contains(&prefix) {
             break prefix;
@@ -324,7 +413,10 @@ pub fn redacted_excerpt(source: &str) -> String {
         return source.to_owned();
     }
     let icons = IconCatalog::default();
-    let ctx = RenderContext { resolver: &NoAttachables, request_host: None };
+    let ctx = RenderContext {
+        resolver: &NoAttachables,
+        request_host: None,
+    };
     render(source, &(|_: &str| None), &icons)
         .and_then(|html| plain_text(&html, &ctx, &icons))
         .unwrap_or_else(|_| "spoiler".to_owned())
@@ -350,13 +442,22 @@ pub fn is_spoiler(dom: &Dom, node: NodeId) -> bool {
 /// (`[||ending||](url "title")`). The link's URL and title would tell what the spoiler hides, so
 /// unfurls, cards and references skip both.
 pub fn conceals_spoiler(dom: &Dom, node: NodeId) -> bool {
-    is_spoiler(dom, node) || (dom.local_name(node) == Some("a") && dom.descendants(node).into_iter().any(|inner| is_spoiler(dom, inner)))
+    is_spoiler(dom, node)
+        || (dom.local_name(node) == Some("a")
+            && dom
+                .descendants(node)
+                .into_iter()
+                .any(|inner| is_spoiler(dom, inner)))
 }
 
 fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
     for node in dom.descendants(root) {
         if let Some(classes) = dom.attr(node, "class") {
-            let classes = classes.split_whitespace().filter(|class| allowed_class(class)).collect::<Vec<_>>().join(" ");
+            let classes = classes
+                .split_whitespace()
+                .filter(|class| allowed_class(class))
+                .collect::<Vec<_>>()
+                .join(" ");
             if classes.is_empty() {
                 dom.remove_attr(node, "class");
             } else {
@@ -368,8 +469,14 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
         // are not spoilers: unwrap them so they don't appear in stored HTML. Spoilers nest one
         // level only: a spoiler inside another is unwrapped, so `||a ||b|| c||` hides all three.
         if dom.local_name(node) == Some("span") {
-            let spoiler = dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
-            let nested = spoiler && dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
+            let spoiler = dom
+                .attr(node, "class")
+                .is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+            let nested = spoiler
+                && dom
+                    .ancestors(node)
+                    .iter()
+                    .any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
             if spoiler && !nested {
                 dom.set_attr(node, "data-spoiler", "");
             } else if dom.parent(node).is_some() {
@@ -414,7 +521,9 @@ const ICON_CLASSES: &[&str] = &["icon", "icon--brand", "icon--custom"];
 
 /// A table's elements. Action Text allows none of them, so `render` is their only source, and it
 /// writes no attribute on them but a cell's `align`.
-const TABLE_TAGS: &[&str] = &["table", "thead", "tbody", "tfoot", "tr", "th", "td", "col", "colgroup"];
+const TABLE_TAGS: &[&str] = &[
+    "table", "thead", "tbody", "tfoot", "tr", "th", "td", "col", "colgroup",
+];
 
 /// A Markdown body's own markup as the SPA shows it (`Content::to_rendered_markdown_html_with_layout`),
 /// held to the values `render` emits for what `SafeList::markdown_body` adds to Action Text's
@@ -436,7 +545,9 @@ const TABLE_TAGS: &[&str] = &["table", "thead", "tbody", "tfoot", "tr", "th", "t
 /// drops every `on*` handler, `style` and unknown attribute afterwards.
 pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
     for node in dom.descendants(root) {
-        let Some(name) = dom.local_name(node).map(str::to_owned) else { continue };
+        let Some(name) = dom.local_name(node).map(str::to_owned) else {
+            continue;
+        };
         if let Some(classes) = dom.attr(node, "class") {
             let icon = name == "img";
             let classes = classes
@@ -450,7 +561,8 @@ pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
                 dom.set_attr(node, "class", &classes);
             }
         }
-        let aligned = matches!(name.as_str(), "th" | "td") && matches!(dom.attr(node, "align"), Some("left" | "center" | "right"));
+        let aligned = matches!(name.as_str(), "th" | "td")
+            && matches!(dom.attr(node, "align"), Some("left" | "center" | "right"));
         if !aligned {
             dom.remove_attr(node, "align");
         }
@@ -480,12 +592,16 @@ pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
                 dom.remove_attr(node, attribute);
             }
         }
-        let numeric = dom.attr(node, "start").is_some_and(|start| !start.is_empty() && start.len() <= 9 && start.bytes().all(|b| b.is_ascii_digit()));
+        let numeric = dom.attr(node, "start").is_some_and(|start| {
+            !start.is_empty() && start.len() <= 9 && start.bytes().all(|b| b.is_ascii_digit())
+        });
         if name != "ol" || !numeric {
             dom.remove_attr(node, "start");
         }
         let off_site = name == "a"
-            && dom.attr(node, "href").is_some_and(|href| !is_blank(href) && sanitizer::allowed_uri(href) && !in_app_href(href));
+            && dom.attr(node, "href").is_some_and(|href| {
+                !is_blank(href) && sanitizer::allowed_uri(href) && !in_app_href(href)
+            });
         if off_site && dom.has_attr(node, "target") {
             dom.set_attr(node, "target", "_blank");
             dom.set_attr(node, "rel", NEW_TAB_REL);
@@ -497,9 +613,17 @@ pub fn constrain_body_markup(dom: &mut Dom, root: NodeId) {
 }
 
 fn skipped(dom: &Dom, node: NodeId, tags: &[&str]) -> bool {
-    dom.ancestors(node).iter().any(|&a| dom.local_name(a).is_some_and(|name| tags.contains(&name)))
+    dom.ancestors(node)
+        .iter()
+        .any(|&a| dom.local_name(a).is_some_and(|name| tags.contains(&name)))
 }
-fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[String], pattern: &Regex, mentions: &dyn MentionResolver) {
+fn restore_mentions(
+    dom: &mut Dom,
+    root: NodeId,
+    tokens: &[String],
+    pattern: &Regex,
+    mentions: &dyn MentionResolver,
+) {
     let users = tokens
         .iter()
         .map(|token| {
@@ -516,7 +640,9 @@ fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[String], pattern: &Re
         .collect::<HashMap<_, _>>();
     for node in dom.descendants(root) {
         for (key, value) in dom.attrs(node) {
-            let restored = pattern.replace_all(&value, |c: &regex::Captures| tokens[c[1].parse::<usize>().unwrap()].clone());
+            let restored = pattern.replace_all(&value, |c: &regex::Captures| {
+                tokens[c[1].parse::<usize>().unwrap()].clone()
+            });
             dom.set_attr(node, &key, &restored);
         }
         let Some(text) = dom.text(node).map(str::to_owned) else {
@@ -537,14 +663,24 @@ fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[String], pattern: &Re
                 pending_text.push_str(&text[cursor..m.start()]);
             }
             let token = &tokens[c[1].parse::<usize>().unwrap()];
-            let user = if skip { None } else { users.get(token).and_then(Option::as_ref) };
+            let user = if skip {
+                None
+            } else {
+                users.get(token).and_then(Option::as_ref)
+            };
             match user {
                 Some(user) => {
                     if !pending_text.is_empty() {
                         replacements.push(dom.create_text(&pending_text));
                         pending_text.clear();
                     }
-                    replacements.push(dom.create_element("action-text-attachment", &[("sgid", &user.attachable_sgid), ("content-type", MENTION_CONTENT_TYPE)]));
+                    replacements.push(dom.create_element(
+                        "action-text-attachment",
+                        &[
+                            ("sgid", &user.attachable_sgid),
+                            ("content-type", MENTION_CONTENT_TYPE),
+                        ],
+                    ));
                 }
                 None => pending_text.push_str(token),
             }
@@ -578,13 +714,23 @@ fn icon_node(dom: &mut Dom, name: &str, icons: &dyn IconResolver) -> NodeId {
     let icon = icons.find(name);
     let (canonical, title, url, class) = match icon {
         Some(Icon::Emoji(raw)) => return dom.create_text(&raw),
-        Some(Icon::Brand { name, title, url: Some(url) }) => (name, title, url, "icon icon--brand"),
+        Some(Icon::Brand {
+            name,
+            title,
+            url: Some(url),
+        }) => (name, title, url, "icon icon--brand"),
         Some(Icon::Custom { name, title, url }) => (name, title, url, "icon icon--custom"),
         _ => return dom.create_text(&format!(":{name}:")),
     };
     dom.create_element(
         "img",
-        &[("class", class), ("src", &url), ("alt", &format!(":{canonical}:")), ("title", &title), ("draggable", "false")],
+        &[
+            ("class", class),
+            ("src", &url),
+            ("alt", &format!(":{canonical}:")),
+            ("title", &title),
+            ("draggable", "false"),
+        ],
     )
 }
 fn expand_shortcodes(dom: &mut Dom, root: NodeId, icons: &dyn IconResolver) {
@@ -652,7 +798,11 @@ pub fn avatar_src(src: &str, asset_host: Option<&str>) -> bool {
     Regex::new(&pattern).is_ok_and(|re| re.is_match(parsed.host.as_deref().unwrap_or("")))
 }
 
-pub fn sanitize_presentation(html: &str, icons: &dyn IconResolver, asset_host: Option<&str>) -> Result<String, Error> {
+pub fn sanitize_presentation(
+    html: &str,
+    icons: &dyn IconResolver,
+    asset_host: Option<&str>,
+) -> Result<String, Error> {
     let safe = sanitizer::sanitize(html, &presentation_allowlist()).map_err(Error::Parse)?;
     if !safe.contains("<img") && !safe.contains("href=\"/") {
         return Ok(safe);
@@ -687,12 +837,18 @@ pub fn sanitize_presentation(html: &str, icons: &dyn IconResolver, asset_host: O
 
 /// `MessagesHelper#markdown_message_presentation`: only User attachments receive a partial;
 /// others keep their canonical empty attachment node, followed by the presentation sanitizer.
-pub fn presentation(body: &str, ctx: &RenderContext, icons: &dyn IconResolver, asset_host: Option<&str>) -> Result<String, Error> {
+pub fn presentation(
+    body: &str,
+    ctx: &RenderContext,
+    icons: &dyn IconResolver,
+    asset_host: Option<&str>,
+) -> Result<String, Error> {
     let Content { mut dom, root } = Content::load(body, ctx)?;
     for node in attachment_nodes(&dom, root) {
         let attachment = attachables::attachment_from_node(&dom, node, ctx)?;
         if let Attachable::User(user) = attachment.attachable {
-            dom.set_inner_html(node, &attachables::render_mention(&user)).map_err(Error::Parse)?;
+            dom.set_inner_html(node, &attachables::render_mention(&user))
+                .map_err(Error::Parse)?;
         }
     }
     crate::content::contain_spoiler_blocks(&mut dom, root);
@@ -701,16 +857,28 @@ pub fn presentation(body: &str, ctx: &RenderContext, icons: &dyn IconResolver, a
 }
 
 /// `Message::Markdown.plain_text`: HTML-shaped attachment expansion followed by block/cell rules.
-pub fn plain_text(body: &str, ctx: &RenderContext, icons: &dyn IconResolver) -> Result<String, Error> {
+pub fn plain_text(
+    body: &str,
+    ctx: &RenderContext,
+    icons: &dyn IconResolver,
+) -> Result<String, Error> {
     let Content { mut dom, root } = Content::load(body, ctx)?;
     for node in attachment_nodes(&dom, root) {
         let attachment = attachables::attachment_from_node(&dom, node, ctx)?;
         match attachables::attachment_plain_text(&attachment) {
-            attachables::PlainTextRepresentation::Html(text) => dom.replace_with_html(node, &text).map_err(Error::Parse)?,
-            attachables::PlainTextRepresentation::Content(html) => dom.replace_with_html(node, &html).map_err(Error::Parse)?,
+            attachables::PlainTextRepresentation::Html(text) => {
+                dom.replace_with_html(node, &text).map_err(Error::Parse)?
+            }
+            attachables::PlainTextRepresentation::Content(html) => {
+                dom.replace_with_html(node, &html).map_err(Error::Parse)?
+            }
         }
     }
-    let text = dom.children(root).iter().map(|&n| plain_node(&dom, n, icons)).collect::<String>();
+    let text = dom
+        .children(root)
+        .iter()
+        .map(|&n| plain_node(&dom, n, icons))
+        .collect::<String>();
     let text = text
         .split_inclusive('\n')
         .map(|line| line.trim_end_matches(['\n', '\r', ' ', '\t', '\u{b}', '\u{c}']))
@@ -735,12 +903,20 @@ fn plain_node(dom: &Dom, node: NodeId, icons: &dyn IconResolver) -> String {
     if name == "img" {
         let alt = dom.attr(node, "alt").unwrap_or("");
         let icon = ICON_ALT_RE.captures(alt).and_then(|c| icons.find(&c[1]));
-        let icon_class = dom.attr(node, "class").unwrap_or("").split_whitespace().any(|c| matches!(c, "icon--brand" | "icon--custom"));
+        let icon_class = dom
+            .attr(node, "class")
+            .unwrap_or("")
+            .split_whitespace()
+            .any(|c| matches!(c, "icon--brand" | "icon--custom"));
         if matches!(icon, Some(Icon::Brand { .. } | Icon::Custom { .. })) || icon_class {
             return alt.to_owned();
         }
     }
-    let text = dom.children(node).iter().map(|&n| plain_node(dom, n, icons)).collect::<String>();
+    let text = dom
+        .children(node)
+        .iter()
+        .map(|&n| plain_node(dom, n, icons))
+        .collect::<String>();
     if matches!(name, "td" | "th") {
         format!("{text}\t")
     } else if BLOCK_TAGS.contains(&name) {

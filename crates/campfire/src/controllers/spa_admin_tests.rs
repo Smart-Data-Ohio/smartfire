@@ -67,7 +67,12 @@ pub(super) async fn spa<T: serde::de::DeserializeOwned>(
 }
 
 /// A classic form post that must redirect, as the admin pages' writes do.
-pub(super) async fn classic(b: &mut Browser<'_>, method: Method, path: &str, fields: &[(&str, &str)]) {
+pub(super) async fn classic(
+    b: &mut Browser<'_>,
+    method: Method,
+    path: &str,
+    fields: &[(&str, &str)],
+) {
     let reply = b.write(Req::new(method, path).form(fields)).await;
     assert!(
         reply.status.is_redirection(),
@@ -234,7 +239,9 @@ pub(super) async fn dump(a: &TestApp) -> Value {
 }
 
 /// Every publication until they stop coming (some go out after the response).
-pub(super) async fn settle(capture: &campfire_cable::pubsub::PublicationCapture) -> Vec<(String, String)> {
+pub(super) async fn settle(
+    capture: &campfire_cable::pubsub::PublicationCapture,
+) -> Vec<(String, String)> {
     let mut frames = Vec::new();
     let mut quiet = 0;
     while quiet < 10 {
@@ -570,9 +577,7 @@ async fn sudo_comes_back_to_the_spa_page() {
     assert_eq!(error(&asked)["_tag"], "SudoRequired");
     assert_eq!(dump(&a).await, before, "nothing changed");
 
-    let confirmed = b
-        .confirm_sudo(PASSWORD)
-        .await;
+    let confirmed = b.confirm_sudo(PASSWORD).await;
     assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
     assert_eq!(
         confirmed.json()["retry"],
@@ -600,9 +605,7 @@ async fn sudo_comes_back_to_the_spa_page() {
         )
         .await;
     assert_eq!(error(&asked)["_tag"], "SudoRequired");
-    let confirmed = other
-        .confirm_sudo(PASSWORD)
-        .await;
+    let confirmed = other.confirm_sudo(PASSWORD).await;
     assert_eq!(confirmed.json()["retry"]["returnTo"], "/app/");
 
     // So does a page of this host outside the SPA.
@@ -618,9 +621,7 @@ async fn sudo_comes_back_to_the_spa_page() {
         )
         .await;
     assert_eq!(error(&asked)["_tag"], "SudoRequired");
-    let confirmed = classic_page
-        .confirm_sudo(PASSWORD)
-        .await;
+    let confirmed = classic_page.confirm_sudo(PASSWORD).await;
     assert_eq!(confirmed.json()["retry"]["returnTo"], "/app/");
 }
 
@@ -752,9 +753,16 @@ async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
     // Both removals leave the server's branding mark (verified in the branding analysis tests).
     let without_mark = |metadata: &str| {
         let mut metadata: Value = serde_json::from_str(metadata).unwrap();
-        let mark = metadata.as_object_mut().unwrap().remove("branding_mark").unwrap();
+        let mark = metadata
+            .as_object_mut()
+            .unwrap()
+            .remove("branding_mark")
+            .unwrap();
         let mark = mark.as_str().unwrap();
-        assert!(mark.len() == 64 && mark.bytes().all(|byte| byte.is_ascii_hexdigit()), "{mark}");
+        assert!(
+            mark.len() == 64 && mark.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "{mark}"
+        );
         metadata
     };
     let spa_metadata = without_mark(spa_blob["metadata"].as_str().unwrap());
@@ -773,7 +781,10 @@ async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
         let mut blob: Value = serde_json::from_str(row.as_str().unwrap()).unwrap();
         if blob["filename"] == "logo.png" {
             // While attached the classic blob keeps Rails' metadata.
-            assert_eq!(without_mark(blob["metadata"].as_str().unwrap()), json!({"identified": true}));
+            assert_eq!(
+                without_mark(blob["metadata"].as_str().unwrap()),
+                json!({"identified": true})
+            );
             assert_eq!(blob["id"], spa_blob["id"]);
             blob["metadata"] = spa_blob["metadata"].clone();
             *row = json!(blob.to_string());
@@ -887,8 +898,6 @@ async fn people_list_as_the_account_page_does() {
             .iter()
             .any(|person| person.you && person.id == DAVID)
     );
-
-
 }
 
 #[tokio::test]
@@ -1157,15 +1166,45 @@ async fn workspace_styles_live_updates_reach_other_users_from_both_uis() {
     let mut b = a.sign_in(DAVID).await;
     b.grant_sudo().await;
     let css = ":root { --accent: red; }";
-    let saved: api::CustomStyles = spa(&mut b, Method::PATCH, "/api/v1/admin/custom_styles", json!({"css": css})).await;
+    let saved: api::CustomStyles = spa(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/admin/custom_styles",
+        json!({"css": css}),
+    )
+    .await;
     assert_eq!(saved.css.as_deref(), Some(css));
-    let event = sync.until(|event| matches!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(_)), |_| false).await;
+    let event = sync
+        .until(
+            |event| matches!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(_)),
+            |_| false,
+        )
+        .await;
     assert_eq!(event.topic, "user");
-    assert_eq!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(saved));
-    classic(&mut b, Method::PATCH, "/account/custom_styles", &[("account[custom_styles]", "")]).await;
-    let event = sync.until(|event| matches!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(_)), |_| false).await;
+    assert_eq!(
+        event.payload,
+        api::SyncPayload::WorkspaceStylesUpdated(saved)
+    );
+    classic(
+        &mut b,
+        Method::PATCH,
+        "/account/custom_styles",
+        &[("account[custom_styles]", "")],
+    )
+    .await;
+    let event = sync
+        .until(
+            |event| matches!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(_)),
+            |_| false,
+        )
+        .await;
     assert_eq!(event.topic, "user");
-    assert_eq!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(api::CustomStyles { css: Some(String::new()) }));
+    assert_eq!(
+        event.payload,
+        api::SyncPayload::WorkspaceStylesUpdated(api::CustomStyles {
+            css: Some(String::new())
+        })
+    );
     server.abort();
 }
 
@@ -1387,8 +1426,6 @@ async fn the_audit_log_filters_as_the_classic_page_does() {
             .all(|entry| entry.action == "user.role.change")
     );
     assert!(filtered.export_url.contains("action=user.role.change"));
-
-
 }
 
 #[tokio::test]

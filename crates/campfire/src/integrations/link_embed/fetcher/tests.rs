@@ -1,11 +1,11 @@
 use super::*;
-use campfire_jobs::JobKind;
-use campfire_app::integrations::link_embed::Embed;
-use std::time::Duration;
 use crate::controllers::presenters::test_support::TestApp;
 use crate::integrations::test_support::*;
+use campfire_app::integrations::link_embed::Embed;
+use campfire_jobs::JobKind;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[tokio::test]
 async fn ws15e_link_fetch_records_positive_negative_and_guarded_image_results() {
@@ -64,13 +64,27 @@ async fn ws15e_link_fetch_records_positive_negative_and_guarded_image_results() 
         ("/redirect", Some("Could not load this link"), None),
     ] {
         let url = format!("https://example.com{path}");
-        let embed = app.db().write(move |tx| Embed::for_reference(tx, &url)).await.unwrap();
+        let embed = app
+            .db()
+            .write(move |tx| Embed::for_reference(tx, &url))
+            .await
+            .unwrap();
         fetch(&app.booted.app, &net, embed.id).await.unwrap();
-        let fetched = app.db().read(move |conn| Embed::find(conn, embed.id)).await.unwrap();
+        let fetched = app
+            .db()
+            .read(move |conn| Embed::find(conn, embed.id))
+            .await
+            .unwrap();
         assert_eq!(fetched.fetch_error.as_deref(), error, "{path}");
         assert_eq!(fetched.image_url.as_deref(), image, "{path}");
         let ttl = if error.is_some() { 3600 } else { 86400 };
-        assert!((fetched.expires_at.unwrap().as_second() - fetched.fetched_at.unwrap().as_second() - ttl).abs() <= 1);
+        assert!(
+            (fetched.expires_at.unwrap().as_second()
+                - fetched.fetched_at.unwrap().as_second()
+                - ttl)
+                .abs()
+                <= 1
+        );
     }
     assert!(
         dialer
@@ -81,10 +95,23 @@ async fn ws15e_link_fetch_records_positive_negative_and_guarded_image_results() 
             .all(|addr| addr.ip() == "93.184.216.34".parse::<std::net::IpAddr>().unwrap())
     );
     let received = server.received.lock().unwrap();
-    assert!(received.iter().all(|request| request.header("Cookie").is_none()));
-    assert_eq!(received.iter().filter(|request| request.target == "/redirect").count(), 4);
+    assert!(
+        received
+            .iter()
+            .all(|request| request.header("Cookie").is_none())
+    );
     assert_eq!(
-        received.iter().filter(|request| request.target == "/photo.png").count(),
+        received
+            .iter()
+            .filter(|request| request.target == "/redirect")
+            .count(),
+        4
+    );
+    assert_eq!(
+        received
+            .iter()
+            .filter(|request| request.target == "/photo.png")
+            .count(),
         2,
         "HTTP and private images were never fetched"
     );
@@ -104,7 +131,8 @@ async fn ws15e_link_durable_job_has_one_attempt_and_discards_deleted_records() {
         })
         .await
         .unwrap();
-    let config = campfire_jobs::RunnerConfig::new(vec![campfire_jobs::QueueConfig::new("default", 1)]);
+    let config =
+        campfire_jobs::RunnerConfig::new(vec![campfire_jobs::QueueConfig::new("default", 1)]);
     let mut registry = campfire_jobs::Registry::new();
     registry.register(perform);
     let queue = campfire_jobs::JobQueue::new(&registry, &config).unwrap();
@@ -112,10 +140,22 @@ async fn ws15e_link_durable_job_has_one_attempt_and_discards_deleted_records() {
     assert_eq!(jobs.len(), 2);
     assert_eq!(FetchJob::retry_policy().attempts, 1);
     assert_eq!(FetchJob::retry_policy().retry_delay(1, None, 0.0), None);
-    let runner = campfire_jobs::start(app.db().clone(), queue, registry, app.booted.app.clone(), config);
+    let runner = campfire_jobs::start(
+        app.db().clone(),
+        queue,
+        registry,
+        app.booted.app.clone(),
+        config,
+    );
     tokio::time::timeout(Duration::from_secs(5), async {
         loop {
-            if app.db().read(campfire_jobs::inspect::all).await.unwrap().is_empty() {
+            if app
+                .db()
+                .read(campfire_jobs::inspect::all)
+                .await
+                .unwrap()
+                .is_empty()
+            {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(20)).await;
@@ -124,7 +164,13 @@ async fn ws15e_link_durable_job_has_one_attempt_and_discards_deleted_records() {
     .await
     .expect("jobs performed");
     runner.shutdown(Duration::from_secs(1)).await;
-    let embed = app.db().read(move |conn| Embed::find(conn, embed.id)).await.unwrap();
+    let embed = app
+        .db()
+        .read(move |conn| Embed::find(conn, embed.id))
+        .await
+        .unwrap();
     assert_eq!(embed.fetch_error.as_deref(), Some("is not public"));
-    assert!(!embed.needs_fetch(campfire_db::Timestamp::from_jiff(app.booted.app.clock.now())));
+    assert!(!embed.needs_fetch(campfire_db::Timestamp::from_jiff(
+        app.booted.app.clock.now()
+    )));
 }

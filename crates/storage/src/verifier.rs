@@ -19,7 +19,12 @@ use crate::json::Json;
 
 pub trait Verifier: Send + Sync {
     /// `verifier.generate(data, purpose:, expires_at:)`, with `data_json` the encoded data.
-    fn generate(&self, data_json: &str, purpose: &str, expires_at: Option<jiff::Timestamp>) -> String;
+    fn generate(
+        &self,
+        data_json: &str,
+        purpose: &str,
+        expires_at: Option<jiff::Timestamp>,
+    ) -> String;
 
     /// `verifier.verified(message, purpose:)`: the data's JSON when valid, unexpired and on purpose.
     fn verified(&self, message: &str, purpose: &str, now: jiff::Timestamp) -> Option<String>;
@@ -40,17 +45,32 @@ impl AppMessageVerifier {
     fn digest(&self, data: &str) -> String {
         let mut mac = Hmac::<Sha1>::new_from_slice(&self.secret).expect("any key length");
         mac.update(data.as_bytes());
-        mac.finalize().into_bytes().iter().map(|b| format!("{b:02x}")).collect()
+        mac.finalize()
+            .into_bytes()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
     }
 }
 
 impl Verifier for AppMessageVerifier {
-    fn generate(&self, data_json: &str, purpose: &str, expires_at: Option<jiff::Timestamp>) -> String {
+    fn generate(
+        &self,
+        data_json: &str,
+        purpose: &str,
+        expires_at: Option<jiff::Timestamp>,
+    ) -> String {
         let mut envelope = format!("{{\"_rails\":{{\"data\":{data_json}");
         if let Some(expires_at) = expires_at {
-            envelope.push_str(&format!(",\"exp\":{}", Json::String(iso8601_ms(expires_at)).encode()));
+            envelope.push_str(&format!(
+                ",\"exp\":{}",
+                Json::String(iso8601_ms(expires_at)).encode()
+            ));
         }
-        envelope.push_str(&format!(",\"pur\":{}}}}}", Json::String(purpose.to_string()).encode()));
+        envelope.push_str(&format!(
+            ",\"pur\":{}}}}}",
+            Json::String(purpose.to_string()).encode()
+        ));
         let data = STANDARD.encode(envelope);
         let digest = self.digest(&data);
         format!("{data}--{digest}")

@@ -39,21 +39,21 @@ use crate::active_storage;
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
 pub mod activity_items;
-pub mod agents;
 pub mod agent_approvals;
+pub mod agents;
 pub mod autocompletable;
 pub mod channel_thread_messages;
 pub mod channel_threads;
 pub mod csp_reports;
 pub mod embeds;
 pub mod first_runs;
-pub mod google_sign_in;
-pub mod google_calendar;
-pub mod google_connections;
-pub mod google_drive;
 pub mod fizzy_connections;
 pub mod fizzy_message_cards;
 pub mod github;
+pub mod google_calendar;
+pub mod google_connections;
+pub mod google_drive;
+pub mod google_sign_in;
 pub mod message_embed_suppressions;
 #[cfg(test)]
 pub(crate) mod message_features;
@@ -65,9 +65,9 @@ pub mod presenters {
     pub(crate) use campfire_runtime::presenters::*;
 
     #[cfg(test)]
-    pub mod test_support;
-    #[cfg(test)]
     pub(crate) mod sql_probe;
+    #[cfg(test)]
+    pub mod test_support;
     #[cfg(test)]
     pub(crate) mod accounts {
         pub(crate) use campfire_runtime::presenters::accounts::*;
@@ -76,23 +76,23 @@ pub mod presenters {
     #[cfg(test)]
     pub(crate) mod agent_payload {
         pub(crate) use campfire_runtime::presenters::agent_payload::*;
-        mod tests;
         mod callback_tests;
         mod finalization_tests;
-        mod reference_callback_tests;
         mod live_tests;
+        mod reference_callback_tests;
+        mod tests;
     }
     #[cfg(test)]
     pub(crate) mod attachments {
         pub(crate) use campfire_runtime::presenters::attachments::*;
-        mod tests;
         mod avatar_logo_tests;
+        mod tests;
     }
     #[cfg(test)]
     pub(crate) mod link_embeds {
         pub(crate) use campfire_runtime::presenters::link_embeds::*;
-        mod tests;
         mod linkedin_tests;
+        mod tests;
     }
     #[cfg(test)]
     pub(crate) mod message_payload {
@@ -109,8 +109,13 @@ pub mod presenters {
 mod activity_domain_tests;
 #[cfg(test)]
 mod human_work_tests;
-pub mod public_pages;
+pub mod internal_huddle;
+#[cfg(test)]
+mod internal_huddle_declaration_tests;
+#[cfg(test)]
+mod internal_huddle_tests;
 pub mod navigation;
+pub mod public_pages;
 pub mod pwa;
 pub mod qr_code;
 pub mod room_categories;
@@ -126,28 +131,23 @@ pub mod switchers;
 pub mod two_factor;
 pub mod unfurl_links;
 pub mod users;
-pub mod internal_huddle;
-#[cfg(test)]
-mod internal_huddle_tests;
-#[cfg(test)]
-mod internal_huddle_declaration_tests;
-pub mod workspace_icons;
 pub mod work_threads;
+pub mod workspace_icons;
 
 #[cfg(test)]
-mod agent_http_tests;
-#[cfg(test)]
 mod agent_event_stream_tests;
+#[cfg(test)]
+mod agent_http_tests;
 #[cfg(test)]
 mod agent_mcp_tests;
 #[cfg(test)]
 mod oauth_data_tests;
 #[cfg(test)]
-mod personal_agent_tests;
+mod personal_agent_grant_admin_tests;
 #[cfg(test)]
 mod personal_agent_owner_ceiling_tests;
 #[cfg(test)]
-mod personal_agent_grant_admin_tests;
+mod personal_agent_tests;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -289,11 +289,21 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         | "welcome#show"
         | "work_threads#new_handoff" => arc(navigation::page),
         "agents/approvals#for_agent" | "agents/events#ledger" => arc(navigation::agent_history),
-        "github/pull_request_write_actions#show" | "rooms/message_links#show" | "rooms/github/pull_request_cards#show" | "rooms/fizzy/cards#show" => arc(navigation::record),
-        "rooms/opens#show" | "rooms/closeds#show" | "rooms/directs#show" | "rooms/boards#show" | "rooms/voices#show" | "rooms/stages#show" => arc(navigation::typed_room),
+        "github/pull_request_write_actions#show"
+        | "rooms/message_links#show"
+        | "rooms/github/pull_request_cards#show"
+        | "rooms/fizzy/cards#show" => arc(navigation::record),
+        "rooms/opens#show" | "rooms/closeds#show" | "rooms/directs#show" | "rooms/boards#show"
+        | "rooms/voices#show" | "rooms/stages#show" => arc(navigation::typed_room),
         "accounts/audit_logs#show" => arc(accounts::audit_logs::show),
         "rooms/refreshes#show" => arc(navigation::refresh),
-        "rooms#index" | "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index" | "rooms/boards#index" | "rooms/voices#index" | "rooms/stages#index" => arc(navigation::room_index),
+        "rooms#index"
+        | "rooms/opens#index"
+        | "rooms/closeds#index"
+        | "rooms/directs#index"
+        | "rooms/boards#index"
+        | "rooms/voices#index"
+        | "rooms/stages#index" => arc(navigation::room_index),
         "rooms/voices#create" => arc(rooms::call_channels::create),
         "rooms/voices#update" => arc(rooms::call_channels::update),
         "rooms/voices#destroy" => arc(rooms::destroy_without_room),
@@ -397,8 +407,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "agent_approvals#update" => arc(agent_approvals::update),
         "accounts/bots/credentials#create" => arc(accounts::bots::credentials::create),
         "accounts/bots/credentials#destroy" => arc(accounts::bots::credentials::destroy),
-        "accounts/bots/github_connections#create" => arc(accounts::bots::github_connections::create),
-        "accounts/bots/github_connections#destroy" => arc(accounts::bots::github_connections::destroy),
+        "accounts/bots/github_connections#create" => {
+            arc(accounts::bots::github_connections::create)
+        }
+        "accounts/bots/github_connections#destroy" => {
+            arc(accounts::bots::github_connections::destroy)
+        }
         "accounts/bots/grants#create" => arc(accounts::bots::grants::create),
         "accounts/bots/grants#destroy" => arc(accounts::bots::grants::destroy),
         "activity_items#index" => arc(activity_items::index),
@@ -576,9 +590,15 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         // The live router also binds this as an unparsed API webhook (app.rs).
         "google/calendar_notifications#create" => arc(google_calendar::notifications),
         "rooms/boards/automations#show" => arc(navigation::page),
-        "rooms/boards/automations#create_tag_assignment" => arc(rooms::board_automations::create_tag_assignment),
-        "rooms/boards/automations#destroy_tag_assignment" => arc(rooms::board_automations::destroy_tag_assignment),
-        "rooms/boards/automations#update_sla_rules" => arc(rooms::board_automations::update_sla_rules),
+        "rooms/boards/automations#create_tag_assignment" => {
+            arc(rooms::board_automations::create_tag_assignment)
+        }
+        "rooms/boards/automations#destroy_tag_assignment" => {
+            arc(rooms::board_automations::destroy_tag_assignment)
+        }
+        "rooms/boards/automations#update_sla_rules" => {
+            arc(rooms::board_automations::update_sla_rules)
+        }
         "rooms/directs#update" => arc(rooms::directs::update),
         "rooms/directs#add_members" => arc(rooms::directs::add_members),
         "rooms/directs#leave" => arc(rooms::directs::leave),
@@ -649,10 +669,17 @@ pub fn recognize(method: &Method, path: &str) -> Result<Option<(&'static Route, 
         method
     };
     // Collection bookmarks take precedence over the generic /rooms/:id path.
-    let collections = routes().iter().filter(|route| matches!(route.endpoint,
-        "rooms/opens#index" | "rooms/closeds#index" | "rooms/directs#index"
-        | "rooms/boards#index" | "rooms/voices#index" | "rooms/stages#index"
-    ));
+    let collections = routes().iter().filter(|route| {
+        matches!(
+            route.endpoint,
+            "rooms/opens#index"
+                | "rooms/closeds#index"
+                | "rooms/directs#index"
+                | "rooms/boards#index"
+                | "rooms/voices#index"
+                | "rooms/stages#index"
+        )
+    });
     for route in collections.chain(routes().iter()) {
         if route.verb != *verb {
             continue;
@@ -864,9 +891,16 @@ mod tests {
     fn recognizes_paths_like_rails() {
         for mut sample in vectors().recognitions {
             if matches!(sample.verb.as_str(), "GET" | "HEAD")
-                && let Some(kind) = sample.path.strip_prefix("/rooms/")
+                && let Some(kind) = sample
+                    .path
+                    .strip_prefix("/rooms/")
                     .map(|kind| kind.split('.').next().unwrap())
-                    .filter(|kind| matches!(*kind, "opens" | "closeds" | "directs" | "boards" | "voices" | "stages"))
+                    .filter(|kind| {
+                        matches!(
+                            *kind,
+                            "opens" | "closeds" | "directs" | "boards" | "voices" | "stages"
+                        )
+                    })
             {
                 sample.endpoint = Some(format!("rooms/{kind}#index"));
                 sample.params.remove("id");
@@ -950,10 +984,18 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
-        "rooms/boards#destroy", "google/calendar_notifications#create",
-        "agents#me", "agents#update",
-        "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
-        "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
+        "rooms/boards#destroy",
+        "google/calendar_notifications#create",
+        "agents#me",
+        "agents#update",
+        "agents/events#index",
+        "agents/events#ack",
+        "agents/steps#create",
+        "agents/steps#update",
+        "agents/slash_commands#create",
+        "agents/slash_commands#destroy",
+        "agents/mcp#create",
+        "agents/mcp#method_not_allowed",
         "rooms/voices#index",
         "rooms/voices#show",
         "rooms/voices#new",
@@ -968,7 +1010,11 @@ mod tests {
         "rooms/stages#edit",
         "rooms/stages#update",
         "rooms/stages#destroy",
-        "rooms/huddles#show", "rooms/huddles#create", "rooms/huddles#participants", "rooms/huddles#leave", "users/huddle_presence#show",
+        "rooms/huddles#show",
+        "rooms/huddles#create",
+        "rooms/huddles#participants",
+        "rooms/huddles#leave",
+        "users/huddle_presence#show",
         "accounts/slack_import_runs#index",
         "accounts/slack_import_runs#create",
         "accounts/slack_import_runs#show",
@@ -1200,16 +1246,30 @@ mod tests {
 
     #[tokio::test]
     async fn unported_actions_say_so_instead_of_404ing() {
-        let unported: Vec<_> = campfire_routes::TABLE.iter().filter(|route| {
-            route.verb == "GET" && route.action == ActionStatus::Defined
-                && ported(route.endpoint).is_none()
-        }).collect();
+        let unported: Vec<_> = campfire_routes::TABLE
+            .iter()
+            .filter(|route| {
+                route.verb == "GET"
+                    && route.action == ActionStatus::Defined
+                    && ported(route.endpoint).is_none()
+            })
+            .collect();
         // As actions are ported, the remaining real routes can all have parameters
         // (or there can be none). Keep exercising every available unported GET.
         for route in &unported {
-            let path = route.spec.trim_end_matches("(.:format)").split('/').map(|part| {
-                if part.starts_with([':', '*']) { "1" } else { part }
-            }).collect::<Vec<_>>().join("/");
+            let path = route
+                .spec
+                .trim_end_matches("(.:format)")
+                .split('/')
+                .map(|part| {
+                    if part.starts_with([':', '*']) {
+                        "1"
+                    } else {
+                        part
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("/");
             let (status, header, body) = request("GET", &path).await;
             assert_eq!(status, StatusCode::NOT_IMPLEMENTED, "{path}");
             assert_eq!(header.as_deref(), Some(route.endpoint));
@@ -1236,11 +1296,11 @@ mod tests {
 mod agent_surface_tests;
 
 #[cfg(test)]
+mod agent_legacy_bot_tests;
+#[cfg(test)]
 mod bot_http_tests;
 #[cfg(test)]
 mod sticker_bot_tests;
-#[cfg(test)]
-mod agent_legacy_bot_tests;
 
 #[cfg(test)]
 mod agent_conversation_tests;
@@ -1258,9 +1318,9 @@ mod agent_reads_tests;
 mod agent_pins_tests;
 
 #[cfg(test)]
-mod agent_polls_tests;
-#[cfg(test)]
 mod agent_permissions_tests;
+#[cfg(test)]
+mod agent_polls_tests;
 
 #[cfg(test)]
 mod agent_reactions_tests;
@@ -1269,20 +1329,20 @@ mod agent_reactions_tests;
 mod agent_polling_tests;
 
 #[cfg(test)]
-mod agent_work_validation_tests;
-#[cfg(test)]
-mod agent_work_writes_tests;
+mod agent_next6_named_tests;
 #[cfg(test)]
 mod agent_work_named_tests;
 #[cfg(test)]
-mod agent_next6_named_tests;
+mod agent_work_validation_tests;
+#[cfg(test)]
+mod agent_work_writes_tests;
 
 #[cfg(test)]
 mod agent_pr227_tests;
 #[cfg(test)]
-mod ws12_agent_work_query_tests;
-#[cfg(test)]
 mod ws12_activity_helper_named_tests;
+#[cfg(test)]
+mod ws12_agent_work_query_tests;
 #[cfg(test)]
 mod ws12_huddle_copy_tests;
 #[cfg(test)]

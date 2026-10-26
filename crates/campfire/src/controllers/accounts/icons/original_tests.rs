@@ -1,8 +1,8 @@
 //! The original named icon assertions, through the actual upload/list/delete endpoints.
-use campfire_db::models::workspace_icon::WorkspaceIcon;
 use crate::controllers::presenters::attachments;
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
+use campfire_db::models::workspace_icon::WorkspaceIcon;
 const JZ: i64 = 773523953;
 fn file(name: &str) -> Vec<u8> {
     std::fs::read(
@@ -82,7 +82,13 @@ async fn original_jz_cannot_list_create_or_remove_the_existing_icon() {
         .unwrap();
     let mut member = app.sign_in(JZ).await;
     assert_eq!(
-        member.send(Req::new(Method::GET, "/account/icons").header("x-requested-with", "XMLHttpRequest")).await.status,
+        member
+            .send(
+                Req::new(Method::GET, "/account/icons")
+                    .header("x-requested-with", "XMLHttpRequest")
+            )
+            .await
+            .status,
         StatusCode::FORBIDDEN
     );
     assert_eq!(
@@ -173,7 +179,10 @@ async fn original_password_session_enrollment_and_stale_icon_access() {
         .unwrap();
     let stale = browser.get("/icons/acme").await;
     assert_eq!(stale.status, StatusCode::FOUND);
-    assert_eq!(stale.location(), Some("http://campfire.test/app/session/new"));
+    assert_eq!(
+        stale.location(),
+        Some("http://campfire.test/app/session/new")
+    );
     assert!(
         app.db()
             .read(move |c| Session::find_by_token(c, &token))

@@ -32,7 +32,11 @@ pub struct GlobalId {
 
 impl GlobalId {
     pub fn new(model_name: &str, id: impl ToString) -> Self {
-        Self { app: APP.to_string(), model_name: model_name.to_string(), id: id.to_string() }
+        Self {
+            app: APP.to_string(),
+            model_name: model_name.to_string(),
+            id: id.to_string(),
+        }
     }
 
     /// `GlobalID.parse` for the URI form (`URI::GID`): `gid://<app>/<Model>/<id>[?params]`.
@@ -44,7 +48,11 @@ impl GlobalId {
         if app.is_empty() || model_name.is_empty() || id.is_empty() {
             return None;
         }
-        Some(GlobalId { app: app.to_string(), model_name: model_name.to_string(), id: id.to_string() })
+        Some(GlobalId {
+            app: app.to_string(),
+            model_name: model_name.to_string(),
+            id: id.to_string(),
+        })
     }
 
     /// `GlobalID#to_param`: URL-safe Base64 without padding, as used in Action Cable stream names.
@@ -67,17 +75,31 @@ impl fmt::Display for GlobalId {
 /// the leftover `expires_in: nil` option into a query param, so the signed data is
 /// `gid://campfire/User/1?expires_in`, with no expiry in the envelope.
 pub fn attachable_sgid(secrets: &Secrets, gid: &GlobalId) -> String {
-    verifier(secrets).generate(&Value::String(format!("{gid}?expires_in")), Some(ATTACHABLE_PURPOSE), None)
+    verifier(secrets).generate(
+        &Value::String(format!("{gid}?expires_in")),
+        Some(ATTACHABLE_PURPOSE),
+        None,
+    )
 }
 
 /// `SignedGlobalID.new(gid_uri, for: purpose, expires_at:)` for a bare GID URI (no params).
-pub fn sgid(secrets: &Secrets, gid: &GlobalId, purpose: &str, expires_at: Option<Timestamp>) -> String {
+pub fn sgid(
+    secrets: &Secrets,
+    gid: &GlobalId,
+    purpose: &str,
+    expires_at: Option<Timestamp>,
+) -> String {
     verifier(secrets).generate(&Value::String(gid.to_string()), Some(purpose), expires_at)
 }
 
 /// `SignedGlobalID.parse(sgid, for: purpose)`: the GID if the signature, purpose and expiry
 /// check out. Looking the record up (and `only:` restrictions) is the caller's job.
-pub fn locate_signed(secrets: &Secrets, sgid: &str, purpose: &str, now: Timestamp) -> Option<GlobalId> {
+pub fn locate_signed(
+    secrets: &Secrets,
+    sgid: &str,
+    purpose: &str,
+    now: Timestamp,
+) -> Option<GlobalId> {
     let verifier = verifier(secrets);
     let data = match verifier.verify(sgid, Some(purpose), now) {
         Ok(data) => data,
@@ -90,7 +112,12 @@ pub fn locate_signed(secrets: &Secrets, sgid: &str, purpose: &str, now: Timestam
 }
 
 /// globalid < 1.0 signed `{"gid":..,"purpose":..,"expires_at":..}` without a Rails envelope.
-fn verify_with_legacy_self_validated_metadata(verifier: &MessageVerifier, sgid: &str, purpose: &str, now: Timestamp) -> Option<Value> {
+fn verify_with_legacy_self_validated_metadata(
+    verifier: &MessageVerifier,
+    sgid: &str,
+    purpose: &str,
+    now: Timestamp,
+) -> Option<Value> {
     let metadata = verifier.verify(sgid, None, now).ok()?;
     let metadata = metadata.as_object()?;
     if let Some(expires_at) = metadata.get("expires_at").filter(|v| !v.is_null()) {
@@ -99,12 +126,20 @@ fn verify_with_legacy_self_validated_metadata(verifier: &MessageVerifier, sgid: 
             return None;
         }
     }
-    (crate::metadata::ruby_to_s(metadata.get("purpose")) == purpose).then(|| metadata.get("gid").cloned().unwrap_or(Value::Null))
+    (crate::metadata::ruby_to_s(metadata.get("purpose")) == purpose)
+        .then(|| metadata.get("gid").cloned().unwrap_or(Value::Null))
 }
 
 pub fn verifier(secrets: &Secrets) -> MessageVerifier {
     let secret = secrets.key_generator.generate_key(SALT, 64);
-    MessageVerifier::new(secret, Digest::Sha1, Encoding::UrlSafePadded, Serializer::JsonWithFallback { allow_marshal: true })
+    MessageVerifier::new(
+        secret,
+        Digest::Sha1,
+        Encoding::UrlSafePadded,
+        Serializer::JsonWithFallback {
+            allow_marshal: true,
+        },
+    )
 }
 
 /// Why `attachable_from_possibly_expired_sgid` would raise in Rails (it only rescues
@@ -128,9 +163,16 @@ pub enum UnverifiedSgidError {
 /// `Ok(Some(gid))` means Rails would use the User with `gid.id` *if it exists* (the caller
 /// looks it up; a missing user is `nil`). Like `GlobalID.find`, the GID's app isn't checked in
 /// the JSON form. `Err` is where Rails raises instead of returning nil.
-pub fn unverified_attachable_user(sgid: Option<&str>) -> Result<Option<GlobalId>, UnverifiedSgidError> {
+pub fn unverified_attachable_user(
+    sgid: Option<&str>,
+) -> Result<Option<GlobalId>, UnverifiedSgidError> {
     // `sgid&.split("--")&.first`: nil for nil or "", but "" (then a JSON error) for "--x".
-    let Some(message) = sgid.filter(|s| !s.is_empty()).and_then(|s| s.split("--").next()) else { return Ok(None) };
+    let Some(message) = sgid
+        .filter(|s| !s.is_empty())
+        .and_then(|s| s.split("--").next())
+    else {
+        return Ok(None);
+    };
     let decoded = decode_base64(message)?;
     let parsed = json::parse(&decoded).ok_or(UnverifiedSgidError::InvalidJson)?;
 
@@ -140,17 +182,25 @@ pub fn unverified_attachable_user(sgid: Option<&str>) -> Result<Option<GlobalId>
             _ => None,
         },
         Some(rails) if truthy(rails.get("message")) => {
-            let data = rails.get("message").and_then(Value::as_str).ok_or(UnverifiedSgidError::UnexpectedStructure)?;
+            let data = rails
+                .get("message")
+                .and_then(Value::as_str)
+                .ok_or(UnverifiedSgidError::UnexpectedStructure)?;
             find_marshaled_gid(&decode_base64(data)?)
         }
         _ => None,
     };
 
-    Ok(decoded_gid.as_deref().and_then(GlobalId::parse).filter(|gid| gid.model_name == "User"))
+    Ok(decoded_gid
+        .as_deref()
+        .and_then(GlobalId::parse)
+        .filter(|gid| gid.model_name == "User"))
 }
 
 /// `encoded_message.dig("_rails", ...)`: `Hash#dig` raises on anything that isn't a Hash or nil.
-fn dig_rails(parsed: &Value) -> Result<Option<&serde_json::Map<String, Value>>, UnverifiedSgidError> {
+fn dig_rails(
+    parsed: &Value,
+) -> Result<Option<&serde_json::Map<String, Value>>, UnverifiedSgidError> {
     match parsed {
         Value::Object(hash) => match hash.get("_rails") {
             None | Some(Value::Null) => Ok(None),
@@ -167,7 +217,9 @@ fn truthy(value: Option<&Value>) -> bool {
 
 /// `Base64.strict_decode64(message) rescue Base64.urlsafe_decode64(message)`.
 fn decode_base64(message: &str) -> Result<Vec<u8>, UnverifiedSgidError> {
-    encoding::strict_decode(message).or_else(|| encoding::urlsafe_decode(message)).ok_or(UnverifiedSgidError::InvalidBase64)
+    encoding::strict_decode(message)
+        .or_else(|| encoding::urlsafe_decode(message))
+        .ok_or(UnverifiedSgidError::InvalidBase64)
 }
 
 /// `decode_base64(data).match(%r{(gid://campfire/[^/]+/\d+)})` over the raw bytes of a Marshal
@@ -180,7 +232,10 @@ fn find_marshaled_gid(bytes: &[u8]) -> Option<String> {
         if model_length == 0 {
             return None;
         }
-        let digits = rest[model_length + 1..].iter().take_while(|b| b.is_ascii_digit()).count();
+        let digits = rest[model_length + 1..]
+            .iter()
+            .take_while(|b| b.is_ascii_digit())
+            .count();
         if digits == 0 {
             return None;
         }

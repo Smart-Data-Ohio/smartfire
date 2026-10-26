@@ -18,7 +18,8 @@ pub(crate) async fn prepare(
     kind: Kind,
     max_bytes: u64,
 ) -> Result<Prepared> {
-    let blob = attachments::resolve_signed_blob(c.app(), signed_id, None).await
+    let blob = attachments::resolve_signed_blob(c.app(), signed_id, None)
+        .await
         .map_err(|_| fail(c, validation("signedId", "isn't an uploaded file")))?;
     if !matches!(
         blob.content_type(),

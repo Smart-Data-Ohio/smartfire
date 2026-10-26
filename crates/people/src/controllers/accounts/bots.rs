@@ -45,9 +45,14 @@ pub async fn create(c: &mut Ctx) -> Result {
         Ok(bot) => {
             c.no_store();
             c.set_header("pragma", "no-cache");
-            c.json(StatusCode::CREATED, &serde_json::json!({"bot_key": bot.bot_key()}))
+            c.json(
+                StatusCode::CREATED,
+                &serde_json::json!({"bot_key": bot.bot_key()}),
+            )
         }
-        Err(campfire_db::Error::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
+        Err(campfire_db::Error::RecordInvalid(_errors)) => {
+            Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
+        }
         Err(error) => Err(Error::internal(error)),
     }
 }
@@ -177,11 +182,12 @@ pub async fn update(c: &mut Ctx) -> Result {
     let result = update_bot(c, bot.clone(), update).await?;
     match result {
         Ok(()) => redirect_to_bots(c),
-        Err(campfire_db::Error::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
+        Err(campfire_db::Error::RecordInvalid(_errors)) => {
+            Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
+        }
         Err(error) => Err(Error::internal(error)),
     }
 }
-
 
 /// What an edit gives, as `bot_params` and `agent_params` read the form: `None` where a key
 /// wasn't given.

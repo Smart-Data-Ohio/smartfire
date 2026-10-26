@@ -24,7 +24,9 @@ async fn set_poll(c: &Ctx, room_id: i64) -> Result<Poll> {
         .read(move |conn| {
             let poll = Poll::find_in_room(conn, room_id, id)?;
             let message = Message::find(conn, poll.message_id)?;
-            if !campfire_db::message_quote::visible(conn, &message, viewer)? { return Err(campfire_db::Error::RecordNotFound("Poll")); }
+            if !campfire_db::message_quote::visible(conn, &message, viewer)? {
+                return Err(campfire_db::Error::RecordNotFound("Poll"));
+            }
             Ok(poll)
         })
         .await
@@ -44,13 +46,9 @@ pub async fn create(c: &mut Ctx) -> Result {
                     StatusCode::UNPROCESSABLE_ENTITY,
                     &serde_json::json!({"error": error}),
                 ),
-                _ => features::redirect(
-                    c,
-                    &campfire_routes::room(room.id),
-                    None,
-                    Some(error),
-                    false,
-                ),
+                _ => {
+                    features::redirect(c, &campfire_routes::room(room.id), None, Some(error), false)
+                }
             };
         }
         Err(error) => return invalid(c, room.id, error, None).await,
@@ -153,9 +151,7 @@ pub async fn vote(c: &mut Ctx) -> Result {
     if let Err(error) = c
         .app()
         .db
-        .write(
-            move |tx| voted.clone().cast_vote(tx, user_id, &ids),
-        )
+        .write(move |tx| voted.clone().cast_vote(tx, user_id, &ids))
         .await
         .map_err(db_error)
     {

@@ -158,12 +158,20 @@ impl AgentEvent {
         Self::create_record(tx, a, true)
     }
     fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
-        let thread_id = a.metadata.get("thread_id").and_then(Value::as_i64).or(
-            a.message_id.map(|id| crate::Message::find_by_id(tx.conn(), id)).transpose()?.flatten().and_then(|message| message.thread_id)
-        );
+        let thread_id = a.metadata.get("thread_id").and_then(Value::as_i64).or(a
+            .message_id
+            .map(|id| crate::Message::find_by_id(tx.conn(), id))
+            .transpose()?
+            .flatten()
+            .and_then(|message| message.thread_id));
         if let Some(thread_id) = thread_id
-            && crate::ChannelThread::find_by_id(tx.conn(), thread_id)?.is_some_and(|thread| thread.visibility == super::channel_thread::ThreadVisibility::Private) {
-            if !a.metadata.is_object() { a.metadata = serde_json::json!({}); }
+            && crate::ChannelThread::find_by_id(tx.conn(), thread_id)?.is_some_and(|thread| {
+                thread.visibility == super::channel_thread::ThreadVisibility::Private
+            })
+        {
+            if !a.metadata.is_object() {
+                a.metadata = serde_json::json!({});
+            }
             a.metadata["thread_id"] = serde_json::json!(thread_id);
             a.metadata["thread_visibility"] = serde_json::json!("private");
         }
@@ -361,7 +369,8 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     let mut metadata = json!({"hop":hop,"thread_id":message.thread_id});
     if let Some(thread_id) = message.thread_id
         && crate::ChannelThread::find(tx.conn(), thread_id)?.visibility
-            == crate::channel_thread::ThreadVisibility::Private {
+            == crate::channel_thread::ThreadVisibility::Private
+    {
         metadata["thread_visibility"] = json!("private");
     }
     if let Some(agent_id) = sender {
@@ -425,8 +434,14 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     }
     for (agent_id, kind) in recipients {
         if let Some(thread_id) = message.thread_id {
-            let user_id: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
-            if !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), user_id)? { continue; }
+            let user_id: i64 = tx.conn().query_row(
+                "SELECT user_id FROM agents WHERE id=?",
+                [agent_id],
+                |row| row.get(0),
+            )?;
+            if !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), user_id)? {
+                continue;
+            }
         }
         let (kind, outcome, detail) = if hop >= 3 {
             (

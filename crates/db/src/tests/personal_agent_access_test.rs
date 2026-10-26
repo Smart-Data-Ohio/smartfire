@@ -446,9 +446,10 @@ fn personal_agent_owner_deactivation_disables_auth_and_legacy_bot_key() {
         tx.conn()
             .execute("UPDATE users SET status=1 WHERE id=?", [id("david")])?;
         assert!(access::authenticate_identity(tx, &secret, "127.0.0.1")?.is_none());
-        assert!(access::verify_identity(
-            tx.conn(), &secret, tx.now(), &tx.env().default_url_origin,
-        )?.is_none());
+        assert!(
+            access::verify_identity(tx.conn(), &secret, tx.now(), &tx.env().default_url_origin,)?
+                .is_none()
+        );
         assert!(
             !crate::Agent::find(tx.conn(), id("bender_agent"))?
                 .unwrap()

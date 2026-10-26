@@ -93,7 +93,10 @@ impl JobKind for PurgeJob {
     /// `ActiveStorage::BaseJob` isn't an `ApplicationJob`: `retry_on ActiveRecord::Deadlocked,
     /// attempts: 10, wait: :polynomially_longer`, which SQLite never raises, so it doesn't retry.
     fn retry_policy() -> RetryPolicy {
-        RetryPolicy::application_job().attempts(10).wait(Wait::PolynomiallyLonger { jitter: 0.15 }).retry_on(|_| false)
+        RetryPolicy::application_job()
+            .attempts(10)
+            .wait(Wait::PolynomiallyLonger { jitter: 0.15 })
+            .retry_on(|_| false)
     }
 }
 
@@ -126,9 +129,20 @@ impl JobKind for AnalyzeJob {
 /// isn't a job.
 pub fn request_for(event: &Event) -> Option<JobRequest> {
     Some(match event {
-        Event::PushMessage { room_id, message_id } => JobRequest::new(&PushMessageJob { room_id: *room_id, message_id: *message_id }),
-        Event::DeliverWebhook { bot_id, message_id } => JobRequest::new(&WebhookJob { bot_id: *bot_id, message_id: *message_id }),
-        Event::RemoveBannedContent { user_id } => JobRequest::new(&RemoveBannedContentJob { user_id: *user_id }),
+        Event::PushMessage {
+            room_id,
+            message_id,
+        } => JobRequest::new(&PushMessageJob {
+            room_id: *room_id,
+            message_id: *message_id,
+        }),
+        Event::DeliverWebhook { bot_id, message_id } => JobRequest::new(&WebhookJob {
+            bot_id: *bot_id,
+            message_id: *message_id,
+        }),
+        Event::RemoveBannedContent { user_id } => {
+            JobRequest::new(&RemoveBannedContentJob { user_id: *user_id })
+        }
         Event::PurgeBlob { blob_id } => JobRequest::new(&PurgeJob { blob_id: *blob_id }),
         Event::Job(request) => request.clone(),
         Event::DisconnectUser { .. } | Event::Broadcast(_) => return None,
@@ -143,7 +157,6 @@ pub fn discard_missing(error: campfire_db::Error) -> JobError {
         error => JobError::from(error),
     }
 }
-
 
 /// The queues and their workers.
 pub fn runner_config(config: &Config) -> RunnerConfig {
@@ -176,7 +189,6 @@ pub struct Jobs {
     pub queue: JobQueue,
     pub model_callbacks: Arc<campfire_db::callbacks::Registry>,
     #[cfg(any(test, feature = "test-support"))]
-
     ad_hoc: mpsc::Sender<AdHocWork>,
     // The server's authenticator owns the database, whose Env owns this sink.
     // Holding Cable strongly here would retain every database after shutdown.
@@ -203,28 +215,38 @@ impl Jobs {
         peer_callbacks::install(&model_callbacks);
         #[cfg(not(any(test, feature = "test-support")))]
         drop(ad_hoc);
-        Ok((Self {
-            queue,
-            model_callbacks,
-            #[cfg(any(test, feature = "test-support"))]
-            ad_hoc,
-            cable: Arc::new(OnceLock::new()),
-            app: Arc::new(OnceLock::new()),
-            #[cfg(any(test, feature = "test-support"))]
-            fixture_app: Arc::new(std::sync::RwLock::new(None)),
-            delivery: Arc::new(OnceLock::new()),
-        }, AdHocQueue(receiver)))
-
+        Ok((
+            Self {
+                queue,
+                model_callbacks,
+                #[cfg(any(test, feature = "test-support"))]
+                ad_hoc,
+                cable: Arc::new(OnceLock::new()),
+                app: Arc::new(OnceLock::new()),
+                #[cfg(any(test, feature = "test-support"))]
+                fixture_app: Arc::new(std::sync::RwLock::new(None)),
+                delivery: Arc::new(OnceLock::new()),
+            },
+            AdHocQueue(receiver),
+        ))
     }
 
     /// Runs best-effort work in memory. Dropped with an error log when the ad hoc queue is full,
     /// or lost if the process stops first.
     #[cfg(any(test, feature = "test-support"))]
-    pub fn perform_later(&self, name: &'static str, work: impl Future<Output = anyhow::Result<()>> + Send + 'static) {
+    pub fn perform_later(
+        &self,
+        name: &'static str,
+        work: impl Future<Output = anyhow::Result<()>> + Send + 'static,
+    ) {
         match self.ad_hoc.try_send((name, Box::pin(work))) {
             Ok(()) => tracing::debug!(job = name, "enqueued"),
-            Err(mpsc::error::TrySendError::Full(_)) => tracing::error!(job = name, "job queue is full, dropping job"),
-            Err(mpsc::error::TrySendError::Closed(_)) => tracing::warn!(job = name, "job runner stopped, dropping job"),
+            Err(mpsc::error::TrySendError::Full(_)) => {
+                tracing::error!(job = name, "job queue is full, dropping job")
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                tracing::warn!(job = name, "job runner stopped, dropping job")
+            }
         }
     }
 
@@ -239,7 +261,13 @@ impl Jobs {
 
     fn current_app(&self) -> Option<App> {
         #[cfg(any(test, feature = "test-support"))]
-        if let Some(app) = self.fixture_app.read().unwrap_or_else(|p| p.into_inner()).as_ref().and_then(Weak::upgrade) {
+        if let Some(app) = self
+            .fixture_app
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .as_ref()
+            .and_then(Weak::upgrade)
+        {
             return Some(app);
         }
         self.app.get().and_then(Weak::upgrade)
@@ -255,18 +283,31 @@ impl Jobs {
 }
 
 impl EventSink for Jobs {
-    fn broadcast_digest_notes(&self, notes: &campfire_db::models::board_automations::DigestNotes) -> campfire_db::Result<Vec<i64>> {
-        let cable = self.cable.get().and_then(campfire_cable::WeakServer::upgrade)
+    fn broadcast_digest_notes(
+        &self,
+        notes: &campfire_db::models::board_automations::DigestNotes,
+    ) -> campfire_db::Result<Vec<i64>> {
+        let cable = self
+            .cable
+            .get()
+            .and_then(campfire_cable::WeakServer::upgrade)
             .ok_or_else(|| campfire_db::Error::Other("digest cable server not booted".into()))?;
-        let app = self.current_app()
+        let app = self
+            .current_app()
             .ok_or_else(|| campfire_db::Error::Other("digest app not booted".into()))?;
         // Installed with the cable server, so it's there whenever the cable server is.
-        let delivery = self.delivery.get()
+        let delivery = self
+            .delivery
+            .get()
             .ok_or_else(|| campfire_db::Error::Other("digest cable server not booted".into()))?;
         (delivery.digest_notes)(&cable, &app, notes)
             .map_err(|error| campfire_db::Error::Other(error.to_string()))
     }
-    fn model_callback(&self, tx: &mut Tx<'_>, callback: campfire_db::callbacks::Callback) -> campfire_db::Result<()> {
+    fn model_callback(
+        &self,
+        tx: &mut Tx<'_>,
+        callback: campfire_db::callbacks::Callback,
+    ) -> campfire_db::Result<()> {
         self.model_callbacks.call(tx, callback)
     }
 
@@ -274,30 +315,46 @@ impl EventSink for Jobs {
         if let Some(app) = self.current_app() {
             campfire_db::models::google_connection::deactivate(tx, user_id, &app.secrets)?;
         }
-        if let Some(account) = crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)? {
+        if let Some(account) =
+            crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)?
+        {
             account.mark_disconnected(tx, "Account deactivated")?;
         }
         // GitHub deactivation uses the Env hook installed by WS15g at boot.
         Ok(())
     }
 
-    fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
+    fn sync_message_references(
+        &self,
+        tx: &mut Tx<'_>,
+        message: &campfire_db::Message,
+        enqueue: bool,
+    ) -> campfire_db::Result<()> {
         let app = self.current_app();
         let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
         crate::integrations::sync_message_references(tx, message, enqueue, crypto)
     }
 
-    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, phase: campfire_db::callbacks::Phase, enqueue: bool) -> campfire_db::Result<()> {
+    fn sync_message_reference_phase(
+        &self,
+        tx: &mut Tx<'_>,
+        message: &campfire_db::Message,
+        phase: campfire_db::callbacks::Phase,
+        enqueue: bool,
+    ) -> campfire_db::Result<()> {
         let app = self.current_app();
         let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
-        crate::integrations::sync_message_reference_phase(tx,message,phase,enqueue,crypto)
+        crate::integrations::sync_message_reference_phase(tx, message, phase, enqueue, crypto)
     }
 
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
         if let Some(request) = request_for(event) {
             if !tx.in_transaction() {
                 // From an after-commit hook: the row commits on its own, not with the write.
-                tracing::warn!(job = request.class, "enqueued after commit, outside its write's transaction");
+                tracing::warn!(
+                    job = request.class,
+                    "enqueued after commit, outside its write's transaction"
+                );
             }
             let id = self.queue.enqueue(tx, &request)?;
             tracing::debug!(job = request.class, id, "enqueued");
@@ -328,11 +385,15 @@ impl EventSink for Jobs {
                     Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
                 })?.collect::<Result<Vec<_>, _>>()?;
                 for (id, blob_id) in recoveries {
-                    campfire_db::models::message_attachment_processing::schedule(after, id, blob_id);
+                    campfire_db::models::message_attachment_processing::schedule(
+                        after, id, blob_id,
+                    );
                 }
                 Ok::<_, campfire_db::Error>(())
             })();
-            if let Err(error) = result { tracing::warn!(%error, "Skipping broadcast attachment recovery"); }
+            if let Err(error) = result {
+                tracing::warn!(%error, "Skipping broadcast attachment recovery");
+            }
         }
     }
 
@@ -344,7 +405,10 @@ impl EventSink for Jobs {
             // pub/sub broadcast in Rails, done right away. Before boot finishes there are no
             // connections to disconnect.
             (None, event @ (Event::DisconnectUser { .. } | Event::Broadcast(_))) => {
-                if let Some(cable) = self.cable.get().and_then(campfire_cable::WeakServer::upgrade)
+                if let Some(cable) = self
+                    .cable
+                    .get()
+                    .and_then(campfire_cable::WeakServer::upgrade)
                     && let Some(delivery) = self.delivery.get()
                 {
                     let app = self.current_app();
@@ -360,30 +424,58 @@ impl EventSink for Jobs {
 /// Component-only events (cards, reactions, thread steps/indicators, room/status/huddle
 /// controls) do not inspect the attachment.
 fn attachment_render_message_ids(event: &Event) -> Vec<i64> {
+    use crate::integrations::github::notifier::MessageCreated;
     use campfire_db::{
         Broadcast as _,
         broadcasts::Broadcast,
-        models::{agent_step::StepParentChange, board_automations::DigestNotes,
-            huddle_effects::StageEndedNote, user::lifecycle::QuietStreamFinal},
+        models::{
+            agent_step::StepParentChange, board_automations::DigestNotes,
+            huddle_effects::StageEndedNote, user::lifecycle::QuietStreamFinal,
+        },
     };
-    use crate::integrations::github::notifier::MessageCreated;
-    let Event::Broadcast(request) = event else { return Vec::new(); };
+    let Event::Broadcast(request) = event else {
+        return Vec::new();
+    };
     match request.kind {
-        Broadcast::KIND => request.decode::<Broadcast>().and_then(Result::ok)
+        Broadcast::KIND => request
+            .decode::<Broadcast>()
+            .and_then(Result::ok)
             .and_then(|broadcast| match broadcast {
-                Broadcast::MessageCreated { message_id } | Broadcast::MessageUpdated { message_id } => Some(message_id),
+                Broadcast::MessageCreated { message_id }
+                | Broadcast::MessageUpdated { message_id } => Some(message_id),
                 _ => None,
-            }).into_iter().collect(),
-        StepParentChange::KIND => request.decode::<StepParentChange>().and_then(Result::ok)
-            .and_then(|change| change.message_id).into_iter().collect(),
-        QuietStreamFinal::KIND => request.decode::<QuietStreamFinal>().and_then(Result::ok)
-            .map(|change| change.message_id).into_iter().collect(),
-        MessageCreated::KIND => request.decode::<MessageCreated>().and_then(Result::ok)
-            .map(|change| change.message_id).into_iter().collect(),
-        StageEndedNote::KIND => request.decode::<StageEndedNote>().and_then(Result::ok)
-            .map(|change| change.message_id).into_iter().collect(),
-        DigestNotes::KIND => request.decode::<DigestNotes>().and_then(Result::ok)
-            .map(|notes| notes.message_ids).unwrap_or_default(),
+            })
+            .into_iter()
+            .collect(),
+        StepParentChange::KIND => request
+            .decode::<StepParentChange>()
+            .and_then(Result::ok)
+            .and_then(|change| change.message_id)
+            .into_iter()
+            .collect(),
+        QuietStreamFinal::KIND => request
+            .decode::<QuietStreamFinal>()
+            .and_then(Result::ok)
+            .map(|change| change.message_id)
+            .into_iter()
+            .collect(),
+        MessageCreated::KIND => request
+            .decode::<MessageCreated>()
+            .and_then(Result::ok)
+            .map(|change| change.message_id)
+            .into_iter()
+            .collect(),
+        StageEndedNote::KIND => request
+            .decode::<StageEndedNote>()
+            .and_then(Result::ok)
+            .map(|change| change.message_id)
+            .into_iter()
+            .collect(),
+        DigestNotes::KIND => request
+            .decode::<DigestNotes>()
+            .and_then(Result::ok)
+            .map(|notes| notes.message_ids)
+            .unwrap_or_default(),
         _ => Vec::new(),
     }
 }

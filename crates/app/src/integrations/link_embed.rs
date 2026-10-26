@@ -27,15 +27,28 @@ pub fn reference_urls(
 ) -> Result<Vec<ReferenceUrl>, campfire_richtext::dom::ParseError> {
     let suppressed = url_classifier::suppressed_urls(&[markdown_source, forward_note]);
     let body = linkedin::non_code_text(html)?;
-    let text = [body.as_str(), forward_note].into_iter().filter(|s| !s.trim().is_empty()).collect::<Vec<_>>().join("\n");
+    let text = [body.as_str(), forward_note]
+        .into_iter()
+        .filter(|s| !s.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
     let mut selected = Vec::new();
-    let linkedin_urls = linkedin::extract(&text).into_iter().filter_map(|r| url_classifier::normalize_url(&r.url));
+    let linkedin_urls = linkedin::extract(&text)
+        .into_iter()
+        .filter_map(|r| url_classifier::normalize_url(&r.url));
     for normalized_url in linkedin_urls.chain(url_classifier::extract(&text, &suppressed)) {
-        if suppressed.contains(&normalized_url) || selected.iter().any(|r: &ReferenceUrl| r.normalized_url == normalized_url) {
+        if suppressed.contains(&normalized_url)
+            || selected
+                .iter()
+                .any(|r: &ReferenceUrl| r.normalized_url == normalized_url)
+        {
             continue;
         }
         let url = url_classifier::first_seen_url(&text, &normalized_url);
-        selected.push(ReferenceUrl { normalized_url, url });
+        selected.push(ReferenceUrl {
+            normalized_url,
+            url,
+        });
     }
     Ok(selected)
 }
@@ -45,11 +58,20 @@ mod tests {
     use super::*;
     #[test]
     fn ws15e_reference_selection_keeps_raw_urls_per_message() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws15e_urls.json")).unwrap();
+        let vectors: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../vectors/ws15e_urls.json")).unwrap();
         for case in vectors["references"].as_array().unwrap() {
-            let selected =
-                reference_urls(case["html"].as_str().unwrap(), case["source"].as_str().unwrap(), case["note"].as_str().unwrap()).unwrap();
-            assert_eq!(serde_json::to_value(selected).unwrap(), case["selected"], "{case}");
+            let selected = reference_urls(
+                case["html"].as_str().unwrap(),
+                case["source"].as_str().unwrap(),
+                case["note"].as_str().unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                serde_json::to_value(selected).unwrap(),
+                case["selected"],
+                "{case}"
+            );
         }
     }
 

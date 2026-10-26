@@ -59,8 +59,14 @@ fn load(conn: &Connection, viewer: i64, id: Option<i64>, now: Timestamp) -> Resu
                         id,
                         owner_id: row.get("agent_owner_id")?,
                         owner_name: if row.get::<_, Option<i64>>("owner_id")?.is_some() {
-                            Some(User::from_prefixed_row(row, "owner_")?.display_name().to_owned())
-                        } else { None },
+                            Some(
+                                User::from_prefixed_row(row, "owner_")?
+                                    .display_name()
+                                    .to_owned(),
+                            )
+                        } else {
+                            None
+                        },
                     })
                 })
                 .transpose()?;

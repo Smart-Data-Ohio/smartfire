@@ -47,7 +47,8 @@ async fn oauth_return_path(c: &Ctx, user: &User, path: &str) -> campfire_kit::Re
         Ok(match path.as_str() {
             "/account/slack_import" => "/app/admin/slack",
             _ => "/app/settings/slack",
-        }.into())
+        }
+        .into())
     } else {
         Ok(path)
     }
@@ -92,10 +93,7 @@ pub async fn start(c: &mut Ctx) -> Result {
     let bytes = crate::test_support::oauth_entropy()
         .map(|entropy| entropy[..16].try_into().unwrap())
         .unwrap_or(bytes);
-    let raw = bytes
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>();
+    let raw = bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
     let path = return_path(&user, &param(c, "return_to"));
     c.session()
         .insert("slack_oauth_state", json!({"state":raw,"user_id":user.id}));
@@ -120,9 +118,11 @@ pub async fn callback(c: &mut Ctx) -> Result {
     let stored = c.session().remove("slack_oauth_state");
     let return_to = c.session().remove("slack_oauth_return_to");
     let path = oauth_return_path(
-        c, &user,
+        c,
+        &user,
         &return_to.as_ref().map(oauth::string).unwrap_or_default(),
-    ).await?;
+    )
+    .await?;
     if !oauth::valid_state(
         &c.app().secrets,
         &param(c, "state"),

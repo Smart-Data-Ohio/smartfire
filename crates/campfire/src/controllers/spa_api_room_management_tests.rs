@@ -91,13 +91,7 @@ async fn spa_api_room_management_voice_user_limit_validation_is_atomic() {
         let path = format!("/api/v1/rooms/{}", created.room.id);
         super::admin_tests::settle(&capture).await;
         let before = dump(&a).await;
-        for limit in [
-            json!(-1),
-            json!(0),
-            json!(100),
-            json!("5"),
-            json!(1.5),
-        ] {
+        for limit in [json!(-1), json!(0), json!(100), json!("5"), json!(1.5)] {
             let mut body = json!({"type":kind,"name":"Must not persist","voiceUserLimit":limit});
             if kind != "open" {
                 body["userIds"] = json!([KEVIN]);
@@ -121,8 +115,6 @@ async fn spa_api_room_management_voice_user_limit_validation_is_atomic() {
         }
     }
 }
-
-
 
 #[tokio::test]
 async fn spa_api_room_management_voice_bitrate_reads_updates_and_reuses_settings_permissions() {
@@ -233,7 +225,6 @@ async fn spa_api_room_management_voice_bitrate_validation_is_atomic() {
         }
     }
 }
-
 
 #[tokio::test]
 async fn spa_api_rooms_creation_replays_without_any_side_effects() {
@@ -1327,13 +1318,26 @@ async fn spa_api_rooms_management_changes_publish_refreshes_to_the_real_sync_soc
             unreachable!()
         };
         assert_eq!(row.refresh_room, Some(true));
-        assert_eq!(serde_json::to_value(&row.room).unwrap()["topic"], json!("Live topic"));
+        assert_eq!(
+            serde_json::to_value(&row.room).unwrap()["topic"],
+            json!("Live topic")
+        );
         let mut body = json!({"type":name,"topic":"Topic only"});
-        if name != "open" { body["userIds"] = json!([DAVID,JASON]); }
-        let reply = write(&mut david, Method::PATCH, &format!("/api/v1/rooms/{id}"), body).await;
+        if name != "open" {
+            body["userIds"] = json!([DAVID, JASON]);
+        }
+        let reply = write(
+            &mut david,
+            Method::PATCH,
+            &format!("/api/v1/rooms/{id}"),
+            body,
+        )
+        .await;
         assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
         let event=sync.until(|event| matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == id && row.room.topic.as_deref() == Some("Topic only")), |_| false).await;
-        let api::SyncPayload::SidebarRowUpserted(row) = event.payload else { unreachable!() };
+        let api::SyncPayload::SidebarRowUpserted(row) = event.payload else {
+            unreachable!()
+        };
         assert_eq!(row.refresh_room, Some(true));
         assert_eq!(row.room.name.as_deref(), Some("Live edit"));
 

@@ -1,7 +1,8 @@
 use super::*;
 
 #[tokio::test]
-async fn google_link_and_reauthentication_return_to_the_spa_with_the_same_flash_whatever_was_chosen() {
+async fn google_link_and_reauthentication_return_to_the_spa_with_the_same_flash_whatever_was_chosen()
+ {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     for preference in [UiPreference::Classic, UiPreference::Next] {
         let (a, r) = app_with_env(&[("SPA_ENABLED", "1")]).await;

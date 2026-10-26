@@ -117,7 +117,12 @@ async fn channel_webhook_author_cannot_be_unbanned_or_managed_after_deletion() {
             ))
             .await;
         // An unavailable direct-message target gets the same refusal as a missing one.
-        assert_eq!(response.status, StatusCode::NOT_FOUND, "{}", response.text());
+        assert_eq!(
+            response.status,
+            StatusCode::NOT_FOUND,
+            "{}",
+            response.text()
+        );
         assert!(
             a.db()
                 .read(move |conn| Ok(campfire_db::Membership::for_user(conn, author)?.is_empty()))

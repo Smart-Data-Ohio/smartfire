@@ -44,7 +44,12 @@ impl State {
     #[cfg(any(test, feature = "test-support"))]
     pub fn fixture_snapshot(&self) -> Self {
         Self {
-            reader: RwLock::new(self.reader.read().unwrap_or_else(|p| p.into_inner()).clone()),
+            reader: RwLock::new(
+                self.reader
+                    .read()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone(),
+            ),
         }
     }
 

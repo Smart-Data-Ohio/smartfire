@@ -1,28 +1,51 @@
 use super::*;
+use axum::{
+    body::Body,
+    http::{Request, header},
+};
 use campfire_db::Message;
 use campfire_db::Room;
 use campfire_db::User;
 use campfire_kit::StatusCode;
 use campfire_mail::inbound;
 use campfire_mail::jobs::MessageCreated;
-use axum::{
-    body::Body,
-    http::{Request, header},
-};
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn attachment_processing_imported_mail_recovers_after_inline_failure() {
-    let (app, _, id, _) = crate::controllers::messages::attachment_processing_tests::setup(true).await;
-    let now = app.db().read(move |c| Ok(Message::find(c, id)?.created_at)).await.unwrap();
-    message_created(app.booted.app.clone(), MessageCreated { message_id: id }, campfire_jobs::Execution {
-        id: 0, executions: 1, enqueued_at: now, scheduled_at: now,
-    }).await.unwrap();
-    let count = app.db().read(|c| Ok(c.query_row(
+    let (app, _, id, _) =
+        crate::controllers::messages::attachment_processing_tests::setup(true).await;
+    let now = app
+        .db()
+        .read(move |c| Ok(Message::find(c, id)?.created_at))
+        .await
+        .unwrap();
+    message_created(
+        app.booted.app.clone(),
+        MessageCreated { message_id: id },
+        campfire_jobs::Execution {
+            id: 0,
+            executions: 1,
+            enqueued_at: now,
+            scheduled_at: now,
+        },
+    )
+    .await
+    .unwrap();
+    let count = app
+        .db()
+        .read(|c| {
+            Ok(c.query_row(
         "SELECT count(*) FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob'",
         [], |r| r.get::<_,i64>(0),
-    )?)).await.unwrap();
-    assert_eq!(count, 1, "imported mail must keep the detached presenter's recovery request");
+    )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        count, 1,
+        "imported mail must keep the detached presenter's recovery request"
+    );
 }
 const PATH: &str = "/rails/action_mailbox/relay/inbound_emails";
 const RAW: &str = "Message-ID: <ws10-http@example.com>\r\nFrom: person@example.com\r\nTo: room-token@mail.test\r\n\r\nHello";
@@ -60,14 +83,39 @@ async fn send(
 #[tokio::test]
 async fn ws8_mail_runtime_posts_with_shared_markdown_and_queue() {
     let (b, _dir) = boot(true, true).await;
-    b.app.db.write(|tx| {
-        campfire_db::fixtures::load(tx.conn(), &campfire_db::fixtures::reference_dir(), &campfire_db::fixtures::Options { now: tx.now(), bcrypt_cost: 4 })
-    }).await.unwrap();
+    b.app
+        .db
+        .write(|tx| {
+            campfire_db::fixtures::load(
+                tx.conn(),
+                &campfire_db::fixtures::reference_dir(),
+                &campfire_db::fixtures::Options {
+                    now: tx.now(),
+                    bcrypt_cost: 4,
+                },
+            )
+        })
+        .await
+        .unwrap();
     let room_id = campfire_db::fixtures::identify("designers");
-    let token = b.app.db.write(move |tx| Room::find(tx.conn(), room_id)?.regenerate_inbound_email_token(tx)).await.unwrap();
-    let g: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws8_mail_merge_vectors.json")).unwrap();
-    let raw = g["mail"]["raw"].as_str().unwrap().replace("ws8-mail-merge-token", &token);
-    let id = inbound::accept(&b.app.db, b.app.storage.clone(), raw.into_bytes()).await.unwrap().unwrap();
+    let token = b
+        .app
+        .db
+        .write(move |tx| Room::find(tx.conn(), room_id)?.regenerate_inbound_email_token(tx))
+        .await
+        .unwrap();
+    let g: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../db/src/tests/ws8_mail_merge_vectors.json"
+    ))
+    .unwrap();
+    let raw = g["mail"]["raw"]
+        .as_str()
+        .unwrap()
+        .replace("ws8-mail-merge-token", &token);
+    let id = inbound::accept(&b.app.db, b.app.storage.clone(), raw.into_bytes())
+        .await
+        .unwrap()
+        .unwrap();
     let message = tokio::time::timeout(crate::test_support::WAIT, async {
         loop {
             let posted = b.app.db.read(move |conn| {
@@ -82,13 +130,22 @@ async fn ws8_mail_runtime_posts_with_shared_markdown_and_queue() {
         }
     }).await.expect("durable RoutingJob must post with the boot-installed renderer");
     let rich_text = b.app.db.env().rich_text.clone();
-    let saved = b.app.db.read(move |conn| Ok(serde_json::json!({
-        "source": message.markdown_source,
-        "body": message.body_html(conn)?,
-        "plain": message.plain_text_body(conn, &*rich_text)?,
-        "creator_name": User::find(conn, message.creator_id)?.name,
-    }))).await.unwrap();
-    for key in ["source", "body", "plain", "creator_name"] { assert_eq!(saved[key], g["mail"][key], "{key}"); }
+    let saved = b
+        .app
+        .db
+        .read(move |conn| {
+            Ok(serde_json::json!({
+                "source": message.markdown_source,
+                "body": message.body_html(conn)?,
+                "plain": message.plain_text_body(conn, &*rich_text)?,
+                "creator_name": User::find(conn, message.creator_id)?.name,
+            }))
+        })
+        .await
+        .unwrap();
+    for key in ["source", "body", "plain", "creator_name"] {
+        assert_eq!(saved[key], g["mail"][key], "{key}");
+    }
     b.jobs.shutdown(crate::test_support::WAIT).await;
 }
 

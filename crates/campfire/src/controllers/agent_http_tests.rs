@@ -653,45 +653,103 @@ async fn slash_schema_composer_listing_validation_visibility_and_delivery() {
 #[tokio::test]
 async fn step_endpoints_recheck_removed_private_agent_parents() {
     let app = setup().await;
-    let (user, thread_id, message_id) = app.db().write(|tx| {
-        let user = campfire_db::Agent::find(tx.conn(), AGENT)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?.user_id;
-        let room = super::presenters::test_support::ALL_TALK;
-        if campfire_db::Membership::find_by_room_and_user(tx.conn(), room, user)?.is_none() {
-            campfire_db::Membership::create_default(tx, room, user)?;
-        }
-        for capability in ["post_messages", "manage_threads"] {
-            campfire_db::AgentGrant::create(tx, campfire_db::NewGrant { agent_id: AGENT, capability: capability.into(), granted_by_id: 127326141, ..Default::default() })?;
-        }
-        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: room, creator_id: user,
-            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
-            work_status: Some("in_progress".into()), work_owner_id: Some(user),
-            ..Default::default()
-        })?;
-        let message = thread.post_message(tx, user, campfire_db::NewMessage { markdown_source: Some("Secret parent".into()), ..Default::default() })?;
-        Ok((user, thread.id, message.id))
-    }).await.unwrap();
-    let bodies = [json!({"message_id":message_id,"name":"Inspect","output_summary":"Secret output"}), json!({"thread_id":thread_id,"name":"Inspect","output_summary":"Secret output"})];
+    let (user, thread_id, message_id) = app
+        .db()
+        .write(|tx| {
+            let user = campfire_db::Agent::find(tx.conn(), AGENT)?
+                .ok_or(campfire_db::Error::RecordNotFound("Agent"))?
+                .user_id;
+            let room = super::presenters::test_support::ALL_TALK;
+            if campfire_db::Membership::find_by_room_and_user(tx.conn(), room, user)?.is_none() {
+                campfire_db::Membership::create_default(tx, room, user)?;
+            }
+            for capability in ["post_messages", "manage_threads"] {
+                campfire_db::AgentGrant::create(
+                    tx,
+                    campfire_db::NewGrant {
+                        agent_id: AGENT,
+                        capability: capability.into(),
+                        granted_by_id: 127326141,
+                        ..Default::default()
+                    },
+                )?;
+            }
+            let mut thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: room,
+                    creator_id: user,
+                    visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+                    work_status: Some("in_progress".into()),
+                    work_owner_id: Some(user),
+                    ..Default::default()
+                },
+            )?;
+            let message = thread.post_message(
+                tx,
+                user,
+                campfire_db::NewMessage {
+                    markdown_source: Some("Secret parent".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((user, thread.id, message.id))
+        })
+        .await
+        .unwrap();
+    let bodies = [
+        json!({"message_id":message_id,"name":"Inspect","output_summary":"Secret output"}),
+        json!({"thread_id":thread_id,"name":"Inspect","output_summary":"Secret output"}),
+    ];
     let mut ids = Vec::new();
     for body in &bodies {
-        let reply = app.anonymous().send(Req::new(Method::POST, "/agents/steps")
-            .header("authorization", &["Bearer", SECRET].join(" "))
-            .header("content-type", "application/json").body(body.to_string())).await;
+        let reply = app
+            .anonymous()
+            .send(
+                Req::new(Method::POST, "/agents/steps")
+                    .header("authorization", &["Bearer", SECRET].join(" "))
+                    .header("content-type", "application/json")
+                    .body(body.to_string()),
+            )
+            .await;
         assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
         ids.push(reply.json()["id"].as_i64().unwrap());
     }
-    app.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, user, user)).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                .remove_access_member(tx, user, user)
+        })
+        .await
+        .unwrap();
     for (body, id) in bodies.into_iter().zip(ids) {
-        let reply = app.anonymous().send(Req::new(Method::POST, "/agents/steps")
-            .header("authorization", &["Bearer", SECRET].join(" "))
-            .header("content-type", "application/json").body(body.to_string())).await;
+        let reply = app
+            .anonymous()
+            .send(
+                Req::new(Method::POST, "/agents/steps")
+                    .header("authorization", &["Bearer", SECRET].join(" "))
+                    .header("content-type", "application/json")
+                    .body(body.to_string()),
+            )
+            .await;
         assert_eq!(reply.status.as_u16(), 404, "{}", reply.text());
-        let reply = app.anonymous().send(Req::new(Method::PATCH, &format!("/agents/steps/{id}"))
-            .header("authorization", &["Bearer", SECRET].join(" "))
-            .header("content-type", "application/json").body(json!({"status":"done"}).to_string())).await;
+        let reply = app
+            .anonymous()
+            .send(
+                Req::new(Method::PATCH, &format!("/agents/steps/{id}"))
+                    .header("authorization", &["Bearer", SECRET].join(" "))
+                    .header("content-type", "application/json")
+                    .body(json!({"status":"done"}).to_string()),
+            )
+            .await;
         assert_eq!(reply.status.as_u16(), 403, "{}", reply.text());
         assert!(!reply.text().contains("Secret output"));
-        let step = app.db().read(move |conn| campfire_db::AgentStep::find(conn, id)).await.unwrap().unwrap();
+        let step = app
+            .db()
+            .read(move |conn| campfire_db::AgentStep::find(conn, id))
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(step.status, "running");
         assert_eq!(step.output_summary.as_deref(), Some("Secret output"));
     }

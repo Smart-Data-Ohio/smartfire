@@ -65,9 +65,9 @@ async fn switcher_scopes_private_hidden_deleted_rooms_and_threads() {
     let value = response.json();
     let rooms = value["rooms"].as_array().unwrap();
     assert!(
-        rooms.iter().all(|r| r["id"] != hidden
-            && r["id"] != ALL_TALK
-            && r["id"] != DIRECT_KEVIN_BENDER)
+        rooms
+            .iter()
+            .all(|r| r["id"] != hidden && r["id"] != ALL_TALK && r["id"] != DIRECT_KEVIN_BENDER)
     );
     assert!(
         value["threads"]
@@ -137,9 +137,7 @@ async fn switcher_preserves_group_names_room_kinds_flags_and_thread_limit() {
                         room_id: ALL_TALK,
                         creator_id: DAVID,
                         name: Some(format!("Thread {i}")),
-                        last_activity_at: Some(
-                            tx.now().since(jiff::SignedDuration::from_secs(i)),
-                        ),
+                        last_activity_at: Some(tx.now().since(jiff::SignedDuration::from_secs(i))),
                         ..Default::default()
                     },
                 )?;

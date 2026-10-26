@@ -89,11 +89,20 @@ pub struct PollOption {
 
 /// One uploaded image or emoji on an option, never a remote embed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[ts(export)]
 pub enum PollOptionMedia {
-    Image { url: String, still_url: Option<String> },
-    Emoji { content: String },
+    Image {
+        url: String,
+        still_url: Option<String>,
+    },
+    Emoji {
+        content: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

@@ -1464,55 +1464,124 @@ async fn the_ledger_pages_past_unknown_types_without_losing_timestamp_ties() {
     );
 }
 
-
 #[tokio::test]
 async fn ledger_filters_private_context_for_owner_and_agent_before_pagination() {
     let Some(a) = app(true).await else { return };
-    let thread_id = a.db().write(|tx| {
-        tx.conn().execute("UPDATE agents SET owner_id=? WHERE id=?", [KEVIN, AGENT])?;
-        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
-        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, name: Some("Secret ledger context".into()),
-            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
-            ..Default::default()
-        })?;
-        thread.add_access_member(tx, DAVID, KEVIN)?;
-        tx.conn().execute("DELETE FROM agent_events WHERE agent_id=?", [AGENT])?;
-        Ok(thread.id)
-    }).await.unwrap();
-    let public = ledger_entry(&a, "posted", Some(ALL_TALK), Some(BENDERS_MESSAGE), json!({}), 10).await;
+    let thread_id = a
+        .db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE agents SET owner_id=? WHERE id=?", [KEVIN, AGENT])?;
+            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            let thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("Secret ledger context".into()),
+                    visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            thread.add_access_member(tx, DAVID, KEVIN)?;
+            tx.conn()
+                .execute("DELETE FROM agent_events WHERE agent_id=?", [AGENT])?;
+            Ok(thread.id)
+        })
+        .await
+        .unwrap();
+    let public = ledger_entry(
+        &a,
+        "posted",
+        Some(ALL_TALK),
+        Some(BENDERS_MESSAGE),
+        json!({}),
+        10,
+    )
+    .await;
     for _ in 0..52 {
         ledger_entry(&a, "work_handed_off", Some(ALL_TALK), None,
             json!({"thread_id":thread_id,"thread_visibility":"private","handoff":{"summary":"secret summary"}}), 0).await;
     }
-    a.db().write(move |tx| {
-        tx.conn().execute("UPDATE agent_events SET actor_id=? WHERE json_extract(metadata,'$.thread_id')=?", [JASON, thread_id])?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE agent_events SET actor_id=? WHERE json_extract(metadata,'$.thread_id')=?",
+                [JASON, thread_id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let mut kevin = a.sign_in(KEVIN).await;
     let path = format!("/api/v1/agents/{AGENT}/events");
     let page: api::AgentLedgerPage = parse(&kevin.send(get(&path)).await);
-    assert_eq!(page.events.iter().map(|event| event.id).collect::<Vec<_>>(), [public], "agent lacks thread access, so hidden rows cannot consume the page");
+    assert_eq!(
+        page.events.iter().map(|event| event.id).collect::<Vec<_>>(),
+        [public],
+        "agent lacks thread access, so hidden rows cannot consume the page"
+    );
     assert!(page.next_cursor.is_none());
-    a.db().write(move |tx| {
-        campfire_db::ChannelThread::find(tx.conn(), thread_id)?.add_access_member(tx, DAVID, BENDER)?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                .add_access_member(tx, DAVID, BENDER)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let page: api::AgentLedgerPage = parse(&kevin.send(get(&path)).await);
     assert_eq!(page.events.len(), 50);
     assert!(page.next_cursor.is_some());
-    assert!(page.events.iter().all(|event| event.handoff_summary.as_deref() == Some("secret summary")));
-    a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+    assert!(
+        page.events
+            .iter()
+            .all(|event| event.handoff_summary.as_deref() == Some("secret summary"))
+    );
+    a.db()
+        .write(move |tx| {
+            campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                .remove_access_member(tx, DAVID, KEVIN)
+        })
+        .await
+        .unwrap();
     let page: api::AgentLedgerPage = parse(&kevin.send(get(&path)).await);
-    assert_eq!(page.events.iter().map(|event| event.id).collect::<Vec<_>>(), [public], "owner's private access is independently required");
+    assert_eq!(
+        page.events.iter().map(|event| event.id).collect::<Vec<_>>(),
+        [public],
+        "owner's private access is independently required"
+    );
     assert!(page.next_cursor.is_none());
-    assert!(!page.users.iter().any(|user| user.id == JASON), "hidden actors do not leak through the people list");
+    assert!(
+        !page.users.iter().any(|user| user.id == JASON),
+        "hidden actors do not leak through the people list"
+    );
     // Metadata-only private snapshots remain hidden after the source thread is destroyed.
-    a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.destroy(tx)).await.unwrap();
-    ledger_entry(&a, "work_unassigned", Some(ALL_TALK), None,
-        json!({"thread_id":thread_id,"thread_visibility":"private"}), 0).await;
-    let public_snapshot = ledger_entry(&a, "work_unassigned", Some(ALL_TALK), None,
-        json!({"thread_id":thread_id,"thread_visibility":"public"}), 0).await;
+    a.db()
+        .write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.destroy(tx))
+        .await
+        .unwrap();
+    ledger_entry(
+        &a,
+        "work_unassigned",
+        Some(ALL_TALK),
+        None,
+        json!({"thread_id":thread_id,"thread_visibility":"private"}),
+        0,
+    )
+    .await;
+    let public_snapshot = ledger_entry(
+        &a,
+        "work_unassigned",
+        Some(ALL_TALK),
+        None,
+        json!({"thread_id":thread_id,"thread_visibility":"public"}),
+        0,
+    )
+    .await;
     let page: api::AgentLedgerPage = parse(&kevin.send(get(&path)).await);
-    assert_eq!(page.events.iter().map(|event| event.id).collect::<Vec<_>>(), [public_snapshot, public]);
+    assert_eq!(
+        page.events.iter().map(|event| event.id).collect::<Vec<_>>(),
+        [public_snapshot, public]
+    );
 }

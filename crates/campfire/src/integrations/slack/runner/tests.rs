@@ -1,12 +1,12 @@
 use super::super::client::tests::fake;
 use super::super::jobs::tests::{run, setup, start};
 use super::*;
+use crate::integrations::test_support::Route;
 use campfire_app::integrations::slack::client::Client;
+use campfire_db::{Database, models::slack_import::SlackImport};
 use serde_json::Value;
 use serde_json::json;
 use std::time::Duration;
-use crate::integrations::test_support::Route;
-use campfire_db::{Database, models::slack_import::SlackImport};
 
 /// A transactional operation recorder for testing the engine independently of mapping policy.
 /// It persists the engine's actual progress and rejects cancelled pages in SQLite, just as

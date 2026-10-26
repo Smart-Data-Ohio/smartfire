@@ -82,14 +82,29 @@ pub struct TwoFactorSetupState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[ts(export)]
 pub enum TwoFactorSetupResponse {
-    Ready { setup: TwoFactorSetupState },
+    Ready {
+        setup: TwoFactorSetupState,
+    },
     /// Returned by successful confirmation only. Plaintext codes are never persisted.
-    RecoveryCodes { codes: Vec<String>, signed_out: usize, continue_url: String },
-    Navigate { location: String },
-    Error { message: String, setup: TwoFactorSetupState },
+    RecoveryCodes {
+        codes: Vec<String>,
+        signed_out: usize,
+        continue_url: String,
+    },
+    Navigate {
+        location: String,
+    },
+    Error {
+        message: String,
+        setup: TwoFactorSetupState,
+    },
 }
 
 /// An enrollment gate carries a next step, never provisioning material or a pending identity.
@@ -185,7 +200,9 @@ pub enum SudoResponse {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         session: Option<i64>,
     },
-    Error { message: String },
+    Error {
+        message: String,
+    },
 }
 
 /// Credential refusals keep their HTTP status, but are next actions rather than expired sessions.
@@ -360,15 +377,51 @@ mod tests {
             qr_svg: "<svg/>".into(),
         };
         let wire = json!({"secret":"ABCD1234","manualKey":"ABCD 1234","otpauthUri":"otpauth://totp/Smartfire:ada?secret=ABCD1234","qrSvg":"<svg/>"});
-        assert_wire(&TwoFactorSetupSubmission { code: "123 456".into() }, json!({"code":"123 456"}));
-        assert_wire(&TwoFactorSetupResponse::Ready { setup: setup.clone() }, json!({"kind":"ready","setup":wire}));
-        assert_wire(&TwoFactorSetupResponse::Error { message: "That code didn't work.".into(), setup }, json!({"kind":"error","message":"That code didn't work.","setup":wire}));
-        assert_wire(&TwoFactorSetupResponse::RecoveryCodes {
-            codes: vec!["abcd-1234-efgh".into()], signed_out: 2, continue_url: "/app/".into(),
-        }, json!({"kind":"recoveryCodes","codes":["abcd-1234-efgh"],"signedOut":2,"continueUrl":"/app/"}));
-        assert_wire(&TwoFactorSetupResponse::Navigate { location: "/session/new".into() }, json!({"kind":"navigate","location":"/session/new"}));
-        assert_wire(&TwoFactorRequirement::Setup { location: "/two_factor_setup".into() }, json!({"kind":"setup","location":"/two_factor_setup"}));
-        assert_wire(&TwoFactorRequirement::Challenge { location: "/two_factor_challenge".into() }, json!({"kind":"challenge","location":"/two_factor_challenge"}));
+        assert_wire(
+            &TwoFactorSetupSubmission {
+                code: "123 456".into(),
+            },
+            json!({"code":"123 456"}),
+        );
+        assert_wire(
+            &TwoFactorSetupResponse::Ready {
+                setup: setup.clone(),
+            },
+            json!({"kind":"ready","setup":wire}),
+        );
+        assert_wire(
+            &TwoFactorSetupResponse::Error {
+                message: "That code didn't work.".into(),
+                setup,
+            },
+            json!({"kind":"error","message":"That code didn't work.","setup":wire}),
+        );
+        assert_wire(
+            &TwoFactorSetupResponse::RecoveryCodes {
+                codes: vec!["abcd-1234-efgh".into()],
+                signed_out: 2,
+                continue_url: "/app/".into(),
+            },
+            json!({"kind":"recoveryCodes","codes":["abcd-1234-efgh"],"signedOut":2,"continueUrl":"/app/"}),
+        );
+        assert_wire(
+            &TwoFactorSetupResponse::Navigate {
+                location: "/session/new".into(),
+            },
+            json!({"kind":"navigate","location":"/session/new"}),
+        );
+        assert_wire(
+            &TwoFactorRequirement::Setup {
+                location: "/two_factor_setup".into(),
+            },
+            json!({"kind":"setup","location":"/two_factor_setup"}),
+        );
+        assert_wire(
+            &TwoFactorRequirement::Challenge {
+                location: "/two_factor_challenge".into(),
+            },
+            json!({"kind":"challenge","location":"/two_factor_challenge"}),
+        );
     }
 
     #[test]

@@ -2,8 +2,8 @@
 //! WS11: inbox/agent keys; WS13: call values; WS14g: Google configuration and connection;
 //! GitHub and Fizzy connection fragments and WS17 effective status use merged owner APIs.
 use campfire_db::Result;
-use campfire_richtext::ruby::is_blank;
 use campfire_presentation::users::*;
+use campfire_richtext::ruby::is_blank;
 use rusqlite::{Connection, OptionalExtension};
 
 pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSections> {
@@ -33,23 +33,55 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
         fields.google.drive = account.drive();
         fields.google.email = account.email;
     }
-    fields.google.identity_email = campfire_db::models::google_identity::GoogleIdentity::for_user(c, id)?
-        .map(|identity| identity.email);
+    fields.google.identity_email =
+        campfire_db::models::google_identity::GoogleIdentity::for_user(c, id)?
+            .map(|identity| identity.email);
     let user = campfire_db::UserStatusSettings::find(c, id)?;
-    fields.status = status_fields(&user, &campfire_db::Errors::default(), campfire_db::Timestamp::from_jiff(now));
-    fields.status.fetch_error = c.query_row("SELECT fetch_error FROM calendar_meeting_caches WHERE user_id=?", [id], |r| r.get::<_, Option<String>>(0)).optional()?.flatten().filter(|s| !is_blank(s));
+    fields.status = status_fields(
+        &user,
+        &campfire_db::Errors::default(),
+        campfire_db::Timestamp::from_jiff(now),
+    );
+    fields.status.fetch_error = c
+        .query_row(
+            "SELECT fetch_error FROM calendar_meeting_caches WHERE user_id=?",
+            [id],
+            |r| r.get::<_, Option<String>>(0),
+        )
+        .optional()?
+        .flatten()
+        .filter(|s| !is_blank(s));
     Ok(fields)
 }
-pub fn status_fields(user: &campfire_db::UserStatusSettings, errors: &campfire_db::Errors, now: campfire_db::Timestamp) -> StatusFields {
+pub fn status_fields(
+    user: &campfire_db::UserStatusSettings,
+    errors: &campfire_db::Errors,
+    now: campfire_db::Timestamp,
+) -> StatusFields {
     let mut fields = StatusFields {
-        presence: user.presence_setting.clone(), emoji: user.custom_status_emoji.clone(), text: user.custom_status_text.clone(),
-        ooo_note: user.ooo_note.clone(), manual_ooo: user.manual_ooo_active(now),
-        meeting_enabled: user.meeting_status_enabled, ooo_calendar_enabled: user.ooo_calendar_enabled,
-        ooo_return: user.ooo_until_effective(now).map(|t| t.jiff().to_zoned(user.zone()).strftime("%B %d, %Y").to_string()),
+        presence: user.presence_setting.clone(),
+        emoji: user.custom_status_emoji.clone(),
+        text: user.custom_status_text.clone(),
+        ooo_note: user.ooo_note.clone(),
+        manual_ooo: user.manual_ooo_active(now),
+        meeting_enabled: user.meeting_status_enabled,
+        ooo_calendar_enabled: user.ooo_calendar_enabled,
+        ooo_return: user.ooo_until_effective(now).map(|t| {
+            t.jiff()
+                .to_zoned(user.zone())
+                .strftime("%B %d, %Y")
+                .to_string()
+        }),
 
         ..Default::default()
     };
-    for (key, message) in &errors.0 { fields.errors.entry(key.to_string()).or_default().push(message.clone()); }
+    for (key, message) in &errors.0 {
+        fields
+            .errors
+            .entry(key.to_string())
+            .or_default()
+            .push(message.clone());
+    }
     fields
 }
 
@@ -89,5 +121,4 @@ mod unicode_tests {
             oracle["sql_names"]["sorted"]
         );
     }
-
 }

@@ -1,6 +1,5 @@
 //! Rails-compatible escaping and JSON wire encoding.
 
-
 /// Escapes like `ERB::Util.html_escape`.
 pub fn escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());

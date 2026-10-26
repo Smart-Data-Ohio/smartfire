@@ -16,8 +16,7 @@ struct Tables {
     alpha_ranges: Vec<(u32, u32)>,
 }
 static TABLES: LazyLock<Tables> = LazyLock::new(|| {
-    serde_json::from_str(include_str!("unicode_tables.json"))
-        .expect("pinned Ruby Unicode tables")
+    serde_json::from_str(include_str!("unicode_tables.json")).expect("pinned Ruby Unicode tables")
 });
 
 fn map(value: &str, rows: &[(u32, String)]) -> String {

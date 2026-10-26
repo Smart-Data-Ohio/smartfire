@@ -287,9 +287,11 @@ async fn cutover_c_sudo_held_nested_user_role_patch_is_named_for_the_retry() {
     async fn role(a: &TestApp) -> rusqlite::Result<i64> {
         Ok(a.db()
             .read(|c| {
-                Ok(c.query_row("SELECT role FROM users WHERE id=?", [KEVIN], |r| {
-                    r.get::<_, i64>(0)
-                })?)
+                Ok(
+                    c.query_row("SELECT role FROM users WHERE id=?", [KEVIN], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                )
             })
             .await
             .unwrap())

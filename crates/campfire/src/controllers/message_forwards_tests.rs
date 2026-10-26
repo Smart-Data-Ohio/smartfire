@@ -1,35 +1,102 @@
+use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
-use crate::controllers::presenters::test_support::*;
 
 #[tokio::test]
 async fn forward_endpoints_scope_sources_and_reject_bots_and_forgery_first() {
     let app = TestApp::boot().await.unwrap();
-    let (root, child, thread) = app.db().write(|tx| {
-        let root = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Forward source".into()), ..Default::default()})?;
-        let thread = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: JASON, name: Some("Forward thread".into()), ..Default::default()})?;
-        let child = Message::create(tx, NewMessage {room_id: ALL_TALK, thread_id: Some(thread.id), creator_id: JASON, markdown_source: Some("Child".into()), ..Default::default()})?;
-        Ok((root.id, child.id, thread.id))
-    }).await.unwrap();
+    let (root, child, thread) = app
+        .db()
+        .write(|tx| {
+            let root = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("Forward source".into()),
+                    ..Default::default()
+                },
+            )?;
+            let thread = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: JASON,
+                    name: Some("Forward thread".into()),
+                    ..Default::default()
+                },
+            )?;
+            let child = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    thread_id: Some(thread.id),
+                    creator_id: JASON,
+                    markdown_source: Some("Child".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((root.id, child.id, thread.id))
+        })
+        .await
+        .unwrap();
     let mut browser = app.david();
-    for path in [format!("/rooms/{QUIET_CORNER}/messages/{root}/forwards/destinations.json"), format!("/rooms/{ALL_TALK}/messages/{child}/forwards/destinations.json"), format!("/rooms/{ALL_TALK}/threads/{thread}/messages/{root}/forwards/destinations.json")] {
+    for path in [
+        format!("/rooms/{QUIET_CORNER}/messages/{root}/forwards/destinations.json"),
+        format!("/rooms/{ALL_TALK}/messages/{child}/forwards/destinations.json"),
+        format!("/rooms/{ALL_TALK}/threads/{thread}/messages/{root}/forwards/destinations.json"),
+    ] {
         assert_eq!(browser.get(&path).await.status, StatusCode::NOT_FOUND);
     }
     let path = format!("/rooms/{ALL_TALK}/messages/{root}/forwards.json");
-    assert_eq!(browser.send(Req::new(Method::POST, &path).header("origin", "https://forged.test")
-        .header("content-type", "application/json").body(serde_json::json!({"destinations": [{"room_id": QUIET_CORNER}]}).to_string())).await.status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(app.anonymous().get(&format!("/rooms/{ALL_TALK}/messages/{root}/forwards/destinations.json?bot_key={BENDER_KEY}")).await.status, StatusCode::FORBIDDEN);
-    assert_eq!(app.sign_in(KEVIN).await.write(Req::new(Method::POST, &path)).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        browser
+            .send(
+                Req::new(Method::POST, &path)
+                    .header("origin", "https://forged.test")
+                    .header("content-type", "application/json")
+                    .body(
+                        serde_json::json!({"destinations": [{"room_id": QUIET_CORNER}]})
+                            .to_string()
+                    )
+            )
+            .await
+            .status,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        app.anonymous()
+            .get(&format!(
+                "/rooms/{ALL_TALK}/messages/{root}/forwards/destinations.json?bot_key={BENDER_KEY}"
+            ))
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        app.sign_in(KEVIN)
+            .await
+            .write(Req::new(Method::POST, &path))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
 }
 
-use std::sync::Arc;
-use serde_json::{Value, json};
 use campfire_db::{Room, RoomType, ThreadMembership};
 use campfire_kit::clock::FrozenClock;
-fn oracle() -> Value {serde_json::from_str(include_str!("../../../../vectors/messaging/forwards.json")).unwrap()}
+use serde_json::{Value, json};
+use std::sync::Arc;
+fn oracle() -> Value {
+    serde_json::from_str(include_str!("../../../../vectors/messaging/forwards.json")).unwrap()
+}
 
 async fn fixture() -> TestApp {
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap())))
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
     app.db().write(|tx| {
         let source = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("**Snapshot**".into()), client_message_id: Some("forward-source".into()), drive_file_ids: vec!["abcdefghij".into()], ..Default::default()})?;
         let open = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: DAVID, name: Some("Forward open".into()), ..Default::default()})?;
@@ -52,19 +119,69 @@ async fn pickers_refusals_and_private_source_urls_match_rails_bytes() {
     let app = fixture().await;
     let mut browser = app.david();
     for row in oracle()["rows"].as_array().unwrap() {
-        if row["name"] == "source_inaccessible" {app.db().write(|tx| {tx.conn().execute("DELETE FROM memberships WHERE room_id = ? AND user_id = ?", (ALL_TALK,DAVID))?;Ok(())}).await.unwrap();}
-        let response = browser.write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(), row["path"].as_str().unwrap())
-            .header("content-type","application/json").body(row["input"].to_string())).await;
+        if row["name"] == "source_inaccessible" {
+            app.db()
+                .write(|tx| {
+                    tx.conn().execute(
+                        "DELETE FROM memberships WHERE room_id = ? AND user_id = ?",
+                        (ALL_TALK, DAVID),
+                    )?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+        }
+        let response = browser
+            .write(
+                Req::new(
+                    Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes())
+                        .unwrap(),
+                    row["path"].as_str().unwrap(),
+                )
+                .header("content-type", "application/json")
+                .body(row["input"].to_string()),
+            )
+            .await;
         let name = row["name"].as_str().unwrap();
-        assert_eq!(response.status.as_u16(),row["status"].as_u64().unwrap() as u16,"{name}: {}",response.text());
-        assert_eq!(response.header("cache-control"),row["cache_control"].as_str(),"{name}");
-        assert_eq!(response.content_type(),row["content_type"].as_str(),"{name}");
-        if response.text()!=row["body"].as_str().unwrap() {rails_mismatch(&response.text(),row["body"].as_str().unwrap(),name);}
-        let count=app.db().read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM messages",[],|row|row.get::<_,i64>(0))?)).await.unwrap();
-        assert_eq!(row["message_count"],count);
+        assert_eq!(
+            response.status.as_u16(),
+            row["status"].as_u64().unwrap() as u16,
+            "{name}: {}",
+            response.text()
+        );
+        assert_eq!(
+            response.header("cache-control"),
+            row["cache_control"].as_str(),
+            "{name}"
+        );
+        assert_eq!(
+            response.content_type(),
+            row["content_type"].as_str(),
+            "{name}"
+        );
+        if response.text() != row["body"].as_str().unwrap() {
+            rails_mismatch(&response.text(), row["body"].as_str().unwrap(), name);
+        }
+        let count = app
+            .db()
+            .read(|conn| {
+                Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |row| {
+                    row.get::<_, i64>(0)
+                })?)
+            })
+            .await
+            .unwrap();
+        assert_eq!(row["message_count"], count);
     }
     let id = oracle()["stale_id"].as_i64().unwrap();
-    assert!(app.db().read(move|conn|ChannelThread::find(conn,id)).await.unwrap().closed_at.is_none());
+    assert!(
+        app.db()
+            .read(move |conn| ChannelThread::find(conn, id))
+            .await
+            .unwrap()
+            .closed_at
+            .is_none()
+    );
 }
 
 #[tokio::test]
@@ -74,69 +191,197 @@ async fn forward_snapshots_drive_ids_and_thread_membership_survive_source_edit_a
     let thread = oracle()["stale_id"].as_i64().unwrap();
     let response = app.david().write(Req::new(Method::POST,&format!("/messages/{source}/forwards.json"))
         .header("content-type","application/json").body(json!({"forward":{"note":"Note <&>","destinations":[{"room_id":QUIET_CORNER},{"room_id":ALL_TALK,"thread_id":thread}]}}).to_string())).await;
-    assert_eq!(response.status,StatusCode::CREATED,"{}",response.text());
-    assert_eq!(response.header("cache-control"),Some("no-store"));
-    let ids=response.json()["forwards"].as_array().unwrap().iter().map(|row|row["message"]["id"].as_i64().unwrap()).collect::<Vec<_>>();
-    assert_eq!(ids.len(),2);
-    app.db().write(move|tx|{let mut message=Message::find(tx.conn(),source)?;message.edit(tx,campfire_db::MessageChanges{markdown_source:Some("Changed".into()),..Default::default()})?;message.destroy(tx)}).await.unwrap();
-    app.db().read(move|conn| {
-        let first=Message::find(conn,ids[0])?;
-        let second=Message::find(conn,ids[1])?;
-        assert_ne!(first.client_message_id,second.client_message_id);
-        assert!(first.client_message_id.parse::<uuid::Uuid>().is_ok());
-        for message in [first,second] {
-            assert_eq!(message.body_html(conn)?.as_deref(),Some("<p><strong>Snapshot</strong></p>"));
-            assert_eq!(message.forward_note.as_deref(),Some("Note <&>"));
-            assert!(message.forwarded_markdown);
-            assert_eq!(message.forwarded_from_message_id,None);
-            assert_eq!(message.drive_file_ids(conn)?,vec!["abcdefghij"]);
-        }
-        let thread=ChannelThread::find(conn,thread)?;
-        assert!(thread.closed_at.is_none());
-        assert!(ThreadMembership::find_by_thread_and_user(conn,thread.id,DAVID)?.is_some());
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    assert_eq!(response.header("cache-control"), Some("no-store"));
+    let ids = response.json()["forwards"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["message"]["id"].as_i64().unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(ids.len(), 2);
+    app.db()
+        .write(move |tx| {
+            let mut message = Message::find(tx.conn(), source)?;
+            message.edit(
+                tx,
+                campfire_db::MessageChanges {
+                    markdown_source: Some("Changed".into()),
+                    ..Default::default()
+                },
+            )?;
+            message.destroy(tx)
+        })
+        .await
+        .unwrap();
+    app.db()
+        .read(move |conn| {
+            let first = Message::find(conn, ids[0])?;
+            let second = Message::find(conn, ids[1])?;
+            assert_ne!(first.client_message_id, second.client_message_id);
+            assert!(first.client_message_id.parse::<uuid::Uuid>().is_ok());
+            for message in [first, second] {
+                assert_eq!(
+                    message.body_html(conn)?.as_deref(),
+                    Some("<p><strong>Snapshot</strong></p>")
+                );
+                assert_eq!(message.forward_note.as_deref(), Some("Note <&>"));
+                assert!(message.forwarded_markdown);
+                assert_eq!(message.forwarded_from_message_id, None);
+                assert_eq!(message.drive_file_ids(conn)?, vec!["abcdefghij"]);
+            }
+            let thread = ChannelThread::find(conn, thread)?;
+            assert!(thread.closed_at.is_none());
+            assert!(ThreadMembership::find_by_thread_and_user(conn, thread.id, DAVID)?.is_some());
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn forwarded_attachment_is_a_private_copy_and_failed_enqueue_removes_all_copies() {
     let app = fixture().await;
-    let uploaded=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
-        .multipart(&[("message[client_message_id]","copy-upload")],("message[attachment]","forward.txt","text/plain",b"Private copy\n"))).await;
-    assert_eq!(uploaded.status,StatusCode::CREATED,"{}",uploaded.text());
+    let uploaded = app
+        .david()
+        .write(
+            Req::new(
+                Method::POST,
+                &format!("/rooms/{ALL_TALK}/messages.turbo_stream"),
+            )
+            .multipart(
+                &[("message[client_message_id]", "copy-upload")],
+                (
+                    "message[attachment]",
+                    "forward.txt",
+                    "text/plain",
+                    b"Private copy\n",
+                ),
+            ),
+        )
+        .await;
+    assert_eq!(uploaded.status, StatusCode::CREATED, "{}", uploaded.text());
     assert!(uploaded.body.is_empty());
-    let id=app.db().read(|conn|Ok(Message::find_duplicate(conn,ALL_TALK,DAVID,"copy-upload")?.unwrap().id)).await.unwrap();
-    let path=format!("/messages/{id}/forwards.json");
-    let response=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json")
-        .body(json!({"destinations":[{"room_id":QUIET_CORNER}]}).to_string())).await;
-    assert_eq!(response.status,StatusCode::CREATED,"{}",response.text());
-    let copy=response.json()["forwards"][0]["message"]["id"].as_i64().unwrap();
-    let (original,copied)=app.db().read(move|conn|Ok((Message::find(conn,id)?.attachment(conn)?.unwrap().1,Message::find(conn,copy)?.attachment(conn)?.unwrap().1))).await.unwrap();
-    assert_ne!(original.id,copied.id);
-    assert_ne!(original.key,copied.key);
-    assert_eq!(original.checksum,copied.checksum);
-    assert_eq!(app.booted.app.storage.service.download(&copied.key).unwrap(),b"Private copy\n");
-    let files_before=storage_keys(&app);
-    let before=app.db().read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM messages",[],|row|row.get::<_,i64>(0))?)).await.unwrap();
+    let id = app
+        .db()
+        .read(|conn| {
+            Ok(
+                Message::find_duplicate(conn, ALL_TALK, DAVID, "copy-upload")?
+                    .unwrap()
+                    .id,
+            )
+        })
+        .await
+        .unwrap();
+    let path = format!("/messages/{id}/forwards.json");
+    let response = app
+        .david()
+        .write(
+            Req::new(Method::POST, &path)
+                .header("content-type", "application/json")
+                .body(json!({"destinations":[{"room_id":QUIET_CORNER}]}).to_string()),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    let copy = response.json()["forwards"][0]["message"]["id"]
+        .as_i64()
+        .unwrap();
+    let (original, copied) = app
+        .db()
+        .read(move |conn| {
+            Ok((
+                Message::find(conn, id)?.attachment(conn)?.unwrap().1,
+                Message::find(conn, copy)?.attachment(conn)?.unwrap().1,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_ne!(original.id, copied.id);
+    assert_ne!(original.key, copied.key);
+    assert_eq!(original.checksum, copied.checksum);
+    assert_eq!(
+        app.booted
+            .app
+            .storage
+            .service
+            .download(&copied.key)
+            .unwrap(),
+        b"Private copy\n"
+    );
+    let files_before = storage_keys(&app);
+    let before = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |row| {
+                row.get::<_, i64>(0)
+            })?)
+        })
+        .await
+        .unwrap();
     app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws8bm_forward_reject_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'WS8bm copy rollback'); END;")?;Ok(())}).await.unwrap();
-    let rejected=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json")
-        .body(json!({"destinations":[{"room_id":QUIET_CORNER},{"room_id":ALL_TALK}]}).to_string())).await;
-    assert_eq!(rejected.status,StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(storage_keys(&app),files_before);
-    let after=app.db().read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM messages",[],|row|row.get::<_,i64>(0))?)).await.unwrap();
-    assert_eq!(after,before);
+    let rejected = app
+        .david()
+        .write(
+            Req::new(Method::POST, &path)
+                .header("content-type", "application/json")
+                .body(
+                    json!({"destinations":[{"room_id":QUIET_CORNER},{"room_id":ALL_TALK}]})
+                        .to_string(),
+                ),
+        )
+        .await;
+    assert_eq!(rejected.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(storage_keys(&app), files_before);
+    let after = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |row| {
+                row.get::<_, i64>(0)
+            })?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(after, before);
 }
-fn storage_keys(app:&TestApp)->Vec<String> {
-    fn visit(path:&std::path::Path,keys:&mut Vec<String>){for entry in std::fs::read_dir(path).unwrap(){let entry=entry.unwrap();if entry.file_type().unwrap().is_dir(){visit(&entry.path(),keys)}else{keys.push(entry.path().to_string_lossy().into_owned())}}}
-    let mut keys=Vec::new();visit(app.booted.app.storage.service.root(),&mut keys);keys.sort();keys
+fn storage_keys(app: &TestApp) -> Vec<String> {
+    fn visit(path: &std::path::Path, keys: &mut Vec<String>) {
+        for entry in std::fs::read_dir(path).unwrap() {
+            let entry = entry.unwrap();
+            if entry.file_type().unwrap().is_dir() {
+                visit(&entry.path(), keys)
+            } else {
+                keys.push(entry.path().to_string_lossy().into_owned())
+            }
+        }
+    }
+    let mut keys = Vec::new();
+    visit(app.booted.app.storage.service.root(), &mut keys);
+    keys.sort();
+    keys
 }
 
 #[tokio::test]
 async fn attachment_processing_failure_preserves_every_forward_and_thread_side_effect() {
     let app = fixture().await;
     let thread = oracle()["stale_id"].as_i64().unwrap();
-    let uploaded = app.david().write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
-        .multipart(&[("message[client_message_id]", "processing-rollback")], ("message[attachment]", "source.txt", "text/plain", b"Forward rollback\n"))).await;
+    let uploaded = app
+        .david()
+        .write(
+            Req::new(
+                Method::POST,
+                &format!("/rooms/{ALL_TALK}/messages.turbo_stream"),
+            )
+            .multipart(
+                &[("message[client_message_id]", "processing-rollback")],
+                (
+                    "message[attachment]",
+                    "source.txt",
+                    "text/plain",
+                    b"Forward rollback\n",
+                ),
+            ),
+        )
+        .await;
     assert_eq!(uploaded.status, StatusCode::CREATED, "{}", uploaded.text());
     assert!(uploaded.body.is_empty());
     let source = app.db().write(move |tx| {
@@ -151,35 +396,99 @@ async fn attachment_processing_failure_preserves_every_forward_and_thread_side_e
         .header("content-type", "application/json").body(json!({"destinations": [{"room_id": ALL_TALK, "thread_id": thread}, {"room_id": QUIET_CORNER}]}).to_string())).await;
     assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
     let files = storage_keys(&app);
-    assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
-    app.db().read(move |conn| {
-        assert_eq!(conn.query_row("SELECT count(*) FROM messages WHERE forwarded_from_message_id=?", [source], |r| r.get::<_,i64>(0))?, 2);
-        assert!(ChannelThread::find(conn, thread)?.closed_at.is_none());
-        assert!(ThreadMembership::find_by_thread_and_user(conn, thread, DAVID)?.is_some());
-        Ok(())
-    }).await.unwrap();
-    assert_eq!(storage_keys(&app), files, "processing failure retains committed private copies");
+    assert!(
+        super::messages::attachment_processing_tests::perform_queued(&app, 1)
+            .await
+            .is_err()
+    );
+    app.db()
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT count(*) FROM messages WHERE forwarded_from_message_id=?",
+                    [source],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                2
+            );
+            assert!(ChannelThread::find(conn, thread)?.closed_at.is_none());
+            assert!(ThreadMembership::find_by_thread_and_user(conn, thread, DAVID)?.is_some());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        storage_keys(&app),
+        files,
+        "processing failure retains committed private copies"
+    );
 }
 
 fn forward_row_counts(conn: &campfire_db::Connection) -> campfire_db::Result<Vec<i64>> {
-    ["messages", "action_text_rich_texts", "active_storage_blobs", "active_storage_attachments", "active_storage_variant_records", "thread_memberships"]
-        .iter().map(|table| Ok(conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))?)).collect()
+    [
+        "messages",
+        "action_text_rich_texts",
+        "active_storage_blobs",
+        "active_storage_attachments",
+        "active_storage_variant_records",
+        "thread_memberships",
+    ]
+    .iter()
+    .map(|table| {
+        Ok(
+            conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| {
+                row.get(0)
+            })?,
+        )
+    })
+    .collect()
 }
 
 #[tokio::test]
 async fn forward_media_failure_is_deferred_and_precommit_enqueue_failure_still_rolls_back() {
     for trigger in [
         "CREATE TRIGGER ws8bm_reject_later_variant BEFORE INSERT ON active_storage_variant_records WHEN (SELECT COUNT(*) FROM messages WHERE forwarded_from_message_id = (SELECT id FROM messages WHERE client_message_id = 'variant-source')) > 1 BEGIN SELECT RAISE(ABORT,'later variant failed'); END;",
-        "CREATE TRIGGER ws8bm_reject_media_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'media enqueue failed'); END;"
+        "CREATE TRIGGER ws8bm_reject_media_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'media enqueue failed'); END;",
     ] {
         let app = fixture().await;
-        let id = app.db().write(|tx| Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, body: Some("Media snapshot".into()),
-            client_message_id: Some("variant-source".into()), attachment_blob_id: Some(1), ..Default::default()}).map(|m| m.id)).await.unwrap();
+        let id = app
+            .db()
+            .write(|tx| {
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        body: Some("Media snapshot".into()),
+                        client_message_id: Some("variant-source".into()),
+                        attachment_blob_id: Some(1),
+                        ..Default::default()
+                    },
+                )
+                .map(|m| m.id)
+            })
+            .await
+            .unwrap();
         let before = app.db().read(forward_row_counts).await.unwrap();
         let files = storage_keys(&app);
-        app.db().write(move |tx| {tx.conn().execute_batch(trigger)?;Ok(())}).await.unwrap();
-        let response = app.david().write(Req::new(Method::POST, &format!("/messages/{id}/forwards.json"))
-            .header("content-type", "application/json").body(json!({"destinations": [{"room_id": QUIET_CORNER}, {"room_id": ALL_TALK}]}).to_string())).await;
+        app.db()
+            .write(move |tx| {
+                tx.conn().execute_batch(trigger)?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let response = app
+            .david()
+            .write(
+                Req::new(Method::POST, &format!("/messages/{id}/forwards.json"))
+                    .header("content-type", "application/json")
+                    .body(
+                        json!({"destinations": [{"room_id": QUIET_CORNER}, {"room_id": ALL_TALK}]})
+                            .to_string(),
+                    ),
+            )
+            .await;
         if trigger.contains("background_jobs") {
             assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
             assert_eq!(app.db().read(forward_row_counts).await.unwrap(), before);
@@ -187,44 +496,161 @@ async fn forward_media_failure_is_deferred_and_precommit_enqueue_failure_still_r
         } else {
             assert_eq!(response.status, StatusCode::CREATED);
             let copied_files = storage_keys(&app);
-            assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+            assert!(
+                super::messages::attachment_processing_tests::perform_queued(&app, 1)
+                    .await
+                    .is_err()
+            );
             assert_eq!(storage_keys(&app), copied_files);
-            assert_eq!(app.db().read(move |c| Ok(c.query_row("SELECT count(*) FROM messages WHERE forwarded_from_message_id=?", [id], |r| r.get::<_,i64>(0))?)).await.unwrap(), 2);
+            assert_eq!(
+                app.db()
+                    .read(move |c| Ok(c.query_row(
+                        "SELECT count(*) FROM messages WHERE forwarded_from_message_id=?",
+                        [id],
+                        |r| r.get::<_, i64>(0)
+                    )?))
+                    .await
+                    .unwrap(),
+                2
+            );
         }
     }
 }
 
-pub(crate) fn success_oracle() -> Value {serde_json::from_str(include_str!("../../../../vectors/messaging/forward-success.json")).unwrap()}
+pub(crate) fn success_oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../vectors/messaging/forward-success.json"
+    ))
+    .unwrap()
+}
 pub(crate) async fn install_success_fixture(app: &TestApp) {
-    app.db().write(|tx| {
-        let source = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("**Forward snapshot**".into()), client_message_id: Some("success-source".into()), drive_file_ids: vec!["abcdefghij".into()], ..Default::default()})?;
-        let legacy = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, body: Some("<div>Legacy &amp; <strong>safe</strong></div>".into()), client_message_id: Some("success-legacy".into()), ..Default::default()})?;
-        let file = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, body: Some("File snapshot".into()), client_message_id: Some("success-file".into()), attachment_blob_id: Some(13), ..Default::default()})?;
-        let thread = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: JASON, name: Some("Success closed".into()), ..Default::default()})?;
-        let child = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, thread_id: Some(thread.id), markdown_source: Some("Nested snapshot".into()), client_message_id: Some("success-child".into()), ..Default::default()})?;
-        tx.conn().execute("DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?", (thread.id, DAVID))?;
-        tx.conn().execute("UPDATE channel_threads SET closed_at = ?, last_activity_at = ? WHERE id = ?", (tx.now(), tx.now().since(jiff::SignedDuration::from_hours(-2)), thread.id))?;
-        for (key,id) in [("source_id",source.id),("legacy_id",legacy.id),("file_id",file.id),("thread_id",thread.id),("child_id",child.id)] {assert_eq!(success_oracle()[key],id);}
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(|tx| {
+            let source = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("**Forward snapshot**".into()),
+                    client_message_id: Some("success-source".into()),
+                    drive_file_ids: vec!["abcdefghij".into()],
+                    ..Default::default()
+                },
+            )?;
+            let legacy = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    body: Some("<div>Legacy &amp; <strong>safe</strong></div>".into()),
+                    client_message_id: Some("success-legacy".into()),
+                    ..Default::default()
+                },
+            )?;
+            let file = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    body: Some("File snapshot".into()),
+                    client_message_id: Some("success-file".into()),
+                    attachment_blob_id: Some(13),
+                    ..Default::default()
+                },
+            )?;
+            let thread = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: JASON,
+                    name: Some("Success closed".into()),
+                    ..Default::default()
+                },
+            )?;
+            let child = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    thread_id: Some(thread.id),
+                    markdown_source: Some("Nested snapshot".into()),
+                    client_message_id: Some("success-child".into()),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute(
+                "DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?",
+                (thread.id, DAVID),
+            )?;
+            tx.conn().execute(
+                "UPDATE channel_threads SET closed_at = ?, last_activity_at = ? WHERE id = ?",
+                (
+                    tx.now(),
+                    tx.now().since(jiff::SignedDuration::from_hours(-2)),
+                    thread.id,
+                ),
+            )?;
+            for (key, id) in [
+                ("source_id", source.id),
+                ("legacy_id", legacy.id),
+                ("file_id", file.id),
+                ("thread_id", thread.id),
+                ("child_id", child.id),
+            ] {
+                assert_eq!(success_oracle()[key], id);
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn positive_forward_responses_and_snapshot_rows_match_rails_without_masks() {
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap())))
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
     install_success_fixture(&app).await;
     for row in success_oracle()["rows"].as_array().unwrap() {
-        let ids = row["client_ids"].as_array().unwrap().iter().map(|id| id.as_str().unwrap()).collect::<Vec<_>>().join(",");
+        let ids = row["client_ids"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|id| id.as_str().unwrap())
+            .collect::<Vec<_>>()
+            .join(",");
         let input = row["input"].to_string();
-        let mut request = Req::new(Method::POST, row["path"].as_str().unwrap()).header("x-ws8bm-forward-client-ids", &ids).header("content-type", "application/json").body(input);
-        if row["name"] == "nested_html" {request = request.header("accept", "text/html");}
+        let mut request = Req::new(Method::POST, row["path"].as_str().unwrap())
+            .header("x-ws8bm-forward-client-ids", &ids)
+            .header("content-type", "application/json")
+            .body(input);
+        if row["name"] == "nested_html" {
+            request = request.header("accept", "text/html");
+        }
         let response = app.david().write(request).await;
         let name = row["name"].as_str().unwrap();
-        assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{name}: {}", response.text());
-        assert_eq!(response.header("cache-control"), row["cache_control"].as_str(), "{name}");
+        assert_eq!(
+            response.status.as_u16(),
+            row["status"].as_u64().unwrap() as u16,
+            "{name}: {}",
+            response.text()
+        );
+        assert_eq!(
+            response.header("cache-control"),
+            row["cache_control"].as_str(),
+            "{name}"
+        );
         assert_eq!(response.location(), row["location"].as_str(), "{name}");
-        assert_eq!(response.content_type(), row["content_type"].as_str(), "{name}");
-        if response.text() != row["body"].as_str().unwrap() {rails_mismatch(&response.text(), row["body"].as_str().unwrap(), name);}
+        assert_eq!(
+            response.content_type(),
+            row["content_type"].as_str(),
+            "{name}"
+        );
+        if response.text() != row["body"].as_str().unwrap() {
+            rails_mismatch(&response.text(), row["body"].as_str().unwrap(), name);
+        }
         let expected = row["messages"].clone();
         app.db().read(move |conn| {
             for row in expected.as_array().unwrap() {
@@ -239,75 +665,149 @@ async fn positive_forward_responses_and_snapshot_rows_match_rails_without_masks(
 
 #[tokio::test]
 async fn forward_picker_excludes_boards_names_directs_and_keeps_query_count_constant() {
-    let app=fixture().await;
-    let source=oracle()["source_id"].as_i64().unwrap();
-    let path=format!("/messages/{source}/forwards/destinations.json");
-    let mut viewer=app.david();viewer.authenticity_token().await;
-    let capture=|app:&TestApp|app.db().capture_read_queries();
-    let log=capture(&app);
-    let response=viewer.get(&path).await;
+    let app = fixture().await;
+    let source = oracle()["source_id"].as_i64().unwrap();
+    let path = format!("/messages/{source}/forwards/destinations.json");
+    let mut viewer = app.david();
+    viewer.authenticity_token().await;
+    let capture = |app: &TestApp| app.db().capture_read_queries();
+    let log = capture(&app);
+    let response = viewer.get(&path).await;
     app.db().stop_capturing_read_queries();
-    assert_eq!(response.status,StatusCode::OK);
-    assert_eq!(response.header("cache-control"),Some("no-store"));
-    let rows=response.json()["destinations"].as_array().unwrap().clone();
-    let board=oracle()["board_id"].as_i64().unwrap();
-    assert!(rows.iter().all(|row|row["room_id"]!=board),"board never offered");
-    assert_eq!(rows.iter().find(|row|row["room_id"]==DIRECT_DAVID_JASON).unwrap()["name"],"Jason");
-    let small=log.lock().unwrap().len();assert!(small>0);
-    app.db().write(|tx| {
-        for i in 0..6 {
-            let room=Room::create_for(tx,RoomType::Closed,Some(&format!("Query destination {i}")),DAVID,&[DAVID,JASON])?;
-            ChannelThread::create(tx,NewChannelThread {room_id:room.id,creator_id:DAVID,name:Some(format!("Destination thread {i}")),..Default::default()})?;
-        }
-        Ok(())
-    }).await.unwrap();
-    let log=capture(&app);let response=viewer.get(&path).await;app.db().stop_capturing_read_queries();
-    assert_eq!(response.status,StatusCode::OK);
-    assert_eq!(response.json()["destinations"].as_array().unwrap().len(),rows.len()+6);
-    let large=log.lock().unwrap().len();assert_eq!(small,large,"forward picker reader queries grow: {small} to {large}");
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.header("cache-control"), Some("no-store"));
+    let rows = response.json()["destinations"].as_array().unwrap().clone();
+    let board = oracle()["board_id"].as_i64().unwrap();
+    assert!(
+        rows.iter().all(|row| row["room_id"] != board),
+        "board never offered"
+    );
+    assert_eq!(
+        rows.iter()
+            .find(|row| row["room_id"] == DIRECT_DAVID_JASON)
+            .unwrap()["name"],
+        "Jason"
+    );
+    let small = log.lock().unwrap().len();
+    assert!(small > 0);
+    app.db()
+        .write(|tx| {
+            for i in 0..6 {
+                let room = Room::create_for(
+                    tx,
+                    RoomType::Closed,
+                    Some(&format!("Query destination {i}")),
+                    DAVID,
+                    &[DAVID, JASON],
+                )?;
+                ChannelThread::create(
+                    tx,
+                    NewChannelThread {
+                        room_id: room.id,
+                        creator_id: DAVID,
+                        name: Some(format!("Destination thread {i}")),
+                        ..Default::default()
+                    },
+                )?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let log = capture(&app);
+    let response = viewer.get(&path).await;
+    app.db().stop_capturing_read_queries();
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(
+        response.json()["destinations"].as_array().unwrap().len(),
+        rows.len() + 6
+    );
+    let large = log.lock().unwrap().len();
+    assert_eq!(
+        small, large,
+        "forward picker reader queries grow: {small} to {large}"
+    );
 }
-
 
 #[tokio::test]
 async fn classic_forward_picker_filters_private_threads_before_serializing_them() {
     let app = TestApp::boot().await.unwrap();
-    let (source, private_id, public_id) = app.db().write(|tx| {
-        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
-        let source = Message::create(tx, NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Public forward source".into()),
-            ..Default::default()
-        })?;
-        let private = ChannelThread::create(tx, NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, name: Some("Secret forward destination".into()),
-            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
-        })?;
-        let public = ChannelThread::create(tx, NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, name: Some("Public forward destination".into()),
-            ..Default::default()
-        })?;
-        Ok((source.id, private.id, public.id))
-    }).await.unwrap();
+    let (source, private_id, public_id) = app
+        .db()
+        .write(|tx| {
+            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            let source = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("Public forward source".into()),
+                    ..Default::default()
+                },
+            )?;
+            let private = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("Secret forward destination".into()),
+                    visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            let public = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("Public forward destination".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((source.id, private.id, public.id))
+        })
+        .await
+        .unwrap();
     let mut kevin = app.sign_in(KEVIN).await;
     let path = format!("/messages/{source}/forwards/destinations.json");
     for visible in [false, true, false] {
         if visible {
-            app.db().write(move |tx| {
-                ChannelThread::find(tx.conn(), private_id)?.add_access_member(tx, DAVID, KEVIN)?;
-                Ok(())
-            }).await.unwrap();
+            app.db()
+                .write(move |tx| {
+                    ChannelThread::find(tx.conn(), private_id)?
+                        .add_access_member(tx, DAVID, KEVIN)?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
         }
         let response = kevin.get(&path).await;
         assert_eq!(response.status, StatusCode::OK, "{}", response.text());
         let value = response.json();
-        let room = value["destinations"].as_array().unwrap().iter()
-            .find(|room| room["room_id"] == ALL_TALK).unwrap();
+        let room = value["destinations"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|room| room["room_id"] == ALL_TALK)
+            .unwrap();
         let threads = room["threads"].as_array().unwrap();
         assert!(threads.iter().any(|thread| thread["id"] == public_id));
-        assert_eq!(threads.iter().any(|thread| thread["id"] == private_id), visible);
-        assert_eq!(response.text().contains("Secret forward destination"), visible);
+        assert_eq!(
+            threads.iter().any(|thread| thread["id"] == private_id),
+            visible
+        );
+        assert_eq!(
+            response.text().contains("Secret forward destination"),
+            visible
+        );
         if visible {
-            app.db().write(move |tx| ChannelThread::find(tx.conn(), private_id)?
-                .remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+            app.db()
+                .write(move |tx| {
+                    ChannelThread::find(tx.conn(), private_id)?
+                        .remove_access_member(tx, DAVID, KEVIN)
+                })
+                .await
+                .unwrap();
         }
     }
 }

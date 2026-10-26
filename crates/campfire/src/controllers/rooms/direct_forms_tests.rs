@@ -42,7 +42,10 @@ async fn direct_forms_keep_human_membership_and_group_delete_gates() {
         .send(Req::new(Method::GET, &path).header("x-requested-with", "XMLHttpRequest"))
         .await;
     assert_eq!(reply.status, StatusCode::FOUND);
-    assert_eq!(reply.location(), Some(format!("http://campfire.test/app/r/{id}").as_str()));
+    assert_eq!(
+        reply.location(),
+        Some(format!("http://campfire.test/app/r/{id}").as_str())
+    );
 }
 #[tokio::test]
 async fn invalid_direct_rename_leaves_the_name_unchanged() {

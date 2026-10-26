@@ -87,7 +87,11 @@ pub fn to_plain_text(body: &str, ctx: &RenderContext) -> Result<String, Error> {
 
 /// `Message#editable_markdown_source`: preserve exact source for Markdown records, convert
 /// legacy bodies (including forwarded HTML snapshots) to Markdown for the textarea.
-pub fn editable_markdown_source(body: &str, source: Option<&str>, ctx: &RenderContext) -> Result<String, Error> {
+pub fn editable_markdown_source(
+    body: &str,
+    source: Option<&str>,
+    ctx: &RenderContext,
+) -> Result<String, Error> {
     match source {
         Some(source) => Ok(source.to_owned()),
         None => legacy_markdown::render(&Content::load(body, ctx)?.to_html(), ctx),
@@ -106,7 +110,8 @@ pub fn mentioned_users(body: &str, ctx: &RenderContext) -> Result<Vec<MentionUse
     let content = Content::load(body, ctx)?;
     let mut users: Vec<MentionUser> = Vec::new();
     for node in attachment_nodes(&content.dom, content.root) {
-        if let attachables::Attachable::User(user) = attachables::action_text_attachable_from_node(&content.dom, node, ctx)
+        if let attachables::Attachable::User(user) =
+            attachables::action_text_attachable_from_node(&content.dom, node, ctx)
             && !users.iter().any(|u| u.id == user.id)
         {
             users.push(user);

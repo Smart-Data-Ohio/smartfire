@@ -9,8 +9,6 @@ mod huddle_effects_tests;
 #[cfg(test)]
 pub(crate) mod tests;
 
-
-
 #[cfg(test)]
 pub(crate) mod sink {
     pub(crate) use campfire_channels::channels::sink::*;

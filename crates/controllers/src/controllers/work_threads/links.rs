@@ -3,8 +3,8 @@ use super::*;
 use crate::integrations::github::{
     jobs::FetchPullRequestJob, pull_requests::PullRequest, references,
 };
-use campfire_runtime::presenters::work_links::resolve_drive_title;
 use campfire_db::{Event, NewWorkThreadLink, WorkThreadLink};
+use campfire_runtime::presenters::work_links::resolve_drive_title;
 
 enum Build {
     Invalid(String),
@@ -167,7 +167,11 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 async fn success(c: &mut Ctx, thread: &ChannelThread, notice: &str, back: bool) -> Result {
     c.flash().set_notice(notice);
     let path = format!("/rooms/{}/threads/{}", thread.room_id, thread.id);
-    if back { c.redirect_back_or_to(&path) } else { c.redirect_to(&path) }
+    if back {
+        c.redirect_back_or_to(&path)
+    } else {
+        c.redirect_to(&path)
+    }
 }
 async fn invalid(c: &mut Ctx, thread: &ChannelThread, error: String) -> Result {
     c.flash().set_alert(error);

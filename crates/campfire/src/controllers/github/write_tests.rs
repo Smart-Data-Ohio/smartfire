@@ -29,7 +29,12 @@ async fn github_write_http_results_payloads_own_token_prompts_retry_text_and_str
         "../../../../../vectors/github_write_http.json"
     ))
     .unwrap();
-    for case in cases.as_array().unwrap().iter().filter(|case| case["action"] != "show") {
+    for case in cases
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["action"] != "show")
+    {
         let action = case["action"].as_str().unwrap();
         let path = case["path"].as_str().unwrap();
         let api_path = match action {
@@ -123,7 +128,12 @@ fn github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries() 
         "../../../../../vectors/github_review_logins.json"
     ))
     .unwrap();
-    for case in cases.as_array().unwrap().iter().filter(|case| case["action"] != "show") {
+    for case in cases
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["action"] != "show")
+    {
         assert_eq!(
             json!(crate::integrations::github::actions::normalize_reviewers(
                 &case["input"]

@@ -16,7 +16,11 @@ pub fn enter_time_zone(zone: campfire_presentation::time::Zone) -> TimeZoneGuard
     TimeZoneGuard(RENDER_TIME_ZONE.with(|current| current.replace(Some(zone))))
 }
 pub fn renderer_time_zone() -> campfire_presentation::time::Zone {
-    RENDER_TIME_ZONE.with(|zone| zone.borrow().clone().unwrap_or_else(campfire_presentation::time::Zone::utc))
+    RENDER_TIME_ZONE.with(|zone| {
+        zone.borrow()
+            .clone()
+            .unwrap_or_else(campfire_presentation::time::Zone::utc)
+    })
 }
 
 /// `SetCurrentRequest#default_url_options` supplies the request's host, port and protocol to

@@ -1,12 +1,12 @@
 use super::*;
+use crate::integrations::test_support::TestDb;
 use campfire_db::ActivityItem;
 use campfire_db::Database;
 use campfire_db::Message;
-use serde_json::Value;
-use crate::integrations::test_support::TestDb;
 use campfire_db::{Env, Event, EventSink, TestClock, Timestamp, Tx};
 use campfire_jobs::{JobQueue, QueueConfig, Registry, RunnerConfig};
 use rusqlite::params;
+use serde_json::Value;
 use serde_json::json;
 use std::sync::{Arc, Mutex};
 fn vectors() -> Value {
@@ -99,10 +99,8 @@ async fn database(case: &Value) -> (TestDb, Sink) {
         message_reference_syncs: vec![super::super::references::sync],
         user_deactivation_hooks: Vec::new(),
         ..Env::default()
-
     };
-    let directory =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+    let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     let fixture = tokio::task::spawn_blocking(move || TestDb::with_env(env, &directory))
         .await
         .unwrap();
@@ -193,7 +191,12 @@ async fn run_case(case: &Value) {
     if case["name"] == "lazy_bot"
         && let Ok(path) = std::env::var("GITHUB_NOTIFIER_RUST_OUTPUT")
     {
-        if let Some(parent)=std::path::Path::new(&path).parent().filter(|p|!p.as_os_str().is_empty()){std::fs::create_dir_all(parent).unwrap();}
+        if let Some(parent) = std::path::Path::new(&path)
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+        {
+            std::fs::create_dir_all(parent).unwrap();
+        }
         let _ = std::fs::remove_file(&path);
         let database = fixture
             .db
@@ -316,8 +319,7 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             .find(|c| c["name"] == name)
             .unwrap()
             .clone();
-        let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let secret: Value =
@@ -365,8 +367,17 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
         let addr = listener.local_addr().unwrap();
         let router = booted.app.cable.sync_router::<()>(campfire_api::SYNC_PATH);
         let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-        let topic = if name == "opened" { "room:815" } else { "thread:817" };
-        let mut socket = crate::controllers::spa::api_tests::Sync::connect(addr, &format!("session_token={cookie}"), &[topic.into()]).await;
+        let topic = if name == "opened" {
+            "room:815"
+        } else {
+            "thread:817"
+        };
+        let mut socket = crate::controllers::spa::api_tests::Sync::connect(
+            addr,
+            &format!("session_token={cookie}"),
+            &[topic.into()],
+        )
+        .await;
         socket.welcome().await;
         let payload = case["deliveries"][0][1].clone();
         booted
@@ -385,8 +396,14 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             .unwrap();
         let received = socket.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageCreated(message) if message.room_id == 815), |_| false).await;
         assert_eq!(received.topic, topic);
-        let campfire_api_types::SyncPayload::MessageCreated(message) = received.payload else { unreachable!() };
-        assert!(message.body_html.contains(if name == "opened" { "opened pull request" } else { "requested a review" }));
+        let campfire_api_types::SyncPayload::MessageCreated(message) = received.payload else {
+            unreachable!()
+        };
+        assert!(message.body_html.contains(if name == "opened" {
+            "opened pull request"
+        } else {
+            "requested a review"
+        }));
         let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(5);
         loop {
             let jobs = booted
@@ -431,8 +448,7 @@ async fn github_notifier_runtime_uses_default_retry_policy_and_fails_nontransien
     assert!(!(policy.retry_on)(&anyhow::anyhow!("invalid payload")));
     for mode in ["shape", "post"] {
         let case = &vectors()["cases"][0];
-        let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let secret: Value =

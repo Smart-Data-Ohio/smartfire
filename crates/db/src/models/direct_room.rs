@@ -1,5 +1,5 @@
 //! `app/models/rooms/direct.rb`. HTTP selection/access and huddle-specific rendering are WS8b/WS13.
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::sql::{exists, query_all};
 use crate::{Connection, Errors, Event, Membership, Message, NewMessage, Result, Room, Tx, User};
 use campfire_richtext::ruby::{is_blank, strip};
@@ -121,10 +121,16 @@ impl Room {
             None => {
                 // users.ordered uses SQLite LOWER(name); preloaded members use Ruby
                 // downcase sorting above. These differ for non-ASCII capitals.
-                let users = query_all(conn,
+                let users = query_all(
+                    conn,
                     "SELECT users.* FROM users INNER JOIN memberships ON users.id=memberships.user_id WHERE memberships.room_id=? ORDER BY LOWER(users.name)",
-                    [self.id], User::from_row)?;
-                let list = users.iter().filter(|u| for_user.is_none_or(|f| f.id != u.id)).collect::<Vec<_>>();
+                    [self.id],
+                    User::from_row,
+                )?;
+                let list = users
+                    .iter()
+                    .filter(|u| for_user.is_none_or(|f| f.id != u.id))
+                    .collect::<Vec<_>>();
                 Ok(display_ordered_members(for_user, &list))
             }
         }
@@ -218,13 +224,17 @@ impl Room {
                 ..Default::default()
             },
         )?;
-        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
+        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated {
+            message_id: message.id,
+        }));
         Ok(())
     }
     fn direct_directory_updates(&self, tx: &mut Tx<'_>, _newcomers: &[i64]) -> Result<()> {
         for membership in self.memberships(tx.conn())? {
             // Management rows include refreshRoom, including invisible memberships.
-            tx.emit_after_commit(Event::broadcast(&Broadcast::MembershipChanged { membership_id: membership.id }));
+            tx.emit_after_commit(Event::broadcast(&Broadcast::MembershipChanged {
+                membership_id: membership.id,
+            }));
         }
         Ok(())
     }

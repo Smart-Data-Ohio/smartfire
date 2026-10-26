@@ -1,20 +1,14 @@
 use super::super::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use super::*;
 use campfire_db::Message;
+use campfire_db::NewMessage;
 use campfire_db::User;
 use campfire_runtime::presenters::{Presenter, Result};
 use serde_json::Value;
 use std::sync::Arc;
-use campfire_db::NewMessage;
 struct Adapter;
 impl MessagePayload for Adapter {
-    fn message(
-        &self,
-        p: &Presenter<'_>,
-        m: &Message,
-        viewer: &User,
-        base: &str,
-    ) -> Result<Value> {
+    fn message(&self, p: &Presenter<'_>, m: &Message, viewer: &User, base: &str) -> Result<Value> {
         assert!(p.conn.query_row(
             "SELECT EXISTS(SELECT 1 FROM messages WHERE id=?)",
             [m.id],
@@ -24,8 +18,7 @@ impl MessagePayload for Adapter {
     }
 }
 #[tokio::test]
-async fn ws11_production_presenter_requires_current_user_and_forwards_uncached_request_context()
-{
+async fn ws11_production_presenter_requires_current_user_and_forwards_uncached_request_context() {
     let test = TestApp::boot().await.expect("default seed");
     let app = test.booted.app.clone();
     let mid = app

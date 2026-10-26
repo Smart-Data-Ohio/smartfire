@@ -19,7 +19,11 @@ pub fn extract_ids(text: &str) -> Vec<i64> {
     ids
 }
 pub fn sync(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-    sync_from_plain_text(tx, message, &message.plain_text_body(tx.conn(), tx.env().rich_text.as_ref())?)
+    sync_from_plain_text(
+        tx,
+        message,
+        &message.plain_text_body(tx.conn(), tx.env().rich_text.as_ref())?,
+    )
 }
 pub(crate) fn sync_from_plain_text(tx: &mut Tx<'_>, message: &Message, plain: &str) -> Result<()> {
     let text = format!(

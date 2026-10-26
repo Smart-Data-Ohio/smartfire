@@ -4,9 +4,12 @@ mod access;
 pub mod message_recorder;
 mod recorder;
 mod recording_source;
-pub use recording_source::{ActivityEventType, ActivityRecordingFacts, ActivityRecordingSource, AgentBudgetNoticeActivityReader, SourceAuthorization};
-pub use recorder::ActivitySource;
 pub use access::{ActivityQuery, ActivityUnread};
+pub use recorder::ActivitySource;
+pub use recording_source::{
+    ActivityEventType, ActivityRecordingFacts, ActivityRecordingSource,
+    AgentBudgetNoticeActivityReader, SourceAuthorization,
+};
 
 use rusqlite::{Connection, Row, params};
 
@@ -374,11 +377,30 @@ impl ActivityItem {
     }
 
     /// `has_many :activity_items, as: :source, dependent: :destroy`
-    pub(crate) fn destroy_for_source(tx: &mut Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
+    pub(crate) fn destroy_for_source(
+        tx: &mut Tx<'_>,
+        source_type: &str,
+        source_id: i64,
+    ) -> Result<()> {
         let room = match source_type {
-            "Message" => crate::sql::query_one(tx.conn(), "SELECT room_id FROM messages WHERE id=?", [source_id], |row| row.get::<_, i64>(0))?,
-            "WorkThreadEvent" => crate::sql::query_one(tx.conn(), "SELECT t.room_id FROM work_thread_events e JOIN channel_threads t ON t.id=e.channel_thread_id WHERE e.id=?", [source_id], |row| row.get::<_, i64>(0))?,
-            "BoardSlaNudge" => crate::sql::query_one(tx.conn(), "SELECT room_id FROM board_sla_nudges WHERE id=?", [source_id], |row| row.get::<_, i64>(0))?,
+            "Message" => crate::sql::query_one(
+                tx.conn(),
+                "SELECT room_id FROM messages WHERE id=?",
+                [source_id],
+                |row| row.get::<_, i64>(0),
+            )?,
+            "WorkThreadEvent" => crate::sql::query_one(
+                tx.conn(),
+                "SELECT t.room_id FROM work_thread_events e JOIN channel_threads t ON t.id=e.channel_thread_id WHERE e.id=?",
+                [source_id],
+                |row| row.get::<_, i64>(0),
+            )?,
+            "BoardSlaNudge" => crate::sql::query_one(
+                tx.conn(),
+                "SELECT room_id FROM board_sla_nudges WHERE id=?",
+                [source_id],
+                |row| row.get::<_, i64>(0),
+            )?,
             _ => None,
         };
         let removed = Self::delete_for_source(tx, source_type, source_id)?;
@@ -410,7 +432,11 @@ impl ActivityItem {
     /// leave their reach: `user_id`'s on leaving it, everyone's when it's deleted. The rows stay,
     /// as in Rails (`ActivityItem.accessible_to` hides them, and shows them again if access
     /// returns). Call it before the memberships go.
-    pub(crate) fn emit_hidden_in_room(tx: &mut Tx<'_>, room_id: i64, user_id: Option<i64>) -> Result<()> {
+    pub(crate) fn emit_hidden_in_room(
+        tx: &mut Tx<'_>,
+        room_id: i64,
+        user_id: Option<i64>,
+    ) -> Result<()> {
         let hidden = crate::sql::query_all(
             tx.conn(),
             "SELECT ai.id, ai.user_id FROM activity_items ai WHERE (?2 IS NULL OR ai.user_id = ?2) AND ( \
@@ -428,12 +454,24 @@ impl ActivityItem {
     }
 
     /// Publication slots come from the room roster, never the number of personal items.
-    pub(crate) fn emit_removed_in_room(tx: &mut Tx<'_>, items: Vec<(i64, i64)>, room_id: i64, user_id: Option<i64>) -> Result<()> {
+    pub(crate) fn emit_removed_in_room(
+        tx: &mut Tx<'_>,
+        items: Vec<(i64, i64)>,
+        room_id: i64,
+        user_id: Option<i64>,
+    ) -> Result<()> {
         let recipient_ids = match user_id {
             Some(user_id) => vec![user_id],
-            None => crate::Membership::for_room(tx.conn(), room_id)?.into_iter().map(|member| member.user_id).collect(),
+            None => crate::Membership::for_room(tx.conn(), room_id)?
+                .into_iter()
+                .map(|member| member.user_id)
+                .collect(),
         };
-        tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items, recipient_ids: Some(recipient_ids), room_id: Some(room_id) }));
+        tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved {
+            items,
+            recipient_ids: Some(recipient_ids),
+            room_id: Some(room_id),
+        }));
         Ok(())
     }
 
@@ -441,7 +479,11 @@ impl ActivityItem {
     /// their reach because the rows are deleted without their items (a session, a two-step
     /// credential, an agent's budget notices): the items stay, as in Rails, but
     /// `ActivityItem.accessible_to` no longer finds them.
-    pub(crate) fn emit_hidden_for_sources(tx: &mut Tx<'_>, source_type: &str, source_ids: &[i64]) -> Result<()> {
+    pub(crate) fn emit_hidden_for_sources(
+        tx: &mut Tx<'_>,
+        source_type: &str,
+        source_ids: &[i64],
+    ) -> Result<()> {
         if source_ids.is_empty() {
             return Ok(());
         }
@@ -458,7 +500,11 @@ impl ActivityItem {
     /// Tells the owners' other tabs that these `(id, user_id)` items went with their source.
     pub(crate) fn emit_removed(tx: &mut Tx<'_>, items: Vec<(i64, i64)>) {
         if !items.is_empty() {
-            tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items, recipient_ids: None, room_id: None }));
+            tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved {
+                items,
+                recipient_ids: None,
+                room_id: None,
+            }));
         }
     }
 }

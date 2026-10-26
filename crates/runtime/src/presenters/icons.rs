@@ -120,7 +120,9 @@ pub fn catalog(conn: &campfire_db::Connection) -> campfire_db::Result<Vec<Sugges
     let mut brands: BTreeMap<String, Suggestion> = BTreeMap::new();
     for record in catalog.brands.into_values() {
         if let Icon::Brand { name, title, url } = record {
-            brands.entry(name.clone()).or_insert_with(|| image(&name, &title, "brand", url));
+            brands
+                .entry(name.clone())
+                .or_insert_with(|| image(&name, &title, "brand", url));
         }
     }
     let mut icons = brands.into_values().collect::<Vec<_>>();

@@ -63,23 +63,36 @@ impl Compression {
         } else {
             String::new()
         };
-        Self { jitter, disable_on_auth }
-    }
-
-    pub fn negotiate<B>(&self, request: &Request<B>) -> Negotiation {
-        let accept_encoding = request.headers().get(header::ACCEPT_ENCODING).and_then(|v| v.to_str().ok());
-        Negotiation {
-            encoding: select_encoding(request.method(), accept_encoding),
-            user_specific_request: self.disable_on_auth && has_user_specific_request_headers(request.headers()),
+        Self {
+            jitter,
+            disable_on_auth,
         }
     }
 
-    pub async fn apply(&self, negotiation: Negotiation, mut response: Response<Body>, merge: HeaderMerge) -> Response<Body> {
+    pub fn negotiate<B>(&self, request: &Request<B>) -> Negotiation {
+        let accept_encoding = request
+            .headers()
+            .get(header::ACCEPT_ENCODING)
+            .and_then(|v| v.to_str().ok());
+        Negotiation {
+            encoding: select_encoding(request.method(), accept_encoding),
+            user_specific_request: self.disable_on_auth
+                && has_user_specific_request_headers(request.headers()),
+        }
+    }
+
+    pub async fn apply(
+        &self,
+        negotiation: Negotiation,
+        mut response: Response<Body>,
+        merge: HeaderMerge,
+    ) -> Response<Body> {
         add_vary(response.headers_mut(), merge);
         if response.status().is_informational() {
             return response;
         }
-        let guarded = negotiation.user_specific_request || (self.disable_on_auth && has_user_specific_response_headers(response.headers()));
+        let guarded = negotiation.user_specific_request
+            || (self.disable_on_auth && has_user_specific_response_headers(response.headers()));
         let vetoed = guarded || response.headers().contains_key(NO_COMPRESSION);
         response.headers_mut().remove(NO_COMPRESSION);
         if negotiation.encoding == Encoding::None || vetoed || !may_compress(response.headers()) {
@@ -88,7 +101,11 @@ impl Compression {
 
         // Hold the start of the body until it's clear whether it's long enough (and, with jitter,
         // until there's enough of it to derive the jitter from).
-        let want = if self.jitter.is_empty() { MIN_SIZE } else { JITTER_BUFFER.max(MIN_SIZE) };
+        let want = if self.jitter.is_empty() {
+            MIN_SIZE
+        } else {
+            JITTER_BUFFER.max(MIN_SIZE)
+        };
         let (mut parts, body) = response.into_parts();
         let had_length = hyper::body::Body::size_hint(&body).exact().is_some();
         let mut stream = body.into_data_stream();
@@ -111,17 +128,31 @@ impl Compression {
         }
         let buffered = buffered.freeze();
 
-        let body_allowed = !matches!(parts.status, StatusCode::NO_CONTENT | StatusCode::NOT_MODIFIED);
-        let mut content_type = parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+        let body_allowed = !matches!(
+            parts.status,
+            StatusCode::NO_CONTENT | StatusCode::NOT_MODIFIED
+        );
+        let mut content_type = parts
+            .headers
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
+            .to_string();
         if content_type.is_empty() && body_allowed && !buffered.is_empty() {
             content_type = detect_content_type(&buffered).to_string();
             if !parts.headers.contains_key(header::CONTENT_TYPE) {
-                parts.headers.insert(header::CONTENT_TYPE, HeaderValue::from_str(&content_type).unwrap());
+                parts.headers.insert(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_str(&content_type).unwrap(),
+                );
             }
         }
         let long_enough = buffered.len() >= MIN_SIZE;
-        let rest: BoxStream<'static, Result<Bytes, axum::Error>> =
-            if ended { stream::empty().boxed() } else { stream.map(|r| r.map_err(axum::Error::new)).boxed() };
+        let rest: BoxStream<'static, Result<Bytes, axum::Error>> = if ended {
+            stream::empty().boxed()
+        } else {
+            stream.map(|r| r.map_err(axum::Error::new)).boxed()
+        };
         if !(long_enough && content_type_filter(&content_type)) {
             if ended && had_length {
                 return Response::from_parts(parts, Body::from(buffered));
@@ -131,7 +162,14 @@ impl Compression {
         }
 
         let encoding = negotiation.encoding;
-        parts.headers.insert(header::CONTENT_ENCODING, HeaderValue::from_static(if encoding == Encoding::Gzip { "gzip" } else { "zstd" }));
+        parts.headers.insert(
+            header::CONTENT_ENCODING,
+            HeaderValue::from_static(if encoding == Encoding::Gzip {
+                "gzip"
+            } else {
+                "zstd"
+            }),
+        );
         parts.headers.remove(header::CONTENT_LENGTH);
         parts.headers.remove(header::ACCEPT_RANGES);
         let jitter = self.jitter_for(&buffered);
@@ -145,12 +183,27 @@ impl Compression {
             return match compressed {
                 // Go's server gives a response a length when the handler returns with all of it
                 // still in its 2 KB chunking buffer, and sends anything longer chunked.
-                Ok(compressed) if compressed.len() <= GO_CHUNKING_BUFFER => Response::from_parts(parts, Body::from(compressed)),
-                Ok(compressed) => Response::from_parts(parts, Body::from_stream(stream::once(async move { Ok::<_, axum::Error>(compressed) }))),
-                Err(error) => Response::from_parts(parts, Body::from_stream(stream::once(async move { Err::<Bytes, _>(axum::Error::new(error)) }))),
+                Ok(compressed) if compressed.len() <= GO_CHUNKING_BUFFER => {
+                    Response::from_parts(parts, Body::from(compressed))
+                }
+                Ok(compressed) => Response::from_parts(
+                    parts,
+                    Body::from_stream(stream::once(
+                        async move { Ok::<_, axum::Error>(compressed) },
+                    )),
+                ),
+                Err(error) => Response::from_parts(
+                    parts,
+                    Body::from_stream(stream::once(async move {
+                        Err::<Bytes, _>(axum::Error::new(error))
+                    })),
+                ),
             };
         }
-        Response::from_parts(parts, Body::from_stream(compress_stream(encoder, buffered, rest)))
+        Response::from_parts(
+            parts,
+            Body::from_stream(compress_stream(encoder, buffered, rest)),
+        )
     }
 
     /// `startCompression`'s jitter: a prefix of the padding whose length (1..=n) comes from the
@@ -182,13 +235,20 @@ fn add_vary(headers: &mut HeaderMap, merge: HeaderMerge) {
 /// The checks `gzhttp` can make from the headers alone: not already encoded, not a range, and
 /// (when the length and type are known) at least 1 KB of a compressible type.
 fn may_compress(headers: &HeaderMap) -> bool {
-    let get = |name| headers.get(name).and_then(|v: &HeaderValue| v.to_str().ok()).unwrap_or("");
+    let get = |name| {
+        headers
+            .get(name)
+            .and_then(|v: &HeaderValue| v.to_str().ok())
+            .unwrap_or("")
+    };
     if !get(header::CONTENT_ENCODING).is_empty() || !get(header::CONTENT_RANGE).is_empty() {
         return false;
     }
     let content_length: usize = get(header::CONTENT_LENGTH).parse().unwrap_or(0);
     let content_type = get(header::CONTENT_TYPE);
-    content_length == 0 || (content_length >= MIN_SIZE && (content_type.is_empty() || content_type_filter(content_type)))
+    content_length == 0
+        || (content_length >= MIN_SIZE
+            && (content_type.is_empty() || content_type_filter(content_type)))
 }
 
 /// `selectEncoding`: never for HEAD; zstd when its quality is at least gzip's.
@@ -196,7 +256,9 @@ pub fn select_encoding(method: &Method, accept_encoding: Option<&str>) -> Encodi
     if method == Method::HEAD {
         return Encoding::None;
     }
-    let Some(accept_encoding) = accept_encoding.filter(|ae| !ae.is_empty()) else { return Encoding::None };
+    let Some(accept_encoding) = accept_encoding.filter(|ae| !ae.is_empty()) else {
+        return Encoding::None;
+    };
     let gzip = quality(accept_encoding, "gzip");
     let zstd = quality(accept_encoding, "zstd");
     match (gzip > 0.0, zstd > 0.0) {
@@ -233,42 +295,76 @@ pub fn content_type_filter(content_type: &str) -> bool {
     if content_type.is_empty() {
         return true;
     }
-    const EXCLUDE_CONTAINS: [&str; 8] = ["compress", "zip", "snappy", "lzma", "xz", "zstd", "brotli", "stuffit"];
+    const EXCLUDE_CONTAINS: [&str; 8] = [
+        "compress", "zip", "snappy", "lzma", "xz", "zstd", "brotli", "stuffit",
+    ];
     const EXCLUDE_PREFIX: [&str; 3] = ["video/", "audio/", "image/jp"];
-    const COMPRESSED_IMAGES: [&str; 10] =
-        ["image/jpeg", "image/jpg", "image/png", "image/apng", "image/webp", "image/gif", "image/avif", "image/heic", "image/heif", "image/jxl"];
+    const COMPRESSED_IMAGES: [&str; 10] = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/apng",
+        "image/webp",
+        "image/gif",
+        "image/avif",
+        "image/heic",
+        "image/heif",
+        "image/jxl",
+    ];
     !(EXCLUDE_CONTAINS.iter().any(|s| content_type.contains(s))
-        || EXCLUDE_PREFIX.iter().chain(COMPRESSED_IMAGES.iter()).any(|p| content_type.starts_with(p)))
+        || EXCLUDE_PREFIX
+            .iter()
+            .chain(COMPRESSED_IMAGES.iter())
+            .any(|p| content_type.starts_with(p)))
 }
 
 /// `hasUserSpecificRequestHeaders` (GZIP_COMPRESSION_DISABLE_ON_AUTH)
 fn has_user_specific_request_headers(headers: &HeaderMap) -> bool {
-    ["cookie", "authorization", "x-csrf-token"].iter().any(|name| headers.get(*name).is_some_and(|v| !v.is_empty()))
+    ["cookie", "authorization", "x-csrf-token"]
+        .iter()
+        .any(|name| headers.get(*name).is_some_and(|v| !v.is_empty()))
 }
 
 /// `hasUserSpecificResponseHeaders`
 fn has_user_specific_response_headers(headers: &HeaderMap) -> bool {
-    let get = |name| headers.get(name).and_then(|v: &HeaderValue| v.to_str().ok()).unwrap_or("");
+    let get = |name| {
+        headers
+            .get(name)
+            .and_then(|v: &HeaderValue| v.to_str().ok())
+            .unwrap_or("")
+    };
     if !get(header::SET_COOKIE).is_empty() {
         return true;
     }
     let cache_control = get(header::CACHE_CONTROL).to_ascii_lowercase();
-    if cache_control.split(',').map(|d| d.trim().split('=').next().unwrap_or("")).any(|d| d == "private" || d == "no-store") {
+    if cache_control
+        .split(',')
+        .map(|d| d.trim().split('=').next().unwrap_or(""))
+        .any(|d| d == "private" || d == "no-store")
+    {
         return true;
     }
-    get(header::VARY).split(',').any(|token| token.trim().eq_ignore_ascii_case("cookie"))
+    get(header::VARY)
+        .split(',')
+        .any(|token| token.trim().eq_ignore_ascii_case("cookie"))
 }
 
 /// A streaming gzip or zstd encoder.
 enum Encoder {
     Gzip(flate2::write::GzEncoder<Vec<u8>>),
-    Zstd(zstd::stream::write::Encoder<'static, Vec<u8>>, Option<String>),
+    Zstd(
+        zstd::stream::write::Encoder<'static, Vec<u8>>,
+        Option<String>,
+    ),
 }
 
 impl Encoder {
     fn new(encoding: Encoding, jitter: Option<String>) -> Self {
         match encoding {
-            Encoding::Zstd => Encoder::Zstd(zstd::stream::write::Encoder::new(Vec::new(), ZSTD_LEVEL).expect("zstd encoder"), jitter),
+            Encoding::Zstd => Encoder::Zstd(
+                zstd::stream::write::Encoder::new(Vec::new(), ZSTD_LEVEL).expect("zstd encoder"),
+                jitter,
+            ),
             _ => {
                 let mut builder = flate2::GzBuilder::new();
                 if let Some(jitter) = jitter {
@@ -316,23 +412,26 @@ fn compress_stream(
     rest: BoxStream<'static, Result<Bytes, axum::Error>>,
 ) -> impl futures_util::Stream<Item = Result<Bytes, axum::Error>> + Send + 'static {
     let chunks = stream::once(async move { Ok(first) }).chain(rest);
-    stream::unfold((Some(encoder), chunks.boxed()), |(encoder, mut chunks)| async move {
-        let mut encoder = encoder?;
-        loop {
-            match chunks.next().await {
-                Some(Ok(chunk)) => match encoder.write(&chunk) {
-                    Ok(output) if output.is_empty() => continue,
-                    Ok(output) => return Some((Ok(output), (Some(encoder), chunks))),
-                    Err(error) => return Some((Err(axum::Error::new(error)), (None, chunks))),
-                },
-                Some(Err(error)) => return Some((Err(error), (None, chunks))),
-                None => {
-                    let output = encoder.finish().map_err(axum::Error::new);
-                    return Some((output, (None, chunks)));
+    stream::unfold(
+        (Some(encoder), chunks.boxed()),
+        |(encoder, mut chunks)| async move {
+            let mut encoder = encoder?;
+            loop {
+                match chunks.next().await {
+                    Some(Ok(chunk)) => match encoder.write(&chunk) {
+                        Ok(output) if output.is_empty() => continue,
+                        Ok(output) => return Some((Ok(output), (Some(encoder), chunks))),
+                        Err(error) => return Some((Err(axum::Error::new(error)), (None, chunks))),
+                    },
+                    Some(Err(error)) => return Some((Err(error), (None, chunks))),
+                    None => {
+                        let output = encoder.finish().map_err(axum::Error::new);
+                        return Some((output, (None, chunks)));
+                    }
                 }
             }
-        }
-    })
+        },
+    )
 }
 
 /// A subset of Go's `http.DetectContentType`, for bodies sent without a `Content-Type` (the app
@@ -340,12 +439,30 @@ fn compress_stream(
 fn detect_content_type(data: &[u8]) -> &'static str {
     let data = &data[..data.len().min(512)];
     let trimmed = {
-        let start = data.iter().position(|b| !matches!(b, b'\t' | b'\n' | 0x0c | b'\r' | b' ')).unwrap_or(data.len());
+        let start = data
+            .iter()
+            .position(|b| !matches!(b, b'\t' | b'\n' | 0x0c | b'\r' | b' '))
+            .unwrap_or(data.len());
         &data[start..]
     };
     const HTML: [&[u8]; 17] = [
-        b"<!DOCTYPE HTML", b"<HTML", b"<HEAD", b"<SCRIPT", b"<IFRAME", b"<H1", b"<DIV", b"<FONT", b"<TABLE", b"<A", b"<STYLE", b"<TITLE",
-        b"<B", b"<BODY", b"<BR", b"<P", b"<!--",
+        b"<!DOCTYPE HTML",
+        b"<HTML",
+        b"<HEAD",
+        b"<SCRIPT",
+        b"<IFRAME",
+        b"<H1",
+        b"<DIV",
+        b"<FONT",
+        b"<TABLE",
+        b"<A",
+        b"<STYLE",
+        b"<TITLE",
+        b"<B",
+        b"<BODY",
+        b"<BR",
+        b"<P",
+        b"<!--",
     ];
     for signature in HTML {
         if trimmed.len() > signature.len()
@@ -383,8 +500,14 @@ fn detect_content_type(data: &[u8]) -> &'static str {
     if data.starts_with(b"PK\x03\x04") {
         return "application/zip";
     }
-    let binary = data.iter().any(|&b| b <= 0x08 || b == 0x0B || (0x0E..=0x1A).contains(&b) || (0x1C..=0x1F).contains(&b));
-    if binary { "application/octet-stream" } else { "text/plain; charset=utf-8" }
+    let binary = data.iter().any(|&b| {
+        b <= 0x08 || b == 0x0B || (0x0E..=0x1A).contains(&b) || (0x1C..=0x1F).contains(&b)
+    });
+    if binary {
+        "application/octet-stream"
+    } else {
+        "text/plain; charset=utf-8"
+    }
 }
 
 /// CRC-32C (Castagnoli), as `crc32.Update(0, castagnoliTable, b)`.
@@ -393,7 +516,11 @@ fn crc32c(data: &[u8]) -> u32 {
     for &byte in data {
         crc ^= byte as u32;
         for _ in 0..8 {
-            crc = if crc & 1 != 0 { (crc >> 1) ^ 0x82F6_3B78 } else { crc >> 1 };
+            crc = if crc & 1 != 0 {
+                (crc >> 1) ^ 0x82F6_3B78
+            } else {
+                crc >> 1
+            };
         }
     }
     !crc
@@ -408,33 +535,54 @@ mod tests {
     fn response(content_type: &str, body: impl Into<Bytes>) -> Response<Body> {
         let mut response = Response::new(Body::from(body.into()));
         if !content_type.is_empty() {
-            response.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_str(content_type).unwrap());
+            response.headers_mut().insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_str(content_type).unwrap(),
+            );
         }
         response
     }
 
     fn negotiation(accept_encoding: &str) -> Negotiation {
-        let request = Request::get("/").header("accept-encoding", accept_encoding).body(()).unwrap();
+        let request = Request::get("/")
+            .header("accept-encoding", accept_encoding)
+            .body(())
+            .unwrap();
         Compression::new(32, false).negotiate(&request)
     }
 
     async fn apply(accept_encoding: &str, response: Response<Body>) -> (HeaderMap, Bytes) {
-        let response = Compression::new(32, false).apply(negotiation(accept_encoding), response, HeaderMerge::Append).await;
+        let response = Compression::new(32, false)
+            .apply(negotiation(accept_encoding), response, HeaderMerge::Append)
+            .await;
         let (parts, body) = response.into_parts();
         (parts.headers, body.collect().await.unwrap().to_bytes())
     }
 
     fn vary(headers: &HeaderMap) -> Vec<&str> {
-        headers.get_all(header::VARY).iter().map(|v| v.to_str().unwrap()).collect()
+        headers
+            .get_all(header::VARY)
+            .iter()
+            .map(|v| v.to_str().unwrap())
+            .collect()
     }
 
     #[test]
     fn selects_zstd_at_equal_quality() {
-        assert_eq!(select_encoding(&Method::GET, Some("gzip, deflate, br, zstd")), Encoding::Zstd);
-        assert_eq!(select_encoding(&Method::GET, Some("gzip, zstd;q=0.5")), Encoding::Gzip);
+        assert_eq!(
+            select_encoding(&Method::GET, Some("gzip, deflate, br, zstd")),
+            Encoding::Zstd
+        );
+        assert_eq!(
+            select_encoding(&Method::GET, Some("gzip, zstd;q=0.5")),
+            Encoding::Gzip
+        );
         assert_eq!(select_encoding(&Method::GET, Some("gzip")), Encoding::Gzip);
         assert_eq!(select_encoding(&Method::GET, Some("zstd")), Encoding::Zstd);
-        assert_eq!(select_encoding(&Method::GET, Some("gzip;q=0, br")), Encoding::None);
+        assert_eq!(
+            select_encoding(&Method::GET, Some("gzip;q=0, br")),
+            Encoding::None
+        );
         assert_eq!(select_encoding(&Method::GET, None), Encoding::None);
         assert_eq!(select_encoding(&Method::HEAD, Some("gzip")), Encoding::None);
     }
@@ -453,7 +601,8 @@ mod tests {
     #[tokio::test]
     async fn compresses_unencoded_bodies_with_zstd() {
         let body = "hello campfire ".repeat(200);
-        let (headers, bytes) = apply("zstd", response("text/html; charset=utf-8", body.clone())).await;
+        let (headers, bytes) =
+            apply("zstd", response("text/html; charset=utf-8", body.clone())).await;
         assert_eq!(headers[header::CONTENT_ENCODING], "zstd");
         assert_eq!(vary(&headers), ["Accept-Encoding"]);
         let decoded = zstd::stream::decode_all(&bytes[..]).unwrap();
@@ -470,14 +619,26 @@ mod tests {
         decoder.read_to_string(&mut decoded).unwrap();
         assert_eq!(decoded, body);
         let comment = decoder.header().unwrap().comment().unwrap();
-        assert!(!comment.is_empty() && comment.len() <= 32 && b"Padding-Padding-Padding-Padding-P".starts_with(comment));
+        assert!(
+            !comment.is_empty()
+                && comment.len() <= 32
+                && b"Padding-Padding-Padding-Padding-P".starts_with(comment)
+        );
     }
 
     #[tokio::test]
     async fn a_failing_body_fails_the_response() {
-        let chunks = [Ok(Bytes::from("hello campfire ".repeat(100))), Err(std::io::Error::other("disk gone"))];
-        let failing = Response::builder().header(header::CONTENT_TYPE, "text/html").body(Body::from_stream(stream::iter(chunks))).unwrap();
-        let response = Compression::new(32, false).apply(negotiation("gzip"), failing, HeaderMerge::Append).await;
+        let chunks = [
+            Ok(Bytes::from("hello campfire ".repeat(100))),
+            Err(std::io::Error::other("disk gone")),
+        ];
+        let failing = Response::builder()
+            .header(header::CONTENT_TYPE, "text/html")
+            .body(Body::from_stream(stream::iter(chunks)))
+            .unwrap();
+        let response = Compression::new(32, false)
+            .apply(negotiation("gzip"), failing, HeaderMerge::Append)
+            .await;
         assert!(response.headers().get(header::CONTENT_ENCODING).is_none());
         assert!(response.into_body().collect().await.is_err());
     }
@@ -486,8 +647,12 @@ mod tests {
     async fn leaves_encoded_small_and_incompressible_bodies_alone() {
         let body = "x".repeat(2000);
         let mut encoded = response("text/html", body.clone());
-        encoded.headers_mut().insert(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
-        encoded.headers_mut().insert(header::VARY, HeaderValue::from_static("Accept-Encoding"));
+        encoded
+            .headers_mut()
+            .insert(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
+        encoded
+            .headers_mut()
+            .insert(header::VARY, HeaderValue::from_static("Accept-Encoding"));
         let (headers, bytes) = apply("gzip", encoded).await;
         assert_eq!(headers[header::CONTENT_ENCODING], "gzip");
         assert_eq!(vary(&headers), ["Accept-Encoding", "Accept-Encoding"]);
@@ -505,10 +670,20 @@ mod tests {
     #[tokio::test]
     async fn vary_is_replaced_by_the_cache_and_appended_otherwise() {
         let mut with_vary = response("text/html", "x");
-        with_vary.headers_mut().insert(header::VARY, HeaderValue::from_static("Accept"));
-        let replaced = Compression::new(32, false).apply(negotiation("gzip"), with_vary, HeaderMerge::Replace).await;
+        with_vary
+            .headers_mut()
+            .insert(header::VARY, HeaderValue::from_static("Accept"));
+        let replaced = Compression::new(32, false)
+            .apply(negotiation("gzip"), with_vary, HeaderMerge::Replace)
+            .await;
         assert_eq!(vary(replaced.headers()), ["Accept"]);
-        let plain = Compression::new(32, false).apply(negotiation("gzip"), response("text/html", "x"), HeaderMerge::Replace).await;
+        let plain = Compression::new(32, false)
+            .apply(
+                negotiation("gzip"),
+                response("text/html", "x"),
+                HeaderMerge::Replace,
+            )
+            .await;
         assert_eq!(vary(plain.headers()), ["Accept-Encoding"]);
     }
 
@@ -522,19 +697,43 @@ mod tests {
     #[tokio::test]
     async fn guard_vetoes_user_specific_responses() {
         let compression = Compression::new(32, true);
-        let request = Request::get("/").header("accept-encoding", "gzip").header("cookie", "a=b").body(()).unwrap();
-        let response = compression.apply(compression.negotiate(&request), response("text/html", "x".repeat(2000)), HeaderMerge::Append).await;
+        let request = Request::get("/")
+            .header("accept-encoding", "gzip")
+            .header("cookie", "a=b")
+            .body(())
+            .unwrap();
+        let response = compression
+            .apply(
+                compression.negotiate(&request),
+                response("text/html", "x".repeat(2000)),
+                HeaderMerge::Append,
+            )
+            .await;
         assert!(!response.headers().contains_key(header::CONTENT_ENCODING));
-        let request = Request::get("/").header("accept-encoding", "gzip").body(()).unwrap();
+        let request = Request::get("/")
+            .header("accept-encoding", "gzip")
+            .body(())
+            .unwrap();
         let mut private = response_with_cc("private");
-        private.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html"));
-        let response = compression.apply(compression.negotiate(&request), private, HeaderMerge::Append).await;
+        private
+            .headers_mut()
+            .insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html"));
+        let response = compression
+            .apply(
+                compression.negotiate(&request),
+                private,
+                HeaderMerge::Append,
+            )
+            .await;
         assert!(!response.headers().contains_key(header::CONTENT_ENCODING));
     }
 
     fn response_with_cc(cache_control: &'static str) -> Response<Body> {
         let mut response = Response::new(Body::from("x".repeat(2000)));
-        response.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static(cache_control));
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static(cache_control),
+        );
         response
     }
 

@@ -153,7 +153,12 @@ async fn set_blocked(c: &mut Ctx, blocked: bool) -> Result {
                 campfire_db::models::audit_log::AuditLog::record(
                     tx,
                     campfire_db::models::audit_log::NewAuditLog {
-                        action: if blocked { "oauth.client.block" } else { "oauth.client.unblock" }.into(),
+                        action: if blocked {
+                            "oauth.client.block"
+                        } else {
+                            "oauth.client.unblock"
+                        }
+                        .into(),
                         target: Some(campfire_db::models::audit_log::Target {
                             record_type: "OAuthClient".into(),
                             id,
@@ -166,7 +171,9 @@ async fn set_blocked(c: &mut Ctx, blocked: bool) -> Result {
                 )?;
             }
             let sql = format!("{CLIENT_SQL} WHERE client.id=?2");
-            Ok(tx.conn().query_row(&sql, params![tx.now(), id], admin_client)?)
+            Ok(tx
+                .conn()
+                .query_row(&sql, params![tx.now(), id], admin_client)?)
         })
         .await
         .map_err(campfire_runtime::context::db_error)?;
@@ -426,10 +433,11 @@ fn room_access(
     owner_id: i64,
     agent: &api::PersonalAgent,
 ) -> campfire_db::Result<(Vec<api::OAuthAgentRoomAccess>, i64)> {
-    let mut rooms: BTreeMap<i64, Vec<String>> = campfire_db::Membership::for_user(conn, agent.user_id)?
-        .into_iter()
-        .map(|membership| (membership.room_id, Vec::new()))
-        .collect();
+    let mut rooms: BTreeMap<i64, Vec<String>> =
+        campfire_db::Membership::for_user(conn, agent.user_id)?
+            .into_iter()
+            .map(|membership| (membership.room_id, Vec::new()))
+            .collect();
     for grant in campfire_db::AgentGrant::effective_for_agent(conn, agent.id)? {
         if let Some(room_id) = grant.room_id {
             let capabilities = rooms.entry(room_id).or_default();
@@ -441,7 +449,9 @@ fn room_access(
     let mut access = Vec::new();
     let mut hidden = 0;
     for (room_id, mut capabilities) in rooms {
-        let Some(room) = campfire_db::Room::find_by_id(conn, room_id)? else { continue };
+        let Some(room) = campfire_db::Room::find_by_id(conn, room_id)? else {
+            continue;
+        };
         if room.direct() || room.deleted_at.is_some() {
             continue;
         }
@@ -451,7 +461,10 @@ fn room_access(
         }
         capabilities.sort();
         access.push(api::OAuthAgentRoomAccess {
-            agent_id: agent.id, room_id, room_name: room.name.unwrap_or_default(), capabilities,
+            agent_id: agent.id,
+            room_id,
+            room_name: room.name.unwrap_or_default(),
+            capabilities,
         });
     }
     Ok((access, hidden))

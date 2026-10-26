@@ -11,7 +11,12 @@ async fn ws11ui_bot_mutation_independent_saves_match_pinned_rails() {
     ))
     .unwrap();
     let mut failures = Vec::new();
-    for case in oracle["rows"].as_array().unwrap().iter().filter(|case| case["operation"] != "legacy") {
+    for case in oracle["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["operation"] != "legacy")
+    {
         let t = TestApp::boot_frozen()
             .await
             .unwrap()
@@ -110,7 +115,10 @@ async fn ws11ui_bot_mutation_independent_saves_match_pinned_rails() {
             "remove" => browser.write(Req::new(Method::DELETE, &path)).await,
             "legacy" => {
                 browser
-                    .send(Req::new(Method::GET, &path.replace("/account/bots/", "/api/v1/admin/bots/")))
+                    .send(Req::new(
+                        Method::GET,
+                        &path.replace("/account/bots/", "/api/v1/admin/bots/"),
+                    ))
                     .await
             }
             "legacy_post" => {

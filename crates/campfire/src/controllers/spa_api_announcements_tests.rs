@@ -813,7 +813,9 @@ async fn announcement_jobs_deliver_normal_messages_and_filter_http_and_sync_refe
     .expect("deleting a published copy refreshes its target-room thread");
     assert!(matches!(event.payload, api::SyncPayload::ThreadUnread(_)));
     let detail: api::ThreadDetail = parse(
-        &david.send(get(&format!("/api/v1/threads/{thread_id}"))).await,
+        &david
+            .send(get(&format!("/api/v1/threads/{thread_id}")))
+            .await,
     );
     assert!(detail.thread.parent_message_id.is_none());
     assert!(detail.parent_message.is_none());
@@ -1065,7 +1067,10 @@ async fn announcement_webhook_copies_preserve_ignore_policy_in_http_live_and_rep
         };
         assert_eq!(message.creator_id, author.1);
         assert_eq!(message.ignored, ignored);
-        assert_eq!(message.webhook.unwrap().username.as_deref(), Some("Release bot"));
+        assert_eq!(
+            message.webhook.unwrap().username.as_deref(),
+            Some("Release bot")
+        );
         assert_eq!(message.embeds.unwrap()[0].title.as_deref(), Some("Release"));
         assert_eq!(message.announcement_source.unwrap().message_id, source_id);
     }
@@ -1076,7 +1081,10 @@ async fn announcement_webhook_copies_preserve_ignore_policy_in_http_live_and_rep
     );
     assert_eq!(read.message.ignored, Some(true));
     assert_eq!(read.message.webhook.unwrap().name, "Announcements");
-    assert_eq!(read.message.announcement_source.unwrap().message_id, source_id);
+    assert_eq!(
+        read.message.announcement_source.unwrap().message_id,
+        source_id
+    );
     let mut replay = Sync::open(
         addr,
         &kevin.cookie_header(),
@@ -1084,7 +1092,10 @@ async fn announcement_webhook_copies_preserve_ignore_policy_in_http_live_and_rep
         json!({"epoch":epoch,"seq":seq}),
     )
     .await;
-    assert!(matches!(replay.next().await, Some(api::ServerFrame::Welcome { resumed: true, .. })));
+    assert!(matches!(
+        replay.next().await,
+        Some(api::ServerFrame::Welcome { resumed: true, .. })
+    ));
     let event = replay.until(created, |_| false).await;
     let api::SyncPayload::MessageCreated(message) = event.payload else {
         unreachable!()
@@ -1421,7 +1432,11 @@ async fn announcement_copies_are_marked_for_viewers_who_cannot_see_the_source() 
         .find(|m| m.room_id == HQ)
         .unwrap()
         .id;
-    let visible: Value = parse(&david.send(get(&format!("/api/v1/messages/{copy_id}"))).await);
+    let visible: Value = parse(
+        &david
+            .send(get(&format!("/api/v1/messages/{copy_id}")))
+            .await,
+    );
     assert_eq!(visible["message"]["announcementCopy"], true);
     assert!(!visible["message"]["announcementSource"].is_null());
     a.db()
@@ -1434,10 +1449,18 @@ async fn announcement_copies_are_marked_for_viewers_who_cannot_see_the_source() 
         })
         .await
         .unwrap();
-    let hidden: Value = parse(&david.send(get(&format!("/api/v1/messages/{copy_id}"))).await);
+    let hidden: Value = parse(
+        &david
+            .send(get(&format!("/api/v1/messages/{copy_id}")))
+            .await,
+    );
     assert!(hidden["message"]["announcementSource"].is_null());
     assert_eq!(hidden["message"]["announcementCopy"], true);
-    let page: Value = parse(&david.send(get(&format!("/api/v1/rooms/{HQ}/messages"))).await);
+    let page: Value = parse(
+        &david
+            .send(get(&format!("/api/v1/rooms/{HQ}/messages")))
+            .await,
+    );
     let listed = page["messages"]
         .as_array()
         .unwrap()
@@ -1460,5 +1483,10 @@ async fn announcement_copies_are_marked_for_viewers_who_cannot_see_the_source() 
             &json!({}),
         ))
         .await;
-    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", refused.text());
+    assert_eq!(
+        refused.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        refused.text()
+    );
 }

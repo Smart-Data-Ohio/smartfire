@@ -1,7 +1,9 @@
 //! Discord-style `||spoiler||` text: inline only, inert in code, redacted in plain-text previews.
 use campfire_richtext::markdown::{self, Icon, IconCatalog, RoomMember};
+use campfire_richtext::{
+    AttachableResolver, Content, GidLookup, MentionUser, RenderContext, SignedLookup,
+};
 use std::collections::HashMap;
-use campfire_richtext::{AttachableResolver, Content, GidLookup, MentionUser, RenderContext, SignedLookup};
 
 struct NoRecords;
 impl AttachableResolver for NoRecords {
@@ -97,7 +99,11 @@ fn david() -> MentionUser {
 struct DavidRecords;
 impl AttachableResolver for DavidRecords {
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
-        if sgid == david().attachable_sgid { SignedLookup::User(david()) } else { SignedLookup::Invalid }
+        if sgid == david().attachable_sgid {
+            SignedLookup::User(david())
+        } else {
+            SignedLookup::Invalid
+        }
     }
     fn find_gid(&self, _: &str) -> GidLookup {
         GidLookup::NotFound
@@ -105,30 +111,52 @@ impl AttachableResolver for DavidRecords {
 }
 
 fn david_ctx() -> RenderContext<'static> {
-    RenderContext { resolver: &DavidRecords, request_host: None }
+    RenderContext {
+        resolver: &DavidRecords,
+        request_host: None,
+    }
 }
 
 fn render_david(source: &str) -> String {
-    markdown::render(source, &(|name: &str| (name == "David").then(david)), &IconCatalog::default()).unwrap()
+    markdown::render(
+        source,
+        &(|name: &str| (name == "David").then(david)),
+        &IconCatalog::default(),
+    )
+    .unwrap()
 }
 
 /// Richtext mentions are `@[Name]`. There is no `<@id>` form on this path.
 fn assert_mention_stays_concealed(html: &str) {
     let mut dom = campfire_richtext::dom::Dom::new();
     let root = dom.parse_fragment(html).unwrap();
-    let spoilers: Vec<_> = dom.descendants(root).into_iter().filter(|&node| dom.has_attr(node, "data-spoiler")).collect();
+    let spoilers: Vec<_> = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|&node| dom.has_attr(node, "data-spoiler"))
+        .collect();
     assert_eq!(spoilers.len(), 1, "{html}");
     let text = dom.text_content(spoilers[0]);
     assert!(text.contains("David") && text.contains("killer"), "{html}");
     for node in dom.descendants(root) {
-        if dom.text(node).is_some_and(|value| value.contains("David") || value.contains("killer")) {
-            let hidden = dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
+        if dom
+            .text(node)
+            .is_some_and(|value| value.contains("David") || value.contains("killer"))
+        {
+            let hidden = dom
+                .ancestors(node)
+                .iter()
+                .any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
             assert!(hidden, "{html}");
         }
     }
     let mention_inside = dom.descendants(root).into_iter().any(|node| {
-        dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "mention"))
-            && dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"))
+        dom.attr(node, "class")
+            .is_some_and(|classes| classes.split_whitespace().any(|class| class == "mention"))
+            && dom
+                .ancestors(node)
+                .iter()
+                .any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"))
     });
     assert!(mention_inside, "{html}");
 }
@@ -139,13 +167,21 @@ fn a_mention_inside_a_spoiler_stays_concealed() {
     let shown = markdown::presentation(&body, &david_ctx(), &IconCatalog::default(), None).unwrap();
     assert_mention_stays_concealed(&shown);
 
-    let timeline = Content::load(&body, &david_ctx()).unwrap().to_rendered_html_with_layout(&david_ctx()).unwrap();
+    let timeline = Content::load(&body, &david_ctx())
+        .unwrap()
+        .to_rendered_html_with_layout(&david_ctx())
+        .unwrap();
     assert_mention_stays_concealed(&timeline);
 }
 
 #[test]
 fn plain_text_hides_a_mention_inside_a_spoiler() {
-    let text = markdown::plain_text(&render_david("||@[David] is the killer||"), &david_ctx(), &IconCatalog::default()).unwrap();
+    let text = markdown::plain_text(
+        &render_david("||@[David] is the killer||"),
+        &david_ctx(),
+        &IconCatalog::default(),
+    )
+    .unwrap();
     assert_eq!(text, "spoiler");
 }
 
@@ -171,7 +207,10 @@ fn presentation_keeps_the_spoiler_and_drops_anything_else_new() {
 fn a_spoiler_inside_a_spoiler_joins_the_outer_one() {
     // One level only. Inner markers don't open a second spoiler or reveal the words between them.
     let spoiler = "<span class=\"spoiler\" data-spoiler=\"\">";
-    assert_eq!(render("||outer ||SECRET|| tail||"), format!("<p>{spoiler}outer SECRET tail</span></p>\n"));
+    assert_eq!(
+        render("||outer ||SECRET|| tail||"),
+        format!("<p>{spoiler}outer SECRET tail</span></p>\n")
+    );
     assert_eq!(
         render("||a **||b||** c||"),
         format!("<p>{spoiler}a <strong>b</strong> c</span></p>\n")
@@ -181,14 +220,20 @@ fn a_spoiler_inside_a_spoiler_joins_the_outer_one() {
 
 #[test]
 fn a_link_whose_label_holds_a_spoiler_conceals_it() {
-    let html = render(r#"[||ending||](https://example.com/alice-dies "Alice dies") and [open](https://example.com/shown)"#);
+    let html = render(
+        r#"[||ending||](https://example.com/alice-dies "Alice dies") and [open](https://example.com/shown)"#,
+    );
     assert_eq!(
         html,
         "<p><a href=\"https://example.com/alice-dies\" title=\"Alice dies\" target=\"_blank\" rel=\"nofollow noopener noreferrer\"><span class=\"spoiler\" data-spoiler=\"\">ending</span></a> and <a href=\"https://example.com/shown\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">open</a></p>\n"
     );
     let mut dom = campfire_richtext::dom::Dom::new();
     let root = dom.parse_fragment(&html).unwrap();
-    let links: Vec<_> = dom.descendants(root).into_iter().filter(|&node| dom.local_name(node) == Some("a")).collect();
+    let links: Vec<_> = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|&node| dom.local_name(node) == Some("a"))
+        .collect();
     assert!(markdown::conceals_spoiler(&dom, links[0]));
     assert!(!markdown::conceals_spoiler(&dom, links[1]));
 }
@@ -198,7 +243,10 @@ fn a_forwarded_spoiler_survives_an_edit() {
     // A forward stores the rendered HTML with no Markdown source. Editing it starts from
     // Markdown made from that HTML, and saving renders that Markdown again.
     let forwarded = render("before ||SECRET||");
-    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
     let source = campfire_richtext::editable_markdown_source(&forwarded, None, &ctx).unwrap();
     assert_eq!(source, "before ||SECRET||");
 
@@ -207,7 +255,10 @@ fn a_forwarded_spoiler_survives_an_edit() {
     assert_eq!(from_shown, "before ||SECRET||");
 
     let edited = render(&source.replace("before", "after"));
-    assert_eq!(edited, "<p>after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span></p>\n");
+    assert_eq!(
+        edited,
+        "<p>after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span></p>\n"
+    );
 }
 
 /// Scheduled-message excerpts (`markdown::redacted_excerpt`): Markdown with no stored HTML, read
@@ -215,43 +266,90 @@ fn a_forwarded_spoiler_survives_an_edit() {
 #[test]
 fn redacted_excerpts_come_from_the_render() {
     for (source, excerpt) in [
-        ("no markers at all, **raw** [docs](https://example.com/docs)", "no markers at all, **raw** [docs](https://example.com/docs)"),
+        (
+            "no markers at all, **raw** [docs](https://example.com/docs)",
+            "no markers at all, **raw** [docs](https://example.com/docs)",
+        ),
         ("see ||secret words|| now", "see spoiler now"),
         ("||outer ||SECRET|| tail||", "spoiler"),
         ("\\`||SECRET||\\`", "`spoiler`"),
         ("`||x||` and ||y||", "||x|| and spoiler"),
         ("||top\n\nbottom||", "||top\n\nbottom||"),
         // A link or image around a spoiler loses its URL and title.
-        (r#"[||Alice dies||](https://example.com/alice-dies "Alice dies")"#, "spoiler"),
-        (r#"see [the ||end||](https://example.com/a "t") now"#, "see the spoiler now"),
+        (
+            r#"[||Alice dies||](https://example.com/alice-dies "Alice dies")"#,
+            "spoiler",
+        ),
+        (
+            r#"see [the ||end||](https://example.com/a "t") now"#,
+            "see the spoiler now",
+        ),
         // Round 5: an escaped `)` and a `)` inside `<…>` don't end the destination early.
-        (r#"[||x||](https://example.com/a\)b "Alice dies") after"#, "spoiler after"),
-        (r#"[||x||](<https://example.com/a)b> "Alice dies") after"#, "spoiler after"),
+        (
+            r#"[||x||](https://example.com/a\)b "Alice dies") after"#,
+            "spoiler after",
+        ),
+        (
+            r#"[||x||](<https://example.com/a)b> "Alice dies") after"#,
+            "spoiler after",
+        ),
         // Reference definitions, multiline or blockquoted, are resolved and never shown.
-        ("read [||Alice dies||][ending] now\n\n[ending]:\n  https://example.com/alice-dies\n  \"Alice dies\"", "read spoiler now"),
-        ("> [||x||][r]\n>\n> [r]: https://example.com/alice-dies \"Alice dies\"", "spoiler"),
-        ("[||Alice dies||] now\n\n[||Alice dies||]: https://example.com/alice-dies", "spoiler now"),
+        (
+            "read [||Alice dies||][ending] now\n\n[ending]:\n  https://example.com/alice-dies\n  \"Alice dies\"",
+            "read spoiler now",
+        ),
+        (
+            "> [||x||][r]\n>\n> [r]: https://example.com/alice-dies \"Alice dies\"",
+            "spoiler",
+        ),
+        (
+            "[||Alice dies||] now\n\n[||Alice dies||]: https://example.com/alice-dies",
+            "spoiler now",
+        ),
         // Nested brackets and entities.
-        ("[a [||x||] b](https://example.com/alice-dies)", "a [spoiler] b"),
+        (
+            "[a [||x||] b](https://example.com/alice-dies)",
+            "a [spoiler] b",
+        ),
         ("||Alice &amp; Bob|| &lt;3", "spoiler <3"),
-        (r#"[||x||](https://example.com/&#97;lice "&#65;lice")"#, "spoiler"),
+        (
+            r#"[||x||](https://example.com/&#97;lice "&#65;lice")"#,
+            "spoiler",
+        ),
         // Images aren't rendered, so neither their alt text nor their URL shows.
-        (r#"![||Alice dies||](https://example.com/alice.png "Alice dies") end"#, "end"),
-        ("[![||x||](https://example.com/i.png)](https://example.com/alice-dies)", ""),
+        (
+            r#"![||Alice dies||](https://example.com/alice.png "Alice dies") end"#,
+            "end",
+        ),
+        (
+            "[![||x||](https://example.com/i.png)](https://example.com/alice-dies)",
+            "",
+        ),
         // Autolinks.
-        ("||Alice dies|| <https://example.com/shown>", "spoiler https://example.com/shown"),
-        ("<https://example.com/||alice||>", "https://example.com/||alice||"),
+        (
+            "||Alice dies|| <https://example.com/shown>",
+            "spoiler https://example.com/shown",
+        ),
+        (
+            "<https://example.com/||alice||>",
+            "https://example.com/||alice||",
+        ),
     ] {
         let shown = markdown::redacted_excerpt(source);
         assert_eq!(shown, excerpt, "{source:?}");
         if source.contains("||") {
-            for secret in ["Alice dies", "alice-dies", "SECRET", "secret words", "&#97;lice"] {
+            for secret in [
+                "Alice dies",
+                "alice-dies",
+                "SECRET",
+                "secret words",
+                "&#97;lice",
+            ] {
                 assert!(!shown.contains(secret), "{source:?} => {shown:?}");
             }
         }
     }
 }
-
 
 /// Every link, image and mention in `html`, and every text holding a word of `secrets`, sits
 /// inside a spoiler span, and no `||` marker or swallowed `%7C%7C` is left over.
@@ -261,10 +359,16 @@ fn assert_covered(html: &str, secrets: &[&str]) {
     let root = dom.parse_fragment(html).unwrap();
     let mut spoilers = 0;
     for node in dom.descendants(root) {
-        let inside = dom.ancestors(node).iter().any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
+        let inside = dom
+            .ancestors(node)
+            .iter()
+            .any(|&ancestor| dom.has_attr(ancestor, "data-spoiler"));
         spoilers += usize::from(dom.has_attr(node, "data-spoiler"));
-        let tagged = matches!(dom.local_name(node), Some("a" | "img")) || dom.has_attr(node, "data-user-id");
-        let secret = dom.text(node).is_some_and(|text| secrets.iter().any(|word| text.contains(word)));
+        let tagged =
+            matches!(dom.local_name(node), Some("a" | "img")) || dom.has_attr(node, "data-user-id");
+        let secret = dom
+            .text(node)
+            .is_some_and(|text| secrets.iter().any(|word| text.contains(word)));
         assert!(inside || !(tagged || secret), "{html}");
     }
     assert!(spoilers > 0, "{html}");
@@ -277,18 +381,33 @@ fn a_url_inside_a_spoiler_is_covered() {
         "<p><span class=\"spoiler\" data-spoiler=\"\"><a href=\"https://example.com/alice-dies\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">https://example.com/alice-dies</a></span></p>\n"
     );
     let cases = [
-        ("see ||https://example.com/alice-dies|| now", "see spoiler now"),
+        (
+            "see ||https://example.com/alice-dies|| now",
+            "see spoiler now",
+        ),
         ("||https://example.com/alice-dies.||", "spoiler"),
         ("||go to https://example.com/alice-dies||!", "spoiler!"),
-        ("||https://example.com/alice-dies|| and ||https://example.com/bob-dies||", "spoiler and spoiler"),
+        (
+            "||https://example.com/alice-dies|| and ||https://example.com/bob-dies||",
+            "spoiler and spoiler",
+        ),
         ("||see www.example.com/alice-dies||", "spoiler"),
         ("||www.example.com/alice-dies||", "spoiler"),
         ("||<https://example.com/alice-dies>||", "spoiler"),
         ("||alice-dies@example.com||", "spoiler"),
         ("> ||https://example.com/alice-dies||", "spoiler"),
-        ("- one\n- ||https://example.com/alice-dies||", "one\n\nspoiler"),
-        ("> - quoted ||https://example.com/alice-dies|| list", "quoted spoiler list"),
-        ("**bold** ||https://example.com/alice-dies||", "bold spoiler"),
+        (
+            "- one\n- ||https://example.com/alice-dies||",
+            "one\n\nspoiler",
+        ),
+        (
+            "> - quoted ||https://example.com/alice-dies|| list",
+            "quoted spoiler list",
+        ),
+        (
+            "**bold** ||https://example.com/alice-dies||",
+            "bold spoiler",
+        ),
         ("é ||https://example.com/alice-dies||", "é spoiler"),
     ];
     for (source, excerpt) in cases {
@@ -300,25 +419,44 @@ fn a_url_inside_a_spoiler_is_covered() {
 #[test]
 fn a_bar_inside_a_url_with_no_spoiler_is_left_alone() {
     // Only a `||` that closes a spoiler ends the URL. Everything else renders as before.
-    for source in ["https://example.com/a||b", "see https://example.com/a||", "`||https://example.com/a||`"] {
+    for source in [
+        "https://example.com/a||b",
+        "see https://example.com/a||",
+        "`||https://example.com/a||`",
+    ] {
         let html = render(source);
         assert!(!html.contains("data-spoiler"), "{html}");
     }
     assert!(render("https://example.com/a||b").contains("href=\"https://example.com/a%7C%7Cb\""));
     let mixed = render("https://example.com/a||b and ||https://example.com/alice-dies||");
-    assert!(mixed.contains("href=\"https://example.com/a%7C%7Cb\""), "{mixed}");
     assert!(
-        mixed.contains("<span class=\"spoiler\" data-spoiler=\"\"><a href=\"https://example.com/alice-dies\""),
+        mixed.contains("href=\"https://example.com/a%7C%7Cb\""),
+        "{mixed}"
+    );
+    assert!(
+        mixed.contains(
+            "<span class=\"spoiler\" data-spoiler=\"\"><a href=\"https://example.com/alice-dies\""
+        ),
         "{mixed}"
     );
 }
 
 #[test]
 fn mentions_and_icons_inside_a_spoiler_are_covered() {
-    let members = [RoomMember { user: david(), active: true }];
+    let members = [RoomMember {
+        user: david(),
+        active: true,
+    }];
     let icons = IconCatalog {
         brands: HashMap::new(),
-        custom: HashMap::from([("acme".into(), Icon::Custom { name: "acme".into(), title: "Custom".into(), url: "/icons/acme".into() })]),
+        custom: HashMap::from([(
+            "acme".into(),
+            Icon::Custom {
+                name: "acme".into(),
+                title: "Custom".into(),
+                url: "/icons/acme".into(),
+            },
+        )]),
     };
     for source in [
         "||<@1> is the killer||",
@@ -330,7 +468,10 @@ fn mentions_and_icons_inside_a_spoiler_are_covered() {
         assert_covered(&html, &["David", "killer", "acme", "Custom"]);
         let text = markdown::plain_text(&html, &david_ctx(), &icons).unwrap();
         assert!(text.starts_with("spoiler"), "{source}: {text}");
-        assert!(!text.contains("killer") && !text.contains("David"), "{source}: {text}");
+        assert!(
+            !text.contains("killer") && !text.contains("David"),
+            "{source}: {text}"
+        );
     }
 }
 
@@ -340,21 +481,49 @@ fn many_urls_inside_spoilers_render_quickly() {
     let started = std::time::Instant::now();
     let html = render(&source);
     assert_eq!(html.matches("data-spoiler").count(), 400);
-    assert!(started.elapsed() < std::time::Duration::from_secs(5), "{:?}", started.elapsed());
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(5),
+        "{:?}",
+        started.elapsed()
+    );
 }
 
 /// Bot and webhook HTML, each way it might mark a spoiler, and whether it is one: a `span` with
 /// the `spoiler` class or a `data-spoiler` attribute. Any other element marked so is not.
 const BOT_HTML: &[(&str, bool)] = &[
-    (r#"<p>before <span class="spoiler">SECRET</span> after</p>"#, true),
-    (r#"<p>before <span data-spoiler="">SECRET</span> after</p>"#, true),
-    (r#"<p>before <span data-spoiler>SECRET</span> after</p>"#, true),
-    (r#"<p>before <span data-spoiler="no">SECRET</span> after</p>"#, true),
-    (r#"<p>before <span class="loud spoiler">SECRET</span> after</p>"#, true),
-    (r#"<p>before <span class="spoiler" data-spoiler="">SECRET</span> after</p>"#, true),
-    (r#"<p>before <b class="spoiler">SECRET</b> after</p>"#, false),
+    (
+        r#"<p>before <span class="spoiler">SECRET</span> after</p>"#,
+        true,
+    ),
+    (
+        r#"<p>before <span data-spoiler="">SECRET</span> after</p>"#,
+        true,
+    ),
+    (
+        r#"<p>before <span data-spoiler>SECRET</span> after</p>"#,
+        true,
+    ),
+    (
+        r#"<p>before <span data-spoiler="no">SECRET</span> after</p>"#,
+        true,
+    ),
+    (
+        r#"<p>before <span class="loud spoiler">SECRET</span> after</p>"#,
+        true,
+    ),
+    (
+        r#"<p>before <span class="spoiler" data-spoiler="">SECRET</span> after</p>"#,
+        true,
+    ),
+    (
+        r#"<p>before <b class="spoiler">SECRET</b> after</p>"#,
+        false,
+    ),
     (r#"<div class="spoiler">SECRET</div>"#, false),
-    (r#"<p>before <a href="https://example.com/x" data-spoiler="">SECRET</a></p>"#, false),
+    (
+        r#"<p>before <a href="https://example.com/x" data-spoiler="">SECRET</a></p>"#,
+        false,
+    ),
 ];
 
 /// The reader's HTML marks the secret with the one canonical marker, a `span` with
@@ -365,21 +534,34 @@ fn assert_canonical(html: &str, spoiler: bool) {
     let canonical = |node| {
         dom.local_name(node) == Some("span")
             && dom.attr(node, "data-spoiler") == Some("")
-            && dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"))
+            && dom
+                .attr(node, "class")
+                .is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"))
     };
     for node in dom.descendants(root) {
         let marked = dom.has_attr(node, "data-spoiler")
-            || dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+            || dom
+                .attr(node, "class")
+                .is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
         assert!(!marked || (spoiler && canonical(node)), "{html}");
         if dom.text(node).is_some_and(|text| text.contains("SECRET")) {
-            assert_eq!(dom.ancestors(node).iter().any(|&ancestor| canonical(ancestor)), spoiler, "{html}");
+            assert_eq!(
+                dom.ancestors(node)
+                    .iter()
+                    .any(|&ancestor| canonical(ancestor)),
+                spoiler,
+                "{html}"
+            );
         }
     }
 }
 
 #[test]
 fn bot_html_spoilers_have_one_marker_everywhere() {
-    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
     let icons = IconCatalog::default();
     for &(html, spoiler) in BOT_HTML {
         for text in [
@@ -391,9 +573,17 @@ fn bot_html_spoilers_have_one_marker_everywhere() {
         }
         let content = Content::load(html, &ctx).unwrap();
         assert_canonical(&content.render(&ctx).unwrap(), spoiler);
-        assert_canonical(&content.to_rendered_html_with_layout(&ctx).unwrap(), spoiler);
-        assert_canonical(&markdown::sanitize_presentation(html, &icons, None).unwrap(), spoiler);
-        let filtered = campfire_richtext::filters::sanitize_attributes(Content::load(html, &ctx).unwrap()).unwrap();
+        assert_canonical(
+            &content.to_rendered_html_with_layout(&ctx).unwrap(),
+            spoiler,
+        );
+        assert_canonical(
+            &markdown::sanitize_presentation(html, &icons, None).unwrap(),
+            spoiler,
+        );
+        let filtered =
+            campfire_richtext::filters::sanitize_attributes(Content::load(html, &ctx).unwrap())
+                .unwrap();
         assert_canonical(&filtered.to_html(), spoiler);
     }
 }

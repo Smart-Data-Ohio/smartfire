@@ -1,5 +1,5 @@
 //! Pinned Rails callback digests above SQLite's bind limit, including cross-batch fetch claims.
-use super::quote_integration_tests::{app_rows};
+use super::quote_integration_tests::app_rows;
 use crate::controllers::presenters::test_support::*;
 use crate::integrations::link_embed::{Embed, metadata_parser::Metadata};
 use serde_json::Value;
@@ -24,7 +24,9 @@ async fn large_callback(index: usize) {
     // Every frame of the callback's one burst fits in the stream's ring (see
     // `with_cable_stream_capacity`), so a briefly descheduled cable connection doesn't lag out.
     let capacity = case["count"].as_u64().unwrap() as usize;
-    let app = crate::test_support::with_cable_stream_capacity(capacity, app_rows(case["rows"].clone())).await;
+    let app =
+        crate::test_support::with_cable_stream_capacity(capacity, app_rows(case["rows"].clone()))
+            .await;
     let input = case.clone();
     app.db().write(move |tx| {
         let count = input["count"].as_i64().unwrap();
@@ -67,20 +69,30 @@ async fn large_callback(index: usize) {
         })
         .await;
     if let Err(error) = result {
-
         panic!(
             "bounded {kind} callback rejected: {}",
             error.to_string().chars().take(150).collect::<String>()
         );
     }
-    app.db().read(move |conn| {
-        let jobs:i64 = conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",[],|r|r.get(0))?;
-        assert_eq!(jobs,case["fetch_jobs"].as_i64().unwrap());
-        if kind != "github" { assert_eq!(Embed::find(conn,id)?.title.as_deref(),Some("after")); }
-        println!("bounded {kind}: {} references; {jobs} fetch jobs",case["count"]);
-        Ok(())
-    }).await.unwrap();
-
+    app.db()
+        .read(move |conn| {
+            let jobs: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(jobs, case["fetch_jobs"].as_i64().unwrap());
+            if kind != "github" {
+                assert_eq!(Embed::find(conn, id)?.title.as_deref(), Some("after"));
+            }
+            println!(
+                "bounded {kind}: {} references; {jobs} fetch jobs",
+                case["count"]
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 #[tokio::test]
 async fn bounded_generic_callback_above_sqlite_bind_limit() {

@@ -8,9 +8,8 @@ use serde_json::{Value, json};
 
 fn inputs() -> Value {
     use std::io::Read;
-    let bytes = include_bytes!(
-        "../../../../../../test-support/agents_ui/normalized_cast_inputs.json.gz"
-    );
+    let bytes =
+        include_bytes!("../../../../../../test-support/agents_ui/normalized_cast_inputs.json.gz");
     let mut text = String::new();
     flate2::read::GzDecoder::new(&bytes[..])
         .read_to_string(&mut text)
@@ -150,10 +149,7 @@ fn pr196_r3_non_token_routes_keep_ordinary_parser() {
                 raw.as_str().unwrap(),
                 raw.as_str().unwrap()
             );
-            assert!(
-                json_params::scoped_json_body_params(&method, path, body.as_bytes())
-                    .is_none()
-            );
+            assert!(json_params::scoped_json_body_params(&method, path, body.as_bytes()).is_none());
             checked += 1;
         }
     }

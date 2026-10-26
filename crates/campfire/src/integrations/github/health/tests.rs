@@ -1,5 +1,4 @@
 use super::*;
-use campfire_db::Timestamp;
 use crate::integrations::{
     github::{
         accounts::{Account, AccountInput},
@@ -8,6 +7,7 @@ use crate::integrations::{
     },
     test_support::TestDb,
 };
+use campfire_db::Timestamp;
 use campfire_db::{Clock, TestClock};
 use rusqlite::params;
 use serde_json::{Value, json};
@@ -18,12 +18,10 @@ async fn github_health_counts_limits_boundaries_configuration_and_section_match_
         "2026-01-01T12:00:00Z".parse().unwrap(),
     ));
     let now = clock.now();
-    let scratch =
-        std::path::PathBuf::from(std::env::var_os("TMPDIR").unwrap()).join("ws15g");
-    let fixture =
-        tokio::task::spawn_blocking(move || TestDb::in_dir(Arc::new(clock), &scratch))
-            .await
-            .unwrap();
+    let scratch = std::path::PathBuf::from(std::env::var_os("TMPDIR").unwrap()).join("ws15g");
+    let fixture = tokio::task::spawn_blocking(move || TestDb::in_dir(Arc::new(clock), &scratch))
+        .await
+        .unwrap();
     let encryption = crypto();
     fixture.db.write(move|tx| {
    for i in 0..13 {let user=900+i;tx.conn().execute("INSERT INTO users (id,name,email_address,created_at,updated_at) VALUES (?,?,?, ?,?)",params![user,format!("User {i}"),format!("user{i}@example.test"),now,now])?;
@@ -34,8 +32,7 @@ let pr=PullRequest::for_reference(tx,&format!("owner{i}"),"repo",i+1)?;tx.conn()
    for (i,age) in [-86_400_000_001i64,-86_400_000_000,0].into_iter().enumerate() {tx.conn().execute("INSERT INTO github_webhook_deliveries (delivery_guid,event,created_at,updated_at) VALUES (?,'ping',?,?)",params![format!("health-{i}"),now.since(jiff::SignedDuration::from_micros(age)),now])?;}Ok(())
   }).await.unwrap();
     let cases: Value =
-        serde_json::from_str(include_str!("../../../../../../vectors/github_health.json"))
-            .unwrap();
+        serde_json::from_str(include_str!("../../../../../../vectors/github_health.json")).unwrap();
     for case in cases.as_array().unwrap() {
         let case = case.clone();
         fixture

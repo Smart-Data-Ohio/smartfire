@@ -5,7 +5,10 @@ use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
-use crate::models::{DeviceClass, Membership, Message, Room, User, NotificationKind, NotificationPolicy, UserStatusSettings, WorkspacePresenceLease};
+use crate::models::{
+    DeviceClass, Membership, Message, NotificationKind, NotificationPolicy, Room, User,
+    UserStatusSettings, WorkspacePresenceLease,
+};
 use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
@@ -63,7 +66,12 @@ pub struct PushPayload {
 impl PushPayload {
     /// Rails does not truncate Web Push payloads. The transport rejects oversized records.
     pub fn new(title: String, body: String, path: String, tag: Option<String>) -> Self {
-        Self { title, body, path, tag }
+        Self {
+            title,
+            body,
+            path,
+            tag,
+        }
     }
     /// Legacy explicit truncation helper. Smartfire's production pushers use [`Self::new`].
     pub fn fitted(title: String, body: String, path: String) -> Self {
@@ -136,16 +144,32 @@ impl PushSubscription {
     }
 
     pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
-        if user_ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn,
-            &format!("SELECT * FROM push_subscriptions WHERE user_id IN ({})",placeholders(user_ids.len())),
-            rusqlite::params_from_iter(user_ids),Self::from_row)
+        if user_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM push_subscriptions WHERE user_id IN ({})",
+                placeholders(user_ids.len())
+            ),
+            rusqlite::params_from_iter(user_ids),
+            Self::from_row,
+        )
     }
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
-        if ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn,
-            &format!("SELECT * FROM push_subscriptions WHERE id IN ({}) ORDER BY id",placeholders(ids.len())),
-            rusqlite::params_from_iter(ids),Self::from_row)
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM push_subscriptions WHERE id IN ({}) ORDER BY id",
+                placeholders(ids.len())
+            ),
+            rusqlite::params_from_iter(ids),
+            Self::from_row,
+        )
     }
 
     /// `user.push_subscriptions.find_by(endpoint:, p256dh_key:, auth_key:)`
@@ -185,7 +209,11 @@ impl PushSubscription {
         })
     }
 
-    pub fn touch_for_device(&self, tx: &mut Tx<'_>, device_class: Option<DeviceClass>) -> Result<()> {
+    pub fn touch_for_device(
+        &self,
+        tx: &mut Tx<'_>,
+        device_class: Option<DeviceClass>,
+    ) -> Result<()> {
         tx.conn().execute_cached(
             "UPDATE push_subscriptions SET updated_at=?1, device_class=COALESCE(?2,device_class) WHERE id=?3 AND (?2 IS NULL OR device_class IS NOT ?2)",
             params![tx.now(), device_class, self.id],
@@ -300,7 +328,9 @@ impl PushSubscription {
         let visible = super::ignore_policy::visible_sql("memberships.user_id", "?3");
         query_all(
             conn,
-            &format!(r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" = 'everything' AND {visible}"#),
+            &format!(
+                r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" = 'everything' AND {visible}"#
+            ),
             params![Membership::connection_cutoff(now), room_id, creator_id],
             Self::from_row,
         )
@@ -354,24 +384,39 @@ impl PushSubscription {
             .map(|u: &User| u.id)
             .collect();
         let reply_author_id = match message.reply_to_message_id {
-            Some(id) if message.reply_notify_author => Message::find_by_id(conn, id)?.map(|m| m.creator_id),
+            Some(id) if message.reply_notify_author => {
+                Message::find_by_id(conn, id)?.map(|m| m.creator_id)
+            }
             _ => None,
         };
-        let members = query_all(conn,
+        let members = query_all(
+            conn,
             "SELECT m.* FROM memberships m WHERE m.room_id=?1 AND m.user_id!=?2 AND (m.involvement IS NULL OR m.involvement!='invisible')",
-            params![message.room_id, message.creator_id], Membership::from_row)?;
+            params![message.room_id, message.creator_id],
+            Membership::from_row,
+        )?;
         let ids: Vec<i64> = members.iter().map(|m| m.user_id).collect();
         let users = UserStatusSettings::for_ids(conn, &ids)?;
-        let exceptions = super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
-        Ok(members.into_iter().filter(|m| {
-            NotificationPolicy {
-                room_id: Some(message.room_id),
-                recipient: users.get(&m.user_id), kind: NotificationKind::RoomMessage,
-                room_involvement: Some(m.involvement), thread_involvement: None,
-                mentioned: mentionee_ids.contains(&m.user_id), reply_to_recipient: reply_author_id == Some(m.user_id),
-                keyword_matched: false, dnd_exception: exceptions.contains(&m.user_id), now,
-            }.push()
-        }).collect())
+        let exceptions =
+            super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
+        Ok(members
+            .into_iter()
+            .filter(|m| {
+                NotificationPolicy {
+                    room_id: Some(message.room_id),
+                    recipient: users.get(&m.user_id),
+                    kind: NotificationKind::RoomMessage,
+                    room_involvement: Some(m.involvement),
+                    thread_involvement: None,
+                    mentioned: mentionee_ids.contains(&m.user_id),
+                    reply_to_recipient: reply_author_id == Some(m.user_id),
+                    keyword_matched: false,
+                    dnd_exception: exceptions.contains(&m.user_id),
+                    now,
+                }
+                .push()
+            })
+            .collect())
     }
 
     /// `Room::MessagePusher#push`: the devices of the notified members who aren't watching the
@@ -393,17 +438,32 @@ impl PushSubscription {
             .filter(|m| m.connected_at.is_none_or(|at| at < cutoff))
             .map(|m| m.user_id)
             .collect();
-        Ok((payload, Self::route_message(conn, Self::for_users(conn, &away)?, now)?))
+        Ok((
+            payload,
+            Self::route_message(conn, Self::for_users(conn, &away)?, now)?,
+        ))
     }
-    pub fn route_message(conn: &Connection, subscriptions: Vec<Self>, now: Timestamp) -> Result<Vec<Self>> {
-        let ids: Vec<i64> = subscriptions.iter().filter(|s| s.device_class() == DeviceClass::Mobile)
-            .map(|s| s.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+    pub fn route_message(
+        conn: &Connection,
+        subscriptions: Vec<Self>,
+        now: Timestamp,
+    ) -> Result<Vec<Self>> {
+        let ids: Vec<i64> = subscriptions
+            .iter()
+            .filter(|s| s.device_class() == DeviceClass::Mobile)
+            .map(|s| s.user_id)
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
         let activity = WorkspacePresenceLease::activity_by_user_id(conn, &ids, now)?;
-        Ok(subscriptions.into_iter().filter(|s| {
-            s.device_class() != DeviceClass::Mobile || !activity.get(&s.user_id).is_some_and(|a| a.active_desktop)
-        }).collect())
+        Ok(subscriptions
+            .into_iter()
+            .filter(|s| {
+                s.device_class() != DeviceClass::Mobile
+                    || !activity.get(&s.user_id).is_some_and(|a| a.active_desktop)
+            })
+            .collect())
     }
-
 }
 
 /// `text`, cut short with an ellipsis if it takes more than `max_bytes` as a JSON string's
@@ -458,18 +518,27 @@ impl EndpointUri {
         if endpoint.is_empty() || !endpoint.is_ascii() {
             return None;
         }
-        let (without_fragment, fragment) = endpoint.split_once('#')
+        let (without_fragment, fragment) = endpoint
+            .split_once('#')
             .map_or((endpoint, None), |(base, fragment)| (base, Some(fragment)));
         if fragment.is_some_and(|v| !uri_component(v, "/?:@")) {
             return None;
         }
-        let (base, query) = without_fragment.split_once('?')
-            .map_or((without_fragment, None), |(base, query)| (base, Some(query)));
+        let (base, query) = without_fragment
+            .split_once('?')
+            .map_or((without_fragment, None), |(base, query)| {
+                (base, Some(query))
+            });
         let (scheme, rest) = match base.split_once(':') {
-            Some((scheme, rest)) if !scheme.is_empty()
-                && scheme.as_bytes()[0].is_ascii_alphabetic()
-                && scheme.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'-' | b'.')) =>
-                    (scheme.to_ascii_lowercase(), rest),
+            Some((scheme, rest))
+                if !scheme.is_empty()
+                    && scheme.as_bytes()[0].is_ascii_alphabetic()
+                    && scheme
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'-' | b'.')) =>
+            {
+                (scheme.to_ascii_lowercase(), rest)
+            }
             _ => (String::new(), base),
         };
         let mut host = String::new();
@@ -479,49 +548,92 @@ impl EndpointUri {
             _ => None,
         };
         let path = if let Some(rest) = rest.strip_prefix("//") {
-            let (authority, path) = rest.find('/').map_or((rest, ""), |index| (&rest[..index], &rest[index..]));
+            let (authority, path) = rest
+                .find('/')
+                .map_or((rest, ""), |index| (&rest[..index], &rest[index..]));
             let authority = if let Some((userinfo, authority)) = authority.split_once('@') {
-                if !uri_component(userinfo, ":") { return None; }
+                if !uri_component(userinfo, ":") {
+                    return None;
+                }
                 authority
-            } else { authority };
+            } else {
+                authority
+            };
             let (hostname, explicit_port) = if authority.starts_with('[') {
                 let end = authority.find(']')?;
                 let address = &authority[1..end];
-                let ipv_future = address.strip_prefix('v').and_then(|a| a.split_once('.'))
-                    .is_some_and(|(version, address)| !version.is_empty()
-                        && version.bytes().all(|b| b.is_ascii_hexdigit())
-                        && !address.is_empty() && uri_component(address, ":") && !address.contains('%'));
-                if address.parse::<std::net::Ipv6Addr>().is_err() && !ipv_future { return None; }
+                let ipv_future = address
+                    .strip_prefix('v')
+                    .and_then(|a| a.split_once('.'))
+                    .is_some_and(|(version, address)| {
+                        !version.is_empty()
+                            && version.bytes().all(|b| b.is_ascii_hexdigit())
+                            && !address.is_empty()
+                            && uri_component(address, ":")
+                            && !address.contains('%')
+                    });
+                if address.parse::<std::net::Ipv6Addr>().is_err() && !ipv_future {
+                    return None;
+                }
                 let suffix = &authority[end + 1..];
-                let explicit_port = if suffix.is_empty() { None } else { Some(suffix.strip_prefix(':')?) };
+                let explicit_port = if suffix.is_empty() {
+                    None
+                } else {
+                    Some(suffix.strip_prefix(':')?)
+                };
                 (&authority[..end + 1], explicit_port)
             } else if let Some((hostname, port)) = authority.split_once(':') {
                 (hostname, Some(port))
-            } else { (authority, None) };
-            if !hostname.starts_with('[') && !uri_component(hostname, "") { return None; }
+            } else {
+                (authority, None)
+            };
+            if !hostname.starts_with('[') && !uri_component(hostname, "") {
+                return None;
+            }
             host = hostname.to_owned();
             if let Some(explicit) = explicit_port {
-                if !explicit.bytes().all(|b| b.is_ascii_digit()) { return None; }
+                if !explicit.bytes().all(|b| b.is_ascii_digit()) {
+                    return None;
+                }
                 if !explicit.is_empty() {
                     // Ruby accepts arbitrary-size integer ports. Only 443 is permitted.
-                    port = Some(if explicit.trim_start_matches('0') == "443" { 443 } else { 0 });
+                    port = Some(if explicit.trim_start_matches('0') == "443" {
+                        443
+                    } else {
+                        0
+                    });
                 }
             }
             path
         } else {
-            if scheme.is_empty() && rest.split('/').next().is_some_and(|first| first.contains(':')) {
+            if scheme.is_empty()
+                && rest
+                    .split('/')
+                    .next()
+                    .is_some_and(|first| first.contains(':'))
+            {
                 return None;
             }
             rest
         };
-        if !uri_component(path, "/:@") { return None; }
+        if !uri_component(path, "/:@") {
+            return None;
+        }
         // Generic#query= removes TAB/CR/LF and escapes other ASCII bytes. It raises
         // for % followed by two non-hex characters, unlike strict path escapes.
         let opaque = !scheme.is_empty() && !rest.starts_with('/');
-        if !opaque && query.is_some_and(|q| {
-            let q: Vec<_> = q.bytes().filter(|b| !matches!(b, b'\t' | b'\r' | b'\n')).collect();
-            q.windows(3).any(|w| w[0] == b'%' && !w[1].is_ascii_hexdigit() && !w[2].is_ascii_hexdigit())
-        }) { return None; }
+        if !opaque
+            && query.is_some_and(|q| {
+                let q: Vec<_> = q
+                    .bytes()
+                    .filter(|b| !matches!(b, b'\t' | b'\r' | b'\n'))
+                    .collect();
+                q.windows(3)
+                    .any(|w| w[0] == b'%' && !w[1].is_ascii_hexdigit() && !w[2].is_ascii_hexdigit())
+            })
+        {
+            return None;
+        }
         Some(Self { scheme, host, port })
     }
 }
@@ -532,8 +644,14 @@ fn uri_component(value: &str, delimiters: &str) -> bool {
     while let Some(b) = bytes.next() {
         if b == b'%' {
             if !bytes.next().is_some_and(|b| b.is_ascii_hexdigit())
-                || !bytes.next().is_some_and(|b| b.is_ascii_hexdigit()) { return false; }
-        } else if !(b.is_ascii_alphanumeric() || b"-._~!$&'()*+,;=".contains(&b) || delimiters.as_bytes().contains(&b)) {
+                || !bytes.next().is_some_and(|b| b.is_ascii_hexdigit())
+            {
+                return false;
+            }
+        } else if !(b.is_ascii_alphanumeric()
+            || b"-._~!$&'()*+,;=".contains(&b)
+            || delimiters.as_bytes().contains(&b))
+        {
             return false;
         }
     }
@@ -548,7 +666,10 @@ mod tests {
     fn truncates_by_json_escaped_length() {
         assert_eq!(truncate_json_string("short".into(), 5), "short");
         assert_eq!(truncate_json_string("longer".into(), 5), "lo…");
-        assert_eq!(truncate_json_string("\u{1}".repeat(10), 16), format!("{}…", "\u{1}".repeat(2)));
+        assert_eq!(
+            truncate_json_string("\u{1}".repeat(10), 16),
+            format!("{}…", "\u{1}".repeat(2))
+        );
         assert_eq!(truncate_json_string(r#"""""#.into(), 5), "\"…");
         assert_eq!(truncate_json_string("😀😀".into(), 7), "😀…");
     }

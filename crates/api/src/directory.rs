@@ -83,7 +83,8 @@ async fn index_direct_candidates(c: &mut Ctx) -> Result {
                 .collect();
             // `rooms/directs#new`: a stable partition keeps `User.ordered` within each half. The
             // viewer (their note-to-self) leads, as Slack lists you first.
-            candidates.sort_by_key(|candidate| (candidate.user_id != viewer.id, !candidate.starred));
+            candidates
+                .sort_by_key(|candidate| (candidate.user_id != viewer.id, !candidate.starred));
             Ok(api::DirectCandidateList {
                 candidates,
                 users: dto::users(conn, &secrets, ids, now)?,
@@ -108,10 +109,17 @@ fn capacity(c: &mut Ctx) -> Error {
 
 fn contact_user_ids(conn: &campfire_db::Connection, ids: &[i64]) -> campfire_db::Result<Vec<i64>> {
     let users = User::where_ids(conn, ids)?;
-    if ids.iter().any(|id| !users.iter().any(|user| user.id == *id)) {
+    if ids
+        .iter()
+        .any(|id| !users.iter().any(|user| user.id == *id))
+    {
         return Err(campfire_db::Error::RecordNotFound("User"));
     }
-    Ok(users.into_iter().filter(User::is_active).map(|user| user.id).collect())
+    Ok(users
+        .into_iter()
+        .filter(User::is_active)
+        .map(|user| user.id)
+        .collect())
 }
 
 /// `rooms/directs#create`: the first [`MAX_MEMBERS`] ids and the viewer, active people only.
@@ -475,7 +483,9 @@ async fn index_files(c: &mut Ctx) -> Result {
     let list = c
         .app()
         .db
-        .read(move |conn| dto::room_files(conn, &app, room.id, viewer_id, &file_type, &filename, page))
+        .read(move |conn| {
+            dto::room_files(conn, &app, room.id, viewer_id, &file_type, &filename, page)
+        })
         .await
         .map_err(db_error)?;
     c.json(StatusCode::OK, &list)

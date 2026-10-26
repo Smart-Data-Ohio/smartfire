@@ -19,8 +19,18 @@ impl State {
         Self {
             config: self.config.clone(),
             throttle: self.throttle.clone(),
-            renderer: RwLock::new(self.renderer.read().unwrap_or_else(|p| p.into_inner()).clone()),
-            fanout: RwLock::new(self.fanout.read().unwrap_or_else(|p| p.into_inner()).clone()),
+            renderer: RwLock::new(
+                self.renderer
+                    .read()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone(),
+            ),
+            fanout: RwLock::new(
+                self.fanout
+                    .read()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone(),
+            ),
         }
     }
 

@@ -10,39 +10,39 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::server::Booted;
 use crate::config::Config;
 use crate::controllers::presenters::test_support::{masked_session_token, seed_clock, seed_dir};
+use crate::server::Booted;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 const HOST: &str = "campfire.test";
 const PASSWORD: &str = "secret123456";
 const CHROME: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
-#[path = "tests/github_connections.rs"]
-mod github_connections;
-#[path = "tests/owner_inputs.rs"]
-mod owner_inputs;
-#[path = "tests/bot_mutations.rs"]
-mod bot_mutations;
-#[path = "tests/bot_access.rs"]
-mod bot_access;
-#[path = "tests/approval_decisions.rs"]
-mod approval_decisions;
-#[path = "tests/agent_histories.rs"]
-mod agent_histories;
 #[path = "tests/agent_broadcasts.rs"]
 mod agent_broadcasts;
-#[path = "tests/webhook_secrets.rs"]
-mod webhook_secrets;
+#[path = "tests/agent_histories.rs"]
+mod agent_histories;
+#[path = "tests/approval_decisions.rs"]
+mod approval_decisions;
+#[path = "tests/bot_access.rs"]
+mod bot_access;
+#[path = "tests/bot_mutations.rs"]
+mod bot_mutations;
+#[path = "tests/github_connections.rs"]
+mod github_connections;
 #[path = "tests/kill_switch.rs"]
 mod kill_switch;
-#[path = "tests/navigation_inbox.rs"]
-mod navigation_inbox;
 #[path = "tests/member_polling.rs"]
 mod member_polling;
+#[path = "tests/navigation_inbox.rs"]
+mod navigation_inbox;
+#[path = "tests/owner_inputs.rs"]
+mod owner_inputs;
 #[path = "tests/page_read_boundaries.rs"]
 mod page_read_boundaries;
+#[path = "tests/webhook_secrets.rs"]
+mod webhook_secrets;
 
 #[test]
 fn unicode_parity_sidebar_direct_names_use_ruby_sort_order() {
@@ -93,7 +93,11 @@ async fn boot_seed_with_clock(name: &str, clock: campfire_kit::SharedClock) -> O
     boot_seed_with_network(name, clock, crate::net::Network::system()).await
 }
 
-async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, network: crate::net::Network) -> Option<Test> {
+async fn boot_seed_with_network(
+    name: &str,
+    clock: campfire_kit::SharedClock,
+    network: crate::net::Network,
+) -> Option<Test> {
     let seed = seed_dir(name)?;
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -121,7 +125,9 @@ async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, ne
     .unwrap();
     // The classic pages, until they're deleted.
     Some(Test {
-        booted: crate::server::boot_with_network(config, clock, network).await.unwrap(),
+        booted: crate::server::boot_with_network(config, clock, network)
+            .await
+            .unwrap(),
         labels,
         _dir: dir,
     })
@@ -189,7 +195,6 @@ impl Reply {
             .map(|v| v.to_str().unwrap().to_string())
             .collect()
     }
-
 }
 
 struct Browser<'a> {
@@ -209,7 +214,13 @@ impl Browser<'_> {
         // A page gives the session its authenticity token: the SPA's shell, or, signed out, its
         // sign-in page.
         for page in ["/app/", "/app/session/new"] {
-            if method == Method::GET || self.cookies.get(campfire_kit::session::SESSION_KEY).and_then(|raw| masked_session_token(&self.test.booted.app.secrets, raw)).is_some() {
+            if method == Method::GET
+                || self
+                    .cookies
+                    .get(campfire_kit::session::SESSION_KEY)
+                    .and_then(|raw| masked_session_token(&self.test.booted.app.secrets, raw))
+                    .is_some()
+            {
                 break;
             }
             Box::pin(self.get(page)).await;
@@ -307,19 +318,21 @@ impl Browser<'_> {
         .await
     }
 
-
     // Rails test helper's grant_sudo_access: authenticate the real encrypted cookie,
     // preserve its CSRF state, and add the same verified-at epoch value.
     fn grant_sudo_access(&mut self) {
         use campfire_kit::Crypto;
         let key = campfire_kit::session::SESSION_KEY;
         let crypto = campfire_kit::RailsCrypto::new(self.test.booted.app.secrets.clone());
-        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap())
+            .decode_utf8()
+            .unwrap();
         let now = self.test.booted.app.clock.now();
         let mut data = crypto.decrypt_cookie(key, &raw, now).unwrap();
         data["sudo_verified_at"] = now.as_second().into();
         let cookie = crypto.encrypt_cookie(key, &data, None);
-        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&cookie));
+        self.cookies
+            .insert(key.into(), campfire_kit::cookies::escape(&cookie));
     }
 
     /// A JSON call as the SPA makes it.
@@ -342,7 +355,12 @@ impl Browser<'_> {
                 serde_json::json!({"emailAddress": email, "password": PASSWORD}),
             )
             .await;
-        assert_eq!(reply.status, StatusCode::OK, "sign in as {email}: {}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::OK,
+            "sign in as {email}: {}",
+            reply.text()
+        );
         if reply.text().contains("\"secondFactorRequired\"") {
             let completed = self.complete_challenge(email).await;
             assert_eq!(completed.status, StatusCode::OK, "{}", completed.text());
@@ -400,25 +418,39 @@ impl Browser<'_> {
     }
 }
 
-
-
 #[test]
 fn browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature() {
     use campfire_kit::Crypto;
-    let secrets = std::sync::Arc::new(rails_compat::Secrets::new(&parity_env("SECRET_KEY_BASE").unwrap()));
+    let secrets = std::sync::Arc::new(rails_compat::Secrets::new(
+        &parity_env("SECRET_KEY_BASE").unwrap(),
+    ));
     let crypto = campfire_kit::RailsCrypto::new(secrets);
-    let (token, signed) = (0..20_000).find_map(|i| {
-        let token = format!("fixture-browser-session-{i}");
-        let signed = crypto.sign_cookie("session_token", &token, None);
-        signed.contains("1970").then_some((token, signed))
-    }).expect("deterministic signed-cookie fixture contains epoch digits");
-    assert_eq!(crypto.verify_signed_cookie("session_token", &signed, seed_clock().now()), Some(token));
+    let (token, signed) = (0..20_000)
+        .find_map(|i| {
+            let token = format!("fixture-browser-session-{i}");
+            let signed = crypto.sign_cookie("session_token", &token, None);
+            signed.contains("1970").then_some((token, signed))
+        })
+        .expect("deterministic signed-cookie fixture contains epoch digits");
+    assert_eq!(
+        crypto.verify_signed_cookie("session_token", &signed, seed_clock().now()),
+        Some(token)
+    );
     let header = format!("session_token={signed}; Path=/; HttpOnly; SameSite=Lax");
-    assert!(!cookie_tombstone(&header), "valid signature digits are not an expiry attribute");
-    assert!(!cookie_tombstone("session_token=fixture; Path=/1970; Expires=Mon, 02 Mar 2046 16:00:00 GMT"));
+    assert!(
+        !cookie_tombstone(&header),
+        "valid signature digits are not an expiry attribute"
+    );
+    assert!(!cookie_tombstone(
+        "session_token=fixture; Path=/1970; Expires=Mon, 02 Mar 2046 16:00:00 GMT"
+    ));
     assert!(cookie_tombstone("session_token=fixture; Max-Age=0; Path=/"));
-    assert!(cookie_tombstone("session_token=fixture; max-age=-1; Path=/"));
-    assert!(cookie_tombstone("session_token=fixture; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"));
+    assert!(cookie_tombstone(
+        "session_token=fixture; max-age=-1; Path=/"
+    ));
+    assert!(cookie_tombstone(
+        "session_token=fixture; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"
+    ));
 }
 
 fn encode(value: &str) -> String {
@@ -506,7 +538,10 @@ async fn signs_in_with_a_password_and_out_again() {
     assert_eq!(root.location(), "http://campfire.test/app/");
 
     // Sign out from the profile page's form.
-    assert_eq!(browser.get("/users/me/profile").await.status, StatusCode::FOUND);
+    assert_eq!(
+        browser.get("/users/me/profile").await.status,
+        StatusCode::FOUND
+    );
     let signed_out = browser.form("delete", "/session", &[]).await;
     assert_redirect(&signed_out, "http://campfire.test/");
     assert!(
@@ -546,7 +581,10 @@ async fn rejects_bad_passwords_and_rate_limits_sign_ins() {
         .await;
     assert_eq!(
         (retained.status, retained.location()),
-        (StatusCode::SEE_OTHER, "http://campfire.test/app/session/new")
+        (
+            StatusCode::SEE_OTHER,
+            "http://campfire.test/app/session/new"
+        )
     );
     for attempt in 1..=11 {
         let reply = browser
@@ -646,10 +684,19 @@ async fn transfers_sign_in_on_another_device() {
     let mut admin = test.browser("198.51.100.5");
     admin.sign_in(&test.label("emails.david")).await;
     let kevin_id = test.label("users.kevin");
-    let profile = admin.request(Method::GET, &format!("/api/v1/people/{kevin_id}"), &[("accept", "application/json")], None).await;
+    let profile = admin
+        .request(
+            Method::GET,
+            &format!("/api/v1/people/{kevin_id}"),
+            &[("accept", "application/json")],
+            None,
+        )
+        .await;
     assert_eq!(profile.status, StatusCode::OK, "{}", profile.text());
     let profile: serde_json::Value = serde_json::from_str(&profile.text()).unwrap();
-    let transfer_url = profile["transferUrl"].as_str().expect("administrator's transfer link");
+    let transfer_url = profile["transferUrl"]
+        .as_str()
+        .expect("administrator's transfer link");
     let transfer_id = transfer_url.rsplit('/').next().unwrap().to_owned();
 
     let mut phone = test.browser("198.51.100.6");
@@ -670,7 +717,10 @@ async fn transfers_sign_in_on_another_device() {
         json(&completed),
         serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/app/"})
     );
-    assert_redirect(&phone.get("/users/me/profile").await, "http://campfire.test/app/settings");
+    assert_redirect(
+        &phone.get("/users/me/profile").await,
+        "http://campfire.test/app/settings",
+    );
 
     let mut stranger = test.browser("198.51.100.7");
     assert_redirect(
@@ -697,7 +747,15 @@ async fn joins_with_the_join_code() {
         "http://campfire.test/app/join/nope",
     );
     assert_eq!(
-        browser.request(Method::GET, "/api/v1/join/nope", &[("accept", "application/json")], None).await.status,
+        browser
+            .request(
+                Method::GET,
+                "/api/v1/join/nope",
+                &[("accept", "application/json")],
+                None
+            )
+            .await
+            .status,
         StatusCode::NOT_FOUND
     );
     let code = test.label("join_codes.signal");
@@ -707,7 +765,9 @@ async fn joins_with_the_join_code() {
         &format!("http://campfire.test/app/join/{code}"),
     );
     let api = format!("/api/v1/join/{code}");
-    let page = browser.request(Method::GET, &api, &[("accept", "application/json")], None).await;
+    let page = browser
+        .request(Method::GET, &api, &[("accept", "application/json")], None)
+        .await;
     assert_eq!(page.status, StatusCode::OK, "{}", page.text());
     assert_eq!(json(&page)["kind"], "join");
     // The retained form makes no account.
@@ -719,7 +779,10 @@ async fn joins_with_the_join_code() {
     let retained = browser.form("post", &path, &fields).await;
     assert_eq!(
         (retained.status, retained.location()),
-        (StatusCode::SEE_OTHER, format!("http://campfire.test/app/join/{code}").as_str())
+        (
+            StatusCode::SEE_OTHER,
+            format!("http://campfire.test/app/join/{code}").as_str()
+        )
     );
     let joined = browser
         .json(
@@ -732,7 +795,10 @@ async fn joins_with_the_join_code() {
         json(&joined),
         serde_json::json!({"kind": "signedIn", "location": "http://campfire.test/"})
     );
-    assert_redirect(&browser.get("/users/me/profile").await, "http://campfire.test/app/two_factor/setup?required=true");
+    assert_redirect(
+        &browser.get("/users/me/profile").await,
+        "http://campfire.test/app/two_factor/setup?required=true",
+    );
     assert_redirect(
         &browser.get("/two_factor_setup").await,
         "http://campfire.test/app/two_factor/setup",
@@ -767,7 +833,12 @@ async fn first_run_sets_up_the_account() {
         "http://campfire.test/app/first_run",
     );
     let page = browser
-        .request(Method::GET, "/api/v1/first_run", &[("accept", "application/json")], None)
+        .request(
+            Method::GET,
+            "/api/v1/first_run",
+            &[("accept", "application/json")],
+            None,
+        )
         .await;
     assert_eq!(page.status, StatusCode::OK, "{}", page.text());
     assert_eq!(json(&page)["kind"], "pending");
@@ -791,7 +862,10 @@ async fn first_run_sets_up_the_account() {
     assert_eq!(set_up.status, StatusCode::OK, "{}", set_up.text());
     assert_eq!(json(&set_up)["kind"], "signedIn");
     assert_redirect(&browser.get("/first_run").await, "http://campfire.test/");
-    assert_redirect(&browser.get("/").await, "http://campfire.test/app/two_factor/setup?required=true");
+    assert_redirect(
+        &browser.get("/").await,
+        "http://campfire.test/app/two_factor/setup?required=true",
+    );
     assert_redirect(
         &browser.get("/two_factor_setup").await,
         "http://campfire.test/app/two_factor/setup",
@@ -807,25 +881,53 @@ async fn administers_the_account() {
     admin.sign_in(&test.label("emails.david")).await;
     admin.confirm_sudo().await;
     let action = format!("/account.{}", test.label("accounts.signal"));
-    assert_redirect(&admin.form("patch", &action, &[("account[name]", "Renamed")]).await,
-        "http://campfire.test/account/edit");
-    assert_redirect(&admin.form("post", "/account/join_code", &[]).await,
-        "http://campfire.test/account/edit");
-    assert_redirect(&admin.form("patch", "/account/custom_styles", &[("account[custom_styles]", "body { --x: 1 }")]).await,
-        "http://campfire.test/account/custom_styles/edit");
-    let account = test.booted.app.db.read(campfire_db::Account::first).await.unwrap().unwrap();
+    assert_redirect(
+        &admin
+            .form("patch", &action, &[("account[name]", "Renamed")])
+            .await,
+        "http://campfire.test/account/edit",
+    );
+    assert_redirect(
+        &admin.form("post", "/account/join_code", &[]).await,
+        "http://campfire.test/account/edit",
+    );
+    assert_redirect(
+        &admin
+            .form(
+                "patch",
+                "/account/custom_styles",
+                &[("account[custom_styles]", "body { --x: 1 }")],
+            )
+            .await,
+        "http://campfire.test/account/custom_styles/edit",
+    );
+    let account = test
+        .booted
+        .app
+        .db
+        .read(campfire_db::Account::first)
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(account.name, "Renamed");
     assert_eq!(account.custom_styles.as_deref(), Some("body { --x: 1 }"));
     assert_ne!(account.join_code, test.label("join_codes.signal"));
     let mut member = test.browser("198.51.100.12");
     member.sign_in(&test.label("emails.kevin")).await;
-    assert_eq!(member.form("patch", &action, &[("account[name]", "Mine")]).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        member
+            .form("patch", &action, &[("account[name]", "Mine")])
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
 }
-
 
 #[tokio::test]
 async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
-    let test = boot_seed("default").await.expect("build default parity seed");
+    let test = boot_seed("default")
+        .await
+        .expect("build default parity seed");
     let mut admin = test.browser("198.51.100.113");
     admin.sign_in(&test.label("emails.david")).await;
     let bot_id: i64 = test.label("users.bender").parse().unwrap();
@@ -833,8 +935,22 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     let old_key = test.label("bot_keys.bender");
     let response = admin.form("put", &path, &[]).await;
     assert_redirect(&response, "http://campfire.test/app/sudo/new");
-    assert!(test.booted.app.db.read({let old_key=old_key.clone(); move |conn| campfire_db::User::authenticate_bot(conn,&old_key)}).await.unwrap().is_some());
-    assert_redirect(&admin.get("/sudo/new").await, "http://campfire.test/app/sudo/new");
+    assert!(
+        test.booted
+            .app
+            .db
+            .read({
+                let old_key = old_key.clone();
+                move |conn| campfire_db::User::authenticate_bot(conn, &old_key)
+            })
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert_redirect(
+        &admin.get("/sudo/new").await,
+        "http://campfire.test/app/sudo/new",
+    );
     let confirmed = admin
         .json(
             "/api/v1/sudo",
@@ -847,7 +963,18 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
         serde_json::json!({"method": "PUT", "path": path, "returnTo": "/app/"})
     );
     // The held write runs only when it's sent again.
-    assert!(test.booted.app.db.read({let old_key=old_key.clone(); move |conn| campfire_db::User::authenticate_bot(conn,&old_key)}).await.unwrap().is_some());
+    assert!(
+        test.booted
+            .app
+            .db
+            .read({
+                let old_key = old_key.clone();
+                move |conn| campfire_db::User::authenticate_bot(conn, &old_key)
+            })
+            .await
+            .unwrap()
+            .is_some()
+    );
     let response = admin.form("put", &path, &[]).await;
     assert_eq!(response.status, StatusCode::OK);
     assert_eq!(response.headers.get("cache-control").unwrap(), "no-store");
@@ -855,16 +982,34 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     let payload: serde_json::Value = serde_json::from_slice(&response.body).unwrap();
     let new_key = payload["bot_key"].as_str().unwrap().to_owned();
     assert_ne!(new_key, old_key);
-    let (new_valid, old_valid, plaintext, audit) = test.booted.app.db.read({let new_key=new_key.clone(); let old_key=old_key.clone(); move |conn| Ok((
-        campfire_db::User::authenticate_bot(conn,&new_key)?.is_some(),
-        campfire_db::User::authenticate_bot(conn,&old_key)?.is_some(),
-        conn.query_row("SELECT bot_token FROM users WHERE id=?",[bot_id],|r|r.get::<_,Option<String>>(0))?,
-        conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'",[],|r|r.get::<_,i64>(0))?,
-    ))}).await.unwrap();
+    let (new_valid, old_valid, plaintext, audit) = test
+        .booted
+        .app
+        .db
+        .read({
+            let new_key = new_key.clone();
+            let old_key = old_key.clone();
+            move |conn| {
+                Ok((
+                    campfire_db::User::authenticate_bot(conn, &new_key)?.is_some(),
+                    campfire_db::User::authenticate_bot(conn, &old_key)?.is_some(),
+                    conn.query_row("SELECT bot_token FROM users WHERE id=?", [bot_id], |r| {
+                        r.get::<_, Option<String>>(0)
+                    })?,
+                    conn.query_row(
+                        "SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'",
+                        [],
+                        |r| r.get::<_, i64>(0),
+                    )?,
+                ))
+            }
+        })
+        .await
+        .unwrap();
     assert!(new_valid);
     assert!(!old_valid);
-    assert_eq!(plaintext,None);
-    assert_eq!(audit,1);
+    assert_eq!(plaintext, None);
+    assert_eq!(audit, 1);
     for page in [
         "/account/bots".to_string(),
         format!("/account/bots/{bot_id}/edit"),
@@ -874,7 +1019,10 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
         let response = admin.get(&page).await;
         assert_eq!(response.status, StatusCode::FOUND, "{page}");
         for secret in [&old_key, &new_key] {
-            assert!(!response.text().contains(secret), "{page} reveals a bot key after rotation");
+            assert!(
+                !response.text().contains(secret),
+                "{page} reveals a bot key after rotation"
+            );
         }
     }
 }
@@ -885,7 +1033,16 @@ async fn manages_bots() {
     let mut admin = test.browser("198.51.100.13");
     admin.sign_in(&test.label("emails.david")).await;
     admin.grant_sudo_access();
-    let created = admin.form("post", "/account/bots", &[("user[name]", "Robo"), ("user[webhook_url]", "https://example.com/robo")]).await;
+    let created = admin
+        .form(
+            "post",
+            "/account/bots",
+            &[
+                ("user[name]", "Robo"),
+                ("user[webhook_url]", "https://example.com/robo"),
+            ],
+        )
+        .await;
     assert_eq!(created.status, StatusCode::CREATED);
     assert_eq!(created.header("cache-control"), Some("no-store"));
     let payload: serde_json::Value = serde_json::from_slice(&created.body).unwrap();
@@ -893,19 +1050,46 @@ async fn manages_bots() {
     let bender = test.label("users.bender");
     let id = bender.parse::<i64>().unwrap();
     let action = format!("/account/bots/{bender}");
-    assert_redirect(&admin.form("patch", &action, &[("user[name]", "Bender 2")]).await,
-        "http://campfire.test/account/bots");
-    let old = test.booted.app.db.read(move |conn| campfire_db::User::find(conn,id)).await.unwrap();
+    assert_redirect(
+        &admin
+            .form("patch", &action, &[("user[name]", "Bender 2")])
+            .await,
+        "http://campfire.test/account/bots",
+    );
+    let old = test
+        .booted
+        .app
+        .db
+        .read(move |conn| campfire_db::User::find(conn, id))
+        .await
+        .unwrap();
     assert_eq!(old.name, "Bender 2");
     let reset = admin.form("put", &format!("{action}/key"), &[]).await;
     assert_eq!(reset.status, StatusCode::OK);
     assert_eq!(reset.header("cache-control"), Some("no-store"));
-    let new = test.booted.app.db.read(move |conn| campfire_db::User::find(conn,id)).await.unwrap();
+    let new = test
+        .booted
+        .app
+        .db
+        .read(move |conn| campfire_db::User::find(conn, id))
+        .await
+        .unwrap();
     assert_ne!(old.bot_token_digest, new.bot_token_digest);
-    assert_redirect(&admin.form("delete", &action, &[]).await, "http://campfire.test/account/bots");
-    assert!(!test.booted.app.db.read(move |conn| campfire_db::User::find(conn,id)).await.unwrap().is_active());
+    assert_redirect(
+        &admin.form("delete", &action, &[]).await,
+        "http://campfire.test/account/bots",
+    );
+    assert!(
+        !test
+            .booted
+            .app
+            .db
+            .read(move |conn| campfire_db::User::find(conn, id))
+            .await
+            .unwrap()
+            .is_active()
+    );
 }
-
 
 #[tokio::test]
 async fn serves_the_account_logo_and_avatars() {
@@ -1004,7 +1188,6 @@ async fn bans_and_unbans() {
         &format!("http://campfire.test/users/{jz}"),
     );
 
-
     assert_redirect(
         &admin.form("delete", &action, &[]).await,
         &format!("http://campfire.test/users/{jz}"),
@@ -1074,33 +1257,83 @@ async fn qr_codes_and_the_pwa() {
 
 #[tokio::test]
 async fn agent_directory_rejects_credentials_bots_and_unsigned_visitors() {
-    let Some(test) = boot_seed("default").await else { return };
+    let Some(test) = boot_seed("default").await else {
+        return;
+    };
     let mut browser = test.browser("198.51.100.94");
-    assert_redirect(&browser.get("/agents").await, "http://campfire.test/app/session/new");
-    let secret = test.booted.app.db.write(|tx| {
-        let id = tx.conn().query_row("SELECT id FROM agents LIMIT 1", [], |r| r.get(0))?;
-        Ok(campfire_db::models::agent_credential::AgentCredential::create_with_secret(tx, id, "directory-denial", 127326141, None)?.1)
-    }).await.unwrap();
+    assert_redirect(
+        &browser.get("/agents").await,
+        "http://campfire.test/app/session/new",
+    );
+    let secret = test
+        .booted
+        .app
+        .db
+        .write(|tx| {
+            let id = tx
+                .conn()
+                .query_row("SELECT id FROM agents LIMIT 1", [], |r| r.get(0))?;
+            Ok(
+                campfire_db::models::agent_credential::AgentCredential::create_with_secret(
+                    tx,
+                    id,
+                    "directory-denial",
+                    127326141,
+                    None,
+                )?
+                .1,
+            )
+        })
+        .await
+        .unwrap();
     let authorization = format!("{} {}", "Bearer", secret);
-    let response = browser.request(Method::GET, "/agents", &[("authorization", &authorization)], None).await;
-    assert_eq!(response.status, StatusCode::FORBIDDEN, "directory credentials must be forbidden");
+    let response = browser
+        .request(
+            Method::GET,
+            "/agents",
+            &[("authorization", &authorization)],
+            None,
+        )
+        .await;
+    assert_eq!(
+        response.status,
+        StatusCode::FORBIDDEN,
+        "directory credentials must be forbidden"
+    );
     let path = format!("/agents?bot_key={}", encode(&test.label("bot_keys.bender")));
     assert_eq!(browser.get(&path).await.status, StatusCode::FORBIDDEN);
 }
 
 #[tokio::test]
 async fn agent_directory_bot_session_is_forbidden() {
-    let Some(app) = crate::controllers::presenters::test_support::TestApp::boot().await else { return };
-    let mut bot = app.sign_in(crate::controllers::presenters::test_support::BENDER).await;
-    assert_eq!(bot.get("/agents").await.status, StatusCode::FORBIDDEN, "directory bot sessions must be forbidden");
+    let Some(app) = crate::controllers::presenters::test_support::TestApp::boot().await else {
+        return;
+    };
+    let mut bot = app
+        .sign_in(crate::controllers::presenters::test_support::BENDER)
+        .await;
+    assert_eq!(
+        bot.get("/agents").await.status,
+        StatusCode::FORBIDDEN,
+        "directory bot sessions must be forbidden"
+    );
 }
 
 // Set-Cookie values are opaque; only attributes determine deletion.
 fn cookie_tombstone(cookie: &str) -> bool {
     cookie.split(';').skip(1).any(|attribute| {
-        let Some((name,value))=attribute.trim().split_once('=') else {return false};
-        (name.eq_ignore_ascii_case("max-age") && value.trim().parse::<i64>().is_ok_and(|seconds|seconds<=0))
-            || (name.eq_ignore_ascii_case("expires") && value.trim().eq_ignore_ascii_case("Thu, 01 Jan 1970 00:00:00 GMT"))
+        let Some((name, value)) = attribute.trim().split_once('=') else {
+            return false;
+        };
+        (name.eq_ignore_ascii_case("max-age")
+            && value
+                .trim()
+                .parse::<i64>()
+                .is_ok_and(|seconds| seconds <= 0))
+            || (name.eq_ignore_ascii_case("expires")
+                && value
+                    .trim()
+                    .eq_ignore_ascii_case("Thu, 01 Jan 1970 00:00:00 GMT"))
     })
 }
 
@@ -1112,19 +1345,23 @@ async fn browser_cookie_value_1970_is_not_an_expiry_attribute() {
     }));
     let mut browser = test.browser("198.51.100.14");
     browser.get("/cookie-probe").await;
-    assert_eq!(browser.cookies.get("session_token").map(String::as_str), Some("signed1970value"));
+    assert_eq!(
+        browser.cookies.get("session_token").map(String::as_str),
+        Some("signed1970value")
+    );
 }
 
 #[test]
 fn browser_cookie_deletion_requires_real_attribute() {
-    assert!(!cookie_tombstone("session_token=opaque1970value; expires=Tue, 02 Mar 2027 16:00:00 GMT"));
+    assert!(!cookie_tombstone(
+        "session_token=opaque1970value; expires=Tue, 02 Mar 2027 16:00:00 GMT"
+    ));
     assert!(!cookie_tombstone("session_token=signed; max-age=01"));
     assert!(cookie_tombstone("session_token=signed; Max-Age=0"));
-    assert!(cookie_tombstone("session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT"));
+    assert!(cookie_tombstone(
+        "session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    ));
 }
-
-
-
 
 #[path = "tests/sidebar_review.rs"]
 mod sidebar_review;

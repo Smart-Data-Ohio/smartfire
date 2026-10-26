@@ -6,6 +6,7 @@
 //! [`Tx`], which carries the clock, the [`EventSink`] for side effects that leave the
 //! database, and the after-commit queue.
 
+pub mod additive;
 pub mod broadcasts;
 pub mod callbacks;
 pub mod database;
@@ -13,9 +14,8 @@ pub mod error;
 pub mod events;
 #[cfg(feature = "test-support")]
 pub mod fixtures;
-pub mod models;
 pub mod migrations;
-pub mod additive;
+pub mod models;
 pub mod rich_text;
 pub mod schema;
 pub mod time;
@@ -26,7 +26,9 @@ pub use sql::CachedStatements;
 
 pub use database::{Config, Database, Env, Snapshot, Tx, run_write};
 pub use error::{Error, Errors, Result};
-pub use events::{Broadcast, BroadcastRequest, Event, EventSink, Job, JobRequest, NullSink, RecordingSink};
+pub use events::{
+    Broadcast, BroadcastRequest, Event, EventSink, Job, JobRequest, NullSink, RecordingSink,
+};
 pub use models::*;
 pub use rich_text::{BasicRichText, RichText};
 pub use rusqlite::Connection;

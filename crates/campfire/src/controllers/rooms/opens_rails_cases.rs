@@ -38,10 +38,6 @@ fn redirect(reply: &Reply, id: i64) {
     );
 }
 
-
-
-
-
 async fn assert_active_grants(app: &TestApp, id: i64, retained: &[i64]) {
     let (mut members, mut active) = app
         .db()
@@ -91,7 +87,6 @@ async fn create_case() {
         .unwrap();
     redirect(&reply, id);
     assert_active_grants(&app, id, &[]).await;
-
 }
 #[tokio::test]
 async fn create_forbidden_by_non_admin_when_account_restricts_creation_to_admins() {
@@ -128,7 +123,6 @@ async fn only_admins_or_creators_can_update() {
         StatusCode::FORBIDDEN
     );
     assert_eq!(room(&app, HQ).await.name.as_deref(), Some("HQ"));
-
 }
 #[tokio::test]
 async fn update_case() {
@@ -137,7 +131,6 @@ async fn update_case() {
 
     redirect(&david.write(update(PETS, "New Name", None)).await, PETS);
     assert_eq!(room(&app, PETS).await.name.as_deref(), Some("New Name"));
-
 }
 #[tokio::test]
 async fn update_with_an_icon_normalizes_the_shortcode() {
@@ -191,7 +184,6 @@ async fn update_with_an_unknown_icon_re_renders_the_edit_form() {
         .await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(room(&app, PETS).await.icon_name.is_none());
-
 }
 #[tokio::test]
 async fn a_plain_member_cannot_set_an_icon() {

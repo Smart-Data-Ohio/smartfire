@@ -446,7 +446,9 @@ pub fn request_refresh(tx: &mut Tx<'_>, ids: &[i64]) -> Result<()> {
 /// Rendering can serve stored card data even if refresh scheduling fails. The writer
 /// transaction still makes claim + job indivisible, and serializes concurrent renders.
 pub async fn refresh_after_render(db: &Database, ids: Vec<i64>) {
-    if ids.is_empty() { return; }
+    if ids.is_empty() {
+        return;
+    }
     if let Err(error) = db.write(move |tx| request_refresh(tx, &ids)).await {
         tracing::warn!(%error, "Skipping rendered PR refresh enqueue");
     }
@@ -514,4 +516,3 @@ pub struct CardUpdated {
 impl Broadcast for CardUpdated {
     const KIND: &'static str = "Github::PullRequest#broadcast_card_updates";
 }
-

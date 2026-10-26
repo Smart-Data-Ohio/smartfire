@@ -7,8 +7,13 @@ pub fn first_unread(conn: &Connection, membership: &Membership) -> Result<Option
     if !membership.unread() {
         return Ok(None);
     }
-    let visible = campfire_db::models::ignore_policy::visible_sql(&membership.user_id.to_string(), "creator_id");
-    let mut query = format!("SELECT id,created_at FROM messages WHERE room_id=? AND thread_id IS NULL AND {visible} AND ");
+    let visible = campfire_db::models::ignore_policy::visible_sql(
+        &membership.user_id.to_string(),
+        "creator_id",
+    );
+    let mut query = format!(
+        "SELECT id,created_at FROM messages WHERE room_id=? AND thread_id IS NULL AND {visible} AND "
+    );
     let boundary = if let Some(id) = membership.last_read_message_id {
         if let Some(reference) = Message::find_by_id(conn, id)?
             .filter(|m| m.room_id == membership.room_id && m.thread_id.is_none())

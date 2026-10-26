@@ -6,8 +6,8 @@ use base64::Engine;
 use campfire_richtext::attachables::{render_mention, web_url};
 use campfire_richtext::content::Content;
 use campfire_richtext::{
-    AttachableResolver, GidLookup, MentionUser, RenderContext, SignedLookup, editable_value, filters, mentioned_users,
-    message_presentation, to_plain_text,
+    AttachableResolver, GidLookup, MentionUser, RenderContext, SignedLookup, editable_value,
+    filters, mentioned_users, message_presentation, to_plain_text,
 };
 
 const DAVID_SGID: &str = "eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvMT9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--f7d8e8773314d3310320f3cdd08e5597bb51ca1a";
@@ -26,7 +26,11 @@ struct Fixtures;
 
 impl AttachableResolver for Fixtures {
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
-        if sgid == DAVID_SGID { SignedLookup::User(david()) } else { SignedLookup::Invalid }
+        if sgid == DAVID_SGID {
+            SignedLookup::User(david())
+        } else {
+            SignedLookup::Invalid
+        }
     }
 
     fn embed_image_path(&self, _: &str) -> Result<String, campfire_richtext::Error> {
@@ -43,7 +47,10 @@ impl AttachableResolver for Fixtures {
 }
 
 fn ctx() -> RenderContext<'static> {
-    RenderContext { resolver: &Fixtures, request_host: Some("once.campfire.test".into()) }
+    RenderContext {
+        resolver: &Fixtures,
+        request_host: Some("once.campfire.test".into()),
+    }
 }
 
 /// test_helper.rb's `mention_attachment_for(:david)`
@@ -56,7 +63,9 @@ fn mention_attachment_for_david() -> String {
 
 fn filtered(body: &str) -> String {
     let ctx = ctx();
-    filters::apply(Content::load(body, &ctx).unwrap(), &ctx).unwrap().to_html()
+    filters::apply(Content::load(body, &ctx).unwrap(), &ctx)
+        .unwrap()
+        .to_html()
 }
 
 fn loaded(body: &str) -> String {
@@ -82,7 +91,9 @@ fn entire_message_contains_an_unfurled_url() {
 
 #[test]
 fn a_solo_link_in_a_p_is_preserved_by_our_legacy_filter() {
-    let body = format!("<p><a href=\"https://basecamp.com/\">https://basecamp.com/</a></p>{BASECAMP_UNFURL}");
+    let body = format!(
+        "<p><a href=\"https://basecamp.com/\">https://basecamp.com/</a></p>{BASECAMP_UNFURL}"
+    );
     let result = filtered(&body);
     assert!(result.contains(">https://basecamp.com/</a>"));
     assert!(result.contains("<action-text-attachment"));
@@ -120,7 +131,10 @@ fn unfurled_tweet_with_a_content_image_is_not_styled_as_an_avatar() {
 
 #[test]
 fn entire_message_contains_an_unfurled_url_from_x_com_but_unfurls_to_twitter_com() {
-    for text in ["https://x.com/dhh/status/1752476663303323939", "https://x.com/dhh/status/1752476663303323939?s=20"] {
+    for text in [
+        "https://x.com/dhh/status/1752476663303323939",
+        "https://x.com/dhh/status/1752476663303323939?s=20",
+    ] {
         let body = format!("<div>{text}{TWITTER_UNFURL}</div>");
         let result = filtered(&body);
         assert_ne!(loaded(&body), result);
@@ -130,7 +144,9 @@ fn entire_message_contains_an_unfurled_url_from_x_com_but_unfurls_to_twitter_com
 
 #[test]
 fn legacy_messages_drop_upstream_only_formatting() {
-    let html = presentation("<p>Hello <s>struck</s> <u>under</u> <mark>marked</mark></p><pre data-language=\"ruby\">def x<br>end</pre>");
+    let html = presentation(
+        "<p>Hello <s>struck</s> <u>under</u> <mark>marked</mark></p><pre data-language=\"ruby\">def x<br>end</pre>",
+    );
     assert!(!html.contains("struck"));
     assert!(!html.contains("under"));
     assert!(!html.contains("marked"));
@@ -139,7 +155,12 @@ fn legacy_messages_drop_upstream_only_formatting() {
 
 #[test]
 fn message_contains_a_forbidden_tag() {
-    assert_eq!(filtered("Hello <img src=\"https://ssecurityrise.com/tests/billionlaughs-cache.svg\">World"), "Hello World");
+    assert_eq!(
+        filtered(
+            "Hello <img src=\"https://ssecurityrise.com/tests/billionlaughs-cache.svg\">World"
+        ),
+        "Hello World"
+    );
 }
 
 #[test]
@@ -151,7 +172,9 @@ fn message_with_a_link_using_an_unsafe_uri_scheme() {
 
 #[test]
 fn message_with_an_event_handler_attribute_on_an_allowed_tag() {
-    let result = filtered("<div><a href=\"/x\" onmouseover=\"alert(1)\">x</a> <span onclick=\"alert(2)\">y</span></div>");
+    let result = filtered(
+        "<div><a href=\"/x\" onmouseover=\"alert(1)\">x</a> <span onclick=\"alert(2)\">y</span></div>",
+    );
     assert!(!result.contains("onmouseover"));
     assert!(!result.contains("onclick"));
     assert!(result.contains("<a href=\"/x\">x</a>"));
@@ -184,7 +207,13 @@ fn sanitize_attributes_neutralizes_unsafe_input_and_preserves_benign_content() {
     );
     let content = Content::load(&body, &ctx()).unwrap();
     let result = filters::sanitize_attributes(content).unwrap().to_html();
-    for forbidden in ["javascript:", "data:text/html", "onclick", "onmouseover", "evil.example"] {
+    for forbidden in [
+        "javascript:",
+        "data:text/html",
+        "onclick",
+        "onmouseover",
+        "evil.example",
+    ] {
         assert!(!result.contains(forbidden), "{forbidden} in {result}");
     }
     assert!(result.contains("<span class=\"cf-twitter-avatar\">avatar</span>"));
@@ -208,7 +237,10 @@ fn legacy_messages_drop_tables() {
 
 #[test]
 fn message_with_a_mention_attachment() {
-    let result = filtered(&format!("<div>Hey {}</div>", mention_attachment_for_david()));
+    let result = filtered(&format!(
+        "<div>Hey {}</div>",
+        mention_attachment_for_david()
+    ));
     assert!(
         result.contains(&format!(
             "<action-text-attachment sgid=\"{DAVID_SGID}\" content-type=\"application/vnd.campfire.mention\" content=\""
@@ -234,7 +266,9 @@ fn message_presentation_strips_event_handler_attributes_from_allowed_tags() {
 
 #[test]
 fn message_presentation_preserves_safe_links_and_formatting() {
-    let html = presentation("<div><a href=\"https://example.com\">example</a> <strong>bold</strong></div>");
+    let html = presentation(
+        "<div><a href=\"https://example.com\">example</a> <strong>bold</strong></div>",
+    );
     assert!(html.contains("<a href=\"https://example.com\">example</a>"));
     assert!(html.contains("<strong>bold</strong>"));
 }
@@ -246,31 +280,50 @@ fn editing_legacy_mentions_produces_markdown_tokens() {
     let body = format!(
         "<div>Hey <action-text-attachment sgid=\"{DAVID_SGID}\" content-type=\"application/octet-stream\"></action-text-attachment></div>"
     );
-    assert_eq!(editable_value(&body, &ctx()).unwrap().as_deref(), Some("Hey @[David]"));
+    assert_eq!(
+        editable_value(&body, &ctx()).unwrap().as_deref(),
+        Some("Hey @[David]")
+    );
 }
 
 #[test]
 fn editing_legacy_embeds_keeps_their_link() {
     let body = "<div>Text <action-text-attachment content-type=\"application/vnd.actiontext.opengraph-embed\" href=\"https://example.com/\" filename=\"Example\"></action-text-attachment></div>";
-    assert_eq!(editable_value(body, &ctx()).unwrap().as_deref(), Some("Text https://example.com/"));
+    assert_eq!(
+        editable_value(body, &ctx()).unwrap().as_deref(),
+        Some("Text https://example.com/")
+    );
 }
 
 #[test]
 fn editing_preserves_exact_markdown_source() {
     let source = " **bold**\n\n@[David] ";
-    assert_eq!(campfire_richtext::editable_markdown_source("<p>irrelevant</p>", Some(source), &ctx()).unwrap(), source);
+    assert_eq!(
+        campfire_richtext::editable_markdown_source("<p>irrelevant</p>", Some(source), &ctx())
+            .unwrap(),
+        source
+    );
 }
 
 #[test]
 fn editing_legacy_text_converts_formatting() {
-    assert_eq!(editable_value("<p>Plain <b>bold</b></p>", &ctx()).unwrap().as_deref(), Some("Plain **bold**"));
+    assert_eq!(
+        editable_value("<p>Plain <b>bold</b></p>", &ctx())
+            .unwrap()
+            .as_deref(),
+        Some("Plain **bold**")
+    );
 }
 
 // --- test/lib/rails_ext/action_text_attachables_test.rb, test/models/action_text_attachment_test.rb
 
 fn attachment_plain_text(sgid: Option<&str>) -> String {
     let attribute = sgid.map(|s| format!(" sgid=\"{s}\"")).unwrap_or_default();
-    to_plain_text(&format!("<action-text-attachment{attribute}></action-text-attachment>"), &ctx()).unwrap()
+    to_plain_text(
+        &format!("<action-text-attachment{attribute}></action-text-attachment>"),
+        &ctx(),
+    )
+    .unwrap()
 }
 
 #[test]
@@ -285,23 +338,35 @@ fn from_node_with_a_rails_7_sgid() {
     marshaled.extend_from_slice(b"gid://campfire/User/1");
     marshaled.extend_from_slice(&[0x06, b':', 0x06, b'E', b'T']);
     let message = base64::engine::general_purpose::URL_SAFE.encode(&marshaled);
-    let payload = format!("{{\"_rails\":{{\"message\":\"{message}\",\"exp\":null,\"pur\":\"attachable\"}}}}");
-    let sgid = format!("{}--invalidsignature", base64::engine::general_purpose::STANDARD.encode(payload));
+    let payload =
+        format!("{{\"_rails\":{{\"message\":\"{message}\",\"exp\":null,\"pur\":\"attachable\"}}}}");
+    let sgid = format!(
+        "{}--invalidsignature",
+        base64::engine::general_purpose::STANDARD.encode(payload)
+    );
     assert_eq!(attachment_plain_text(Some(&sgid)), "@David");
 }
 
 #[test]
 fn lookup_user_attachable_with_invalid_signature() {
     let message = DAVID_SGID.split("--").next().unwrap();
-    assert_eq!(attachment_plain_text(Some(&format!("{message}--invalid"))), "@David");
+    assert_eq!(
+        attachment_plain_text(Some(&format!("{message}--invalid"))),
+        "@David"
+    );
 }
 
 #[test]
 fn lookup_invalid_sgid_for_an_attachable_requiring_a_valid_sgid() {
     // A tampered SGID for any model but User is a missing attachable, which renders as ☒
-    for sgid in [format!("{ROOM_SGID_MESSAGE}--invalid"), format!("{ROOM_SGID_MESSAGE}--f7d8e8773314d3310320f3cdd08e5597bb51ca1ainvalid")] {
+    for sgid in [
+        format!("{ROOM_SGID_MESSAGE}--invalid"),
+        format!("{ROOM_SGID_MESSAGE}--f7d8e8773314d3310320f3cdd08e5597bb51ca1ainvalid"),
+    ] {
         assert_eq!(attachment_plain_text(Some(&sgid)), "");
-        let html = presentation(&format!("<p><action-text-attachment sgid=\"{sgid}\"></action-text-attachment></p>"));
+        let html = presentation(&format!(
+            "<p><action-text-attachment sgid=\"{sgid}\"></action-text-attachment></p>"
+        ));
         assert!(html.contains("☒"), "{html}");
         assert!(!html.contains("mention"));
     }
@@ -309,7 +374,9 @@ fn lookup_invalid_sgid_for_an_attachable_requiring_a_valid_sgid() {
 
 #[test]
 fn lookup_attachable_with_nil_sgid() {
-    let html = presentation("<p><action-text-attachment content-type=\"application/pdf\"></action-text-attachment></p>");
+    let html = presentation(
+        "<p><action-text-attachment content-type=\"application/pdf\"></action-text-attachment></p>",
+    );
     assert!(html.contains("☒"));
 }
 
@@ -317,8 +384,18 @@ fn lookup_attachable_with_nil_sgid() {
 
 #[test]
 fn keeps_absolute_http_and_https_links_and_images() {
-    assert_eq!(web_url(Some("http://example.com/page"), "").unwrap().as_deref(), Some("http://example.com/page"));
-    assert_eq!(web_url(Some("https://example.com/image.png"), "").unwrap().as_deref(), Some("https://example.com/image.png"));
+    assert_eq!(
+        web_url(Some("http://example.com/page"), "")
+            .unwrap()
+            .as_deref(),
+        Some("http://example.com/page")
+    );
+    assert_eq!(
+        web_url(Some("https://example.com/image.png"), "")
+            .unwrap()
+            .as_deref(),
+        Some("https://example.com/image.png")
+    );
 }
 
 #[test]
@@ -352,9 +429,17 @@ fn drops_a_link_and_an_image_on_this_campfires_own_host_however_it_is_spelled() 
         "https://%6fnce.campfire.test/rooms/1",
         "https://%77ww.example.com/x.png",
     ] {
-        assert_eq!(web_url(Some(value), "once.campfire.test").unwrap(), None, "{value:?}");
+        assert_eq!(
+            web_url(Some(value), "once.campfire.test").unwrap(),
+            None,
+            "{value:?}"
+        );
     }
-    assert!(web_url(Some("https://example.com/page"), "once.campfire.test").unwrap().is_some());
+    assert!(
+        web_url(Some("https://example.com/page"), "once.campfire.test")
+            .unwrap()
+            .is_some()
+    );
 }
 
 #[test]
@@ -375,7 +460,11 @@ fn drops_a_link_and_an_image_on_a_bare_address_rather_than_a_domain_name() {
 
 #[test]
 fn keeps_an_internationalized_domain_written_in_punycode() {
-    assert!(web_url(Some("https://xn--80aswg.xn--p1ai/page"), "").unwrap().is_some());
+    assert!(
+        web_url(Some("https://xn--80aswg.xn--p1ai/page"), "")
+            .unwrap()
+            .is_some()
+    );
 }
 
 #[test]
@@ -392,20 +481,34 @@ fn renders_the_title_and_the_description_as_text() {
 
 #[test]
 fn rich_text_body_is_converted_to_plain_text_for_indexing() {
-    assert_eq!(to_plain_text("<span>My hovercraft is full of eels</span>", &ctx()).unwrap(), "My hovercraft is full of eels");
+    assert_eq!(
+        to_plain_text("<span>My hovercraft is full of eels</span>", &ctx()).unwrap(),
+        "My hovercraft is full of eels"
+    );
     assert_eq!(to_plain_text("First post!", &ctx()).unwrap(), "First post!");
 }
 
 #[test]
 fn mentionees_are_the_mentioned_users_once_each() {
-    let body = format!("<div>Hey {} {}</div>", mention_attachment_for_david(), mention_attachment_for_david());
+    let body = format!(
+        "<div>Hey {} {}</div>",
+        mention_attachment_for_david(),
+        mention_attachment_for_david()
+    );
     let users = mentioned_users(&body, &ctx()).unwrap();
     assert_eq!(users.iter().map(|u| u.id).collect::<Vec<_>>(), vec![1]);
 }
 
 #[test]
 fn webhook_plain_body_drops_the_recipients_mentions() {
-    let plain = to_plain_text(&format!("<p>{} hello</p>", mention_attachment_for_david()), &ctx()).unwrap();
+    let plain = to_plain_text(
+        &format!("<p>{} hello</p>", mention_attachment_for_david()),
+        &ctx(),
+    )
+    .unwrap();
     assert_eq!(plain, "@David hello");
-    assert_eq!(campfire_richtext::without_recipient_mentions(&plain, "David"), "hello");
+    assert_eq!(
+        campfire_richtext::without_recipient_mentions(&plain, "David"),
+        "hello"
+    );
 }

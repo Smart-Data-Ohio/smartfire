@@ -1,8 +1,8 @@
 //! Credentialed read facts for work links.
 use crate::app::AppCtx;
 use crate::concerns::require_current_user;
-use campfire_kit::Ctx;
 use campfire_db::models::google_account::GoogleAccount;
+use campfire_kit::Ctx;
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::Value;
 

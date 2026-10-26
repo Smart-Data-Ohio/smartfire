@@ -35,9 +35,11 @@ pub fn redirect_alias(c: &mut Ctx, path: &str) -> Result {
 }
 
 pub fn alias_navigation(c: &mut Ctx) -> Result<bool> {
-    Ok(concerns::authenticated_by(c) == concerns::AuthenticatedBy::Session
-        && c.request.header("turbo-frame").is_none()
-        && concerns::coexistence_navigation(c)?)
+    Ok(
+        concerns::authenticated_by(c) == concerns::AuthenticatedBy::Session
+            && c.request.header("turbo-frame").is_none()
+            && concerns::coexistence_navigation(c)?,
+    )
 }
 
 /// Typed room bookmarks use the generic room's translation and record-access checks.

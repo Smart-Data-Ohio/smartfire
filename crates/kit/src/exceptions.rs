@@ -33,7 +33,12 @@ impl ErrorPages {
     }
 }
 
-pub fn render(pages: &ErrorPages, status: StatusCode, format: Option<Format>, head: bool) -> Response {
+pub fn render(
+    pages: &ErrorPages,
+    status: StatusCode,
+    format: Option<Format>,
+    head: bool,
+) -> Response {
     // `request.formats.first`, `*/*` included (only `formats` failing falls back to HTML).
     let content_type = format.map(|f| f.string).unwrap_or("text/html");
     if head {
@@ -65,12 +70,15 @@ pub fn render(pages: &ErrorPages, status: StatusCode, format: Option<Format>, he
 /// leaves the empty ones alone (`should_deflate?` skips `Content-Length: 0`).
 fn with_length(status: StatusCode, content_type: &str, body: Bytes) -> Response {
     let length = body.len().to_string();
-    Response::with_body(status, &format!("{content_type}; {CHARSET}"), body).header(header::CONTENT_LENGTH, &length)
+    Response::with_body(status, &format!("{content_type}; {CHARSET}"), body)
+        .header(header::CONTENT_LENGTH, &length)
 }
 
 /// Builder's text escaping (`Hash#to_xml`).
 fn xml_escape(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 /// `Rack::Utils::HTTP_STATUS_CODES`.
@@ -89,8 +97,16 @@ mod tests {
 
     #[test]
     fn json_errors() {
-        let response = render(&ErrorPages::default(), StatusCode::UNPROCESSABLE_ENTITY, Some(&format::JSON), false);
-        assert_eq!(response.body_bytes().unwrap().as_ref(), br#"{"status":422,"error":"Unprocessable Content"}"#);
+        let response = render(
+            &ErrorPages::default(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Some(&format::JSON),
+            false,
+        );
+        assert_eq!(
+            response.body_bytes().unwrap().as_ref(),
+            br#"{"status":422,"error":"Unprocessable Content"}"#
+        );
     }
 
     #[test]
@@ -99,7 +115,10 @@ mod tests {
         let response = render(&pages, StatusCode::NOT_FOUND, Some(&format::HTML), false);
         assert_eq!(response.status, StatusCode::NOT_FOUND);
         assert_eq!(response.body_bytes().unwrap().as_ref(), b"<h1>404</h1>");
-        assert_eq!(response.headers[axum::http::header::CONTENT_TYPE], "text/html; charset=UTF-8");
+        assert_eq!(
+            response.headers[axum::http::header::CONTENT_TYPE],
+            "text/html; charset=UTF-8"
+        );
         let missing = render(&pages, StatusCode::BAD_REQUEST, None, false);
         assert_eq!(missing.status, StatusCode::BAD_REQUEST);
         assert!(missing.body_bytes().unwrap().is_empty());
@@ -107,23 +126,47 @@ mod tests {
 
     #[test]
     fn xml_and_yaml_errors() {
-        let xml = render(&ErrorPages::default(), StatusCode::NOT_ACCEPTABLE, Some(&format::XML), false);
+        let xml = render(
+            &ErrorPages::default(),
+            StatusCode::NOT_ACCEPTABLE,
+            Some(&format::XML),
+            false,
+        );
         assert_eq!(
             xml.body_bytes().unwrap().as_ref(),
             b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<hash>\n  <status type=\"integer\">406</status>\n  <error>Not Acceptable</error>\n</hash>\n"
         );
-        assert_eq!(xml.headers[header::CONTENT_TYPE], "application/xml; charset=UTF-8");
+        assert_eq!(
+            xml.headers[header::CONTENT_TYPE],
+            "application/xml; charset=UTF-8"
+        );
         assert_eq!(xml.headers[header::CONTENT_LENGTH], "124");
-        let yaml = render(&ErrorPages::default(), StatusCode::NOT_ACCEPTABLE, Some(&format::YAML), false);
-        assert_eq!(yaml.body_bytes().unwrap().as_ref(), b"---\n:status: 406\n:error: Not Acceptable\n");
+        let yaml = render(
+            &ErrorPages::default(),
+            StatusCode::NOT_ACCEPTABLE,
+            Some(&format::YAML),
+            false,
+        );
+        assert_eq!(
+            yaml.body_bytes().unwrap().as_ref(),
+            b"---\n:status: 406\n:error: Not Acceptable\n"
+        );
     }
 
     #[test]
     fn head_errors_are_empty_in_the_request_format() {
-        let head = render(&ErrorPages::default(), StatusCode::NOT_FOUND, Some(&format::ALL), true);
+        let head = render(
+            &ErrorPages::default(),
+            StatusCode::NOT_FOUND,
+            Some(&format::ALL),
+            true,
+        );
         assert_eq!(head.headers[header::CONTENT_TYPE], "*/*; charset=UTF-8");
         assert_eq!(head.headers[header::CONTENT_LENGTH], "0");
         let head = render(&ErrorPages::default(), StatusCode::NOT_FOUND, None, true);
-        assert_eq!(head.headers[header::CONTENT_TYPE], "text/html; charset=UTF-8");
+        assert_eq!(
+            head.headers[header::CONTENT_TYPE],
+            "text/html; charset=UTF-8"
+        );
     }
 }

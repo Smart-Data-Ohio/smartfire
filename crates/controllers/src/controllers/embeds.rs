@@ -10,12 +10,19 @@ pub async fn show(c: &mut Ctx) -> Result {
     let Some(url) = image_proxy::verified_url(&c.app().secrets, signed, c.now()) else {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
-    let net = c.current::<Network>().cloned().unwrap_or_else(Network::system);
+    let net = c
+        .current::<Network>()
+        .cloned()
+        .unwrap_or_else(Network::system);
     match image_proxy::fetch(&net, &url).await {
         Ok(image) => {
             c.expires_in(3600, ExpiresIn::default());
             Ok(c.send_data(image.body, SendOptions::inline(&image.content_type)))
         }
-        Err(error) => Ok(c.head(if error.denied() { StatusCode::NOT_FOUND } else { StatusCode::BAD_GATEWAY })),
+        Err(error) => Ok(c.head(if error.denied() {
+            StatusCode::NOT_FOUND
+        } else {
+            StatusCode::BAD_GATEWAY
+        })),
     }
 }

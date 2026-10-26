@@ -13,7 +13,11 @@ pub(super) fn operation(
     // pending::preflight already applied the common membership and post_messages gates.
     let agent =
         Agent::find(tx.conn(), agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-    let message = Message::find_reachable(tx.conn(), agent.user_id, args.get("message_id").map_or(0, ruby_i64))?;
+    let message = Message::find_reachable(
+        tx.conn(),
+        agent.user_id,
+        args.get("message_id").map_or(0, ruby_i64),
+    )?;
     let pinned = op == "pin_message";
     let status = if pinned {
         match tx.savepoint(|tx| MessagePin::pin(tx, &message, agent.user_id)) {

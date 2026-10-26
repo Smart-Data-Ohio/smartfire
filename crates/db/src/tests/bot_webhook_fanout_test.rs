@@ -1,8 +1,8 @@
-use super::*;
-use rusqlite::params;
-use crate::{Message, NewMessage, Room, User};
-use crate::models::bot_webhook_fanout::{self as fanout, HOP_LIMIT};
 use super::channel_thread_test::{create_thread, frozen, post_reply};
+use super::*;
+use crate::models::bot_webhook_fanout::{self as fanout, HOP_LIMIT};
+use crate::{Message, NewMessage, Room, User};
+use rusqlite::params;
 
 #[test]
 fn ws11_fanout_skips_agents_notes_streams_threads_and_creator() {
@@ -16,18 +16,47 @@ fn ws11_fanout_skips_agents_notes_streams_threads_and_creator() {
     let reply = post_reply(&t, thread.id, "david", "@[Legacy]");
     let r = reply.clone();
     assert!(t.write(move |tx| fanout::recipients(tx, &r)).is_empty());
-    for (creator_id, system_note, streaming, expected) in [(id("david"), false, false, 1), (bot.id, false, false, 0), (id("david"), true, false, 0), (id("david"), false, true, 0)] {
+    for (creator_id, system_note, streaming, expected) in [
+        (id("david"), false, false, 1),
+        (bot.id, false, false, 0),
+        (id("david"), true, false, 0),
+        (id("david"), false, true, 0),
+    ] {
         let users = t.write(move |tx| {
-            let message = Message::create(tx, NewMessage { room_id: id("watercooler"), creator_id, markdown_source: Some("@[Legacy]".into()), system_note, streaming, ..Default::default() })?;
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("watercooler"),
+                    creator_id,
+                    markdown_source: Some("@[Legacy]".into()),
+                    system_note,
+                    streaming,
+                    ..Default::default()
+                },
+            )?;
             fanout::recipients(tx, &message)
         });
         assert_eq!(users.len(), expected);
     }
     t.write(move |tx| {
-        tx.conn().execute("UPDATE rooms SET type='Rooms::Direct' WHERE id=?", [id("watercooler")])?;
-        let message = Message::create(tx, NewMessage { room_id: id("watercooler"), creator_id: id("david"), body: Some("DM".into()), ..Default::default() })?;
+        tx.conn().execute(
+            "UPDATE rooms SET type='Rooms::Direct' WHERE id=?",
+            [id("watercooler")],
+        )?;
+        let message = Message::create(
+            tx,
+            NewMessage {
+                room_id: id("watercooler"),
+                creator_id: id("david"),
+                body: Some("DM".into()),
+                ..Default::default()
+            },
+        )?;
         let recipients = fanout::recipients(tx, &message)?;
-        assert_eq!(recipients.iter().map(|bot| bot.id).collect::<Vec<_>>(), [bot.id]);
+        assert_eq!(
+            recipients.iter().map(|bot| bot.id).collect::<Vec<_>>(),
+            [bot.id]
+        );
         Ok(())
     });
 }

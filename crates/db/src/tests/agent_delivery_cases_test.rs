@@ -20,31 +20,65 @@ fn setup() -> TestDb {
 
 #[test]
 fn ws11_fanout_case_normal_message_mentions_legacy_bot() {
-    let t=setup();
-    let mid=t.write(|tx| {
-        let bot=User::create_bot(tx,"Legacy Note",Some("https://example.test/legacy-note"))?;
-        Room::find(tx.conn(),id("watercooler"))?.grant_to(tx,&[bot.id])?;
-        Ok(post(tx,id("david"),id("watercooler"),"Hey @[Legacy Note]",None)?.id)
+    let t = setup();
+    let mid = t.write(|tx| {
+        let bot = User::create_bot(tx, "Legacy Note", Some("https://example.test/legacy-note"))?;
+        Room::find(tx.conn(), id("watercooler"))?.grant_to(tx, &[bot.id])?;
+        Ok(post(
+            tx,
+            id("david"),
+            id("watercooler"),
+            "Hey @[Legacy Note]",
+            None,
+        )?
+        .id)
     });
     t.sink.take();
-    t.write(move|tx|crate::models::bot_webhook_fanout::deliver(tx,&Message::find(tx.conn(),mid)?));
-    let events=t.events();
-    let jobs:Vec<_>=events.iter().filter_map(|e|if let Event::DeliverWebhook {message_id,..}=e {Some(*message_id)} else {None}).collect();
-    assert_eq!(jobs.len(),1);
-    assert_eq!(jobs[0],mid);
+    t.write(move |tx| {
+        crate::models::bot_webhook_fanout::deliver(tx, &Message::find(tx.conn(), mid)?)
+    });
+    let events = t.events();
+    let jobs: Vec<_> = events
+        .iter()
+        .filter_map(|e| {
+            if let Event::DeliverWebhook { message_id, .. } = e {
+                Some(*message_id)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0], mid);
 }
 
 #[test]
 fn ws11_fanout_case_system_note_mentions_legacy_bot() {
-    let t=setup();
-    let mid=t.write(|tx| {
-        let bot=User::create_bot(tx,"Legacy Note",Some("https://example.test/legacy-note"))?;
-        Room::find(tx.conn(),id("watercooler"))?.grant_to(tx,&[bot.id])?;
-        Ok(Message::create(tx,NewMessage {room_id:id("watercooler"),creator_id:id("david"),markdown_source:Some("Hey @[Legacy Note]".into()),system_note:true,..Default::default()})?.id)
+    let t = setup();
+    let mid = t.write(|tx| {
+        let bot = User::create_bot(tx, "Legacy Note", Some("https://example.test/legacy-note"))?;
+        Room::find(tx.conn(), id("watercooler"))?.grant_to(tx, &[bot.id])?;
+        Ok(Message::create(
+            tx,
+            NewMessage {
+                room_id: id("watercooler"),
+                creator_id: id("david"),
+                markdown_source: Some("Hey @[Legacy Note]".into()),
+                system_note: true,
+                ..Default::default()
+            },
+        )?
+        .id)
     });
     t.sink.take();
-    t.write(move|tx|crate::models::bot_webhook_fanout::deliver(tx,&Message::find(tx.conn(),mid)?));
-    assert!(t.events().iter().all(|e|!matches!(e,Event::DeliverWebhook{..})));
+    t.write(move |tx| {
+        crate::models::bot_webhook_fanout::deliver(tx, &Message::find(tx.conn(), mid)?)
+    });
+    assert!(
+        t.events()
+            .iter()
+            .all(|e| !matches!(e, Event::DeliverWebhook { .. }))
+    );
 }
 fn post(
     tx: &mut Tx<'_>,

@@ -10,11 +10,11 @@
 use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 
+use super::DeviceClass;
 use crate::database::Tx;
 use crate::error::{Error, Result};
-use crate::sql::{self, CachedStatements, query_one, query_all, placeholders};
+use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
-use super::DeviceClass;
 
 /// `WorkspacePresenceLease::TTL`
 pub const TTL: SignedDuration = SignedDuration::from_secs(90);
@@ -23,7 +23,12 @@ pub const IDLE_AFTER: SignedDuration = SignedDuration::from_mins(10);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
-pub enum Presence { Online, Idle, Offline, Dnd }
+pub enum Presence {
+    Online,
+    Idle,
+    Offline,
+    Dnd,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WorkspaceActivity {
@@ -59,20 +64,48 @@ pub struct WorkspacePresenceLease {
 
 impl WorkspacePresenceLease {
     /// Reads never prune: the hot presence poll must not take SQLite's write lock.
-    pub fn presence_by_user_id(conn: &Connection, ids: &[i64], now: Timestamp) -> Result<std::collections::HashMap<i64, Presence>> {
-        Ok(Self::activity_by_user_id(conn, ids, now)?.into_iter().map(|(id, presence)| (id, presence.overall)).collect())
+    pub fn presence_by_user_id(
+        conn: &Connection,
+        ids: &[i64],
+        now: Timestamp,
+    ) -> Result<std::collections::HashMap<i64, Presence>> {
+        Ok(Self::activity_by_user_id(conn, ids, now)?
+            .into_iter()
+            .map(|(id, presence)| (id, presence.overall))
+            .collect())
     }
 
-    pub fn activity_by_user_id(conn: &Connection, ids: &[i64], now: Timestamp) -> Result<std::collections::HashMap<i64, WorkspaceActivity>> {
-        if ids.is_empty() { return Ok(std::collections::HashMap::new()); }
-        let sql = format!("SELECT leases.user_id, leases.last_active_at, leases.device_class FROM workspace_presence_leases leases JOIN sessions ON sessions.id=leases.session_id JOIN users ON users.id=leases.user_id WHERE leases.expires_at>=? AND users.status=0 AND sessions.user_id=leases.user_id AND leases.user_id IN ({})", placeholders(ids.len()));
+    pub fn activity_by_user_id(
+        conn: &Connection,
+        ids: &[i64],
+        now: Timestamp,
+    ) -> Result<std::collections::HashMap<i64, WorkspaceActivity>> {
+        if ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let sql = format!(
+            "SELECT leases.user_id, leases.last_active_at, leases.device_class FROM workspace_presence_leases leases JOIN sessions ON sessions.id=leases.session_id JOIN users ON users.id=leases.user_id WHERE leases.expires_at>=? AND users.status=0 AND sessions.user_id=leases.user_id AND leases.user_id IN ({})",
+            placeholders(ids.len())
+        );
         let mut values: Vec<rusqlite::types::Value> = vec![now.to_db().into()];
         values.extend(ids.iter().map(|id| (*id).into()));
-        let rows: Vec<ActivityRow> = query_all(conn, &sql, rusqlite::params_from_iter(values), |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?;
+        let rows: Vec<ActivityRow> =
+            query_all(conn, &sql, rusqlite::params_from_iter(values), |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })?;
         let mut states = std::collections::HashMap::new();
         for (user_id, last_active_at, reported_class) in rows {
-            let state = if last_active_at.is_none_or(|at| at >= now.ago(IDLE_AFTER)) { Presence::Online } else { Presence::Idle };
-            states.entry(user_id).or_insert(WorkspaceActivity { overall: Presence::Offline, active_desktop: false })
+            let state = if last_active_at.is_none_or(|at| at >= now.ago(IDLE_AFTER)) {
+                Presence::Online
+            } else {
+                Presence::Idle
+            };
+            states
+                .entry(user_id)
+                .or_insert(WorkspaceActivity {
+                    overall: Presence::Offline,
+                    active_desktop: false,
+                })
                 .record(state, reported_class.unwrap_or(DeviceClass::Unknown));
         }
         Ok(states)
@@ -84,7 +117,10 @@ impl WorkspacePresenceLease {
         )?.query_map(params![tx.now(), limit as i64], |row| row.get::<_, i64>(0))?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         let count = removed.len();
-        for user_id in removed.into_iter().collect::<std::collections::BTreeSet<_>>() {
+        for user_id in removed
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>()
+        {
             tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::UserStatus { user_id });
         }
         Ok(count)
@@ -105,7 +141,12 @@ impl WorkspacePresenceLease {
     }
 
     pub fn find_by_id(conn: &Connection, id: i64) -> Result<Option<Self>> {
-        query_one(conn, r#"SELECT * FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."id" = ? LIMIT 1"#, [id], Self::from_row)
+        query_one(
+            conn,
+            r#"SELECT * FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )
     }
 
     /// `WorkspacePresenceLease.establish(user:, session:)`: a new lease, or `None` when the user
@@ -114,7 +155,12 @@ impl WorkspacePresenceLease {
         Self::establish_for_device(tx, user_id, session_id, None)
     }
 
-    pub fn establish_for_device(tx: &mut Tx<'_>, user_id: i64, session_id: i64, device_class: Option<DeviceClass>) -> Result<Option<Self>> {
+    pub fn establish_for_device(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        session_id: i64,
+        device_class: Option<DeviceClass>,
+    ) -> Result<Option<Self>> {
         if !Self::identity_valid(tx.conn(), user_id, session_id)? {
             return Ok(None);
         }
@@ -126,13 +172,28 @@ impl WorkspacePresenceLease {
             params![connection_id, now, expires_at, now, session_id, now, user_id, device_class],
             |row| row.get(0),
         )?;
-        Ok(Some(Self { id, connection_id, expires_at, last_active_at: Some(now), device_class, session_id, user_id, created_at: now, updated_at: now, destroyed: false }))
+        Ok(Some(Self {
+            id,
+            connection_id,
+            expires_at,
+            last_active_at: Some(now),
+            device_class,
+            session_id,
+            user_id,
+            created_at: now,
+            updated_at: now,
+            destroyed: false,
+        }))
     }
 
     /// `identity_valid?(user:, session:)`: `User.active.exists?(id:)` and
     /// `Session.exists?(id:, user_id:)`.
     pub fn identity_valid(conn: &Connection, user_id: i64, session_id: i64) -> Result<bool> {
-        let active = sql::count(conn, r#"SELECT COUNT(*) FROM (SELECT 1 FROM "users" WHERE "users"."status" = 0 AND "users"."id" = ? LIMIT 1)"#, [user_id])? > 0;
+        let active = sql::count(
+            conn,
+            r#"SELECT COUNT(*) FROM (SELECT 1 FROM "users" WHERE "users"."status" = 0 AND "users"."id" = ? LIMIT 1)"#,
+            [user_id],
+        )? > 0;
         let session = sql::count(
             conn,
             r#"SELECT COUNT(*) FROM (SELECT 1 FROM "sessions" WHERE "sessions"."id" = ? AND "sessions"."user_id" = ? LIMIT 1)"#,
@@ -175,7 +236,10 @@ impl WorkspacePresenceLease {
 
     /// `delete`: no callbacks.
     pub fn delete(&mut self, tx: &mut Tx<'_>) -> Result<()> {
-        tx.conn().execute_cached(r#"DELETE FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."id" = ?"#, [self.id])?;
+        tx.conn().execute_cached(
+            r#"DELETE FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."id" = ?"#,
+            [self.id],
+        )?;
         self.destroyed = true;
         Ok(())
     }

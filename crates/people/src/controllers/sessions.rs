@@ -97,13 +97,7 @@ pub async fn destroy_json(c: &mut Ctx) -> Result {
 }
 
 async fn destroy_response(c: &mut Ctx, mode: ResponseMode) -> Result {
-    auth::before_actions(
-        c,
-        "sessions#destroy",
-        Before::default(),
-        mode,
-    )
-    .await?;
+    auth::before_actions(c, "sessions#destroy", Before::default(), mode).await?;
     if mode == ResponseMode::Json {
         let body: campfire_api_types::SignOut = auth::body(c).await?;
         c.params.remove("push_subscription_endpoint");

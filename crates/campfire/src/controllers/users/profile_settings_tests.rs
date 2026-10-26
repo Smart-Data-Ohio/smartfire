@@ -75,7 +75,12 @@ async fn run_profile_vectors(selected: Option<&str>) {
     .unwrap();
     let mut browser = app.david();
     for method in [Method::PUT, Method::PATCH] {
-        for case in cases["profiles"].as_array().unwrap().iter().filter(|case| selected.is_none_or(|name| case["name"] == name)) {
+        for case in cases["profiles"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|case| selected.is_none_or(|name| case["name"] == name))
+        {
             let setup = case.clone();
             app.db().write(move |tx|{
             let case=&setup;
@@ -147,9 +152,7 @@ async fn run_profile_vectors(selected: Option<&str>) {
             Ok(state)
         }).await.unwrap();
             assert_eq!(state, case["state"], "{}", case["name"]);
-            if response.status == StatusCode::UNPROCESSABLE_ENTITY {
-
-            }
+            if response.status == StatusCode::UNPROCESSABLE_ENTITY {}
         }
     }
 }

@@ -33,7 +33,12 @@ impl State {
     #[cfg(any(test, feature = "test-support"))]
     pub fn fixture_snapshot(&self) -> Self {
         Self {
-            google: RwLock::new(self.google.read().unwrap_or_else(|p| p.into_inner()).clone()),
+            google: RwLock::new(
+                self.google
+                    .read()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone(),
+            ),
             extra_verifiers: RwLock::new(self.extra_verifiers()),
         }
     }

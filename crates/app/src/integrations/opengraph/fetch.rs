@@ -25,12 +25,19 @@ pub struct FetchOptions {
 
 impl Default for FetchOptions {
     fn default() -> Self {
-        Self { max_redirects: MAX_REDIRECTS, deadline: None }
+        Self {
+            max_redirects: MAX_REDIRECTS,
+            deadline: None,
+        }
     }
 }
 
 /// Explicit operation timeouts in our fork (app/models/opengraph/fetch.rb).
-const TIMEOUTS: Timeouts = Timeouts { open: Duration::from_secs(5), read: Duration::from_secs(5), write: Duration::from_secs(5) };
+const TIMEOUTS: Timeouts = Timeouts {
+    open: Duration::from_secs(5),
+    read: Duration::from_secs(5),
+    write: Duration::from_secs(5),
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum FetchError {
@@ -50,14 +57,25 @@ pub enum FetchError {
 }
 
 /// `fetch_document(url, ip:)`: the body, or `None` when the response isn't acceptable.
-pub async fn fetch_document(net: &Network, url: &Uri, ip: IpAddr) -> Result<Option<Vec<u8>>, FetchError> {
+pub async fn fetch_document(
+    net: &Network,
+    url: &Uri,
+    ip: IpAddr,
+) -> Result<Option<Vec<u8>>, FetchError> {
     fetch_document_with(net, url, ip, FetchOptions::default()).await
 }
 
-pub async fn fetch_document_with(net: &Network, url: &Uri, ip: IpAddr, options: FetchOptions) -> Result<Option<Vec<u8>>, FetchError> {
+pub async fn fetch_document_with(
+    net: &Network,
+    url: &Uri,
+    ip: IpAddr,
+    options: FetchOptions,
+) -> Result<Option<Vec<u8>>, FetchError> {
     within_deadline(options.deadline, async {
         let response = request(net, url.clone(), ip, Method::GET, options).await?;
-        if response.status != 200 || response.content_type().as_deref() != Some(ALLOWED_DOCUMENT_CONTENT_TYPE) {
+        if response.status != 200
+            || response.content_type().as_deref() != Some(ALLOWED_DOCUMENT_CONTENT_TYPE)
+        {
             return Ok(None);
         }
         if response.content_length()?.unwrap_or(0) > MAX_BODY_SIZE as u64 {
@@ -72,13 +90,26 @@ pub async fn fetch_document_with(net: &Network, url: &Uri, ip: IpAddr, options: 
 }
 
 /// `fetch_content_type(url, ip:)`: the final response's header, whatever its status.
-pub async fn fetch_content_type(net: &Network, url: &Uri, ip: IpAddr) -> Result<Option<String>, FetchError> {
+pub async fn fetch_content_type(
+    net: &Network,
+    url: &Uri,
+    ip: IpAddr,
+) -> Result<Option<String>, FetchError> {
     fetch_content_type_with(net, url, ip, FetchOptions::default()).await
 }
 
-pub async fn fetch_content_type_with(net: &Network, url: &Uri, ip: IpAddr, options: FetchOptions) -> Result<Option<String>, FetchError> {
-    within_deadline(options.deadline, async { Ok(request(net, url.clone(), ip, Method::HEAD, options).await?.header("content-type")) })
-        .await
+pub async fn fetch_content_type_with(
+    net: &Network,
+    url: &Uri,
+    ip: IpAddr,
+    options: FetchOptions,
+) -> Result<Option<String>, FetchError> {
+    within_deadline(options.deadline, async {
+        Ok(request(net, url.clone(), ip, Method::HEAD, options)
+            .await?
+            .header("content-type"))
+    })
+    .await
 }
 
 async fn within_deadline<T>(
@@ -86,7 +117,9 @@ async fn within_deadline<T>(
     fetch: impl std::future::Future<Output = Result<T, FetchError>>,
 ) -> Result<T, FetchError> {
     match deadline {
-        Some(duration) if !duration.is_zero() => tokio::time::timeout(duration, fetch).await.map_err(|_| FetchError::Deadline)?,
+        Some(duration) if !duration.is_zero() => tokio::time::timeout(duration, fetch)
+            .await
+            .map_err(|_| FetchError::Deadline)?,
         _ => fetch.await,
     }
 }
@@ -133,30 +166,67 @@ fn retryable(error: &HttpError) -> bool {
     }
 }
 
-async fn resolve_redirect(net: &Network, location: Option<String>, base: &Uri) -> Result<(Uri, IpAddr), FetchError> {
-    let url = crate::net::redirect::resolve(base, location.as_deref()).ok_or(FetchError::RedirectDenied)?;
+async fn resolve_redirect(
+    net: &Network,
+    location: Option<String>,
+    base: &Uri,
+) -> Result<(Uri, IpAddr), FetchError> {
+    let url = crate::net::redirect::resolve(base, location.as_deref())
+        .ok_or(FetchError::RedirectDenied)?;
     let ip = guard::resolve(net.resolver.as_ref(), url.host.as_deref().unwrap_or("")).await?;
     Ok((url, ip))
 }
 
 /// `Net::HTTP.start(url.host, url.port, ipaddr: ip, use_ssl: url.scheme == "https")` and
 /// `http.request(request_class.new(url))`.
-async fn send(net: &Network, url: &Uri, ip: IpAddr, method: Method) -> Result<http::Response, FetchError> {
-    let host = url.host.clone().filter(|h| !h.is_empty()).ok_or(FetchError::InvalidUri)?;
-    let https = url.scheme.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("https"));
-    let port = url.port.and_then(|p| u16::try_from(p).ok()).ok_or(FetchError::InvalidUri)?;
-    let endpoint = Endpoint { https, host: host.clone(), port, pinned_ip: Some(ip) };
-    let request = http::Request::net_http(method, http::request_uri(url), Some(host_header(&host, port, https)), Vec::new())
-        .transport(false, &endpoint);
+async fn send(
+    net: &Network,
+    url: &Uri,
+    ip: IpAddr,
+    method: Method,
+) -> Result<http::Response, FetchError> {
+    let host = url
+        .host
+        .clone()
+        .filter(|h| !h.is_empty())
+        .ok_or(FetchError::InvalidUri)?;
+    let https = url
+        .scheme
+        .as_deref()
+        .is_some_and(|s| s.eq_ignore_ascii_case("https"));
+    let port = url
+        .port
+        .and_then(|p| u16::try_from(p).ok())
+        .ok_or(FetchError::InvalidUri)?;
+    let endpoint = Endpoint {
+        https,
+        host: host.clone(),
+        port,
+        pinned_ip: Some(ip),
+    };
+    let request = http::Request::net_http(
+        method,
+        http::request_uri(url),
+        Some(host_header(&host, port, https)),
+        Vec::new(),
+    )
+    .transport(false, &endpoint);
     Ok(http::exchange(net, &endpoint, request, &TIMEOUTS).await?)
 }
 
 /// `Net::HTTPGenericRequest#initialize`: `uri.hostname`, plus the port unless it's the scheme's
 /// default.
 fn host_header(host: &str, port: u16, https: bool) -> String {
-    let hostname = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(host);
+    let hostname = host
+        .strip_prefix('[')
+        .and_then(|h| h.strip_suffix(']'))
+        .unwrap_or(host);
     let default_port = if https { 443 } else { 80 };
-    if port == default_port { hostname.to_string() } else { format!("{hostname}:{port}") }
+    if port == default_port {
+        hostname.to_string()
+    } else {
+        format!("{hostname}:{port}")
+    }
 }
 
 #[cfg(test)]

@@ -533,7 +533,10 @@ async fn workspace_presence_heartbeat_extends_the_lease() {
     david
         .perform(&workspace_presence(), json!({ "action": "heartbeat" }))
         .await;
-    eventually("workspace lease expiry refresh", || async { app.leases().await[0].expires_at > initial.expires_at }).await;
+    eventually("workspace lease expiry refresh", || async {
+        app.leases().await[0].expires_at > initial.expires_at
+    })
+    .await;
     // A heartbeat without `active: true` leaves the activity stamp; one with it moves it.
     assert_eq!(app.leases().await[0].last_active_at, initial.last_active_at);
     david
@@ -542,7 +545,10 @@ async fn workspace_presence_heartbeat_extends_the_lease() {
             json!({ "action": "heartbeat", "active": true }),
         )
         .await;
-    eventually("workspace lease activity refresh", || async { app.leases().await[0].last_active_at > initial.last_active_at }).await;
+    eventually("workspace lease activity refresh", || async {
+        app.leases().await[0].last_active_at > initial.last_active_at
+    })
+    .await;
 }
 
 /// Puts back a deleted session row with its id, so that a subscription that wasn't rejected
@@ -637,7 +643,10 @@ async fn workspace_presence_heartbeat_replaces_a_valid_lease_that_was_pruned() {
     david
         .perform(&workspace_presence(), json!({ "action": "heartbeat" }))
         .await;
-    eventually("old workspace lease removal", || async { app.leases().await.len() == 1 }).await;
+    eventually("old workspace lease removal", || async {
+        app.leases().await.len() == 1
+    })
+    .await;
     let replacement = app.leases().await[0].clone();
     assert_ne!(replacement.id, original.id);
 
@@ -650,7 +659,10 @@ async fn workspace_presence_heartbeat_replaces_a_valid_lease_that_was_pruned() {
     david
         .perform(&workspace_presence(), json!({ "action": "heartbeat" }))
         .await;
-    eventually("workspace resubscription lease replacement", || async { app.leases().await.len() == 1 }).await;
+    eventually("workspace resubscription lease replacement", || async {
+        app.leases().await.len() == 1
+    })
+    .await;
 }
 
 /// `current_session: nil` can't happen over the wire (no session, no connection); the nearest is

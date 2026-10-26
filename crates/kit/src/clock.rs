@@ -32,7 +32,9 @@ pub struct FrozenClock {
 
 impl FrozenClock {
     pub fn new(now: Timestamp) -> Self {
-        Self { now: Mutex::new(now) }
+        Self {
+            now: Mutex::new(now),
+        }
     }
 
     pub fn set(&self, now: Timestamp) {
@@ -55,10 +57,9 @@ impl Clock for FrozenClock {
 pub fn from_env() -> anyhow::Result<SharedClock> {
     match std::env::var(FROZEN_TIME_ENV) {
         Ok(value) if !value.trim().is_empty() => {
-            let now: Timestamp = value
-                .trim()
-                .parse()
-                .map_err(|e| anyhow::anyhow!("{FROZEN_TIME_ENV}={value:?} is not an RFC 3339 timestamp: {e}"))?;
+            let now: Timestamp = value.trim().parse().map_err(|e| {
+                anyhow::anyhow!("{FROZEN_TIME_ENV}={value:?} is not an RFC 3339 timestamp: {e}")
+            })?;
             Ok(Arc::new(FrozenClock::new(now)))
         }
         _ => Ok(Arc::new(SystemClock)),
@@ -75,12 +76,16 @@ pub fn years_from(now: Timestamp, years: i64) -> Timestamp {
 
 /// An HTTP date (`Time#httpdate`): `Thu, 01 Jan 1970 00:00:00 GMT`.
 pub fn httpdate(at: Timestamp) -> String {
-    jiff::fmt::rfc2822::DateTimePrinter::new().timestamp_to_rfc9110_string(&at).expect("valid http date")
+    jiff::fmt::rfc2822::DateTimePrinter::new()
+        .timestamp_to_rfc9110_string(&at)
+        .expect("valid http date")
 }
 
 /// Parse an HTTP date (`Time.httpdate` / `Time.rfc2822`), `None` when malformed.
 pub fn parse_httpdate(value: &str) -> Option<Timestamp> {
-    jiff::fmt::rfc2822::DateTimeParser::new().parse_timestamp(value.trim()).ok()
+    jiff::fmt::rfc2822::DateTimeParser::new()
+        .parse_timestamp(value.trim())
+        .ok()
 }
 
 #[cfg(test)]
@@ -104,8 +109,14 @@ mod tests {
 
     #[test]
     fn http_dates() {
-        assert_eq!(httpdate(Timestamp::UNIX_EPOCH), "Thu, 01 Jan 1970 00:00:00 GMT");
-        assert_eq!(parse_httpdate("Thu, 01 Jan 1970 00:00:00 GMT"), Some(Timestamp::UNIX_EPOCH));
+        assert_eq!(
+            httpdate(Timestamp::UNIX_EPOCH),
+            "Thu, 01 Jan 1970 00:00:00 GMT"
+        );
+        assert_eq!(
+            parse_httpdate("Thu, 01 Jan 1970 00:00:00 GMT"),
+            Some(Timestamp::UNIX_EPOCH)
+        );
         assert_eq!(parse_httpdate("garbage"), None);
     }
 }

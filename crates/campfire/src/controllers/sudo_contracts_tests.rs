@@ -200,8 +200,7 @@ async fn sudo_contract_password_and_totp_share_timestamps_audits_and_lockout() {
             tx.conn().execute("UPDATE two_factor_credentials SET last_totp_at=NULL,consecutive_failures=0,lockout_count=0,locked_until=NULL WHERE id=?", [factor.id])?;
             factor.secret(&encryption)
         }).await.unwrap();
-        let code =
-            rails_compat::totp::at(&secret, app.booted.app.clock.now().as_second()).unwrap();
+        let code = rails_compat::totp::at(&secret, app.booted.app.clock.now().as_second()).unwrap();
         let key = if method == "password" {
             "password"
         } else {
@@ -267,7 +266,8 @@ async fn sudo_contract_password_and_totp_share_timestamps_audits_and_lockout() {
 }
 
 #[tokio::test]
-async fn sudo_contract_ten_attempts_are_shared_across_json_and_google_and_the_retained_form_counts_none() {
+async fn sudo_contract_ten_attempts_are_shared_across_json_and_google_and_the_retained_form_counts_none()
+ {
     let app = TestApp::boot_frozen().await.unwrap();
     let mut browser = app.sign_in(DAVID).await;
     let token = browser.authenticity_token().await;
@@ -385,8 +385,8 @@ async fn sudo_contract_totp_lockout_and_recovery_code_refusal() {
         Ok((factor.secret(&encryption)?, campfire_db::TwoFactorBackupCode::regenerate_set(tx, factor.id)?))
     }).await.unwrap();
     let code = rails_compat::totp::at(&secret, app.booted.app.clock.now().as_second()).unwrap();
-    let retained = Req::new(Method::POST, "/sudo")
-        .form(&[("verifier", "totp"), ("totp_code", &recovery[0])]);
+    let retained =
+        Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", &recovery[0])]);
     assert_retained_confirms_nothing(&app, &mut browser, retained).await;
     for value in [&recovery[0], "wrong", "wrong", "wrong", "wrong", &code] {
         let reply = browser
@@ -491,7 +491,10 @@ async fn sudo_contract_methods_unavailable_totp_and_authentication_csrf() {
     for path in ["/api/v1/sudo", "/api/v1/sudo/continue"] {
         let reply = anonymous.get(path).await;
         assert_eq!(reply.json()["kind"], "navigate");
-        assert_eq!(reply.json()["location"], "http://campfire.test/app/session/new");
+        assert_eq!(
+            reply.json()["location"],
+            "http://campfire.test/app/session/new"
+        );
     }
 }
 
@@ -675,8 +678,15 @@ async fn sudo_contract_all_retained_callers_negotiate_json_before_mutation() {
             } else {
                 // A form goes to the SPA's confirmation; the CSV download, not a page, to the
                 // retained route.
-                let page = if path.ends_with(".csv") { "/sudo/new" } else { "/app/sudo/new" };
-                assert_eq!(reply.location(), Some(format!("http://campfire.test{page}").as_str()));
+                let page = if path.ends_with(".csv") {
+                    "/sudo/new"
+                } else {
+                    "/app/sudo/new"
+                };
+                assert_eq!(
+                    reply.location(),
+                    Some(format!("http://campfire.test{page}").as_str())
+                );
             }
         }
     }
@@ -863,7 +873,8 @@ async fn sudo_contract_status_reports_a_fresh_confirmation_and_only_peeks_at_the
     browser.grant_sudo().await;
     edit_session(&app, &mut browser, |state| {
         state["sudo_google_attempt"] = json!({"id":"attempt-in-flight-0001","user_id":DAVID,"session_id":session_id,"at":app.booted.app.clock.now().as_second(),"retry":null});
-        state["google_sign_in_request"] = json!({"purpose":"sudo","google_json":true,"session_id":session_id});
+        state["google_sign_in_request"] =
+            json!({"purpose":"sudo","google_json":true,"session_id":session_id});
     });
     let before = session(&app, &browser);
     for _ in 0..2 {
@@ -910,7 +921,10 @@ async fn sudo_contract_another_sessions_held_request_is_never_named() {
     assert_eq!(ready.json()["kind"], "ready");
     assert_eq!(ready.json()["reauthentication"]["retry"], Value::Null);
     second.grant_sudo().await;
-    assert_eq!(second.get("/api/v1/sudo").await.json()["retry"], Value::Null);
+    assert_eq!(
+        second.get("/api/v1/sudo").await.json()["retry"],
+        Value::Null
+    );
     assert_eq!(
         second.get("/api/v1/sudo/continue").await.json()["retry"],
         Value::Null
@@ -949,7 +963,9 @@ async fn sudo_contract_status_signed_out_asks_to_sign_in() {
         })
         .await
         .unwrap();
-    let reply = browser.write(request(Method::GET, "/api/v1/sudo", json!({}))).await;
+    let reply = browser
+        .write(request(Method::GET, "/api/v1/sudo", json!({})))
+        .await;
     assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
     assert_eq!(reply.header("cache-control"), Some("no-store"));
     assert_eq!(

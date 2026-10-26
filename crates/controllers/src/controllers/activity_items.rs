@@ -30,36 +30,63 @@ pub async fn index(c: &mut Ctx) -> Result {
     }
     let viewer = concerns::require_current_user(c)?.clone();
     let viewer_id = viewer.id;
-    c.app().db.write(move |tx| {
-        campfire_db::models::huddle_invitations::resolve_overdue(tx, Some(viewer_id))?;
-        campfire_db::AgentApproval::resolve_overdue(tx, Some(viewer_id))
-    }).await.map_err(Error::internal)?;
+    c.app()
+        .db
+        .write(move |tx| {
+            campfire_db::models::huddle_invitations::resolve_overdue(tx, Some(viewer_id))?;
+            campfire_db::AgentApproval::resolve_overdue(tx, Some(viewer_id))
+        })
+        .await
+        .map_err(Error::internal)?;
     let (filter, kind) = filters(c);
     let app = c.app().clone();
     let f = filter.clone();
     let k = kind.clone();
     let raw_before = c.param_str("before").map(str::to_owned);
-    let (payloads, unread, next) = c.app().db.read(move |conn| {
-        let rows = ActivityItem::query_accessible(conn, &viewer, ActivityQuery {
-            state: Some(&f), type_filter: Some(&k), before: raw_before.as_deref(), limit: Some(100),
-        })?;
-        let unread = ActivityItem::unread_count(conn, &viewer, app.db.env().now())? as usize;
-        let next = (rows.len() == 100).then(|| rows.last().unwrap().id);
-        let sources = activity::Sources::load_json(conn, &rows)?;
-        let payloads = rows.iter().map(|item| activity::payload_with_sources(conn, &app, item, &sources))
-            .collect::<campfire_db::Result<Vec<_>>>()?;
-        Ok((payloads, unread, next))
-    }).await.map_err(Error::internal)?;
+    let (payloads, unread, next) = c
+        .app()
+        .db
+        .read(move |conn| {
+            let rows = ActivityItem::query_accessible(
+                conn,
+                &viewer,
+                ActivityQuery {
+                    state: Some(&f),
+                    type_filter: Some(&k),
+                    before: raw_before.as_deref(),
+                    limit: Some(100),
+                },
+            )?;
+            let unread = ActivityItem::unread_count(conn, &viewer, app.db.env().now())? as usize;
+            let next = (rows.len() == 100).then(|| rows.last().unwrap().id);
+            let sources = activity::Sources::load_json(conn, &rows)?;
+            let payloads = rows
+                .iter()
+                .map(|item| activity::payload_with_sources(conn, &app, item, &sources))
+                .collect::<campfire_db::Result<Vec<_>>>()?;
+            Ok((payloads, unread, next))
+        })
+        .await
+        .map_err(Error::internal)?;
     no_store(c);
     #[derive(serde::Serialize)]
     struct Index<'a> {
-        activity_items: Vec<activity::Payload>, filter: &'a str, type_filter: &'a str,
-        unread_count: usize, next_cursor: Option<i64>,
+        activity_items: Vec<activity::Payload>,
+        filter: &'a str,
+        type_filter: &'a str,
+        unread_count: usize,
+        next_cursor: Option<i64>,
     }
-    c.json(StatusCode::OK, &Index {
-        activity_items: payloads, filter: &filter, type_filter: &kind,
-        unread_count: unread, next_cursor: next,
-    })
+    c.json(
+        StatusCode::OK,
+        &Index {
+            activity_items: payloads,
+            filter: &filter,
+            type_filter: &kind,
+            unread_count: unread,
+            next_cursor: next,
+        },
+    )
 }
 
 pub async fn unread_count(c: &mut Ctx) -> Result {
@@ -150,11 +177,7 @@ async fn change(c: &mut Ctx, handled: bool) -> Result {
     state_response(c, Some(saved), None).await
 }
 
-async fn state_response(
-    c: &mut Ctx,
-    item: Option<ActivityItem>,
-    error: Option<&str>,
-) -> Result {
+async fn state_response(c: &mut Ctx, item: Option<ActivityItem>, error: Option<&str>) -> Result {
     let chosen = c.respond_to(&[&format::HTML, &format::JSON])?;
     if chosen == &format::JSON {
         if let Some(error) = error {

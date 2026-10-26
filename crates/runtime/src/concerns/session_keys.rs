@@ -55,21 +55,30 @@ pub const RETURN_TO_KEY: &str = "return_to_after_authenticating";
 /// `stash_two_factor_pending(user, method)`
 pub fn stash_two_factor_pending(session: &mut Session, user_id: i64, method: &str, now: Timestamp) {
     session.insert(TWO_FACTOR_PENDING_USER_KEY, user_id);
-    session.insert(TWO_FACTOR_PENDING_EXPIRY_KEY, (now + TWO_FACTOR_PENDING_TTL).as_second());
+    session.insert(
+        TWO_FACTOR_PENDING_EXPIRY_KEY,
+        (now + TWO_FACTOR_PENDING_TTL).as_second(),
+    );
     session.insert(TWO_FACTOR_PENDING_METHOD_KEY, method);
 }
 
 /// `two_factor_pending_user` up to its `User.active.find_by(id:)`: the id to look up, or `None`
 /// when nothing is pending or it expired.
 pub fn two_factor_pending_user_id(session: &Session, now: Timestamp) -> Option<i64> {
-    let user_id = session.get(TWO_FACTOR_PENDING_USER_KEY).filter(|value| !blank(value))?;
-    let expires_at = session.get(TWO_FACTOR_PENDING_EXPIRY_KEY).filter(|value| !blank(value))?;
+    let user_id = session
+        .get(TWO_FACTOR_PENDING_USER_KEY)
+        .filter(|value| !blank(value))?;
+    let expires_at = session
+        .get(TWO_FACTOR_PENDING_EXPIRY_KEY)
+        .filter(|value| !blank(value))?;
     if to_i(expires_at) < now.as_second() {
         return None;
     }
     // `find_by(id:)` casts the stored value like an integer column.
     match user_id {
-        Value::Number(number) => number.as_i64().or_else(|| number.as_f64().map(|float| float as i64)),
+        Value::Number(number) => number
+            .as_i64()
+            .or_else(|| number.as_f64().map(|float| float as i64)),
         Value::String(string) => super::cast_integer(string),
         _ => None,
     }
@@ -77,13 +86,24 @@ pub fn two_factor_pending_user_id(session: &Session, now: Timestamp) -> Option<i
 
 /// `two_factor_pending_method`: `session[KEY].to_s.presence || "unknown"`
 pub fn two_factor_pending_method(session: &Session) -> String {
-    let method = session.get(TWO_FACTOR_PENDING_METHOD_KEY).map(to_s).unwrap_or_default();
-    if method.trim().is_empty() { "unknown".into() } else { method }
+    let method = session
+        .get(TWO_FACTOR_PENDING_METHOD_KEY)
+        .map(to_s)
+        .unwrap_or_default();
+    if method.trim().is_empty() {
+        "unknown".into()
+    } else {
+        method
+    }
 }
 
 /// `clear_two_factor_pending!`
 pub fn clear_two_factor_pending(session: &mut Session) {
-    for key in [TWO_FACTOR_PENDING_USER_KEY, TWO_FACTOR_PENDING_EXPIRY_KEY, TWO_FACTOR_PENDING_METHOD_KEY] {
+    for key in [
+        TWO_FACTOR_PENDING_USER_KEY,
+        TWO_FACTOR_PENDING_EXPIRY_KEY,
+        TWO_FACTOR_PENDING_METHOD_KEY,
+    ] {
         session.remove(key);
     }
 }
@@ -92,7 +112,9 @@ pub fn clear_two_factor_pending(session: &mut Session) {
 
 /// `sudo_verified?`: an Integer `sudo_verified_at` less than `SUDO_TIMEOUT` ago.
 pub fn sudo_verified(session: &Session, now: Timestamp) -> bool {
-    let Some(verified_at) = session.get(SUDO_VERIFIED_KEY).and_then(Value::as_i64) else { return false };
+    let Some(verified_at) = session.get(SUDO_VERIFIED_KEY).and_then(Value::as_i64) else {
+        return false;
+    };
     Timestamp::from_second(verified_at).is_ok_and(|verified_at| verified_at > now - SUDO_TIMEOUT)
 }
 
@@ -150,7 +172,9 @@ fn scalar_params(value: &Param, depth: usize) -> bool {
         return false;
     }
     match value {
-        Param::Hash(map) => map.iter().all(|(key, value)| !SECRET_PARAM.is_match(key) && scalar_params(value, depth + 1)),
+        Param::Hash(map) => map
+            .iter()
+            .all(|(key, value)| !SECRET_PARAM.is_match(key) && scalar_params(value, depth + 1)),
         Param::Array(values) => values.iter().all(|value| scalar_params(value, depth + 1)),
         Param::File(_) => false,
         _ => true,
@@ -160,7 +184,12 @@ fn scalar_params(value: &Param, depth: usize) -> bool {
 /// `to_json.bytesize`: `ActiveSupport::JSON` escapes `<`, `>` and `&` as `\u00XX` (six bytes).
 fn active_support_json_bytesize(value: &Value) -> usize {
     let json = serde_json::to_string(value).expect("a Value serializes");
-    json.len() + json.bytes().filter(|byte| matches!(byte, b'<' | b'>' | b'&')).count() * 5
+    json.len()
+        + json
+            .bytes()
+            .filter(|byte| matches!(byte, b'<' | b'>' | b'&'))
+            .count()
+            * 5
 }
 
 /// Scoped exact Integers are stored as digit strings because serde's ordinary
@@ -169,18 +198,37 @@ fn rails_param_json_bytesize(value: &Param) -> usize {
     match value {
         Param::BigInteger(digits) => digits.len(),
         Param::Number(number) => rails_compat::numbers::number_to_s(number).len(),
-        Param::Array(values) => 2 + values.len().saturating_sub(1) + values.iter().map(rails_param_json_bytesize).sum::<usize>(),
-        Param::Hash(values) => 2 + values.len().saturating_sub(1) + values.iter().map(|(key,value)| active_support_json_bytesize(&Value::String(key.clone())) + 1 + rails_param_json_bytesize(value)).sum::<usize>(),
+        Param::Array(values) => {
+            2 + values.len().saturating_sub(1)
+                + values.iter().map(rails_param_json_bytesize).sum::<usize>()
+        }
+        Param::Hash(values) => {
+            2 + values.len().saturating_sub(1)
+                + values
+                    .iter()
+                    .map(|(key, value)| {
+                        active_support_json_bytesize(&Value::String(key.clone()))
+                            + 1
+                            + rails_param_json_bytesize(value)
+                    })
+                    .sum::<usize>()
+        }
         _ => active_support_json_bytesize(&value.to_json()),
     }
 }
 
 /// `sudo_origin_path`: the referrer's path when it's on this host, else the root.
 pub fn sudo_origin_path(referer: Option<&str>, host: &str, root_path: &str) -> String {
-    let Some(referer) = referer.filter(|referer| !referer.trim().is_empty()) else { return root_path.into() };
+    let Some(referer) = referer.filter(|referer| !referer.trim().is_empty()) else {
+        return root_path.into();
+    };
     match crate::security::ruby_uri::parse(referer) {
         Some(uri) if uri.host.as_deref() == Some(host) => {
-            if uri.path.is_empty() { root_path.into() } else { uri.path }
+            if uri.path.is_empty() {
+                root_path.into()
+            } else {
+                uri.path
+            }
         }
         _ => root_path.into(),
     }
@@ -192,7 +240,11 @@ pub enum SudoContinuation {
     /// A stashed GET: `redirect_to path`.
     Redirect(String),
     /// A stashed non-GET with replayable params: `render "sudos/continue"`.
-    Replay { method: String, path: String, params: Value },
+    Replay {
+        method: String,
+        path: String,
+        params: Value,
+    },
     /// Nothing safe to continue: `redirect_to origin.presence || root_path`.
     Origin(String),
 }
@@ -205,18 +257,34 @@ pub fn continue_after_sudo(session: &mut Session, root_path: &str) -> SudoContin
     };
     let path = pending.get("path").map(to_s).unwrap_or_default();
     let path = (path.starts_with('/') && !path.starts_with("//")).then_some(path);
-    let params = pending.get("params").filter(|params| !matches!(params, Value::Null | Value::Bool(false)));
+    let params = pending
+        .get("params")
+        .filter(|params| !matches!(params, Value::Null | Value::Bool(false)));
     match (path, params) {
-        (Some(path), _) if pending.get("method").map(to_s).unwrap_or_default().to_uppercase() == "GET" => {
+        (Some(path), _)
+            if pending
+                .get("method")
+                .map(to_s)
+                .unwrap_or_default()
+                .to_uppercase()
+                == "GET" =>
+        {
             SudoContinuation::Redirect(path)
         }
         (Some(path), Some(params)) => SudoContinuation::Replay {
-            method: pending.get("method").map(to_s).unwrap_or_default().to_lowercase(),
+            method: pending
+                .get("method")
+                .map(to_s)
+                .unwrap_or_default()
+                .to_lowercase(),
             path,
             params: params.clone(),
         },
         _ => {
-            let origin = pending.get("origin").map(to_s).filter(|origin| !origin.trim().is_empty());
+            let origin = pending
+                .get("origin")
+                .map(to_s)
+                .filter(|origin| !origin.trim().is_empty());
             SudoContinuation::Origin(origin.unwrap_or_else(|| root_path.into()))
         }
     }
@@ -231,7 +299,9 @@ pub fn mark_reauthenticated(session: &mut Session, now: Timestamp) {
 
 /// `consume_google_reauthentication!`: single use, and good for [`REAUTH_TTL`].
 pub fn consume_google_reauthentication(session: &mut Session, now: Timestamp) -> bool {
-    let Some(confirmed_at) = session.remove(REAUTH_KEY) else { return false };
+    let Some(confirmed_at) = session.remove(REAUTH_KEY) else {
+        return false;
+    };
     !blank(&confirmed_at) && to_i(&confirmed_at) > (now - REAUTH_TTL).as_second()
 }
 
@@ -241,11 +311,19 @@ pub fn consume_google_reauthentication(session: &mut Session, now: Timestamp) ->
 /// not inherit the previous one's confirmations. The SPA's Google confirmation in flight goes too
 /// (its flow is bound to the session that started it); the retained page's flow stays, as in Rails.
 pub fn clear_confirmations(session: &mut Session) {
-    for key in [SUDO_VERIFIED_KEY, SUDO_PENDING_KEY, SUDO_ATTEMPT_KEY, REAUTH_KEY] {
+    for key in [
+        SUDO_VERIFIED_KEY,
+        SUDO_PENDING_KEY,
+        SUDO_ATTEMPT_KEY,
+        REAUTH_KEY,
+    ] {
         session.remove(key);
     }
     let flow = campfire_app::integrations::google::sign_in::FLOW_SESSION_KEY;
-    if session.get(flow).is_some_and(|flow| flow["google_json"] == true) {
+    if session
+        .get(flow)
+        .is_some_and(|flow| flow["google_json"] == true)
+    {
         session.remove(flow);
     }
 }
@@ -267,7 +345,9 @@ fn blank(value: &Value) -> bool {
 /// as 0 here where Rails would raise).
 fn to_i(value: &Value) -> i64 {
     match value {
-        Value::Number(number) => number.as_i64().unwrap_or_else(|| number.as_f64().map_or(0, |float| float as i64)),
+        Value::Number(number) => number
+            .as_i64()
+            .unwrap_or_else(|| number.as_f64().map_or(0, |float| float as i64)),
         Value::String(string) => ruby_to_i(string),
         _ => 0,
     }
@@ -298,12 +378,18 @@ mod tests {
     }
 
     fn crypto(vectors: &Value) -> Arc<RailsCrypto> {
-        Arc::new(RailsCrypto::new(Arc::new(rails_compat::Secrets::new(vectors["secret_key_base"].as_str().unwrap()))))
+        Arc::new(RailsCrypto::new(Arc::new(rails_compat::Secrets::new(
+            vectors["secret_key_base"].as_str().unwrap(),
+        ))))
     }
 
     fn jar(vectors: &Value, raw: Option<&str>) -> CookieJar {
-        let clock: SharedClock = Arc::new(campfire_kit::clock::FrozenClock::new(at(vectors["now"].as_str().unwrap())));
-        let header = raw.map(|raw| format!("_campfire_session={}", campfire_kit::cookies::escape(raw)));
+        let clock: SharedClock =
+            Arc::new(campfire_kit::clock::FrozenClock::new(at(vectors["now"]
+                .as_str()
+                .unwrap())));
+        let header =
+            raw.map(|raw| format!("_campfire_session={}", campfire_kit::cookies::escape(raw)));
         CookieJar::from_headers(header.as_deref(), crypto(vectors), clock)
     }
 
@@ -322,20 +408,49 @@ mod tests {
         for check in keys["checks"].as_array().unwrap() {
             let now = at(check["now"].as_str().unwrap());
             let mut session = rails_session(&vectors);
-            assert_eq!(two_factor_pending_user_id(&session, now), check["two_factor_pending_user_id"].as_i64(), "{check}");
+            assert_eq!(
+                two_factor_pending_user_id(&session, now),
+                check["two_factor_pending_user_id"].as_i64(),
+                "{check}"
+            );
             assert_eq!(two_factor_pending_method(&session), "password");
-            assert_eq!(sudo_verified(&session, now), check["sudo_verified"].as_bool().unwrap(), "{check}");
-            assert_eq!(consume_google_reauthentication(&mut session, now), check["reauthenticated"].as_bool().unwrap(), "{check}");
-            assert!(!consume_google_reauthentication(&mut session, now), "single use");
+            assert_eq!(
+                sudo_verified(&session, now),
+                check["sudo_verified"].as_bool().unwrap(),
+                "{check}"
+            );
+            assert_eq!(
+                consume_google_reauthentication(&mut session, now),
+                check["reauthenticated"].as_bool().unwrap(),
+                "{check}"
+            );
+            assert!(
+                !consume_google_reauthentication(&mut session, now),
+                "single use"
+            );
         }
         let mut session = rails_session(&vectors);
-        assert_eq!(session.get_str(RETURN_TO_KEY), keys["data"][RETURN_TO_KEY].as_str());
+        assert_eq!(
+            session.get_str(RETURN_TO_KEY),
+            keys["data"][RETURN_TO_KEY].as_str()
+        );
         assert_eq!(
             continue_after_sudo(&mut session, "/"),
-            SudoContinuation::Replay { method: "patch".into(), path: "/account?x=1".into(), params: json!({ "account": { "name": "New" } }) }
+            SudoContinuation::Replay {
+                method: "patch".into(),
+                path: "/account?x=1".into(),
+                params: json!({ "account": { "name": "New" } })
+            }
         );
-        assert_eq!(continue_after_sudo(&mut session, "/"), SudoContinuation::Origin("/".into()), "taken");
-        assert_eq!(keys["two_factor_pending_ttl_seconds"], TWO_FACTOR_PENDING_TTL.as_secs());
+        assert_eq!(
+            continue_after_sudo(&mut session, "/"),
+            SudoContinuation::Origin("/".into()),
+            "taken"
+        );
+        assert_eq!(
+            keys["two_factor_pending_ttl_seconds"],
+            TWO_FACTOR_PENDING_TTL.as_secs()
+        );
         assert_eq!(keys["sudo_timeout_seconds"], SUDO_TIMEOUT.as_secs());
         assert_eq!(keys["reauth_ttl_seconds"], REAUTH_TTL.as_secs());
     }
@@ -352,7 +467,12 @@ mod tests {
         session.load(&jar);
         session.insert("session_id", data["session_id"].clone());
         session.insert("_csrf_token", data["_csrf_token"].clone());
-        stash_two_factor_pending(&mut session, data[TWO_FACTOR_PENDING_USER_KEY].as_i64().unwrap(), "password", now);
+        stash_two_factor_pending(
+            &mut session,
+            data[TWO_FACTOR_PENDING_USER_KEY].as_i64().unwrap(),
+            "password",
+            now,
+        );
         mark_sudo_verified(&mut session, now);
         let mut params = ParamMap::new();
         params.insert("account", Param::from_json(json!({ "name": "New" })));
@@ -363,19 +483,40 @@ mod tests {
                 method: "PATCH".into(),
                 path: "/account?x=1".into(),
                 params: sudo_storable_params("PATCH", &params),
-                origin: sudo_origin_path(Some("http://campfire.test/account/edit"), "campfire.test", "/"),
+                origin: sudo_origin_path(
+                    Some("http://campfire.test/account/edit"),
+                    "campfire.test",
+                    "/",
+                ),
             },
         );
         mark_reauthenticated(&mut session, now);
         session.insert(RETURN_TO_KEY, data[RETURN_TO_KEY].clone());
         session.commit(&mut jar, now).unwrap();
 
-        let header = jar.set_cookie_headers(false, "campfire.test").into_iter().next().unwrap();
-        let raw = rails_compat::cookies::unescape(header.strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap());
-        assert_eq!(&crypto(&vectors).decrypt_cookie("_campfire_session", &raw, now).unwrap(), data);
+        let header = jar
+            .set_cookie_headers(false, "campfire.test")
+            .into_iter()
+            .next()
+            .unwrap();
+        let raw = rails_compat::cookies::unescape(
+            header
+                .strip_prefix("_campfire_session=")
+                .unwrap()
+                .split(';')
+                .next()
+                .unwrap(),
+        );
+        assert_eq!(
+            &crypto(&vectors)
+                .decrypt_cookie("_campfire_session", &raw, now)
+                .unwrap(),
+            data
+        );
 
         let output = json!({ "now": vectors["now"], "raw": raw, "data": data, "checks": vectors["session_keys"]["checks"] });
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/campfire_session_keys_rust_output.json");
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../target/campfire_session_keys_rust_output.json");
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, serde_json::to_string_pretty(&output).unwrap()).unwrap();
     }
@@ -398,7 +539,10 @@ mod tests {
         let flow = campfire_app::integrations::google::sign_in::FLOW_SESSION_KEY;
         let mut session = rails_session(&vectors);
         session.insert(flow, json!({ "purpose": "sudo", "google_json": true, "attempt": "attempt-0000000000000001" }));
-        session.insert(SUDO_ATTEMPT_KEY, json!({ "id": "attempt-0000000000000001" }));
+        session.insert(
+            SUDO_ATTEMPT_KEY,
+            json!({ "id": "attempt-0000000000000001" }),
+        );
         clear_confirmations(&mut session);
         assert!(!session.contains_key(flow));
         assert!(!session.contains_key(SUDO_ATTEMPT_KEY));
@@ -415,20 +559,47 @@ mod tests {
             Param::Hash(map) => map,
             _ => unreachable!(),
         };
-        let plain = params(json!({ "account": { "name": "N", "tags": ["a", 1, null, true] }, "controller": "x", "action": "y" }));
-        assert_eq!(sudo_storable_params("PATCH", &plain), Some(json!({ "account": { "name": "N", "tags": ["a", 1, true] } })));
+        let plain = params(
+            json!({ "account": { "name": "N", "tags": ["a", 1, null, true] }, "controller": "x", "action": "y" }),
+        );
+        assert_eq!(
+            sudo_storable_params("PATCH", &plain),
+            Some(json!({ "account": { "name": "N", "tags": ["a", 1, true] } }))
+        );
         assert_eq!(sudo_storable_params("GET", &plain), None);
-        assert_eq!(sudo_storable_params("POST", &params(json!({ "user": { "password": "x" } }))), None);
-        assert_eq!(sudo_storable_params("POST", &params(json!({ "bot_key": "x" }))), None);
-        assert_eq!(sudo_storable_params("POST", &params(json!({ "a": { "b": { "c": { "d": { "e": 1 } } } } }))), None, "five deep");
-        assert!(sudo_storable_params("POST", &params(json!({ "a": { "b": { "c": { "d": 1 } } } }))).is_some());
+        assert_eq!(
+            sudo_storable_params("POST", &params(json!({ "user": { "password": "x" } }))),
+            None
+        );
+        assert_eq!(
+            sudo_storable_params("POST", &params(json!({ "bot_key": "x" }))),
+            None
+        );
+        assert_eq!(
+            sudo_storable_params(
+                "POST",
+                &params(json!({ "a": { "b": { "c": { "d": { "e": 1 } } } } }))
+            ),
+            None,
+            "five deep"
+        );
+        assert!(
+            sudo_storable_params(
+                "POST",
+                &params(json!({ "a": { "b": { "c": { "d": 1 } } } }))
+            )
+            .is_some()
+        );
         // 2048 bytes as ActiveSupport encodes it: each `<` is six.
         let fits = "x".repeat(2048 - r#"{"a":""}"#.len());
         assert!(sudo_storable_params("POST", &params(json!({ "a": fits }))).is_some());
         let escaped = format!("<{}", "x".repeat(2048 - r#"{"a":""}"#.len() - 6));
         assert!(sudo_storable_params("POST", &params(json!({ "a": escaped }))).is_some());
         let over = format!("<{}", "x".repeat(2048 - r#"{"a":""}"#.len() - 5));
-        assert_eq!(sudo_storable_params("POST", &params(json!({ "a": over }))), None);
+        assert_eq!(
+            sudo_storable_params("POST", &params(json!({ "a": over }))),
+            None
+        );
     }
 
     #[test]
@@ -439,13 +610,29 @@ mod tests {
             session.insert(SUDO_PENDING_KEY, value);
             continue_after_sudo(&mut session, "/")
         };
-        assert_eq!(stash(json!({ "method": "get", "path": "/account/edit", "params": null })), SudoContinuation::Redirect("/account/edit".into()));
-        assert_eq!(stash(json!({ "method": "GET", "path": "//evil.test/x", "origin": "/o" })), SudoContinuation::Origin("/o".into()));
-        assert_eq!(stash(json!({ "method": "POST", "path": "/x", "params": null, "origin": "" })), SudoContinuation::Origin("/".into()));
-        assert_eq!(stash(json!("not a hash")), SudoContinuation::Origin("/".into()));
+        assert_eq!(
+            stash(json!({ "method": "get", "path": "/account/edit", "params": null })),
+            SudoContinuation::Redirect("/account/edit".into())
+        );
+        assert_eq!(
+            stash(json!({ "method": "GET", "path": "//evil.test/x", "origin": "/o" })),
+            SudoContinuation::Origin("/o".into())
+        );
+        assert_eq!(
+            stash(json!({ "method": "POST", "path": "/x", "params": null, "origin": "" })),
+            SudoContinuation::Origin("/".into())
+        );
+        assert_eq!(
+            stash(json!("not a hash")),
+            SudoContinuation::Origin("/".into())
+        );
         assert_eq!(
             stash(json!({ "method": "DELETE", "path": "/x", "params": {} })),
-            SudoContinuation::Replay { method: "delete".into(), path: "/x".into(), params: json!({}) }
+            SudoContinuation::Replay {
+                method: "delete".into(),
+                path: "/x".into(),
+                params: json!({})
+            }
         );
     }
 
@@ -453,11 +640,31 @@ mod tests {
     fn origin_is_the_same_host_referrer_path() {
         assert_eq!(sudo_origin_path(None, "campfire.test", "/"), "/");
         assert_eq!(sudo_origin_path(Some(" "), "campfire.test", "/"), "/");
-        assert_eq!(sudo_origin_path(Some("http://campfire.test/rooms/1?x=1"), "campfire.test", "/"), "/rooms/1");
-        assert_eq!(sudo_origin_path(Some("https://campfire.test"), "campfire.test", "/"), "/");
-        assert_eq!(sudo_origin_path(Some("https://evil.test/rooms/1"), "campfire.test", "/"), "/");
-        assert_eq!(sudo_origin_path(Some("/rooms/1"), "campfire.test", "/"), "/");
-        assert_eq!(sudo_origin_path(Some("http://campfire.test/a b"), "campfire.test", "/"), "/", "InvalidURIError");
+        assert_eq!(
+            sudo_origin_path(
+                Some("http://campfire.test/rooms/1?x=1"),
+                "campfire.test",
+                "/"
+            ),
+            "/rooms/1"
+        );
+        assert_eq!(
+            sudo_origin_path(Some("https://campfire.test"), "campfire.test", "/"),
+            "/"
+        );
+        assert_eq!(
+            sudo_origin_path(Some("https://evil.test/rooms/1"), "campfire.test", "/"),
+            "/"
+        );
+        assert_eq!(
+            sudo_origin_path(Some("/rooms/1"), "campfire.test", "/"),
+            "/"
+        );
+        assert_eq!(
+            sudo_origin_path(Some("http://campfire.test/a b"), "campfire.test", "/"),
+            "/",
+            "InvalidURIError"
+        );
     }
 
     #[test]
@@ -467,7 +674,11 @@ mod tests {
         let mut session = rails_session(&vectors);
         session.insert(TWO_FACTOR_PENDING_USER_KEY, "7abc");
         session.insert(TWO_FACTOR_PENDING_EXPIRY_KEY, now.as_second().to_string());
-        assert_eq!(two_factor_pending_user_id(&session, now), Some(7), "expiring this second still counts");
+        assert_eq!(
+            two_factor_pending_user_id(&session, now),
+            Some(7),
+            "expiring this second still counts"
+        );
         session.insert(TWO_FACTOR_PENDING_EXPIRY_KEY, " ");
         assert_eq!(two_factor_pending_user_id(&session, now), None);
         session.insert(TWO_FACTOR_PENDING_METHOD_KEY, " ");

@@ -12,11 +12,14 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as posting, MessageParams, ThreadOutcome};
 use campfire_runtime::concerns;
-use campfire_runtime::presenters::attachments::Assignment;
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::attachments::Assignment;
 
 use crate::dto;
-use crate::endpoints::{before_actions, blob_exists, body, file_spoilers, grouped_signed_ids, message_page, now, require_grouped_uploads, set_room};
+use crate::endpoints::{
+    before_actions, blob_exists, body, file_spoilers, grouped_signed_ids, message_page, now,
+    require_grouped_uploads, set_room,
+};
 use crate::error::{fail, not_found, validation};
 
 endpoint!(
@@ -82,7 +85,10 @@ pub(crate) async fn scope(c: &mut Ctx) -> Result<(ChannelThread, Room, User)> {
     scope_with_creator(c, false).await
 }
 
-async fn scope_with_creator(c: &mut Ctx, creator_may_manage: bool) -> Result<(ChannelThread, Room, User)> {
+async fn scope_with_creator(
+    c: &mut Ctx,
+    creator_may_manage: bool,
+) -> Result<(ChannelThread, Room, User)> {
     let viewer = concerns::require_current_user(c)?.clone();
     let Some(id) = c.param_str("thread_id").and_then(concerns::cast_integer) else {
         return Err(fail(c, not_found()));
@@ -96,12 +102,12 @@ async fn scope_with_creator(c: &mut Ctx, creator_may_manage: bool) -> Result<(Ch
                 return Ok(None);
             };
             let room = Room::find(conn, thread.room_id)?;
-            let creator = creator_may_manage && thread.creator_id == user_id
+            let creator = creator_may_manage
+                && thread.creator_id == user_id
                 && User::find(conn, user_id)?.is_active()
-                && campfire_db::Membership::find_by_room_and_user(conn, room.id, user_id)?.is_some();
-            if room.deleted_at.is_some()
-                || (!creator && !thread.readable_by(conn, user_id)?)
-            {
+                && campfire_db::Membership::find_by_room_and_user(conn, room.id, user_id)?
+                    .is_some();
+            if room.deleted_at.is_some() || (!creator && !thread.readable_by(conn, user_id)?) {
                 return Ok(None);
             }
             Ok(Some((thread, room)))
@@ -220,12 +226,31 @@ async fn message_params(
     let signed_id = input
         .attachment_signed_id
         .filter(|signed_id| !signed_id.is_empty());
-    let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), input.attachment_signed_ids.unwrap_or_default())?;
-    let gif_slug = crate::gifs::selection(c, input.gif_slug.as_deref(), signed_id.as_deref(), signed_ids.len())?;
-    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
+    let signed_ids = grouped_signed_ids(
+        c,
+        signed_id.as_deref(),
+        input.attachment_signed_ids.unwrap_or_default(),
+    )?;
+    let gif_slug = crate::gifs::selection(
+        c,
+        input.gif_slug.as_deref(),
+        signed_id.as_deref(),
+        signed_ids.len(),
+    )?;
+    let attachment_spoilers = file_spoilers(
+        c,
+        input.attachment_spoilers,
+        signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()),
+    )?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
-    if signed_id.is_none() && signed_ids.is_empty() && drive_file_ids.is_empty() && input.sticker_id.is_none() && gif_slug.is_none() && input.markdown_source.trim().is_empty() {
+    if signed_id.is_none()
+        && signed_ids.is_empty()
+        && drive_file_ids.is_empty()
+        && input.sticker_id.is_none()
+        && gif_slug.is_none()
+        && input.markdown_source.trim().is_empty()
+    {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     if let Some(reply_to) = input.reply_to_message_id {
@@ -261,9 +286,14 @@ async fn message_params(
     if let Some(slug) = gif_slug {
         let creator_id = concerns::require_current_user(c)?.id;
         let lookup = client_message_id.clone();
-        let replay = c.app().db.read(move |conn| {
-            Ok(Message::find_duplicate(conn, room_id, creator_id, &lookup)?.is_some())
-        }).await.map_err(db_error)?;
+        let replay = c
+            .app()
+            .db
+            .read(move |conn| {
+                Ok(Message::find_duplicate(conn, room_id, creator_id, &lookup)?.is_some())
+            })
+            .await
+            .map_err(db_error)?;
         if !replay {
             staged_attachments.push(crate::gifs::stage_gif(c, creator_id, &slug).await?);
         }
@@ -274,8 +304,10 @@ async fn message_params(
         attachment: signed_id.map(Assignment::Signed),
         attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
         staged_attachments,
-                attachment_spoilers,
-        attachment_policy: posting::AttachmentPolicy::OwnedUpload { uploader_id: concerns::require_current_user(c)?.id },
+        attachment_spoilers,
+        attachment_policy: posting::AttachmentPolicy::OwnedUpload {
+            uploader_id: concerns::require_current_user(c)?.id,
+        },
         client_message_id: Some(client_message_id),
         reply_to_message_id: input.reply_to_message_id,
         reply_notify_author: input.reply_notify_author,
@@ -322,10 +354,18 @@ async fn create_thread(c: &mut Ctx) -> Result {
     }
     let attributes = message_params(c, input.message, Timeline::Room(room_id), room_id).await?;
     let name = input.name.filter(|name| !name.trim().is_empty());
-    let outcome = match posting::create_or_find_thread(c, &room, parent_id, name, match input.visibility.unwrap_or_default() {
-        api::ThreadVisibility::Public => ThreadVisibility::Public,
-        api::ThreadVisibility::Private => ThreadVisibility::Private,
-    }, attributes).await
+    let outcome = match posting::create_or_find_thread(
+        c,
+        &room,
+        parent_id,
+        name,
+        match input.visibility.unwrap_or_default() {
+            api::ThreadVisibility::Public => ThreadVisibility::Public,
+            api::ThreadVisibility::Private => ThreadVisibility::Private,
+        },
+        attributes,
+    )
+    .await
     {
         Ok(outcome) => outcome,
         Err(error) if db_cause(&error).is_some_and(campfire_db::Error::is_record_not_unique) => {
@@ -372,10 +412,13 @@ async fn update_thread(c: &mut Ctx) -> Result {
     let (thread, room, viewer) = scope(c).await?;
     let value: serde_json::Value = body(c).await?;
     if value.get("visibility").is_some() {
-        return Err(fail(c, api::ApiError::ThreadAccess {
-            message: "Thread visibility cannot be changed".into(),
-            reason: api::ThreadAccessRefusal::VisibilityImmutable,
-        }));
+        return Err(fail(
+            c,
+            api::ApiError::ThreadAccess {
+                message: "Thread visibility cannot be changed".into(),
+                reason: api::ThreadAccessRefusal::VisibilityImmutable,
+            },
+        ));
     }
     let input: api::UpdateThread = serde_json::from_value(value)
         .map_err(|error| fail(c, validation("body", &format!("isn't valid: {error}"))))?;
@@ -413,8 +456,9 @@ async fn update_thread(c: &mut Ctx) -> Result {
         ));
     }
     // An empty body changes nothing, so nothing is published.
-    let changes =
-        input.name.is_some() || input.auto_archive_after_minutes.is_some() || input.status.is_some();
+    let changes = input.name.is_some()
+        || input.auto_archive_after_minutes.is_some()
+        || input.status.is_some();
     let actor = viewer.clone();
     let result = c
         .app()
@@ -525,10 +569,28 @@ async fn create_reply(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (thread, room, _) = scope(c).await?;
     let input: api::CreateMessage = body(c).await?;
-    if input.gif_slug.as_deref().is_some_and(|slug| !slug.trim().is_empty()) && thread.locked_at.is_some() {
-        let (room_id, creator_id, lookup) = (room.id, concerns::require_current_user(c)?.id, input.client_message_id.trim().to_owned());
-        let replay = c.app().db.read(move |conn| Ok(Message::find_duplicate(conn, room_id, creator_id, &lookup)?.is_some())).await.map_err(db_error)?;
-        if !replay { return Err(forbidden(c, campfire_db::channel_thread::LOCKED_MESSAGE)); }
+    if input
+        .gif_slug
+        .as_deref()
+        .is_some_and(|slug| !slug.trim().is_empty())
+        && thread.locked_at.is_some()
+    {
+        let (room_id, creator_id, lookup) = (
+            room.id,
+            concerns::require_current_user(c)?.id,
+            input.client_message_id.trim().to_owned(),
+        );
+        let replay = c
+            .app()
+            .db
+            .read(move |conn| {
+                Ok(Message::find_duplicate(conn, room_id, creator_id, &lookup)?.is_some())
+            })
+            .await
+            .map_err(db_error)?;
+        if !replay {
+            return Err(forbidden(c, campfire_db::channel_thread::LOCKED_MESSAGE));
+        }
     }
     let attributes = message_params(c, input, Timeline::Thread(thread.id), room.id).await?;
     // `channel_thread_messages#create`: a retry gets the reply its first attempt posted.
@@ -669,35 +731,49 @@ async fn create_read(c: &mut Ctx) -> Result {
     )
 }
 
-
 async fn access_members(c: &Ctx, thread_id: i64) -> Result<api::ThreadAccessMembers> {
     let (secrets, now) = (c.app().secrets.clone(), now(c));
     let viewer_id = concerns::require_current_user(c)?.id;
-    c.app().db.read(move |conn| {
-        let thread = ChannelThread::find(conn, thread_id)?;
-        if !thread.readable_by(conn, viewer_id)? {
-            return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
-        }
-        let members = thread.access_members(conn)?;
-        Ok(api::ThreadAccessMembers {
-            users: dto::users(conn, &secrets, members.iter().map(|member| member.user_id), now)?,
-            members: members.into_iter().map(|member| api::ThreadAccessMember {
-                user_id: member.user_id,
-                added_by_id: member.added_by_id,
-                created_at: dto::time(member.created_at),
-            }).collect(),
+    c.app()
+        .db
+        .read(move |conn| {
+            let thread = ChannelThread::find(conn, thread_id)?;
+            if !thread.readable_by(conn, viewer_id)? {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
+            let members = thread.access_members(conn)?;
+            Ok(api::ThreadAccessMembers {
+                users: dto::users(
+                    conn,
+                    &secrets,
+                    members.iter().map(|member| member.user_id),
+                    now,
+                )?,
+                members: members
+                    .into_iter()
+                    .map(|member| api::ThreadAccessMember {
+                        user_id: member.user_id,
+                        added_by_id: member.added_by_id,
+                        created_at: dto::time(member.created_at),
+                    })
+                    .collect(),
+            })
         })
-    }).await.map_err(db_error)
+        .await
+        .map_err(db_error)
 }
 
 async fn index_access_members(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (thread, _, _) = scope(c).await?;
     if thread.visibility != ThreadVisibility::Private {
-        return Err(fail(c, api::ApiError::ThreadAccess {
-            message: "Public threads do not have access members".into(),
-            reason: api::ThreadAccessRefusal::NotPrivate,
-        }));
+        return Err(fail(
+            c,
+            api::ApiError::ThreadAccess {
+                message: "Public threads do not have access members".into(),
+                reason: api::ThreadAccessRefusal::NotPrivate,
+            },
+        ));
     }
     let members = access_members(c, thread.id).await?;
     c.json(StatusCode::OK, &members)
@@ -709,31 +785,52 @@ async fn create_access_member(c: &mut Ctx) -> Result {
     let input: api::AddThreadAccessMember = body(c).await?;
     let thread_id = thread.id;
     let (secrets, now) = (c.app().secrets.clone(), now(c));
-    let members = c.app().db.write(move |tx| {
-        let thread = ChannelThread::find(tx.conn(), thread_id)?;
-        let added = thread.add_access_member(tx, viewer.id, input.user_id)?;
-        let members = if thread.readable_by(tx.conn(), viewer.id)? {
-            thread.access_members(tx.conn())?
-        } else {
-            vec![added]
-        };
-        Ok(api::ThreadAccessMembers {
-            users: dto::users(tx.conn(), &secrets, members.iter().map(|member| member.user_id), now)?,
-            members: members.into_iter().map(|member| api::ThreadAccessMember {
-                user_id: member.user_id, added_by_id: member.added_by_id, created_at: dto::time(member.created_at),
-            }).collect(),
+    let members = c
+        .app()
+        .db
+        .write(move |tx| {
+            let thread = ChannelThread::find(tx.conn(), thread_id)?;
+            let added = thread.add_access_member(tx, viewer.id, input.user_id)?;
+            let members = if thread.readable_by(tx.conn(), viewer.id)? {
+                thread.access_members(tx.conn())?
+            } else {
+                vec![added]
+            };
+            Ok(api::ThreadAccessMembers {
+                users: dto::users(
+                    tx.conn(),
+                    &secrets,
+                    members.iter().map(|member| member.user_id),
+                    now,
+                )?,
+                members: members
+                    .into_iter()
+                    .map(|member| api::ThreadAccessMember {
+                        user_id: member.user_id,
+                        added_by_id: member.added_by_id,
+                        created_at: dto::time(member.created_at),
+                    })
+                    .collect(),
+            })
         })
-    }).await.map_err(db_error)?;
+        .await
+        .map_err(db_error)?;
     c.json(StatusCode::OK, &members)
 }
 
 async fn destroy_access_member(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (thread, _, viewer) = scope_with_creator(c, true).await?;
-    let user_id = c.param_str("user_id").and_then(concerns::cast_integer)
+    let user_id = c
+        .param_str("user_id")
+        .and_then(concerns::cast_integer)
         .ok_or_else(|| fail(c, not_found()))?;
-    c.app().db.write(move |tx| {
-        ChannelThread::find(tx.conn(), thread.id)?.remove_access_member(tx, viewer.id, user_id)
-    }).await.map_err(db_error)?;
+    c.app()
+        .db
+        .write(move |tx| {
+            ChannelThread::find(tx.conn(), thread.id)?.remove_access_member(tx, viewer.id, user_id)
+        })
+        .await
+        .map_err(db_error)?;
     Ok(c.head(StatusCode::NO_CONTENT))
 }

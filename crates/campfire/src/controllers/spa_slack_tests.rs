@@ -166,7 +166,9 @@ async fn flash(b: &mut Browser<'_>, method: Method, path: &str, fields: &[(&str,
         reply.text()
     );
     for _ in 0..3 {
-        let Some(location) = reply.header("location").map(str::to_owned) else { break };
+        let Some(location) = reply.header("location").map(str::to_owned) else {
+            break;
+        };
         reply = b.send(Req::new(Method::GET, &location)).await;
     }
     reply.text()
@@ -1333,8 +1335,9 @@ async fn the_slack_pages_redirect_but_their_forms_stay_classic() {
         .await;
     assert_eq!(kept.status, StatusCode::FOUND);
     assert!(
-        kept.location().is_some_and(|spa| spa
-            .starts_with(&format!("http://campfire.test/app/admin/slack/runs/{dry_run}"))),
+        kept.location().is_some_and(|spa| spa.starts_with(&format!(
+            "http://campfire.test/app/admin/slack/runs/{dry_run}"
+        ))),
         "{:?}",
         kept.location()
     );

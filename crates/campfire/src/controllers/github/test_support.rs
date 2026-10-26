@@ -45,7 +45,19 @@ pub(super) async fn request(
     body: Value,
     values: Value,
 ) -> (u16, HeaderMap, String) {
-    request_with_accept(fresh, method, path, body, values, if path.starts_with("/api/") { "application/json" } else { "text/html" }).await
+    request_with_accept(
+        fresh,
+        method,
+        path,
+        body,
+        values,
+        if path.starts_with("/api/") {
+            "application/json"
+        } else {
+            "text/html"
+        },
+    )
+    .await
 }
 pub(super) async fn request_with_accept(
     fresh: &Fresh,
@@ -94,4 +106,3 @@ pub(super) async fn request_with_accept(
 pub(super) fn sudo() -> Value {
     json!({"sudo_verified_at":1767268800})
 }
-

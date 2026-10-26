@@ -215,11 +215,18 @@ async fn assert_retained_redirects(b: &mut Browser<'_>, request: Req) {
     let reply = b.write(request).await;
     assert_eq!(
         (reply.status, reply.location()),
-        (StatusCode::SEE_OTHER, Some("http://campfire.test/app/settings/security")),
+        (
+            StatusCode::SEE_OTHER,
+            Some("http://campfire.test/app/settings/security")
+        ),
         "{}",
         reply.text()
     );
-    assert_eq!(dump(b.app()).await, before, "the retained form changes nothing");
+    assert_eq!(
+        dump(b.app()).await,
+        before,
+        "the retained form changes nothing"
+    );
 }
 
 /// Signs David in (with sudo) on a fresh app, runs `prepare` (its answer goes to `exercise`),
@@ -251,7 +258,8 @@ fn api_alert(reply: &Reply, tag: &str, status: StatusCode, message: &str) {
         match tag {
             "Validation" => json!({"_tag": tag, "message": message, "fields": {}}),
             "RateLimited" => json!({"_tag": tag, "message": message, "retryAfter": 0}),
-            "TwoFactorRequired" => json!({"_tag": tag, "message": message, "requirement":{"kind":"setup","location":"http://campfire.test/app/two_factor/setup"}}),
+            "TwoFactorRequired" =>
+                json!({"_tag": tag, "message": message, "requirement":{"kind":"setup","location":"http://campfire.test/app/two_factor/setup"}}),
             _ => json!({"_tag": tag, "message": message}),
         }
     );
@@ -296,8 +304,14 @@ async fn backup_codes_match_accepted_refused_not_enabled_rate_and_google_branche
                 let context = prepare(a, b, case).await;
                 if case == "rate" {
                     for _ in 0..10 {
-                        let reply = write(b, Method::POST, api_path, json!({"reauth": "wrong"})).await;
-                        api_alert(&reply, "Validation", StatusCode::UNPROCESSABLE_ENTITY, REFUSED);
+                        let reply =
+                            write(b, Method::POST, api_path, json!({"reauth": "wrong"})).await;
+                        api_alert(
+                            &reply,
+                            "Validation",
+                            StatusCode::UNPROCESSABLE_ENTITY,
+                            REFUSED,
+                        );
                     }
                 }
                 context
@@ -481,8 +495,13 @@ async fn disable_matches_notice_refusals_conflict_rate_and_response_cookies() {
                 let context = prepare(a, b, case).await;
                 if case == "rate" {
                     for _ in 0..10 {
-                        write(b, Method::DELETE, "/api/v1/settings/two_factor", json!({"reauth": "wrong"}))
-                            .await;
+                        write(
+                            b,
+                            Method::DELETE,
+                            "/api/v1/settings/two_factor",
+                            json!({"reauth": "wrong"}),
+                        )
+                        .await;
                     }
                 }
                 context
@@ -651,8 +670,13 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                     let context = prepare(a, b, case).await;
                     if case == "rate" {
                         for _ in 0..10 {
-                            write(b, Method::DELETE, &path(&context, true), json!({"reauth": "wrong"}))
-                                .await;
+                            write(
+                                b,
+                                Method::DELETE,
+                                &path(&context, true),
+                                json!({"reauth": "wrong"}),
+                            )
+                            .await;
                         }
                     }
                     context
@@ -1110,7 +1134,10 @@ async fn every_account_route_refuses_a_bot_session() {
         .await;
     assert_eq!(
         (reply.status, reply.location()),
-        (StatusCode::SEE_OTHER, Some("http://campfire.test/app/settings/security"))
+        (
+            StatusCode::SEE_OTHER,
+            Some("http://campfire.test/app/settings/security")
+        )
     );
     let before = dump(&a).await;
     let capture = a.booted.app.cable.capture_every_publication();

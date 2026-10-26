@@ -27,27 +27,55 @@ const LAYERS: &[(&str, &[&str])] = &[
     ("message_features", &["controllers::message_features"]),
     ("messages", &["controllers::messages"]),
     // `campfire_rooms`'s mirrors here, which hold tests of theirs (and the test-only `shell`).
-    ("rooms", &["controllers::rooms", "controllers::room_categories"]),
+    (
+        "rooms",
+        &["controllers::rooms", "controllers::room_categories"],
+    ),
     // `campfire_people`'s mirrors here, which hold tests of theirs.
-    ("people", &[
-        "controllers::accounts", "controllers::qr_code", "controllers::sessions",
-        "controllers::sudos", "controllers::two_factor", "controllers::users",
-    ]),
+    (
+        "people",
+        &[
+            "controllers::accounts",
+            "controllers::qr_code",
+            "controllers::sessions",
+            "controllers::sudos",
+            "controllers::two_factor",
+            "controllers::users",
+        ],
+    ),
     // `campfire_controllers`'s mirrors here, which hold tests of theirs.
     ("controllers", &["controllers::*"]),
-    ("server", &[
-        "", "admin", "controllers", "controllers::health", "controllers::mailbox",
-        "controllers::turbo_native", "server",
-    ]),
+    (
+        "server",
+        &[
+            "",
+            "admin",
+            "controllers",
+            "controllers::health",
+            "controllers::mailbox",
+            "controllers::turbo_native",
+            "server",
+        ],
+    ),
     // The test harness, which boots the whole app: above everything, so only tests use it.
-    ("harness", &["app::google_test_support", "controllers::presenters::test_support"]),
+    (
+        "harness",
+        &[
+            "app::google_test_support",
+            "controllers::presenters::test_support",
+        ],
+    ),
 ];
 
 #[test]
 fn modules_name_only_their_own_layer_and_below() {
     let tree = ModuleTree::read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
     // A walk that stopped early would pass vacuously. K15 deleted classic UI modules; 536 remain.
-    assert!(tree.modules.len() > 535, "found only {} modules", tree.modules.len());
+    assert!(
+        tree.modules.len() > 535,
+        "found only {} modules",
+        tree.modules.len()
+    );
     let violations = tree.violations();
     assert!(
         violations.is_empty(),
@@ -60,17 +88,29 @@ fn modules_name_only_their_own_layer_and_below() {
 #[test]
 fn an_upward_reference_is_a_violation() {
     let tree = ModuleTree::from_sources(&[
-        ("main.rs", "mod huddle;\nmod controllers;\n#[cfg(test)]\nmod tests;"),
-        ("huddle.rs", "use crate::controllers::rooms::pins::list;\nfn f() { super::controllers::rooms::show(); }"),
+        (
+            "main.rs",
+            "mod huddle;\nmod controllers;\n#[cfg(test)]\nmod tests;",
+        ),
+        (
+            "huddle.rs",
+            "use crate::controllers::rooms::pins::list;\nfn f() { super::controllers::rooms::show(); }",
+        ),
         ("controllers.rs", "pub mod rooms;"),
-        ("controllers/rooms.rs", "pub mod pins;\nuse crate::huddle;\nmod inline { use super::super::super::huddle::Config; }"),
+        (
+            "controllers/rooms.rs",
+            "pub mod pins;\nuse crate::huddle;\nmod inline { use super::super::super::huddle::Config; }",
+        ),
         ("controllers/rooms/pins.rs", "pub fn list() {}"),
         ("tests.rs", "use crate::controllers::rooms;"),
     ]);
-    assert_eq!(tree.violations(), [
-        "huddle.rs:1 (app) -> crate::controllers::rooms::pins (rooms)",
-        "huddle.rs:2 (app) -> crate::controllers::rooms (rooms)",
-    ]);
+    assert_eq!(
+        tree.violations(),
+        [
+            "huddle.rs:1 (app) -> crate::controllers::rooms::pins (rooms)",
+            "huddle.rs:2 (app) -> crate::controllers::rooms (rooms)",
+        ]
+    );
 }
 
 struct Module {
@@ -107,7 +147,9 @@ impl Sources for Disk {
 
 impl Sources for [(&str, &str)] {
     fn read(&self, file: &str) -> Option<String> {
-        self.iter().find(|(name, _)| *name == file).map(|(_, text)| (*text).to_owned())
+        self.iter()
+            .find(|(name, _)| *name == file)
+            .map(|(_, text)| (*text).to_owned())
     }
 }
 
@@ -128,15 +170,36 @@ impl ModuleTree {
 
     /// Adds `file` as module `path`, then the modules it declares. `dir` is where its
     /// out-of-line children live.
-    fn add_file(&mut self, sources: &(impl Sources + ?Sized), file: &str, path: String, test: bool, dir: &str) {
+    fn add_file(
+        &mut self,
+        sources: &(impl Sources + ?Sized),
+        file: &str,
+        path: String,
+        test: bool,
+        dir: &str,
+    ) {
         let Some(raw) = sources.read(file) else {
             panic!("module file {file} is missing");
         };
         let text = strip(&raw);
         let index = self.files.len();
-        self.files.push(SourceFile { name: file.to_owned(), text: text.clone(), spans: Vec::new() });
-        let file_dir = file.rfind('/').map_or("", |slash| &file[..=slash]).to_owned();
-        let block = Block { file: index, raw: &raw, text: &text, start: 0, end: text.len(), inline: false };
+        self.files.push(SourceFile {
+            name: file.to_owned(),
+            text: text.clone(),
+            spans: Vec::new(),
+        });
+        let file_dir = file
+            .rfind('/')
+            .map_or("", |slash| &file[..=slash])
+            .to_owned();
+        let block = Block {
+            file: index,
+            raw: &raw,
+            text: &text,
+            start: 0,
+            end: text.len(),
+            inline: false,
+        };
         self.add_block(sources, &block, path, test, dir, &file_dir);
     }
 
@@ -154,8 +217,13 @@ impl ModuleTree {
     ) {
         let module = self.modules.len();
         self.module_paths.insert(path.clone());
-        self.modules.push(Module { path: path.clone(), test });
-        self.files[block.file].spans.push((block.start, block.end, module));
+        self.modules.push(Module {
+            path: path.clone(),
+            test,
+        });
+        self.files[block.file]
+            .spans
+            .push((block.start, block.end, module));
         let declaration = declaration();
         let mut at = block.start;
         while let Some(found) = declaration.captures_at(&block.text[..block.end], at) {
@@ -163,30 +231,50 @@ impl ModuleTree {
             let name = &found["name"];
             let attrs = &found["attrs"];
             let child_test = test || attrs.contains("cfg(test)") || attrs.contains("cfg(all(test");
-            let child = if path.is_empty() { name.to_owned() } else { format!("{path}::{name}") };
+            let child = if path.is_empty() {
+                name.to_owned()
+            } else {
+                format!("{path}::{name}")
+            };
             if &found["end"] == "{" {
                 let close = matching_brace(block.text, whole.end() - 1);
-                let inner = Block { start: whole.end(), end: close, inline: true, ..*block };
-                self.add_block(sources, &inner, child, child_test, &format!("{dir}{name}/"), file_dir);
+                let inner = Block {
+                    start: whole.end(),
+                    end: close,
+                    inline: true,
+                    ..*block
+                };
+                self.add_block(
+                    sources,
+                    &inner,
+                    child,
+                    child_test,
+                    &format!("{dir}{name}/"),
+                    file_dir,
+                );
                 at = close;
                 continue;
             }
             at = whole.end();
             // `#[path]` strings were blanked, so read them from the same span of the source.
             let attrs_span = found.name("attrs").expect("attrs");
-            let (child_file, child_dir) = match path_attribute().captures(&block.raw[attrs_span.range()]) {
-                // A file named by `#[path]` declares its children beside it, like a `mod.rs`.
-                Some(attr) => {
-                    let base = if block.inline { dir } else { file_dir };
-                    let child_file = normalize(&format!("{base}{}", &attr[1]));
-                    let child_dir = child_file.rfind('/').map_or("", |slash| &child_file[..=slash]).to_owned();
-                    (child_file, child_dir)
-                }
-                None if sources.read(&format!("{dir}{name}.rs")).is_some() => {
-                    (format!("{dir}{name}.rs"), format!("{dir}{name}/"))
-                }
-                None => (format!("{dir}{name}/mod.rs"), format!("{dir}{name}/")),
-            };
+            let (child_file, child_dir) =
+                match path_attribute().captures(&block.raw[attrs_span.range()]) {
+                    // A file named by `#[path]` declares its children beside it, like a `mod.rs`.
+                    Some(attr) => {
+                        let base = if block.inline { dir } else { file_dir };
+                        let child_file = normalize(&format!("{base}{}", &attr[1]));
+                        let child_dir = child_file
+                            .rfind('/')
+                            .map_or("", |slash| &child_file[..=slash])
+                            .to_owned();
+                        (child_file, child_dir)
+                    }
+                    None if sources.read(&format!("{dir}{name}.rs")).is_some() => {
+                        (format!("{dir}{name}.rs"), format!("{dir}{name}/"))
+                    }
+                    None => (format!("{dir}{name}/mod.rs"), format!("{dir}{name}/")),
+                };
             // Only files under `src/` belong to the crate's layers.
             if !child_file.starts_with("../") {
                 self.add_file(sources, &child_file, child, child_test, &child_dir);
@@ -203,7 +291,9 @@ impl ModuleTree {
                 if module.test {
                     continue;
                 }
-                let Some(target) = self.resolve(&module.path, &path) else { continue };
+                let Some(target) = self.resolve(&module.path, &path) else {
+                    continue;
+                };
                 // A path that names no module under the root names an item of `main.rs` or a
                 // module `main.rs` brings in from a crate below (`use campfire_app::config`),
                 // whose boundary the compiler checks.
@@ -213,7 +303,10 @@ impl ModuleTree {
                 let (from, to) = (layer(&module.path), layer(&target));
                 if to.0 > from.0 {
                     let line = file.text[..at].matches('\n').count() + 1;
-                    violations.push(format!("{}:{line} ({}) -> crate::{target} ({})", file.name, from.1, to.1));
+                    violations.push(format!(
+                        "{}:{line} ({}) -> crate::{target} ({})",
+                        file.name, from.1, to.1
+                    ));
                 }
             }
         }
@@ -243,10 +336,18 @@ impl ModuleTree {
         self.longest_module(base, segments)
     }
 
-    fn longest_module<'a>(&self, base: Vec<&str>, segments: impl Iterator<Item = &'a str>) -> Option<String> {
+    fn longest_module<'a>(
+        &self,
+        base: Vec<&str>,
+        segments: impl Iterator<Item = &'a str>,
+    ) -> Option<String> {
         let mut resolved = base.join("::");
         for segment in segments {
-            let candidate = if resolved.is_empty() { segment.to_owned() } else { format!("{resolved}::{segment}") };
+            let candidate = if resolved.is_empty() {
+                segment.to_owned()
+            } else {
+                format!("{resolved}::{segment}")
+            };
             if !self.module_paths.contains(&candidate) {
                 break;
             }
@@ -300,7 +401,8 @@ fn layer(module: &str) -> (usize, &'static str) {
             }
         }
     }
-    best.map(|(index, _, name)| (index, name)).expect("the server layer covers every module")
+    best.map(|(index, _, name)| (index, name))
+        .expect("the server layer covers every module")
 }
 
 /// `mod name;` or `mod name {`, with its attributes.
@@ -329,7 +431,11 @@ fn references(text: &str) -> Vec<(usize, String)> {
             Some(group) => {
                 let close = matching_brace(text, group.end() - 1);
                 let mut branches = Vec::new();
-                use_branches(&format!("{prefix}::"), &text[group.end()..close.min(text.len())], &mut branches);
+                use_branches(
+                    &format!("{prefix}::"),
+                    &text[group.end()..close.min(text.len())],
+                    &mut branches,
+                );
                 references.extend(branches.into_iter().map(|branch| (path.start(), branch)));
                 at = close.min(text.len());
             }
@@ -387,12 +493,16 @@ fn strip(source: &str) -> String {
             }
         }
     };
-    let ident = |at: usize| at > 0 && (bytes[at - 1].is_ascii_alphanumeric() || bytes[at - 1] == b'_');
+    let ident =
+        |at: usize| at > 0 && (bytes[at - 1].is_ascii_alphanumeric() || bytes[at - 1] == b'_');
     let mut i = 0;
     while i < bytes.len() {
         let rest = &bytes[i..];
         if rest.starts_with(b"//") {
-            let end = rest.iter().position(|b| *b == b'\n').map_or(bytes.len(), |p| i + p);
+            let end = rest
+                .iter()
+                .position(|b| *b == b'\n')
+                .map_or(bytes.len(), |p| i + p);
             blank(&mut out, i, end);
             i = end;
         } else if rest.starts_with(b"/*") {
@@ -432,7 +542,10 @@ fn strip(source: &str) -> String {
         } else if rest.starts_with(b"'") {
             // A character literal ('x', '\n', '\u{7b}'), not a lifetime ('a).
             let end = if rest.get(1) == Some(&b'\\') {
-                rest.iter().skip(2).position(|b| *b == b'\'').map(|p| i + 2 + p + 1)
+                rest.iter()
+                    .skip(2)
+                    .position(|b| *b == b'\'')
+                    .map(|p| i + 2 + p + 1)
             } else {
                 let width = source[i + 1..].chars().next().map_or(1, char::len_utf8);
                 (rest.get(1 + width) == Some(&b'\'')).then_some(i + 2 + width)
@@ -457,7 +570,10 @@ fn raw_string_start(rest: &[u8]) -> Option<(usize, usize)> {
     if rest.get(after_b) != Some(&b'r') {
         return None;
     }
-    let hashes = rest[after_b + 1..].iter().take_while(|b| **b == b'#').count();
+    let hashes = rest[after_b + 1..]
+        .iter()
+        .take_while(|b| **b == b'#')
+        .count();
     (rest.get(after_b + 1 + hashes) == Some(&b'"')).then_some((after_b + 2 + hashes, hashes))
 }
 
@@ -482,12 +598,18 @@ fn use_branches(prefix: &str, body: &str, branches: &mut Vec<String>) {
         let item = item.trim();
         if let Some(open) = item.find('{') {
             let head: String = item[..open].split_whitespace().collect();
-            let inner = item[open + 1..].strip_suffix('}').unwrap_or(&item[open + 1..]);
+            let inner = item[open + 1..]
+                .strip_suffix('}')
+                .unwrap_or(&item[open + 1..]);
             use_branches(&format!("{prefix}{head}"), inner, branches);
             continue;
         }
         let words: Vec<&str> = item.split_whitespace().collect();
-        let leaf: String = words.split(|word| *word == "as").next().unwrap_or_default().concat();
+        let leaf: String = words
+            .split(|word| *word == "as")
+            .next()
+            .unwrap_or_default()
+            .concat();
         match leaf.as_str() {
             "" | "*" => {}
             "self" => branches.push(prefix.trim_end_matches("::").to_owned()),
@@ -495,4 +617,3 @@ fn use_branches(prefix: &str, body: &str, branches: &mut Vec<String>) {
         }
     }
 }
-

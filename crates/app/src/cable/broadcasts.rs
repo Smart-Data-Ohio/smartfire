@@ -68,11 +68,20 @@ impl Broadcasts {
         sync::message(&self.server, &self.sync, conn, message, created);
     }
 
-    pub fn sync_message_checked(&self, conn: &Connection, message: &Message, created: bool) -> bool {
+    pub fn sync_message_checked(
+        &self,
+        conn: &Connection,
+        message: &Message,
+        created: bool,
+    ) -> bool {
         sync::checked_message(&self.server, &self.sync, conn, message, created)
     }
 
-    pub fn sync_digest_messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<i64>> {
+    pub fn sync_digest_messages(
+        &self,
+        conn: &Connection,
+        messages: &[Message],
+    ) -> Option<Vec<i64>> {
         sync::checked_messages(&self.server, &self.sync, conn, messages)
     }
 
@@ -105,13 +114,28 @@ impl Broadcasts {
     }
 
     /// A recording slot, including the room of a source with no personally stored item.
-    pub fn sync_activity_recorded(&self, recorded: campfire_db::models::activity_item::ActivityItemRecorded) {
-        sync::activity_item_in_room_later(&self.server, &self.sync, recorded.user_id, recorded.id, recorded.room_id);
+    pub fn sync_activity_recorded(
+        &self,
+        recorded: campfire_db::models::activity_item::ActivityItemRecorded,
+    ) {
+        sync::activity_item_in_room_later(
+            &self.server,
+            &self.sync,
+            recorded.user_id,
+            recorded.id,
+            recorded.room_id,
+        );
     }
 
     /// `message.notified` for the people a new message's push policy notifies.
     pub fn sync_message_notified(&self, rich_text: std::sync::Arc<dyn RichText>, message_id: i64) {
-        sync::message_notified_later(&self.server, &self.sync, rich_text, self.clock.now(), message_id);
+        sync::message_notified_later(
+            &self.server,
+            &self.sync,
+            rich_text,
+            self.clock.now(),
+            message_id,
+        );
     }
 
     /// `activity.removed` for removed inbox items.
@@ -246,7 +270,10 @@ impl Broadcasts {
     }
 
     /// Access grants also change discovery and existing subscriptions.
-    pub fn thread_access_changed(&self, change: campfire_db::models::channel_thread::ThreadAccessChange) {
+    pub fn thread_access_changed(
+        &self,
+        change: campfire_db::models::channel_thread::ThreadAccessChange,
+    ) {
         sync::thread_access_changed(&self.server, &self.sync, change);
     }
 
@@ -263,11 +290,16 @@ impl Broadcasts {
     /// `message.broadcast_create`: append the message to its conversation (`thread || room`),
     /// then, unless it's a thread message or a system note, `broadcast_unread_room`.
     pub fn message_create(
-        &self, conn: &Connection, room: &Room, message: &Message,
+        &self,
+        conn: &Connection,
+        room: &Room,
+        message: &Message,
         rich_text: &dyn RichText,
     ) -> campfire_db::Result<()> {
         if !self.sync_message_checked(conn, message, true) {
-            return Err(campfire_db::Error::Other("message JSON publication failed".into()));
+            return Err(campfire_db::Error::Other(
+                "message JSON publication failed".into(),
+            ));
         }
         if message.thread_id.is_none() && !message.system_note {
             self.unread_room(conn, room, message, rich_text)?;
@@ -302,7 +334,8 @@ impl Broadcasts {
                 .iter()
                 .map(|user| user.id)
                 .collect();
-            let blockers = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
+            let blockers =
+                campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
             // The author's own message never makes the room unread for them (`unread_memberships`
             // leaves them out), so their other devices hear nothing either; the classic stream
             // above keeps every member, as `broadcast_unread_room` did.
@@ -384,7 +417,12 @@ impl Broadcasts {
     }
 
     pub fn involvement_change(&self, room: &Room, membership: &Membership) {
-        sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(vec![membership.user_id]));
+        sync::sidebar_rows_later(
+            &self.server,
+            &self.sync,
+            room.id,
+            Some(vec![membership.user_id]),
+        );
     }
 }
 
@@ -398,17 +436,25 @@ fn unread_user_ids(
     now: campfire_db::Timestamp,
 ) -> campfire_db::Result<Vec<i64>> {
     let mut memberships = Membership::for_room(conn, room.id)?;
-    let ids = memberships.iter().map(|membership| membership.user_id).collect::<Vec<_>>();
+    let ids = memberships
+        .iter()
+        .map(|membership| membership.user_id)
+        .collect::<Vec<_>>();
     let users = UserStatusSettings::for_ids(conn, &ids)?;
     memberships.retain(|membership| {
-        !users.get(&membership.user_id).is_some_and(|user| {
-                user.notification_preferences.muted(room.id, now)
-            })
+        !users
+            .get(&membership.user_id)
+            .is_some_and(|user| user.notification_preferences.muted(room.id, now))
     });
     let muted = |membership: &Membership| {
-        users.get(&membership.user_id)
-            .map(|user| user.notification_preferences.involvement(room.id, membership.involvement))
-            .unwrap_or(membership.involvement) == Some(Involvement::Muted)
+        users
+            .get(&membership.user_id)
+            .map(|user| {
+                user.notification_preferences
+                    .involvement(room.id, membership.involvement)
+            })
+            .unwrap_or(membership.involvement)
+            == Some(Involvement::Muted)
     };
     if !memberships.iter().any(muted) {
         return Ok(memberships

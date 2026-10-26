@@ -1,10 +1,7 @@
 //! Actual production task objects executed by Periodic::tick, with complete state.
 //! Producer controls in check_rendering_mutants.py remove the reminder claim,
 //! change durable push arguments and skip scheduled delivery; each witness is real.
-use super::{
-    comparison_support,
-    quote_integration_tests::{insert_rows},
-};
+use super::{comparison_support, quote_integration_tests::insert_rows};
 use crate::controllers::presenters::test_support::*;
 use serde_json::{Value, json};
 use std::{collections::HashMap, sync::Arc, time::Duration};
@@ -135,7 +132,6 @@ async fn periodic_wide_and_due_delivery_match_rails_full_rows_jobs_and_frames() 
             );
             ticks += 1;
         }
-
     }
     assert_eq!(ticks, 24);
     println!(

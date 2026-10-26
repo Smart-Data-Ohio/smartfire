@@ -23,8 +23,8 @@ pub mod controllers {
     pub mod internal_huddle;
     pub mod message_embed_suppressions;
     pub mod message_forwards;
-    pub mod public_pages;
     pub mod navigation;
+    pub mod public_pages;
     pub mod pwa;
     pub mod saved_items;
     pub mod scheduled_messages;
@@ -44,7 +44,7 @@ pub mod controllers {
 }
 
 // The app, web and channels layers, under the paths this code used inside the campfire crate.
-use campfire_app::{app, huddle, integrations, net, security};
 #[cfg(any(test, feature = "test-support"))]
 use campfire_app::test_support;
+use campfire_app::{app, huddle, integrations, net, security};
 use campfire_runtime::{authentication, concerns, messaging};

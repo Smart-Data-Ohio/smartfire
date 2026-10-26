@@ -130,12 +130,24 @@ impl CalendarEvent {
         )
     }
     pub fn for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {
-        query_all(conn, "SELECT * FROM events WHERE room_id=? ORDER BY starts_at,id", [room_id], Self::from_row)
+        query_all(
+            conn,
+            "SELECT * FROM events WHERE room_id=? ORDER BY starts_at,id",
+            [room_id],
+            Self::from_row,
+        )
     }
     /// Preserve the series association's ordering, including equal-time cancelled rows.
     pub fn for_series_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
-        if ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn, "SELECT * FROM events WHERE series_id IN (SELECT value FROM json_each(?)) ORDER BY series_id,starts_at,cancelled_at ASC NULLS FIRST,id", [serde_json::json!(ids).to_string()], Self::from_row)
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM events WHERE series_id IN (SELECT value FROM json_each(?)) ORDER BY series_id,starts_at,cancelled_at ASC NULLS FIRST,id",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
     }
     /// Upcoming, unlinked choices for the work pane; retain Rails' starts_at/id order.
     pub fn work_link_candidates(
@@ -164,12 +176,9 @@ impl CalendarEvent {
         // One JSON bind also bounds large message/quote pages and repeated IDs.
         let ids = serde_json::to_string(ids).expect("integer IDs serialize");
         let sql = "SELECT r.message_id,e.* FROM events e JOIN event_references r ON r.event_id=e.id JOIN messages m ON m.id=r.message_id AND m.room_id=e.room_id WHERE r.message_id IN (SELECT value FROM json_each(?1)) ORDER BY e.starts_at,e.id";
-        for row in conn
-            .prepare(sql)?
-            .query_map([ids], |row| {
-                Ok((row.get::<_, i64>("message_id")?, Self::from_row(row)?))
-            })?
-        {
+        for row in conn.prepare(sql)?.query_map([ids], |row| {
+            Ok((row.get::<_, i64>("message_id")?, Self::from_row(row)?))
+        })? {
             let (message, event) = row?;
             result.entry(message).or_default().push(event);
         }
@@ -457,12 +466,18 @@ impl CalendarEvent {
                 ..Default::default()
             },
         )?;
-        tx.emit_after_commit(SideEffect::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
+        tx.emit_after_commit(SideEffect::broadcast(&Broadcast::MessageCreated {
+            message_id: message.id,
+        }));
         Ok(())
     }
     /// Current notified going/maybe active human members, re-read in the triggering write.
     pub fn notification_recipient_ids(&self, conn: &Connection) -> Result<Vec<i64>> {
-        super::ignore_policy::visible_recipients(conn, self.organizer_id, self.activity_recipient_ids(conn)?)
+        super::ignore_policy::visible_recipients(
+            conn,
+            self.organizer_id,
+            self.activity_recipient_ids(conn)?,
+        )
     }
 
     pub(super) fn activity_recipient_ids(&self, conn: &Connection) -> Result<Vec<i64>> {

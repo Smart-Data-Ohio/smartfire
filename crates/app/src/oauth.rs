@@ -2,7 +2,6 @@
 pub mod assertion;
 pub mod client;
 pub mod registration;
-use client::AuthMethod;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use campfire_db::{
     AgentCredential, Connection, Result, Timestamp, Tx,
@@ -14,6 +13,7 @@ use campfire_db::{
         },
     },
 };
+use client::AuthMethod;
 use rusqlite::{OptionalExtension, Params, Row, params};
 use serde::Serialize;
 use serde_json::json;

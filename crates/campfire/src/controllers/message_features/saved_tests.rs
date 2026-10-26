@@ -11,7 +11,9 @@ async fn fixture() -> (TestApp, i64, Arc<campfire_kit::clock::FrozenClock>) {
     ));
     let app = TestApp::boot_with_test_clock(clock.clone())
         .await
-        .expect("WS8bm2 requires default seed").without_job_runner().await;
+        .expect("WS8bm2 requires default seed")
+        .without_job_runner()
+        .await;
     let message = app
         .db()
         .write(|tx| {
@@ -474,8 +476,14 @@ async fn review_regression_status_patch_preserves_dispatch_claim() {
         ))
     );
     assert_eq!(jobs, 1);
-    assert_eq!(response.json()["reminded_at"], race_oracle()["after_status_response"]["reminded_at"]);
-    assert_eq!(response.json()["remind_at"], race_oracle()["after_status_response"]["remind_at"]);
+    assert_eq!(
+        response.json()["reminded_at"],
+        race_oracle()["after_status_response"]["reminded_at"]
+    );
+    assert_eq!(
+        response.json()["remind_at"],
+        race_oracle()["after_status_response"]["remind_at"]
+    );
 }
 
 #[tokio::test]
@@ -545,8 +553,14 @@ async fn review_regression_status_patch_preserves_concurrent_reschedule() {
         )),
         "status PATCH overwrote the concurrent reminder schedule"
     );
-    assert_eq!(response.json()["remind_at"], race_oracle()["after_reschedule_response"]["remind_at"]);
-    assert_eq!(response.json()["reminded_at"], race_oracle()["after_reschedule_response"]["reminded_at"]);
+    assert_eq!(
+        response.json()["remind_at"],
+        race_oracle()["after_reschedule_response"]["remind_at"]
+    );
+    assert_eq!(
+        response.json()["reminded_at"],
+        race_oracle()["after_reschedule_response"]["reminded_at"]
+    );
 }
 
 fn race_oracle() -> Value {

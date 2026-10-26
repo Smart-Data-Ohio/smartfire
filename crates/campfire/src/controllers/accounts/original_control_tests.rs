@@ -42,10 +42,7 @@ async fn run(name: &'static str) {
     };
     if viewer == DAVID {
         assert_eq!(
-            browser
-                .confirm_sudo("secret123456")
-                .await
-                .status,
+            browser.confirm_sudo("secret123456").await.status,
             StatusCode::OK
         );
     }

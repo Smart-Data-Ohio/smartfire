@@ -1,6 +1,6 @@
 //! Read-side work policy and owner choices, shared by posts and human work controls.
-use crate::Room;
 use super::ChannelThread;
+use crate::Room;
 use crate::{
     Agent, Error, Errors, Membership, Message, NewChannelThread, NewMessage, Result, Tx, User,
     WorkThreadEvent,
@@ -104,13 +104,25 @@ impl ChannelThread {
         let owner = User::find_by_id(conn, id)?;
         let member = Membership::find_by_room_and_user(conn, self.room_id, id)?.is_some();
         if self.visibility == super::ThreadVisibility::Private
-            && (if self.id == 0 { id != self.creator_id && !owner.as_ref().is_some_and(User::is_administrator) } else { !self.readable_by(conn, id)? }) {
+            && (if self.id == 0 {
+                id != self.creator_id && !owner.as_ref().is_some_and(User::is_administrator)
+            } else {
+                !self.readable_by(conn, id)?
+            })
+        {
             errors.add("work_owner", "must have access to the private thread");
         }
         if let Some(owner) = owner.as_ref().filter(|u| u.is_bot()) {
             let eligible = if let Some(agent) = Agent::for_user(conn, owner.id)? {
-                member && Agent::capabilities_for_rooms(conn, "post_messages", &[(agent.id, Some(self.room_id))])?
-                    .get(&(agent.id, Some(self.room_id))).copied().unwrap_or(false)
+                member
+                    && Agent::capabilities_for_rooms(
+                        conn,
+                        "post_messages",
+                        &[(agent.id, Some(self.room_id))],
+                    )?
+                    .get(&(agent.id, Some(self.room_id)))
+                    .copied()
+                    .unwrap_or(false)
             } else {
                 false
             };
@@ -180,8 +192,10 @@ impl ChannelThread {
             }
             if let Some(message) = &opener {
                 crate::models::agent_delivery::enqueue_for_message(tx, message)?;
-                let blockers = crate::models::ignore_policy::blockers_of(tx.conn(), message.creator_id)?
-                    .into_iter().collect::<std::collections::HashSet<_>>();
+                let blockers =
+                    crate::models::ignore_policy::blockers_of(tx.conn(), message.creator_id)?
+                        .into_iter()
+                        .collect::<std::collections::HashSet<_>>();
                 for (membership, user) in
                     Membership::for_room_with_users(tx.conn(), thread.room_id)?
                 {
@@ -198,7 +212,12 @@ impl ChannelThread {
                     if membership.involvement == Some(crate::Involvement::Everything)
                         || Some(user.id) == thread.work_owner_id
                     {
-                        crate::ActivityItem::record_authorized_board_opener(tx, &user, message, blockers.contains(&user.id))?;
+                        crate::ActivityItem::record_authorized_board_opener(
+                            tx,
+                            &user,
+                            message,
+                            blockers.contains(&user.id),
+                        )?;
                     }
                 }
             }
@@ -310,8 +329,7 @@ impl ChannelThread {
         Ok(())
     }
     pub fn work_viewable_by(&self, conn: &Connection, user: &User) -> Result<bool> {
-        Ok(Self::work_viewable_with_membership(user, true)
-            && self.readable_by(conn, user.id)?)
+        Ok(Self::work_viewable_with_membership(user, true) && self.readable_by(conn, user.id)?)
     }
 
     pub fn work_viewable_with_membership(user: &User, member: bool) -> bool {
@@ -321,8 +339,14 @@ impl ChannelThread {
         Self::work_viewable_with_membership(user, member)
             && (self.settings_manageable_in_room(room, user) || self.work_owner_id == Some(user.id))
     }
-    pub fn work_assignment_manageable_in_room(&self, room: &Room, user: &User, member: bool) -> bool {
-        Self::work_viewable_with_membership(user, member) && self.settings_manageable_in_room(room, user)
+    pub fn work_assignment_manageable_in_room(
+        &self,
+        room: &Room,
+        user: &User,
+        member: bool,
+    ) -> bool {
+        Self::work_viewable_with_membership(user, member)
+            && self.settings_manageable_in_room(room, user)
     }
     pub fn work_manageable_by(&self, conn: &Connection, user: &User) -> Result<bool> {
         Ok(self.work_viewable_by(conn, user)?

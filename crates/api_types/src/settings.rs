@@ -185,7 +185,9 @@ pub struct UpdateProfileBanner {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct AppearancePreferences(
-    #[ts(type = "null | boolean | number | string | ReadonlyArray<AppearancePreferences> | { [key: string]: AppearancePreferences }")]
+    #[ts(
+        type = "null | boolean | number | string | ReadonlyArray<AppearancePreferences> | { [key: string]: AppearancePreferences }"
+    )]
     pub serde_json::Value,
 );
 
@@ -228,7 +230,11 @@ pub struct UpdateAppearance {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
-pub enum NotificationLevel { Everything, Mentions, Nothing }
+pub enum NotificationLevel {
+    Everything,
+    Mentions,
+    Nothing,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -242,7 +248,14 @@ pub struct RoomNotificationUpdate {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
-pub enum RoomMuteDuration { Minutes15, Hour1, Hours8, Hours24, Forever, Off }
+pub enum RoomMuteDuration {
+    Minutes15,
+    Hour1,
+    Hours8,
+    Hours24,
+    Forever,
+    Off,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -470,7 +483,11 @@ pub struct GoogleIntegration {
 
 /// A personal connection to GitHub or Fizzy.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(tag = "state", rename_all = "lowercase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "state",
+    rename_all = "lowercase",
+    rename_all_fields = "camelCase"
+)]
 #[ts(export)]
 pub enum Connection {
     Missing,

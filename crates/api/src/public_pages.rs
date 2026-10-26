@@ -1,7 +1,7 @@
 //! Public policy articles for the SPA, with the recorded ERB escaping and links.
-use campfire_app::app::AppCtx;
 use askama::Template;
 use campfire_api_types::{PublicPage, PublicPageName, PublicPagePolicy};
+use campfire_app::app::AppCtx;
 use campfire_app::public_policy::PublicPolicy;
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 
@@ -15,8 +15,19 @@ pub async fn show_json(c: &mut Ctx) -> Result {
     };
     let mut body = public_page(page, &c.app().config.public_policy).map_err(Error::internal)?;
     if page == PublicPageName::About {
-        let account = c.app().db.read(campfire_db::Account::first).await.map_err(Error::internal)?;
-        body.workspace = Some(campfire_runtime::presenters::workspace_branding::public_for_account(c.app(), account.as_ref()).await?);
+        let account = c
+            .app()
+            .db
+            .read(campfire_db::Account::first)
+            .await
+            .map_err(Error::internal)?;
+        body.workspace = Some(
+            campfire_runtime::presenters::workspace_branding::public_for_account(
+                c.app(),
+                account.as_ref(),
+            )
+            .await?,
+        );
     }
     let body = serde_json::to_string(&body).map_err(Error::internal)?;
     Ok(c.render_as(StatusCode::OK, "application/json; charset=utf-8", body))
@@ -87,9 +98,27 @@ pub fn render_article(
     links: &Links,
 ) -> askama::Result<String> {
     match page {
-        Page::About => About { operator_name, contact_email, effective_date, links }.render(),
-        Page::Privacy => Privacy { operator_name, contact_email, effective_date, links }.render(),
-        Page::Terms => Terms { operator_name, contact_email, effective_date, links }.render(),
+        Page::About => About {
+            operator_name,
+            contact_email,
+            effective_date,
+            links,
+        }
+        .render(),
+        Page::Privacy => Privacy {
+            operator_name,
+            contact_email,
+            effective_date,
+            links,
+        }
+        .render(),
+        Page::Terms => Terms {
+            operator_name,
+            contact_email,
+            effective_date,
+            links,
+        }
+        .render(),
     }
 }
 
@@ -146,7 +175,11 @@ pub mod h {
     /// href, and the plain address as the link text.
     pub fn mail_to(email: &str) -> Safe<String> {
         let encoded = cgi_escape(email).replace('+', "%20").replace("%40", "@");
-        Safe(format!("<a href=\"mailto:{}\">{}</a>", escape(&encoded), escape(email)))
+        Safe(format!(
+            "<a href=\"mailto:{}\">{}</a>",
+            escape(&encoded),
+            escape(email)
+        ))
     }
 }
 

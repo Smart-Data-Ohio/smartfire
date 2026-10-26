@@ -3,22 +3,24 @@
 
 pub mod avatars;
 pub mod banners;
-pub mod stars;
 pub mod bans;
 pub mod dnd_allowances;
 pub mod notification_settings;
-pub mod statuses;
-pub mod profiles;
 pub mod presences;
+pub mod profiles;
 pub mod push_subscriptions;
+pub mod stars;
+pub mod statuses;
 pub mod time_zones;
 pub mod tours;
 
 pub mod sessions;
 
-use campfire_api_types::{InviteRefusal, JoinPage, SignInHelpContact, SignInWorkspace, WorkspaceJoin};
-use campfire_db::{Account, NewUser, User};
+use campfire_api_types::{
+    InviteRefusal, JoinPage, SignInHelpContact, SignInWorkspace, WorkspaceJoin,
+};
 use campfire_db::models::workspace_invite::{InviteState, WorkspaceInvite};
+use campfire_db::{Account, NewUser, User};
 use campfire_kit::{Ctx, Error, Param, ParamMap, Result, StatusCode, halt, permit_keys};
 
 use super::auth::{self, ResponseMode};
@@ -76,8 +78,15 @@ pub async fn invite_create(c: &mut Ctx) -> Result {
 /// The SPA's join (`/app/join/:join_code`) or invite (`/app/invite/:token`) page for this
 /// request's code or token.
 fn spa_join_path(c: &Ctx, invite: bool) -> String {
-    let (prefix, key) = if invite { ("/app/invite/", "token") } else { ("/app/join/", "join_code") };
-    format!("{prefix}{}", campfire_routes::escape(c.param_str(key).unwrap_or_default(), false))
+    let (prefix, key) = if invite {
+        ("/app/invite/", "token")
+    } else {
+        ("/app/join/", "join_code")
+    };
+    format!(
+        "{prefix}{}",
+        campfire_routes::escape(c.param_str(key).unwrap_or_default(), false)
+    )
 }
 
 pub async fn invite_create_json(c: &mut Ctx) -> Result {
@@ -115,35 +124,71 @@ async fn invite_new_response(c: &mut Ctx, mode: ResponseMode) -> Result {
 async fn invite_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     before_actions(c, "users#create", mode).await?;
     verify_invite(c).await?;
-    create_user(c, Some(c.param_str("token").unwrap_or_default().to_owned()), mode).await
+    create_user(
+        c,
+        Some(c.param_str("token").unwrap_or_default().to_owned()),
+        mode,
+    )
+    .await
 }
 
 /// The retained callbacks, with the JSON body's authenticity token exposed to the forgery check.
 async fn before_actions(c: &mut Ctx, endpoint: &'static str, mode: ResponseMode) -> Result<()> {
-    auth::before_actions(c, endpoint, Before::default().require_unauthenticated_access(), mode).await
+    auth::before_actions(
+        c,
+        endpoint,
+        Before::default().require_unauthenticated_access(),
+        mode,
+    )
+    .await
 }
 
 /// The join or invite page's JSON: the workspace, and why an invite can't be used, if it can't.
-async fn join_page(c: &mut Ctx, status: StatusCode, description: String, refusal: Option<InviteRefusal>) -> Result {
+async fn join_page(
+    c: &mut Ctx,
+    status: StatusCode,
+    description: String,
+    refusal: Option<InviteRefusal>,
+) -> Result {
     let (workspace, help_contact) = join_workspace(c, description).await?;
     let page = match refusal {
-        None => JoinPage::Join { workspace, help_contact },
-        Some(refusal) => JoinPage::InviteInvalid { workspace, help_contact, refusal, reason: refusal_reason(refusal).to_owned() },
+        None => JoinPage::Join {
+            workspace,
+            help_contact,
+        },
+        Some(refusal) => JoinPage::InviteInvalid {
+            workspace,
+            help_contact,
+            refusal,
+            reason: refusal_reason(refusal).to_owned(),
+        },
     };
     auth::json(c, status, &page)
 }
 
 /// The workspace's name, logo and description, and the help contact, as the join page shows them.
-async fn join_workspace(c: &Ctx, description: String) -> Result<(SignInWorkspace, Option<SignInHelpContact>)> {
+async fn join_workspace(
+    c: &Ctx,
+    description: String,
+) -> Result<(SignInWorkspace, Option<SignInHelpContact>)> {
     let (account, help_contact) = c
         .app()
         .db
-        .read(|conn| Ok((Account::first(conn)?, presenters::accounts::help_contact(conn)?)))
+        .read(|conn| {
+            Ok((
+                Account::first(conn)?,
+                presenters::accounts::help_contact(conn)?,
+            ))
+        })
         .await
         .map_err(Error::internal)?;
-    let mut workspace = presenters::workspace_branding::public_for_account(c.app(), account.as_ref()).await?;
+    let mut workspace =
+        presenters::workspace_branding::public_for_account(c.app(), account.as_ref()).await?;
     workspace.description = description;
-    let help_contact = help_contact.map(|owner| SignInHelpContact { name: owner.name, email_address: owner.email_address });
+    let help_contact = help_contact.map(|owner| SignInHelpContact {
+        name: owner.name,
+        email_address: owner.email_address,
+    });
     Ok((workspace, help_contact))
 }
 
@@ -165,30 +210,45 @@ fn refusal_reason(refusal: InviteRefusal) -> &'static str {
 }
 
 async fn verify_invite(c: &mut Ctx) -> Result<()> {
-    let Some(refusal) = invite_refusal(c).await? else { return Ok(()) };
+    let Some(refusal) = invite_refusal(c).await? else {
+        return Ok(());
+    };
     halt(join_page(c, refusal_status(refusal), String::new(), Some(refusal)).await?)
 }
 
 /// Why `params[:token]` can't enroll anyone, if it can't.
 async fn invite_refusal(c: &Ctx) -> Result<Option<InviteRefusal>> {
     let token = c.param_str("token").unwrap_or_default().to_owned();
-    let invite = c.app().db.read(move |conn| WorkspaceInvite::find_by_token(conn, &token)).await.map_err(Error::internal)?;
-    Ok(match invite.map(|invite| invite.state(campfire_db::Timestamp::from_jiff(c.now()))) {
-        Some(InviteState::Active) => None,
-        Some(InviteState::Expired) => Some(InviteRefusal::Expired),
-        Some(InviteState::Exhausted) => Some(InviteRefusal::Exhausted),
-        Some(InviteState::Revoked) => Some(InviteRefusal::Revoked),
-        None => Some(InviteRefusal::Unknown),
-    })
+    let invite = c
+        .app()
+        .db
+        .read(move |conn| WorkspaceInvite::find_by_token(conn, &token))
+        .await
+        .map_err(Error::internal)?;
+    Ok(
+        match invite.map(|invite| invite.state(campfire_db::Timestamp::from_jiff(c.now()))) {
+            Some(InviteState::Active) => None,
+            Some(InviteState::Expired) => Some(InviteRefusal::Expired),
+            Some(InviteState::Exhausted) => Some(InviteRefusal::Exhausted),
+            Some(InviteState::Revoked) => Some(InviteRefusal::Revoked),
+            None => Some(InviteRefusal::Unknown),
+        },
+    )
 }
 
 /// The status the retained join or invite page answers for these params, for the SPA shell that
 /// draws its counterpart (`/app/join/:join_code`, `/app/invite/:token`).
 pub async fn page_status(c: &Ctx, invite: bool) -> Result<StatusCode> {
     if invite {
-        return Ok(invite_refusal(c).await?.map_or(StatusCode::OK, refusal_status));
+        return Ok(invite_refusal(c)
+            .await?
+            .map_or(StatusCode::OK, refusal_status));
     }
-    Ok(if join_code_account(c).await?.1 { StatusCode::OK } else { StatusCode::NOT_FOUND })
+    Ok(if join_code_account(c).await?.1 {
+        StatusCode::OK
+    } else {
+        StatusCode::NOT_FOUND
+    })
 }
 
 async fn create_user(c: &mut Ctx, invite_token: Option<String>, mode: ResponseMode) -> Result {
@@ -199,12 +259,23 @@ async fn create_user(c: &mut Ctx, invite_token: Option<String>, mode: ResponseMo
     let email_address = params.get("email_address").and_then(|p| p.to_s());
     let attributes = NewUser {
         // users.name is NOT NULL: a missing name fails the insert, as in Rails.
-        name: params.get("name").and_then(|p| p.to_s()).ok_or_else(|| Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name")))?,
+        name: params.get("name").and_then(|p| p.to_s()).ok_or_else(|| {
+            Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name"))
+        })?,
         email_address: email_address.clone(),
-        password_digest: concerns::password_digest(c, params.get("password").and_then(|p| p.to_s()).filter(|password| !password.is_empty())).await?,
+        password_digest: concerns::password_digest(
+            c,
+            params
+                .get("password")
+                .and_then(|p| p.to_s())
+                .filter(|password| !password.is_empty()),
+        )
+        .await?,
         ..NewUser::default()
     };
-    let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
+    let avatar = Assignment::from_params(&params, "avatar")?
+        .stage(c.app())
+        .await?;
 
     // `User.create!(user_params)`
     let result = c
@@ -234,7 +305,10 @@ async fn create_user(c: &mut Ctx, invite_token: Option<String>, mode: ResponseMo
         Err(error) if presenters::accounts::is_record_not_unique(&error) => {
             let mut location = c.url_for("/app/session/new");
             if let Some(email_address) = email_address {
-                location.push_str(&format!("?email_address={}", campfire_presentation::helpers::url::cgi_escape(&email_address)));
+                location.push_str(&format!(
+                    "?email_address={}",
+                    campfire_presentation::helpers::url::cgi_escape(&email_address)
+                ));
             }
             mode.navigate(c, &location)
         }
@@ -247,10 +321,21 @@ async fn create_user(c: &mut Ctx, invite_token: Option<String>, mode: ResponseMo
 /// `user_params`.
 fn user_params_from_join(c: &mut Ctx) -> Result<()> {
     let text = |key: &str| c.params.get(key).and_then(Param::as_str).map(str::to_owned);
-    let (Some(name), Some(email_address), Some(password)) = (text("name"), text("emailAddress"), text("password")) else {
-        return halt(auth::field_error(c, StatusCode::UNPROCESSABLE_ENTITY, "base", "The request body isn't valid.")?);
+    let (Some(name), Some(email_address), Some(password)) =
+        (text("name"), text("emailAddress"), text("password"))
+    else {
+        return halt(auth::field_error(
+            c,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "base",
+            "The request body isn't valid.",
+        )?);
     };
-    let join = WorkspaceJoin { name, email_address, password };
+    let join = WorkspaceJoin {
+        name,
+        email_address,
+        password,
+    };
     let mut user = ParamMap::new();
     user.insert("name", Param::Str(join.name));
     user.insert("email_address", Param::Str(join.email_address));
@@ -264,8 +349,16 @@ fn user_params_from_join(c: &mut Ctx) -> Result<()> {
 
 /// `User.find(params[key])`: 404 when there's no such user.
 pub async fn find_user(c: &Ctx, key: &str) -> Result<User> {
-    let id = c.param_str(key).and_then(cast_integer).ok_or(Error::NotFound)?;
-    c.app().db.read(move |conn| User::find_by_id(conn, id)).await.map_err(Error::internal)?.ok_or(Error::NotFound)
+    let id = c
+        .param_str(key)
+        .and_then(cast_integer)
+        .ok_or(Error::NotFound)?;
+    c.app()
+        .db
+        .read(move |conn| User::find_by_id(conn, id))
+        .await
+        .map_err(Error::internal)?
+        .ok_or(Error::NotFound)
 }
 
 /// `head :not_found if Current.account.join_code != params[:join_code]`
@@ -296,5 +389,10 @@ async fn join_code_account(c: &Ctx) -> Result<(Account, bool)> {
 
 /// `params.require(:user).permit(:name, :avatar, :email_address, :password)`
 fn user_params(c: &Ctx) -> Result<ParamMap> {
-    Ok(c.params.require("user")?.permit(&permit_keys(&["name", "avatar", "email_address", "password"])))
+    Ok(c.params.require("user")?.permit(&permit_keys(&[
+        "name",
+        "avatar",
+        "email_address",
+        "password",
+    ])))
 }

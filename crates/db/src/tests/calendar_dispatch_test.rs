@@ -1,8 +1,6 @@
 use super::*;
 use crate::models::calendar_dispatch::{dispatch_meetings, dispatch_ooo};
-use crate::models::user_status_settings::updates::{
-    MeetingRefreshJob, StatusBadgeBroadcast,
-};
+use crate::models::user_status_settings::updates::{MeetingRefreshJob, StatusBadgeBroadcast};
 use crate::{Broadcast, MeetingCache, Timestamp, UserStatusSettings};
 use rusqlite::{
     params,
@@ -106,7 +104,10 @@ fn ws17_calendar_two_ticks_match_rails_jobs_claims_update_counts_and_emission_or
                 .as_array()
                 .unwrap()
                 .iter()
-                .filter_map(|f| { let stream = f["stream"].as_str().unwrap().rsplit(':').next().unwrap(); (stream == "status").then_some(stream) })
+                .filter_map(|f| {
+                    let stream = f["stream"].as_str().unwrap().rsplit(':').next().unwrap();
+                    (stream == "status").then_some(stream)
+                })
                 .collect::<Vec<_>>();
             assert_eq!(streams, expected_streams, "{} emission order", row["name"]);
             let settings = t.read(|c| UserStatusSettings::find(c, id("david")));

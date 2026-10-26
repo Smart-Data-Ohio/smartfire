@@ -380,7 +380,8 @@ async fn spa_workspace_branding_legacy_analysis_caps_bytes_before_open_or_copy()
             branding::test_hooks::stall(&source.key, campfire_storage::vips::StallPhase::Header);
         let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
         let (result, full) =
-            with_media_observation(campfire_runtime::active_storage::analyze(&a.booted.app, id)).await;
+            with_media_observation(campfire_runtime::active_storage::analyze(&a.booted.app, id))
+                .await;
         branding_slots_are_free().await;
         assert!(full);
         assert_eq!(
@@ -617,7 +618,8 @@ async fn spa_workspace_branding_replacement_between_analysis_reads_stays_bounded
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     let (_, id) = upload_bytes(&a, &png(7, 3, false), "legacy.png", "image/png").await;
-    let (replacement, _) = upload_bytes(&a, &png(2, 2, false), "replacement.png", "image/png").await;
+    let (replacement, _) =
+        upload_bytes(&a, &png(2, 2, false), "replacement.png", "image/png").await;
     attach_legacy(&a, id, "logo").await;
     let source = blob(&a, id).await;
     assert!(source.metadata.get(branding::MARK_KEY).is_none());
@@ -654,8 +656,15 @@ async fn spa_workspace_branding_replacement_between_analysis_reads_stays_bounded
     })
     .await;
     branding_slots_are_free().await;
-    assert!(full, "the detached logo's analysis must leave MEDIA_PERMITS full");
-    assert_eq!(opens.count(), 0, "oversized branding must not create a copy tempfile");
+    assert!(
+        full,
+        "the detached logo's analysis must leave MEDIA_PERMITS full"
+    );
+    assert_eq!(
+        opens.count(),
+        0,
+        "oversized branding must not create a copy tempfile"
+    );
     assert!(
         result
             .unwrap_err()
@@ -705,7 +714,10 @@ async fn spa_workspace_branding_purge_between_analysis_reads_stops_without_copyi
         analysis.await.unwrap()
     })
     .await;
-    assert!(full, "a purged blob's analysis must not take a media permit");
+    assert!(
+        full,
+        "a purged blob's analysis must not take a media permit"
+    );
     assert_eq!(opens.count(), 0, "a purged blob's file must not be copied");
     assert!(result.unwrap().is_none());
     assert!(path.exists(), "the file deletion is still pending");

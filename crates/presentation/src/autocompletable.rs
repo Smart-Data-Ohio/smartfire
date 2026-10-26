@@ -1,7 +1,6 @@
-
-use serde::Serialize;
 use crate::helpers as h;
 use crate::users::MentionUser;
+use serde::Serialize;
 
 /// `autocompletable/users/_user.json.jbuilder`; `index.json.jbuilder` is a JSON array of these.
 #[derive(Clone, Debug, Serialize)]

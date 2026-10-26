@@ -161,7 +161,11 @@ impl Timestamp {
         }
         let (proxy, shift) = self.calendar_proxy();
         let year = I512::from(proxy.to_zoned(jiff::tz::TimeZone::UTC).year()) + shift;
-        let year = if year.is_negative() { format!("-{:06}", year.unsigned_abs()) } else { format!("+{year:06}") };
+        let year = if year.is_negative() {
+            format!("-{:06}", year.unsigned_abs())
+        } else {
+            format!("+{year:06}")
+        };
         format!("{year}{}", proxy.strftime("-%m-%dT%H:%M:%S%.3fZ"))
     }
 

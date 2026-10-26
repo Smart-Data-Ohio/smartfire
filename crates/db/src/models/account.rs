@@ -46,7 +46,9 @@ pub struct AfkPolicy {
     pub timeout_minutes: i64,
 }
 
-fn default_afk_timeout() -> i64 { 5 }
+fn default_afk_timeout() -> i64 {
+    5
+}
 
 impl AfkPolicy {
     pub fn validate(&self) -> Result<()> {
@@ -183,12 +185,18 @@ impl AccountSettings {
     }
 
     pub fn member_agents_enabled(&self) -> bool {
-        self.data.get("member_agents_enabled").and_then(Value::as_bool).unwrap_or(true)
+        self.data
+            .get("member_agents_enabled")
+            .and_then(Value::as_bool)
+            .unwrap_or(true)
     }
 
     pub fn member_agent_limit(&self) -> i64 {
-        self.data.get("member_agent_limit").and_then(Value::as_i64)
-            .filter(|limit| (0..=MAX_UPLOAD_LIMIT_BYTES).contains(limit)).unwrap_or(3)
+        self.data
+            .get("member_agent_limit")
+            .and_then(Value::as_i64)
+            .filter(|limit| (0..=MAX_UPLOAD_LIMIT_BYTES).contains(limit))
+            .unwrap_or(3)
     }
 
     pub fn description(&self) -> &str {
@@ -199,10 +207,14 @@ impl AccountSettings {
     }
 
     pub fn afk_policy(&self) -> AfkPolicy {
-        self.data.get(AFK_POLICY)
+        self.data
+            .get(AFK_POLICY)
             .and_then(|value| serde_json::from_value::<AfkPolicy>(value.clone()).ok())
             .filter(|policy| policy.validate().is_ok())
-            .unwrap_or(AfkPolicy { room_id: None, timeout_minutes: 5 })
+            .unwrap_or(AfkPolicy {
+                room_id: None,
+                timeout_minutes: 5,
+            })
     }
 
     pub fn vanity_slug(&self) -> Option<&str> {
@@ -257,19 +269,31 @@ impl AccountSettings {
         for (key, value) in values {
             match *key {
                 "member_agents_enabled" => {
-                    self.data.insert((*key).into(), Value::Bool(cast_boolean(value).unwrap_or(false)));
+                    self.data.insert(
+                        (*key).into(),
+                        Value::Bool(cast_boolean(value).unwrap_or(false)),
+                    );
                 }
                 "member_agent_limit" => {
-                    let limit = value.parse::<i64>().ok()
+                    let limit = value
+                        .parse::<i64>()
+                        .ok()
                         .filter(|limit| (0..=MAX_UPLOAD_LIMIT_BYTES).contains(limit))
-                        .ok_or_else(|| Error::Other("member agent limit must be a non-negative safe integer".into()))?;
+                        .ok_or_else(|| {
+                            Error::Other(
+                                "member agent limit must be a non-negative safe integer".into(),
+                            )
+                        })?;
                     self.data.insert((*key).into(), Value::from(limit));
                 }
                 AFK_POLICY => {
                     let policy: AfkPolicy = serde_json::from_str(value)
                         .map_err(|error| Error::Other(error.to_string()))?;
                     policy.validate()?;
-                    self.data.insert(AFK_POLICY.into(), serde_json::to_value(policy).expect("AFK policy encodes"));
+                    self.data.insert(
+                        AFK_POLICY.into(),
+                        serde_json::to_value(policy).expect("AFK policy encodes"),
+                    );
                 }
                 RESTRICT_ROOM_CREATION => self.set_restrict_room_creation_to_administrators(value),
                 UPLOAD_LIMIT => {
@@ -288,7 +312,9 @@ impl AccountSettings {
                         .ok()
                         .filter(|budget| (1..=MAX_UPLOAD_LIMIT_BYTES).contains(budget))
                         .ok_or_else(|| {
-                            Error::Other("stage audience budget must be a positive safe integer".into())
+                            Error::Other(
+                                "stage audience budget must be a positive safe integer".into(),
+                            )
                         })?;
                     self.data
                         .insert(STAGE_AUDIENCE_BUDGET.into(), Value::from(budget));
@@ -307,10 +333,16 @@ impl AccountSettings {
                         .insert(ANIMATED_EMOJI_LIMIT.into(), Value::from(limit));
                 }
                 DESCRIPTION => {
-                    self.data.insert(DESCRIPTION.into(), Value::from(validate_description(value)?));
+                    self.data.insert(
+                        DESCRIPTION.into(),
+                        Value::from(validate_description(value)?),
+                    );
                 }
                 VANITY_SLUG => {
-                    self.data.insert(VANITY_SLUG.into(), Value::from(validate_vanity_slug(value)?));
+                    self.data.insert(
+                        VANITY_SLUG.into(),
+                        Value::from(validate_vanity_slug(value)?),
+                    );
                 }
                 WELCOME => {
                     let welcome = serde_json::from_str::<Value>(value)
@@ -461,7 +493,8 @@ impl Account {
             updated.assign(values)?;
             if values.iter().any(|(key, _)| *key == AFK_POLICY)
                 && let Some(id) = updated.afk_policy().room_id
-                && !crate::Room::find_by_id(tx.conn(), id)?.is_some_and(|room| room.voice() && !room.deleted())
+                && !crate::Room::find_by_id(tx.conn(), id)?
+                    .is_some_and(|room| room.voice() && !room.deleted())
             {
                 let mut errors = crate::Errors::default();
                 errors.add("afkPolicy", "room must be an existing voice room");

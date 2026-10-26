@@ -28,7 +28,11 @@ pub struct SessionConfig {
 
 impl Default for SessionConfig {
     fn default() -> Self {
-        Self { key: SESSION_KEY.into(), expire_after_years: Some(EXPIRE_AFTER_YEARS), httponly: true }
+        Self {
+            key: SESSION_KEY.into(),
+            expire_after_years: Some(EXPIRE_AFTER_YEARS),
+            httponly: true,
+        }
     }
 }
 
@@ -48,7 +52,14 @@ pub struct Session {
 
 impl Session {
     pub fn new(config: SessionConfig) -> Self {
-        Self { config, loaded: false, changed: false, written: false, data: Map::new(), cookie_data: None }
+        Self {
+            config,
+            loaded: false,
+            changed: false,
+            written: false,
+            data: Map::new(),
+            cookie_data: None,
+        }
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -70,14 +81,18 @@ impl Session {
 
     fn cookie_data(&mut self, jar: &CookieJar) -> &Map<String, Value> {
         let key = &self.config.key;
-        self.cookie_data.get_or_insert_with(|| match jar.encrypted(key) {
-            Some(Value::Object(map)) => map,
-            _ => Map::new(),
-        })
+        self.cookie_data
+            .get_or_insert_with(|| match jar.encrypted(key) {
+                Some(Value::Object(map)) => map,
+                _ => Map::new(),
+            })
     }
 
     fn assert_loaded(&self) {
-        debug_assert!(self.loaded, "session used before load(); go through Ctx::session()");
+        debug_assert!(
+            self.loaded,
+            "session used before load(); go through Ctx::session()"
+        );
     }
 
     pub fn id(&self) -> Option<&str> {
@@ -91,9 +106,16 @@ impl Session {
     /// CSP nonce is random (`config/initializers/content_security_policy.rb`).
     pub fn public_id(&mut self, jar: &CookieJar) -> Option<String> {
         if self.written {
-            return self.data.get("session_id").and_then(Value::as_str).map(str::to_string);
+            return self
+                .data
+                .get("session_id")
+                .and_then(Value::as_str)
+                .map(str::to_string);
         }
-        self.cookie_data(jar).get("session_id").and_then(Value::as_str).map(str::to_string)
+        self.cookie_data(jar)
+            .get("session_id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
     }
 
     pub fn get(&self, key: &str) -> Option<&Value> {
@@ -132,7 +154,8 @@ impl Session {
     /// `reset_session`: drop everything and start a new session id.
     pub fn reset(&mut self) {
         self.data = Map::new();
-        self.data.insert("session_id".into(), Value::String(generate_sid()));
+        self.data
+            .insert("session_id".into(), Value::String(generate_sid()));
         self.cookie_data = Some(self.data.clone());
         self.loaded = true;
         self.changed = true;
@@ -145,7 +168,12 @@ impl Session {
         if !self.changed {
             return Ok(());
         }
-        let data: Map<String, Value> = self.data.iter().filter(|(_, v)| !v.is_null()).map(|(k, v)| (k.clone(), v.clone())).collect();
+        let data: Map<String, Value> = self
+            .data
+            .iter()
+            .filter(|(_, v)| !v.is_null())
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
         if data.keys().all(|key| key == "session_id") {
             jar.delete(&self.config.key);
             return Ok(());
@@ -161,7 +189,11 @@ impl Session {
 
     /// Serialize an owned preview even when the current session is unchanged: a later
     /// request may extend it. The caller supplies a cloned cookie jar as well.
-    pub(crate) fn preview_commit(mut self, jar: &mut CookieJar, now: jiff::Timestamp) -> crate::Result<()> {
+    pub(crate) fn preview_commit(
+        mut self,
+        jar: &mut CookieJar,
+        now: jiff::Timestamp,
+    ) -> crate::Result<()> {
         self.changed = true;
         self.commit(jar, now)
     }
@@ -184,13 +216,20 @@ impl Flash {
     /// `FlashHash.from_session_value`: everything loaded is marked for discard at the end of this
     /// request, minus what the previous request had already discarded.
     pub fn from_session_value(value: Option<&Value>) -> Self {
-        let Some(Value::Object(stored)) = value else { return Self::default() };
-        let discarded: Vec<&str> =
-            stored.get("discard").and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_str).collect()).unwrap_or_default();
+        let Some(Value::Object(stored)) = value else {
+            return Self::default();
+        };
+        let discarded: Vec<&str> = stored
+            .get("discard")
+            .and_then(Value::as_array)
+            .map(|a| a.iter().filter_map(Value::as_str).collect())
+            .unwrap_or_default();
         let flashes: Vec<(String, Value)> = match stored.get("flashes") {
-            Some(Value::Object(flashes)) => {
-                flashes.iter().filter(|(k, _)| !discarded.contains(&k.as_str())).map(|(k, v)| (k.clone(), v.clone())).collect()
-            }
+            Some(Value::Object(flashes)) => flashes
+                .iter()
+                .filter(|(k, _)| !discarded.contains(&k.as_str()))
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
             _ => vec![],
         };
         let discard = flashes.iter().map(|(k, _)| k.clone()).collect();
@@ -199,9 +238,17 @@ impl Flash {
 
     /// `FlashHash#to_session_value`: `None` when nothing survives.
     pub fn to_session_value(&self) -> Option<Value> {
-        let keep: Map<String, Value> =
-            self.flashes.iter().filter(|(k, _)| !self.discard.contains(k)).map(|(k, v)| (k.clone(), v.clone())).collect();
-        if keep.is_empty() { None } else { Some(serde_json::json!({ "discard": [], "flashes": keep })) }
+        let keep: Map<String, Value> = self
+            .flashes
+            .iter()
+            .filter(|(k, _)| !self.discard.contains(k))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        if keep.is_empty() {
+            None
+        } else {
+            Some(serde_json::json!({ "discard": [], "flashes": keep }))
+        }
     }
 
     pub fn get(&self, key: &str) -> Option<&Value> {
@@ -307,7 +354,10 @@ mod tests {
         let mut flash = Flash::from_session_value(Some(&stored));
         assert_eq!(flash.alert(), None);
         flash.keep(Some("notice"));
-        assert_eq!(flash.to_session_value(), Some(json!({"discard": [], "flashes": {"notice": "hi"}})));
+        assert_eq!(
+            flash.to_session_value(),
+            Some(json!({"discard": [], "flashes": {"notice": "hi"}}))
+        );
     }
 
     #[test]

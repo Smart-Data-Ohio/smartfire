@@ -68,5 +68,4 @@ impl UserSummary {
     pub fn administrator(&self) -> bool {
         self.role == Role::Administrator
     }
-
 }

@@ -4,7 +4,10 @@
 use std::time::{Duration, Instant};
 
 use campfire_richtext::dom::Dom;
-use campfire_richtext::{AttachableResolver, GidLookup, RenderContext, SignedLookup, editable_value, message_presentation};
+use campfire_richtext::{
+    AttachableResolver, GidLookup, RenderContext, SignedLookup, editable_value,
+    message_presentation,
+};
 
 struct NoRecords;
 
@@ -19,7 +22,10 @@ impl AttachableResolver for NoRecords {
 }
 
 fn ctx() -> RenderContext<'static> {
-    RenderContext { resolver: &NoRecords, request_host: Some("once.campfire.test".into()) }
+    RenderContext {
+        resolver: &NoRecords,
+        request_host: Some("once.campfire.test".into()),
+    }
 }
 
 fn presentation(body: &str) -> String {
@@ -37,7 +43,11 @@ fn parsed_markup(html: &str) -> Vec<String> {
                 continue; // the layout's wrapper
             }
             names.push(name.to_string());
-            names.extend(dom.attrs(node).into_iter().map(|(attr, _)| format!("{name}[{attr}]")));
+            names.extend(
+                dom.attrs(node)
+                    .into_iter()
+                    .map(|(attr, _)| format!("{name}[{attr}]")),
+            );
         }
     }
     names
@@ -45,8 +55,16 @@ fn parsed_markup(html: &str) -> Vec<String> {
 
 fn assert_quick(started: Instant, what: &str) {
     // Generous enough for a debug build; release takes a few milliseconds.
-    let bound = if cfg!(debug_assertions) { Duration::from_secs(5) } else { Duration::from_secs(1) };
-    assert!(started.elapsed() < bound, "{what} took {:?}", started.elapsed());
+    let bound = if cfg!(debug_assertions) {
+        Duration::from_secs(5)
+    } else {
+        Duration::from_secs(1)
+    };
+    assert!(
+        started.elapsed() < bound,
+        "{what} took {:?}",
+        started.elapsed()
+    );
 }
 
 // --- Autolinking inside attribute values ---------------------------------------------------------
@@ -59,7 +77,10 @@ fn a_url_after_a_greater_than_sign_in_an_attribute_cannot_break_out_of_it() {
     let body = r#"<p title="x> http://evil.test/ <img src=x onerror=alert(1)>">hi</p>"#;
     let html = presentation(body);
     let markup = parsed_markup(&html);
-    assert!(!markup.iter().any(|m| m == "img" || m.contains("onerror")), "{html}");
+    assert!(
+        !markup.iter().any(|m| m == "img" || m.contains("onerror")),
+        "{html}"
+    );
     assert_eq!(markup, ["p", "p[title]"], "{html}");
 }
 
@@ -73,8 +94,13 @@ fn an_email_address_after_a_greater_than_sign_in_an_attribute_cannot_break_out_o
 
 #[test]
 fn named_anchors_keep_escaped_names() {
-    let html = presentation(r#"<p><a name='a b"c' href="/x">x</a><span name="cookie">y</span></p>"#);
-    assert_eq!(parsed_markup(&html), ["p", "a", "a[name]", "a[href]", "span"], "{html}");
+    let html =
+        presentation(r#"<p><a name='a b"c' href="/x">x</a><span name="cookie">y</span></p>"#);
+    assert_eq!(
+        parsed_markup(&html),
+        ["p", "a", "a[name]", "a[href]", "span"],
+        "{html}"
+    );
     assert!(html.contains("name=\"a%20b%22c\""), "{html}");
 }
 
@@ -104,15 +130,23 @@ fn many_bare_domains_autolink_in_linear_time() {
     let started = Instant::now();
     let html = presentation(&body);
     assert_quick(started, "autolinking 64 KB of bare domains");
-    assert_eq!(html.matches("<a target=\"_blank\" href=\"http://www.a.com\">").count(), 64 * 1024 / 16);
+    assert_eq!(
+        html.matches("<a target=\"_blank\" href=\"http://www.a.com\">")
+            .count(),
+        64 * 1024 / 16
+    );
 }
 
 /// Content attachments nested `levels` deep, each saying which level it is.
 fn nested_content_attachments(levels: usize, padding: &str) -> String {
     let mut body = String::new();
     for level in (1..=levels).rev() {
-        let content = format!("<p>level {level}{padding}</p>{body}").replace('&', "&amp;").replace('"', "&quot;");
-        body = format!("<action-text-attachment content-type=\"text/html\" content=\"{content}\"></action-text-attachment>");
+        let content = format!("<p>level {level}{padding}</p>{body}")
+            .replace('&', "&amp;")
+            .replace('"', "&quot;");
+        body = format!(
+            "<action-text-attachment content-type=\"text/html\" content=\"{content}\"></action-text-attachment>"
+        );
     }
     body
 }
@@ -121,7 +155,11 @@ fn nested_content_attachments(levels: usize, padding: &str) -> String {
 fn content_attachments_render_eight_levels_deep() {
     let html = presentation(&nested_content_attachments(12, ""));
     for level in 1..=12 {
-        assert_eq!(html.contains(&format!("level {level}<")), level <= 8, "level {level} in {html}");
+        assert_eq!(
+            html.contains(&format!("level {level}<")),
+            level <= 8,
+            "level {level} in {html}"
+        );
     }
 }
 
@@ -139,7 +177,9 @@ struct DeletedUsers;
 
 impl AttachableResolver for DeletedUsers {
     fn locate_signed(&self, _sgid: &str) -> SignedLookup {
-        SignedLookup::MissingRecord { model_name: "User".into() }
+        SignedLookup::MissingRecord {
+            model_name: "User".into(),
+        }
     }
 
     fn find_gid(&self, _gid: &str) -> GidLookup {
@@ -151,13 +191,25 @@ const DELETED_MENTION: &str = r#"<p>Hi <action-text-attachment sgid="eyJfcmFpbHM
 
 #[test]
 fn a_deleted_user_mention_matches_the_forks_empty_presentation() {
-    let ctx = RenderContext { resolver: &DeletedUsers, request_host: None };
-    assert_eq!(campfire_richtext::present_message(DELETED_MENTION, &ctx), campfire_richtext::Presentation::Html(String::new()));
+    let ctx = RenderContext {
+        resolver: &DeletedUsers,
+        request_host: None,
+    };
+    assert_eq!(
+        campfire_richtext::present_message(DELETED_MENTION, &ctx),
+        campfire_richtext::Presentation::Html(String::new())
+    );
 }
 
 #[test]
 fn a_mention_of_a_deleted_user_leaves_the_editor() {
-    let ctx = RenderContext { resolver: &DeletedUsers, request_host: None };
+    let ctx = RenderContext {
+        resolver: &DeletedUsers,
+        request_host: None,
+    };
     let value = editable_value(DELETED_MENTION, &ctx).unwrap().unwrap();
-    assert!(!value.contains("action-text-attachment") && value.contains("welcome"), "{value}");
+    assert!(
+        !value.contains("action-text-attachment") && value.contains("welcome"),
+        "{value}"
+    );
 }

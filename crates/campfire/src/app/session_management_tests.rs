@@ -65,10 +65,16 @@ async fn list_scopes_sorts_describes_and_hides_only_expired_admin_sessions() {
     let mut b = a.sign_in(KEVIN).await;
     let current = latest(&a, KEVIN).await;
     let id = current.id;
-    a.db().write(move |tx| {
-        tx.conn().execute("UPDATE sessions SET user_agent=?,ip_address='192.0.2.10' WHERE id=?", rusqlite::params![CHROME, id])?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE sessions SET user_agent=?,ip_address='192.0.2.10' WHERE id=?",
+                rusqlite::params![CHROME, id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let other = new_other(&a, KEVIN, 2).await;
     let foreign = new_other(&a, DAVID, 0).await;
     let reply = b.get("/api/v1/settings/sessions").await;
@@ -76,7 +82,12 @@ async fn list_scopes_sorts_describes_and_hides_only_expired_admin_sessions() {
     assert_eq!(reply.header("cache-control"), Some("no-store"));
     let payload: serde_json::Value = serde_json::from_str(&reply.text()).unwrap();
     let rows = payload["sessions"].as_array().unwrap();
-    assert_eq!(rows.iter().map(|row| row["id"].as_i64().unwrap()).collect::<Vec<_>>(), vec![current.id, 481019665, other.id]);
+    assert_eq!(
+        rows.iter()
+            .map(|row| row["id"].as_i64().unwrap())
+            .collect::<Vec<_>>(),
+        vec![current.id, 481019665, other.id]
+    );
     assert_eq!(rows[0]["description"], "Chrome on macOS");
     assert_eq!(rows[0]["ipAddress"], "192.0.2.10");
     assert_eq!(rows[0]["current"], true);
@@ -88,20 +99,38 @@ async fn list_scopes_sorts_describes_and_hides_only_expired_admin_sessions() {
     let reply = admin.get("/api/v1/settings/sessions").await;
     assert_eq!(reply.status, StatusCode::OK);
     let payload: serde_json::Value = serde_json::from_str(&reply.text()).unwrap();
-    assert!(!payload["sessions"].as_array().unwrap().iter().any(|row| row["id"] == expired.id));
-    assert!(a.db().read(move |c| Session::find(c, expired.id)).await.is_ok(), "hidden rows are not deleted");
+    assert!(
+        !payload["sessions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["id"] == expired.id)
+    );
+    assert!(
+        a.db()
+            .read(move |c| Session::find(c, expired.id))
+            .await
+            .is_ok(),
+        "hidden rows are not deleted"
+    );
 }
-
 
 #[tokio::test]
 async fn session_descriptions_match_rails_browser_os_and_unknown_cases() {
-    let a=app().await;
-    let mut s=new_other(&a,KEVIN,0).await;
-    let safari="Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1";
-    let edge="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0";
-    for (ua,expected) in [(Some(CHROME),"Chrome on macOS"),(Some(FIREFOX),"Firefox on Windows"),(Some(safari),"Safari on iPhone"),(Some(edge),"Edge on Windows"),(None,"Unknown browser on Unknown device"),(Some("Rails Testing"),"Unknown browser on Unknown device")] {
-        s.user_agent=ua.map(str::to_string);
-        assert_eq!(crate::authentication::device_description(&s),expected);
+    let a = app().await;
+    let mut s = new_other(&a, KEVIN, 0).await;
+    let safari = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1";
+    let edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0";
+    for (ua, expected) in [
+        (Some(CHROME), "Chrome on macOS"),
+        (Some(FIREFOX), "Firefox on Windows"),
+        (Some(safari), "Safari on iPhone"),
+        (Some(edge), "Edge on Windows"),
+        (None, "Unknown browser on Unknown device"),
+        (Some("Rails Testing"), "Unknown browser on Unknown device"),
+    ] {
+        s.user_agent = ua.map(str::to_string);
+        assert_eq!(crate::authentication::device_description(&s), expected);
     }
 }
 #[tokio::test]
@@ -195,8 +224,9 @@ async fn revoke_others_preserves_current_and_noop_has_no_audit() {
         Some("http://campfire.test/users/me/sessions")
     );
     assert!(
-        b.boot_flash()
-            .await["message"].as_str().unwrap_or("")
+        b.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
             .contains(&format!("Signed out {count} other sessions."))
     );
     a.db()
@@ -213,8 +243,9 @@ async fn revoke_others_preserves_current_and_noop_has_no_audit() {
         .await;
     assert_eq!(audit_count(&a, "session.revoke_others").await, before);
     assert!(
-        b.boot_flash()
-            .await["message"].as_str().unwrap_or("")
+        b.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
             .contains("No other sessions to sign out.")
     );
 }
@@ -280,7 +311,10 @@ async fn revocation_drains_frames_then_disconnects_and_revoked_cookie_cannot_rec
     let mut reconnect = socket(&a, &cookie, addr).await;
     assert!(reconnect.next_text().await.contains("unauthorized"));
     reconnect.until_closed().await;
-    assert_eq!(owner.get("/api/v1/settings/account").await.status, StatusCode::OK);
+    assert_eq!(
+        owner.get("/api/v1/settings/account").await.status,
+        StatusCode::OK
+    );
     server.abort();
 }
 
@@ -288,7 +322,8 @@ async fn revocation_drains_frames_then_disconnects_and_revoked_cookie_cannot_rec
 async fn password(
     b: &mut crate::controllers::presenters::test_support::Browser<'_>,
 ) -> crate::controllers::presenters::test_support::Reply {
-    let body = serde_json::json!({"emailAddress": "david@37signals.com", "password": "secret123456"});
+    let body =
+        serde_json::json!({"emailAddress": "david@37signals.com", "password": "secret123456"});
     b.write(
         Req::new(Method::POST, "/api/v1/session")
             .header("user-agent", CHROME)
@@ -322,7 +357,10 @@ async fn completed_sign_ins_record_devices_first_and_known_are_quiet_new_alerts_
         .unwrap();
     let mut first = a.anonymous();
     let reply = password(&mut first).await;
-    assert_eq!(signed_in(&reply).as_deref(), Some("http://campfire.test/app/"));
+    assert_eq!(
+        signed_in(&reply).as_deref(),
+        Some("http://campfire.test/app/")
+    );
     let cookie = reply
         .headers
         .get_all("set-cookie")
@@ -371,7 +409,10 @@ async fn pending_first_factor_records_nothing_until_challenge_completes() {
         .unwrap();
     let before = stats(&a).await;
     let mut b = a.anonymous();
-    assert_eq!(password(&mut b).await.json()["kind"], "secondFactorRequired");
+    assert_eq!(
+        password(&mut b).await.json()["kind"],
+        "secondFactorRequired"
+    );
     assert_eq!(stats(&a).await, before);
     let enc = rails_compat::ar_encryption::ArEncryption::new(&a.booted.app.secrets);
     let secret = a

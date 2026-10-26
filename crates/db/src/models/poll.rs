@@ -94,12 +94,23 @@ impl Poll {
     }
 
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
-        query_one(conn, r#"SELECT "polls".* FROM "polls" WHERE "polls"."id" = ? LIMIT 1"#, [id], Self::from_row)?.or_not_found("Poll")
+        query_one(
+            conn,
+            r#"SELECT "polls".* FROM "polls" WHERE "polls"."id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("Poll")
     }
 
     /// `message.poll`
     pub fn find_by_message(conn: &Connection, message_id: i64) -> Result<Option<Self>> {
-        query_one(conn, r#"SELECT "polls".* FROM "polls" WHERE "polls"."message_id" = ? LIMIT 1"#, [message_id], Self::from_row)
+        query_one(
+            conn,
+            r#"SELECT "polls".* FROM "polls" WHERE "polls"."message_id" = ? LIMIT 1"#,
+            [message_id],
+            Self::from_row,
+        )
     }
 
     /// `Poll.joins(:message).where(messages: { room_id: }).find(id)`
@@ -115,7 +126,11 @@ impl Poll {
 
     /// `Poll.normalize_labels`: stripped, blanks dropped.
     pub fn normalize_labels(labels: &[String]) -> Vec<String> {
-        labels.iter().map(|label| campfire_richtext::ruby::strip(label).to_string()).filter(|label| !campfire_richtext::ruby::is_blank(label)).collect()
+        labels
+            .iter()
+            .map(|label| campfire_richtext::ruby::strip(label).to_string())
+            .filter(|label| !campfire_richtext::ruby::is_blank(label))
+            .collect()
     }
 
     /// `Poll.create_for_message!(message:, labels:, multiple:, anonymous:, closes_at:)`: never on
@@ -127,7 +142,10 @@ impl Poll {
         }
         let labels = Self::normalize_labels(&poll.labels);
         if !(MIN_OPTIONS..=MAX_OPTIONS).contains(&labels.len()) {
-            return Err(invalid("base", &format!("Poll needs between {MIN_OPTIONS} and {MAX_OPTIONS} options")));
+            return Err(invalid(
+                "base",
+                &format!("Poll needs between {MIN_OPTIONS} and {MAX_OPTIONS} options"),
+            ));
         }
         Self::validate(tx.conn(), tx.now(), message.id, poll.closes_at)?.into_result()?;
         let now = tx.now();
@@ -144,12 +162,21 @@ impl Poll {
 
     /// `belongs_to :message`, `validates :message_id, uniqueness: true`, and
     /// `closes_at_must_be_future` for a new poll.
-    pub fn validate(conn: &Connection, now: Timestamp, message_id: i64, closes_at: Option<Timestamp>) -> Result<Errors> {
+    pub fn validate(
+        conn: &Connection,
+        now: Timestamp,
+        message_id: i64,
+        closes_at: Option<Timestamp>,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
         if Message::find_by_id(conn, message_id)?.is_none() {
             errors.add("message", "must exist");
         }
-        if sql::exists(conn, r#"SELECT 1 AS one FROM "polls" WHERE "polls"."message_id" = ? LIMIT 1"#, [message_id])? {
+        if sql::exists(
+            conn,
+            r#"SELECT 1 AS one FROM "polls" WHERE "polls"."message_id" = ? LIMIT 1"#,
+            [message_id],
+        )? {
             errors.add("message_id", "has already been taken");
         }
         if closes_at.is_some_and(|closes_at| closes_at <= now) {
@@ -185,9 +212,25 @@ impl Poll {
     }
     /// Standalone cards use the same ordered votes with optional voter names in one read.
     pub fn votes_with_names(&self, conn: &Connection) -> Result<Vec<(PollVote, Option<String>)>> {
-        query_all(conn,
-            &format!("SELECT poll_votes.*,{} FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_votes.poll_id=? ORDER BY poll_votes.id", User::projection("users", "voter_")),
-            [self.id],|r|Ok((PollVote::from_row(r)?,r.get::<_, Option<i64>>("voter_id")?.map(|_| User::from_prefixed_row(r, "voter_").map(|user| user.display_name().to_owned())).transpose()?)))
+        query_all(
+            conn,
+            &format!(
+                "SELECT poll_votes.*,{} FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_votes.poll_id=? ORDER BY poll_votes.id",
+                User::projection("users", "voter_")
+            ),
+            [self.id],
+            |r| {
+                Ok((
+                    PollVote::from_row(r)?,
+                    r.get::<_, Option<i64>>("voter_id")?
+                        .map(|_| {
+                            User::from_prefixed_row(r, "voter_")
+                                .map(|user| user.display_name().to_owned())
+                        })
+                        .transpose()?,
+                ))
+            },
+        )
     }
 
     /// The ids of the polls `close_due!` closes at `now`: unstamped, with a closing time come.
@@ -215,7 +258,13 @@ impl Poll {
 
     /// `close!(now:)` of the poll `id`.
     pub fn close_by_id(tx: &mut Tx<'_>, id: i64, now: Timestamp) -> Result<bool> {
-        let Some(mut poll) = query_one(tx.conn(), r#"SELECT * FROM "polls" WHERE "id" = ?"#, [id], Self::from_row)? else {
+        let Some(mut poll) = query_one(
+            tx.conn(),
+            r#"SELECT * FROM "polls" WHERE "id" = ?"#,
+            [id],
+            Self::from_row,
+        )?
+        else {
             return Ok(false);
         };
         poll.close(tx, now)
@@ -246,7 +295,11 @@ impl Poll {
                 ids.push(*id);
             }
         }
-        let options: Vec<i64> = self.options(tx.conn())?.into_iter().map(|option| option.id).collect();
+        let options: Vec<i64> = self
+            .options(tx.conn())?
+            .into_iter()
+            .map(|option| option.id)
+            .collect();
         if ids.iter().any(|id| !options.contains(id)) {
             return Err(invalid("base", "That option is not part of this poll"));
         }
@@ -266,7 +319,10 @@ impl Poll {
             PollVote::create(tx, self.id, option_id, voter_id)?;
         }
         let now = tx.now();
-        tx.conn().execute_cached(r#"UPDATE "polls" SET "updated_at" = ? WHERE "polls"."id" = ?"#, params![now, self.id])?;
+        tx.conn().execute_cached(
+            r#"UPDATE "polls" SET "updated_at" = ? WHERE "polls"."id" = ?"#,
+            params![now, self.id],
+        )?;
         self.updated_at = now;
         self.broadcast_card_replace(tx, Some(voter_id))
     }
@@ -275,23 +331,40 @@ impl Poll {
     /// sync-only [`PollChanged`], for the single-page app's `poll.updated` and the voter's
     /// `poll.ballot`.
     fn broadcast_card_replace(&self, tx: &mut Tx<'_>, voter_id: Option<i64>) -> Result<()> {
-        tx.emit_after_commit(Event::broadcast(&PollChanged { poll_id: self.id, voter_id }));
+        tx.emit_after_commit(Event::broadcast(&PollChanged {
+            poll_id: self.id,
+            voter_id,
+        }));
         Ok(())
     }
 
     /// `results_payload(viewer:)`: the card's, the vote response's and the agent API's JSON.
     /// Anonymous polls carry counts only.
-    pub fn results_payload(&self, conn: &Connection, rich_text: &dyn crate::RichText, now: Timestamp, viewer_id: Option<i64>, verifier: &dyn campfire_storage::Verifier) -> Result<serde_json::Value> {
+    pub fn results_payload(
+        &self,
+        conn: &Connection,
+        rich_text: &dyn crate::RichText,
+        now: Timestamp,
+        viewer_id: Option<i64>,
+        verifier: &dyn campfire_storage::Verifier,
+    ) -> Result<serde_json::Value> {
         let message = Message::find(conn, self.message_id)?;
         let votes = self.votes(conn)?;
-        let voted: Vec<i64> = votes.iter().filter(|vote| Some(vote.user_id) == viewer_id).map(|vote| vote.poll_option_id).collect();
+        let voted: Vec<i64> = votes
+            .iter()
+            .filter(|vote| Some(vote.user_id) == viewer_id)
+            .map(|vote| vote.poll_option_id)
+            .collect();
         let voter_ids: Vec<i64> = votes.iter().map(|vote| vote.user_id).collect();
         let names = voter_names(conn, &voter_ids)?;
         let options: Vec<serde_json::Value> = self
             .options(conn)?
             .into_iter()
             .map(|option| {
-                let option_votes: Vec<&PollVote> = votes.iter().filter(|vote| vote.poll_option_id == option.id).collect();
+                let option_votes: Vec<&PollVote> = votes
+                    .iter()
+                    .filter(|vote| vote.poll_option_id == option.id)
+                    .collect();
                 let mut entry = json!({
                     "id": option.id,
                     "label": option.label,
@@ -299,8 +372,15 @@ impl Poll {
                     "voted": voted.contains(&option.id),
                 });
                 if !self.anonymous {
-                    let mut voters: Vec<String> =
-                        option_votes.iter().filter_map(|vote| names.iter().find(|(id, _)| *id == vote.user_id).map(|(_, name)| name.clone())).collect();
+                    let mut voters: Vec<String> = option_votes
+                        .iter()
+                        .filter_map(|vote| {
+                            names
+                                .iter()
+                                .find(|(id, _)| *id == vote.user_id)
+                                .map(|(_, name)| name.clone())
+                        })
+                        .collect();
                     voters.sort();
                     entry["voters"] = json!(voters);
                 }
@@ -328,7 +408,9 @@ impl Poll {
     /// `message.poll` in `Message#destroy` (`has_one :poll, dependent: :destroy`): the options
     /// (and their votes), then the votes, then the poll.
     pub(crate) fn destroy_for_message(tx: &mut Tx<'_>, message_id: i64) -> Result<()> {
-        let Some(poll) = Self::find_by_message(tx.conn(), message_id)? else { return Ok(()) };
+        let Some(poll) = Self::find_by_message(tx.conn(), message_id)? else {
+            return Ok(());
+        };
         poll.destroy(tx)
     }
 
@@ -338,8 +420,12 @@ impl Poll {
         for option in self.options(tx.conn())? {
             option.destroy(tx)?;
         }
-        tx.conn().execute_cached(r#"DELETE FROM "poll_votes" WHERE "poll_votes"."poll_id" = ?"#, [self.id])?;
-        tx.conn().execute_cached(r#"DELETE FROM "polls" WHERE "polls"."id" = ?"#, [self.id])?;
+        tx.conn().execute_cached(
+            r#"DELETE FROM "poll_votes" WHERE "poll_votes"."poll_id" = ?"#,
+            [self.id],
+        )?;
+        tx.conn()
+            .execute_cached(r#"DELETE FROM "polls" WHERE "polls"."id" = ?"#, [self.id])?;
         Ok(())
     }
 }
@@ -349,7 +435,10 @@ fn voter_names(conn: &Connection, user_ids: &[i64]) -> Result<Vec<(i64, String)>
     if user_ids.is_empty() {
         return Ok(Vec::new());
     }
-    let sql = format!(r#"SELECT "users".* FROM "users" WHERE "users"."id" IN ({})"#, placeholders(user_ids.len()));
+    let sql = format!(
+        r#"SELECT "users".* FROM "users" WHERE "users"."id" IN ({})"#,
+        placeholders(user_ids.len())
+    );
     query_all(conn, &sql, rusqlite::params_from_iter(user_ids), |r| {
         let user = User::from_row(r)?;
         Ok((user.id, user.display_name().to_owned()))
@@ -392,7 +481,13 @@ impl PollOption {
             params![now, label, poll_id, position, now],
             |r| r.get(0),
         )?;
-        query_one(tx.conn(), r#"SELECT * FROM "poll_options" WHERE "id" = ?"#, [id], Self::from_row)?.or_not_found("PollOption")
+        query_one(
+            tx.conn(),
+            r#"SELECT * FROM "poll_options" WHERE "id" = ?"#,
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("PollOption")
     }
 
     /// A single polymorphic slot also stores emoji descriptors, without changing the schema.
@@ -417,41 +512,78 @@ impl PollOption {
         self.attach_media(tx, blob.id)
     }
 
-    pub fn media(&self, conn: &Connection, verifier: &dyn campfire_storage::Verifier) -> Result<Option<serde_json::Value>> {
-        let Some(blob) = campfire_storage::Blob::attached(conn, "PollOption", self.id, "media").map_err(|e| Error::Other(e.to_string()))? else {
+    pub fn media(
+        &self,
+        conn: &Connection,
+        verifier: &dyn campfire_storage::Verifier,
+    ) -> Result<Option<serde_json::Value>> {
+        let Some(blob) = campfire_storage::Blob::attached(conn, "PollOption", self.id, "media")
+            .map_err(|e| Error::Other(e.to_string()))?
+        else {
             return Ok(None);
         };
         if blob.content_type() == "application/vnd.smartfire.poll-emoji" {
-            return Ok(blob.metadata.get("poll_emoji").and_then(campfire_storage::Json::as_str).map(|content| json!({"kind": "emoji", "content": content})));
+            return Ok(blob
+                .metadata
+                .get("poll_emoji")
+                .and_then(campfire_storage::Json::as_str)
+                .map(|content| json!({"kind": "emoji", "content": content})));
         }
         let url = campfire_storage::paths::blob_redirect_path(verifier, &blob, None);
-        let still_url = (campfire_storage::branding::animated(&blob) || matches!(blob.metadata.get("poll_still"), Some(campfire_storage::Json::Bool(true)))).then(|| {
-            campfire_storage::paths::representation_redirect_path(verifier, &blob, &campfire_storage::branding::Kind::Logo.still_variation())
+        let still_url = (campfire_storage::branding::animated(&blob)
+            || matches!(
+                blob.metadata.get("poll_still"),
+                Some(campfire_storage::Json::Bool(true))
+            ))
+        .then(|| {
+            campfire_storage::paths::representation_redirect_path(
+                verifier,
+                &blob,
+                &campfire_storage::branding::Kind::Logo.still_variation(),
+            )
         });
-        Ok(Some(json!({"kind": "image", "url": url, "stillUrl": still_url})))
+        Ok(Some(
+            json!({"kind": "image", "url": url, "stillUrl": still_url}),
+        ))
     }
 
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        if let Some(attachment) = crate::models::active_storage::Attachment::find_for(tx.conn(), "PollOption", self.id, "media")? {
+        if let Some(attachment) = crate::models::active_storage::Attachment::find_for(
+            tx.conn(),
+            "PollOption",
+            self.id,
+            "media",
+        )? {
             attachment.delete(tx)?;
-            tx.emit_after_commit(Event::PurgeBlob { blob_id: attachment.blob_id });
+            tx.emit_after_commit(Event::PurgeBlob {
+                blob_id: attachment.blob_id,
+            });
         }
-        tx.conn().execute_cached("DELETE FROM poll_votes WHERE poll_option_id=?", [self.id])?;
-        tx.conn().execute_cached("DELETE FROM poll_options WHERE id=?", [self.id])?;
+        tx.conn()
+            .execute_cached("DELETE FROM poll_votes WHERE poll_option_id=?", [self.id])?;
+        tx.conn()
+            .execute_cached("DELETE FROM poll_options WHERE id=?", [self.id])?;
         Ok(())
     }
 
     /// `belongs_to :poll`, `validates :label, presence: true, length: { maximum: 200 }`
     pub fn validate(conn: &Connection, poll_id: i64, label: &str) -> Result<Errors> {
         let mut errors = Errors::default();
-        if !sql::exists(conn, r#"SELECT 1 AS one FROM "polls" WHERE "id" = ? LIMIT 1"#, [poll_id])? {
+        if !sql::exists(
+            conn,
+            r#"SELECT 1 AS one FROM "polls" WHERE "id" = ? LIMIT 1"#,
+            [poll_id],
+        )? {
             errors.add("poll", "must exist");
         }
         if label.trim().is_empty() {
             errors.add("label", "can't be blank");
         }
         if label.chars().count() > LABEL_LIMIT {
-            errors.add("label", format!("is too long (maximum is {LABEL_LIMIT} characters)"));
+            errors.add(
+                "label",
+                format!("is too long (maximum is {LABEL_LIMIT} characters)"),
+            );
         }
         Ok(errors)
     }
@@ -487,15 +619,35 @@ impl PollVote {
             params![now, poll_id, poll_option_id, now, user_id],
             |r| r.get(0),
         )?;
-        query_one(tx.conn(), r#"SELECT * FROM "poll_votes" WHERE "id" = ?"#, [id], Self::from_row)?.or_not_found("PollVote")
+        query_one(
+            tx.conn(),
+            r#"SELECT * FROM "poll_votes" WHERE "id" = ?"#,
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("PollVote")
     }
 
     /// The `belongs_to`s, `validates :user_id, uniqueness: { scope: :poll_option_id }` and
     /// `option_must_belong_to_poll`.
-    pub fn validate(conn: &Connection, poll_id: i64, poll_option_id: i64, user_id: i64) -> Result<Errors> {
+    pub fn validate(
+        conn: &Connection,
+        poll_id: i64,
+        poll_option_id: i64,
+        user_id: i64,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
-        let poll_exists = sql::exists(conn, r#"SELECT 1 AS one FROM "polls" WHERE "id" = ? LIMIT 1"#, [poll_id])?;
-        let option_poll: Option<i64> = query_one(conn, r#"SELECT "poll_id" FROM "poll_options" WHERE "id" = ?"#, [poll_option_id], |r| r.get(0))?;
+        let poll_exists = sql::exists(
+            conn,
+            r#"SELECT 1 AS one FROM "polls" WHERE "id" = ? LIMIT 1"#,
+            [poll_id],
+        )?;
+        let option_poll: Option<i64> = query_one(
+            conn,
+            r#"SELECT "poll_id" FROM "poll_options" WHERE "id" = ?"#,
+            [poll_option_id],
+            |r| r.get(0),
+        )?;
         if !poll_exists {
             errors.add("poll", "must exist");
         }

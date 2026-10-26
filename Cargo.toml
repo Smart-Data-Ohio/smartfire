@@ -91,7 +91,7 @@ bytes        = "1"
 rustls       = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
 rustls-native-certs = "0.8"
-p256         = { version = "0.13", features = ["ecdh", "ecdsa"] }
+p256         = { version = "0.14", features = ["ecdh", "ecdsa"] }
 # RS256 verification of Google ID tokens (rails_compat::jwt); already in the tree through rustls
 ring         = { version = "0.17", default-features = false, features = ["alloc"] }
 hkdf         = "0.12"

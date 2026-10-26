@@ -136,7 +136,9 @@ impl Param {
                 "content_type": file.content_type,
             }),
             Param::Array(items) => Value::Array(items.iter().map(Param::to_json).collect()),
-            Param::Hash(map) => Value::Object(map.iter().map(|(k, v)| (k.clone(), v.to_json())).collect()),
+            Param::Hash(map) => {
+                Value::Object(map.iter().map(|(k, v)| (k.clone(), v.to_json())).collect())
+            }
         }
     }
 
@@ -149,9 +151,13 @@ impl Param {
             Value::Bool(b) => Param::Bool(b),
             Value::Number(n) => Param::Number(n),
             Value::String(s) => Param::Str(s),
-            Value::Array(items) => {
-                Param::Array(items.into_iter().filter(|v| !v.is_null()).map(Param::from_json).collect())
-            }
+            Value::Array(items) => Param::Array(
+                items
+                    .into_iter()
+                    .filter(|v| !v.is_null())
+                    .map(Param::from_json)
+                    .collect(),
+            ),
             Value::Object(map) => {
                 let mut params = ParamMap::new();
                 for (k, v) in map {
@@ -281,9 +287,10 @@ impl ParamMap {
                 }
                 Permit::ScalarArray(key) => {
                     if let Some(Param::Array(items)) = self.get(key)
-                        && items.iter().all(Param::is_permitted_scalar) {
-                            permitted.insert(key.clone(), Param::Array(items.clone()));
-                        }
+                        && items.iter().all(Param::is_permitted_scalar)
+                    {
+                        permitted.insert(key.clone(), Param::Array(items.clone()));
+                    }
                 }
                 Permit::AnyHash(key) => {
                     if let Some(Param::Hash(map)) = self.get(key) {
@@ -304,8 +311,11 @@ impl ParamMap {
                         permitted.insert(key.clone(), Param::Hash(map.permit(nested)));
                     }
                     Some(Param::Array(items)) => {
-                        let hashes =
-                            items.iter().filter_map(Param::as_hash).map(|m| Param::Hash(m.permit(nested))).collect();
+                        let hashes = items
+                            .iter()
+                            .filter_map(Param::as_hash)
+                            .map(|m| Param::Hash(m.permit(nested)))
+                            .collect();
                         permitted.insert(key.clone(), Param::Array(hashes));
                     }
                     _ => {}
@@ -332,7 +342,10 @@ impl FromIterator<(String, Param)> for ParamMap {
 
 fn is_multi_parameter_key(candidate: &str, key: &str) -> bool {
     // /\A#{key}\(\d+[if]?\)\z/
-    let Some(rest) = candidate.strip_prefix(key).and_then(|r| r.strip_prefix('(')).and_then(|r| r.strip_suffix(')'))
+    let Some(rest) = candidate
+        .strip_prefix(key)
+        .and_then(|r| r.strip_prefix('('))
+        .and_then(|r| r.strip_suffix(')'))
     else {
         return false;
     };
@@ -344,7 +357,9 @@ fn is_fields_for_style(map: &ParamMap) -> bool {
     !map.is_empty()
         && map.iter().all(|(k, v)| {
             let digits = k.strip_prefix('-').unwrap_or(k);
-            !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()) && matches!(v, Param::Hash(_))
+            !digits.is_empty()
+                && digits.bytes().all(|b| b.is_ascii_digit())
+                && matches!(v, Param::Hash(_))
         })
 }
 
@@ -415,13 +430,25 @@ impl UploadedFile {
         size: u64,
         path: tempfile::TempPath,
     ) -> Self {
-        Self { original_filename, content_type, headers, size, path }
+        Self {
+            original_filename,
+            content_type,
+            headers,
+            size,
+            path,
+        }
     }
 
     /// Spool `bytes` to a temp file; handy for tests and for bot raw-body attachments.
-    pub fn from_bytes(original_filename: &str, content_type: Option<&str>, bytes: &[u8]) -> std::io::Result<Self> {
+    pub fn from_bytes(
+        original_filename: &str,
+        content_type: Option<&str>,
+        bytes: &[u8],
+    ) -> std::io::Result<Self> {
         use std::io::Write;
-        let mut file = tempfile::Builder::new().prefix("RackMultipart").tempfile()?;
+        let mut file = tempfile::Builder::new()
+            .prefix("RackMultipart")
+            .tempfile()?;
         file.write_all(bytes)?;
         Ok(Self {
             original_filename: original_filename.to_string(),
@@ -477,7 +504,9 @@ pub(crate) fn disk_form_pairs(body: &[u8]) -> Result<Vec<RawPair>, ParamError> {
 
 fn check_form_size(body: &[u8]) -> Result<(), ParamError> {
     if body.len() > FORM_BYTESIZE_LIMIT {
-        return Err(ParamError::Limit(format!("total query size exceeds limit ({FORM_BYTESIZE_LIMIT})")));
+        return Err(ParamError::Limit(format!(
+            "total query size exceeds limit ({FORM_BYTESIZE_LIMIT})"
+        )));
     }
     Ok(())
 }
@@ -515,16 +544,31 @@ pub enum PairValue {
 
 impl RawPair {
     pub fn text(key: &str, value: Option<&str>) -> Self {
-        Self { key: key.as_bytes().to_vec(), value: value.map(|v| PairValue::Bytes(v.as_bytes().to_vec())) }
+        Self {
+            key: key.as_bytes().to_vec(),
+            value: value.map(|v| PairValue::Bytes(v.as_bytes().to_vec())),
+        }
     }
 
     pub fn file(key: &str, file: UploadedFile) -> Self {
-        Self { key: key.as_bytes().to_vec(), value: Some(PairValue::File(Arc::new(file))) }
+        Self {
+            key: key.as_bytes().to_vec(),
+            value: Some(PairValue::File(Arc::new(file))),
+        }
     }
 }
 
 fn split_pairs(qs: &str) -> impl Iterator<Item = &str> {
-    qs.split('&').enumerate().map(|(i, part)| if i == 0 { part } else { part.trim_start_matches(' ') }).filter(|p| !p.is_empty())
+    qs.split('&')
+        .enumerate()
+        .map(|(i, part)| {
+            if i == 0 {
+                part
+            } else {
+                part.trim_start_matches(' ')
+            }
+        })
+        .filter(|p| !p.is_empty())
 }
 
 fn decode_pair(part: &str) -> Result<RawPair, ParamError> {
@@ -534,7 +578,10 @@ fn decode_pair(part: &str) -> Result<RawPair, ParamError> {
     };
     Ok(RawPair {
         key: decode_www_form_component(k)?,
-        value: v.map(decode_www_form_component).transpose()?.map(PairValue::Bytes),
+        value: v
+            .map(decode_www_form_component)
+            .transpose()?
+            .map(PairValue::Bytes),
     })
 }
 
@@ -551,7 +598,9 @@ pub fn decode_www_form_component(s: &str) -> Result<Vec<u8>, ParamError> {
                 i += 1;
             }
             b'%' => {
-                let hex = bytes.get(i + 1..i + 3).filter(|h| h.iter().all(u8::is_ascii_hexdigit));
+                let hex = bytes
+                    .get(i + 1..i + 3)
+                    .filter(|h| h.iter().all(u8::is_ascii_hexdigit));
                 let Some(hex) = hex else {
                     return Err(ParamError::Invalid(format!("invalid %-encoding ({s})")));
                 };
@@ -577,7 +626,10 @@ pub fn from_pairs(pairs: impl IntoIterator<Item = RawPair>) -> Result<ParamMap, 
 }
 
 // Rack::Request#POST validates with Rack's 32-level builder before Rails rebuilds pairs.
-pub(crate) fn from_pairs_with_depth_limit(pairs: impl IntoIterator<Item = RawPair>, depth_limit: usize) -> Result<ParamMap, ParamError> {
+pub(crate) fn from_pairs_with_depth_limit(
+    pairs: impl IntoIterator<Item = RawPair>,
+    depth_limit: usize,
+) -> Result<ParamMap, ParamError> {
     let mut params = ParamMap::new();
     for pair in pairs {
         let RawPair { key, value } = pair;
@@ -635,7 +687,12 @@ fn top_level_key(name: &str) -> &str {
 }
 
 fn find_byte(s: &str, byte: u8, from: usize) -> Option<usize> {
-    s.as_bytes().iter().enumerate().skip(from).find(|(_, b)| **b == byte).map(|(i, _)| i)
+    s.as_bytes()
+        .iter()
+        .enumerate()
+        .skip(from)
+        .find(|(_, b)| **b == byte)
+        .map(|(i, _)| i)
 }
 
 /// What `store_nested_param` returned: the params hash it was given, a one-element array (for a
@@ -656,7 +713,13 @@ impl Stored {
     }
 }
 
-fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize, depth_limit: usize) -> Result<Stored, ParamError> {
+fn store_nested_param(
+    params: &mut ParamMap,
+    name: &str,
+    v: Param,
+    depth: usize,
+    depth_limit: usize,
+) -> Result<Stored, ParamError> {
     if depth >= depth_limit {
         return Err(ParamError::TooDeep);
     }
@@ -669,7 +732,11 @@ fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize,
         }
     } else if let Some(rest) = name.strip_prefix("[]") {
         ("[]", rest)
-    } else if let Some(start) = name.starts_with('[').then(|| find_byte(name, b']', 1)).flatten() {
+    } else if let Some(start) = name
+        .starts_with('[')
+        .then(|| find_byte(name, b']', 1))
+        .flatten()
+    {
         (&name[1..start], &name[start + 1..])
     } else {
         // Probably malformed input, nested but not starting with [.
@@ -695,7 +762,9 @@ fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize,
     } else if let Some(nested) = after.strip_prefix("[]") {
         // Recognize x[][y] (hash inside array) parameters; otherwise nest what follows the [].
         let child_key = match nested.strip_prefix('[').and_then(|n| n.strip_suffix(']')) {
-            Some(inner) if !inner.is_empty() && !inner.contains('[') && !inner.contains(']') => inner,
+            Some(inner) if !inner.is_empty() && !inner.contains('[') && !inner.contains(']') => {
+                inner
+            }
             _ => nested,
         };
         let array = array_slot(params, k)?;
@@ -710,11 +779,17 @@ fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize,
             }
         }
     } else {
-        let mut child = match params.get_mut(k).map(|slot| std::mem::replace(slot, Param::Null)) {
+        let mut child = match params
+            .get_mut(k)
+            .map(|slot| std::mem::replace(slot, Param::Null))
+        {
             None | Some(Param::Null) => ParamMap::new(),
             Some(Param::Hash(existing)) => existing,
             Some(other) => {
-                return Err(ParamError::Type(format!("expected Hash (got {}) for param `{k}'", ruby_class(&other))));
+                return Err(ParamError::Type(format!(
+                    "expected Hash (got {}) for param `{k}'",
+                    ruby_class(&other)
+                )));
             }
         };
         let stored = store_nested_param(&mut child, after, v, depth + 1, depth_limit)?;
@@ -731,7 +806,10 @@ fn array_slot<'a>(params: &'a mut ParamMap, k: &str) -> Result<&'a mut Vec<Param
     }
     match params.get_mut(k) {
         Some(Param::Array(items)) => Ok(items),
-        Some(other) => Err(ParamError::Type(format!("expected Array (got {}) for param `{k}'", ruby_class(other)))),
+        Some(other) => Err(ParamError::Type(format!(
+            "expected Array (got {}) for param `{k}'",
+            ruby_class(other)
+        ))),
         None => unreachable!(),
     }
 }
@@ -839,9 +917,18 @@ mod tests {
         assert_eq!(parse("a=x+y%20z"), json!({"a": "x y z"}));
         assert_eq!(parse("a%5Bb%5D=1"), json!({"a": {"b": "1"}}));
         assert_eq!(parse("caf%C3%A9=%E2%9C%93"), json!({"café": "✓"}));
-        assert!(matches!(try_parse_nested("a=%"), Err(ParamError::Invalid(_))));
-        assert!(matches!(try_parse_nested("a=%zz"), Err(ParamError::Invalid(_))));
-        assert!(matches!(try_parse_nested("a=%FF"), Err(ParamError::Invalid(_))));
+        assert!(matches!(
+            try_parse_nested("a=%"),
+            Err(ParamError::Invalid(_))
+        ));
+        assert!(matches!(
+            try_parse_nested("a=%zz"),
+            Err(ParamError::Invalid(_))
+        ));
+        assert!(matches!(
+            try_parse_nested("a=%FF"),
+            Err(ParamError::Invalid(_))
+        ));
         // An empty top-level key is skipped before the encoding check.
         assert_eq!(parse("=%FF"), json!({}));
     }
@@ -849,7 +936,10 @@ mod tests {
     #[test]
     fn nested_hashes() {
         assert_eq!(parse("a[b]=1"), json!({"a": {"b": "1"}}));
-        assert_eq!(parse("a[b][c]=1&a[b][d]=2"), json!({"a": {"b": {"c": "1", "d": "2"}}}));
+        assert_eq!(
+            parse("a[b][c]=1&a[b][d]=2"),
+            json!({"a": {"b": {"c": "1", "d": "2"}}})
+        );
         assert_eq!(parse("a[b]c=1"), json!({"a": {"b": {"c": "1"}}}));
         assert_eq!(parse("[a]=1"), json!({"[a]": "1"}));
         assert_eq!(parse("a[=1"), json!({"a[": "1"}));
@@ -875,9 +965,18 @@ mod tests {
             parse("a[][b]=1&a[][c]=2&a[][b]=3"),
             json!({"a": [{"b": "1", "c": "2"}, {"b": "3"}]})
         );
-        assert_eq!(parse("a[][b][c]=1&a[][b][d]=2"), json!({"a": [{"b": {"c": "1", "d": "2"}}]}));
-        assert_eq!(parse("a[][b][c]=1&a[][b][c]=2"), json!({"a": [{"b": {"c": "1"}}, {"b": {"c": "2"}}]}));
-        assert_eq!(parse("a[][b][]=1&a[][b][]=2"), json!({"a": [{"b": ["1", "2"]}]}));
+        assert_eq!(
+            parse("a[][b][c]=1&a[][b][d]=2"),
+            json!({"a": [{"b": {"c": "1", "d": "2"}}]})
+        );
+        assert_eq!(
+            parse("a[][b][c]=1&a[][b][c]=2"),
+            json!({"a": [{"b": {"c": "1"}}, {"b": {"c": "2"}}]})
+        );
+        assert_eq!(
+            parse("a[][b][]=1&a[][b][]=2"),
+            json!({"a": [{"b": ["1", "2"]}]})
+        );
         assert_eq!(parse("a[]b=1"), json!({"a": [{"b": "1"}]}));
         assert_eq!(parse("a[][b]"), json!({"a": [{"b": null}]}));
     }
@@ -891,11 +990,26 @@ mod tests {
 
     #[test]
     fn type_conflicts() {
-        assert!(matches!(try_parse_nested("a=1&a[]=2"), Err(ParamError::Type(_))));
-        assert!(matches!(try_parse_nested("a=1&a[b]=2"), Err(ParamError::Type(_))));
-        assert!(matches!(try_parse_nested("a[]=1&a[b]=2"), Err(ParamError::Type(_))));
-        assert!(matches!(try_parse_nested("a[b]=1&a[]=2"), Err(ParamError::Type(_))));
-        assert!(matches!(try_parse_nested("a[b]=1&a[b][c]=2"), Err(ParamError::Type(_))));
+        assert!(matches!(
+            try_parse_nested("a=1&a[]=2"),
+            Err(ParamError::Type(_))
+        ));
+        assert!(matches!(
+            try_parse_nested("a=1&a[b]=2"),
+            Err(ParamError::Type(_))
+        ));
+        assert!(matches!(
+            try_parse_nested("a[]=1&a[b]=2"),
+            Err(ParamError::Type(_))
+        ));
+        assert!(matches!(
+            try_parse_nested("a[b]=1&a[]=2"),
+            Err(ParamError::Type(_))
+        ));
+        assert!(matches!(
+            try_parse_nested("a[b]=1&a[b][c]=2"),
+            Err(ParamError::Type(_))
+        ));
         assert_eq!(parse_nested("a=1&a[]=2"), serde_json::Value::Null);
     }
 
@@ -909,16 +1023,29 @@ mod tests {
 
     #[test]
     fn form_body_limits() {
-        assert_eq!(from_pairs(form_pairs(b"a=1\0").unwrap()).unwrap().to_json(), json!({"a": "1"}));
+        assert_eq!(
+            from_pairs(form_pairs(b"a=1\0").unwrap()).unwrap().to_json(),
+            json!({"a": "1"})
+        );
         let many = vec!["a=1"; FORM_PARAMS_LIMIT + 1].join("&");
-        assert!(matches!(form_pairs(many.as_bytes()), Err(ParamError::Limit(_))));
+        assert!(matches!(
+            form_pairs(many.as_bytes()),
+            Err(ParamError::Limit(_))
+        ));
     }
 
     #[test]
     fn json_bodies_are_deep_munged() {
-        let params = from_json_body(br#"{"a": [1, null, "x"], "b": {"c": null}, "d": true}"#).unwrap();
-        assert_eq!(params.to_json(), json!({"a": [1, "x"], "b": {"c": null}, "d": true}));
-        assert_eq!(from_json_body(b"[1,2]").unwrap().to_json(), json!({"_json": [1, 2]}));
+        let params =
+            from_json_body(br#"{"a": [1, null, "x"], "b": {"c": null}, "d": true}"#).unwrap();
+        assert_eq!(
+            params.to_json(),
+            json!({"a": [1, "x"], "b": {"c": null}, "d": true})
+        );
+        assert_eq!(
+            from_json_body(b"[1,2]").unwrap().to_json(),
+            json!({"_json": [1, 2]})
+        );
         assert_eq!(from_json_body(b"{bad"), Err(ParamError::Parse));
     }
 
@@ -946,7 +1073,9 @@ mod tests {
 
     #[test]
     fn permit_nested() {
-        let params = from_query_string("a[b][c]=1&a[b][d]=2&list[][c]=1&list[][d]=2&ff[0][c]=1&ff[1][c]=2").unwrap();
+        let params =
+            from_query_string("a[b][c]=1&a[b][d]=2&list[][c]=1&list[][d]=2&ff[0][c]=1&ff[1][c]=2")
+                .unwrap();
         let nested = vec![Permit::Key("c".into())];
         let permitted = params.permit(&[
             Permit::Nested("a".into(), vec![Permit::Nested("b".into(), nested.clone())]),
@@ -962,16 +1091,29 @@ mod tests {
     #[test]
     fn fetch_default() {
         let params = from_query_string("user_ids[]=1&user_ids[]=2").unwrap();
-        assert_eq!(params.fetch("user_ids", Param::Array(vec![])).to_json(), json!(["1", "2"]));
-        assert_eq!(params.fetch("nope", Param::Array(vec![])).to_json(), json!([]));
+        assert_eq!(
+            params.fetch("user_ids", Param::Array(vec![])).to_json(),
+            json!(["1", "2"])
+        );
+        assert_eq!(
+            params.fetch("nope", Param::Array(vec![])).to_json(),
+            json!([])
+        );
     }
 
     #[test]
     fn many_keys_build_in_linear_time() {
-        let object: serde_json::Map<String, serde_json::Value> = (0..100_000).map(|n| (format!("k{n}"), n.into())).collect();
+        let object: serde_json::Map<String, serde_json::Value> =
+            (0..100_000).map(|n| (format!("k{n}"), n.into())).collect();
         let started = std::time::Instant::now();
-        let Param::Hash(map) = Param::from_json(serde_json::Value::Object(object)) else { panic!("a hash") };
+        let Param::Hash(map) = Param::from_json(serde_json::Value::Object(object)) else {
+            panic!("a hash")
+        };
         assert_eq!(map.len(), 100_000);
-        assert!(started.elapsed() < std::time::Duration::from_secs(1), "{:?}", started.elapsed());
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "{:?}",
+            started.elapsed()
+        );
     }
 }

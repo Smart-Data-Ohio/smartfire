@@ -42,7 +42,11 @@ pub struct CachedResponse {
 impl CachedResponse {
     /// How much of the cache it takes up stored under `key`.
     fn size(&self, key: &str) -> usize {
-        let headers: usize = self.headers.iter().map(|(n, v)| n.as_str().len() + v.len()).sum();
+        let headers: usize = self
+            .headers
+            .iter()
+            .map(|(n, v)| n.as_str().len() + v.len())
+            .sum();
         let variant: usize = self.variant.iter().map(|(n, v)| n.len() + v.len()).sum();
         self.body.len() + headers + variant + key.len() + ENTRY_OVERHEAD
     }
@@ -71,7 +75,15 @@ struct Entry {
 
 impl MemoryCache {
     pub fn new(capacity: i64, max_item_size: i64) -> Self {
-        Self { inner: Mutex::new(Inner { capacity, max_item_size, size: 0, keys: Vec::new(), items: HashMap::new() }) }
+        Self {
+            inner: Mutex::new(Inner {
+                capacity,
+                max_item_size,
+                size: 0,
+                keys: Vec::new(),
+                items: HashMap::new(),
+            }),
+        }
     }
 
     pub fn get(&self, key: &str, now: Instant) -> Option<Arc<CachedResponse>> {
@@ -100,7 +112,15 @@ impl MemoryCache {
             Some(existing) => inner.size -= existing.size,
             None => inner.keys.push(key.clone()),
         }
-        inner.items.insert(key, Entry { last_accessed_at: now, expires_at, value: Arc::new(value), size: item_size });
+        inner.items.insert(
+            key,
+            Entry {
+                last_accessed_at: now,
+                expires_at,
+                value: Arc::new(value),
+                size: item_size,
+            },
+        );
         inner.size += item_size;
     }
 
@@ -137,17 +157,28 @@ impl Inner {
 /// `shouldCacheRequest`: GET or HEAD, not an upgrade, not a range; and (unlike Thruster) not a
 /// very long URI.
 pub fn should_cache_request<B>(request: &Request<B>) -> bool {
-    let header = |name| request.headers().get(name).map(HeaderValue::as_bytes).unwrap_or_default();
+    let header = |name| {
+        request
+            .headers()
+            .get(name)
+            .map(HeaderValue::as_bytes)
+            .unwrap_or_default()
+    };
     let allowed_method = request.method() == Method::GET || request.method() == Method::HEAD;
-    let is_upgrade = header(header::CONNECTION) == b"Upgrade" || header(header::UPGRADE) == b"websocket";
+    let is_upgrade =
+        header(header::CONNECTION) == b"Upgrade" || header(header::UPGRADE) == b"websocket";
     let is_range = !header(header::RANGE).is_empty();
-    let uri_length = request.uri().path_and_query().map_or(0, |p| p.as_str().len());
+    let uri_length = request
+        .uri()
+        .path_and_query()
+        .map_or(0, |p| p.as_str().len());
     allowed_method && !is_upgrade && !is_range && uri_length <= MAX_CACHEABLE_URI
 }
 
 static PUBLIC: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u)\bpublic\b").unwrap());
 static NO_CACHE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u)\bno-cache\b").unwrap());
-static S_MAX_AGE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u)\bs-max-age=(\d+)\b").unwrap());
+static S_MAX_AGE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u)\bs-max-age=(\d+)\b").unwrap());
 static MAX_AGE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u)\bmax-age=(\d+)\b").unwrap());
 
 /// `CacheStatus` (before the body's size is known): how long the response may be cached, if at all.
@@ -163,14 +194,19 @@ pub fn cache_lifetime(status: StatusCode, headers: &HeaderMap) -> Option<Duratio
     if !PUBLIC.is_match(cache_control) || NO_CACHE.is_match(cache_control) {
         return None;
     }
-    let max_age = S_MAX_AGE.captures(cache_control).or_else(|| MAX_AGE.captures(cache_control))?;
+    let max_age = S_MAX_AGE
+        .captures(cache_control)
+        .or_else(|| MAX_AGE.captures(cache_control))?;
     let seconds: i64 = max_age[1].parse().ok()?;
     (seconds > 0).then(|| Duration::from_secs(seconds as u64))
 }
 
 /// `Header.Get`: the first value, or "".
 fn first<'a>(headers: &'a HeaderMap, name: &HeaderName) -> &'a str {
-    headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or("")
+    headers
+        .get(name)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
 }
 
 /// `Variant`: the cache key for a request, given the headers its response varies on.
@@ -194,7 +230,11 @@ impl Variant {
         // `/a%2Fb` and `/a/b` one entry.
         let query = encode_query(uri.query().unwrap_or(""));
         let base = format!("{}\n{}\n{query}\n{host}", request.method(), uri.path());
-        Self { base, request_headers: request.headers().clone(), names: Vec::new() }
+        Self {
+            base,
+            request_headers: request.headers().clone(),
+            names: Vec::new(),
+        }
     }
 
     /// `SetResponseHeader`: vary on the response's `Vary` names (canonical, sorted).
@@ -203,7 +243,10 @@ impl Variant {
         self.names = if vary.is_empty() {
             Vec::new()
         } else {
-            let mut names: Vec<String> = vary.split(',').map(|n| n.trim().to_ascii_lowercase()).collect();
+            let mut names: Vec<String> = vary
+                .split(',')
+                .map(|n| n.trim().to_ascii_lowercase())
+                .collect();
             names.sort();
             names
         };
@@ -223,17 +266,27 @@ impl Variant {
     /// Whether a stored response's variant headers match this request's.
     pub fn matches(&self, variant: &[(String, String)]) -> bool {
         self.names.iter().all(|name| {
-            let stored = variant.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str()).unwrap_or("");
+            let stored = variant
+                .iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, v)| v.as_str())
+                .unwrap_or("");
             stored == self.request_value(name)
         })
     }
 
     pub fn variant_headers(&self) -> Vec<(String, String)> {
-        self.names.iter().map(|name| (name.clone(), self.request_value(name).to_string())).collect()
+        self.names
+            .iter()
+            .map(|name| (name.clone(), self.request_value(name).to_string()))
+            .collect()
     }
 
     fn request_value(&self, name: &str) -> &str {
-        self.request_headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or("")
+        self.request_headers
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("")
     }
 }
 
@@ -246,7 +299,9 @@ fn encode_query(query: &str) -> String {
             continue;
         }
         let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
-        let (Some(key), Some(value)) = (query_unescape(key), query_unescape(value)) else { continue };
+        let (Some(key), Some(value)) = (query_unescape(key), query_unescape(value)) else {
+            continue;
+        };
         match values.iter_mut().find(|(k, _)| *k == key) {
             Some((_, list)) => list.push(value),
             None => values.push((key, vec![value])),
@@ -298,7 +353,9 @@ fn query_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for &b in s.as_bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
             b' ' => out.push('+'),
             _ => out.push_str(&format!("%{b:02X}")),
         }
@@ -312,8 +369,14 @@ pub fn was_not_modified<B>(cached: &CachedResponse, request: &Request<B>) -> boo
     if etag.is_empty() {
         return false;
     }
-    let if_none_match = request.headers().get(header::IF_NONE_MATCH).and_then(|v| v.to_str().ok()).unwrap_or("");
-    if_none_match.split(',').any(|candidate| candidate.trim() == etag)
+    let if_none_match = request
+        .headers()
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if_none_match
+        .split(',')
+        .any(|candidate| candidate.trim() == etag)
 }
 
 #[cfg(test)]
@@ -321,13 +384,21 @@ mod tests {
     use super::*;
 
     fn response(body: &str) -> CachedResponse {
-        CachedResponse { status: StatusCode::OK, headers: HeaderMap::new(), body: Bytes::from(body.to_string()), variant: Vec::new() }
+        CachedResponse {
+            status: StatusCode::OK,
+            headers: HeaderMap::new(),
+            body: Bytes::from(body.to_string()),
+            variant: Vec::new(),
+        }
     }
 
     fn headers(pairs: &[(&str, &str)]) -> HeaderMap {
         let mut map = HeaderMap::new();
         for (name, value) in pairs {
-            map.append(HeaderName::from_bytes(name.as_bytes()).unwrap(), HeaderValue::from_str(value).unwrap());
+            map.append(
+                HeaderName::from_bytes(name.as_bytes()).unwrap(),
+                HeaderValue::from_str(value).unwrap(),
+            );
         }
         map
     }
@@ -335,14 +406,59 @@ mod tests {
     #[test]
     fn lifetime_needs_public_and_a_max_age() {
         let ok = StatusCode::OK;
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "public, max-age=2592000")])), Some(Duration::from_secs(2592000)));
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "max-age=300, public, stale-while-revalidate=604800")])), Some(Duration::from_secs(300)));
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "public, s-max-age=10, max-age=99")])), Some(Duration::from_secs(10)));
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "max-age=0, private, must-revalidate")])), None);
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "public")])), None);
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "public, max-age=0")])), None);
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "public, no-cache, max-age=60")])), None);
-        assert_eq!(cache_lifetime(ok, &headers(&[("cache-control", "public, max-age=60"), ("vary", "*")])), None);
+        assert_eq!(
+            cache_lifetime(
+                ok,
+                &headers(&[("cache-control", "public, max-age=2592000")])
+            ),
+            Some(Duration::from_secs(2592000))
+        );
+        assert_eq!(
+            cache_lifetime(
+                ok,
+                &headers(&[(
+                    "cache-control",
+                    "max-age=300, public, stale-while-revalidate=604800"
+                )])
+            ),
+            Some(Duration::from_secs(300))
+        );
+        assert_eq!(
+            cache_lifetime(
+                ok,
+                &headers(&[("cache-control", "public, s-max-age=10, max-age=99")])
+            ),
+            Some(Duration::from_secs(10))
+        );
+        assert_eq!(
+            cache_lifetime(
+                ok,
+                &headers(&[("cache-control", "max-age=0, private, must-revalidate")])
+            ),
+            None
+        );
+        assert_eq!(
+            cache_lifetime(ok, &headers(&[("cache-control", "public")])),
+            None
+        );
+        assert_eq!(
+            cache_lifetime(ok, &headers(&[("cache-control", "public, max-age=0")])),
+            None
+        );
+        assert_eq!(
+            cache_lifetime(
+                ok,
+                &headers(&[("cache-control", "public, no-cache, max-age=60")])
+            ),
+            None
+        );
+        assert_eq!(
+            cache_lifetime(
+                ok,
+                &headers(&[("cache-control", "public, max-age=60"), ("vary", "*")])
+            ),
+            None
+        );
         let public = headers(&[("cache-control", "public, max-age=60")]);
         assert_eq!(cache_lifetime(StatusCode::NOT_MODIFIED, &public), None);
         assert_eq!(cache_lifetime(StatusCode::NOT_FOUND, &public), None);
@@ -361,16 +477,28 @@ mod tests {
         assert!(!get(&[("connection", "Upgrade")]));
         assert!(get(&[("connection", "upgrade")])); // Thruster compares exactly
         assert!(!get(&[("range", "bytes=0-1")]));
-        assert!(!should_cache_request(&Request::post("/x").body(()).unwrap()));
+        assert!(!should_cache_request(
+            &Request::post("/x").body(()).unwrap()
+        ));
         assert!(should_cache_request(&Request::head("/x").body(()).unwrap()));
         let uri = |length: usize| format!("/qr_code/aGk?pad={}", "x".repeat(length - 17));
-        assert!(should_cache_request(&Request::head(uri(MAX_CACHEABLE_URI)).body(()).unwrap()));
-        assert!(!should_cache_request(&Request::head(uri(MAX_CACHEABLE_URI + 1)).body(()).unwrap()));
+        assert!(should_cache_request(
+            &Request::head(uri(MAX_CACHEABLE_URI)).body(()).unwrap()
+        ));
+        assert!(!should_cache_request(
+            &Request::head(uri(MAX_CACHEABLE_URI + 1)).body(()).unwrap()
+        ));
     }
 
     #[test]
     fn keys_normalize_the_query_and_include_varying_headers() {
-        let request = |uri: &str, ae: &str| Request::get(uri).header("host", "chat.test").header("accept-encoding", ae).body(()).unwrap();
+        let request = |uri: &str, ae: &str| {
+            Request::get(uri)
+                .header("host", "chat.test")
+                .header("accept-encoding", ae)
+                .body(())
+                .unwrap()
+        };
         let key = |uri: &str| Variant::new(&request(uri, "gzip")).cache_key();
         assert_eq!(key("/a?b=2&a=1"), key("/a?a=1&b=2"));
         assert_eq!(key("/a?q=a+b"), key("/a?q=a%20b"));
@@ -398,20 +526,51 @@ mod tests {
         let now = Instant::now();
         let item = ENTRY_OVERHEAD as i64 + 50;
         let cache = MemoryCache::new(2 * item, item + 10);
-        cache.set("a".into(), response_of_size(item as usize), now + Duration::from_secs(10), now);
+        cache.set(
+            "a".into(),
+            response_of_size(item as usize),
+            now + Duration::from_secs(10),
+            now,
+        );
         assert!(cache.get("a", now).is_some());
         assert!(cache.get("a", now + Duration::from_secs(11)).is_none());
 
-        cache.set("big".into(), response_of_size(item as usize + 11), now + Duration::from_secs(10), now);
-        assert!(cache.get("big", now).is_none(), "larger than the item limit");
+        cache.set(
+            "big".into(),
+            response_of_size(item as usize + 11),
+            now + Duration::from_secs(10),
+            now,
+        );
+        assert!(
+            cache.get("big", now).is_none(),
+            "larger than the item limit"
+        );
 
-        cache.set("b".into(), response_of_size(item as usize), now + Duration::from_secs(10), now);
-        cache.set("c".into(), response_of_size(item as usize), now + Duration::from_secs(10), now);
+        cache.set(
+            "b".into(),
+            response_of_size(item as usize),
+            now + Duration::from_secs(10),
+            now,
+        );
+        cache.set(
+            "c".into(),
+            response_of_size(item as usize),
+            now + Duration::from_secs(10),
+            now,
+        );
         assert_eq!(cache.size(), 2 * item);
-        let kept = ["a", "b", "c"].iter().filter(|k| cache.get(k, now).is_some()).count();
+        let kept = ["a", "b", "c"]
+            .iter()
+            .filter(|k| cache.get(k, now).is_some())
+            .count();
         assert_eq!(kept, 2);
 
-        cache.set("c".into(), response_of_size(item as usize - 30), now + Duration::from_secs(10), now);
+        cache.set(
+            "c".into(),
+            response_of_size(item as usize - 30),
+            now + Duration::from_secs(10),
+            now,
+        );
         assert!(cache.size() <= 2 * item);
     }
 
@@ -425,7 +584,11 @@ mod tests {
             cache.set(key, response(""), now + Duration::from_secs(60), now);
         }
         assert!(cache.size() <= capacity);
-        assert!(cache.size() > capacity - 2000, "charged the keys: {}", cache.size());
+        assert!(
+            cache.size() > capacity - 2000,
+            "charged the keys: {}",
+            cache.size()
+        );
         let inner = cache.inner.lock().unwrap();
         let held: usize = inner.keys.iter().map(|k| k.len() + ENTRY_OVERHEAD).sum();
         assert!(held as i64 <= capacity);
@@ -434,8 +597,15 @@ mod tests {
     #[test]
     fn not_modified_compares_etags() {
         let mut cached = response("x");
-        cached.headers.insert(header::ETAG, HeaderValue::from_static("\"abc\""));
-        let request = |inm: &str| Request::get("/").header("if-none-match", inm).body(()).unwrap();
+        cached
+            .headers
+            .insert(header::ETAG, HeaderValue::from_static("\"abc\""));
+        let request = |inm: &str| {
+            Request::get("/")
+                .header("if-none-match", inm)
+                .body(())
+                .unwrap()
+        };
         assert!(was_not_modified(&cached, &request("\"abc\"")));
         assert!(was_not_modified(&cached, &request("\"x\", \"abc\"")));
         assert!(!was_not_modified(&cached, &request("W/\"abc\"")));

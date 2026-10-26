@@ -84,7 +84,9 @@ impl Context {
     }
 
     pub fn html(local: &str) -> Self {
-        Context { name: QualName::new(None, ns!(html), LocalName::from(local)) }
+        Context {
+            name: QualName::new(None, ns!(html), LocalName::from(local)),
+        }
     }
 }
 
@@ -98,7 +100,11 @@ impl Dom {
     }
 
     fn push(&mut self, data: NodeData) -> NodeId {
-        self.nodes.push(Node { data, parent: None, children: Vec::new() });
+        self.nodes.push(Node {
+            data,
+            parent: None,
+            children: Vec::new(),
+        });
         self.nodes.len() - 1
     }
 
@@ -109,7 +115,10 @@ impl Dom {
     pub fn create_element(&mut self, local: &str, attrs: &[(&str, &str)]) -> NodeId {
         let attrs = attrs
             .iter()
-            .map(|(k, v)| Attr { name: QualName::new(None, ns!(), LocalName::from(*k)), value: v.to_string() })
+            .map(|(k, v)| Attr {
+                name: QualName::new(None, ns!(), LocalName::from(*k)),
+                value: v.to_string(),
+            })
             .collect();
         self.push(NodeData::Element(ElementData {
             name: QualName::new(None, ns!(html), LocalName::from(local)),
@@ -180,7 +189,11 @@ impl Dom {
     }
 
     pub fn attr(&self, id: NodeId, name: &str) -> Option<&str> {
-        self.element(id)?.attrs.iter().find(|a| a.qualified_name() == name).map(|a| a.value.as_str())
+        self.element(id)?
+            .attrs
+            .iter()
+            .find(|a| a.qualified_name() == name)
+            .map(|a| a.value.as_str())
     }
 
     pub fn has_attr(&self, id: NodeId, name: &str) -> bool {
@@ -190,7 +203,11 @@ impl Dom {
     /// Nokogiri's `node[name] = value`: updates in place, or appends a new attribute.
     pub fn set_attr(&mut self, id: NodeId, name: &str, value: &str) {
         if let Some(element) = self.element_mut(id) {
-            if let Some(attr) = element.attrs.iter_mut().find(|a| a.qualified_name() == name) {
+            if let Some(attr) = element
+                .attrs
+                .iter_mut()
+                .find(|a| a.qualified_name() == name)
+            {
                 attr.value = value.to_string();
             } else {
                 element.attrs.push(Attr {
@@ -203,19 +220,31 @@ impl Dom {
 
     pub fn remove_attr(&mut self, id: NodeId, name: &str) -> Option<String> {
         let element = self.element_mut(id)?;
-        let index = element.attrs.iter().position(|a| a.qualified_name() == name)?;
+        let index = element
+            .attrs
+            .iter()
+            .position(|a| a.qualified_name() == name)?;
         Some(element.attrs.remove(index).value)
     }
 
     pub fn attrs(&self, id: NodeId) -> Vec<(String, String)> {
         self.element(id)
-            .map(|e| e.attrs.iter().map(|a| (a.qualified_name(), a.value.clone())).collect())
+            .map(|e| {
+                e.attrs
+                    .iter()
+                    .map(|a| (a.qualified_name(), a.value.clone()))
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
     /// Element children only (Nokogiri's `Node#elements`).
     pub fn element_children(&self, id: NodeId) -> Vec<NodeId> {
-        self.children(id).iter().copied().filter(|&c| self.is_element(c)).collect()
+        self.children(id)
+            .iter()
+            .copied()
+            .filter(|&c| self.is_element(c))
+            .collect()
     }
 
     /// All descendants in document order, excluding `id` itself.
@@ -253,8 +282,14 @@ impl Dom {
 
     pub fn insert_before(&mut self, reference: NodeId, new: NodeId) {
         self.detach(new);
-        let parent = self.nodes[reference].parent.expect("reference node has a parent");
-        let index = self.nodes[parent].children.iter().position(|&c| c == reference).unwrap();
+        let parent = self.nodes[reference]
+            .parent
+            .expect("reference node has a parent");
+        let index = self.nodes[parent]
+            .children
+            .iter()
+            .position(|&c| c == reference)
+            .unwrap();
         self.nodes[new].parent = Some(parent);
         self.nodes[parent].children.insert(index, new);
     }
@@ -307,14 +342,20 @@ impl Dom {
     /// The context Nokogiri uses when parsing markup for a node (`Node#fragment`).
     pub fn context_for(&self, id: NodeId) -> Context {
         match &self.nodes[id].data {
-            NodeData::Element(e) => Context { name: e.name.clone() },
+            NodeData::Element(e) => Context {
+                name: e.name.clone(),
+            },
             // Gumbo falls back to a body context for anything that isn't an element
             _ => Context::body(),
         }
     }
 
     /// Parses `html` in the given context and returns the resulting top-level nodes, detached.
-    pub fn parse_nodes(&mut self, html: &str, context: &Context) -> Result<Vec<NodeId>, ParseError> {
+    pub fn parse_nodes(
+        &mut self,
+        html: &str,
+        context: &Context,
+    ) -> Result<Vec<NodeId>, ParseError> {
         let parsed = parse_with_html5ever(html, context);
         check_limits(&parsed)?;
         let root = parsed.fragment_root();
@@ -350,7 +391,9 @@ impl Dom {
 
     /// Nokogiri's `node.replace(html)`: the markup is parsed in the context of the node's parent.
     pub fn replace_with_html(&mut self, id: NodeId, html: &str) -> Result<(), ParseError> {
-        let Some(parent) = self.parent(id) else { return Ok(()) };
+        let Some(parent) = self.parent(id) else {
+            return Ok(());
+        };
         let context = self.context_for(parent);
         let replacements = self.parse_nodes(html, &context)?;
         for n in replacements {
@@ -388,7 +431,9 @@ impl Dom {
     fn serialize(&self, id: NodeId, escaping: AttributeEscaping) -> String {
         let mut out = String::new();
         match self.nodes[id].data {
-            NodeData::Fragment | NodeData::Document => self.serialize_children(id, escaping, &mut out),
+            NodeData::Fragment | NodeData::Document => {
+                self.serialize_children(id, escaping, &mut out)
+            }
             _ => self.serialize_node(id, escaping, &mut out),
         }
         out
@@ -430,7 +475,9 @@ impl Dom {
             }
             NodeData::Text(text) => {
                 let raw = self.parent(id).is_some_and(|p| {
-                    self.element(p).is_some_and(|e| e.name.ns == ns!(html) && is_raw_text_element(&e.name.local))
+                    self.element(p).is_some_and(|e| {
+                        e.name.ns == ns!(html) && is_raw_text_element(&e.name.local)
+                    })
                 });
                 if raw {
                     out.push_str(text);
@@ -467,8 +514,24 @@ fn serialized_tag_name(name: &QualName) -> String {
 pub fn is_void_element(local: &str) -> bool {
     matches!(
         local,
-        "area" | "base" | "basefont" | "bgsound" | "br" | "col" | "embed" | "frame" | "hr" | "img" | "input"
-            | "keygen" | "link" | "meta" | "param" | "source" | "track" | "wbr"
+        "area"
+            | "base"
+            | "basefont"
+            | "bgsound"
+            | "br"
+            | "col"
+            | "embed"
+            | "frame"
+            | "hr"
+            | "img"
+            | "input"
+            | "keygen"
+            | "link"
+            | "meta"
+            | "param"
+            | "source"
+            | "track"
+            | "wbr"
     )
 }
 
@@ -514,7 +577,11 @@ fn escape_text(value: &str, out: &mut String) {
 
 fn check_limits(parsed: &ParsedTree) -> Result<(), ParseError> {
     let root = parsed.fragment_root();
-    let mut stack: Vec<(NodeId, usize)> = parsed.nodes[root].children.iter().map(|&c| (c, 1)).collect();
+    let mut stack: Vec<(NodeId, usize)> = parsed.nodes[root]
+        .children
+        .iter()
+        .map(|&c| (c, 1))
+        .collect();
     while let Some((n, depth)) = stack.pop() {
         if let NodeData::Element(e) = &parsed.nodes[n].data {
             if depth > MAX_TREE_DEPTH {
@@ -550,8 +617,15 @@ fn parse_with_html5ever(html: &str, context: &Context) -> ParsedTree {
     // Gumbo parses without scripting, so <noscript> content is markup rather than raw text
     opts.tree_builder.scripting_enabled = false;
     opts.tree_builder.quirks_mode = QuirksMode::NoQuirks;
-    let sink = Sink { nodes: RefCell::new(vec![Node { data: NodeData::Document, parent: None, children: vec![] }]) };
-    let parser = html5ever::driver::parse_fragment(sink, opts, context.name.clone(), Vec::new(), false);
+    let sink = Sink {
+        nodes: RefCell::new(vec![Node {
+            data: NodeData::Document,
+            parent: None,
+            children: vec![],
+        }]),
+    };
+    let parser =
+        html5ever::driver::parse_fragment(sink, opts, context.name.clone(), Vec::new(), false);
     parser.one(StrTendril::from(html))
 }
 
@@ -575,7 +649,11 @@ impl ElemName for OwnedName {
 impl Sink {
     fn new_node(&self, data: NodeData) -> NodeId {
         let mut nodes = self.nodes.borrow_mut();
-        nodes.push(Node { data, parent: None, children: vec![] });
+        nodes.push(Node {
+            data,
+            parent: None,
+            children: vec![],
+        });
         nodes.len() - 1
     }
 
@@ -596,12 +674,17 @@ impl Sink {
             }
             NodeOrText::AppendText(text) => {
                 // Adjacent text merges into the preceding text node, as in the DOM
-                let previous = if index > 0 { Some(self.nodes.borrow()[parent].children[index - 1]) } else { None };
+                let previous = if index > 0 {
+                    Some(self.nodes.borrow()[parent].children[index - 1])
+                } else {
+                    None
+                };
                 if let Some(prev) = previous
-                    && let NodeData::Text(existing) = &mut self.nodes.borrow_mut()[prev].data {
-                        existing.push_str(&text);
-                        return;
-                    }
+                    && let NodeData::Text(existing) = &mut self.nodes.borrow_mut()[prev].data
+                {
+                    existing.push_str(&text);
+                    return;
+                }
                 let node = self.new_node(NodeData::Text(text.to_string()));
                 let mut nodes = self.nodes.borrow_mut();
                 nodes[node].parent = Some(parent);
@@ -617,7 +700,9 @@ impl TreeSink for Sink {
     type ElemName<'a> = OwnedName;
 
     fn finish(self) -> ParsedTree {
-        ParsedTree { nodes: self.nodes.into_inner() }
+        ParsedTree {
+            nodes: self.nodes.into_inner(),
+        }
     }
 
     fn parse_error(&self, _msg: Cow<'static, str>) {}
@@ -633,11 +718,19 @@ impl TreeSink for Sink {
         }
     }
 
-    fn create_element(&self, name: QualName, attrs: Vec<Attribute>, _flags: ElementFlags) -> NodeId {
+    fn create_element(
+        &self,
+        name: QualName,
+        attrs: Vec<Attribute>,
+        _flags: ElementFlags,
+    ) -> NodeId {
         let mut seen: Vec<Attr> = Vec::with_capacity(attrs.len());
         for a in attrs {
             if !seen.iter().any(|s| s.name == a.name) {
-                seen.push(Attr { name: a.name, value: a.value.to_string() });
+                seen.push(Attr {
+                    name: a.name,
+                    value: a.value.to_string(),
+                });
             }
         }
         self.new_node(NodeData::Element(ElementData { name, attrs: seen }))
@@ -656,7 +749,12 @@ impl TreeSink for Sink {
         self.insert_at(*parent, index, child);
     }
 
-    fn append_based_on_parent_node(&self, element: &NodeId, prev_element: &NodeId, child: NodeOrText<NodeId>) {
+    fn append_based_on_parent_node(
+        &self,
+        element: &NodeId,
+        prev_element: &NodeId,
+        child: NodeOrText<NodeId>,
+    ) {
         if self.nodes.borrow()[*element].parent.is_some() {
             self.append_before_sibling(element, child);
         } else {
@@ -664,7 +762,12 @@ impl TreeSink for Sink {
         }
     }
 
-    fn append_doctype_to_document(&self, name: StrTendril, _public_id: StrTendril, _system_id: StrTendril) {
+    fn append_doctype_to_document(
+        &self,
+        name: StrTendril,
+        _public_id: StrTendril,
+        _system_id: StrTendril,
+    ) {
         let node = self.new_node(NodeData::Doctype(name.to_string()));
         self.append(&0, NodeOrText::AppendNode(node));
     }
@@ -681,8 +784,14 @@ impl TreeSink for Sink {
     fn set_quirks_mode(&self, _mode: QuirksMode) {}
 
     fn append_before_sibling(&self, sibling: &NodeId, new_node: NodeOrText<NodeId>) {
-        let parent = self.nodes.borrow()[*sibling].parent.expect("sibling has a parent");
-        let index = self.nodes.borrow()[parent].children.iter().position(|c| c == sibling).unwrap();
+        let parent = self.nodes.borrow()[*sibling]
+            .parent
+            .expect("sibling has a parent");
+        let index = self.nodes.borrow()[parent]
+            .children
+            .iter()
+            .position(|c| c == sibling)
+            .unwrap();
         self.insert_at(parent, index, new_node);
     }
 
@@ -690,7 +799,10 @@ impl TreeSink for Sink {
         if let NodeData::Element(e) = &mut self.nodes.borrow_mut()[*target].data {
             for a in attrs {
                 if !e.attrs.iter().any(|existing| existing.name == a.name) {
-                    e.attrs.push(Attr { name: a.name, value: a.value.to_string() });
+                    e.attrs.push(Attr {
+                        name: a.name,
+                        value: a.value.to_string(),
+                    });
                 }
             }
         }
@@ -721,33 +833,52 @@ mod tests {
 
     #[test]
     fn gumbo_adoption_agency_keeps_the_fourth_formatting_element_on_the_stack() {
-        let cases: serde_json::Value = serde_json::from_str(include_str!("../tests/markdown/parser.json")).unwrap();
+        let cases: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/markdown/parser.json")).unwrap();
         for case in cases.as_array().unwrap() {
-            assert_eq!(roundtrip(case["input"].as_str().unwrap()), case["output"].as_str().unwrap());
+            assert_eq!(
+                roundtrip(case["input"].as_str().unwrap()),
+                case["output"].as_str().unwrap()
+            );
         }
     }
 
     #[test]
     fn serializes_like_nokogiri() {
         assert_eq!(roundtrip("<td>x</td>"), "x");
-        assert_eq!(roundtrip("<p><table><tr><td>a</td></tr></table>"), "<p></p><table><tbody><tr><td>a</td></tr></tbody></table>");
+        assert_eq!(
+            roundtrip("<p><table><tr><td>a</td></tr></table>"),
+            "<p></p><table><tbody><tr><td>a</td></tr></tbody></table>"
+        );
         assert_eq!(
             roundtrip("<a title='a<b>c' href=\"x&y\u{a0}z\">t&lt;\u{a0}>\"'</a>"),
             "<a title=\"a<b>c\" href=\"x&amp;y&nbsp;z\">t&lt;&nbsp;&gt;\"'</a>"
         );
         let mut dom = Dom::new();
         let f = dom.parse_fragment("<a title='a<b>c'>d>e</a>").unwrap();
-        assert_eq!(dom.to_html_with_escaped_attribute_brackets(f), "<a title=\"a&lt;b&gt;c\">d&gt;e</a>");
+        assert_eq!(
+            dom.to_html_with_escaped_attribute_brackets(f),
+            "<a title=\"a&lt;b&gt;c\">d&gt;e</a>"
+        );
         assert_eq!(roundtrip("<pre>\n\nx</pre>"), "<pre>\nx</pre>");
-        assert_eq!(roundtrip("<noscript><b>x</b></noscript>"), "<noscript><b>x</b></noscript>");
+        assert_eq!(
+            roundtrip("<noscript><b>x</b></noscript>"),
+            "<noscript><b>x</b></noscript>"
+        );
         assert_eq!(roundtrip("<?php x ?>"), "<!--?php x ?-->");
-        assert_eq!(roundtrip("<SVG viewBox='0 0 1 1'><CLIPPATH/></SVG>"), "<svg viewBox=\"0 0 1 1\"><clipPath></clipPath></svg>");
+        assert_eq!(
+            roundtrip("<SVG viewBox='0 0 1 1'><CLIPPATH/></SVG>"),
+            "<svg viewBox=\"0 0 1 1\"><clipPath></clipPath></svg>"
+        );
     }
 
     #[test]
     fn enforces_gumbo_limits() {
         let mut dom = Dom::new();
         assert!(dom.parse_fragment(&"<b>".repeat(400)).is_ok());
-        assert_eq!(dom.parse_fragment(&"<b>".repeat(401)), Err(ParseError::TreeDepthExceeded));
+        assert_eq!(
+            dom.parse_fragment(&"<b>".repeat(401)),
+            Err(ParseError::TreeDepthExceeded)
+        );
     }
 }

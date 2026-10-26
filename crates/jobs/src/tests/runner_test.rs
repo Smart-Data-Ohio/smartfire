@@ -6,10 +6,15 @@ use super::*;
 async fn durable_exhaustion_marker_and_failed_queue_row_commit_together() {
     let mut registry = Registry::new();
     registry.register(|(), _: Echo, _: Execution| async {
-        Err(JobError::retry_group(anyhow::anyhow!("corrupt video"), "StandardError", 1))
+        Err(JobError::retry_group(
+            anyhow::anyhow!("corrupt video"),
+            "StandardError",
+            1,
+        ))
     });
     registry.on_exhausted_in::<Echo, _>(|tx, (), job| {
-        tx.conn().execute("INSERT INTO terminal_markers VALUES(?)", [job.n])?;
+        tx.conn()
+            .execute("INSERT INTO terminal_markers VALUES(?)", [job.n])?;
         Ok(())
     });
     let h = harness(&registry, &config());
@@ -22,14 +27,30 @@ async fn durable_exhaustion_marker_and_failed_queue_row_commit_together() {
     }).await.unwrap();
     let id = h.enqueue(Echo { n: 226 }).await;
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
-    tokio::time::timeout(Duration::from_secs(5), rejected.notified()).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(5), rejected.notified())
+        .await
+        .unwrap();
     assert_eq!(h.job(id).unwrap().status, RUNNING);
-    h.db.write(|tx| { tx.conn().execute_batch("DROP TRIGGER refuse_marker")?; Ok(()) }).await.unwrap();
-    h.wait_for("atomic terminal outcome", |rows| rows[0].status == FAILED).await;
+    h.db.write(|tx| {
+        tx.conn().execute_batch("DROP TRIGGER refuse_marker")?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    h.wait_for("atomic terminal outcome", |rows| rows[0].status == FAILED)
+        .await;
     runner.shutdown(Duration::from_secs(5)).await;
-    let marker = h.db.read_blocking(|c| Ok(c.query_row("SELECT n FROM terminal_markers", [], |r| r.get::<_,i64>(0))?)).unwrap();
+    let marker =
+        h.db.read_blocking(|c| {
+            Ok(c.query_row("SELECT n FROM terminal_markers", [], |r| r.get::<_, i64>(0))?)
+        })
+        .unwrap();
     assert_eq!(marker, 226);
-    assert_eq!(h.job(id).unwrap().attempts, 1, "retry the commit, never decode again for its failed commit");
+    assert_eq!(
+        h.job(id).unwrap().attempts,
+        1,
+        "retry the commit, never decode again for its failed commit"
+    );
 }
 
 // --- Enqueueing ------------------------------------------------------------------------------------
@@ -40,7 +61,10 @@ async fn a_job_is_enqueued_in_its_writes_transaction() {
     let h = harness(&registry, &config());
     let id = h.enqueue(Echo { n: 1 }).await;
     let job = h.job(id).unwrap();
-    assert_eq!((job.queue.as_str(), job.class.as_str(), job.status.as_str()), ("default", "EchoJob", READY));
+    assert_eq!(
+        (job.queue.as_str(), job.class.as_str(), job.status.as_str()),
+        ("default", "EchoJob", READY)
+    );
     assert_eq!(job.arguments, serde_json::json!({"n": 1}));
     assert_eq!((job.payload_version, job.attempts), (1, 0));
     assert_eq!((job.run_at, job.created_at), (at(T0), at(T0)));
@@ -50,9 +74,8 @@ async fn a_job_is_enqueued_in_its_writes_transaction() {
 async fn a_write_that_rolls_back_enqueues_nothing() {
     let (registry, _) = echo_registry();
     let h = harness(&registry, &config());
-    let result = h
-        .db
-        .write(|tx| {
+    let result =
+        h.db.write(|tx| {
             tx.emit_after_commit(Event::job(&Echo { n: 1 }));
             tx.emit_now(Event::job(&Echo { n: 2 }));
             Err::<(), _>(campfire_db::Error::Other("validation failed".into()))
@@ -69,16 +92,24 @@ async fn a_job_that_cant_be_enqueued_fails_its_write() {
     let (registry, _) = echo_registry();
     let h = harness(&registry, &config());
     h.sink.broken.store(true, Ordering::SeqCst);
-    let result = h
-        .db
-        .write(|tx| {
-            tx.conn().execute_batch("CREATE TABLE side_effects (id integer)")?;
+    let result =
+        h.db.write(|tx| {
+            tx.conn()
+                .execute_batch("CREATE TABLE side_effects (id integer)")?;
             tx.emit_after_commit(Event::job(&Echo { n: 1 }));
             Ok(())
         })
         .await;
     assert!(result.is_err());
-    let tables: i64 = h.db.read_blocking(|conn| Ok(conn.query_row("SELECT count(*) FROM sqlite_master WHERE name = 'side_effects'", [], |r| r.get(0))?)).unwrap();
+    let tables: i64 =
+        h.db.read_blocking(|conn| {
+            Ok(conn.query_row(
+                "SELECT count(*) FROM sqlite_master WHERE name = 'side_effects'",
+                [],
+                |r| r.get(0),
+            )?)
+        })
+        .unwrap();
     assert_eq!(tables, 0, "the write rolled back");
 }
 
@@ -86,7 +117,9 @@ async fn a_job_that_cant_be_enqueued_fails_its_write() {
 async fn a_delayed_job_is_due_after_its_wait() {
     let (registry, _) = echo_registry();
     let h = harness(&registry, &config());
-    let id = h.enqueue_request(JobRequest::new(&Echo { n: 1 }).wait(Duration::from_secs(90))).await;
+    let id = h
+        .enqueue_request(JobRequest::new(&Echo { n: 1 }).wait(Duration::from_secs(90)))
+        .await;
     assert_eq!(h.job(id).unwrap().run_at, at("2026-09-29 12:01:30"));
 }
 
@@ -97,21 +130,40 @@ async fn held_jobs_run_once_released() {
     let (registry, mut performed) = echo_registry();
     let h = harness(&registry, &config());
     let hold = Duration::from_secs(300);
-    let held = h.enqueue_request(JobRequest::new(&Echo { n: 1 }).wait(hold)).await;
-    let other = h.enqueue_request(JobRequest::new(&Echo { n: 2 }).wait(hold)).await;
+    let held = h
+        .enqueue_request(JobRequest::new(&Echo { n: 1 }).wait(hold))
+        .await;
+    let other = h
+        .enqueue_request(JobRequest::new(&Echo { n: 2 }).wait(hold))
+        .await;
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
     tokio::time::sleep(Duration::from_millis(200)).await;
     assert!(performed.try_recv().is_err(), "held");
 
     let queue = h.queue.clone();
-    let released = h.db.write(move |tx| queue.release_held(tx, Echo::CLASS, "n", 1)).await.unwrap();
+    let released =
+        h.db.write(move |tx| queue.release_held(tx, Echo::CLASS, "n", 1))
+            .await
+            .unwrap();
     assert_eq!(released, 1);
     h.queue.wake(Echo::CLASS);
     assert_eq!(next(&mut performed).await, (1, 1));
-    h.wait_for("the released job to finish", |jobs| jobs.iter().all(|job| job.id != held)).await;
+    h.wait_for("the released job to finish", |jobs| {
+        jobs.iter().all(|job| job.id != held)
+    })
+    .await;
     let queue = h.queue.clone();
-    assert_eq!(h.db.write(move |tx| queue.release_held(tx, Echo::CLASS, "n", 1)).await.unwrap(), 0);
-    assert_eq!(h.job(other).unwrap().run_at, at("2026-09-29 12:05:00"), "still held");
+    assert_eq!(
+        h.db.write(move |tx| queue.release_held(tx, Echo::CLASS, "n", 1))
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        h.job(other).unwrap().run_at,
+        at("2026-09-29 12:05:00"),
+        "still held"
+    );
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
@@ -129,7 +181,10 @@ async fn releasing_leaves_jobs_past_their_hold_alone() {
         async move {
             let _ = performed.send((job.n, execution.executions));
             match job.n {
-                1 => Err(JobError::retry_after(anyhow::anyhow!("429 Too Many Requests"), Duration::from_secs(120))),
+                1 => Err(JobError::retry_after(
+                    anyhow::anyhow!("429 Too Many Requests"),
+                    Duration::from_secs(120),
+                )),
                 2 => Ok(Outcome::Again(Duration::from_secs(300))),
                 3 => {
                     finish.notified().await;
@@ -144,7 +199,10 @@ async fn releasing_leaves_jobs_past_their_hold_alone() {
     let ids: Vec<i64> = {
         let mut ids = Vec::new();
         for n in 1..=5 {
-            ids.push(h.enqueue_request(JobRequest::new(&Echo { n }).wait(hold)).await);
+            ids.push(
+                h.enqueue_request(JobRequest::new(&Echo { n }).wait(hold))
+                    .await,
+            );
         }
         ids
     };
@@ -166,8 +224,15 @@ async fn releasing_leaves_jobs_past_their_hold_alone() {
     first.sort();
     assert_eq!(first, [(1, 1), (2, 1), (3, 1), (4, 1), (5, 1)]);
     h.wait_for("the outcomes", |jobs| {
-        let status = |id: i64| jobs.iter().find(|job| job.id == id).map(|job| job.status.as_str());
-        status(ids[0]) == Some(READY) && status(ids[1]) == Some(READY) && status(ids[3]) == Some(FAILED) && status(ids[4]) == Some(FAILED)
+        let status = |id: i64| {
+            jobs.iter()
+                .find(|job| job.id == id)
+                .map(|job| job.status.as_str())
+        };
+        status(ids[0]) == Some(READY)
+            && status(ids[1]) == Some(READY)
+            && status(ids[3]) == Some(FAILED)
+            && status(ids[4]) == Some(FAILED)
     })
     .await;
     let before = h.jobs();
@@ -179,12 +244,29 @@ async fn releasing_leaves_jobs_past_their_hold_alone() {
     tokio::time::sleep(Duration::from_millis(300)).await;
     assert!(performed_rx.try_recv().is_err(), "nothing ran early");
     let after = h.jobs();
-    let run_at = |jobs: &[JobRow], id: i64| jobs.iter().find(|job| job.id == id).map(|job| (job.status.clone(), job.run_at)).unwrap();
-    assert_eq!(run_at(&after, ids[0]), (READY.to_string(), at("2026-09-29 12:07:00")), "the Retry-After backoff stands");
-    assert_eq!(run_at(&after, ids[1]), (READY.to_string(), at("2026-09-29 12:10:00")), "the rerun's wait stands");
+    let run_at = |jobs: &[JobRow], id: i64| {
+        jobs.iter()
+            .find(|job| job.id == id)
+            .map(|job| (job.status.clone(), job.run_at))
+            .unwrap()
+    };
+    assert_eq!(
+        run_at(&after, ids[0]),
+        (READY.to_string(), at("2026-09-29 12:07:00")),
+        "the Retry-After backoff stands"
+    );
+    assert_eq!(
+        run_at(&after, ids[1]),
+        (READY.to_string(), at("2026-09-29 12:10:00")),
+        "the rerun's wait stands"
+    );
     assert_eq!(run_at(&after, ids[2]).0, RUNNING);
     for id in &ids {
-        assert_eq!(run_at(&after, *id), run_at(&before, *id), "job {id} untouched");
+        assert_eq!(
+            run_at(&after, *id),
+            run_at(&before, *id),
+            "job {id} untouched"
+        );
     }
     finish.notify_one();
     runner.shutdown(Duration::from_secs(5)).await;
@@ -202,7 +284,15 @@ async fn a_job_runs_after_its_write_commits_and_sees_it() {
     registry.register(move |(), job: Echo, _: Execution| {
         let (seen, db) = (seen.clone(), db_for_job.get().unwrap().clone());
         async move {
-            let rows: i64 = db.read(move |conn| Ok(conn.query_row("SELECT count(*) FROM triggers WHERE n = ?", [job.n], |r| r.get(0))?)).await?;
+            let rows: i64 = db
+                .read(move |conn| {
+                    Ok(conn.query_row(
+                        "SELECT count(*) FROM triggers WHERE n = ?",
+                        [job.n],
+                        |r| r.get(0),
+                    )?)
+                })
+                .await?;
             let _ = seen.send((job.n, rows));
             Ok(Outcome::Done)
         }
@@ -211,31 +301,41 @@ async fn a_job_runs_after_its_write_commits_and_sees_it() {
     config.poll = Duration::from_secs(60); // only a wake can start it in time
     let h = harness(&registry, &config);
     assert!(db_slot.set(h.db.clone()).is_ok());
-    h.db.write(|tx| Ok(tx.conn().execute_batch("CREATE TABLE triggers (n integer)")?)).await.unwrap();
+    h.db.write(|tx| {
+        Ok(tx
+            .conn()
+            .execute_batch("CREATE TABLE triggers (n integer)")?)
+    })
+    .await
+    .unwrap();
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config);
     // Let the queue find nothing and go to sleep: only the commit's wake can start the job now.
     tokio::time::sleep(Duration::from_millis(200)).await;
 
     let committed = Arc::new(Mutex::new(None));
     let committed_at = committed.clone();
-    h.db
-        .write(move |tx| {
-            tx.emit_after_commit(Event::job(&Echo { n: 7 }));
-            // The runner can't claim it while this write holds the writer.
-            std::thread::sleep(Duration::from_millis(200));
-            tx.conn().execute("INSERT INTO triggers (n) VALUES (7)", [])?;
-            tx.after_commit(move |_| {
-                *committed_at.lock().unwrap() = Some(std::time::Instant::now());
-                Ok(())
-            });
+    h.db.write(move |tx| {
+        tx.emit_after_commit(Event::job(&Echo { n: 7 }));
+        // The runner can't claim it while this write holds the writer.
+        std::thread::sleep(Duration::from_millis(200));
+        tx.conn()
+            .execute("INSERT INTO triggers (n) VALUES (7)", [])?;
+        tx.after_commit(move |_| {
+            *committed_at.lock().unwrap() = Some(std::time::Instant::now());
             Ok(())
-        })
+        });
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let (n, rows) = tokio::time::timeout(Duration::from_secs(5), seen_rx.recv())
         .await
+        .expect("woken, not polled")
         .unwrap();
-    let (n, rows) = tokio::time::timeout(Duration::from_secs(5), seen_rx.recv()).await.expect("woken, not polled").unwrap();
     assert_eq!((n, rows), (7, 1), "the job saw its write's row");
     assert!(committed.lock().unwrap().is_some());
-    h.wait_for("the job's row to go", |jobs| jobs.is_empty()).await;
+    h.wait_for("the job's row to go", |jobs| jobs.is_empty())
+        .await;
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
@@ -253,7 +353,9 @@ impl Job for Flaky {
 
 impl JobKind for Flaky {
     fn retry_policy() -> RetryPolicy {
-        RetryPolicy::application_job().attempts(3).wait(Wait::PolynomiallyLonger { jitter: 0.0 })
+        RetryPolicy::application_job()
+            .attempts(3)
+            .wait(Wait::PolynomiallyLonger { jitter: 0.0 })
     }
 }
 
@@ -265,7 +367,11 @@ fn flaky_registry() -> (Registry<()>, Performed) {
         async move {
             let _ = performed.send((i64::from(job.succeed_on), execution.executions));
             if execution.executions < job.succeed_on {
-                return Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("timed out on execution {}", execution.executions)).into());
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::TimedOut,
+                    format!("timed out on execution {}", execution.executions),
+                )
+                .into());
             }
             Ok(Outcome::Done)
         }
@@ -283,7 +389,12 @@ async fn transient_failures_retry_with_polynomial_backoff() {
     let id = h.enqueue(Flaky { succeed_on: 3 }).await;
 
     assert_eq!(next(&mut performed).await, (3, 1));
-    let job = h.wait_for("the first retry", |jobs| jobs[0].status == READY && jobs[0].attempts == 1).await.remove(0);
+    let job = h
+        .wait_for("the first retry", |jobs| {
+            jobs[0].status == READY && jobs[0].attempts == 1
+        })
+        .await
+        .remove(0);
     assert_eq!(job.run_at, at("2026-09-29 12:00:03"));
     assert_eq!(job.last_error.as_deref(), Some("timed out on execution 1"));
 
@@ -296,12 +407,22 @@ async fn transient_failures_retry_with_polynomial_backoff() {
 
     h.travel(1);
     assert_eq!(next(&mut performed).await, (3, 2));
-    let job = h.wait_for("the second retry", |jobs| jobs[0].attempts == 2 && jobs[0].status == READY).await.remove(0);
-    assert_eq!(job.run_at, at("2026-09-29 12:00:21"), "18 s after the second failure");
+    let job = h
+        .wait_for("the second retry", |jobs| {
+            jobs[0].attempts == 2 && jobs[0].status == READY
+        })
+        .await
+        .remove(0);
+    assert_eq!(
+        job.run_at,
+        at("2026-09-29 12:00:21"),
+        "18 s after the second failure"
+    );
 
     h.travel(18);
     assert_eq!(next(&mut performed).await, (3, 3));
-    h.wait_for("the job to finish", |jobs| jobs.is_empty()).await;
+    h.wait_for("the job to finish", |jobs| jobs.is_empty())
+        .await;
     assert!(h.job(id).is_none());
     runner.shutdown(Duration::from_secs(5)).await;
 }
@@ -315,20 +436,32 @@ async fn a_job_out_of_attempts_is_kept_as_failed() {
     let id = h.enqueue(Flaky { succeed_on: 10 }).await;
     for (executions, wait) in [(1, 3), (2, 18)] {
         assert_eq!(next(&mut performed).await, (10, executions));
-        h.wait_for("the retry", |jobs| jobs[0].status == READY && jobs[0].attempts == executions).await;
+        h.wait_for("the retry", |jobs| {
+            jobs[0].status == READY && jobs[0].attempts == executions
+        })
+        .await;
         h.travel(wait);
     }
     assert_eq!(next(&mut performed).await, (10, 3));
-    let job = h.wait_for("the failure", |jobs| jobs[0].status == FAILED).await.remove(0);
+    let job = h
+        .wait_for("the failure", |jobs| jobs[0].status == FAILED)
+        .await
+        .remove(0);
     assert_eq!(job.attempts, 3);
     assert_eq!(job.last_error.as_deref(), Some("timed out on execution 3"));
     assert_eq!(job.failed_at, Some(at("2026-09-29 12:00:21")));
     assert_eq!(job.claimed_by, None);
-    let failed = h.db.read_blocking(|conn| inspect::with_status(conn, FAILED)).unwrap();
+    let failed =
+        h.db.read_blocking(|conn| inspect::with_status(conn, FAILED))
+            .unwrap();
     assert_eq!(failed.iter().map(|job| job.id).collect::<Vec<_>>(), [id]);
 
     // Retried by hand, it gets all its attempts back.
-    assert!(h.db.write(move |tx| inspect::retry_failed(tx, id)).await.unwrap());
+    assert!(
+        h.db.write(move |tx| inspect::retry_failed(tx, id))
+            .await
+            .unwrap()
+    );
     assert_eq!(next(&mut performed).await, (10, 1));
     runner.shutdown(Duration::from_secs(5)).await;
 }
@@ -337,12 +470,22 @@ async fn a_job_out_of_attempts_is_kept_as_failed() {
 #[tokio::test]
 async fn an_error_outside_retry_on_fails_the_job_at_once() {
     let mut registry = Registry::new();
-    registry.register(|(), _: Echo, _: Execution| async { Err(anyhow::anyhow!("undefined method 'deliver' for nil").into()) });
+    registry.register(|(), _: Echo, _: Execution| async {
+        Err(anyhow::anyhow!("undefined method 'deliver' for nil").into())
+    });
     let h = harness(&registry, &config());
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
     h.enqueue(Echo { n: 1 }).await;
-    let job = h.wait_for("the failure", |jobs| jobs.first().is_some_and(|job| job.status == FAILED)).await.remove(0);
-    assert_eq!((job.attempts, job.last_error.as_deref()), (1, Some("undefined method 'deliver' for nil")));
+    let job = h
+        .wait_for("the failure", |jobs| {
+            jobs.first().is_some_and(|job| job.status == FAILED)
+        })
+        .await
+        .remove(0);
+    assert_eq!(
+        (job.attempts, job.last_error.as_deref()),
+        (1, Some("undefined method 'deliver' for nil"))
+    );
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
@@ -362,16 +505,30 @@ impl JobKind for RateLimited {}
 async fn retry_after_sets_the_retry_and_is_capped_at_an_hour() {
     let mut registry = Registry::new();
     registry.register(|(), job: RateLimited, _: Execution| async move {
-        Err(JobError::retry_after(anyhow::anyhow!("429 Too Many Requests"), Duration::from_secs(job.retry_after)))
+        Err(JobError::retry_after(
+            anyhow::anyhow!("429 Too Many Requests"),
+            Duration::from_secs(job.retry_after),
+        ))
     });
     let h = harness(&registry, &config());
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
     let polite = h.enqueue(RateLimited { retry_after: 120 }).await;
-    let greedy = h.enqueue(RateLimited { retry_after: 86_400 }).await;
-    h.wait_for("both retries", |jobs| jobs.iter().all(|job| job.attempts == 1 && job.status == READY)).await;
+    let greedy = h
+        .enqueue(RateLimited {
+            retry_after: 86_400,
+        })
+        .await;
+    h.wait_for("both retries", |jobs| {
+        jobs.iter()
+            .all(|job| job.attempts == 1 && job.status == READY)
+    })
+    .await;
     assert_eq!(h.job(polite).unwrap().run_at, at("2026-09-29 12:02:00"));
     assert_eq!(h.job(greedy).unwrap().run_at, at("2026-09-29 13:00:00"));
-    assert_eq!(h.job(polite).unwrap().last_error.as_deref(), Some("429 Too Many Requests"));
+    assert_eq!(
+        h.job(polite).unwrap().last_error.as_deref(),
+        Some("429 Too Many Requests")
+    );
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
@@ -379,7 +536,9 @@ async fn retry_after_sets_the_retry_and_is_capped_at_an_hour() {
 #[tokio::test]
 async fn a_discarded_job_is_deleted() {
     let mut registry = Registry::new();
-    registry.register(|(), _: Echo, _: Execution| async { Err(JobError::discard(anyhow::anyhow!("Couldn't find Message"))) });
+    registry.register(|(), _: Echo, _: Execution| async {
+        Err(JobError::discard(anyhow::anyhow!("Couldn't find Message")))
+    });
     let h = harness(&registry, &config());
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
     h.enqueue(Echo { n: 1 }).await;
@@ -403,11 +562,28 @@ async fn a_job_can_run_again_as_a_fresh_job() {
     let h = harness(&registry, &config());
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
     let id = h.enqueue(Echo { n: 1 }).await;
-    assert_eq!(tokio::time::timeout(Duration::from_secs(5), performed_rx.recv()).await.unwrap(), Some(1));
-    let job = h.wait_for("the rerun", |jobs| jobs[0].status == READY).await.remove(0);
-    assert_eq!((job.id, job.attempts, job.run_at), (id, 0, at("2026-09-29 12:00:25")));
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(5), performed_rx.recv())
+            .await
+            .unwrap(),
+        Some(1)
+    );
+    let job = h
+        .wait_for("the rerun", |jobs| jobs[0].status == READY)
+        .await
+        .remove(0);
+    assert_eq!(
+        (job.id, job.attempts, job.run_at),
+        (id, 0, at("2026-09-29 12:00:25"))
+    );
     h.travel(25);
-    assert_eq!(tokio::time::timeout(Duration::from_secs(5), performed_rx.recv()).await.unwrap(), Some(1), "all its attempts again");
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(5), performed_rx.recv())
+            .await
+            .unwrap(),
+        Some(1),
+        "all its attempts again"
+    );
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
@@ -423,7 +599,10 @@ impl Job for Renamed {
 impl JobKind for Renamed {
     const VERSION: u32 = 2;
 
-    fn upgrade(version: u32, mut arguments: serde_json::Value) -> Result<serde_json::Value, String> {
+    fn upgrade(
+        version: u32,
+        mut arguments: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         match version {
             1 => {
                 let id = arguments["id"].take();
@@ -448,7 +627,13 @@ async fn old_payloads_are_upgraded_and_unreadable_ones_discarded() {
         }
     });
     let h = harness(&registry, &config());
-    let rows = [(1, r#"{"id": 41}"#), (2, r#"{"message_id": 42}"#), (3, r#"{"message_id": 43}"#), (2, r#"{"message": "not an id"}"#), (2, "not json")];
+    let rows = [
+        (1, r#"{"id": 41}"#),
+        (2, r#"{"message_id": 42}"#),
+        (3, r#"{"message_id": 43}"#),
+        (2, r#"{"message": "not an id"}"#),
+        (2, "not json"),
+    ];
     h.db.write(move |tx| {
         for (version, arguments) in rows {
             tx.conn().execute(
@@ -463,7 +648,12 @@ async fn old_payloads_are_upgraded_and_unreadable_ones_discarded() {
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
     let mut ids = vec![];
     for _ in 0..2 {
-        ids.push(tokio::time::timeout(Duration::from_secs(5), performed_rx.recv()).await.unwrap().unwrap());
+        ids.push(
+            tokio::time::timeout(Duration::from_secs(5), performed_rx.recv())
+                .await
+                .unwrap()
+                .unwrap(),
+        );
     }
     ids.sort();
     assert_eq!(ids, [41, 42]);
@@ -482,8 +672,14 @@ async fn a_job_without_a_handler_fails() {
         const CLASS: &'static str = "UnknownJob";
     }
     h.enqueue(Unknown {}).await;
-    let job = h.wait_for("the failure", |jobs| jobs[0].status == FAILED).await.remove(0);
-    assert_eq!(job.last_error.as_deref(), Some("no handler is registered for UnknownJob"));
+    let job = h
+        .wait_for("the failure", |jobs| jobs[0].status == FAILED)
+        .await
+        .remove(0);
+    assert_eq!(
+        job.last_error.as_deref(),
+        Some("no handler is registered for UnknownJob")
+    );
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
@@ -505,8 +701,18 @@ async fn a_panicking_job_fails_and_its_queue_carries_on() {
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config);
     h.enqueue(Echo { n: 1 }).await;
     h.enqueue(Echo { n: 2 }).await;
-    assert_eq!(tokio::time::timeout(Duration::from_secs(5), performed_rx.recv()).await.unwrap(), Some(2));
-    let job = h.wait_for("the failure", |jobs| jobs.len() == 1 && jobs[0].status == FAILED).await.remove(0);
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(5), performed_rx.recv())
+            .await
+            .unwrap(),
+        Some(2)
+    );
+    let job = h
+        .wait_for("the failure", |jobs| {
+            jobs.len() == 1 && jobs[0].status == FAILED
+        })
+        .await
+        .remove(0);
     assert_eq!(job.last_error.as_deref(), Some("panicked: kaboom"));
     runner.shutdown(Duration::from_secs(5)).await;
 }
@@ -520,7 +726,12 @@ impl Job for Hanging {
 
 impl JobKind for Hanging {
     fn retry_policy() -> RetryPolicy {
-        RetryPolicy::application_job().timeout(Duration::from_millis(100)).wait(Wait::Fixed { wait: Duration::from_secs(60), jitter: 0.0 })
+        RetryPolicy::application_job()
+            .timeout(Duration::from_millis(100))
+            .wait(Wait::Fixed {
+                wait: Duration::from_secs(60),
+                jitter: 0.0,
+            })
     }
 }
 
@@ -534,7 +745,12 @@ async fn a_job_past_its_timeout_is_retried() {
     let h = harness(&registry, &config());
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
     h.enqueue(Hanging {}).await;
-    let job = h.wait_for("the retry", |jobs| jobs[0].status == READY && jobs[0].attempts == 1).await.remove(0);
+    let job = h
+        .wait_for("the retry", |jobs| {
+            jobs[0].status == READY && jobs[0].attempts == 1
+        })
+        .await
+        .remove(0);
     assert_eq!(job.run_at, at("2026-09-29 12:01:00"));
     assert!(job.last_error.unwrap().starts_with("ran longer than 100ms"));
     runner.shutdown(Duration::from_secs(5)).await;
@@ -587,13 +803,34 @@ async fn a_serial_queue_runs_one_job_at_a_time_across_runners() {
         h.enqueue(SlackStep { n }).await;
         h.enqueue(Echo { n }).await;
     }
-    let first = start(h.db.clone(), h.queue.clone(), registry(), (), config.clone());
-    let second = start(h.db.clone(), JobQueue::new(&registry(), &config).unwrap(), registry(), (), config.clone());
-    h.wait_for("every job to finish", |jobs| jobs.is_empty()).await;
+    let first = start(
+        h.db.clone(),
+        h.queue.clone(),
+        registry(),
+        (),
+        config.clone(),
+    );
+    let second = start(
+        h.db.clone(),
+        JobQueue::new(&registry(), &config).unwrap(),
+        registry(),
+        (),
+        config.clone(),
+    );
+    h.wait_for("every job to finish", |jobs| jobs.is_empty())
+        .await;
     assert_eq!(serial.done.load(Ordering::SeqCst), 12);
-    assert_eq!(serial.most.load(Ordering::SeqCst), 1, "slack_import ran two jobs at once");
+    assert_eq!(
+        serial.most.load(Ordering::SeqCst),
+        1,
+        "slack_import ran two jobs at once"
+    );
     assert_eq!(parallel.done.load(Ordering::SeqCst), 12);
-    assert_eq!(parallel.most.load(Ordering::SeqCst), 3, "default runs 3 at once, across both runners");
+    assert_eq!(
+        parallel.most.load(Ordering::SeqCst),
+        3,
+        "default runs 3 at once, across both runners"
+    );
     first.shutdown(Duration::from_secs(5)).await;
     second.shutdown(Duration::from_secs(5)).await;
 }
@@ -603,8 +840,14 @@ fn a_class_on_a_queue_without_workers_is_refused() {
     let mut registry: Registry<()> = Registry::new();
     registry.register(|(), _: SlackStep, _: Execution| async { Ok(Outcome::Done) });
     let config = RunnerConfig::new(vec![QueueConfig::new("default", 2)]);
-    let error = JobQueue::new(&registry, &config).err().expect("refused").to_string();
-    assert_eq!(error, r#"SlackImport::StepJob runs on the "slack_import" queue, which has no workers"#);
+    let error = JobQueue::new(&registry, &config)
+        .err()
+        .expect("refused")
+        .to_string();
+    assert_eq!(
+        error,
+        r#"SlackImport::StepJob runs on the "slack_import" queue, which has no workers"#
+    );
 }
 
 // --- Leases, crashes and shutdown ------------------------------------------------------------------------
@@ -633,10 +876,24 @@ async fn the_heartbeat_keeps_a_long_jobs_lease() {
     let h = harness(&registry(), &config);
     h.clock.travel_back(); // real time: leases expire as the heartbeat stops
     h.enqueue(Echo { n: 1 }).await;
-    let first = start(h.db.clone(), h.queue.clone(), registry(), (), config.clone());
-    h.wait_for("the claim", |jobs| jobs[0].status == RUNNING).await;
-    let second = start(h.db.clone(), JobQueue::new(&registry(), &config).unwrap(), registry(), (), config.clone());
-    h.wait_for("the job to finish", |jobs| jobs.is_empty()).await;
+    let first = start(
+        h.db.clone(),
+        h.queue.clone(),
+        registry(),
+        (),
+        config.clone(),
+    );
+    h.wait_for("the claim", |jobs| jobs[0].status == RUNNING)
+        .await;
+    let second = start(
+        h.db.clone(),
+        JobQueue::new(&registry(), &config).unwrap(),
+        registry(),
+        (),
+        config.clone(),
+    );
+    h.wait_for("the job to finish", |jobs| jobs.is_empty())
+        .await;
     assert_eq!(performed.done.load(Ordering::SeqCst), 1, "performed once");
     assert_eq!(performed.most.load(Ordering::SeqCst), 1);
     first.shutdown(Duration::from_secs(5)).await;
@@ -668,9 +925,17 @@ async fn an_orphaned_job_is_recovered_when_its_lease_expires() {
 
     h.travel(1);
     assert_eq!(next(&mut performed).await, (1, 2), "the second execution");
-    let failed = h.wait_for("the exhausted job to fail", |jobs| jobs.len() == 1 && jobs[0].status == FAILED).await.remove(0);
+    let failed = h
+        .wait_for("the exhausted job to fail", |jobs| {
+            jobs.len() == 1 && jobs[0].status == FAILED
+        })
+        .await
+        .remove(0);
     assert_eq!(failed.id, exhausted);
-    assert_eq!(failed.last_error.as_deref(), Some("the process performing it stopped (execution 5 of 5)"));
+    assert_eq!(
+        failed.last_error.as_deref(),
+        Some("the process performing it stopped (execution 5 of 5)")
+    );
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
@@ -678,12 +943,19 @@ async fn an_orphaned_job_is_recovered_when_its_lease_expires() {
 /// expired (a heartbeat that couldn't be written in time).
 #[tokio::test]
 async fn a_job_still_being_performed_is_not_recovered_by_its_runner() {
-    let (release, released) = (Arc::new(tokio::sync::Notify::new()), Arc::new(AtomicUsize::new(0)));
+    let (release, released) = (
+        Arc::new(tokio::sync::Notify::new()),
+        Arc::new(AtomicUsize::new(0)),
+    );
     let (performed, mut performed_rx) = mpsc::unbounded_channel();
     let mut registry = Registry::new();
     let (release_by_job, released_by_job) = (release.clone(), released.clone());
     registry.register(move |(), job: Echo, execution: Execution| {
-        let (release, released, performed) = (release_by_job.clone(), released_by_job.clone(), performed.clone());
+        let (release, released, performed) = (
+            release_by_job.clone(),
+            released_by_job.clone(),
+            performed.clone(),
+        );
         async move {
             let _ = performed.send((job.n, execution.executions));
             release.notified().await;
@@ -703,7 +975,8 @@ async fn a_job_still_being_performed_is_not_recovered_by_its_runner() {
     let job = &h.jobs()[0];
     assert_eq!((job.status.as_str(), job.attempts), (RUNNING, 1));
     release.notify_one();
-    h.wait_for("the job to finish", |jobs| jobs.is_empty()).await;
+    h.wait_for("the job to finish", |jobs| jobs.is_empty())
+        .await;
     assert_eq!(released.load(Ordering::SeqCst), 1);
     runner.shutdown(Duration::from_secs(5)).await;
 }
@@ -714,7 +987,9 @@ async fn reject_completions(h: &Harness) {
 }
 
 async fn accept_completions(h: &Harness) {
-    h.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER reject_completions")?)).await.unwrap();
+    h.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER reject_completions")?))
+        .await
+        .unwrap();
 }
 
 /// A completion that can't be written is retried while its runner lives, lease or no lease.
@@ -751,7 +1026,10 @@ async fn a_claim_its_runner_stopped_performing_is_recovered() {
     assert_eq!(next(&mut performed).await, (1, 1));
     tokio::time::sleep(Duration::from_millis(1000)).await; // past the completion's retries
     accept_completions(&h).await;
-    h.wait_for("the job to be recovered and performed", |jobs| jobs.is_empty()).await;
+    h.wait_for("the job to be recovered and performed", |jobs| {
+        jobs.is_empty()
+    })
+    .await;
     let (n, executions) = next(&mut performed).await;
     assert!(n == 1 && executions >= 2, "performed again: {executions}");
     runner.shutdown(Duration::from_secs(5)).await;
@@ -778,12 +1056,23 @@ async fn shutdown_drains_running_jobs_and_leaves_the_rest_queued() {
         h.enqueue(Echo { n }).await;
     }
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config);
-    h.wait_for("two claims", |jobs| jobs.iter().filter(|job| job.status == RUNNING).count() == 2).await;
+    h.wait_for("two claims", |jobs| {
+        jobs.iter().filter(|job| job.status == RUNNING).count() == 2
+    })
+    .await;
     runner.shutdown(Duration::from_secs(5)).await;
-    assert_eq!(performed.done.load(Ordering::SeqCst), 2, "the running jobs finished");
+    assert_eq!(
+        performed.done.load(Ordering::SeqCst),
+        2,
+        "the running jobs finished"
+    );
     let jobs = h.jobs();
     assert_eq!(jobs.len(), 3);
-    assert!(jobs.iter().all(|job| job.status == READY && job.attempts == 0), "{jobs:#?}");
+    assert!(
+        jobs.iter()
+            .all(|job| job.status == READY && job.attempts == 0),
+        "{jobs:#?}"
+    );
 }
 
 /// Sets its flag when dropped, after a while (a job's cleanup).
@@ -814,12 +1103,19 @@ async fn shutdown_hands_back_jobs_that_outlast_the_grace_period() {
     let h = harness(&registry, &config());
     let id = h.enqueue(Echo { n: 1 }).await;
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
-    h.wait_for("the claim", |jobs| jobs[0].status == RUNNING).await;
+    h.wait_for("the claim", |jobs| jobs[0].status == RUNNING)
+        .await;
     h.travel(10);
     runner.shutdown(Duration::from_millis(200)).await;
-    assert!(dropped.load(Ordering::SeqCst), "the abandoned job was aborted before shutdown returned");
+    assert!(
+        dropped.load(Ordering::SeqCst),
+        "the abandoned job was aborted before shutdown returned"
+    );
     let job = h.job(id).unwrap();
-    assert_eq!((job.status.as_str(), job.attempts, job.claimed_by), (READY, 0, None));
+    assert_eq!(
+        (job.status.as_str(), job.attempts, job.claimed_by),
+        (READY, 0, None)
+    );
     assert_eq!(job.run_at, at("2026-09-29 12:00:10"));
 }
 
@@ -828,79 +1124,203 @@ async fn shutdown_hands_back_jobs_that_outlast_the_grace_period() {
 #[test]
 fn decisions_follow_retry_on_and_discard_on() {
     let policy = RetryPolicy::application_job().wait(Wait::PolynomiallyLonger { jitter: 0.0 });
-    let timeout = || JobError::Error(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "timed out")));
-    let retry = |seconds, error: &str| Decision::Reschedule { wait: Duration::from_secs(seconds), error: Some(error.into()), reset_attempts: false };
-    assert_eq!(decide(&policy, 1, &Ok(Outcome::Done), 0.0), Decision::Delete);
-    assert_eq!(decide(&policy, 1, &Err(timeout()), 0.0), retry(3, "timed out"));
-    assert_eq!(decide(&policy, 4, &Err(timeout()), 0.0), retry(258, "timed out"));
-    assert_eq!(decide(&policy, 5, &Err(timeout()), 0.0), Decision::Fail("timed out".into()));
-    assert_eq!(decide(&policy, 1, &Err(JobError::Error(anyhow::anyhow!("boom"))), 0.0), Decision::Fail("boom".into()));
-    assert_eq!(decide(&policy, 1, &Err(JobError::retry(anyhow::anyhow!("boom"))), 0.0), retry(3, "boom"));
-    assert_eq!(decide(&policy, 1, &Err(JobError::fail(anyhow::anyhow!(timeout().error().to_string()))), 0.0), Decision::Fail("timed out".into()));
-    assert_eq!(decide(&policy, 1, &Err(JobError::discard(anyhow::anyhow!("gone"))), 0.0), Decision::Delete);
+    let timeout = || {
+        JobError::Error(anyhow::Error::new(std::io::Error::new(
+            std::io::ErrorKind::TimedOut,
+            "timed out",
+        )))
+    };
+    let retry = |seconds, error: &str| Decision::Reschedule {
+        wait: Duration::from_secs(seconds),
+        error: Some(error.into()),
+        reset_attempts: false,
+    };
+    assert_eq!(
+        decide(&policy, 1, &Ok(Outcome::Done), 0.0),
+        Decision::Delete
+    );
+    assert_eq!(
+        decide(&policy, 1, &Err(timeout()), 0.0),
+        retry(3, "timed out")
+    );
+    assert_eq!(
+        decide(&policy, 4, &Err(timeout()), 0.0),
+        retry(258, "timed out")
+    );
+    assert_eq!(
+        decide(&policy, 5, &Err(timeout()), 0.0),
+        Decision::Fail("timed out".into())
+    );
+    assert_eq!(
+        decide(
+            &policy,
+            1,
+            &Err(JobError::Error(anyhow::anyhow!("boom"))),
+            0.0
+        ),
+        Decision::Fail("boom".into())
+    );
+    assert_eq!(
+        decide(
+            &policy,
+            1,
+            &Err(JobError::retry(anyhow::anyhow!("boom"))),
+            0.0
+        ),
+        retry(3, "boom")
+    );
+    assert_eq!(
+        decide(
+            &policy,
+            1,
+            &Err(JobError::fail(anyhow::anyhow!(
+                timeout().error().to_string()
+            ))),
+            0.0
+        ),
+        Decision::Fail("timed out".into())
+    );
+    assert_eq!(
+        decide(
+            &policy,
+            1,
+            &Err(JobError::discard(anyhow::anyhow!("gone"))),
+            0.0
+        ),
+        Decision::Delete
+    );
     assert_eq!(
         decide(&policy, 1, &Ok(Outcome::Again(Duration::from_secs(5))), 0.0),
-        Decision::Reschedule { wait: Duration::from_secs(5), error: None, reset_attempts: true }
+        Decision::Reschedule {
+            wait: Duration::from_secs(5),
+            error: None,
+            reset_attempts: true
+        }
     );
 }
 
 #[tokio::test]
 async fn google_recovery_preserves_completed_exception_group_budgets() {
-    let (registry,mut performed)=echo_registry();let h=harness(&registry,&config());let id=h.enqueue(Echo{n:123}).await;
+    let (registry, mut performed) = echo_registry();
+    let h = harness(&registry, &config());
+    let id = h.enqueue(Echo { n: 123 }).await;
     h.db.write(move |tx| {
         let args=serde_json::json!({"_campfire_retry_metadata_v1":{"arguments":{"n":123},"counts":{"[Google::Client::Unavailable]":7,"[Timeout::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, ActiveRecord::Deadlocked, ActiveRecord::StatementTimeout, SQLite3::BusyException]":4}}}).to_string();
         tx.conn().execute("UPDATE background_jobs SET status='running',attempts=12,claimed_by='dead-process',lease_expires_at=?,arguments=? WHERE id=?",rusqlite::params![tx.now(),args,id])?;Ok(())
     }).await.unwrap();
-    let runner=start(h.db.clone(),h.queue.clone(),registry,(),config());
-    h.wait_for("orphan recovery outcome",|jobs|jobs.is_empty() || jobs.iter().any(|job|job.status==FAILED)).await;
-    assert!(h.job(id).is_none(),"Recovery spent the completed exception handlers' attempts again: {:?}",h.job(id));
-    assert_eq!(next(&mut performed).await,(123,13));runner.shutdown(Duration::from_secs(5)).await;
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
+    h.wait_for("orphan recovery outcome", |jobs| {
+        jobs.is_empty() || jobs.iter().any(|job| job.status == FAILED)
+    })
+    .await;
+    assert!(
+        h.job(id).is_none(),
+        "Recovery spent the completed exception handlers' attempts again: {:?}",
+        h.job(id)
+    );
+    assert_eq!(next(&mut performed).await, (123, 13));
+    runner.shutdown(Duration::from_secs(5)).await;
 }
 
 #[tokio::test]
 async fn exhaustion_blocks_follow_committed_owned_outcomes_and_skip_ordinary_discards() {
-    let (started, mut starts)=mpsc::unbounded_channel();
-    let release=Arc::new(tokio::sync::Notify::new());
-    let reported=Arc::new(Mutex::new(Vec::new()));
-    let db_slot=Arc::new(std::sync::OnceLock::<Database>::new());
-    let mut registry=Registry::new();
-    let gate=release.clone();
-    registry.register(move |(),job:Echo,_:Execution| {
-        let (started,gate)=(started.clone(),gate.clone());
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let release = Arc::new(tokio::sync::Notify::new());
+    let reported = Arc::new(Mutex::new(Vec::new()));
+    let db_slot = Arc::new(std::sync::OnceLock::<Database>::new());
+    let mut registry = Registry::new();
+    let gate = release.clone();
+    registry.register(move |(), job: Echo, _: Execution| {
+        let (started, gate) = (started.clone(), gate.clone());
         async move {
             started.send(job.n).unwrap();
             gate.notified().await;
-            if job.n==3 {return Err(JobError::discard(anyhow::anyhow!("ordinary discard")));}
-            let mut error=JobError::retry_group(anyhow::anyhow!("fixture unavailable"),"fixture",1);
-            if let JobError::RetryGroup {discard_exhausted,..}=&mut error {*discard_exhausted=true;}
+            if job.n == 3 {
+                return Err(JobError::discard(anyhow::anyhow!("ordinary discard")));
+            }
+            let mut error =
+                JobError::retry_group(anyhow::anyhow!("fixture unavailable"), "fixture", 1);
+            if let JobError::RetryGroup {
+                discard_exhausted, ..
+            } = &mut error
+            {
+                *discard_exhausted = true;
+            }
             Err(error)
         }
     });
-    let observed=reported.clone();let slot=db_slot.clone();
-    registry.on_exhausted::<Echo,_>(move |(),job,_| {
-        let count=slot.get().unwrap().read_blocking(|c|Ok(c.query_row("SELECT count(*) FROM background_jobs WHERE json_extract(arguments,'$.n')=?",[job.n],|r|r.get::<_,i64>(0))?)).unwrap();
-        observed.lock().unwrap().push((job.n,count));
+    let observed = reported.clone();
+    let slot = db_slot.clone();
+    registry.on_exhausted::<Echo, _>(move |(), job, _| {
+        let count = slot
+            .get()
+            .unwrap()
+            .read_blocking(|c| {
+                Ok(c.query_row(
+                    "SELECT count(*) FROM background_jobs WHERE json_extract(arguments,'$.n')=?",
+                    [job.n],
+                    |r| r.get::<_, i64>(0),
+                )?)
+            })
+            .unwrap();
+        observed.lock().unwrap().push((job.n, count));
     });
-    let h=harness(&registry,&config());
+    let h = harness(&registry, &config());
     db_slot.set(h.db.clone()).ok().unwrap();
-    let one=h.enqueue(Echo{n:1}).await;let two=h.enqueue(Echo{n:2}).await;let three=h.enqueue(Echo{n:3}).await;
-    let rejected=Arc::new(tokio::sync::Notify::new());let signal=rejected.clone();
+    let one = h.enqueue(Echo { n: 1 }).await;
+    let two = h.enqueue(Echo { n: 2 }).await;
+    let three = h.enqueue(Echo { n: 3 }).await;
+    let rejected = Arc::new(tokio::sync::Notify::new());
+    let signal = rejected.clone();
     h.db.write(move |tx| {
         tx.conn().create_scalar_function("exhaustion_attempt",0,rusqlite::functions::FunctionFlags::SQLITE_UTF8,move |_| {signal.notify_one();Ok(0)})?;
         tx.conn().execute_batch(&format!("CREATE TRIGGER reject_terminal BEFORE DELETE ON background_jobs WHEN OLD.id={one} BEGIN SELECT exhaustion_attempt();SELECT RAISE(ABORT,'terminal rollback');END;"))?;
         Ok(())
     }).await.unwrap();
-    let runner=start(h.db.clone(),h.queue.clone(),registry,(),config());
-    for _ in 0..3 {tokio::time::timeout(Duration::from_secs(5),starts.recv()).await.unwrap().unwrap();}
-    h.db.write(move |tx| {tx.conn().execute("UPDATE background_jobs SET claimed_by='other-runner' WHERE id=?",[two])?;Ok(())}).await.unwrap();
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
+    for _ in 0..3 {
+        tokio::time::timeout(Duration::from_secs(5), starts.recv())
+            .await
+            .unwrap()
+            .unwrap();
+    }
+    h.db.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE background_jobs SET claimed_by='other-runner' WHERE id=?",
+            [two],
+        )?;
+        Ok(())
+    })
+    .await
+    .unwrap();
     release.notify_waiters();
-    tokio::time::timeout(Duration::from_secs(5),rejected.notified()).await.unwrap();
-    assert!(reported.lock().unwrap().is_empty(),"a rolled-back deletion must not report");
+    tokio::time::timeout(Duration::from_secs(5), rejected.notified())
+        .await
+        .unwrap();
+    assert!(
+        reported.lock().unwrap().is_empty(),
+        "a rolled-back deletion must not report"
+    );
     assert!(h.job(one).is_some());
-    h.db.write(|tx| {tx.conn().execute_batch("DROP TRIGGER reject_terminal")?;Ok(())}).await.unwrap();
-    h.wait_for("fenced terminal outcomes",|rows| rows.len()==1 && rows[0].id==two).await;
+    h.db.write(|tx| {
+        tx.conn().execute_batch("DROP TRIGGER reject_terminal")?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    h.wait_for("fenced terminal outcomes", |rows| {
+        rows.len() == 1 && rows[0].id == two
+    })
+    .await;
     runner.shutdown(Duration::from_secs(5)).await;
-    assert_eq!(*reported.lock().unwrap(),[(1,0)],"exactly one report after COMMIT; lost claim and ordinary discard report nothing");
-    assert_eq!(h.job(two).unwrap().claimed_by.as_deref(),Some("other-runner"));
+    assert_eq!(
+        *reported.lock().unwrap(),
+        [(1, 0)],
+        "exactly one report after COMMIT; lost claim and ordinary discard report nothing"
+    );
+    assert_eq!(
+        h.job(two).unwrap().claimed_by.as_deref(),
+        Some("other-runner")
+    );
     assert!(h.job(three).is_none());
 }

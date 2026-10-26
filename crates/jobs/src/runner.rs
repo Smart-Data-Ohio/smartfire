@@ -27,7 +27,10 @@ pub struct QueueConfig {
 
 impl QueueConfig {
     pub fn new(name: impl Into<String>, concurrency: usize) -> Self {
-        Self { name: name.into(), concurrency: concurrency.max(1) }
+        Self {
+            name: name.into(),
+            concurrency: concurrency.max(1),
+        }
     }
 }
 
@@ -86,22 +89,52 @@ struct Shared<C> {
 /// Starts performing `registry`'s jobs from the database's queue, each handler getting a clone
 /// of `context`. Recovers jobs orphaned by a previous process first (once their leases expire).
 /// Must run inside a Tokio runtime.
-pub fn start<C: Clone + Send + Sync + 'static>(db: Database, queue: JobQueue, registry: Registry<C>, context: C, config: RunnerConfig) -> Runner {
+pub fn start<C: Clone + Send + Sync + 'static>(
+    db: Database,
+    queue: JobQueue,
+    registry: Registry<C>,
+    context: C,
+    config: RunnerConfig,
+) -> Runner {
     let id = format!("{}-{}", std::process::id(), uuid::Uuid::new_v4().simple());
     let (stopping, _) = watch::channel(false);
     let (abandoning, _) = watch::channel(false);
     let (background_stopping, _) = watch::channel(false);
-    let shared = Arc::new(Shared { id: id.clone(), db: db.clone(), registry, queue, context, config, performing: Mutex::new(HashSet::new()) });
+    let shared = Arc::new(Shared {
+        id: id.clone(),
+        db: db.clone(),
+        registry,
+        queue,
+        context,
+        config,
+        performing: Mutex::new(HashSet::new()),
+    });
 
     let background = vec![
         tokio::spawn(recovery_loop(shared.clone(), stopping.subscribe())),
-        tokio::spawn(heartbeat_loop(shared.clone(), background_stopping.subscribe())),
+        tokio::spawn(heartbeat_loop(
+            shared.clone(),
+            background_stopping.subscribe(),
+        )),
     ];
     let mut queues = JoinSet::new();
     for queue in &shared.config.queues {
-        queues.spawn(queue_loop(shared.clone(), queue.clone(), stopping.subscribe(), abandoning.subscribe()));
+        queues.spawn(queue_loop(
+            shared.clone(),
+            queue.clone(),
+            stopping.subscribe(),
+            abandoning.subscribe(),
+        ));
     }
-    Runner { id, db, stopping, abandoning, queues, background_stopping, background }
+    Runner {
+        id,
+        db,
+        stopping,
+        abandoning,
+        queues,
+        background_stopping,
+        background,
+    }
 }
 
 impl Runner {
@@ -117,7 +150,10 @@ impl Runner {
     pub async fn shutdown(self, grace: Duration) {
         let _ = self.stopping.send(true);
         let mut queues = self.queues;
-        let drained = tokio::time::timeout(grace, async { while queues.join_next().await.is_some() {} }).await.is_ok();
+        let drained =
+            tokio::time::timeout(grace, async { while queues.join_next().await.is_some() {} })
+                .await
+                .is_ok();
         if !drained {
             // Each queue aborts its running jobs and waits for them to go.
             let _ = self.abandoning.send(true);
@@ -129,17 +165,31 @@ impl Runner {
             let _ = task.await;
         }
         let id = self.id.clone();
-        match self.db.write(move |tx| store::release(tx.conn(), &id, tx.now())).await {
+        match self
+            .db
+            .write(move |tx| store::release(tx.conn(), &id, tx.now()))
+            .await
+        {
             Ok(0) => {}
-            Ok(released) => tracing::warn!(released, "jobs still running at shutdown were abandoned and handed back to their queues"),
-            Err(error) => tracing::error!(%error, "handing back abandoned jobs failed; they're retried when their leases expire"),
+            Ok(released) => tracing::warn!(
+                released,
+                "jobs still running at shutdown were abandoned and handed back to their queues"
+            ),
+            Err(error) => {
+                tracing::error!(%error, "handing back abandoned jobs failed; they're retried when their leases expire")
+            }
         }
     }
 }
 
 /// One queue: claims due jobs while it has free slots, and otherwise waits to be woken (a job
 /// committed), for a job to finish, or for the next job to come due.
-async fn queue_loop<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, queue: QueueConfig, mut stopping: watch::Receiver<bool>, mut abandoning: watch::Receiver<bool>) {
+async fn queue_loop<C: Clone + Send + Sync + 'static>(
+    shared: Arc<Shared<C>>,
+    queue: QueueConfig,
+    mut stopping: watch::Receiver<bool>,
+    mut abandoning: watch::Receiver<bool>,
+) {
     let waker = shared.queue.waker(&queue.name);
     let mut performing = JoinSet::new();
     loop {
@@ -153,7 +203,11 @@ async fn queue_loop<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, qu
                 Ok((claimed, next_run_at)) => {
                     let full = claimed.len() == free;
                     for job in claimed {
-                        shared.performing.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).insert(job.id);
+                        shared
+                            .performing
+                            .lock()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner())
+                            .insert(job.id);
                         performing.spawn(perform(shared.clone(), job));
                     }
                     if !full && let Some(next_run_at) = next_run_at {
@@ -181,13 +235,30 @@ async fn queue_loop<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, qu
 }
 
 /// Claims up to `free` of `queue`'s due jobs, and reads when its next waiting job is due.
-async fn claim<C: Send + Sync + 'static>(shared: &Shared<C>, queue: &QueueConfig, free: usize) -> campfire_db::Result<(Vec<Claimed>, Option<Timestamp>)> {
-    let (name, concurrency, id, lease) = (queue.name.clone(), queue.concurrency, shared.id.clone(), shared.config.lease);
+async fn claim<C: Send + Sync + 'static>(
+    shared: &Shared<C>,
+    queue: &QueueConfig,
+    free: usize,
+) -> campfire_db::Result<(Vec<Claimed>, Option<Timestamp>)> {
+    let (name, concurrency, id, lease) = (
+        queue.name.clone(),
+        queue.concurrency,
+        shared.id.clone(),
+        shared.config.lease,
+    );
     shared
         .db
         .write(move |tx| {
             let now = tx.now();
-            let claimed = store::claim(tx.conn(), &name, concurrency, free, &id, now.since(signed(lease)), now)?;
+            let claimed = store::claim(
+                tx.conn(),
+                &name,
+                concurrency,
+                free,
+                &id,
+                now.since(signed(lease)),
+                now,
+            )?;
             let next_run_at = store::next_run_at(tx.conn(), &name)?;
             Ok((claimed, next_run_at))
         })
@@ -202,29 +273,65 @@ const COMPLETION_BACKOFF_LIMIT: Duration = Duration::from_secs(1);
 async fn perform<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, job: Claimed) {
     let started = Instant::now();
     let kind = shared.registry.get(&job.class).cloned();
-    let policy = kind.as_ref().map_or_else(RetryPolicy::no_retries, |kind| kind.policy);
-    let execution = Execution { id: job.id, executions: job.attempts, enqueued_at: job.created_at, scheduled_at: job.run_at };
-    tracing::debug!(job = job.class, id = job.id, executions = job.attempts, "performing");
+    let policy = kind
+        .as_ref()
+        .map_or_else(RetryPolicy::no_retries, |kind| kind.policy);
+    let execution = Execution {
+        id: job.id,
+        executions: job.attempts,
+        enqueued_at: job.created_at,
+        scheduled_at: job.run_at,
+    };
+    tracing::debug!(
+        job = job.class,
+        id = job.id,
+        executions = job.attempts,
+        "performing"
+    );
     let result = match kind {
-        None => Err(JobError::fail(anyhow!("no handler is registered for {}", job.class))),
+        None => Err(JobError::fail(anyhow!(
+            "no handler is registered for {}",
+            job.class
+        ))),
         Some(kind) => match serde_json::from_str(&job.arguments) {
-            Err(error) => Err(JobError::discard(anyhow!("{} arguments aren't JSON: {error}", job.class))),
+            Err(error) => Err(JobError::discard(anyhow!(
+                "{} arguments aren't JSON: {error}",
+                job.class
+            ))),
             Ok(arguments) => {
-                let execute = AssertUnwindSafe((kind.perform)(shared.context.clone(), crate::retry::arguments(arguments), job.version, execution)).catch_unwind();
+                let execute = AssertUnwindSafe((kind.perform)(
+                    shared.context.clone(),
+                    crate::retry::arguments(arguments),
+                    job.version,
+                    execution,
+                ))
+                .catch_unwind();
                 let finished = match policy.timeout {
                     Some(timeout) => tokio::time::timeout(timeout, execute).await,
                     None => Ok(execute.await),
                 };
                 match finished {
                     Ok(Ok(result)) => result,
-                    Ok(Err(panic)) => Err(JobError::fail(anyhow!("panicked: {}", panic_message(&*panic)))),
-                    Err(elapsed) => Err(JobError::retry(anyhow::Error::new(elapsed).context(format!("ran longer than {timeout:?}", timeout = policy.timeout.unwrap_or_default())))),
+                    Ok(Err(panic)) => Err(JobError::fail(anyhow!(
+                        "panicked: {}",
+                        panic_message(&*panic)
+                    ))),
+                    Err(elapsed) => Err(JobError::retry(anyhow::Error::new(elapsed).context(
+                        format!(
+                            "ran longer than {timeout:?}",
+                            timeout = policy.timeout.unwrap_or_default()
+                        ),
+                    ))),
                 }
             }
         },
     };
     finish(&shared, &job, &policy, result, started.elapsed()).await;
-    shared.performing.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).remove(&job.id);
+    shared
+        .performing
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .remove(&job.id);
 }
 
 /// What becomes of a job after an execution.
@@ -233,16 +340,31 @@ pub(crate) enum Decision {
     /// Done or discarded: the row goes.
     Delete,
     /// Due again after `wait`: a retry (recording the error), or a fresh run.
-    Reschedule { wait: Duration, error: Option<String>, reset_attempts: bool },
+    Reschedule {
+        wait: Duration,
+        error: Option<String>,
+        reset_attempts: bool,
+    },
     /// Failed for good.
     Fail(String),
 }
 
 /// `retry_on`/`discard_on` for one execution's result. `random` is in `[0, 1)`, for the jitter.
-pub(crate) fn decide(policy: &RetryPolicy, executions: u32, result: &JobResult, random: f64) -> Decision {
+pub(crate) fn decide(
+    policy: &RetryPolicy,
+    executions: u32,
+    result: &JobResult,
+    random: f64,
+) -> Decision {
     let error = match result {
         Ok(Outcome::Done) => return Decision::Delete,
-        Ok(Outcome::Again(wait)) => return Decision::Reschedule { wait: *wait, error: None, reset_attempts: true },
+        Ok(Outcome::Again(wait)) => {
+            return Decision::Reschedule {
+                wait: *wait,
+                error: None,
+                reset_attempts: true,
+            };
+        }
         Err(JobError::Discard(_)) => return Decision::Delete,
         Err(JobError::Fail(error)) => return Decision::Fail(describe(error)),
         Err(JobError::RetryGroup {
@@ -272,22 +394,43 @@ pub(crate) fn decide(policy: &RetryPolicy, executions: u32, result: &JobResult, 
         JobError::Discard(_) | JobError::Fail(_) | JobError::RetryGroup { .. } => unreachable!(),
     };
     let message = describe(error.error());
-    match retryable.then(|| policy.retry_delay(executions, retry_after, random)).flatten() {
-        Some(wait) => Decision::Reschedule { wait, error: Some(message), reset_attempts: false },
+    match retryable
+        .then(|| policy.retry_delay(executions, retry_after, random))
+        .flatten()
+    {
+        Some(wait) => Decision::Reschedule {
+            wait,
+            error: Some(message),
+            reset_attempts: false,
+        },
         None => Decision::Fail(message),
     }
 }
 
-async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, policy: &RetryPolicy, result: JobResult, elapsed: Duration) {
+async fn finish<C: Clone + Send + Sync + 'static>(
+    shared: &Shared<C>,
+    job: &Claimed,
+    policy: &RetryPolicy,
+    result: JobResult,
+    elapsed: Duration,
+) {
     let (decision, arguments) = decision_with_metadata(policy, job, &result, rand::random::<f64>());
     let (class, id, executions) = (job.class.as_str(), job.id, job.attempts);
     let elapsed_ms = elapsed.as_millis() as u64;
     match (&result, &decision) {
         (Ok(Outcome::Done), _) => tracing::info!(job = class, id, elapsed_ms, "performed"),
-        (Ok(Outcome::Again(wait)), _) => tracing::info!(job = class, id, elapsed_ms, again_in = ?wait, "performed, and performs again"),
-        (Err(JobError::Discard(error)), _) => tracing::warn!(job = class, id, error = describe(error), "discarded"),
-        (Err(_), Decision::Reschedule { wait, error, .. }) => tracing::warn!(job = class, id, executions, retry_in = ?wait, error, "failed, retrying"),
-        (Err(_), Decision::Fail(error)) => tracing::error!(job = class, id, executions, error, "failed"),
+        (Ok(Outcome::Again(wait)), _) => {
+            tracing::info!(job = class, id, elapsed_ms, again_in = ?wait, "performed, and performs again")
+        }
+        (Err(JobError::Discard(error)), _) => {
+            tracing::warn!(job = class, id, error = describe(error), "discarded")
+        }
+        (Err(_), Decision::Reschedule { wait, error, .. }) => {
+            tracing::warn!(job = class, id, executions, retry_in = ?wait, error, "failed, retrying")
+        }
+        (Err(_), Decision::Fail(error)) => {
+            tracing::error!(job = class, id, executions, error, "failed")
+        }
         (Err(JobError::RetryGroup { error, .. }), Decision::Delete) => tracing::error!(
             job = class,
             id,
@@ -299,16 +442,43 @@ async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Clai
 
     // A write that fails is retried, backing off, for up to a lease (the heartbeat keeps the
     // claim meanwhile). Then the job is let go, and recovered once its lease expires.
-    let terminal_retry = matches!((&result, &decision),
-        (Err(JobError::RetryGroup { discard_exhausted: true, .. }), Decision::Delete)
-        | (Err(JobError::RetryGroup { discard_exhausted: false, .. }), Decision::Fail(_)));
-    let exhausted_in = terminal_retry.then(|| shared.registry.get(class).and_then(|kind| kind.exhausted_in.clone())).flatten();
+    let terminal_retry = matches!(
+        (&result, &decision),
+        (
+            Err(JobError::RetryGroup {
+                discard_exhausted: true,
+                ..
+            }),
+            Decision::Delete
+        ) | (
+            Err(JobError::RetryGroup {
+                discard_exhausted: false,
+                ..
+            }),
+            Decision::Fail(_)
+        )
+    );
+    let exhausted_in = terminal_retry
+        .then(|| {
+            shared
+                .registry
+                .get(class)
+                .and_then(|kind| kind.exhausted_in.clone())
+        })
+        .flatten();
     let deadline = Instant::now() + shared.config.lease;
     let mut backoff = COMPLETION_BACKOFF;
     let written = loop {
-        let (runner, decision, arguments) = (shared.id.clone(), decision.clone(), arguments.clone());
-        let exhausted = exhausted_in.clone().map(|cleanup| (cleanup, shared.context.clone(),
-            crate::retry::arguments(serde_json::from_str(&job.arguments).unwrap_or_default()), job.version));
+        let (runner, decision, arguments) =
+            (shared.id.clone(), decision.clone(), arguments.clone());
+        let exhausted = exhausted_in.clone().map(|cleanup| {
+            (
+                cleanup,
+                shared.context.clone(),
+                crate::retry::arguments(serde_json::from_str(&job.arguments).unwrap_or_default()),
+                job.version,
+            )
+        });
         let written = shared
             .db
             .write(move |tx| {
@@ -340,16 +510,39 @@ async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Clai
     };
     match written {
         Ok(true) => {
-            if let Err(JobError::RetryGroup { error, discard_exhausted, .. }) = &result
-                && matches!((&decision, discard_exhausted), (Decision::Delete, true) | (Decision::Fail(_), false))
-                && let Some(callback)=shared.registry.get(class).and_then(|kind|kind.exhausted.as_ref())
+            if let Err(JobError::RetryGroup {
+                error,
+                discard_exhausted,
+                ..
+            }) = &result
+                && matches!(
+                    (&decision, discard_exhausted),
+                    (Decision::Delete, true) | (Decision::Fail(_), false)
+                )
+                && let Some(callback) = shared
+                    .registry
+                    .get(class)
+                    .and_then(|kind| kind.exhausted.as_ref())
             {
-                callback(shared.context.clone(),crate::retry::arguments(serde_json::from_str(&job.arguments).unwrap_or_default()),job.version,error);
+                callback(
+                    shared.context.clone(),
+                    crate::retry::arguments(
+                        serde_json::from_str(&job.arguments).unwrap_or_default(),
+                    ),
+                    job.version,
+                    error,
+                );
             }
         }
         // Its lease expired and it was recovered: the other claim's outcome stands.
-        Ok(false) => tracing::warn!(job = class, id, "the job's claim was lost while it ran; its outcome wasn't recorded"),
-        Err(error) => tracing::error!(job = class, id, %error, "recording the job's outcome failed; it's retried when its lease expires"),
+        Ok(false) => tracing::warn!(
+            job = class,
+            id,
+            "the job's claim was lost while it ran; its outcome wasn't recorded"
+        ),
+        Err(error) => {
+            tracing::error!(job = class, id, %error, "recording the job's outcome failed; it's retried when its lease expires")
+        }
     }
     // The queue claims again when this task ends, so a retry that's already due runs then.
 }
@@ -376,25 +569,49 @@ pub(crate) fn decision_with_metadata(
 }
 
 /// Extends the leases of the jobs being performed, until the runner has stopped.
-async fn heartbeat_loop<C: Send + Sync + 'static>(shared: Arc<Shared<C>>, mut stopping: watch::Receiver<bool>) {
+async fn heartbeat_loop<C: Send + Sync + 'static>(
+    shared: Arc<Shared<C>>,
+    mut stopping: watch::Receiver<bool>,
+) {
     loop {
         tokio::select! {
             () = tokio::time::sleep(shared.config.heartbeat) => {}
             () = stopped(&mut stopping) => return,
         }
-        let ids: Vec<i64> = shared.performing.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).iter().copied().collect();
+        let ids: Vec<i64> = shared
+            .performing
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .iter()
+            .copied()
+            .collect();
         if ids.is_empty() {
             continue;
         }
         let (runner, lease) = (shared.id.clone(), shared.config.lease);
-        if let Err(error) = shared.db.write(move |tx| store::heartbeat(tx.conn(), &runner, &ids, tx.now().since(signed(lease)), tx.now())).await {
+        if let Err(error) = shared
+            .db
+            .write(move |tx| {
+                store::heartbeat(
+                    tx.conn(),
+                    &runner,
+                    &ids,
+                    tx.now().since(signed(lease)),
+                    tx.now(),
+                )
+            })
+            .await
+        {
             tracing::error!(%error, "extending job leases failed");
         }
     }
 }
 
 /// Recovers jobs whose lease expired, now (at boot) and then every `recovery` interval.
-async fn recovery_loop<C: Send + Sync + 'static>(shared: Arc<Shared<C>>, mut stopping: watch::Receiver<bool>) {
+async fn recovery_loop<C: Send + Sync + 'static>(
+    shared: Arc<Shared<C>>,
+    mut stopping: watch::Receiver<bool>,
+) {
     loop {
         match recover(&shared).await {
             Ok(queues) => {
@@ -418,22 +635,46 @@ async fn recovery_loop<C: Send + Sync + 'static>(shared: Arc<Shared<C>>, mut sto
 /// Returns the queues with jobs due again.
 async fn recover<C: Send + Sync + 'static>(shared: &Shared<C>) -> campfire_db::Result<Vec<String>> {
     let runner = shared.id.clone();
-    let performing: Vec<i64> = shared.performing.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).iter().copied().collect();
-    let orphans = shared.db.write(move |tx| store::orphans(tx.conn(), &runner, &performing, tx.now())).await?;
+    let performing: Vec<i64> = shared
+        .performing
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .iter()
+        .copied()
+        .collect();
+    let orphans = shared
+        .db
+        .write(move |tx| store::orphans(tx.conn(), &runner, &performing, tx.now()))
+        .await?;
     let mut due = Vec::new();
     for orphan in orphans {
-        let attempts = shared.registry.get(&orphan.class).map_or(1, |kind| kind.policy.attempts);
-        let state = crate::retry::State::from_value(serde_json::from_str(&orphan.arguments).unwrap_or_default());
+        let attempts = shared
+            .registry
+            .get(&orphan.class)
+            .map_or(1, |kind| kind.policy.attempts);
+        let state = crate::retry::State::from_value(
+            serde_json::from_str(&orphan.arguments).unwrap_or_default(),
+        );
         let interrupted = state.interrupted_executions(orphan.attempts);
         let retry = interrupted < attempts;
-        let error = format!("the process performing it stopped (execution {interrupted} of {attempts})");
+        let error =
+            format!("the process performing it stopped (execution {interrupted} of {attempts})");
         let (id, message) = (orphan.id, error.clone());
-        if shared.db.write(move |tx| store::recover(tx.conn(), id, retry, &message, tx.now())).await? {
+        if shared
+            .db
+            .write(move |tx| store::recover(tx.conn(), id, retry, &message, tx.now()))
+            .await?
+        {
             if retry {
                 tracing::warn!(job = orphan.class, id, error, "recovered an orphaned job");
                 due.push(orphan.queue);
             } else {
-                tracing::error!(job = orphan.class, id, error, "an orphaned job has no attempts left, failed");
+                tracing::error!(
+                    job = orphan.class,
+                    id,
+                    error,
+                    "an orphaned job has no attempts left, failed"
+                );
             }
         }
     }
@@ -444,7 +685,11 @@ async fn recover<C: Send + Sync + 'static>(shared: &Shared<C>) -> campfire_db::R
 
 /// How long from `now` until `at` (zero if it's past).
 fn until(at: Timestamp, now: Timestamp) -> Duration {
-    Duration::from_micros(at.as_microsecond().saturating_sub(now.as_microsecond()).max(0) as u64)
+    Duration::from_micros(
+        at.as_microsecond()
+            .saturating_sub(now.as_microsecond())
+            .max(0) as u64,
+    )
 }
 
 fn signed(duration: Duration) -> jiff::SignedDuration {
@@ -463,5 +708,9 @@ async fn stopped(stopping: &mut watch::Receiver<bool>) {
 }
 
 fn panic_message(panic: &(dyn std::any::Any + Send)) -> &str {
-    panic.downcast_ref::<&str>().copied().or_else(|| panic.downcast_ref::<String>().map(String::as_str)).unwrap_or("Box<dyn Any>")
+    panic
+        .downcast_ref::<&str>()
+        .copied()
+        .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+        .unwrap_or("Box<dyn Any>")
 }

@@ -125,7 +125,6 @@ async fn replay(names: &[&str]) {
     Ok(q.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?.iter().map(|s|json!({"class":"Calendar::MeetingRefreshJob","args":[serde_json::from_str::<Value>(s).unwrap()["user_id"]]})).collect())
    }).await.unwrap();
             assert_eq!(json!(jobs), run["jobs"], "{name} durable jobs");
-
         }
     }
 }

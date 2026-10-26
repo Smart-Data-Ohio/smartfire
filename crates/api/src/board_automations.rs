@@ -145,7 +145,9 @@ async fn post_tag_rule(c: &mut Ctx) -> Result {
                 input.assignee_id,
                 actor_id,
             )?;
-            let assignee = User::find(tx.conn(), rule.assignee_id)?.display_name().to_owned();
+            let assignee = User::find(tx.conn(), rule.assignee_id)?
+                .display_name()
+                .to_owned();
             Ok((rule, assignee))
         })
         .await;
@@ -192,7 +194,9 @@ async fn delete_tag_rule(c: &mut Ctx) -> Result {
             let Some(rule) = rule.filter(|rule| rule.room_id == room_id) else {
                 return Ok(None);
             };
-            let assignee = User::find(tx.conn(), rule.assignee_id)?.display_name().to_owned();
+            let assignee = User::find(tx.conn(), rule.assignee_id)?
+                .display_name()
+                .to_owned();
             rule.destroy(tx)?;
             Ok(Some((rule.tag, assignee)))
         })

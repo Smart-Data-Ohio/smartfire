@@ -85,7 +85,10 @@ pub enum RecvError {
 
 impl Hub {
     pub fn new(capacity: usize) -> Arc<Self> {
-        Arc::new(Self { capacity, state: Mutex::new(State::default()) })
+        Arc::new(Self {
+            capacity,
+            state: Mutex::new(State::default()),
+        })
     }
 
     /// Publishes to every current subscriber of `broadcasting`. Returns how many received it.
@@ -95,21 +98,32 @@ impl Hub {
         let sequence = state.sequence;
         #[cfg(feature = "test-support")]
         if (state.capture_unfollowed || state.streams.contains_key(broadcasting))
-            && let Some(capture) = state.publications.as_ref().and_then(std::sync::Weak::upgrade)
+            && let Some(capture) = state
+                .publications
+                .as_ref()
+                .and_then(std::sync::Weak::upgrade)
         {
             // The same lock assigns sequence and sends to subscribers. Never sort this log.
-            capture.lock().unwrap().push((broadcasting.into(), payload.into()));
+            capture
+                .lock()
+                .unwrap()
+                .push((broadcasting.into(), payload.into()));
         }
         let Some(groups) = state.streams.get_mut(broadcasting) else {
             return 0;
         };
         let mut receivers = 0;
-        groups.retain(|group| match group.sender.send(Delivery { sequence, frame: group.frame(payload) }) {
-            Ok(count) => {
-                receivers += count;
-                true
+        groups.retain(|group| {
+            match group.sender.send(Delivery {
+                sequence,
+                frame: group.frame(payload),
+            }) {
+                Ok(count) => {
+                    receivers += count;
+                    true
+                }
+                Err(_) => false,
             }
-            Err(_) => false,
         });
         if groups.is_empty() {
             state.streams.remove(broadcasting);
@@ -126,7 +140,10 @@ impl Hub {
     }
 
     /// A refused publication keeps the current sequence. Check and publish under the hub lock.
-    pub(crate) fn try_sequenced<R, E>(&self, publish: impl FnOnce(u64) -> Result<R, E>) -> Result<R, E> {
+    pub(crate) fn try_sequenced<R, E>(
+        &self,
+        publish: impl FnOnce(u64) -> Result<R, E>,
+    ) -> Result<R, E> {
         let mut state = self.state.lock().unwrap();
         let sequence = state.sequence + 1;
         let result = publish(sequence)?;
@@ -141,18 +158,30 @@ impl Hub {
 
     /// Subscribes to `broadcasting`, receiving each payload wrapped as a message frame for the
     /// encoded channel `identifier`, or raw when it's `None`.
-    pub fn subscribe(self: &Arc<Self>, broadcasting: &str, identifier: Option<Arc<str>>) -> Subscriber {
+    pub fn subscribe(
+        self: &Arc<Self>,
+        broadcasting: &str,
+        identifier: Option<Arc<str>>,
+    ) -> Subscriber {
         let mut state = self.state.lock().unwrap();
         let groups = state.streams.entry(broadcasting.to_string()).or_default();
         let receiver = match groups.iter().find(|group| group.identifier == identifier) {
             Some(group) => group.sender.subscribe(),
             None => {
                 let (sender, receiver) = broadcast::channel(self.capacity);
-                groups.push(Group { identifier: identifier.clone(), sender });
+                groups.push(Group {
+                    identifier: identifier.clone(),
+                    sender,
+                });
                 receiver
             }
         };
-        Subscriber { hub: self.clone(), broadcasting: broadcasting.to_string(), identifier, receiver: Some(receiver) }
+        Subscriber {
+            hub: self.clone(),
+            broadcasting: broadcasting.to_string(),
+            identifier,
+            receiver: Some(receiver),
+        }
     }
 
     /// Number of broadcastings with at least one live subscriber channel.
@@ -205,7 +234,13 @@ impl Subscriber {
     }
 
     async fn recv_delivery(&mut self) -> Result<Delivery, RecvError> {
-        match self.receiver.as_mut().expect("receiver is present until drop").recv().await {
+        match self
+            .receiver
+            .as_mut()
+            .expect("receiver is present until drop")
+            .recv()
+            .await
+        {
             Ok(frame) => Ok(frame),
             Err(broadcast::error::RecvError::Lagged(_)) => Err(RecvError::Lagged),
             Err(broadcast::error::RecvError::Closed) => Err(RecvError::Closed),
@@ -215,7 +250,9 @@ impl Subscriber {
     /// The frames as a stream, which ends if the hub goes away. It holds the subscription until
     /// it's dropped.
     pub fn deliveries(self) -> BoxStream<'static, Result<Frame, RecvError>> {
-        self.ordered_deliveries().map(|result| result.map(|delivery| delivery.frame)).boxed()
+        self.ordered_deliveries()
+            .map(|result| result.map(|delivery| delivery.frame))
+            .boxed()
     }
 
     pub(crate) fn ordered_deliveries(self) -> BoxStream<'static, Result<Delivery, RecvError>> {
@@ -266,9 +303,19 @@ mod tests {
         assert_eq!(hub.broadcast("room", r#"{"id":1}"#), 4);
 
         let (a, b) = (a.recv().await.unwrap(), b.recv().await.unwrap());
-        assert_eq!(a, r#"{"identifier":"{\"channel\":\"RoomChannel\"}","message":{"id":1}}"#);
-        assert_eq!(a.as_str().as_ptr(), b.as_str().as_ptr(), "one frame shared by both subscribers");
-        assert_eq!(other.recv().await.unwrap(), r#"{"identifier":"other","message":{"id":1}}"#);
+        assert_eq!(
+            a,
+            r#"{"identifier":"{\"channel\":\"RoomChannel\"}","message":{"id":1}}"#
+        );
+        assert_eq!(
+            a.as_str().as_ptr(),
+            b.as_str().as_ptr(),
+            "one frame shared by both subscribers"
+        );
+        assert_eq!(
+            other.recv().await.unwrap(),
+            r#"{"identifier":"other","message":{"id":1}}"#
+        );
         assert_eq!(raw.recv().await.unwrap(), r#"{"id":1}"#);
 
         drop(other);

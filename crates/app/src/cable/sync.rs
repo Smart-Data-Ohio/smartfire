@@ -14,10 +14,10 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 pub use campfire_api_types::WorkspaceBranding;
 use campfire_api_types::{
-    BoardAutomationsChanged, CustomStyles, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState,
-    PollBallot, PollUpdated, RoomRead, RoomUnread, SavedChanged, SidebarRow,
-    SidebarRowRemoved, SyncPayload, Thread, ThreadIndicator, ThreadIndicatorChanged, ThreadRead,
-    ThreadRemoved, ThreadUnread, Typing,
+    BoardAutomationsChanged, CustomStyles, MessageCards, MessageDTO, MessageReactions,
+    MessageRemoved, PinState, PollBallot, PollUpdated, RoomRead, RoomUnread, SavedChanged,
+    SidebarRow, SidebarRowRemoved, SyncPayload, Thread, ThreadIndicator, ThreadIndicatorChanged,
+    ThreadRead, ThreadRemoved, ThreadUnread, Typing,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
 use campfire_db::models::activity_item::ActivityItemsRemoved;
@@ -31,7 +31,10 @@ pub trait SyncRenderer: Send + Sync + 'static {
     fn message(&self, conn: &Connection, message: &Message) -> Option<MessageDTO>;
     /// A bounded group serialized from the same read snapshot.
     fn messages(&self, conn: &Connection, messages: &[Message]) -> Option<Vec<MessageDTO>> {
-        messages.iter().map(|message| self.message(conn, message)).collect()
+        messages
+            .iter()
+            .map(|message| self.message(conn, message))
+            .collect()
     }
     /// The message's reactions and boosts, as `POST /api/v1/messages/:id/boosts` answers them.
     fn reactions(&self, conn: &Connection, message: &Message) -> Option<MessageReactions>;
@@ -215,14 +218,25 @@ impl RendererSlot {
 /// cable sink handles (its type's path, as the sink names it, without `campfire_db::models::`,
 /// `campfire_db::` or `crate::integrations::`).
 pub const TWINS: &[(&str, &[&str])] = &[
-    ("Broadcasts::user_updated", &["user.updated", "sidebar.row.upserted"]),
+    (
+        "Broadcasts::user_updated",
+        &["user.updated", "sidebar.row.upserted"],
+    ),
     ("workspace_branding::publish", &["workspace.updated"]),
-    ("sync::workspace_styles_updated", &["workspace.styles.updated"]),
+    (
+        "sync::workspace_styles_updated",
+        &["workspace.styles.updated"],
+    ),
     ("sync::settings_updated", &["settings.updated"]),
     ("sync::blocks_updated", &["blocks.updated"]),
     (
         "Broadcasts::message_create",
-        &["message.created", "room.files.changed", "room.unread", "sidebar.row.upserted"],
+        &[
+            "message.created",
+            "room.files.changed",
+            "room.unread",
+            "sidebar.row.upserted",
+        ],
     ),
     (
         "Broadcasts::unread_room",
@@ -234,11 +248,19 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     (
         "Broadcasts::message_remove",
-        &["message.removed", "room.files.changed", "sidebar.row.upserted"],
+        &[
+            "message.removed",
+            "room.files.changed",
+            "sidebar.row.upserted",
+        ],
     ),
     (
         "Broadcasts::message_replace",
-        &["message.updated", "room.files.changed", "sidebar.row.upserted"],
+        &[
+            "message.updated",
+            "room.files.changed",
+            "sidebar.row.upserted",
+        ],
     ),
     (
         "Broadcasts::message_reactions_replace",
@@ -255,7 +277,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
         "Broadcasts::board_automations_changed",
         &["board.automations.changed"],
     ),
-    ("Broadcasts::thread_read", &["thread.read", "sidebar.row.upserted"]),
+    (
+        "Broadcasts::thread_read",
+        &["thread.read", "sidebar.row.upserted"],
+    ),
     ("Broadcasts::room_remove", &["sidebar.row.removed"]),
     ("Broadcasts::open_room_create", &["sidebar.row.upserted"]),
     ("Broadcasts::open_room_update", &["sidebar.row.upserted"]),
@@ -269,7 +294,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     // The joiner's new row, and every other member's row with `refreshRoom`.
     ("Broadcasts::joined_open_room", &["sidebar.row.upserted"]),
     ("broadcasts::read_room", &["room.read"]),
-    ("messages::rendered::broadcast_tombstones", &["message.updated"]),
+    (
+        "messages::rendered::broadcast_tombstones",
+        &["message.updated"],
+    ),
     ("link_embeds::broadcast_message", &["message.cards"]),
     // No classic frame: the sink publishes these for the single-page app only.
     (
@@ -281,12 +309,25 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("agent_approval::ApprovalChange", &["approval.updated"]),
     ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
-    ("channel_thread::ThreadAccessChange", &["thread.updated", "thread.removed", "sidebar.row.upserted"]),
-    ("Broadcasts::thread_access_changed", &["thread.updated", "thread.removed", "sidebar.row.upserted"]),
+    (
+        "channel_thread::ThreadAccessChange",
+        &["thread.updated", "thread.removed", "sidebar.row.upserted"],
+    ),
+    (
+        "Broadcasts::thread_access_changed",
+        &["thread.updated", "thread.removed", "sidebar.row.upserted"],
+    ),
     ("activity_item::ActivityItemRecorded", &["activity.item"]),
     ("notification_push::MessageNotified", &["message.notified"]),
     ("Broadcasts::sync_message_notified", &["message.notified"]),
-    ("Broadcasts::sync_activity_recorded", &["activity.item", "sidebar.row.upserted", "sidebar.row.removed"]),
+    (
+        "Broadcasts::sync_activity_recorded",
+        &[
+            "activity.item",
+            "sidebar.row.upserted",
+            "sidebar.row.removed",
+        ],
+    ),
     ("membership::PresentRead", &["sidebar.row.upserted"]),
     (
         "room_category::SidebarOrganized",
@@ -296,7 +337,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "sidebar.category.removed",
         ],
     ),
-    ("workspace_category::WorkspaceOrganized", &["workspace.layout.updated"]),
+    (
+        "workspace_category::WorkspaceOrganized",
+        &["workspace.layout.updated"],
+    ),
     ("poll::PollChanged", &["poll.updated", "poll.ballot"]),
     ("calendar_event::EventsChanged", &["events.changed"]),
     // The card slots' replaces after a fetch, a refresh or an event's change.
@@ -304,7 +348,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("link_embed::store::CardUpdate", &["message.cards"]),
     ("fizzy::cards::CardUpdate", &["message.cards"]),
     ("twitter::post::CardUpdate", &["message.cards"]),
-    ("github::pull_requests::CardUpdated", &["message.cards", "thread.github.updated"]),
+    (
+        "github::pull_requests::CardUpdated",
+        &["message.cards", "thread.github.updated"],
+    ),
     ("TypingNotificationsChannel", &["typing"]),
     // Committed messages, pins, indicators, memberships, activity and read/unread effects.
     (
@@ -349,7 +396,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     ("user::lifecycle::QuietStreamFinal", &["message.updated"]),
     ("board_automations::DigestNotes", &["message.created"]),
-    ("github::notifier::MessageCreated", &["message.created", "room.unread"]),
+    (
+        "github::notifier::MessageCreated",
+        &["message.created", "room.unread"],
+    ),
     // The message or its thread's agent steps.
     ("agent_step::StepParentChange", &["agent.steps"]),
 ];
@@ -414,22 +464,36 @@ pub fn message_notified_later(
             return;
         };
         let notified = Message::find_by_id(conn, message_id).and_then(|message| {
-            let Some(message) = message else { return Ok(None) };
+            let Some(message) = message else {
+                return Ok(None);
+            };
             let recipients = campfire_db::models::notification_push::MessageNotified::recipients(
-                conn, &*rich_text, &message, now,
+                conn,
+                &*rich_text,
+                &message,
+                now,
             )?;
             Ok(Some((message, recipients)))
         });
         match notified {
             Ok(Some((message, recipients))) => {
-                for recipient in recipients.into_iter().filter(|r| server.sync_connected(r.user_id)) {
-                    let payload = SyncPayload::MessageNotified(campfire_api_types::MessageNotified {
-                        message_id,
-                        room_id: message.room_id,
-                        thread_id: message.thread_id,
-                        ignored: recipient.ignores_author.then_some(true),
-                    });
-                    send(&server, Audience::User(recipient.user_id), &payload, |publication| publication);
+                for recipient in recipients
+                    .into_iter()
+                    .filter(|r| server.sync_connected(r.user_id))
+                {
+                    let payload =
+                        SyncPayload::MessageNotified(campfire_api_types::MessageNotified {
+                            message_id,
+                            room_id: message.room_id,
+                            thread_id: message.thread_id,
+                            ignored: recipient.ignores_author.then_some(true),
+                        });
+                    send(
+                        &server,
+                        Audience::User(recipient.user_id),
+                        &payload,
+                        |publication| publication,
+                    );
                 }
             }
             Ok(None) => {}
@@ -454,7 +518,9 @@ pub fn message(
     };
     match campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) {
         Ok(blockers) => publish_message(server, conn, message, dto, created, &blockers),
-        Err(error) => tracing::warn!(%error, message_id = message.id, "sync: ignore policy not read"),
+        Err(error) => {
+            tracing::warn!(%error, message_id = message.id, "sync: ignore policy not read")
+        }
     }
 }
 
@@ -468,7 +534,13 @@ fn publish_message(
 ) {
     // Resolve source references at delivery and replay, after recipient personalization.
     dto.announcement_source = None;
-    let payload = |dto| if created { SyncPayload::MessageCreated(dto) } else { SyncPayload::MessageUpdated(dto) };
+    let payload = |dto| {
+        if created {
+            SyncPayload::MessageCreated(dto)
+        } else {
+            SyncPayload::MessageUpdated(dto)
+        }
+    };
     if !server.sync_wanted() {
         return;
     }
@@ -490,22 +562,53 @@ fn publish_message(
 }
 
 /// Validate publication even without subscribers, before claims or held jobs are released.
-pub fn checked_message(server: &Cable, slot: &RendererSlot, conn: &Connection, message: &Message, created: bool) -> bool {
-    let Some(renderer) = slot.0.renderer.get() else { return false; };
-    let Some(dto) = renderer.message(conn, message) else { return false; };
-    let Ok(blockers) = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id) else { return false; };
+pub fn checked_message(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    message: &Message,
+    created: bool,
+) -> bool {
+    let Some(renderer) = slot.0.renderer.get() else {
+        return false;
+    };
+    let Some(dto) = renderer.message(conn, message) else {
+        return false;
+    };
+    let Ok(blockers) = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)
+    else {
+        return false;
+    };
     publish_message(server, conn, message, dto, created, &blockers);
     true
 }
 
 /// Serialize the entire batch before acknowledging any digest publication IDs.
-pub fn checked_messages(server: &Cable, slot: &RendererSlot, conn: &Connection, messages: &[Message]) -> Option<Vec<i64>> {
+pub fn checked_messages(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    messages: &[Message],
+) -> Option<Vec<i64>> {
     let renderer = slot.0.renderer.get()?;
     let dtos = renderer.messages(conn, messages)?;
-    if dtos.len() != messages.len() { return None; }
-    let blockers = campfire_db::models::ignore_policy::blockers_for_authors(conn, messages.iter().map(|message| message.creator_id)).ok()?;
+    if dtos.len() != messages.len() {
+        return None;
+    }
+    let blockers = campfire_db::models::ignore_policy::blockers_for_authors(
+        conn,
+        messages.iter().map(|message| message.creator_id),
+    )
+    .ok()?;
     for (message, dto) in messages.iter().zip(dtos) {
-        publish_message(server, conn, message, dto, true, blockers.get(&message.creator_id).map_or(&[], Vec::as_slice));
+        publish_message(
+            server,
+            conn,
+            message,
+            dto,
+            true,
+            blockers.get(&message.creator_id).map_or(&[], Vec::as_slice),
+        );
     }
     Some(messages.iter().map(|message| message.id).collect())
 }
@@ -559,30 +662,49 @@ pub fn message_pinned(server: &Cable, conn: &Connection, message_id: i64) {
     if !server.sync_wanted() {
         return;
     }
-    let states = in_snapshot(conn, 0, |conn| (|| -> campfire_db::Result<Vec<(i64, PinState)>> {
-        let Some(message) = Message::find_by_id(conn, message_id)? else {
-            return Ok(Vec::new());
-        };
-        let pinned = campfire_db::MessagePin::pinned(conn, message_id)?;
-        let mut states = Vec::new();
-        for membership in Membership::for_room(conn, message.room_id)? {
-            if let Some(thread_id) = message.thread_id
-                && !ChannelThread::find(conn, thread_id)?.readable_by(conn, membership.user_id)? {
-                continue;
+    let states = in_snapshot(conn, 0, |conn| {
+        (|| -> campfire_db::Result<Vec<(i64, PinState)>> {
+            let Some(message) = Message::find_by_id(conn, message_id)? else {
+                return Ok(Vec::new());
+            };
+            let pinned = campfire_db::MessagePin::pinned(conn, message_id)?;
+            let mut states = Vec::new();
+            for membership in Membership::for_room(conn, message.room_id)? {
+                if let Some(thread_id) = message.thread_id
+                    && !ChannelThread::find(conn, thread_id)?
+                        .readable_by(conn, membership.user_id)?
+                {
+                    continue;
+                }
+                states.push((
+                    membership.user_id,
+                    PinState {
+                        message_id,
+                        room_id: message.room_id,
+                        pinned,
+                        pin_count: campfire_db::MessagePin::count_for_viewer(
+                            conn,
+                            message.room_id,
+                            membership.user_id,
+                        )?,
+                    },
+                ));
             }
-            states.push((membership.user_id, PinState {
-                message_id,
-                room_id: message.room_id,
-                pinned,
-                pin_count: campfire_db::MessagePin::count_for_viewer(conn, message.room_id, membership.user_id)?,
-            }));
-        }
-        Ok(states)
-    })()).unwrap_or_else(|| Ok(Vec::new()));
+            Ok(states)
+        })()
+    })
+    .unwrap_or_else(|| Ok(Vec::new()));
     match states {
-        Ok(states) => for (user_id, state) in states {
-            send(server, Audience::User(user_id), &SyncPayload::MessagePinned(state), |publication| publication);
-        },
+        Ok(states) => {
+            for (user_id, state) in states {
+                send(
+                    server,
+                    Audience::User(user_id),
+                    &SyncPayload::MessagePinned(state),
+                    |publication| publication,
+                );
+            }
+        }
         Err(error) => tracing::warn!(%error, message_id, "sync: pin state not read"),
     }
 }
@@ -667,22 +789,35 @@ pub fn unread_room(
     if !server.sync_wanted() {
         return;
     }
-    let facts = db.map(|db| {
-        db.read_blocking(|conn| {
-            let blockers = campfire_db::models::ignore_policy::blockers_of(conn, author_id)?;
-            let mentioned = message_id.map(|id| {
-                Message::find(conn, id)?.mentionees(conn, &*db.env().rich_text)
-                    .map(|users| users.into_iter().map(|user| user.id).collect::<Vec<_>>())
-            }).transpose()?.unwrap_or_default();
-            Ok((blockers, mentioned))
+    let facts = db
+        .map(|db| {
+            db.read_blocking(|conn| {
+                let blockers = campfire_db::models::ignore_policy::blockers_of(conn, author_id)?;
+                let mentioned = message_id
+                    .map(|id| {
+                        Message::find(conn, id)?
+                            .mentionees(conn, &*db.env().rich_text)
+                            .map(|users| users.into_iter().map(|user| user.id).collect::<Vec<_>>())
+                    })
+                    .transpose()?
+                    .unwrap_or_default();
+                Ok((blockers, mentioned))
+            })
         })
-    }).transpose();
+        .transpose();
     match facts {
         Ok(facts) => {
             let (blockers, mentioned) = facts.unwrap_or_default();
             // Never the author: their own message leaves the room read for them.
             for &user_id in user_ids.iter().filter(|id| **id != author_id) {
-                room_unread_with_policy(server, user_id, room_id, message_id, mentioned.contains(&user_id), blockers.contains(&user_id));
+                room_unread_with_policy(
+                    server,
+                    user_id,
+                    room_id,
+                    message_id,
+                    mentioned.contains(&user_id),
+                    blockers.contains(&user_id),
+                );
             }
         }
         Err(error) => tracing::warn!(%error, "sync: unread policy not read"),
@@ -759,7 +894,9 @@ pub fn activity_stream(
     stream: &str,
     payload: &serde_json::Value,
 ) {
-    if payload["syncRecorded"].as_bool() == Some(true) { return; }
+    if payload["syncRecorded"].as_bool() == Some(true) {
+        return;
+    }
     let (Some(user_id), Some(item_id)) = (
         stream
             .strip_prefix("user_")
@@ -784,7 +921,13 @@ pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, it
 }
 
 /// The recording source supplies the room even when the personal item was not stored.
-pub fn activity_item_in_room_later(server: &Cable, slot: &RendererSlot, user_id: i64, item_id: i64, room_id: Option<i64>) {
+pub fn activity_item_in_room_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    user_id: i64,
+    item_id: i64,
+    room_id: Option<i64>,
+) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
@@ -813,7 +956,10 @@ pub fn activity_item_in_room_later(server: &Cable, slot: &RendererSlot, user_id:
         // A message's item counts toward its room's red pill (`notificationCount`): a thread
         // reply pings without making the room unread, and reading the item clears it.
         // Read afresh later, under the room's lock, as every row is ([`RoomRows::publish`]).
-        match room_id.map(Some).map_or_else(|| item_room_id(conn, item_id), Ok) {
+        match room_id
+            .map(Some)
+            .map_or_else(|| item_room_id(conn, item_id), Ok)
+        {
             Ok(Some(room_id)) => {
                 sidebar_rows_later(&server, &slot, room_id, Some(vec![user_id]));
             }
@@ -842,12 +988,26 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
     };
     // Only owners with a sync socket open; the others get a gap marker.
     let items = if let Some(recipient_ids) = &removed.recipient_ids {
-        recipient_ids.iter().map(|&user_id| (
-            removed.items.iter().filter(|&&(_, owner)| owner == user_id).map(|&(id, _)| id).collect::<Vec<_>>(),
-            user_id,
-        )).collect()
+        recipient_ids
+            .iter()
+            .map(|&user_id| {
+                (
+                    removed
+                        .items
+                        .iter()
+                        .filter(|&&(_, owner)| owner == user_id)
+                        .map(|&(id, _)| id)
+                        .collect::<Vec<_>>(),
+                    user_id,
+                )
+            })
+            .collect()
     } else {
-        removed.items.iter().map(|&(id, user_id)| (vec![id], user_id)).collect::<Vec<_>>()
+        removed
+            .items
+            .iter()
+            .map(|&(id, user_id)| (vec![id], user_id))
+            .collect::<Vec<_>>()
     };
     let items = items
         .into_iter()
@@ -1130,32 +1290,48 @@ fn thread_indicator(
     });
     if let Some(id) = thread_id {
         match ChannelThread::find_by_id(conn, id) {
-            Ok(Some(thread)) if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private => {
+            Ok(Some(thread))
+                if thread.visibility
+                    == campfire_db::models::channel_thread::ThreadVisibility::Private =>
+            {
                 match thread_readers(conn, &thread) {
-                    Ok(readers) => for user_id in readers {
-                        send(server, Audience::User(user_id), &payload, |publication| publication);
-                    },
-                    Err(error) => tracing::warn!(%error, thread_id = id, "sync: private indicator readers not resolved"),
+                    Ok(readers) => {
+                        for user_id in readers {
+                            send(server, Audience::User(user_id), &payload, |publication| {
+                                publication
+                            });
+                        }
+                    }
+                    Err(error) => {
+                        tracing::warn!(%error, thread_id = id, "sync: private indicator readers not resolved")
+                    }
                 }
                 return thread_id;
             }
-            Ok(_) => {},
+            Ok(_) => {}
             Err(error) => {
                 tracing::warn!(%error, thread_id = id, "sync: indicator thread not read");
                 return thread_id;
             }
         }
     }
-    send(server, Audience::Topic(room_topic(parent.room_id)), &payload, |publication| publication);
+    send(
+        server,
+        Audience::Topic(room_topic(parent.room_id)),
+        &payload,
+        |publication| publication,
+    );
     thread_id
 }
 
 fn thread_readers(conn: &Connection, thread: &ChannelThread) -> campfire_db::Result<Vec<i64>> {
-    let predicate = campfire_db::models::channel_thread::readable_by_sql("?1", "memberships.user_id");
+    let predicate =
+        campfire_db::models::channel_thread::readable_by_sql("?1", "memberships.user_id");
     let mut statement = conn.prepare_cached(&format!(
         "SELECT user_id FROM memberships WHERE room_id=?2 AND {predicate} ORDER BY user_id"
     ))?;
-    Ok(statement.query_map([thread.id, thread.room_id], |row| row.get(0))?
+    Ok(statement
+        .query_map([thread.id, thread.room_id], |row| row.get(0))?
         .collect::<rusqlite::Result<_>>()?)
 }
 
@@ -1174,13 +1350,24 @@ fn room_files_changed(server: &Cable, conn: &Connection, thread_id: i64) {
     });
     if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private {
         match thread_readers(conn, &thread) {
-            Ok(readers) => for user_id in readers {
-                send(server, Audience::User(user_id), &payload, |publication| publication);
-            },
-            Err(error) => tracing::warn!(%error, thread_id, "sync: private files readers not resolved"),
+            Ok(readers) => {
+                for user_id in readers {
+                    send(server, Audience::User(user_id), &payload, |publication| {
+                        publication
+                    });
+                }
+            }
+            Err(error) => {
+                tracing::warn!(%error, thread_id, "sync: private files readers not resolved")
+            }
         }
     } else {
-        send(server, Audience::Topic(room_topic(thread.room_id)), &payload, |publication| publication);
+        send(
+            server,
+            Audience::Topic(room_topic(thread.room_id)),
+            &payload,
+            |publication| publication,
+        );
     }
 }
 
@@ -1217,12 +1404,22 @@ fn thread_changed(
         return;
     };
     if thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private {
-        let payload = if created { SyncPayload::ThreadCreated(dto) } else { SyncPayload::ThreadUpdated(dto) };
+        let payload = if created {
+            SyncPayload::ThreadCreated(dto)
+        } else {
+            SyncPayload::ThreadUpdated(dto)
+        };
         match thread_readers(conn, &thread) {
-            Ok(readers) => for user_id in readers {
-                send(server, Audience::User(user_id), &payload, |publication| publication);
-            },
-            Err(error) => tracing::warn!(%error, thread_id, "sync: private thread readers not resolved"),
+            Ok(readers) => {
+                for user_id in readers {
+                    send(server, Audience::User(user_id), &payload, |publication| {
+                        publication
+                    });
+                }
+            }
+            Err(error) => {
+                tracing::warn!(%error, thread_id, "sync: private thread readers not resolved")
+            }
         }
         return;
     }
@@ -1863,7 +2060,10 @@ pub fn workspace_styles_updated(server: &Cable, css: Option<String>) {
         server,
         Audience::Everyone,
         &SyncPayload::WorkspaceStylesUpdated(CustomStyles { css }),
-        |publication| SyncPublication { coalesce: Some("workspace.styles".into()), ..publication },
+        |publication| SyncPublication {
+            coalesce: Some("workspace.styles".into()),
+            ..publication
+        },
     );
 }
 
@@ -1881,7 +2081,12 @@ pub fn settings_updated(server: &Cable, settings: campfire_api_types::Settings) 
 }
 
 pub fn blocks_updated(server: &Cable, viewer: i64, state: campfire_api_types::BlockState) {
-    send(server, Audience::User(viewer), &SyncPayload::BlocksUpdated(state), |publication| publication);
+    send(
+        server,
+        Audience::User(viewer),
+        &SyncPayload::BlocksUpdated(state),
+        |publication| publication,
+    );
 }
 
 pub fn user_updated(server: &Cable, user: campfire_api_types::User) {
@@ -1889,10 +2094,15 @@ pub fn user_updated(server: &Cable, user: campfire_api_types::User) {
         return;
     }
     let user_id = user.id;
-    send(server, Audience::Everyone, &SyncPayload::UserUpdated(user), |publication| SyncPublication {
-        coalesce: Some(format!("user:{user_id}")),
-        ..publication
-    });
+    send(
+        server,
+        Audience::Everyone,
+        &SyncPayload::UserUpdated(user),
+        |publication| SyncPublication {
+            coalesce: Some(format!("user:{user_id}")),
+            ..publication
+        },
+    );
 }
 
 /// `agent.status` on every active human's `user` topic (the classic `agents:all` stream, which
@@ -2036,10 +2246,18 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
                     continue;
                 }
                 if let Some(update) = renderer.approval_updated(conn, approval_id, user_id)? {
-                    let payload = if campfire_db::ActivityItem::find_accessible(conn, &user, item_id)?.is_none() {
-                        let Some(unchanged) = renderer.activity_item(conn, user_id, item_id)? else { continue; };
-                        SyncPayload::ActivityItem(unchanged)
-                    } else { SyncPayload::ApprovalUpdated(update) };
+                    let payload =
+                        if campfire_db::ActivityItem::find_accessible(conn, &user, item_id)?
+                            .is_none()
+                        {
+                            let Some(unchanged) = renderer.activity_item(conn, user_id, item_id)?
+                            else {
+                                continue;
+                            };
+                            SyncPayload::ActivityItem(unchanged)
+                        } else {
+                            SyncPayload::ApprovalUpdated(update)
+                        };
                     updates.push((user_id, payload));
                 }
             }
@@ -2048,12 +2266,9 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
         match read {
             Ok(updates) => {
                 for (user_id, update) in updates {
-                    send(
-                        &server,
-                        Audience::User(user_id),
-                        &update,
-                        |publication| publication,
-                    );
+                    send(&server, Audience::User(user_id), &update, |publication| {
+                        publication
+                    });
                 }
             }
             Err(error) => tracing::warn!(%error, approval_id, "sync: approval not read"),
@@ -2108,16 +2323,23 @@ pub fn thread_access_changed(
     change: campfire_db::models::channel_thread::ThreadAccessChange,
 ) {
     if !change.added {
-        send(server, Audience::User(change.user_id), &SyncPayload::ThreadRemoved(ThreadRemoved {
-            thread_id: change.thread_id,
-            room_id: change.room_id,
-        }), |publication| SyncPublication {
-            unsubscribe: Some(thread_topic(change.thread_id)),
-            ..publication
-        });
+        send(
+            server,
+            Audience::User(change.user_id),
+            &SyncPayload::ThreadRemoved(ThreadRemoved {
+                thread_id: change.thread_id,
+                room_id: change.room_id,
+            }),
+            |publication| SyncPublication {
+                unsubscribe: Some(thread_topic(change.thread_id)),
+                ..publication
+            },
+        );
     }
     sidebar_rows_later(server, slot, change.room_id, Some(vec![change.user_id]));
-    let Some(renderer) = slot.get(server) else { return; };
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
     let (server, slot) = (server.downgrade(), slot.clone());
     renderer.defer_unread(Box::new(move |reader| {
         let Some(server) = server.upgrade() else { return; };

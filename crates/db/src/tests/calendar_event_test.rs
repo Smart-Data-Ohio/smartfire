@@ -9,12 +9,12 @@ use jiff::SignedDuration;
 use rusqlite::params;
 
 mod calendar_api_test;
-mod membership_calendar_test;
-mod cutover_event_test;
-mod cutover_entry_test;
-mod cutover_timeline_test;
-mod cutover_recurrence_test;
 mod cutover_d_events_test;
+mod cutover_entry_test;
+mod cutover_event_test;
+mod cutover_recurrence_test;
+mod cutover_timeline_test;
+mod membership_calendar_test;
 
 fn frozen() -> TestDb {
     TestDb::with_clock(

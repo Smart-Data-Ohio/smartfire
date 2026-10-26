@@ -30,7 +30,8 @@ pub(crate) struct NewJob<'a> {
 }
 
 pub(crate) fn insert(conn: &Connection, job: NewJob<'_>, now: Timestamp) -> Result<i64> {
-    let arguments = serde_json::to_string(job.arguments).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+    let arguments = serde_json::to_string(job.arguments)
+        .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
     Ok(conn.query_row_cached(
         r#"INSERT INTO "background_jobs" ("queue_name", "job_class", "arguments", "payload_version", "status", "attempts", "run_at", "created_at", "updated_at")
            VALUES (?1, ?2, ?3, ?4, 'ready', 0, ?5, ?6, ?6) RETURNING "id""#,
@@ -76,17 +77,27 @@ pub(crate) fn claim(
            RETURNING "id", "job_class", "arguments", "payload_version", "attempts", "run_at", "created_at""#,
     )?;
     let mut claimed = statement
-        .query_map(params![runner, lease_until, now, queue, limit as i64, concurrency as i64], |row| {
-            Ok(Claimed {
-                id: row.get(0)?,
-                class: row.get(1)?,
-                arguments: row.get(2)?,
-                version: row.get(3)?,
-                attempts: row.get(4)?,
-                run_at: row.get(5)?,
-                created_at: row.get(6)?,
-            })
-        })?
+        .query_map(
+            params![
+                runner,
+                lease_until,
+                now,
+                queue,
+                limit as i64,
+                concurrency as i64
+            ],
+            |row| {
+                Ok(Claimed {
+                    id: row.get(0)?,
+                    class: row.get(1)?,
+                    arguments: row.get(2)?,
+                    version: row.get(3)?,
+                    attempts: row.get(4)?,
+                    run_at: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            },
+        )?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     // RETURNING comes back in no particular order.
     claimed.sort_by_key(|job| (job.run_at, job.id));
@@ -107,7 +118,14 @@ pub(crate) fn next_run_at(conn: &Connection, queue: &str) -> Result<Option<Times
 /// and has never been claimed (no `lease_expires_at`, and no attempts). Anything else is left
 /// alone: a job whose hold ran out is due already, and one that has been claimed is its runner's
 /// (running, waiting out a retry's backoff or a rerun's wait, or failed).
-pub(crate) fn make_due(conn: &Connection, queue: &str, class: &str, path: &str, value: i64, now: Timestamp) -> Result<usize> {
+pub(crate) fn make_due(
+    conn: &Connection,
+    queue: &str,
+    class: &str,
+    path: &str,
+    value: i64,
+    now: Timestamp,
+) -> Result<usize> {
     Ok(conn
         .prepare_cached(
             r#"UPDATE "background_jobs" SET "run_at" = ?5, "updated_at" = ?5
@@ -124,7 +142,15 @@ pub(crate) fn delete(conn: &Connection, id: i64, runner: &str) -> Result<bool> {
 
 /// Puts a job `runner` holds back in its queue, due at `run_at`: a retry (keeping its attempts and
 /// recording the error), or a fresh run ([`crate::Outcome::Again`], which resets them).
-pub(crate) fn reschedule(conn: &Connection, id: i64, runner: &str, run_at: Timestamp, error: Option<&str>, reset_attempts: bool, now: Timestamp) -> Result<bool> {
+pub(crate) fn reschedule(
+    conn: &Connection,
+    id: i64,
+    runner: &str,
+    run_at: Timestamp,
+    error: Option<&str>,
+    reset_attempts: bool,
+    now: Timestamp,
+) -> Result<bool> {
     Ok(conn
         .prepare_cached(
             r#"UPDATE "background_jobs"
@@ -137,7 +163,13 @@ pub(crate) fn reschedule(conn: &Connection, id: i64, runner: &str, run_at: Times
 }
 
 /// Marks a job `runner` holds as failed for good.
-pub(crate) fn fail(conn: &Connection, id: i64, runner: &str, error: &str, now: Timestamp) -> Result<bool> {
+pub(crate) fn fail(
+    conn: &Connection,
+    id: i64,
+    runner: &str,
+    error: &str,
+    now: Timestamp,
+) -> Result<bool> {
     Ok(conn
         .prepare_cached(
             r#"UPDATE "background_jobs"
@@ -149,7 +181,13 @@ pub(crate) fn fail(conn: &Connection, id: i64, runner: &str, error: &str, now: T
 }
 
 /// Extends the leases of the jobs `runner` is performing.
-pub(crate) fn heartbeat(conn: &Connection, runner: &str, ids: &[i64], lease_until: Timestamp, now: Timestamp) -> Result<usize> {
+pub(crate) fn heartbeat(
+    conn: &Connection,
+    runner: &str,
+    ids: &[i64],
+    lease_until: Timestamp,
+    now: Timestamp,
+) -> Result<usize> {
     let ids = serde_json::to_string(ids).expect("ids serialize");
     Ok(conn
         .prepare_cached(
@@ -171,7 +209,12 @@ pub(crate) struct Orphan {
 
 /// Running jobs whose lease has expired, other than those `runner` is still `performing`: its
 /// own claims whose execution is over (their outcome couldn't be written) are orphans too.
-pub(crate) fn orphans(conn: &Connection, runner: &str, performing: &[i64], now: Timestamp) -> Result<Vec<Orphan>> {
+pub(crate) fn orphans(
+    conn: &Connection,
+    runner: &str,
+    performing: &[i64],
+    now: Timestamp,
+) -> Result<Vec<Orphan>> {
     let performing = serde_json::to_string(performing).expect("ids serialize");
     let mut statement = conn.prepare_cached(
         r#"SELECT "id", "queue_name", "job_class", "attempts", "arguments" FROM "background_jobs"
@@ -179,14 +222,28 @@ pub(crate) fn orphans(conn: &Connection, runner: &str, performing: &[i64], now: 
               AND NOT ("claimed_by" IS ?2 AND "id" IN (SELECT "value" FROM json_each(?3))) ORDER BY "id""#,
     )?;
     let orphans = statement
-        .query_map(params![now, runner, performing], |row| Ok(Orphan { id: row.get(0)?, queue: row.get(1)?, class: row.get(2)?, attempts: row.get(3)?, arguments: row.get(4)? }))?
+        .query_map(params![now, runner, performing], |row| {
+            Ok(Orphan {
+                id: row.get(0)?,
+                queue: row.get(1)?,
+                class: row.get(2)?,
+                attempts: row.get(3)?,
+                arguments: row.get(4)?,
+            })
+        })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(orphans)
 }
 
 /// Takes an orphan back from its dead runner: due again now, or failed for good. Conditional on
 /// its lease still being expired, so a runner that was only slow to heartbeat keeps it.
-pub(crate) fn recover(conn: &Connection, id: i64, retry: bool, error: &str, now: Timestamp) -> Result<bool> {
+pub(crate) fn recover(
+    conn: &Connection,
+    id: i64,
+    retry: bool,
+    error: &str,
+    now: Timestamp,
+) -> Result<bool> {
     let sql = if retry {
         r#"UPDATE "background_jobs"
               SET "status" = 'ready', "run_at" = ?2, "claimed_by" = NULL, "last_error" = ?3, "updated_at" = ?2

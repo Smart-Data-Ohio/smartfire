@@ -52,11 +52,17 @@ pub fn reference_path(path: &str) -> PathBuf {
     if let Some(fixture) = path.strip_prefix("test/fixtures/") {
         reference_dir().join(fixture)
     } else if let Some(public) = path.strip_prefix("public/") {
-        workspace_root().join("crates/static_assets/public").join(public)
+        workspace_root()
+            .join("crates/static_assets/public")
+            .join(public)
     } else if let Some(media) = path.strip_prefix("app/assets/").filter(|path| {
-        ["images/", "sounds/", "emoji/"].iter().any(|prefix| path.starts_with(prefix))
+        ["images/", "sounds/", "emoji/"]
+            .iter()
+            .any(|prefix| path.starts_with(prefix))
     }) {
-        workspace_root().join("crates/static_assets/media").join(media)
+        workspace_root()
+            .join("crates/static_assets/media")
+            .join(media)
     } else {
         reference_root().join(path)
     }
@@ -226,7 +232,10 @@ fn fixture_row(
             Some(Association::BelongsTo { column }) => {
                 let target = scalar_string(&value)
                     .ok_or_else(|| Error::Other(format!("{table}.{label}.{key}")))?;
-                values.insert(column, Value::Integer(identify(target.trim_start_matches(':'))));
+                values.insert(
+                    column,
+                    Value::Integer(identify(target.trim_start_matches(':'))),
+                );
             }
             Some(Association::Polymorphic { id, type_column }) => {
                 let target = scalar_string(&value)

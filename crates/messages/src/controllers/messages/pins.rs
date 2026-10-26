@@ -15,9 +15,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let pinned = c
         .app()
         .db
-        .write(
-            move |tx| MessagePin::pin(tx, &message, pinner),
-        )
+        .write(move |tx| MessagePin::pin(tx, &message, pinner))
         .await;
     // Preserve the cap outcome alongside the count; a cap refusal has no writes or frames.
     if let Err(cap) = pinned.map_err(db_error)? {
@@ -26,13 +24,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 StatusCode::UNPROCESSABLE_ENTITY,
                 &serde_json::json!({"error": cap.0}),
             ),
-            _ => features::redirect(
-                c,
-                &campfire_routes::room(room_id),
-                None,
-                Some(cap.0),
-                true,
-            ),
+            _ => features::redirect(c, &campfire_routes::room(room_id), None, Some(cap.0), true),
         };
     }
     pin_response(c, room_id, true).await
@@ -45,14 +37,12 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let room_id = message.room_id;
     c.app()
         .db
-        .write(
-            move |tx| {
-                if let Some(pin) = MessagePin::find_by_message(tx.conn(), message.id)? {
-                    pin.unpin(tx)?;
-                }
-                Ok(())
-            },
-        )
+        .write(move |tx| {
+            if let Some(pin) = MessagePin::find_by_message(tx.conn(), message.id)? {
+                pin.unpin(tx)?;
+            }
+            Ok(())
+        })
         .await
         .map_err(db_error)?;
     pin_response(c, room_id, false).await

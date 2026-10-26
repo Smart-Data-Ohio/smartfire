@@ -25,22 +25,37 @@ pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let user = from_avatar_token(c).await?;
     let user_id = user.id;
-    let blob = c.app().db.read(move |conn| attachments::attached_blob(conn, "User", user_id, "avatar"))
-        .await.map_err(Error::internal)?;
+    let blob = c
+        .app()
+        .db
+        .read(move |conn| attachments::attached_blob(conn, "User", user_id, "avatar"))
+        .await
+        .map_err(Error::internal)?;
     let private = match blob {
         Some(blob) => campfire_runtime::active_storage::authorize_private_media(c, blob.id).await?,
         None => false,
     };
 
     let freshness = Freshness {
-        etag: Some(cache_key_with_version("users", user.id, user.updated_at.jiff())),
+        etag: Some(cache_key_with_version(
+            "users",
+            user.id,
+            user.updated_at.jiff(),
+        )),
         template: template_found(c).then(|| TEMPLATE_DIGEST.to_string()),
         ..Freshness::default()
     };
     if !private && let Some(not_modified) = c.fresh_when(freshness) {
         return Ok(not_modified);
     }
-    c.expires_in(MAX_AGE, ExpiresIn { public: true, stale_while_revalidate: Some(STALE_WHILE_REVALIDATE), ..ExpiresIn::default() });
+    c.expires_in(
+        MAX_AGE,
+        ExpiresIn {
+            public: true,
+            stale_while_revalidate: Some(STALE_WHILE_REVALIDATE),
+            ..ExpiresIn::default()
+        },
+    );
 
     let response = if let Some(variant) = avatar_variant(c, &user).await? {
         let path = c.app().storage.service.path_for(&variant.key);
@@ -50,7 +65,11 @@ pub async fn show(c: &mut Ctx) -> Result {
     } else {
         render_initials(c, &user)
     }?;
-    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
+    Ok(if private {
+        response.header("cache-control", "private, no-store")
+    } else {
+        response
+    })
 }
 
 /// `Current.user.avatar.destroy`, then back to the profile.
@@ -72,23 +91,41 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 /// user is `ActiveRecord::RecordNotFound`.
 async fn from_avatar_token(c: &mut Ctx) -> Result<User> {
     let token = c.param_str("user_id").unwrap_or_default().to_string();
-    let Some(user_id) = presenters::accounts::user_id_from_avatar_token(&c.app().secrets, &token, c.now()) else {
+    let Some(user_id) =
+        presenters::accounts::user_id_from_avatar_token(&c.app().secrets, &token, c.now())
+    else {
         return halt(c.head(campfire_kit::StatusCode::NOT_FOUND));
     };
-    c.app().db.read(move |conn| User::find_by_id(conn, user_id)).await.map_err(Error::internal)?.ok_or(Error::NotFound)
+    c.app()
+        .db
+        .read(move |conn| User::find_by_id(conn, user_id))
+        .await
+        .map_err(Error::internal)?
+        .ok_or(Error::NotFound)
 }
 
 /// Whether `lookup_context.find_all("show", ["users/avatars", ...])` finds `show.svg.erb` for the
 /// request's formats: `*/*` or svg, or no registered format at all (`Accept: image/*` parses to
 /// none, and an empty `formats=` falls back to every format).
 fn template_found(c: &mut Ctx) -> bool {
-    let Ok(formats) = c.formats() else { return false };
-    formats.is_empty() || formats.iter().any(|format| **format == format::ALL || **format == format::SVG)
+    let Ok(formats) = c.formats() else {
+        return false;
+    };
+    formats.is_empty()
+        || formats
+            .iter()
+            .any(|format| **format == format::ALL || **format == format::SVG)
 }
 
 /// `avatar.variant(:square).processed if avatar.variable?` (`resize_to_limit: [512, 512], format: :webp`).
 async fn avatar_variant(c: &Ctx, user: &User) -> Result<Option<campfire_storage::Blob>> {
-    attachments::processed_variant(c.app(), Record::user(user.id), "avatar", Variation::resize_to_limit(512, 512, Some("webp"))).await
+    attachments::processed_variant(
+        c.app(),
+        Record::user(user.id),
+        "avatar",
+        Variation::resize_to_limit(512, 512, Some("webp")),
+    )
+    .await
 }
 
 /// `send_file Rails.root.join("app/assets/images/default-bot-avatar.svg"), content_type: "image/svg+xml", disposition: :inline`
@@ -102,7 +139,11 @@ fn render_initials(c: &mut Ctx, user: &User) -> Result {
     let svg = campfire_presentation::avatar::initials_svg(user.id, &user.initials());
     // `Vary: Accept` like any render when the format came from a non-browser `Accept` (e.g.
     // `image/*`); a browser's image `Accept` ends in `*/*`, so it usually doesn't apply.
-    Ok(c.render_as(campfire_kit::StatusCode::OK, "image/svg+xml; charset=utf-8", svg))
+    Ok(c.render_as(
+        campfire_kit::StatusCode::OK,
+        "image/svg+xml; charset=utf-8",
+        svg,
+    ))
 }
 
 /// A file under `app/assets/images` (embedded by campfire_static_assets) on disk, for `send_file`: it's
@@ -113,9 +154,17 @@ pub fn asset_file(logical_path: &str) -> Result<std::path::PathBuf> {
     static DIR: std::sync::Mutex<Option<tempfile::TempDir>> = std::sync::Mutex::new(None);
     let mut dir = DIR.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     if dir.is_none() {
-        *dir = Some(tempfile::Builder::new().prefix("campfire-assets-").tempdir()?);
+        *dir = Some(
+            tempfile::Builder::new()
+                .prefix("campfire-assets-")
+                .tempdir()?,
+        );
     }
-    let path = dir.as_ref().expect("initialized above").path().join(logical_path);
+    let path = dir
+        .as_ref()
+        .expect("initialized above")
+        .path()
+        .join(logical_path);
     if !path.exists() {
         let data = campfire_static_assets::asset_bytes(logical_path)
             .ok_or_else(|| Error::internal(anyhow::anyhow!("missing asset {logical_path}")))?;
@@ -123,7 +172,9 @@ pub fn asset_file(logical_path: &str) -> Result<std::path::PathBuf> {
         std::fs::create_dir_all(parent)?;
         let mut partial = tempfile::NamedTempFile::new_in(parent)?;
         std::io::Write::write_all(&mut partial, data)?;
-        partial.persist(&path).map_err(|error| Error::internal(error.error))?;
+        partial
+            .persist(&path)
+            .map_err(|error| Error::internal(error.error))?;
     }
     Ok(path)
 }

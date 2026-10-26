@@ -1,8 +1,8 @@
 use super::*;
-use campfire_db::Message;
-use crate::integrations::link_embed::Reference;
 use crate::controllers::presenters::test_support::*;
+use crate::integrations::link_embed::Reference;
 use crate::integrations::link_embed::sync_message;
+use campfire_db::Message;
 use campfire_db::NewMessage;
 use std::time::Duration;
 
@@ -25,23 +25,51 @@ async fn cached_message_render_retries_all_link_fetches_after_atomic_enqueue_fai
     let path = format!("/api/v1/rooms/{ALL_TALK}/messages");
     assert_eq!(browser.get(&path).await.status, axum::http::StatusCode::OK);
     let check = ids.clone();
-    app.db().write(move |tx| {
-        for id in check {
-            assert!(tx.conn().query_row("SELECT fetch_requested_at IS NULL FROM link_embeds WHERE id = ?", [id], |row| row.get::<_, bool>(0))?);
-        }
-        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class = 'LinkEmbed::FetchJob'", [], |row| row.get::<_, i64>(0))?, 0);
-        tx.conn().execute_batch("DROP TRIGGER reject_link_render")?;
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            for id in check {
+                assert!(tx.conn().query_row(
+                    "SELECT fetch_requested_at IS NULL FROM link_embeds WHERE id = ?",
+                    [id],
+                    |row| row.get::<_, bool>(0)
+                )?);
+            }
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class = 'LinkEmbed::FetchJob'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )?,
+                0
+            );
+            tx.conn().execute_batch("DROP TRIGGER reject_link_render")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let response = browser.get(&path).await;
     assert_eq!(response.status, axum::http::StatusCode::OK);
-    app.db().read(move |conn| {
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class = 'LinkEmbed::FetchJob'", [], |row| row.get::<_, i64>(0))?, 2);
-        for id in ids {
-            assert!(conn.query_row("SELECT fetch_requested_at IS NOT NULL FROM link_embeds WHERE id = ?", [id], |row| row.get::<_, bool>(0))?);
-        }
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class = 'LinkEmbed::FetchJob'",
+                    [],
+                    |row| row.get::<_, i64>(0)
+                )?,
+                2
+            );
+            for id in ids {
+                assert!(conn.query_row(
+                    "SELECT fetch_requested_at IS NOT NULL FROM link_embeds WHERE id = ?",
+                    [id],
+                    |row| row.get::<_, bool>(0)
+                )?);
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -73,15 +101,29 @@ async fn ws15e_link_containers_match_rails_and_view_requests_are_single_flight()
         .unwrap();
     let mut browser = app.david();
     for _ in 0..2 {
-        assert_eq!(browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await.status, axum::http::StatusCode::OK);
+        assert_eq!(
+            browser
+                .get(&format!("/api/v1/rooms/{ALL_TALK}/messages"))
+                .await
+                .status,
+            axum::http::StatusCode::OK
+        );
     }
     let jobs = app.db().read(campfire_jobs::inspect::all).await.unwrap();
-    assert_eq!(jobs.iter().filter(|job| job.class == "LinkEmbed::FetchJob").count(), 1);
+    assert_eq!(
+        jobs.iter()
+            .filter(|job| job.class == "LinkEmbed::FetchJob")
+            .count(),
+        1
+    );
     let id = message.id;
     app.db()
         .read(move |conn| {
             let mut message = Message::find(conn, id)?;
-            assert!(!can_offer_suppression(conn, &message, DAVID)?, "unusable generic card");
+            assert!(
+                !can_offer_suppression(conn, &message, DAVID)?,
+                "unusable generic card"
+            );
             assert!(!can_offer_suppression(conn, &message, JASON)?);
             message.system_note = true;
             assert!(!can_offer_suppression(conn, &message, DAVID)?);

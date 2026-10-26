@@ -27,7 +27,12 @@ static RATE_LIMIT_STORE: LazyLock<Arc<RateLimitStore>> = LazyLock::new(Default::
 
 /// `rate_limit to: 20, within: 1.minute, store: RATE_LIMIT_STORE, with: -> { head :too_many_requests }`
 fn rate_limit() -> RateLimit {
-    RateLimit::new("content_security_policy_reports", 20, SignedDuration::from_mins(1)).store(RATE_LIMIT_STORE.clone())
+    RateLimit::new(
+        "content_security_policy_reports",
+        20,
+        SignedDuration::from_mins(1),
+    )
+    .store(RATE_LIMIT_STORE.clone())
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -49,7 +54,9 @@ fn violations(body: &[u8]) -> Vec<serde_json::Map<String, Value>> {
     if body.len() > MAX_BODY {
         return vec![];
     }
-    let Ok(parsed) = serde_json::from_slice::<Value>(body) else { return vec![] };
+    let Ok(parsed) = serde_json::from_slice::<Value>(body) else {
+        return vec![];
+    };
     // `Array.wrap`: a list as is, anything else as a list of one.
     let entries = match parsed {
         Value::Array(entries) => entries,
@@ -58,7 +65,9 @@ fn violations(body: &[u8]) -> Vec<serde_json::Map<String, Value>> {
     entries
         .into_iter()
         .filter_map(|entry| {
-            let Value::Object(mut entry) = entry else { return None };
+            let Value::Object(mut entry) = entry else {
+                return None;
+            };
             let report = match entry.remove("csp-report") {
                 Some(report) if !report.is_null() && report != Value::Bool(false) => report,
                 _ => entry.remove("body")?,

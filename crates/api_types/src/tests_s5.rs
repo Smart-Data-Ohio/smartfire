@@ -281,7 +281,7 @@ fn notices_are_tagged_by_kind() {
             user_name: "Grace Hopper".into(),
             in_call: true,
             rejoin: false,
-                unchanged: None,
+            unchanged: None,
         },
         json!({
             "kind": "joined",

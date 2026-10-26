@@ -140,7 +140,10 @@ async fn the_inbox_lists_changes_and_publishes_items() {
         .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     let changed: api::ActivityItemChanged = parse(&response);
-    assert_eq!(changed.item.as_ref().unwrap().state, api::ActivityState::Read);
+    assert_eq!(
+        changed.item.as_ref().unwrap().state,
+        api::ActivityState::Read
+    );
     assert!(changed.item.as_ref().unwrap().read_at.is_some());
     assert_eq!(changed.unread_count, before.unread_count + 1);
     let event = sync.until(activity_item(mention), |_| false).await;
@@ -152,10 +155,7 @@ async fn the_inbox_lists_changes_and_publishes_items() {
     assert!(published_at <= a.booted.app.db.env().now().jiff());
     let mut expected = changed.clone();
     expected.evaluated_at = published.evaluated_at.clone();
-    assert_eq!(
-        event.payload,
-        api::SyncPayload::ActivityItem(expected)
-    );
+    assert_eq!(event.payload, api::SyncPayload::ActivityItem(expected));
     let read: api::ActivityList = parse(&david.send(get("/api/v1/activity?status=read")).await);
     assert!(read.items.iter().any(|item| item.id == mention));
 
@@ -187,7 +187,10 @@ async fn the_inbox_lists_changes_and_publishes_items() {
         .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     let opened: api::ActivityItemChanged = parse(&response);
-    assert_eq!(opened.item.as_ref().unwrap().state, api::ActivityState::Read);
+    assert_eq!(
+        opened.item.as_ref().unwrap().state,
+        api::ActivityState::Read
+    );
     let count: api::ActivityUnreadCount =
         parse(&david.send(get("/api/v1/activity/unread_count")).await);
     assert_eq!(count.unread_count, before.unread_count + 1);
@@ -263,7 +266,10 @@ async fn activity_count_persists_in_both_uis_across_fresh_sessions() {
     );
     assert_eq!(changed.unread_count, 1);
     assert_eq!(changed.unread_revision, count.unread_revision + 1);
-    assert!(changed.item.as_ref().unwrap().read_at.is_some() && changed.item.as_ref().unwrap().handled_at.is_some());
+    assert!(
+        changed.item.as_ref().unwrap().read_at.is_some()
+            && changed.item.as_ref().unwrap().handled_at.is_some()
+    );
     let response = david
         .write(
             Req::new(Method::PATCH, &format!("/activity/{read}/read"))
@@ -283,7 +289,9 @@ async fn activity_count_persists_in_both_uis_across_fresh_sessions() {
         assert_eq!(response.header("cache-control"), Some("no-store"));
         let count = serde_json::from_slice::<serde_json::Value>(&response.body).unwrap();
         assert_eq!(
-            count.get("unreadCount").or_else(|| count.get("unread_count")),
+            count
+                .get("unreadCount")
+                .or_else(|| count.get("unread_count")),
             Some(&json!(0)),
             "{path}"
         );
@@ -958,7 +966,8 @@ async fn mention_edits_promote_reply_and_demote_with_live_counts() {
                 |event| match &event.payload {
                     api::SyncPayload::ActivityItem(changed) => {
                         changed.item.as_ref().unwrap().id == before.id
-                            && changed.item.as_ref().unwrap().event_type == api::ActivityEventType::Reply
+                            && changed.item.as_ref().unwrap().event_type
+                                == api::ActivityEventType::Reply
                     }
                     api::SyncPayload::SidebarRowUpserted(row) => {
                         row.room.id == DESIGNERS && row.mention_count == 0
@@ -1468,7 +1477,10 @@ async fn credentials_threads_scheduled_and_saved_tell_the_other_tabs() {
         unreachable!()
     };
     assert_eq!(
-        (touched.item.as_ref().unwrap().event_type, touched.item.as_ref().unwrap().state),
+        (
+            touched.item.as_ref().unwrap().event_type,
+            touched.item.as_ref().unwrap().state
+        ),
         (
             api::ActivityEventType::ThreadActivity,
             api::ActivityState::Unread
@@ -1714,7 +1726,12 @@ async fn deactivating_an_agent_takes_its_approvals_out_of_the_inbox() {
 }
 
 /// A message in Designers by Jason, `seconds` after now: on the root timeline, or in `thread`.
-async fn designers_message(a: &TestApp, thread: Option<i64>, system_note: bool, seconds: i64) -> i64 {
+async fn designers_message(
+    a: &TestApp,
+    thread: Option<i64>,
+    system_note: bool,
+    seconds: i64,
+) -> i64 {
     let at = campfire_db::Timestamp::from_second(a.booted.app.db.env().now().as_second() + seconds);
     a.db()
         .write(move |tx| {
@@ -1742,7 +1759,12 @@ async fn exec(a: &TestApp, sql: &'static str, params: Vec<rusqlite::types::Value
 /// David with an empty inbox, his Designers membership set to `involvement` and read through its
 /// newest root message, as `Membership#read` leaves it, and thread 1 read.
 async fn quiet_designers(a: &TestApp, involvement: &'static str) {
-    exec(a, "DELETE FROM activity_items WHERE user_id = ?", vec![DAVID.into()]).await;
+    exec(
+        a,
+        "DELETE FROM activity_items WHERE user_id = ?",
+        vec![DAVID.into()],
+    )
+    .await;
     exec(
         a,
         "UPDATE memberships SET involvement = ?, unread_at = NULL, last_read_message_id = (SELECT id FROM messages WHERE room_id = memberships.room_id AND thread_id IS NULL ORDER BY created_at DESC, id DESC LIMIT 1) WHERE room_id = ? AND user_id = ?",
@@ -1757,7 +1779,11 @@ async fn designers_involvement(a: &TestApp, involvement: &'static str) {
     exec(
         a,
         "UPDATE memberships SET involvement = ? WHERE room_id = ? AND user_id = ?",
-        vec![involvement.to_owned().into(), DESIGNERS.into(), DAVID.into()],
+        vec![
+            involvement.to_owned().into(),
+            DESIGNERS.into(),
+            DAVID.into(),
+        ],
     )
     .await;
 }
@@ -1782,7 +1808,9 @@ async fn thread_unread(a: &TestApp, unread: bool) {
     .await;
 }
 
-async fn designers_row(david: &mut crate::controllers::presenters::test_support::Browser<'_>) -> api::SidebarRow {
+async fn designers_row(
+    david: &mut crate::controllers::presenters::test_support::Browser<'_>,
+) -> api::SidebarRow {
     let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
     sidebar
         .rows
@@ -1793,7 +1821,11 @@ async fn designers_row(david: &mut crate::controllers::presenters::test_support:
 
 /// `(unreadCount, notificationCount, threadNotificationCount)`.
 fn counts(row: &api::SidebarRow) -> (i64, i64, i64) {
-    (row.unread_count, row.notification_count, row.thread_notification_count)
+    (
+        row.unread_count,
+        row.notification_count,
+        row.thread_notification_count,
+    )
 }
 
 /// The next Designers row published to the socket.
@@ -1872,7 +1904,9 @@ async fn reading_the_room_clears_its_count_on_the_server() {
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
     let path = format!("/api/v1/rooms/{DESIGNERS}/read");
-    let response = david.write(json_body(Method::POST, &path, &json!({}))).await;
+    let response = david
+        .write(json_body(Method::POST, &path, &json!({})))
+        .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
 
     // The server publishes the read row, and a reload agrees: the badge doesn't come back,
@@ -1898,7 +1932,9 @@ async fn a_thread_ping_counts_until_the_thread_is_read() {
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
     let path = format!("/api/v1/threads/{THREAD}/read");
-    let response = david.write(json_body(Method::POST, &path, &json!({}))).await;
+    let response = david
+        .write(json_body(Method::POST, &path, &json!({})))
+        .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
     server.abort();
@@ -1937,7 +1973,9 @@ async fn a_read_thread_ping_stays_read_when_a_reply_follows() {
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
     let path = format!("/api/v1/threads/{THREAD}/read");
-    let response = david.write(json_body(Method::POST, &path, &json!({}))).await;
+    let response = david
+        .write(json_body(Method::POST, &path, &json!({})))
+        .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
 
@@ -1965,7 +2003,12 @@ async fn the_classic_thread_read_keeps_read_pings_read() {
 
     let path = format!("/rooms/{DESIGNERS}/threads/{THREAD}/read.json");
     let response = david.write(Req::new(Method::POST, &path)).await;
-    assert!(response.status.is_success(), "{} {}", response.status, response.text());
+    assert!(
+        response.status.is_success(),
+        "{} {}",
+        response.status,
+        response.text()
+    );
     designers_message(&a, Some(THREAD), false, 2).await;
     thread_receives(&a).await;
     assert_eq!(counts(&designers_row(&mut david).await), (0, 0, 0));
@@ -1985,8 +2028,15 @@ async fn deleting_the_only_ping_republishes_the_row() {
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
     let path = format!("/api/v1/messages/{JASONS_REPLY}");
-    let response = jason.write(json_body(Method::DELETE, &path, &json!({}))).await;
-    assert_eq!(response.status, StatusCode::NO_CONTENT, "{}", response.text());
+    let response = jason
+        .write(json_body(Method::DELETE, &path, &json!({})))
+        .await;
+    assert_eq!(
+        response.status,
+        StatusCode::NO_CONTENT,
+        "{}",
+        response.text()
+    );
     assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
     server.abort();
 }
@@ -2034,7 +2084,10 @@ async fn the_sidebar_reads_its_counts_in_one_snapshot() {
         .expect("and closes it");
     // Every membership, message and inbox read falls inside it.
     for (index, sql) in log.iter().enumerate() {
-        if ["memberships", "messages", "activity_items"].iter().any(|table| sql.contains(table)) {
+        if ["memberships", "messages", "activity_items"]
+            .iter()
+            .any(|table| sql.contains(table))
+        {
             assert!(begin < index && index < end, "outside the snapshot: {sql}");
         }
     }
@@ -2077,7 +2130,13 @@ async fn ordinary_replies_in_a_followed_thread_count_once() {
 }
 
 /// David's Designers row with one unread thread ping, and his socket.
-async fn thread_ping(a: &TestApp, addr: std::net::SocketAddr) -> (crate::controllers::presenters::test_support::Browser<'_>, Sync) {
+async fn thread_ping(
+    a: &TestApp,
+    addr: std::net::SocketAddr,
+) -> (
+    crate::controllers::presenters::test_support::Browser<'_>,
+    Sync,
+) {
     let mut david = a.sign_in(DAVID).await;
     quiet_designers(a, "mentions").await;
     item(a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
@@ -2094,8 +2153,15 @@ async fn leaving_a_thread_republishes_the_row() {
     let (addr, server) = serve(&a).await;
     let (mut david, mut sync) = thread_ping(&a, addr).await;
     let path = format!("/api/v1/threads/{THREAD}/join");
-    let response = david.write(json_body(Method::DELETE, &path, &json!({}))).await;
-    assert_eq!(response.status, StatusCode::NO_CONTENT, "{}", response.text());
+    let response = david
+        .write(json_body(Method::DELETE, &path, &json!({})))
+        .await;
+    assert_eq!(
+        response.status,
+        StatusCode::NO_CONTENT,
+        "{}",
+        response.text()
+    );
     assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
     server.abort();
 }
@@ -2109,19 +2175,30 @@ async fn leaving_a_thread_in_the_classic_app_republishes_the_row() {
     let response = david
         .write(Req::new(Method::DELETE, &path).header("accept", "application/json"))
         .await;
-    assert_eq!(response.status, StatusCode::NO_CONTENT, "{}", response.text());
+    assert_eq!(
+        response.status,
+        StatusCode::NO_CONTENT,
+        "{}",
+        response.text()
+    );
     assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
     server.abort();
 }
 
 /// A classic app socket (`/cable`) signed in with `cookie`, past its welcome.
-async fn classic_cable(addr: std::net::SocketAddr, cookie: &str) -> crate::channels::tests::support::Client {
+async fn classic_cable(
+    addr: std::net::SocketAddr,
+    cookie: &str,
+) -> crate::channels::tests::support::Client {
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
     let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
     let headers = request.headers_mut();
     headers.insert("origin", format!("http://{addr}").parse().unwrap());
     headers.insert("cookie", cookie.parse().unwrap());
-    headers.insert("sec-websocket-protocol", "actioncable-v1-json".parse().unwrap());
+    headers.insert(
+        "sec-websocket-protocol",
+        "actioncable-v1-json".parse().unwrap(),
+    );
     let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
     let mut client = crate::channels::tests::support::Client { socket };
     assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
@@ -2142,7 +2219,10 @@ async fn being_present_in_the_classic_app_republishes_the_read_row() {
     sync.welcome().await;
     let mut cable = classic_cable(addr, &david.cookie_header()).await;
     cable
-        .confirm(&crate::channels::tests::support::room_identifier("PresenceChannel", DESIGNERS))
+        .confirm(&crate::channels::tests::support::room_identifier(
+            "PresenceChannel",
+            DESIGNERS,
+        ))
         .await;
     // `present` reads the room: an authoritative row follows, so a row read before the read
     // can't leave the badge up.

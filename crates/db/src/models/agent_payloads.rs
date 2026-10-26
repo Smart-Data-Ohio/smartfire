@@ -168,8 +168,17 @@ pub fn build(
     access: &RepositoryAccess,
 ) -> Result<Payload> {
     if !super::agent_event_access::delivery_authorized(conn, event.id)? {
-        let missing_message=event.message_id.map(|id|Message::find_by_id(conn,id)).transpose()?.flatten().is_none();
-        let reason=if MESSAGE_TYPES.contains(&event.event_type.as_str()) && missing_message {"Message no longer available"} else {"Event access removed"};
+        let missing_message = event
+            .message_id
+            .map(|id| Message::find_by_id(conn, id))
+            .transpose()?
+            .flatten()
+            .is_none();
+        let reason = if MESSAGE_TYPES.contains(&event.event_type.as_str()) && missing_message {
+            "Message no longer available"
+        } else {
+            "Event access removed"
+        };
         return Ok(Payload::Unavailable(reason.into()));
     }
     let scoped = access.in_event(event.id);
@@ -178,14 +187,29 @@ pub fn build(
         &format!("SELECT a.user_id,a.owner_id,{},{} FROM agents a JOIN users u ON u.id=a.user_id LEFT JOIN users o ON o.id=a.owner_id WHERE a.id=?", User::projection("u", "agent_"), User::projection("o", "owner_")),
         [event.agent_id],|r|Ok((r.get(0)?,r.get(1)?,User::from_prefixed_row(r, "agent_")?.display_name().to_owned(),
             r.get::<_, Option<i64>>("owner_id")?.map(|_| User::from_prefixed_row(r, "owner_").map(|owner| owner.display_name().to_owned())).transpose()?)))?;
-    let thread_id = event.message_id.map(|id| Message::find_by_id(conn, id)).transpose()?.flatten().and_then(|message| message.thread_id)
-        .or_else(|| event.metadata.get("thread_id").and_then(serde_json::Value::as_i64));
+    let thread_id = event
+        .message_id
+        .map(|id| Message::find_by_id(conn, id))
+        .transpose()?
+        .flatten()
+        .and_then(|message| message.thread_id)
+        .or_else(|| {
+            event
+                .metadata
+                .get("thread_id")
+                .and_then(serde_json::Value::as_i64)
+        });
     if let Some(id) = thread_id {
         match ChannelThread::find_by_id(conn, id)? {
             Some(thread) if !thread.readable_by(conn, user_id)? => {
                 return Ok(Payload::Unavailable("Thread access removed".into()));
             }
-            None if event.metadata.get("thread_visibility").and_then(Value::as_str) == Some("private") => {
+            None if event
+                .metadata
+                .get("thread_visibility")
+                .and_then(Value::as_str)
+                == Some("private") =>
+            {
                 return Ok(Payload::Unavailable("Thread no longer available".into()));
             }
             _ => (),
@@ -308,11 +332,22 @@ pub fn build(
 fn approval_payload(conn: &Connection, id: i64) -> Result<Option<Value>> {
     query_one(
         conn,
-        &format!("SELECT a.id,a.status,a.decision_note,{} FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=?", User::projection("u", "decider_")),
+        &format!(
+            "SELECT a.id,a.status,a.decision_note,{} FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=?",
+            User::projection("u", "decider_")
+        ),
         [id],
         |r| {
-            let decider = r.get::<_, Option<i64>>("decider_id")?.map(|_| User::from_prefixed_row(r, "decider_").map(|user| user.display_name().to_owned())).transpose()?;
-            Ok(json!({"approval_id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"decided_by":decider,"note":r.get::<_,Option<String>>(2)?}))
+            let decider = r
+                .get::<_, Option<i64>>("decider_id")?
+                .map(|_| {
+                    User::from_prefixed_row(r, "decider_")
+                        .map(|user| user.display_name().to_owned())
+                })
+                .transpose()?;
+            Ok(
+                json!({"approval_id":r.get::<_,i64>(0)?,"status":r.get::<_,String>(1)?,"decided_by":decider,"note":r.get::<_,Option<String>>(2)?}),
+            )
         },
     )
 }

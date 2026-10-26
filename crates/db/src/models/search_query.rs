@@ -402,10 +402,16 @@ impl SearchQuery {
         let (mut sql, mut values) = self.sql(&zone)?;
         sql.push_str(" AND EXISTS (SELECT 1 FROM memberships mem WHERE mem.room_id=rooms.id AND mem.user_id=?)");
         values.push(user.into());
-        sql.push_str(&format!(" AND (messages.thread_id IS NULL OR {})", super::channel_thread::readable_by_sql("messages.thread_id", &user.to_string())));
+        sql.push_str(&format!(
+            " AND (messages.thread_id IS NULL OR {})",
+            super::channel_thread::readable_by_sql("messages.thread_id", &user.to_string())
+        ));
         if self.author_ids.is_empty() && self.from_names.is_empty() {
             sql.push_str(" AND ");
-            sql.push_str(&super::ignore_policy::visible_sql("?", "messages.creator_id"));
+            sql.push_str(&super::ignore_policy::visible_sql(
+                "?",
+                "messages.creator_id",
+            ));
             values.push(user.into());
         }
         if self.mentions_me {
@@ -567,10 +573,17 @@ impl SearchQuery {
                 "SELECT rec.id,rec.room_id,rooms.type,rooms.name,rec.{title},rec.{time},{status},{cancelled} FROM {table} rec JOIN rooms ON rooms.id=rec.room_id WHERE rooms.deleted_at IS NULL AND EXISTS (SELECT 1 FROM memberships mem WHERE mem.room_id=rooms.id AND mem.user_id=?)"
             );
             if !events {
-                sql.push_str(&format!(" AND {}", super::channel_thread::readable_by_sql("rec.id", &user.to_string())));
+                sql.push_str(&format!(
+                    " AND {}",
+                    super::channel_thread::readable_by_sql("rec.id", &user.to_string())
+                ));
             }
             let mut values: Vec<Value> = vec![user.into()];
-            let author = if events { "rec.organizer_id" } else { "rec.creator_id" };
+            let author = if events {
+                "rec.organizer_id"
+            } else {
+                "rec.creator_id"
+            };
             sql.push_str(" AND ");
             sql.push_str(&super::ignore_policy::visible_sql("?", author));
             values.push(user.into());

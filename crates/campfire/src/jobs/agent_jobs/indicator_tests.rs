@@ -61,8 +61,15 @@ async fn deletion_frames(webhook: bool) {
         let listener = bind_listener().await;
         let addr = listener.local_addr().unwrap();
         let router = app.cable.sync_router::<()>(campfire_api::SYNC_PATH);
-        let _listener = Listener(tokio::spawn(async move { axum::serve(listener, router).await.unwrap(); }));
-        let mut sync = crate::controllers::spa::api_tests::Sync::connect(addr, &david_cookie(), &[format!("room:{ALL_TALK}")]).await;
+        let _listener = Listener(tokio::spawn(async move {
+            axum::serve(listener, router).await.unwrap();
+        }));
+        let mut sync = crate::controllers::spa::api_tests::Sync::connect(
+            addr,
+            &david_cookie(),
+            &[format!("room:{ALL_TALK}")],
+        )
+        .await;
         sync.welcome().await;
         let result = app
             .db
@@ -77,13 +84,23 @@ async fn deletion_frames(webhook: bool) {
             "deletion_events": conn.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='work_unassigned'",[],|r|r.get::<_,i64>(0))?
         }))).await.unwrap();
         app.broadcasts.settle_sync().await;
-        campfire_app::cable::sync::publish(&app.cable, campfire_cable::sync::Audience::User(DAVID), &campfire_api_types::SyncPayload::RoomRead(campfire_api_types::RoomRead { room_id: -999 }));
+        campfire_app::cable::sync::publish(
+            &app.cable,
+            campfire_cable::sync::Audience::User(DAVID),
+            &campfire_api_types::SyncPayload::RoomRead(campfire_api_types::RoomRead {
+                room_id: -999,
+            }),
+        );
         let mut indicators = Vec::new();
         loop {
             match sync.until(|_| true, |_| false).await.payload {
                 campfire_api_types::SyncPayload::RoomRead(read) if read.room_id == -999 => break,
-                campfire_api_types::SyncPayload::ThreadIndicator(indicator) if indicator.parent_message_id == parent_id => indicators.push(indicator.thread.map_or(0, |thread| thread.reply_count)),
-                _ => {},
+                campfire_api_types::SyncPayload::ThreadIndicator(indicator)
+                    if indicator.parent_message_id == parent_id =>
+                {
+                    indicators.push(indicator.thread.map_or(0, |thread| thread.reply_count))
+                }
+                _ => {}
             }
         }
         let mut expected = oracle["results"][&key].clone();
@@ -93,6 +110,10 @@ async fn deletion_frames(webhook: bool) {
             .remove("indicator_frames")
             .unwrap();
         assert_eq!(state, expected, "{key}: committed state");
-        assert_eq!(indicators, vec![0; expected_frames.as_array().unwrap().len()], "{key}: committed indicator before failed ledger");
+        assert_eq!(
+            indicators,
+            vec![0; expected_frames.as_array().unwrap().len()],
+            "{key}: committed indicator before failed ledger"
+        );
     }
 }

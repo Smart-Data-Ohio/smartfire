@@ -41,33 +41,44 @@ impl PresenceChannel {
 
     /// `absent`: `membership&.disconnected`, so a membership removed with its room is skipped.
     async fn absent(&self, sub: &Subscription<CableUser>) -> ChannelResult {
-        self.with_membership(sub, |membership, tx| membership.disconnected(tx)).await.map(|_| ())
+        self.with_membership(sub, |membership, tx| membership.disconnected(tx))
+            .await
+            .map(|_| ())
     }
 
     /// `refresh`: `membership&.refresh_connection`.
     async fn refresh(&self, sub: &Subscription<CableUser>) -> ChannelResult {
-        self.with_membership(sub, |membership, tx| membership.refresh_connection(tx)).await.map(|_| ())
+        self.with_membership(sub, |membership, tx| membership.refresh_connection(tx))
+            .await
+            .map(|_| ())
     }
 
     /// `@room.memberships.find_by(user: current_user)`, which is nil (and so raises
     /// NoMethodError) once the membership is gone.
     async fn membership(&self, sub: &Subscription<CableUser>) -> ChannelResult<Membership> {
         let (room_id, user_id) = self.ids(sub)?;
-        self.db.read(move |conn| Membership::find_by_room_and_user(conn, room_id, user_id)).await?.ok_or_else(nil_membership)
+        self.db
+            .read(move |conn| Membership::find_by_room_and_user(conn, room_id, user_id))
+            .await?
+            .ok_or_else(nil_membership)
     }
 
     /// Applies `change` to the membership; false when there's none.
     async fn with_membership(
         &self,
         sub: &Subscription<CableUser>,
-        change: impl FnOnce(&mut Membership, &mut campfire_db::Tx<'_>) -> campfire_db::Result<()> + Send + 'static,
+        change: impl FnOnce(&mut Membership, &mut campfire_db::Tx<'_>) -> campfire_db::Result<()>
+        + Send
+        + 'static,
     ) -> ChannelResult<bool> {
         let (room_id, user_id) = self.ids(sub)?;
         let found = self
             .db
-            .write(move |tx| match Membership::find_by_room_and_user(tx.conn(), room_id, user_id)? {
-                Some(mut membership) => change(&mut membership, tx).map(|()| true),
-                None => Ok(false),
+            .write(move |tx| {
+                match Membership::find_by_room_and_user(tx.conn(), room_id, user_id)? {
+                    Some(mut membership) => change(&mut membership, tx).map(|()| true),
+                    None => Ok(false),
+                }
             })
             .await?;
         Ok(found)
@@ -75,7 +86,10 @@ impl PresenceChannel {
 
     fn ids(&self, sub: &Subscription<CableUser>) -> ChannelResult<(i64, i64)> {
         // `@room` is only nil after a rejection, when these callbacks don't run.
-        let room = self.room.as_ref().ok_or_else(|| ChannelError("undefined method 'memberships' for nil".into()))?;
+        let room = self
+            .room
+            .as_ref()
+            .ok_or_else(|| ChannelError("undefined method 'memberships' for nil".into()))?;
         Ok((room.id, sub.current_user().id))
     }
 }
@@ -103,7 +117,12 @@ impl Channel<CableUser> for PresenceChannel {
         Ok(())
     }
 
-    async fn perform(&mut self, action: &str, _data: &Params, sub: &mut Subscription<CableUser>) -> ChannelResult<bool> {
+    async fn perform(
+        &mut self,
+        action: &str,
+        _data: &Params,
+        sub: &mut Subscription<CableUser>,
+    ) -> ChannelResult<bool> {
         if sub.rejected() {
             return Ok(false);
         }

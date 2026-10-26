@@ -62,7 +62,9 @@ impl Account {
         &self,
         crypto: &ArEncryption,
     ) -> std::result::Result<Option<String>, rails_compat::ar_encryption::DecryptionError> {
-        crypto.decrypt(&self.access_token).map(|token| (!blank(&token)).then_some(token))
+        crypto
+            .decrypt(&self.access_token)
+            .map(|token| (!blank(&token)).then_some(token))
     }
     pub fn connected(&self) -> bool {
         self.disconnected_reason.as_deref().is_none_or(blank)

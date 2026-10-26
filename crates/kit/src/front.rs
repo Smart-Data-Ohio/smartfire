@@ -44,7 +44,11 @@ pub use handler::{ConnInfo, Handler};
 const STOP_GRACE: Duration = Duration::from_secs(5);
 
 /// Serves `app` the way Thruster served the reference until `shutdown` resolves.
-pub async fn serve(config: FrontConfig, app: Router, shutdown: impl Future<Output = ()> + Send + 'static) -> std::io::Result<()> {
+pub async fn serve(
+    config: FrontConfig,
+    app: Router,
+    shutdown: impl Future<Output = ()> + Send + 'static,
+) -> std::io::Result<()> {
     serve_with(config, app, None, shutdown).await
 }
 
@@ -125,12 +129,34 @@ async fn serve_with_ready_inner(
             let response = tls::http_handler(&certs, &request);
             Box::pin(async move { response })
         });
-        servers.push(tokio::spawn(serve_plain(http, redirect, Protocol::Http1, options, shutdown_state.clone())));
-        servers.push(tokio::spawn(serve_tls(https, tls, front, options, shutdown_state.clone())));
+        servers.push(tokio::spawn(serve_plain(
+            http,
+            redirect,
+            Protocol::Http1,
+            options,
+            shutdown_state.clone(),
+        )));
+        servers.push(tokio::spawn(serve_tls(
+            https,
+            tls,
+            front,
+            options,
+            shutdown_state.clone(),
+        )));
     } else {
         tracing::info!(http = %format!(":{}", config.http_port), "Server started");
-        let protocol = if config.h2c_enabled { Protocol::Auto } else { Protocol::Http1 };
-        servers.push(tokio::spawn(serve_plain(http, front, protocol, options, shutdown_state.clone())));
+        let protocol = if config.h2c_enabled {
+            Protocol::Auto
+        } else {
+            Protocol::Http1
+        };
+        servers.push(tokio::spawn(serve_plain(
+            http,
+            front,
+            protocol,
+            options,
+            shutdown_state.clone(),
+        )));
     }
     ready();
     for server in servers {
@@ -152,8 +178,13 @@ async fn serve_upstream(
     shutdown: Shutdown,
     listener: Option<tokio::net::TcpListener>,
 ) -> std::io::Result<tokio::task::JoinHandle<()>> {
-    if config.target_port == config.http_port || (config.has_tls() && config.target_port == config.https_port) {
-        tracing::warn!(port = config.target_port, "TARGET_PORT is the front server's port; not listening on it separately");
+    if config.target_port == config.http_port
+        || (config.has_tls() && config.target_port == config.https_port)
+    {
+        tracing::warn!(
+            port = config.target_port,
+            "TARGET_PORT is the front server's port; not listening on it separately"
+        );
         return Ok(tokio::spawn(async {}));
     }
     let listener = match listener {
@@ -161,7 +192,16 @@ async fn serve_upstream(
         None => tokio::net::TcpListener::bind((config.target_bind, config.target_port)).await?,
     };
     let service = limited_app_service(app, config.max_request_body.max(0) as u64);
-    Ok(tokio::spawn(serve_plain(listener, service, Protocol::Http1, Options { date: false, ..options }, shutdown)))
+    Ok(tokio::spawn(serve_plain(
+        listener,
+        service,
+        Protocol::Http1,
+        Options {
+            date: false,
+            ..options
+        },
+        shutdown,
+    )))
 }
 
 /// `app_service` behind MAX_REQUEST_BODY.
@@ -180,20 +220,28 @@ fn limited_app_service(app: Router, max_request_body: u64) -> Service {
 
 /// The bare app as a connection service.
 pub fn app_service(app: Router) -> Service {
-    Arc::new(move |mut request: axum::http::Request<Body>, conn: ConnInfo| {
-        request.extensions_mut().insert(ConnectInfo(conn.remote));
-        let app = app.clone();
-        Box::pin(async move {
-            match app.oneshot(request).await {
-                Ok(response) => response,
-                Err(infallible) => match infallible {},
-            }
-        })
-    })
+    Arc::new(
+        move |mut request: axum::http::Request<Body>, conn: ConnInfo| {
+            request.extensions_mut().insert(ConnectInfo(conn.remote));
+            let app = app.clone();
+            Box::pin(async move {
+                match app.oneshot(request).await {
+                    Ok(response) => response,
+                    Err(infallible) => match infallible {},
+                }
+            })
+        },
+    )
 }
 
 /// Serves plain HTTP connections from `listener` until shutdown.
-pub async fn serve_plain(listener: tokio::net::TcpListener, service: Service, protocol: Protocol, options: Options, shutdown: Shutdown) {
+pub async fn serve_plain(
+    listener: tokio::net::TcpListener,
+    service: Service,
+    protocol: Protocol,
+    options: Options,
+    shutdown: Shutdown,
+) {
     let connections = shutdown.clone();
     conn::accept_loop(listener, shutdown, move |stream, remote| {
         let (service, shutdown) = (service.clone(), connections.clone());
@@ -203,7 +251,13 @@ pub async fn serve_plain(listener: tokio::net::TcpListener, service: Service, pr
     .await;
 }
 
-async fn serve_tls(listener: tokio::net::TcpListener, tls: Arc<tls::Tls>, service: Service, options: Options, shutdown: Shutdown) {
+async fn serve_tls(
+    listener: tokio::net::TcpListener,
+    tls: Arc<tls::Tls>,
+    service: Service,
+    options: Options,
+    shutdown: Shutdown,
+) {
     let connections = shutdown.clone();
     conn::accept_loop(listener, shutdown, move |stream, remote| {
         let (service, shutdown, tls) = (service.clone(), connections.clone(), tls.clone());
@@ -211,13 +265,16 @@ async fn serve_tls(listener: tokio::net::TcpListener, tls: Arc<tls::Tls>, servic
             // Go bounds the handshake by the connection's read deadline.
             let handshake = tls.accept(stream);
             let accepted = match options.read_timeout {
-                Some(timeout) => tokio::time::timeout(timeout, handshake).await.unwrap_or_else(|_| Err("TLS handshake timeout".into())),
+                Some(timeout) => tokio::time::timeout(timeout, handshake)
+                    .await
+                    .unwrap_or_else(|_| Err("TLS handshake timeout".into())),
                 None => handshake.await,
             };
             match accepted {
                 Ok(Some((stream, protocol))) => {
                     let info = ConnInfo { remote, tls: true };
-                    conn::serve_connection(stream, info, protocol, service, options, shutdown).await;
+                    conn::serve_connection(stream, info, protocol, service, options, shutdown)
+                        .await;
                 }
                 Ok(None) => {}
                 Err(error) => tracing::debug!(%remote, %error, "http: TLS handshake error"),

@@ -33,7 +33,8 @@ fn queue_webhook(tx: &mut Tx<'_>, event: &AgentEvent) -> Result<Option<crate::Ti
         tx.conn(),
         "SELECT 1 FROM webhooks w JOIN agents a ON a.user_id=w.user_id WHERE a.id=?",
         [event.agent_id],
-    )? || !super::agent_event_access::delivery_authorized(tx.conn(), event.id)? {
+    )? || !super::agent_event_access::delivery_authorized(tx.conn(), event.id)?
+    {
         return Ok(None);
     }
     let next_attempt_at = tx.now();
@@ -52,9 +53,10 @@ fn webhook_eligible(tx: &Tx<'_>, agent_id: i64, room_id: i64) -> Result<bool> {
         agent_id,
         "read_messages",
         Some(room_id),
-    )? && exists(tx.conn(),
+    )? && exists(
+        tx.conn(),
         "SELECT 1 FROM agents a JOIN memberships m ON m.user_id=a.user_id JOIN webhooks w ON w.user_id=a.user_id WHERE a.id=? AND m.room_id=?",
-        params![agent_id,room_id],
+        params![agent_id, room_id],
     )?)
 }
 
@@ -77,7 +79,9 @@ fn record(
     let (actor_id, actor_name) = actor;
     let (hop, chain) = hop_chain;
     let mut metadata = json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":actor_name,"hop":hop});
-    if thread.visibility == crate::channel_thread::ThreadVisibility::Private { metadata["thread_visibility"] = json!("private"); }
+    if thread.visibility == crate::channel_thread::ThreadVisibility::Private {
+        metadata["thread_visibility"] = json!("private");
+    }
     if let Some(extra) = extra.as_object() {
         metadata
             .as_object_mut()
@@ -232,7 +236,11 @@ pub fn publish_deleted_webhook(
             let event = AgentEvent::create_captured(tx, captured)?;
             if let (Some(agent), Some(room)) =
                 (Agent::find(tx.conn(), event.agent_id)?, event.room_id)
-                && event.metadata.get("thread_visibility").and_then(Value::as_str) != Some("private")
+                && event
+                    .metadata
+                    .get("thread_visibility")
+                    .and_then(Value::as_str)
+                    != Some("private")
                 && webhook_eligible(tx, agent.id, room)?
                 && super::agent_event_access::delivery_authorized(tx.conn(), event.id)?
             {
@@ -262,7 +270,9 @@ pub(crate) fn capture_deleted(
     // Rails captures without an Agent collaborator: private PR data is redacted.
     let mut snapshot = agent_payloads::work_payload(tx.conn(), thread, None, &Default::default())?;
     snapshot["thread_id"] = json!(thread.id);
-    if thread.visibility == crate::channel_thread::ThreadVisibility::Private { snapshot["thread_visibility"] = json!("private"); }
+    if thread.visibility == crate::channel_thread::ThreadVisibility::Private {
+        snapshot["thread_visibility"] = json!("private");
+    }
     snapshot["status"] = json!(thread.work_status);
     snapshot["assigned_by"] = json!(
         actor_id
@@ -281,12 +291,15 @@ pub(crate) fn record_deleted(
 ) -> Result<()> {
     if let Some(deleted) = deleted {
         let agent = Agent::find(tx.conn(), deleted.agent_id)?;
-        let deliverable = thread.visibility != crate::channel_thread::ThreadVisibility::Private && agent
-            .map(|agent| webhook_eligible(tx, agent.id, thread.room_id))
-            .transpose()?
-            .unwrap_or(false);
+        let deliverable = thread.visibility != crate::channel_thread::ThreadVisibility::Private
+            && agent
+                .map(|agent| webhook_eligible(tx, agent.id, thread.room_id))
+                .transpose()?
+                .unwrap_or(false);
         let mut metadata = json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":deleted.snapshot["assigned_by"],"hop":0,"work_snapshot":deleted.snapshot});
-        if thread.visibility == crate::channel_thread::ThreadVisibility::Private { metadata["thread_visibility"] = json!("private"); }
+        if thread.visibility == crate::channel_thread::ThreadVisibility::Private {
+            metadata["thread_visibility"] = json!("private");
+        }
         let event = NewEvent {
             agent_id: deleted.agent_id,
             room_id: Some(thread.room_id),

@@ -251,7 +251,11 @@ async fn setup_contract_each_step_matches_html_rows_sessions_audits_and_private_
         .as_array()
         .unwrap()
         .iter()
-        .filter(|row| row.as_array().unwrap().contains(&json!("two_factor.enable")))
+        .filter(|row| {
+            row.as_array()
+                .unwrap()
+                .contains(&json!("two_factor.enable"))
+        })
         .count();
     assert_eq!(enabled, 1, "{audits}");
     let after = (facts(&app).await, cookie_state(&app, &browser));
@@ -428,7 +432,9 @@ async fn setup_shell_opens_for_an_unenrolled_session_and_keeps_its_return_path()
             "{path}"
         );
     }
-    let json = browser.send(Req::new(Method::GET, "/api/v1/settings")).await;
+    let json = browser
+        .send(Req::new(Method::GET, "/api/v1/settings"))
+        .await;
     assert_eq!(json.status, StatusCode::FORBIDDEN);
     assert_eq!(json.json(), gated);
     // The gate lets the screen through only as a page, so the gate's redirect can't loop; a JSON
@@ -583,8 +589,8 @@ async fn setup_contract_another_session_cannot_confirm_the_displayed_secret() {
     let encryption = ArEncryption::new(&app.booted.app.secrets);
     app.db()
         .write(move |tx| {
-            let secret = encryption
-                .encrypt_with_encoding(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "ASCII-8BIT");
+            let secret =
+                encryption.encrypt_with_encoding(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "ASCII-8BIT");
             tx.conn().execute(
                 "UPDATE two_factor_setup_secrets SET secret=? WHERE session_id=?",
                 rusqlite::params![secret, id],

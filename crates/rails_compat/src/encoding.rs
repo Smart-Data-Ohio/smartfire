@@ -25,7 +25,14 @@ pub fn strict_decode(encoded: &str) -> Option<Vec<u8>> {
 /// `Base64.urlsafe_decode64`, which pads a short unpadded string and then translates `-_` to
 /// `+/` before a strict decode. So it accepts either alphabet (even mixed) and optional padding.
 pub fn urlsafe_decode(encoded: &str) -> Option<Vec<u8>> {
-    let mut translated: String = encoded.chars().map(|c| match c { '-' => '+', '_' => '/', c => c }).collect();
+    let mut translated: String = encoded
+        .chars()
+        .map(|c| match c {
+            '-' => '+',
+            '_' => '/',
+            c => c,
+        })
+        .collect();
     if !encoded.ends_with('=') && !encoded.len().is_multiple_of(4) {
         while !translated.len().is_multiple_of(4) {
             translated.push('=');

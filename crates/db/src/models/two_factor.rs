@@ -367,8 +367,12 @@ impl TwoFactorBackupCode {
             .collect();
         // WS16 flagged input seam, absent without the test-support feature.
         #[cfg(feature = "test-support")]
-        let codes = tx.env().fixture_auth_inputs.as_ref()
-            .map(|inputs| inputs.backup_codes.clone()).unwrap_or(codes);
+        let codes = tx
+            .env()
+            .fixture_auth_inputs
+            .as_ref()
+            .map(|inputs| inputs.backup_codes.clone())
+            .unwrap_or(codes);
         tx.conn().execute_cached(
             "DELETE FROM two_factor_backup_codes WHERE two_factor_credential_id = ?",
             [credential_id],
@@ -429,8 +433,12 @@ impl TwoFactorSetupSecret {
         let secret = totp::generate_secret();
         // WS16 fixes only issued-secret entropy for the real enrollment differential.
         #[cfg(feature = "test-support")]
-        let secret = tx.env().fixture_auth_inputs.as_ref()
-            .map(|inputs| inputs.totp_secret.clone()).unwrap_or(secret);
+        let secret = tx
+            .env()
+            .fixture_auth_inputs
+            .as_ref()
+            .map(|inputs| inputs.totp_secret.clone())
+            .unwrap_or(secret);
         let encrypted = encryption.encrypt_with_encoding(secret.as_bytes(), "ASCII-8BIT");
         // Rotating a concurrent issuance keeps one row, as Rails' RecordNotUnique retry does.
         tx.conn().execute_cached("INSERT INTO two_factor_setup_secrets (session_id, secret, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(session_id) DO UPDATE SET secret = excluded.secret, expires_at = excluded.expires_at, updated_at = excluded.updated_at", params![session_id, encrypted, now.since(SETUP_TTL), now, now])?;

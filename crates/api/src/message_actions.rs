@@ -7,9 +7,9 @@ use campfire_app::app::AppCtx;
 use campfire_db::models::forwarder::{self, Destination};
 use campfire_db::{Boost, ChannelThread, Message, MessagePin, Room, SavedItem};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
+use campfire_messages::controllers::messages::rendered;
 use campfire_messages::controllers::messages::{self as classic, boosts};
 use campfire_runtime::concerns;
-use campfire_messages::controllers::messages::rendered;
 use campfire_runtime::context::db_error;
 use campfire_runtime::messaging::ForwarderCopier;
 
@@ -199,7 +199,8 @@ async fn show_message(c: &mut Ctx) -> Result {
         .db
         .read(move |conn| {
             let messages = std::slice::from_ref(&message);
-            let (mut dtos, fetches) = dto::messages_and_fetches_for_viewer(conn, &app, messages, viewer.id)?;
+            let (mut dtos, fetches) =
+                dto::messages_and_fetches_for_viewer(conn, &app, messages, viewer.id)?;
             let dto = dtos.remove(0);
             let repliers = dto
                 .thread
@@ -302,8 +303,7 @@ async fn post_boost(c: &mut Ctx) -> Result {
     c.app()
         .db
         .write(move |tx| {
-            let presenter =
-                campfire_runtime::presenters::Presenter::new(tx.conn(), &app, None);
+            let presenter = campfire_runtime::presenters::Presenter::new(tx.conn(), &app, None);
             let content =
                 campfire_presentation::messages::reactions::resolve_content(&content, &presenter);
             let reaction =
@@ -356,9 +356,7 @@ async fn create_pin(c: &mut Ctx) -> Result {
     let pinned = c
         .app()
         .db
-        .write(
-            move |tx| MessagePin::pin(tx, &pinning, pinner),
-        )
+        .write(move |tx| MessagePin::pin(tx, &pinning, pinner))
         .await
         .map_err(db_error)?;
     if let Err(cap) = pinned {
@@ -379,14 +377,12 @@ async fn delete_pin(c: &mut Ctx) -> Result {
     let message_id = message.id;
     c.app()
         .db
-        .write(
-            move |tx| {
-                if let Some(pin) = MessagePin::find_by_message(tx.conn(), message_id)? {
-                    pin.unpin(tx)?;
-                }
-                Ok(())
-            },
-        )
+        .write(move |tx| {
+            if let Some(pin) = MessagePin::find_by_message(tx.conn(), message_id)? {
+                pin.unpin(tx)?;
+            }
+            Ok(())
+        })
         .await
         .map_err(db_error)?;
     pin_reply(c, message, StatusCode::OK).await

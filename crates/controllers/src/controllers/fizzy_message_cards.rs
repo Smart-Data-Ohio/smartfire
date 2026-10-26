@@ -2,10 +2,7 @@
 use crate::{
     app::AppCtx,
     concerns::{self, Before, before_actions, cast_integer, require_current_user},
-    controllers::{
-        fizzy_connections, messages,
-        presenters::page::db_error,
-    },
+    controllers::{fizzy_connections, messages, presenters::page::db_error},
     integrations::{
         fizzy::{
             accounts::{Account, REJECTED_TOKEN_REASON},
@@ -429,11 +426,7 @@ pub struct FormData {
 }
 
 /// Authoring defaults and display fields. Board names are a flat list.
-pub fn form_view(
-    c: &Ctx,
-    source: &Source,
-    boards: Value,
-) -> FormData {
+pub fn form_view(c: &Ctx, source: &Source, boards: Value) -> FormData {
     let title = c.param_str("title").map(str::to_owned).unwrap_or_else(|| {
         campfire_richtext::ruby::truncate(
             campfire_richtext::ruby::strip(source.plain.lines().next().unwrap_or("")),

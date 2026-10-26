@@ -13,7 +13,10 @@ async fn setup() -> TestApp {
         std::sync::Arc::new(campfire_kit::FrozenClock::new(
             "2026-03-02T16:00:00Z".parse().unwrap(),
         )),
-        &[("APP_URL", "https://smartfire.example"), ("SMARTFIRE_MCP_OAUTH", "0")],
+        &[
+            ("APP_URL", "https://smartfire.example"),
+            ("SMARTFIRE_MCP_OAUTH", "0"),
+        ],
     )
     .await
     .expect("OAuth tests require restored default seed")
@@ -68,7 +71,12 @@ async fn oauth_data_mcp_accepts_access_and_rest_search_and_cable_refuse_it() {
         owner.get("/api/v1/me/agents").await.json()["oauthAvailable"],
         false
     );
-    for path in ["/agents/events", "/agents/events/stream", "/agents/work", "/api/v1/search?q=test"] {
+    for path in [
+        "/agents/events",
+        "/agents/events/stream",
+        "/agents/work",
+        "/api/v1/search?q=test",
+    ] {
         let response = request(&app, ACCESS, Method::GET, path).await;
         assert_eq!(response.status.as_u16(), 401, "{path}: {}", response.text());
     }
@@ -219,9 +227,20 @@ async fn oauth_data_registered_periodic_sweep_preserves_live_then_cleans_dead_to
         periodic.tick(app.booted.app.clone(), now).await,
         ["OAuth sweep"]
     );
-    assert_eq!(app.db().read(|conn| {
-        Ok(conn.query_row("SELECT COUNT(*) FROM oauth_clients WHERE client_id='unused-dcr'", [], |r| r.get::<_, i64>(0))?)
-    }).await.unwrap(), 0, "the scheduled sweep also cleans unused registrations");
+    assert_eq!(
+        app.db()
+            .read(|conn| {
+                Ok(conn.query_row(
+                    "SELECT COUNT(*) FROM oauth_clients WHERE client_id='unused-dcr'",
+                    [],
+                    |r| r.get::<_, i64>(0),
+                )?)
+            })
+            .await
+            .unwrap(),
+        0,
+        "the scheduled sweep also cleans unused registrations"
+    );
     let count = |conn: &campfire_db::Connection| {
         Ok(
             conn.query_row("SELECT COUNT(*) FROM oauth_tokens", [], |r| {

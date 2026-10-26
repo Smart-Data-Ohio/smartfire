@@ -8,8 +8,8 @@ use super::presenters::page::db_error;
 // Reviewed human agent pages alongside the REST/MCP service adapters.
 pub mod approvals;
 pub mod conversations;
-mod id_args;
 mod event_stream;
+mod id_args;
 pub use event_stream::event_stream;
 pub mod integrations;
 pub mod mcp;
@@ -98,7 +98,8 @@ fn profile_payload(
 ) -> campfire_db::Result<Value> {
     let name = campfire_db::User::find_by_id(conn, agent.user_id)?
         .ok_or(campfire_db::Error::RecordNotFound("User"))?
-        .display_name().to_owned();
+        .display_name()
+        .to_owned();
     let owner = agent
         .owner_id
         .map(|id| campfire_db::User::find_by_id(conn, id))
@@ -143,7 +144,9 @@ pub async fn poll(
     since: Option<Value>,
     limit: Option<Value>,
 ) -> Result<Value> {
-    EventPolling::for_request(c)?.page(agent_id, since, limit).await
+    EventPolling::for_request(c)?
+        .page(agent_id, since, limit)
+        .await
 }
 
 #[derive(Clone)]
@@ -154,14 +157,23 @@ struct EventPolling {
 
 impl EventPolling {
     fn for_request(c: &Ctx) -> Result<Self> {
-        Ok(Self { app: c.app().clone(), presentation: super::messages::Presentation::for_request(c)? })
+        Ok(Self {
+            app: c.app().clone(),
+            presentation: super::messages::Presentation::for_request(c)?,
+        })
     }
 
-    async fn page(&self, agent_id: i64, since: Option<Value>, limit: Option<Value>) -> Result<Value> {
+    async fn page(
+        &self,
+        agent_id: i64,
+        since: Option<Value>,
+        limit: Option<Value>,
+    ) -> Result<Value> {
         let now = campfire_db::Timestamp::from_jiff(self.app.clock.now());
         let since_id = since.as_ref().map_or(0, ruby_i64);
         let page_limit = limit.as_ref().filter(|v| !mcp::blank(v)).map(ruby_i64);
-        let events = self.app
+        let events = self
+            .app
             .db
             .read(move |conn| {
                 Ok(campfire_db::models::agent_event_access::readable_page(
@@ -173,24 +185,26 @@ impl EventPolling {
             })
             .await
             .map_err(db_error)?;
-        let access = self.app
+        let access = self
+            .app
             .agent_repositories
             .resolve_events(&self.app.db, agent_id, events)
             .await
             .map_err(db_error)?;
-        self.presentation.run(move |presenter| {
-            let _snapshot = campfire_db::Snapshot::begin(presenter.conn)?;
-            agent_event_polling::poll(
-                presenter.conn,
-                agent_id,
-                since.as_ref(),
-                limit.as_ref(),
-                now,
-                &access,
-                |message| presenter.agent_message_payload(message),
-            )
-        })
-        .await
+        self.presentation
+            .run(move |presenter| {
+                let _snapshot = campfire_db::Snapshot::begin(presenter.conn)?;
+                agent_event_polling::poll(
+                    presenter.conn,
+                    agent_id,
+                    since.as_ref(),
+                    limit.as_ref(),
+                    now,
+                    &access,
+                    |message| presenter.agent_message_payload(message),
+                )
+            })
+            .await
     }
 }
 

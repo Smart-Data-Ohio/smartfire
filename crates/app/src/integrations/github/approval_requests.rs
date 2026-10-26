@@ -102,9 +102,9 @@ pub fn create(tx: &mut Tx<'_>, request: Request) -> Result<Reply> {
         account,
         submitted,
     } = request;
-    let Some(identity) = agent_access::verify_identity(
-        tx.conn(), &secret, tx.now(), &tx.env().default_url_origin,
-    )? else {
+    let Some(identity) =
+        agent_access::verify_identity(tx.conn(), &secret, tx.now(), &tx.env().default_url_origin)?
+    else {
         return Ok(Reply {
             status: 401,
             body: None,
