@@ -409,10 +409,10 @@ fn cache_entry(pkcs8: &[u8], chain_pem: &str) -> Result<String, Error> {
 /// A P-256 key as autocert writes it (`x509.MarshalECPrivateKey`): SEC1 with the curve named,
 /// which Go needs to read it back (`ParseECPrivateKey`).
 fn private_key_pem(pkcs8: &[u8]) -> Result<String, Error> {
-    use p256::elliptic_curve::sec1::ToEncodedPoint;
+    use p256::elliptic_curve::sec1::ToSec1Point;
     use p256::pkcs8::DecodePrivateKey;
     let key = p256::SecretKey::from_pkcs8_der(pkcs8).map_err(|e| format!("private key: {e}"))?;
-    let public = key.public_key().to_encoded_point(false);
+    let public = key.public_key().to_sec1_point(false);
     let mut der = vec![0x30, 0x77, 0x02, 0x01, 0x01, 0x04, 0x20];
     der.extend_from_slice(&key.to_bytes());
     // [0] namedCurve prime256v1
@@ -551,6 +551,24 @@ mod tests {
         assert!(Key::from_pkcs8_der(pkcs8.clone_key()).is_ok());
         // And writes them back byte for byte (Go can't read SEC1 keys without the curve named).
         assert_eq!(private_key_pem(pkcs8.secret_pkcs8_der()).unwrap(), sec1);
+    }
+
+    #[test]
+    fn private_key_formats_match_p256_013() {
+        use p256::pkcs8::EncodePrivateKey;
+
+        // Captured with p256 0.13.2 for this fixed test scalar.
+        let key = p256::SecretKey::from_slice(&[1; 32]).unwrap();
+        let expected_pkcs8 = hex::decode("308187020100301306072a8648ce3d020106082a8648ce3d030107046d306b02010104200101010101010101010101010101010101010101010101010101010101010101a144034200046ff03b949241ce1dadd43519e6960e0a85b41a69a05c328103aa2bce1594ca163c4f753a55bf01dc53f6c0b0c7eee78b40c6ff7d25a96e2282b989cef71c144a").unwrap();
+        let expected_pem = "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBoAoGCCqGSM49\nAwEHoUQDQgAEb/A7lJJBzh2t1DUZ5pYOCoW0GmmgXDKBA6orzhWUyhY8T3U6Vb8B\n3FP2wLDH7ueLQMb/fSWpbiKCuYnO9xwUSg==\n-----END EC PRIVATE KEY-----\n";
+        assert_eq!(key.to_pkcs8_der().unwrap().as_bytes(), expected_pkcs8);
+        assert_eq!(private_key_pem(&expected_pkcs8).unwrap(), expected_pem);
+        assert_eq!(
+            parse_private_key(expected_pem.as_bytes())
+                .unwrap()
+                .secret_pkcs8_der(),
+            expected_pkcs8
+        );
     }
 
     #[test]

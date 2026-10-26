@@ -4,7 +4,8 @@ use std::sync::{Arc, Mutex};
 use p256::SecretKey;
 use p256::ecdsa::signature::Verifier;
 use p256::ecdsa::{Signature, VerifyingKey};
-use p256::elliptic_curve::sec1::ToEncodedPoint;
+use p256::elliptic_curve::Generate;
+use p256::elliptic_curve::sec1::ToSec1Point;
 
 use super::*;
 use campfire_app::net::Network;
@@ -35,11 +36,11 @@ struct Receiver {
 
 impl Receiver {
     fn new() -> Self {
-        Self { key: SecretKey::random(&mut p256::elliptic_curve::rand_core::OsRng), auth: rand::random() }
+        Self { key: SecretKey::generate(), auth: rand::random() }
     }
 
     fn subscription(&self, id: i64, endpoint: &str) -> PushSubscription {
-        let p256dh = encode64_nopad(self.key.public_key().to_encoded_point(false).as_bytes());
+        let p256dh = encode64_nopad(self.key.public_key().to_sec1_point(false).as_bytes());
         PushSubscription::new(1, Some(endpoint), Some(&p256dh), Some(&encode64_nopad(&self.auth)), None).with_id(id)
     }
 
@@ -147,7 +148,7 @@ fn signs_with_the_configured_subject() {
 
 #[test]
 fn rejects_bad_vapid_keys_up_front() {
-    let other_public_key = encode64_nopad(Receiver::new().key.public_key().to_encoded_point(false).as_bytes());
+    let other_public_key = encode64_nopad(Receiver::new().key.public_key().to_sec1_point(false).as_bytes());
     let keys = |public_key: &str, private_key: &str| VapidConfig::new(REFERENCE_SUBJECT, public_key, private_key).map(|_| ());
     assert_eq!(keys("", VAPID_PRIVATE_KEY), Err(VapidError::InvalidPublicKey));
     assert_eq!(keys("dGVzdF9rZXk", VAPID_PRIVATE_KEY), Err(VapidError::InvalidPublicKey));
@@ -301,7 +302,7 @@ async fn pushes_messages_and_destroys_expired_subscriptions() {
         .collect();
     let keys: Vec<(i64, String, String)> = receivers
         .iter()
-        .map(|(id, r)| (*id, encode64_nopad(r.key.public_key().to_encoded_point(false).as_bytes()), encode64_nopad(&r.auth)))
+        .map(|(id, r)| (*id, encode64_nopad(r.key.public_key().to_sec1_point(false).as_bytes()), encode64_nopad(&r.auth)))
         .collect();
     t.db.write(move |tx| {
         for (id, p256dh, auth) in &keys {

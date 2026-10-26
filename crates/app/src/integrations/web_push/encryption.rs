@@ -5,7 +5,8 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes128Gcm, Nonce};
 use hkdf::Hkdf;
-use p256::elliptic_curve::sec1::ToEncodedPoint;
+use p256::elliptic_curve::Generate;
+use p256::elliptic_curve::sec1::ToSec1Point;
 use p256::{PublicKey, SecretKey};
 use sha2::Sha256;
 
@@ -24,7 +25,7 @@ pub enum EncryptionError {
 /// Encrypts `message` for the subscription's `p256dh` key and `auth` secret (both urlsafe
 /// Base64), with a fresh server key and salt.
 pub fn encrypt(message: &[u8], p256dh: Option<&str>, auth: Option<&str>) -> Result<Vec<u8>, EncryptionError> {
-    let server_key = SecretKey::random(&mut p256::elliptic_curve::rand_core::OsRng);
+    let server_key = SecretKey::generate();
     let salt: [u8; 16] = rand::random();
     encrypt_with(message, p256dh, auth, &server_key, &salt, Layout::GEM)
 }
@@ -66,7 +67,7 @@ pub fn encrypt_with(
         .map_err(|_| EncryptionError::InvalidKey("invalid encoding".into()))?;
     let auth = decode64(auth.unwrap())?;
 
-    let server_public = server_key.public_key().to_encoded_point(false);
+    let server_public = server_key.public_key().to_sec1_point(false);
     let shared_secret = p256::ecdh::diffie_hellman(server_key.to_nonzero_scalar(), client_public.as_affine());
 
     let mut info = b"WebPush: info\0".to_vec();
@@ -118,7 +119,7 @@ pub fn decrypt(body: &[u8], receiver: &SecretKey, auth: &[u8]) -> Option<(u32, V
     let server_public = PublicKey::from_sec1_bytes(server_public_bytes).ok()?;
     let shared_secret = p256::ecdh::diffie_hellman(receiver.to_nonzero_scalar(), server_public.as_affine());
     let mut info = b"WebPush: info\0".to_vec();
-    info.extend_from_slice(receiver.public_key().to_encoded_point(false).as_bytes());
+    info.extend_from_slice(receiver.public_key().to_sec1_point(false).as_bytes());
     info.extend_from_slice(server_public_bytes);
     let prk = hkdf(auth, shared_secret.raw_secret_bytes(), &info, 32);
     let key = hkdf(salt, &prk, b"Content-Encoding: aes128gcm\0", 16);
@@ -161,8 +162,8 @@ mod tests {
 
     #[test]
     fn round_trips_with_the_gems_framing() {
-        let receiver = SecretKey::random(&mut p256::elliptic_curve::rand_core::OsRng);
-        let p256dh = encode64_nopad(receiver.public_key().to_encoded_point(false).as_bytes());
+        let receiver = SecretKey::generate();
+        let p256dh = encode64_nopad(receiver.public_key().to_sec1_point(false).as_bytes());
         let auth: [u8; 16] = rand::random();
         let body = encrypt(b"{\"title\":\"hi\"}", Some(&p256dh), Some(&encode64_nopad(&auth))).unwrap();
         let (record_size, plaintext) = decrypt(&body, &receiver, &auth).unwrap();
@@ -183,8 +184,8 @@ mod tests {
 
     #[test]
     fn rejects_what_the_gem_rejects() {
-        let key = SecretKey::random(&mut p256::elliptic_curve::rand_core::OsRng);
-        let ok = encode64_nopad(key.public_key().to_encoded_point(false).as_bytes());
+        let key = SecretKey::generate();
+        let ok = encode64_nopad(key.public_key().to_sec1_point(false).as_bytes());
         assert!(matches!(encrypt(b"m", None, Some("YXV0aA")), Err(EncryptionError::Argument(_))));
         assert!(matches!(encrypt(b"m", Some(&ok), Some("")), Err(EncryptionError::Argument(_))));
         assert!(matches!(encrypt(b"m", Some("not base64!"), Some("YXV0aA")), Err(EncryptionError::Argument(_))));

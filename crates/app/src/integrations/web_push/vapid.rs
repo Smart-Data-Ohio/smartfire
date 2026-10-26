@@ -3,7 +3,7 @@
 
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::{Signature, SigningKey};
-use p256::elliptic_curve::sec1::ToEncodedPoint;
+use p256::elliptic_curve::sec1::ToSec1Point;
 
 use super::{decode64, encode64_nopad};
 use crate::config::Config;
@@ -53,7 +53,7 @@ impl VapidConfig {
         let mut scalar = [0u8; 32];
         scalar[32 - private_key.len()..].copy_from_slice(&private_key);
         let signing_key = SigningKey::from_slice(&scalar).map_err(|_| VapidError::InvalidPrivateKey)?;
-        if signing_key.verifying_key().to_encoded_point(false) != point.to_encoded_point(false) {
+        if signing_key.verifying_key().to_sec1_point(false) != point.to_sec1_point(false) {
             return Err(VapidError::Mismatched);
         }
         Ok(Self { subject: subject.to_string(), signing_key, public_key })
@@ -66,5 +66,22 @@ impl VapidConfig {
         let signing_input = format!("{}.{}", encode64_nopad(header.as_bytes()), encode64_nopad(claims.as_bytes()));
         let signature: Signature = self.signing_key.sign(signing_input.as_bytes());
         format!("vapid t={signing_input}.{},k={}", encode64_nopad(&signature.to_bytes()), encode64_nopad(&self.public_key))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn authorization_matches_p256_013() {
+        // Captured with p256 0.13.2 for this fixed test scalar and JWT.
+        let public_key = "BG_wO5SSQc4drdQ1GeaWDgqFtBppoFwygQOqK84VlMoWPE91OlW_AdxT9sCwx-7ni0DG_30lqW4igrmJzvccFEo";
+        let private_key = encode64_nopad(&[1; 32]);
+        let vapid = VapidConfig::new("mailto:test@example.com", public_key, &private_key).unwrap();
+        assert_eq!(
+            vapid.authorization("https://example.com", 0),
+            "vapid t=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9.eyJhdWQiOiJodHRwczovL2V4YW1wbGUuY29tIiwiZXhwIjo0MzIwMCwic3ViIjoibWFpbHRvOnRlc3RAZXhhbXBsZS5jb20ifQ.xkwYngV0lxdCLLKb3g6U8LdZGCue-GQtKfZ6Rm5qmO5tLjLMD0F150pjEJDkYzeG1nNlaJddU5EdYeo52QWtQg,k=BG_wO5SSQc4drdQ1GeaWDgqFtBppoFwygQOqK84VlMoWPE91OlW_AdxT9sCwx-7ni0DG_30lqW4igrmJzvccFEo"
+        );
     }
 }
