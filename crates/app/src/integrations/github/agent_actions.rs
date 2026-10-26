@@ -259,9 +259,13 @@ fn insert_event(
         return Err(error);
     }
     let id = tx.conn().last_insert_rowid();
-    let authorized=pending && campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),id)?;
+    let authorized =
+        pending && campfire_db::models::agent_event_access::delivery_authorized(tx.conn(), id)?;
     if pending && !authorized {
-        tx.conn().execute("UPDATE agent_events SET webhook_status='none',webhook_next_attempt_at=NULL WHERE id=?",[id])?;
+        tx.conn().execute(
+            "UPDATE agent_events SET webhook_status='none',webhook_next_attempt_at=NULL WHERE id=?",
+            [id],
+        )?;
     }
     if authorized {
         tx.emit_after_commit(Event::job(&EventWebhookJob {

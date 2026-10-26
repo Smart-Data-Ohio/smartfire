@@ -12,14 +12,26 @@ pub mod users {
         let viewer = concerns::require_current_user(c)?.id;
         let room_id = if let Some(raw) = c.param("room_id").filter(|p| p.is_present()) {
             if let Param::Array(values) = raw {
-                let ids = values.iter().map(|value| value.to_s().and_then(|s| cast_integer(&s)))
-                    .collect::<Option<Vec<_>>>().ok_or(Error::NotFound)?;
-                let found = c.app().db.read(move |conn| {
-                    let rooms = Room::for_user(conn, viewer)?.into_iter().map(|r| r.id)
-                        .collect::<std::collections::HashSet<_>>();
-                    Ok(ids.iter().all(|id| rooms.contains(id)))
-                }).await.map_err(db_error)?;
-                if !found { return Err(Error::NotFound); }
+                let ids = values
+                    .iter()
+                    .map(|value| value.to_s().and_then(|s| cast_integer(&s)))
+                    .collect::<Option<Vec<_>>>()
+                    .ok_or(Error::NotFound)?;
+                let found = c
+                    .app()
+                    .db
+                    .read(move |conn| {
+                        let rooms = Room::for_user(conn, viewer)?
+                            .into_iter()
+                            .map(|r| r.id)
+                            .collect::<std::collections::HashSet<_>>();
+                        Ok(ids.iter().all(|id| rooms.contains(id)))
+                    })
+                    .await
+                    .map_err(db_error)?;
+                if !found {
+                    return Err(Error::NotFound);
+                }
                 // Association.find(array) returns an Array; calling .users raises in Rails.
                 return Err(Error::Status(StatusCode::INTERNAL_SERVER_ERROR));
             }

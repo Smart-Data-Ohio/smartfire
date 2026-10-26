@@ -37,13 +37,29 @@ fn compare(kind: &str) {
     let returned = db
         .write_blocking(move |tx| {
             if kind == "approval_decided" {
-                crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:"external_action".into(),granted_by_id:id("david"),..Default::default()})?;
-                let approval=crate::AgentApproval::create(tx,crate::NewApproval{agent_id:id("bender_agent"),action:"deploy".into(),summary:"Clock check".into(),..Default::default()})?;
+                crate::AgentGrant::create(
+                    tx,
+                    crate::NewGrant {
+                        agent_id: id("bender_agent"),
+                        capability: "external_action".into(),
+                        granted_by_id: id("david"),
+                        ..Default::default()
+                    },
+                )?;
+                let approval = crate::AgentApproval::create(
+                    tx,
+                    crate::NewApproval {
+                        agent_id: id("bender_agent"),
+                        action: "deploy".into(),
+                        summary: "Clock check".into(),
+                        ..Default::default()
+                    },
+                )?;
                 agent_delivery::create_delivered(
                     tx,
                     NewEvent {
                         agent_id: id("bender_agent"),
-                        agent_approval_id:Some(approval.id),
+                        agent_approval_id: Some(approval.id),
                         event_type: kind,
                         ..Default::default()
                     },

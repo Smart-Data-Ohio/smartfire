@@ -285,9 +285,20 @@ async fn pr192_failed_thread_attachment_preserves_post_reopen_and_retry_job() {
     let mut body: Value = serde_json::from_str(case["body"].as_str().unwrap()).unwrap();
     body["thread_id"] = json!(1900700020);
     body["message"]["client_message_id"] = json!("pr192-media-failure");
-    let reply = app.anonymous().send(request(Method::POST, "/rooms/486777696/agents/messages", Some(body))).await;
+    let reply = app
+        .anonymous()
+        .send(request(
+            Method::POST,
+            "/rooms/486777696/agents/messages",
+            Some(body),
+        ))
+        .await;
     assert_eq!(reply.status.as_u16(), 201);
-    assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+    assert!(
+        super::messages::attachment_processing_tests::perform_queued(&app, 1)
+            .await
+            .is_err()
+    );
     app.db().read(|c| {
         assert_eq!(c.query_row("SELECT count(*) FROM messages WHERE client_message_id='pr192-media-failure'", [], |r| r.get::<_,i64>(0))?, 1);
         assert!(campfire_db::ChannelThread::find(c, 1900700020)?.closed_at.is_none());

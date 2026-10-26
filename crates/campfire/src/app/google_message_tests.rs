@@ -10,7 +10,6 @@ use hyper::Method;
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 
-
 #[tokio::test]
 async fn google_drive_message_requests_and_attachment_socket_frames_match_rails() {
     let oracle: Value = serde_json::from_str(include_str!(
@@ -128,12 +127,10 @@ async fn google_drive_message_requests_and_attachment_socket_frames_match_rails(
         let observed = json!({"status":reply.status.as_u16(),"location":reply.location(),"delta":[state.2.0-before.0,state.2.1-before.1],"files":state.0,"source":state.1,"json_drive":json_drive});
         let mut expected = row["result"].clone();
         expected.as_object_mut().unwrap().remove("frames");
-        if create && !thread_scope && expected["status"] == 200 { expected["status"] = json!(201); }
-        assert_eq!(
-            observed, expected,
-            "{} {}",
-            row["scope"], row["scenario"]
-        );
+        if create && !thread_scope && expected["status"] == 200 {
+            expected["status"] = json!(201);
+        }
+        assert_eq!(observed, expected, "{} {}", row["scope"], row["scenario"]);
         assert!(
             r.calls.lock().unwrap().is_empty(),
             "attaching files requires room authority, never a Google grant"

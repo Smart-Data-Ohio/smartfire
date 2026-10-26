@@ -158,10 +158,18 @@ fn send(server: &Cable, audience: Audience, payload: &SyncPayload, coalesce: Opt
 }
 
 pub fn publish_afk_move(server: &Cable, moved: campfire_db::models::huddle_effects::AfkMoved) {
-    send(server, Audience::User(moved.user_id), &SyncPayload::HuddleAfkMoved(campfire_api_types::HuddleAfkMoved {
-        identity: moved.identity, source_room_id: moved.source_room_id, room_id: moved.room_id,
-        room_name: moved.room_name, timeout_minutes: moved.timeout_minutes,
-    }), None);
+    send(
+        server,
+        Audience::User(moved.user_id),
+        &SyncPayload::HuddleAfkMoved(campfire_api_types::HuddleAfkMoved {
+            identity: moved.identity,
+            source_room_id: moved.source_room_id,
+            room_id: moved.room_id,
+            room_name: moved.room_name,
+            timeout_minutes: moved.timeout_minutes,
+        }),
+        None,
+    );
 }
 
 /// `huddle.presence` to each member, latest per room in a batch: the twin of
@@ -356,8 +364,13 @@ mod tests {
             })
         );
         assert!(matches!(
-            notice(&json!({"eventType":"huddle_left","roomId":12,"roomName":"general","joinerId":8,"joinerName":"Grace","unchanged":true})),
-            Some(HuddleNotice::Left { unchanged: Some(true), .. })
+            notice(
+                &json!({"eventType":"huddle_left","roomId":12,"roomName":"general","joinerId":8,"joinerName":"Grace","unchanged":true})
+            ),
+            Some(HuddleNotice::Left {
+                unchanged: Some(true),
+                ..
+            })
         ));
         assert_eq!(
             notice(&json!({"eventType":"huddle_ended","roomId":12})),

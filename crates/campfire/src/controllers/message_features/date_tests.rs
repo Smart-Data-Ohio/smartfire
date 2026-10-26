@@ -8,7 +8,8 @@ fn builder_calendar_inputs_match_actual_rails_including_exception_and_nil_result
     ))
     .unwrap();
     for row in oracle["cases"].as_array().unwrap() {
-        let zone = campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
+        let zone =
+            campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
         let result = super::parse_time(
             row["input"].as_str().unwrap(),
             &zone,
@@ -85,7 +86,8 @@ fn broader_calendar_inputs_match_actual_rails() {
         .iter()
         .chain(widths["cases"].as_array().unwrap())
     {
-        let zone = campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
+        let zone =
+            campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
         let result = super::parse_time(
             row["input"].as_str().unwrap(),
             &zone,
@@ -232,7 +234,8 @@ fn review_regression_compact_clocks_offsets_and_dst_match_rails() {
     .unwrap();
     let mut mismatches = Vec::new();
     for row in oracle["cases"].as_array().unwrap() {
-        let zone = campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
+        let zone =
+            campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
         let result = super::parse_time(
             row["input"].as_str().unwrap(),
             &zone,
@@ -396,7 +399,8 @@ fn signed_years_and_extended_offsets_match_actual_rails() {
     .unwrap();
     let mut mismatches = Vec::new();
     for row in oracle["cases"].as_array().unwrap() {
-        let zone = campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
+        let zone =
+            campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
         let result = super::parse_time(
             row["input"].as_str().unwrap(),
             &zone,

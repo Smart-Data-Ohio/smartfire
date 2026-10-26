@@ -37,7 +37,6 @@ pub struct NotificationSounds {
     pub ooo_quiet: Vec<(i64, i64)>,
 }
 
-
 /// `User.administrator.first`, shown by the help-contact partial.
 #[derive(Clone, Debug)]
 pub struct HelpContact {

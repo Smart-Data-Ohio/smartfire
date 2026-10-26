@@ -1,7 +1,7 @@
 //! The shared connector also serves GitHub; every connection stage consumes one budget.
 use super::*;
-use crate::net::{BoxFuture, Dialer, Resolver};
 use crate::net::test_support::{FakeResolver, MappingDialer, ws15e_listener};
+use crate::net::{BoxFuture, Dialer, Resolver};
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},

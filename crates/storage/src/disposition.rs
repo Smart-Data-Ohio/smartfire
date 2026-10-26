@@ -10,13 +10,18 @@ pub fn format(disposition: &str, filename: &str) -> String {
         percent_escape(&transliterate(filename), |b| {
             b == b' ' || b.is_ascii_alphanumeric() || b"!#$+.^_`|~-".contains(&b)
         }),
-        percent_escape(filename, |b| b.is_ascii_alphanumeric() || b"!#$&+.^_`|~-".contains(&b)),
+        percent_escape(filename, |b| b.is_ascii_alphanumeric()
+            || b"!#$&+.^_`|~-".contains(&b)),
     )
 }
 
 /// `ActiveStorage::Service#content_disposition_with`: anything but "attachment" is "inline".
 pub fn content_disposition_with(disposition: &str, sanitized_filename: &str) -> String {
-    let disposition = if disposition == "attachment" { "attachment" } else { "inline" };
+    let disposition = if disposition == "attachment" {
+        "attachment"
+    } else {
+        "inline"
+    };
     format(disposition, sanitized_filename)
 }
 
@@ -54,10 +59,14 @@ fn percent_escape(s: &str, keep: impl Fn(u8) -> bool) -> String {
 
 /// `Journey::Router::Utils.escape_path`: keeps unreserved, sub-delims, ":", "@" and "/".
 pub fn escape_path(s: &str) -> String {
-    percent_escape(s, |b| b.is_ascii_alphanumeric() || b"-._~!$&'()*+,;=:@/".contains(&b))
+    percent_escape(s, |b| {
+        b.is_ascii_alphanumeric() || b"-._~!$&'()*+,;=:@/".contains(&b)
+    })
 }
 
 /// `Journey::Router::Utils.escape_segment`: like `escape_path`, but "/" is escaped too.
 pub fn escape_segment(s: &str) -> String {
-    percent_escape(s, |b| b.is_ascii_alphanumeric() || b"-._~!$&'()*+,;=:@".contains(&b))
+    percent_escape(s, |b| {
+        b.is_ascii_alphanumeric() || b"-._~!$&'()*+,;=:@".contains(&b)
+    })
 }

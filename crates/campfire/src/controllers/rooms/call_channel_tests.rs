@@ -125,7 +125,12 @@ async fn call_channel_http_matches_production_rails() {
     use campfire_db::{Membership, Role};
     let vectors: serde_json::Value =
         serde_json::from_str(include_str!("call_channel_vectors.json")).unwrap();
-    for case in vectors["cases"].as_array().unwrap().iter().filter(|case| case["method"] != "GET" && case["method"] != "get") {
+    for case in vectors["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["method"] != "GET" && case["method"] != "get")
+    {
         let name = case["name"].as_str().unwrap();
         let Some(test) = TestApp::boot().await else {
             return;

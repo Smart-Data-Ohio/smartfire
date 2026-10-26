@@ -13,11 +13,16 @@ async fn fixture(test: &TestApp, kind: RoomType, users: &[i64]) -> Room {
         .unwrap()
 }
 async fn drain(test: &TestApp, client: &mut Socket, user: i64) -> Vec<String> {
-    test.booted.app.broadcasts.channel(&format!("user_{user}_reads"), &serde_json::json!({"barrier": true}));
+    test.booted.app.broadcasts.channel(
+        &format!("user_{user}_reads"),
+        &serde_json::json!({"barrier": true}),
+    );
     let mut frames = Vec::new();
     loop {
         let frame = next(client).await;
-        if frame["message"]["barrier"] == true { break; }
+        if frame["message"]["barrier"] == true {
+            break;
+        }
         frames.push(frame["message"].to_string());
     }
     frames
@@ -92,9 +97,10 @@ async fn call_channel_members_and_outsiders_cannot_edit_read_messages_or_receive
                 response.text()
             );
             assert_eq!(response.location(), Some("http://campfire.test/"));
-
         }
-        let response = browser.classic_page(&format!("/rooms/{secret_id}/messages")).await;
+        let response = browser
+            .classic_page(&format!("/rooms/{secret_id}/messages"))
+            .await;
         assert_eq!(response.status, StatusCode::NOT_FOUND);
 
         member_frames.close(None).await.unwrap();
@@ -126,7 +132,7 @@ async fn call_channel_unknown_icon_creation_renders_errors_without_creating_any_
             )
             .await;
         assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
-            assert_eq!(
+        assert_eq!(
             test.db()
                 .read(|c| Ok(
                     c.query_row_cached("SELECT COUNT(*) FROM rooms", [], |r| r.get::<_, i64>(0))?

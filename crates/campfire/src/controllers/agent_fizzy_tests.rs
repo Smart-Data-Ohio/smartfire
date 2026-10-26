@@ -20,28 +20,57 @@ async fn check(case: &Value) {
     };
     let mut routes = vec![];
     for account in ["897362094", "other"] {
-        routes.push(Route::new("GET", "www.example.com", &format!("/{account}/boards.json"), status).body(body));
+        routes.push(
+            Route::new(
+                "GET",
+                "www.example.com",
+                &format!("/{account}/boards.json"),
+                status,
+            )
+            .body(body),
+        );
     }
     routes.extend([
-        Route::new("GET", "www.example.com", "/897362094/boards/board.json", 200).body("{\"id\":\"board\",\"name\":\"Engineering α & β < >\"}"),
-        Route::new("GET", "www.example.com", "/897362094/boards/board/columns.json", 200).body("[{\"id\":\"col\",\"name\":\"Working\"}]"),
-        Route::new("GET", "www.example.com", "/897362094/cards/579.json", 200).body("{\"number\":579,\"title\":\"α & β < >\"}"),
+        Route::new(
+            "GET",
+            "www.example.com",
+            "/897362094/boards/board.json",
+            200,
+        )
+        .body("{\"id\":\"board\",\"name\":\"Engineering α & β < >\"}"),
+        Route::new(
+            "GET",
+            "www.example.com",
+            "/897362094/boards/board/columns.json",
+            200,
+        )
+        .body("[{\"id\":\"col\",\"name\":\"Working\"}]"),
+        Route::new("GET", "www.example.com", "/897362094/cards/579.json", 200)
+            .body("{\"number\":579,\"title\":\"α & β < >\"}"),
     ]);
     // The oracle records CGI.escape's exact target, including Ruby array/hash coercions.
     for call in case["calls"].as_array().unwrap() {
         let path = call["path"].as_str().unwrap();
         if path.starts_with("/897362094/search.json?") {
-            routes.push(Route::new("GET", "www.example.com", path, 200).body("{\"number\":579,\"title\":\"α & β < >\"}"));
+            routes.push(
+                Route::new("GET", "www.example.com", path, 200)
+                    .body("{\"number\":579,\"title\":\"α & β < >\"}"),
+            );
         }
     }
     let server = FakeServer::start_tls(routes).await;
-    let resolver = Arc::new(FakeResolver::new([("www.example.com", vec!["93.184.216.34"])]));
+    let resolver = Arc::new(FakeResolver::new([(
+        "www.example.com",
+        vec!["93.184.216.34"],
+    )]));
     let dialer = Arc::new(MappingDialer {
         public: ["93.184.216.34".parse().unwrap()].into(),
         to: server.addr,
         dialed: Default::default(),
     });
-    let clock = Arc::new(campfire_kit::FrozenClock::new("2026-03-02T16:00:00Z".parse().unwrap()));
+    let clock = Arc::new(campfire_kit::FrozenClock::new(
+        "2026-03-02T16:00:00Z".parse().unwrap(),
+    ));
     let app = TestApp::boot_with_fizzy(
         clock,
         State {
@@ -103,9 +132,24 @@ async fn check(case: &Value) {
     }
     let reply = app.anonymous().send(req).await;
     let name = case["name"].as_str().unwrap();
-    assert_eq!(reply.status.as_u16(), case["status"].as_u64().unwrap() as u16, "{name}: {}", reply.text());
-    assert_eq!(reply.text(), case["response_body"].as_str().unwrap(), "{name}: raw response bytes");
-    for header in ["Content-Type", "Cache-Control", "Pragma", "Retry-After", "Location"] {
+    assert_eq!(
+        reply.status.as_u16(),
+        case["status"].as_u64().unwrap() as u16,
+        "{name}: {}",
+        reply.text()
+    );
+    assert_eq!(
+        reply.text(),
+        case["response_body"].as_str().unwrap(),
+        "{name}: raw response bytes"
+    );
+    for header in [
+        "Content-Type",
+        "Cache-Control",
+        "Pragma",
+        "Retry-After",
+        "Location",
+    ] {
         assert_eq!(
             reply.header(header),
             case["response_headers"][header.to_ascii_lowercase()].as_str(),
@@ -114,35 +158,53 @@ async fn check(case: &Value) {
     }
     let received = server.received();
     assert_eq!(
-        json!(received.iter().map(|r| json!({"method":r.method,"path":r.target})).collect::<Vec<_>>()),
+        json!(
+            received
+                .iter()
+                .map(|r| json!({"method":r.method,"path":r.target}))
+                .collect::<Vec<_>>()
+        ),
         case["calls"],
         "{name}: outbound requests"
     );
     let expected_authorization = format!("{} {}", "Bearer", "fixture-owner");
     for r in &received {
-        assert_eq!(r.header("authorization"), Some(expected_authorization.as_str()));
+        assert_eq!(
+            r.header("authorization"),
+            Some(expected_authorization.as_str())
+        );
         assert_eq!(r.header("accept"), Some("application/json"));
         assert_eq!(r.header("user-agent"), Some("Smartfire-Fizzy"));
     }
-    assert_eq!(resolver.lookups().len(), received.len(), "{name}: rejected input makes no DNS lookup");
+    assert_eq!(
+        resolver.lookups().len(),
+        received.len(),
+        "{name}: rejected input makes no DNS lookup"
+    );
     let reason = app
         .db()
         .read(|c| Ok(Account::for_user(c, 127326141)?.and_then(|a| a.disconnected_reason)))
         .await
         .unwrap();
-    assert_eq!(json!(reason), case["reason"], "{name}: linked-account state");
+    assert_eq!(
+        json!(reason),
+        case["reason"],
+        "{name}: linked-account state"
+    );
     println!("WS11-api Fizzy wire case {name}: 1 passed; 0 failed");
 }
 #[tokio::test]
 async fn fizzy_read_wire_successes() {
-    let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/agent_fizzy_http.json")).unwrap();
+    let vectors: Value =
+        serde_json::from_str(include_str!("../../../../vectors/agent_fizzy_http.json")).unwrap();
     for case in vectors["cases"].as_array().unwrap().iter().take(8) {
         check(case).await;
     }
 }
 #[tokio::test]
 async fn fizzy_read_wire_errors_and_coercions() {
-    let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/agent_fizzy_http.json")).unwrap();
+    let vectors: Value =
+        serde_json::from_str(include_str!("../../../../vectors/agent_fizzy_http.json")).unwrap();
     for case in vectors["cases"].as_array().unwrap().iter().skip(8) {
         check(case).await;
     }

@@ -15,7 +15,12 @@ pub fn gid_param(gid: &GlobalId) -> String {
 /// `ActionCable::Channel::Naming.channel_name`:
 /// `name.delete_suffix("Channel").gsub("::", ":").underscore`.
 pub fn channel_name(class_name: &str) -> String {
-    underscore(&class_name.strip_suffix("Channel").unwrap_or(class_name).replace("::", ":"))
+    underscore(
+        &class_name
+            .strip_suffix("Channel")
+            .unwrap_or(class_name)
+            .replace("::", ":"),
+    )
 }
 
 /// `Channel::Broadcasting.broadcasting_for`: the channel name followed by each broadcastable,
@@ -43,7 +48,11 @@ fn underscore(word: &str) -> String {
                 out.push('_');
             }
         }
-        out.push(if c == '-' { '_' } else { c.to_ascii_lowercase() });
+        out.push(if c == '-' {
+            '_'
+        } else {
+            c.to_ascii_lowercase()
+        });
     }
     out
 }
@@ -55,16 +64,29 @@ mod tests {
     #[test]
     fn channel_names() {
         assert_eq!(channel_name("RoomChannel"), "room");
-        assert_eq!(channel_name("TypingNotificationsChannel"), "typing_notifications");
-        assert_eq!(channel_name("Namespaced::StreamsChannel"), "namespaced:streams");
+        assert_eq!(
+            channel_name("TypingNotificationsChannel"),
+            "typing_notifications"
+        );
+        assert_eq!(
+            channel_name("Namespaced::StreamsChannel"),
+            "namespaced:streams"
+        );
         assert_eq!(channel_name("HTMLChannel"), "html");
         assert_eq!(channel_name("HTMLParserChannel"), "html_parser");
     }
 
     #[test]
     fn broadcastings() {
-        let room = gid_param(&GlobalId { app: "campfire".into(), model_name: "Rooms::Open".into(), id: "1".into() });
+        let room = gid_param(&GlobalId {
+            app: "campfire".into(),
+            model_name: "Rooms::Open".into(),
+            id: "1".into(),
+        });
         assert_eq!(room, "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6Ok9wZW4vMQ");
-        assert_eq!(broadcasting_for("PresenceChannel", &[&room]), format!("presence:{room}"));
+        assert_eq!(
+            broadcasting_for("PresenceChannel", &[&room]),
+            format!("presence:{room}")
+        );
     }
 }

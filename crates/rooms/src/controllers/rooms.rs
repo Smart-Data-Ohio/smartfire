@@ -8,13 +8,11 @@
 //! `set_room` and raise on the nil `@room`, as in the reference. Direct show and board destroy
 //! are implemented on their own controllers.
 
+pub mod board_automations;
+pub mod boards;
 pub mod call_moderation;
-pub mod stage_streams;
-pub mod stage_participation;
 pub mod categories;
 pub mod closeds;
-pub mod boards;
-pub mod board_automations;
 pub mod directs;
 pub mod events;
 pub mod favorites;
@@ -25,6 +23,8 @@ pub mod opens;
 pub mod operations;
 pub mod polls;
 pub mod reads;
+pub mod stage_participation;
+pub mod stage_streams;
 
 pub mod settings;
 pub mod slash_commands;
@@ -115,7 +115,9 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
     ensure_can_delete(c, &room).await?;
-    if room.voice() || room.stage() { return call_channels::destroy(c, room).await; }
+    if room.voice() || room.stage() {
+        return call_channels::destroy(c, room).await;
+    }
     destroy_room(c, room).await
 }
 
@@ -154,7 +156,9 @@ pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
 }
 
 pub async fn destroy_operation(c: &Ctx, room: &Room) -> Result<()> {
-    if room.voice() || room.stage() { return call_channels::destroy_operation(c, room).await; }
+    if room.voice() || room.stage() {
+        return call_channels::destroy_operation(c, room).await;
+    }
     let destroyed = room.clone();
     c.app()
         .db
@@ -467,7 +471,6 @@ pub(crate) fn existing_user_ids(
         .map(|user| user.id)
         .collect())
 }
-
 
 pub mod call_channels;
 

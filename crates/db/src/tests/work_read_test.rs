@@ -29,31 +29,81 @@ fn fixture(t: &TestDb) -> (Room, ChannelThread) {
 
 #[test]
 fn workspace_work_relation_rechecks_membership_is_unbounded_and_rejects_inactive_or_bot_viewers() {
-    let t=channel_thread_test::frozen();
-    let (room,hidden,ids)=t.write(|tx| {
-        tx.conn().execute("UPDATE channel_threads SET work_status=NULL",[])?;
-        let room=Room::create_for(tx,RoomType::Open,Some("Visible"),id("david"),&[id("david"),id("jz")])?;
-        let hidden=Room::create_for(tx,RoomType::Closed,Some("Hidden"),id("david"),&[id("david")])?;
-        let mut ids=Vec::new();
+    let t = channel_thread_test::frozen();
+    let (room, hidden, ids) = t.write(|tx| {
+        tx.conn()
+            .execute("UPDATE channel_threads SET work_status=NULL", [])?;
+        let room = Room::create_for(
+            tx,
+            RoomType::Open,
+            Some("Visible"),
+            id("david"),
+            &[id("david"), id("jz")],
+        )?;
+        let hidden = Room::create_for(
+            tx,
+            RoomType::Closed,
+            Some("Hidden"),
+            id("david"),
+            &[id("david")],
+        )?;
+        let mut ids = Vec::new();
         for i in 0..105 {
-            ids.push(ChannelThread::create(tx,NewChannelThread {room_id:room.id,creator_id:id("jz"),name:Some(format!("Work {i}")),work_status:Some("planned".into()),..Default::default()})?.id);
+            ids.push(
+                ChannelThread::create(
+                    tx,
+                    NewChannelThread {
+                        room_id: room.id,
+                        creator_id: id("jz"),
+                        name: Some(format!("Work {i}")),
+                        work_status: Some("planned".into()),
+                        ..Default::default()
+                    },
+                )?
+                .id,
+            );
         }
-        ChannelThread::create(tx,NewChannelThread {room_id:hidden.id,creator_id:id("david"),name:Some("Hidden work".into()),work_status:Some("planned".into()),..Default::default()})?;
-        Ok((room.id,hidden.id,ids))
+        ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id: hidden.id,
+                creator_id: id("david"),
+                name: Some("Hidden work".into()),
+                work_status: Some("planned".into()),
+                ..Default::default()
+            },
+        )?;
+        Ok((room.id, hidden.id, ids))
     });
     t.read(|conn| {
-        let viewer=User::find(conn,id("jz"))?;
-        let rows=ChannelThread::visible_work_threads(conn,&viewer,"all")?;
-        assert_eq!(rows.iter().map(|row|row.id).collect::<Vec<_>>(),ids.iter().rev().copied().collect::<Vec<_>>());
-        assert!(!rows.iter().any(|row|row.room_id==hidden));
-        let mut inactive=viewer.clone();inactive.status=crate::models::user::Status::Deactivated;
-        assert!(ChannelThread::visible_work_threads(conn,&inactive,"all")?.is_empty());
-        assert!(ChannelThread::visible_work_threads(conn,&User::find(conn,id("bender"))?,"all")?.is_empty());
+        let viewer = User::find(conn, id("jz"))?;
+        let rows = ChannelThread::visible_work_threads(conn, &viewer, "all")?;
+        assert_eq!(
+            rows.iter().map(|row| row.id).collect::<Vec<_>>(),
+            ids.iter().rev().copied().collect::<Vec<_>>()
+        );
+        assert!(!rows.iter().any(|row| row.room_id == hidden));
+        let mut inactive = viewer.clone();
+        inactive.status = crate::models::user::Status::Deactivated;
+        assert!(ChannelThread::visible_work_threads(conn, &inactive, "all")?.is_empty());
+        assert!(
+            ChannelThread::visible_work_threads(conn, &User::find(conn, id("bender"))?, "all")?
+                .is_empty()
+        );
         Ok(())
     });
-    t.write(move |tx| { Membership::find_by_room_and_user(tx.conn(),room,id("jz"))?.unwrap().destroy(tx)?;Ok(()) });
+    t.write(move |tx| {
+        Membership::find_by_room_and_user(tx.conn(), room, id("jz"))?
+            .unwrap()
+            .destroy(tx)?;
+        Ok(())
+    });
     t.read(|conn| {
-        assert!(ChannelThread::visible_work_threads(conn,&User::find(conn,id("jz"))?,"all")?.is_empty());Ok(())
+        assert!(
+            ChannelThread::visible_work_threads(conn, &User::find(conn, id("jz"))?, "all")?
+                .is_empty()
+        );
+        Ok(())
     });
 }
 #[test]
@@ -449,7 +499,11 @@ fn board_deletion_rows_precede_a_failing_agent_ledger_callback() {
         t.try_write(move |tx| ChannelThread::find(tx.conn(), post.id)?.destroy(tx))
             .is_err()
     );
-    assert!(t.events()[from..].iter().any(|event| event.as_broadcast() == Some(Broadcast::ThreadRemoved { thread_id: post.id, room_id: post.room_id })));
+    assert!(t.events()[from..].iter().any(|event| event.as_broadcast()
+        == Some(Broadcast::ThreadRemoved {
+            thread_id: post.id,
+            room_id: post.room_id
+        })));
     assert!(
         t.read(|conn| ChannelThread::find_by_id(conn, post.id))
             .is_none()

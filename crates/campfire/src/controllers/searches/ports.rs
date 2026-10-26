@@ -3,7 +3,6 @@ use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::Search;
 
-
 async fn app() -> TestApp {
     TestApp::boot().await.expect("WS8bm2 requires default seed")
 }
@@ -64,9 +63,7 @@ async fn clear_redirects_after_deleting_only_the_viewers_recents() {
     record(&app, "hello").await;
     let r = app
         .david()
-        .write(
-            Req::new(Method::DELETE, "/searches/clear"),
-        )
+        .write(Req::new(Method::DELETE, "/searches/clear"))
         .await;
     assert_eq!(r.status, StatusCode::FOUND);
     assert_eq!(r.location(), Some("http://campfire.test/searches"));

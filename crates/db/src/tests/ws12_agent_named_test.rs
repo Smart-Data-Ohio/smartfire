@@ -195,9 +195,7 @@ fn run(key: &'static str) {
             Ok(())
         });
         transitions.push(availability());
-        other_owner = t.read(|conn| {
-            Ok(json!(ChannelThread::find(conn, 901832000)?.work_owner_id))
-        });
+        other_owner = t.read(|conn| Ok(json!(ChannelThread::find(conn, 901832000)?.work_owner_id)));
     } else {
         t.write(move |tx| {
             grant(tx, agent_id, room, "post_messages")?;

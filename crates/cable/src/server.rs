@@ -86,7 +86,10 @@ impl<U: Identified + Send + Sync + 'static> ServerBuilder<U> {
         C: Channel<U>,
         F: Fn() -> C + Send + Sync + 'static,
     {
-        self.channels.insert(class_name.to_string(), Arc::new(move || Box::new(factory()) as Box<dyn Channel<U>>));
+        self.channels.insert(
+            class_name.to_string(),
+            Arc::new(move || Box::new(factory()) as Box<dyn Channel<U>>),
+        );
         self
     }
 
@@ -112,7 +115,9 @@ pub struct Server<U: Send + Sync + 'static> {
 
 impl<U: Send + Sync + 'static> Clone for Server<U> {
     fn clone(&self) -> Self {
-        Self { inner: self.inner.clone() }
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }
 
@@ -123,7 +128,9 @@ pub struct WeakServer<U: Send + Sync + 'static> {
 
 impl<U: Send + Sync + 'static> Clone for WeakServer<U> {
     fn clone(&self) -> Self {
-        Self { inner: self.inner.clone() }
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }
 
@@ -135,7 +142,9 @@ impl<U: Send + Sync + 'static> WeakServer<U> {
 
 impl<U: Send + Sync + 'static> Server<U> {
     pub fn downgrade(&self) -> WeakServer<U> {
-        WeakServer { inner: Arc::downgrade(&self.inner) }
+        WeakServer {
+            inner: Arc::downgrade(&self.inner),
+        }
     }
 }
 
@@ -151,7 +160,11 @@ struct Inner<U: Send + Sync + 'static> {
 
 impl<U: Identified + Send + Sync + 'static> Server<U> {
     pub fn builder(config: Config, authenticator: impl Authenticate<U>) -> ServerBuilder<U> {
-        ServerBuilder { config, authenticator: Arc::new(authenticator), channels: HashMap::new() }
+        ServerBuilder {
+            config,
+            authenticator: Arc::new(authenticator),
+            channels: HashMap::new(),
+        }
     }
 
     /// The `/cable` endpoint (`ActionCable::Server::Base#call`). Anything that isn't a WebSocket
@@ -160,25 +173,40 @@ impl<U: Identified + Send + Sync + 'static> Server<U> {
         let (mut parts, _body) = request.into_parts();
         self.start_heartbeat();
 
-        if !websocket_request(&parts.method, &parts.headers) || !self.allow_request_origin(&parts.headers) {
+        if !websocket_request(&parts.method, &parts.headers)
+            || !self.allow_request_origin(&parts.headers)
+        {
             return page_not_found();
         }
-        let (Some(handshake), Some(on_upgrade)) =
-            (Handshake::accept(&parts.headers), parts.extensions.remove::<hyper::upgrade::OnUpgrade>())
-        else {
+        let (Some(handshake), Some(on_upgrade)) = (
+            Handshake::accept(&parts.headers),
+            parts.extensions.remove::<hyper::upgrade::OnUpgrade>(),
+        ) else {
             return page_not_found();
         };
         let mut response = Response::new(axum::body::Body::empty());
         *response.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
         handshake.response_headers(response.headers_mut());
         if let Some(protocol) = negotiate_protocol(&parts.headers) {
-            response.headers_mut().insert(header::SEC_WEBSOCKET_PROTOCOL, HeaderValue::from_static(protocol));
+            response.headers_mut().insert(
+                header::SEC_WEBSOCKET_PROTOCOL,
+                HeaderValue::from_static(protocol),
+            );
         }
-        let request = ConnectRequest { uri: parts.uri, headers: parts.headers };
+        let request = ConnectRequest {
+            uri: parts.uri,
+            headers: parts.headers,
+        };
         let server = self.clone();
         connections_runtime().spawn(async move {
             if let Ok(upgraded) = on_upgrade.await {
-                connection::run(server, hyper_util::rt::TokioIo::new(upgraded), handshake.deflate(), request).await;
+                connection::run(
+                    server,
+                    hyper_util::rt::TokioIo::new(upgraded),
+                    handshake.deflate(),
+                    request,
+                )
+                .await;
             }
         });
         response
@@ -187,10 +215,13 @@ impl<U: Identified + Send + Sync + 'static> Server<U> {
     /// An Axum router serving [`Server::call`] at `path` (normally [`protocol::DEFAULT_MOUNT_PATH`]).
     pub fn router<S: Clone + Send + Sync + 'static>(&self, path: &str) -> axum::Router<S> {
         let server = self.clone();
-        axum::Router::new().route(path, axum::routing::any(move |request: Request| {
-            let server = server.clone();
-            async move { server.call(request).await }
-        }))
+        axum::Router::new().route(
+            path,
+            axum::routing::any(move |request: Request| {
+                let server = server.clone();
+                async move { server.call(request).await }
+            }),
+        )
     }
 
     /// The single-page app's sync socket (`crate::sync`), once [`Server::install_sync`] has run.
@@ -200,18 +231,24 @@ impl<U: Identified + Send + Sync + 'static> Server<U> {
         let Some(engine) = self.inner.sync.get().cloned() else {
             return page_not_found();
         };
-        if !websocket_request(&parts.method, &parts.headers) || !self.allow_request_origin(&parts.headers) {
+        if !websocket_request(&parts.method, &parts.headers)
+            || !self.allow_request_origin(&parts.headers)
+        {
             return page_not_found();
         }
-        let (Some(handshake), Some(on_upgrade)) =
-            (Handshake::accept(&parts.headers), parts.extensions.remove::<hyper::upgrade::OnUpgrade>())
-        else {
+        let (Some(handshake), Some(on_upgrade)) = (
+            Handshake::accept(&parts.headers),
+            parts.extensions.remove::<hyper::upgrade::OnUpgrade>(),
+        ) else {
             return page_not_found();
         };
         let mut response = Response::new(axum::body::Body::empty());
         *response.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
         handshake.response_headers(response.headers_mut());
-        let request = ConnectRequest { uri: parts.uri, headers: parts.headers };
+        let request = ConnectRequest {
+            uri: parts.uri,
+            headers: parts.headers,
+        };
         let server = self.clone();
         connections_runtime().spawn(async move {
             if let Ok(upgraded) = on_upgrade.await {
@@ -225,10 +262,13 @@ impl<U: Identified + Send + Sync + 'static> Server<U> {
     /// An Axum router serving [`Server::sync_call`] at `path`.
     pub fn sync_router<S: Clone + Send + Sync + 'static>(&self, path: &str) -> axum::Router<S> {
         let server = self.clone();
-        axum::Router::new().route(path, axum::routing::any(move |request: Request| {
-            let server = server.clone();
-            async move { server.sync_call(request).await }
-        }))
+        axum::Router::new().route(
+            path,
+            axum::routing::any(move |request: Request| {
+                let server = server.clone();
+                async move { server.sync_call(request).await }
+            }),
+        )
     }
 }
 
@@ -247,7 +287,9 @@ impl<U: Send + Sync + 'static> Server<U> {
 
     pub(crate) fn channel_factory(&self, class_name: &str) -> Option<&ChannelFactory<U>> {
         // `safe_constantize` resolves "::RoomChannel" too.
-        self.inner.channels.get(class_name.strip_prefix("::").unwrap_or(class_name))
+        self.inner
+            .channels
+            .get(class_name.strip_prefix("::").unwrap_or(class_name))
     }
 
     pub(crate) fn heartbeat(&self) -> watch::Receiver<Frame> {
@@ -266,12 +308,22 @@ impl<U: Send + Sync + 'static> Server<U> {
     /// Broadcasts an already-encoded JSON document.
     pub fn broadcast_json(&self, broadcasting: &str, encoded: String) -> usize {
         tracing::debug!(broadcasting, "[ActionCable] Broadcasting");
-        self.inner.hub.broadcast(broadcasting, &json::escape_html_entities(encoded))
+        self.inner
+            .hub
+            .broadcast(broadcasting, &json::escape_html_entities(encoded))
     }
 
     /// `SomeChannel.broadcast_to(broadcastables, message)`.
-    pub fn broadcast_to<T: Serialize + ?Sized>(&self, class_name: &str, broadcastables: &[&str], message: &T) -> usize {
-        self.broadcast(&naming::broadcasting_for(class_name, broadcastables), message)
+    pub fn broadcast_to<T: Serialize + ?Sized>(
+        &self,
+        class_name: &str,
+        broadcastables: &[&str],
+        message: &T,
+    ) -> usize {
+        self.broadcast(
+            &naming::broadcasting_for(class_name, broadcastables),
+            message,
+        )
     }
 
     /// `ActionCable.server.remote_connections.where(current_user: user).disconnect(reconnect:)`:
@@ -283,7 +335,13 @@ impl<U: Send + Sync + 'static> Server<U> {
             r#type: &'static str,
             reconnect: bool,
         }
-        self.broadcast(&internal_channel(connection_identifier), &Disconnect { r#type: "disconnect", reconnect })
+        self.broadcast(
+            &internal_channel(connection_identifier),
+            &Disconnect {
+                r#type: "disconnect",
+                reconnect,
+            },
+        )
     }
 
     /// Broadcastings that currently have subscribers (including connections' internal channels).
@@ -358,12 +416,17 @@ impl<U: Send + Sync + 'static> Server<U> {
         if !engine.gap_needed_for(user_id) {
             return;
         }
-        self.inner.hub.sequenced(|seq| engine.ring.push_gap(seq, user_id));
+        self.inner
+            .hub
+            .sequenced(|seq| engine.ring.push_gap(seq, user_id));
     }
 
     /// The sync engine's epoch and latest sequence, once installed.
     pub fn sync_position(&self) -> Option<(String, u64)> {
-        self.inner.sync.get().map(|engine| (engine.ring.epoch().to_string(), engine.ring.head()))
+        self.inner
+            .sync
+            .get()
+            .map(|engine| (engine.ring.epoch().to_string(), engine.ring.head()))
     }
 
     /// Publishes a sync event, sequenced with the hub's broadcasts. Returns its sequence, or
@@ -389,8 +452,9 @@ impl<U: Send + Sync + 'static> Server<U> {
         if state.last_by_user.get(&presence.user_id) == Some(&presence) {
             return None;
         }
-        let payload = serde_json::to_string(&campfire_api_types::SyncPayload::Presence(presence.clone()))
-            .expect("sync payloads serialize");
+        let payload =
+            serde_json::to_string(&campfire_api_types::SyncPayload::Presence(presence.clone()))
+                .expect("sync payloads serialize");
         let mut publication = SyncPublication::new(crate::sync::Audience::Everyone, payload);
         publication.coalesce = Some(format!("presence:{}", presence.user_id));
         let seq = self.sync_publish(publication)?;
@@ -449,13 +513,25 @@ impl<U: Send + Sync + 'static> Server<U> {
             return true;
         }
         let origin = headers.get(header::ORIGIN).and_then(|v| v.to_str().ok());
-        let host = headers.get(header::HOST).and_then(|v| v.to_str().ok()).unwrap_or("");
-        let proto = if config.assume_ssl || ssl_request(headers) { "https" } else { "http" };
+        let host = headers
+            .get(header::HOST)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let proto = if config.assume_ssl || ssl_request(headers) {
+            "https"
+        } else {
+            "http"
+        };
         let same_origin = origin == Some(format!("{proto}://{host}").as_str());
         if config.allow_same_origin_as_host && same_origin {
             return true;
         }
-        if origin.is_some_and(|origin| config.allowed_request_origins.iter().any(|allowed| allowed == origin)) {
+        if origin.is_some_and(|origin| {
+            config
+                .allowed_request_origins
+                .iter()
+                .any(|allowed| allowed == origin)
+        }) {
             return true;
         }
         tracing::error!(origin, "Request origin not allowed");
@@ -469,7 +545,8 @@ impl<U: Send + Sync + 'static> Server<U> {
             let (sender, receiver) = watch::channel(Frame::from(protocol::ping(unix_now())));
             tokio::spawn(async move {
                 let period = Duration::from_secs(protocol::BEAT_INTERVAL);
-                let mut interval = tokio::time::interval_at(tokio::time::Instant::now() + period, period);
+                let mut interval =
+                    tokio::time::interval_at(tokio::time::Instant::now() + period, period);
                 loop {
                     interval.tick().await;
                     if sender.send(protocol::ping(unix_now()).into()).is_err() {
@@ -488,13 +565,18 @@ pub(crate) fn internal_channel(connection_identifier: &str) -> String {
 }
 
 fn unix_now() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs() as i64)
 }
 
 /// `WebSocket::Driver.websocket?(env)`: a GET with `Connection: upgrade` and `Upgrade: websocket`.
 fn websocket_request(method: &Method, headers: &HeaderMap) -> bool {
     let connection_upgrade = headers.get_all(header::CONNECTION).iter().any(|value| {
-        value.to_str().is_ok_and(|v| v.split(',').any(|token| token.trim().eq_ignore_ascii_case("upgrade")))
+        value.to_str().is_ok_and(|v| {
+            v.split(',')
+                .any(|token| token.trim().eq_ignore_ascii_case("upgrade"))
+        })
     });
     let upgrade_websocket = headers
         .get(header::UPGRADE)
@@ -506,7 +588,13 @@ fn websocket_request(method: &Method, headers: &HeaderMap) -> bool {
 /// `Rack::Request#ssl?` for a request that didn't arrive over TLS itself.
 fn ssl_request(headers: &HeaderMap) -> bool {
     let first = |name: &str| {
-        headers.get(name).and_then(|v| v.to_str().ok()).map(|v| v.split(',').next().unwrap_or("").trim().to_ascii_lowercase())
+        headers.get(name).and_then(|v| v.to_str().ok()).map(|v| {
+            v.split(',')
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_ascii_lowercase()
+        })
     };
     first("x-forwarded-ssl").as_deref() == Some("on")
         || first("x-forwarded-scheme").as_deref() == Some("https")
@@ -521,12 +609,21 @@ fn negotiate_protocol(headers: &HeaderMap) -> Option<&'static str> {
         .filter_map(|v| v.to_str().ok())
         .flat_map(|v| v.split(','))
         .map(str::trim)
-        .find_map(|requested| protocol::PROTOCOLS.into_iter().find(|supported| *supported == requested))
+        .find_map(|requested| {
+            protocol::PROTOCOLS
+                .into_iter()
+                .find(|supported| *supported == requested)
+        })
 }
 
 /// `Connection::Base#respond_to_invalid_request`.
 fn page_not_found() -> Response {
-    (StatusCode::NOT_FOUND, [(header::CONTENT_TYPE, "text/plain; charset=utf-8")], "Page not found").into_response()
+    (
+        StatusCode::NOT_FOUND,
+        [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+        "Page not found",
+    )
+        .into_response()
 }
 
 /// The runtime connections run on, apart from the app's. A broadcast to a big room wakes every
@@ -558,8 +655,14 @@ mod tests {
 
     #[test]
     fn negotiation_follows_the_clients_order() {
-        assert_eq!(negotiate_protocol(&headers("actioncable-v1-json, actioncable-unsupported")), Some("actioncable-v1-json"));
-        assert_eq!(negotiate_protocol(&headers("actioncable-unsupported, actioncable-v1-json")), Some("actioncable-unsupported"));
+        assert_eq!(
+            negotiate_protocol(&headers("actioncable-v1-json, actioncable-unsupported")),
+            Some("actioncable-v1-json")
+        );
+        assert_eq!(
+            negotiate_protocol(&headers("actioncable-unsupported, actioncable-v1-json")),
+            Some("actioncable-unsupported")
+        );
         assert_eq!(negotiate_protocol(&headers("foo")), None);
         assert_eq!(negotiate_protocol(&HeaderMap::new()), None);
     }

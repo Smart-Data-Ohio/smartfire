@@ -3,10 +3,10 @@
 
 use std::sync::Arc;
 
+use crate::json_cache::JsonCache;
 use campfire_db::Database;
 use campfire_kit::{Ctx, SharedClock};
 use campfire_storage::Storage;
-use crate::json_cache::JsonCache;
 use rails_compat::Secrets;
 
 use crate::config::Config;
@@ -67,7 +67,8 @@ impl AppState {
             jobs: self.jobs.clone(),
             mail: self.mail.fixture_snapshot(),
             fizzy: crate::integrations::fizzy::State {
-                network: self.fizzy.network.clone(), base: self.fizzy.base.clone(),
+                network: self.fizzy.network.clone(),
+                base: self.fizzy.base.clone(),
             },
             klipy: self.klipy.clone(),
             agent_message_payload: self.agent_message_payload.fixture_snapshot(),

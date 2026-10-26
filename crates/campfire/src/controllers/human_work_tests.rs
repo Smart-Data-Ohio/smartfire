@@ -3,9 +3,9 @@ use super::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use serde_json::Value;
 
-mod query_round_two;
-mod query_read_growth;
 mod pr201_review;
+mod query_read_growth;
+mod query_round_two;
 
 #[tokio::test]
 async fn human_pr_link_and_fetch_claim_roll_back_when_the_durable_job_is_rejected() {
@@ -88,7 +88,10 @@ async fn human_links_save_no_activity_and_claim_one_real_pr_fetch_across_threads
             .await;
         assert_eq!(response.status, StatusCode::FOUND, "{}", response.text());
         let room = if thread == 90 { 699448332 } else { ALL_TALK };
-        assert_eq!(response.location(), Some(format!("http://campfire.test/rooms/{room}/threads/{thread}").as_str()));
+        assert_eq!(
+            response.location(),
+            Some(format!("http://campfire.test/rooms/{room}/threads/{thread}").as_str())
+        );
     }
     let id=app.db().read(move |conn| {
         let id:i64=conn.query_row("SELECT id FROM github_pull_requests WHERE owner='rails' AND repo='rails' AND number=12",[],|r|r.get(0))?;
@@ -115,7 +118,10 @@ async fn human_links_save_no_activity_and_claim_one_real_pr_fetch_across_threads
         ))
         .await;
     assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(response.location(), Some("http://campfire.test/rooms/699448332/threads/90"));
+    assert_eq!(
+        response.location(),
+        Some("http://campfire.test/rooms/699448332/threads/90")
+    );
     app.db()
         .read(move |conn| {
             assert!(campfire_db::WorkThreadLink::find(conn, link)?.is_none());
@@ -153,7 +159,13 @@ async fn human_drive_title_uses_the_real_google_api_and_linkers_encrypted_accoun
             .without_job_runner()
             .await;
         setup(&app, row).await;
-        app.db().write(|tx| { tx.conn().execute("DELETE FROM google_accounts", [])?; Ok(()) }).await.unwrap();
+        app.db()
+            .write(|tx| {
+                tx.conn().execute("DELETE FROM google_accounts", [])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
         let transport = support::Recorded::new(vec![]);
         support::install(&app, transport.clone()).await;
         let expires = Timestamp::from_jiff(app.booted.app.clock.now())
@@ -179,7 +191,10 @@ async fn human_drive_title_uses_the_real_google_api_and_linkers_encrypted_accoun
             )
             .await;
         assert_eq!(response.status, StatusCode::FOUND, "{}", response.text());
-        assert_eq!(response.location(), Some("http://campfire.test/rooms/699448332/threads/90"));
+        assert_eq!(
+            response.location(),
+            Some("http://campfire.test/rooms/699448332/threads/90")
+        );
         let title = app
             .db()
             .read(|conn| {
@@ -251,7 +266,9 @@ async fn human_handoff_authorization_precedes_receiver_validation_and_creates_no
             .await;
         setup(&app, row).await;
         let mut browser = app.sign_in(row["user_id"].as_i64().unwrap()).await;
-        if row["method"] == "get" { continue; }
+        if row["method"] == "get" {
+            continue;
+        }
         let response = if row["method"] == "get" {
             browser.get(row["path"].as_str().unwrap()).await
         } else {
@@ -382,7 +399,12 @@ async fn human_work_http_matches_complete_rails_responses() {
     let oracle: Value =
         serde_json::from_str(include_str!("../../../../vectors/human_work_http.json")).unwrap();
     let mut mismatches = Vec::new();
-    for row in oracle["rows"].as_array().unwrap().iter().filter(|row| row["method"] != "get" || row["content_type"].as_str().is_some_and(|value| value.starts_with("application/json"))) {
+    for row in oracle["rows"].as_array().unwrap().iter().filter(|row| {
+        row["method"] != "get"
+            || row["content_type"]
+                .as_str()
+                .is_some_and(|value| value.starts_with("application/json"))
+    }) {
         let app = TestApp::boot_frozen_with_env(&vapid)
             .await
             .expect("default seed required")
@@ -440,39 +462,84 @@ async fn human_work_http_matches_complete_rails_responses() {
         let name = row["name"].as_str().unwrap();
         if row["content_type"] == "text/vnd.turbo-stream.html; charset=utf-8" {
             if matches!(row["status"].as_u64(), Some(200 | 422)) {
-                assert_eq!(response.status, StatusCode::FOUND, "{name}: {}", response.text());
-                let thread_id = row["path"].as_str().unwrap()
-                    .split('/').nth(2).unwrap().parse::<i64>().unwrap();
-                let room_id = app.db().read(move |conn| {
-                    Ok(campfire_db::ChannelThread::find(conn, thread_id)?.room_id)
-                }).await.unwrap();
+                assert_eq!(
+                    response.status,
+                    StatusCode::FOUND,
+                    "{name}: {}",
+                    response.text()
+                );
+                let thread_id = row["path"]
+                    .as_str()
+                    .unwrap()
+                    .split('/')
+                    .nth(2)
+                    .unwrap()
+                    .parse::<i64>()
+                    .unwrap();
+                let room_id = app
+                    .db()
+                    .read(
+                        move |conn| Ok(campfire_db::ChannelThread::find(conn, thread_id)?.room_id),
+                    )
+                    .await
+                    .unwrap();
                 let location = format!("http://campfire.test/rooms/{room_id}/threads/{thread_id}");
                 assert_eq!(response.location(), Some(location.as_str()), "{name}");
                 assert!(response.body.is_empty(), "{name}");
             } else {
-                assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{name}");
+                assert_eq!(
+                    response.status.as_u16(),
+                    row["status"].as_u64().unwrap() as u16,
+                    "{name}"
+                );
                 assert!(response.body.is_empty(), "{name}");
             }
             continue;
         }
         assert_eq!(
             response.status.as_u16(),
-            if row["content_type"].as_str().is_some_and(|kind| kind.starts_with("text/vnd.turbo-stream")) && matches!(row["status"].as_u64(), Some(200 | 422)) { 302 } else { row["status"].as_u64().unwrap() as u16 },
+            if row["content_type"]
+                .as_str()
+                .is_some_and(|kind| kind.starts_with("text/vnd.turbo-stream"))
+                && matches!(row["status"].as_u64(), Some(200 | 422))
+            {
+                302
+            } else {
+                row["status"].as_u64().unwrap() as u16
+            },
             "{name}: {}",
             response.text()
         );
-        if row["content_type"].as_str().is_some_and(|kind| kind.starts_with("text/vnd.turbo-stream")) && response.status.as_u16() == 302 {
+        if row["content_type"]
+            .as_str()
+            .is_some_and(|kind| kind.starts_with("text/vnd.turbo-stream"))
+            && response.status.as_u16() == 302
+        {
             assert!(response.location().is_some());
-        } else { assert_eq!(response.location(), row["location"].as_str(), "{name}"); }
+        } else {
+            assert_eq!(response.location(), row["location"].as_str(), "{name}");
+        }
 
-        if row["content_type"].as_str().is_some_and(|kind| kind.starts_with("application/json")) {
-            assert_eq!(response.header("cache-control"), row["cache_control"].as_str(), "{name}");
+        if row["content_type"]
+            .as_str()
+            .is_some_and(|kind| kind.starts_with("application/json"))
+        {
+            assert_eq!(
+                response.header("cache-control"),
+                row["cache_control"].as_str(),
+                "{name}"
+            );
         }
         let actual = response.text();
         let expected = row["body"].as_str().unwrap();
-        if row["content_type"].as_str().is_some_and(|value| value.starts_with("application/json")) && actual != expected {
+        if row["content_type"]
+            .as_str()
+            .is_some_and(|value| value.starts_with("application/json"))
+            && actual != expected
+        {
             let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join(std::env::var_os("TMPDIR").expect("scratch directory")).join("human-work-diffs");
+                .join(std::env::var_os("TMPDIR").expect("scratch directory"))
+                .join("human-work-diffs");
             std::fs::create_dir_all(&directory).unwrap();
             std::fs::write(directory.join(format!("{name}-actual.html")), actual).unwrap();
             std::fs::write(directory.join(format!("{name}-expected.html")), expected).unwrap();

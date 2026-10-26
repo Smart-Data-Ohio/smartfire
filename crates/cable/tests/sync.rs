@@ -29,7 +29,11 @@ impl SyncHandler<User> for Handler {
         user.id as i64
     }
 
-    async fn open(&self, user: Arc<User>, _: Option<campfire_api_types::DeviceClass>) -> Box<dyn SyncSession> {
+    async fn open(
+        &self,
+        user: Arc<User>,
+        _: Option<campfire_api_types::DeviceClass>,
+    ) -> Box<dyn SyncSession> {
         self.0.lock().unwrap().push(format!("open {}", user.id));
         Box::new(Session {
             user,
@@ -225,7 +229,10 @@ async fn delivers_the_users_and_authorized_topics_events_in_batches() {
     assert_eq!(welcome["resumed"], false);
     assert_eq!(welcome["seq"], 0);
     assert_eq!(welcome["epoch"].as_str().unwrap().len(), 24);
-    assert_eq!(welcome["viewerId"], 1, "the welcome says whose socket it is");
+    assert_eq!(
+        welcome["viewerId"], 1,
+        "the welcome says whose socket it is"
+    );
 
     // Room 2 was refused, and someone else's user topic isn't ours.
     let first = app.publish(Audience::Topic("room:2".into()), json!("other room"));
@@ -309,7 +316,10 @@ async fn resumes_within_the_ring_and_starts_over_otherwise() {
     assert_eq!(welcome["resumed"], true);
     assert_eq!(welcome["seq"], a);
     assert_eq!(welcome["replayThrough"], c);
-    assert_eq!(welcome["viewerId"], 1, "a resumed welcome says whose socket it is too");
+    assert_eq!(
+        welcome["viewerId"], 1,
+        "a resumed welcome says whose socket it is too"
+    );
     assert_eq!(
         client.batch().await,
         [
@@ -432,7 +442,11 @@ async fn a_publication_read_before_a_fencing_event_is_refused() {
         server.sync_publish_fresh(event("stale row"), "unread:1:7", read),
         Err(campfire_cable::sync::Stale)
     );
-    assert_eq!(server.sync_head(), fence, "a refused row is not a publication");
+    assert_eq!(
+        server.sync_head(),
+        fence,
+        "a refused row is not a publication"
+    );
     // Another key isn't fenced, and a fresh read goes out.
     let other = server
         .sync_publish_fresh(event("other room"), "unread:1:8", read)

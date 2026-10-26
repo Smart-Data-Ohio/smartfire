@@ -36,7 +36,11 @@ impl<C: Send + 'static> Task<C> {
         F: Fn(C) -> Fut + Send + Sync + 'static,
         Fut: Future<Output = anyhow::Result<()>> + Send + 'static,
     {
-        Self { name, interval, run: Arc::new(move |context| Box::pin(run(context))) }
+        Self {
+            name,
+            interval,
+            run: Arc::new(move |context| Box::pin(run(context))),
+        }
     }
 
     /// A task whose work is done once per process (`clear_bot_tokens_once`): once it has
@@ -79,12 +83,20 @@ pub struct Periodic<C> {
 
 impl<C: Clone + Send + 'static> Periodic<C> {
     pub fn new(label: &'static str) -> Self {
-        Self { label, tasks: Vec::new(), last_run: HashMap::new() }
+        Self {
+            label,
+            tasks: Vec::new(),
+            last_run: HashMap::new(),
+        }
     }
 
     /// Appends a task. Panics on a second task with the same name: names key the last runs.
     pub fn task(&mut self, task: Task<C>) -> &mut Self {
-        assert!(self.tasks.iter().all(|t| t.name != task.name), "periodic task {:?} is registered twice", task.name);
+        assert!(
+            self.tasks.iter().all(|t| t.name != task.name),
+            "periodic task {:?} is registered twice",
+            task.name
+        );
         self.tasks.push(task);
         self
     }
@@ -128,12 +140,19 @@ impl<C: Clone + Send + 'static> Periodic<C> {
     /// `run`: ticks, then sleeps the tick interval, until `stopping` (checked between ticks; a
     /// tick in progress finishes, unless the host aborts the task when its grace period is over).
     /// Does nothing without tasks.
-    pub fn spawn(mut self, context: C, clock: Arc<dyn Clock>, mut stopping: watch::Receiver<bool>) -> JoinHandle<()>
+    pub fn spawn(
+        mut self,
+        context: C,
+        clock: Arc<dyn Clock>,
+        mut stopping: watch::Receiver<bool>,
+    ) -> JoinHandle<()>
     where
         C: Sync,
     {
         tokio::spawn(async move {
-            let Some(interval) = self.tick_interval() else { return };
+            let Some(interval) = self.tick_interval() else {
+                return;
+            };
             loop {
                 if *stopping.borrow() {
                     return;
@@ -159,7 +178,11 @@ async fn stopped(stopping: &mut watch::Receiver<bool>) {
 fn due(last_run: Option<Timestamp>, interval: Duration, now: Timestamp) -> bool {
     match last_run {
         None => true,
-        Some(last) => last.since(jiff::SignedDuration::try_from(interval).unwrap_or(jiff::SignedDuration::MAX)) <= now,
+        Some(last) => {
+            last.since(
+                jiff::SignedDuration::try_from(interval).unwrap_or(jiff::SignedDuration::MAX),
+            ) <= now
+        }
     }
 }
 
@@ -172,7 +195,11 @@ async fn run_task<C>(label: &str, task: &Task<C>, context: C) -> bool {
             false
         }
         Err(panic) => {
-            let message = panic.downcast_ref::<&str>().copied().or_else(|| panic.downcast_ref::<String>().map(String::as_str)).unwrap_or("Box<dyn Any>");
+            let message = panic
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("Box<dyn Any>");
             tracing::error!("{label} {} panicked: {message}", task.name);
             false
         }
@@ -182,16 +209,19 @@ async fn run_task<C>(label: &str, task: &Task<C>, context: C) -> bool {
 /// `Periodic::Runner.parse_interval!`: seconds as a positive, finite number.
 pub fn parse_interval(value: &str, name: &str) -> anyhow::Result<Duration> {
     match value.trim().parse::<f64>() {
-        Ok(seconds) if seconds.is_finite() && seconds > 0.0 => {
-            Duration::try_from_secs_f64(seconds).map_err(|_| anyhow::anyhow!("{name} must be a positive finite number"))
-        }
+        Ok(seconds) if seconds.is_finite() && seconds > 0.0 => Duration::try_from_secs_f64(seconds)
+            .map_err(|_| anyhow::anyhow!("{name} must be a positive finite number")),
         _ => anyhow::bail!("{name} must be a positive finite number"),
     }
 }
 
 /// An interval from the environment variable `name` (`ENV.fetch(name, default)`), parsed by
 /// [`parse_interval`]. `lookup` reads the environment.
-pub fn interval_from_env(lookup: impl Fn(&str) -> Option<String>, name: &str, default: Duration) -> anyhow::Result<Duration> {
+pub fn interval_from_env(
+    lookup: impl Fn(&str) -> Option<String>,
+    name: &str,
+    default: Duration,
+) -> anyhow::Result<Duration> {
     match lookup(name) {
         Some(value) => parse_interval(&value, name),
         None => Ok(default),

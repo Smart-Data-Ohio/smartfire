@@ -99,10 +99,12 @@ impl Channel<User> for RoomChannel {
                 // internal disconnect are ready together when it returns to select!.
                 for i in 0..70 {
                     sub.broadcast_to(&[self.room.as_ref().unwrap()], &i);
-                    sub.server().broadcast("rooms", &serde_json::json!({"removed": i}));
+                    sub.server()
+                        .broadcast("rooms", &serde_json::json!({"removed": i}));
                 }
                 let reconnect = data["reconnect"].as_bool().unwrap();
-                sub.server().disconnect(&sub.current_user().connection_identifier(), reconnect);
+                sub.server()
+                    .disconnect(&sub.current_user().connection_identifier(), reconnect);
                 // A later publication must not extend the drain past the disconnect.
                 sub.broadcast_to(&[self.room.as_ref().unwrap()], &"after disconnect");
                 sub.server().broadcast("rooms", &"after_disconnect");
@@ -171,8 +173,6 @@ pub fn test_config() -> Config {
         ..Config::default()
     }
 }
-
-
 
 pub type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 

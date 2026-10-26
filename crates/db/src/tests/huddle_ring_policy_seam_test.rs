@@ -1,13 +1,16 @@
 //! All eight RingPolicy declarations derive real WS17 policy from persisted Rails contexts.
 use crate::Timestamp;
-use crate::models::huddle_invitations::{RingRequest, ring_allowed, publish_ring_with_policy};
+use crate::models::huddle_invitations::{RingRequest, publish_ring_with_policy, ring_allowed};
 use crate::tests::TestDb;
 use serde_json::{Value, json};
 
 fn run(name: &str) {
     let fixture: Value =
         serde_json::from_str(include_str!("huddle_ring_policy_seam.json")).unwrap();
-    assert_eq!(fixture["reference_pin"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
+    assert_eq!(
+        fixture["reference_pin"],
+        &include_str!("../../../../parity/reference.sha").trim()[..8]
+    );
     assert_eq!(fixture["cases"].as_array().unwrap().len(), 8);
     let case = fixture["cases"]
         .as_array()
@@ -23,7 +26,14 @@ fn run(name: &str) {
         let member = crate::Membership::find_by_room_and_user(tx.conn(), room, caller)?.unwrap();
         Ok(tx.conn().query_row("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,last_issued_at,created_at,updated_at) VALUES('ws13b-policy-source','ws13b-policy-room',?,?,?,?,?,?,?) RETURNING id",rusqlite::params![session.id,caller,member.id,room,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?)
     });
-    let invited_at = db.read(move |conn| Ok(crate::models::huddle_grant::HuddleGrant::find_by_id(conn, grant_id)?.unwrap().last_issued_at.map(Timestamp::as_microsecond)));
+    let invited_at = db.read(move |conn| {
+        Ok(
+            crate::models::huddle_grant::HuddleGrant::find_by_id(conn, grant_id)?
+                .unwrap()
+                .last_issued_at
+                .map(Timestamp::as_microsecond),
+        )
+    });
     for outcome in case["outcomes"].as_array().unwrap() {
         db.clock.travel_to(Timestamp::from_second(
             outcome["context"]["now"].as_i64().unwrap(),
@@ -41,20 +51,41 @@ fn run(name: &str) {
         let sender = outcome["sender_id"].as_i64().unwrap();
         db.write(move |tx| {
             tx.conn().execute_batch(&setup)?;
-            tx.conn().execute("UPDATE huddle_grants SET user_id=? WHERE id=?", rusqlite::params![sender, grant_id])?;
+            tx.conn().execute(
+                "UPDATE huddle_grants SET user_id=? WHERE id=?",
+                rusqlite::params![sender, grant_id],
+            )?;
             Ok(())
         });
-        let quiet = |recipient: &crate::UserStatusSettings| recipient.user.id == crate::fixtures::identify("jason");
-        let override_check = outcome["context"]["quiet_override"].as_bool().unwrap()
+        let quiet = |recipient: &crate::UserStatusSettings| {
+            recipient.user.id == crate::fixtures::identify("jason")
+        };
+        let override_check = outcome["context"]["quiet_override"]
+            .as_bool()
+            .unwrap()
             .then_some(&quiet as &dyn Fn(&crate::UserStatusSettings) -> bool);
-        let sound_allowed = db.read(|conn| ring_allowed(conn, request.recipient_id,
-            outcome["context"]["caller_id"].as_i64(), db.now(), override_check));
-        assert_eq!(serde_json::json!(sound_allowed), outcome["sound_allowed"], "{name} real WS17 decision");
+        let sound_allowed = db.read(|conn| {
+            ring_allowed(
+                conn,
+                request.recipient_id,
+                outcome["context"]["caller_id"].as_i64(),
+                db.now(),
+                override_check,
+            )
+        });
+        assert_eq!(
+            serde_json::json!(sound_allowed),
+            outcome["sound_allowed"],
+            "{name} real WS17 decision"
+        );
         db.sink.take();
         let override_active = outcome["context"]["quiet_override"].as_bool().unwrap();
         db.write(move |tx| {
-            let quiet = |recipient: &crate::UserStatusSettings| recipient.user.id == crate::fixtures::identify("jason");
-            let check = override_active.then_some(&quiet as &dyn Fn(&crate::UserStatusSettings) -> bool);
+            let quiet = |recipient: &crate::UserStatusSettings| {
+                recipient.user.id == crate::fixtures::identify("jason")
+            };
+            let check =
+                override_active.then_some(&quiet as &dyn Fn(&crate::UserStatusSettings) -> bool);
             publish_ring_with_policy(tx, &request, check)
         });
         let frames = db

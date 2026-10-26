@@ -255,7 +255,7 @@ where
                 } else {
                     tok_state::Data
                 }
-            },
+            }
 
             local_name!("plaintext") => tok_state::Plaintext,
 
@@ -312,7 +312,7 @@ where
                         ns!(html) => print!(" {}", name.local_name()),
                         _ => panic!(),
                     }
-                },
+                }
             }
         }
         println!();
@@ -358,20 +358,20 @@ where
                         return tokenizer::TokenSinkResult::Continue;
                     };
                     token = new_token;
-                },
+                }
                 ProcessResult::DoneAckSelfClosing => {
                     let Some(new_token) = more_tokens.pop_front() else {
                         return tokenizer::TokenSinkResult::Continue;
                     };
                     token = new_token;
-                },
+                }
                 ProcessResult::Reprocess(m, t) => {
                     self.mode.set(m);
                     token = t;
-                },
+                }
                 ProcessResult::ReprocessForeign(t) => {
                     token = t;
-                },
+                }
                 ProcessResult::SplitWhitespace(mut buf) => {
                     let p = buf.pop_front_char_run(|c| c.is_ascii_whitespace());
                     let Some((first, is_ws)) = p else {
@@ -387,19 +387,19 @@ where
                     if buf.len32() > 0 {
                         more_tokens.push_back(Token::Characters(SplitStatus::NotSplit, buf));
                     }
-                },
+                }
                 ProcessResult::Script(node) => {
                     assert!(more_tokens.is_empty());
                     return tokenizer::TokenSinkResult::Script(node);
-                },
+                }
                 ProcessResult::ToPlaintext => {
                     assert!(more_tokens.is_empty());
                     return tokenizer::TokenSinkResult::Plaintext;
-                },
+                }
                 ProcessResult::ToRawData(k) => {
                     assert!(more_tokens.is_empty());
                     return tokenizer::TokenSinkResult::RawData(k);
-                },
+                }
             }
         }
     }
@@ -452,7 +452,7 @@ where
             InsertionPoint::LastChild(parent) => self.sink.append(&parent, child),
             InsertionPoint::BeforeSibling(sibling) => {
                 self.sink.append_before_sibling(&sibling, child)
-            },
+            }
             InsertionPoint::TableFosterParenting {
                 element,
                 prev_element,
@@ -481,7 +481,7 @@ where
             tokenizer::ParseError(e) => {
                 self.sink.parse_error(e);
                 return tokenizer::TokenSinkResult::Continue;
-            },
+            }
 
             tokenizer::DoctypeToken(dt) => {
                 if self.mode.get() == InsertionMode::Initial {
@@ -518,7 +518,7 @@ where
                     });
                     return tokenizer::TokenSinkResult::Continue;
                 }
-            },
+            }
 
             tokenizer::TagToken(x) => Token::Tag(x),
             tokenizer::CommentToken(x) => Token::Comment(x),
@@ -533,7 +533,7 @@ where
                     return tokenizer::TokenSinkResult::Continue;
                 }
                 Token::Characters(SplitStatus::NotSplit, x)
-            },
+            }
         };
 
         self.process_to_completion(token)
@@ -827,7 +827,7 @@ where
                     FormatEntry::Element(ref h, ref t) => {
                         assert!(self.sink.same_node(h, &node));
                         t.clone()
-                    },
+                    }
                     FormatEntry::Marker => panic!("Found marker during adoption agency"),
                 };
                 // FIXME: Is there a way to avoid cloning the attributes twice here (once on their
@@ -887,7 +887,7 @@ where
                         .position_in_active_formatting(&to_replace)
                         .expect("bookmark not found in active formatting elements");
                     self.active_formatting.borrow_mut()[index] = new_entry;
-                },
+                }
                 Bookmark::InsertAfter(previous) => {
                     let index = self
                         .position_in_active_formatting(&previous)
@@ -898,7 +898,7 @@ where
                         .position_in_active_formatting(&fmt_elem)
                         .expect("formatting element not found in active formatting elements");
                     self.active_formatting.borrow_mut().remove(old_index);
-                },
+                }
             }
 
             // 19.
@@ -1004,7 +1004,7 @@ where
                 FormatEntry::Element(_, ref t) => t.clone(),
                 FormatEntry::Marker => {
                     panic!("Found marker during formatting element reconstruction")
-                },
+                }
             };
 
             // FIXME: Is there a way to avoid cloning the attributes twice here (once on their own,
@@ -1181,7 +1181,7 @@ where
                     if pred(self.sink.elem_name(&elem).expanded()) {
                         break;
                     }
-                },
+                }
             }
         }
         n
@@ -1282,16 +1282,16 @@ where
                         }
                     }
                     return InsertionMode::InSelect;
-                },
+                }
                 local_name!("td") | local_name!("th") => {
                     if !last {
                         return InsertionMode::InCell;
                     }
-                },
+                }
                 local_name!("tr") => return InsertionMode::InRow,
                 local_name!("tbody") | local_name!("thead") | local_name!("tfoot") => {
                     return InsertionMode::InTableBody;
-                },
+                }
                 local_name!("caption") => return InsertionMode::InCaption,
                 local_name!("colgroup") => return InsertionMode::InColumnGroup,
                 local_name!("table") => return InsertionMode::InTable,
@@ -1300,7 +1300,7 @@ where
                     if !last {
                         return InsertionMode::InHead;
                     }
-                },
+                }
                 local_name!("body") => return InsertionMode::InBody,
                 local_name!("frameset") => return InsertionMode::InFrameset,
                 local_name!("html") => match *self.head_elem.borrow() {
@@ -1382,7 +1382,7 @@ where
         let (node1, node2) = match insertion_point {
             InsertionPoint::LastChild(ref p) | InsertionPoint::BeforeSibling(ref p) => {
                 (p.clone(), None)
-            },
+            }
             InsertionPoint::TableFosterParenting {
                 ref element,
                 ref prev_element,
@@ -1455,7 +1455,7 @@ where
         let (intended_parent, _node2) = match adjusted_insertion_location {
             InsertionPoint::LastChild(ref p) | InsertionPoint::BeforeSibling(ref p) => {
                 (p.clone(), None)
-            },
+            }
             InsertionPoint::TableFosterParenting {
                 ref element,
                 ref prev_element,
@@ -1615,7 +1615,7 @@ where
                     ..
                 }) if !matches!(*name, local_name!("mglyph") | local_name!("malignmark")) => {
                     return false;
-                },
+                }
                 _ => (),
             }
         }
@@ -1641,8 +1641,8 @@ where
                     return !self
                         .sink
                         .is_mathml_annotation_xml_integration_point(&self.adjusted_current_node());
-                },
-                _ => {},
+                }
+                _ => {}
             };
         }
 
@@ -1821,7 +1821,7 @@ where
             ns!(svg) => {
                 self.adjust_svg_tag_name(&mut tag);
                 self.adjust_svg_attributes(&mut tag);
-            },
+            }
             _ => (),
         }
         self.adjust_foreign_attributes(&mut tag);

@@ -188,7 +188,12 @@ async fn run(name: &'static str) {
         assert_eq!(sudo.status, StatusCode::OK);
     }
     for step in case["responses"].as_array().unwrap() {
-        let reply = browser.send(Req::new(Method::GET, step["path"].as_str().unwrap()).header("x-requested-with", "XMLHttpRequest")).await;
+        let reply = browser
+            .send(
+                Req::new(Method::GET, step["path"].as_str().unwrap())
+                    .header("x-requested-with", "XMLHttpRequest"),
+            )
+            .await;
         let mut expected = step["response"].clone();
         // Rails sent these to its sign-in page; a page now goes to the SPA's, and a download
         // still to the retained route.

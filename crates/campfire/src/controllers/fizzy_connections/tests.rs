@@ -29,8 +29,12 @@ async fn ws15e_fizzy_connection_http_matrix() {
         "sudo",
         "csrf",
     ] {
-        let output = ws15e_http_case("WS15E_FIZZY_CONNECTION_CASE", case,
-            "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix").await;
+        let output = ws15e_http_case(
+            "WS15E_FIZZY_CONNECTION_CASE",
+            case,
+            "controllers::fizzy_connections::tests::ws15e_fizzy_connection_http_matrix",
+        )
+        .await;
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             output.status.success(),
@@ -193,9 +197,7 @@ async fn run(case: &str) {
         "disconnect" | "caches" => Some("Fizzy disconnected."),
         _ => None,
     } {
-        assert!(
-            browser.flash().to_string().contains(expected)
-        );
+        assert!(browser.flash().to_string().contains(expected));
     }
     if case == "link" {
         assert_eq!(

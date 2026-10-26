@@ -42,7 +42,13 @@ impl Filename {
     pub fn sanitized(&self) -> String {
         strip(&self.0)
             .chars()
-            .map(|c| if "\u{202E}%$|:;/<>?*\"\t\r\n\\".contains(c) { '-' } else { c })
+            .map(|c| {
+                if "\u{202E}%$|:;/<>?*\"\t\r\n\\".contains(c) {
+                    '-'
+                } else {
+                    c
+                }
+            })
             .collect()
     }
 }
@@ -106,7 +112,11 @@ mod tests {
         ];
         for (name, ext, base) in cases {
             let filename = Filename::new(name);
-            assert_eq!(filename.extension_with_delimiter(), ext, "extname({name:?})");
+            assert_eq!(
+                filename.extension_with_delimiter(),
+                ext,
+                "extname({name:?})"
+            );
             assert_eq!(filename.base(), base, "base({name:?})");
         }
     }

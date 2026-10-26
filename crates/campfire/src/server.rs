@@ -12,11 +12,11 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::middleware::Next;
+use campfire_app::json_cache::{DEFAULT_MAX_BYTES, JsonCache};
 use campfire_db::Database;
 use campfire_kit::exceptions::ErrorPages;
 use campfire_kit::{Kit, KitConfig, RailsCrypto, SharedClock, SharedCrypto};
 use campfire_storage::{DiskService, Storage};
-use campfire_app::json_cache::{JsonCache, DEFAULT_MAX_BYTES};
 use rails_compat::{MessageVerifier, Secrets};
 
 use crate::config::Config;
@@ -49,30 +49,63 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     boot_with_network(config, clock, crate::net::Network::system()).await
 }
 
-pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscription_network: crate::net::Network) -> anyhow::Result<Booted> {
-    boot_with_services(config, clock, subscription_network, jobs::periodic::Intervals::from_env()).await
+pub(crate) async fn boot_with_network(
+    config: Config,
+    clock: SharedClock,
+    subscription_network: crate::net::Network,
+) -> anyhow::Result<Booted> {
+    boot_with_services(
+        config,
+        clock,
+        subscription_network,
+        jobs::periodic::Intervals::from_env(),
+    )
+    .await
 }
 
 /// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
 /// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
-pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+pub(crate) async fn boot_with_services(
+    config: Config,
+    clock: SharedClock,
+    subscription_network: crate::net::Network,
+    intervals: jobs::periodic::Intervals,
+) -> anyhow::Result<Booted> {
     let network = subscription_network.clone();
     let github_app = crate::integrations::github::client::AppClient::with_network(
         std::env::var("GITHUB_APP_CLIENT_ID").ok(),
         std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
         network.clone(),
     );
-    boot_with_all_services(config, clock, crate::integrations::github::client::ReadClient::from_env(), github_app, network, subscription_network, intervals).await
+    boot_with_all_services(
+        config,
+        clock,
+        crate::integrations::github::client::ReadClient::from_env(),
+        github_app,
+        network,
+        subscription_network,
+        intervals,
+    )
+    .await
 }
 
 /// Injects the fixed-host GitHub client for runtime acceptance tests.
 #[cfg(test)]
-pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient) -> anyhow::Result<Booted> {
+pub(crate) async fn boot_with_github_read(
+    config: Config,
+    clock: SharedClock,
+    github_read: crate::integrations::github::client::ReadClient,
+) -> anyhow::Result<Booted> {
     boot_with_github_network(config, clock, github_read, crate::net::Network::system()).await
 }
 
 #[cfg(test)]
-pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::net::Network) -> anyhow::Result<Booted> {
+pub(crate) async fn boot_with_github_network(
+    config: Config,
+    clock: SharedClock,
+    github_read: crate::integrations::github::client::ReadClient,
+    github_network: crate::net::Network,
+) -> anyhow::Result<Booted> {
     let github_app = crate::integrations::github::client::AppClient::with_network(
         std::env::var("GITHUB_APP_CLIENT_ID").ok(),
         std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
@@ -82,12 +115,48 @@ pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock,
 }
 
 #[cfg(test)]
-pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::net::Network) -> anyhow::Result<Booted> {
-    boot_with_all_services(config, clock, github_read, github_app, github_network, crate::net::Network::system(), jobs::periodic::Intervals::from_env()).await
+pub(crate) async fn boot_with_github_clients(
+    config: Config,
+    clock: SharedClock,
+    github_read: crate::integrations::github::client::ReadClient,
+    github_app: crate::integrations::github::client::AppClient,
+    github_network: crate::net::Network,
+) -> anyhow::Result<Booted> {
+    boot_with_all_services(
+        config,
+        clock,
+        github_read,
+        github_app,
+        github_network,
+        crate::net::Network::system(),
+        jobs::periodic::Intervals::from_env(),
+    )
+    .await
 }
 
-pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::net::Network, subscription_network: crate::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
-    boot_with_integrations(config, clock, BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy: crate::integrations::fizzy::State::system(), klipy: crate::integrations::klipy::State::system() }, intervals).await
+pub(crate) async fn boot_with_all_services(
+    config: Config,
+    clock: SharedClock,
+    github_read: crate::integrations::github::client::ReadClient,
+    github_app: crate::integrations::github::client::AppClient,
+    github_network: crate::net::Network,
+    subscription_network: crate::net::Network,
+    intervals: jobs::periodic::Intervals,
+) -> anyhow::Result<Booted> {
+    boot_with_integrations(
+        config,
+        clock,
+        BootIntegrations {
+            github_read,
+            github_app,
+            github_network,
+            subscription_network,
+            fizzy: crate::integrations::fizzy::State::system(),
+            klipy: crate::integrations::klipy::State::system(),
+        },
+        intervals,
+    )
+    .await
 }
 
 /// Per-app transports, including fixture transports; production uses the shared clients.
@@ -100,8 +169,20 @@ pub(crate) struct BootIntegrations {
     pub klipy: crate::integrations::klipy::State,
 }
 
-pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, integrations: BootIntegrations, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
-    let BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy, klipy } = integrations;
+pub(crate) async fn boot_with_integrations(
+    config: Config,
+    clock: SharedClock,
+    integrations: BootIntegrations,
+    intervals: jobs::periodic::Intervals,
+) -> anyhow::Result<Booted> {
+    let BootIntegrations {
+        github_read,
+        github_app,
+        github_network,
+        subscription_network,
+        fizzy,
+        klipy,
+    } = integrations;
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let ar_encryption = Arc::new(rails_compat::ar_encryption::ArEncryption::new(&secrets));
@@ -143,7 +224,8 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     };
     #[cfg(test)]
     let cable_config = campfire_cable::Config {
-        stream_capacity: crate::test_support::cable_stream_capacity().unwrap_or(cable_config.stream_capacity),
+        stream_capacity: crate::test_support::cable_stream_capacity()
+            .unwrap_or(cable_config.stream_capacity),
         ..cable_config
     };
     let deps = channels::Deps {
@@ -165,10 +247,14 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     let json_cache = JsonCache::new(DEFAULT_MAX_BYTES);
     let web_push = crate::integrations::web_push_pool(&config, &db);
     let github_accounts = crate::integrations::github::accounts::Accounts::with_network(
-        db.clone(), ar_encryption.clone(), github_app.clone(), github_network,
+        db.clone(),
+        ar_encryption.clone(),
+        github_app.clone(),
+        github_network,
     );
     let google = crate::integrations::google::State::from_config(&config);
-    let agent_repositories = crate::integrations::agent_repositories::State::live(github_accounts.clone());
+    let agent_repositories =
+        crate::integrations::agent_repositories::State::live(github_accounts.clone());
     let broadcasts = channels::Broadcasts::new(cable.clone(), db.env().clock.clone());
     let app = Arc::new(AppState {
         config,
@@ -251,13 +337,19 @@ async fn open_database(
 /// The HTTP service: public files, then `/cable`, then the Rails route table.
 fn router(app: &App, kit: Kit) -> Router {
     let github_webhook = || {
-        axum::routing::post(campfire_kit::unparsed_action(controllers::github::webhooks::create))
-            .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
+        axum::routing::post(campfire_kit::unparsed_action(
+            controllers::github::webhooks::create,
+        ))
+        .fallback(campfire_kit::unparsed_action(
+            controllers::github::webhooks::not_found,
+        ))
     };
-    let dispatch = || axum::routing::any(
-        campfire_kit::action(controllers::dispatch)
-            .json_body_parser(json_params::scoped_json_body_params),
-    );
+    let dispatch = || {
+        axum::routing::any(
+            campfire_kit::action(controllers::dispatch)
+                .json_body_parser(json_params::scoped_json_body_params),
+        )
+    };
     let routes = Router::new()
         .merge(
             app.cable
@@ -291,24 +383,55 @@ fn router(app: &App, kit: Kit) -> Router {
         )
         .route("/github/webhooks", github_webhook())
         .route("/github/webhooks.{format}", github_webhook())
-        .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)))
-        .route("/agents/events/stream", axum::routing::get(campfire_kit::action(controllers::agents::event_stream)))
-        .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)))
+        .route(
+            "/agents/mcp",
+            axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)),
+        )
+        .route(
+            "/agents/events/stream",
+            axum::routing::get(campfire_kit::action(controllers::agents::event_stream)),
+        )
+        .route(
+            "/agents/mcp.{format}",
+            axum::routing::any(campfire_kit::unparsed_action(controllers::dispatch)),
+        )
         .merge(controllers::pwa::routes(IMMUTABLE_CACHE_CONTROL))
         .merge(controllers::spa::routes(IMMUTABLE_CACHE_CONTROL))
-        .route("/account/invite_splash", axum::routing::get(campfire_kit::action(controllers::accounts::banners::invite_splash)))
-        .route("/account/banner", axum::routing::get(campfire_kit::action(controllers::accounts::banners::show)))
-        .route("/users/{user_id}/banner", axum::routing::get(campfire_kit::action(controllers::users::banners::show)))
-        .route("/invite/{token}", axum::routing::get(campfire_kit::action(controllers::users::invite_new)).post(campfire_kit::action(controllers::users::invite_create)))
+        .route(
+            "/account/invite_splash",
+            axum::routing::get(campfire_kit::action(
+                controllers::accounts::banners::invite_splash,
+            )),
+        )
+        .route(
+            "/account/banner",
+            axum::routing::get(campfire_kit::action(controllers::accounts::banners::show)),
+        )
+        .route(
+            "/users/{user_id}/banner",
+            axum::routing::get(campfire_kit::action(controllers::users::banners::show)),
+        )
+        .route(
+            "/invite/{token}",
+            axum::routing::get(campfire_kit::action(controllers::users::invite_new))
+                .post(campfire_kit::action(controllers::users::invite_create)),
+        )
         .merge(campfire_api::routes(app))
         // Authenticate and verify the signed byte limit before receiving the upload.
-        .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::streamed_action(controllers::dispatch)).fallback(campfire_kit::action(controllers::dispatch)))
+        .route(
+            "/rails/active_storage/disk/{encoded_token}",
+            axum::routing::put(campfire_kit::streamed_action(controllers::dispatch))
+                .fallback(campfire_kit::action(controllers::dispatch)),
+        )
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
     // config.ru: `use Rack::Deflater` around the whole app.
     campfire_kit::app(routes, kit)
-        .layer(axum::middleware::from_fn_with_state(app.clone(), campfire_runtime::active_storage::limit_multipart_uploads))
+        .layer(axum::middleware::from_fn_with_state(
+            app.clone(),
+            campfire_runtime::active_storage::limit_multipart_uploads,
+        ))
         .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
 }
 
@@ -472,7 +595,9 @@ const SHUTDOWN_GRACE: Duration = Duration::from_secs(10);
 /// TLS_DOMAIN, HTTPS_PORT, and the app itself on TARGET_PORT.
 async fn serve(config: Config) -> anyhow::Result<()> {
     let front = campfire_kit::front::FrontConfig::from_env();
-    let Booted { app, router, jobs, .. } = boot(config).await?;
+    let Booted {
+        app, router, jobs, ..
+    } = boot(config).await?;
 
     let (stopping_tx, stopping) = tokio::sync::watch::channel(false);
     let cable = app.cable.clone();

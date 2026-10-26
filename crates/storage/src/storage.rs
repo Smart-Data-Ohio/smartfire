@@ -110,10 +110,16 @@ impl Storage {
         if !blob.is_identified() {
             let mut head = Vec::new();
             if blob.byte_size > 0 {
-                std::fs::File::open(self.path_for(&blob))?.take(4096).read_to_end(&mut head)?;
+                std::fs::File::open(self.path_for(&blob))?
+                    .take(4096)
+                    .read_to_end(&mut head)?;
             }
             // Blob::Identifiable#identify_content_type passes Filename#to_s (sanitized).
-            blob.content_type = Some(crate::marcel::identify(&head, Some(&blob.filename.sanitized()), blob.content_type.as_deref()));
+            blob.content_type = Some(crate::marcel::identify(
+                &head,
+                Some(&blob.filename.sanitized()),
+                blob.content_type.as_deref(),
+            ));
             blob.metadata.set("identified", Json::Bool(true));
         }
         Ok(blob)
@@ -124,13 +130,24 @@ impl Storage {
     /// The file half of `Blob.create_and_upload!(io:, filename:, content_type:)` as attaching an
     /// uploaded file does (`identify: true`): unfurls the file at `source` and uploads it with
     /// checksum verification.
-    pub fn stage_file(&self, source: &Path, filename: Filename, declared_type: Option<&str>) -> Result<Staged> {
-        let blob = NewBlob::unfurl_file(source, filename, declared_type, self.service.name(), true)?;
+    pub fn stage_file(
+        &self,
+        source: &Path,
+        filename: Filename,
+        declared_type: Option<&str>,
+    ) -> Result<Staged> {
+        let blob =
+            NewBlob::unfurl_file(source, filename, declared_type, self.service.name(), true)?;
         self.stage(blob, std::fs::File::open(source)?)
     }
 
     /// [`Self::stage_file`] for bytes in memory.
-    pub fn stage_bytes(&self, data: &[u8], filename: Filename, declared_type: Option<&str>) -> Result<Staged> {
+    pub fn stage_bytes(
+        &self,
+        data: &[u8],
+        filename: Filename,
+        declared_type: Option<&str>,
+    ) -> Result<Staged> {
         let blob = NewBlob::unfurl(data, filename, declared_type, self.service.name(), true);
         self.stage(blob, data)
     }
@@ -139,13 +156,23 @@ impl Storage {
     /// fresh key with identify:false, and retain its content type and ordinary metadata.
     /// KLIPY provenance is signed for the new key only if the source was verified.
     pub fn stage_copy(&self, source: &Blob) -> Result<Staged> {
-        let verified_import = crate::klipy::verified_import(&*self.verifier, source, jiff::Timestamp::now());
+        let verified_import =
+            crate::klipy::verified_import(&*self.verifier, source, jiff::Timestamp::now());
         let file = self.open(source)?;
         // Messages::Forwarder#copy_attachment_to stores filename.to_s, not the raw name.
-        let mut blob = NewBlob::unfurl_file(file.path(), Filename::new(source.filename.sanitized()), source.content_type.as_deref(), self.service.name(), false)?;
+        let mut blob = NewBlob::unfurl_file(
+            file.path(),
+            Filename::new(source.filename.sanitized()),
+            source.content_type.as_deref(),
+            self.service.name(),
+            false,
+        )?;
         blob.metadata = source.metadata.clone();
         if verified_import {
-            blob.metadata.set(crate::klipy::MARK_KEY, Json::String(crate::klipy::import_mark(&*self.verifier, &blob.key)));
+            blob.metadata.set(
+                crate::klipy::MARK_KEY,
+                Json::String(crate::klipy::import_mark(&*self.verifier, &blob.key)),
+            );
         } else if let Json::Object(entries) = &mut blob.metadata {
             entries.retain(|(key, _)| !key.starts_with("klipy_"));
         }
@@ -155,8 +182,13 @@ impl Storage {
 
     fn stage(&self, blob: NewBlob, reader: impl std::io::Read) -> Result<Staged> {
         let checksum = blob.checksum.clone();
-        let staged = Staged { blob, service: self.service.clone(), kept: false };
-        self.service.upload(&staged.blob.key, reader, Some(&checksum))?;
+        let staged = Staged {
+            blob,
+            service: self.service.clone(),
+            kept: false,
+        };
+        self.service
+            .upload(&staged.blob.key, reader, Some(&checksum))?;
         Ok(staged)
     }
 
@@ -169,7 +201,11 @@ impl Storage {
             .suffix(blob.filename.extension_with_delimiter())
             .tempfile()?;
         std::fs::copy(self.service.path_for(&blob.key), file.path()).map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound { Error::FileNotFound } else { e.into() }
+            if e.kind() == std::io::ErrorKind::NotFound {
+                Error::FileNotFound
+            } else {
+                e.into()
+            }
         })?;
         if let Some(checksum) = &blob.checksum
             && &checksum_file(file.path())? != checksum
@@ -197,7 +233,11 @@ impl Storage {
             let input = self.open(blob)?;
             process::transform(input.path(), variation)?
         };
-        let filename = Filename::new(format!("{}.{}", blob.filename.base(), variation.format()?.to_lowercase()));
+        let filename = Filename::new(format!(
+            "{}.{}",
+            blob.filename.base(),
+            variation.format()?.to_lowercase()
+        ));
         self.stage_analyzed(output.path(), filename, &variation.content_type()?)
     }
 
@@ -211,9 +251,16 @@ impl Storage {
             let input = self.open(blob)?;
             process::video_preview(input.path())?
         };
-        let mut output = tempfile::Builder::new().prefix("ActiveStorage-").suffix(".jpg").tempfile()?;
+        let mut output = tempfile::Builder::new()
+            .prefix("ActiveStorage-")
+            .suffix(".jpg")
+            .tempfile()?;
         std::io::Write::write_all(&mut output, &frame)?;
-        self.stage_analyzed(output.path(), Filename::new(format!("{}.jpg", blob.filename.base())), "image/jpeg")
+        self.stage_analyzed(
+            output.path(),
+            Filename::new(format!("{}.jpg", blob.filename.base())),
+            "image/jpeg",
+        )
     }
 
     /// Stages a generated image with the metadata its analysis would save.
@@ -224,7 +271,8 @@ impl Storage {
         content_type: &str,
     ) -> Result<Staged> {
         let mut staged = self.stage_file(path, filename, Some(content_type))?;
-        let analyzer = Analyzer::for_content_type(staged.blob.content_type.as_deref().unwrap_or(""));
+        let analyzer =
+            Analyzer::for_content_type(staged.blob.content_type.as_deref().unwrap_or(""));
         staged.blob.metadata = analyzed(&staged.blob.metadata, analyzer.metadata(path)?);
         Ok(staged)
     }
@@ -236,29 +284,59 @@ impl Storage {
         if !blob.is_variable() {
             return Err(Error::Invariable(blob.content_type().to_string()));
         }
-        Ok(transformations.default_to(&[("format".into(), Value::Str(blob.default_variant_format()))]))
+        Ok(transformations
+            .default_to(&[("format".into(), Value::Str(blob.default_variant_format()))]))
     }
 
     /// The processed variant's image blob, if `variant_records` already has it.
-    pub fn existing_variant(&self, conn: &Connection, blob: &Blob, variation: &Variation) -> Result<Option<Blob>> {
+    pub fn existing_variant(
+        &self,
+        conn: &Connection,
+        blob: &Blob,
+        variation: &Variation,
+    ) -> Result<Option<Blob>> {
         match blob::find_variant_record(conn, blob.id, &variation.digest())? {
-            Some(record_id) => Blob::attached(conn, "ActiveStorage::VariantRecord", record_id, "image"),
+            Some(record_id) => {
+                Blob::attached(conn, "ActiveStorage::VariantRecord", record_id, "image")
+            }
             None => Ok(None),
         }
     }
 
     /// A recorded variant ready to serve, rather than metadata-only `.processed?`.
-    pub fn existing_variant_file(&self, conn: &Connection, blob: &Blob, variation: &Variation) -> Result<Option<Blob>> {
+    pub fn existing_variant_file(
+        &self,
+        conn: &Connection,
+        blob: &Blob,
+        variation: &Variation,
+    ) -> Result<Option<Blob>> {
         self.require_existing_file(self.existing_variant(conn, blob, variation)?)
     }
 
     /// The record half of `VariantWithRecord#processed`: the variant record, its image blob and
     /// attachment. `None` when another request recorded the variant first; that one is then
     /// [`Self::existing_variant`], and `image` should be dropped.
-    pub fn record_variant(&self, conn: &Connection, blob: &Blob, variation: &Variation, image: &Staged, now: jiff::Timestamp) -> Result<Option<Blob>> {
-        let Some(record_id) = blob::insert_variant_record(conn, blob.id, &variation.digest())? else { return Ok(None) };
+    pub fn record_variant(
+        &self,
+        conn: &Connection,
+        blob: &Blob,
+        variation: &Variation,
+        image: &Staged,
+        now: jiff::Timestamp,
+    ) -> Result<Option<Blob>> {
+        let Some(record_id) = blob::insert_variant_record(conn, blob.id, &variation.digest())?
+        else {
+            return Ok(None);
+        };
         let image = image.insert(conn, now)?;
-        blob::insert_attachment(conn, "image", "ActiveStorage::VariantRecord", record_id, image.id, now)?;
+        blob::insert_attachment(
+            conn,
+            "image",
+            "ActiveStorage::VariantRecord",
+            record_id,
+            image.id,
+            now,
+        )?;
         Ok(Some(image))
     }
 
@@ -275,7 +353,10 @@ impl Storage {
     // A variant/preview row is not proof of successful processing when its file was
     // lost. Fail cleanly rather than returning a dangling blob or adding another record.
     fn require_existing_file(&self, image: Option<Blob>) -> Result<Option<Blob>> {
-        if image.as_ref().is_some_and(|blob| !self.service.exist(&blob.key)) {
+        if image
+            .as_ref()
+            .is_some_and(|blob| !self.service.exist(&blob.key))
+        {
             return Err(Error::FileNotFound);
         }
         Ok(image)
@@ -283,12 +364,25 @@ impl Storage {
 
     /// The record half of `Preview#process`: attaches the frame as the blob's `preview_image`.
     /// `None` when another request attached one first; `image` should then be dropped.
-    pub fn record_preview_image(&self, conn: &Connection, blob: &Blob, image: &Staged, now: jiff::Timestamp) -> Result<Option<Blob>> {
+    pub fn record_preview_image(
+        &self,
+        conn: &Connection,
+        blob: &Blob,
+        image: &Staged,
+        now: jiff::Timestamp,
+    ) -> Result<Option<Blob>> {
         if self.existing_preview_image(conn, blob)?.is_some() {
             return Ok(None);
         }
         let image = image.insert(conn, now)?;
-        blob::insert_attachment(conn, "preview_image", "ActiveStorage::Blob", blob.id, image.id, now)?;
+        blob::insert_attachment(
+            conn,
+            "preview_image",
+            "ActiveStorage::Blob",
+            blob.id,
+            image.id,
+            now,
+        )?;
         Ok(Some(image))
     }
 
@@ -318,7 +412,13 @@ impl Storage {
 
     /// `VariantWithRecord#processed`: reuses the variant record when present, otherwise
     /// transforms the blob and records the variant.
-    pub fn process_variant(&self, conn: &Connection, blob: &Blob, variation: &Variation, now: jiff::Timestamp) -> Result<Blob> {
+    pub fn process_variant(
+        &self,
+        conn: &Connection,
+        blob: &Blob,
+        variation: &Variation,
+        now: jiff::Timestamp,
+    ) -> Result<Blob> {
         if let Some(image) = self.existing_variant_file(conn, blob, variation)? {
             return Ok(image);
         }
@@ -328,12 +428,19 @@ impl Storage {
                 image.keep();
                 Ok(recorded)
             }
-            None => self.existing_variant_file(conn, blob, variation)?.ok_or(Error::FileNotFound),
+            None => self
+                .existing_variant_file(conn, blob, variation)?
+                .ok_or(Error::FileNotFound),
         }
     }
 
     /// `blob.preview_image`, generating it with ffmpeg when missing (`Preview#process`).
-    pub fn preview_image(&self, conn: &Connection, blob: &Blob, now: jiff::Timestamp) -> Result<Blob> {
+    pub fn preview_image(
+        &self,
+        conn: &Connection,
+        blob: &Blob,
+        now: jiff::Timestamp,
+    ) -> Result<Blob> {
         if let Some(image) = self.existing_preview_file(conn, blob)? {
             return Ok(image);
         }
@@ -343,13 +450,21 @@ impl Storage {
                 image.keep();
                 Ok(recorded)
             }
-            None => self.existing_preview_file(conn, blob)?.ok_or(Error::FileNotFound),
+            None => self
+                .existing_preview_file(conn, blob)?
+                .ok_or(Error::FileNotFound),
         }
     }
 
     /// `blob.preview(transformations).processed`, returning the blob to serve: the preview image
     /// itself for empty transformations, otherwise its processed variant.
-    pub fn process_preview(&self, conn: &Connection, blob: &Blob, transformations: &Variation, now: jiff::Timestamp) -> Result<Blob> {
+    pub fn process_preview(
+        &self,
+        conn: &Connection,
+        blob: &Blob,
+        transformations: &Variation,
+        now: jiff::Timestamp,
+    ) -> Result<Blob> {
         let image = self.preview_image(conn, blob, now)?;
         if transformations.is_empty() {
             return Ok(image);

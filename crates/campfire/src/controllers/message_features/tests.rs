@@ -139,7 +139,10 @@ async fn pins_require_reachable_messages_and_rooms() {
         );
     }
     assert_eq!(
-        kevin.classic_page(&format!("/rooms/{ALL_TALK}/pins")).await.status,
+        kevin
+            .classic_page(&format!("/rooms/{ALL_TALK}/pins"))
+            .await
+            .status,
         StatusCode::NOT_FOUND
     );
 }
@@ -284,7 +287,8 @@ async fn poll_http_matches_real_rails_responses_and_transactional_create_errors(
 #[test]
 fn builder_dates_match_rails_zones_and_dst_gap_fold() {
     for row in oracle()["dates"].as_array().unwrap() {
-        let zone = campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
+        let zone =
+            campfire_presentation::time::Zone::lookup(row["zone"].as_str().unwrap()).unwrap();
         let time = super::parse_time(
             row["raw"].as_str().unwrap(),
             &zone,
@@ -593,7 +597,6 @@ async fn boards_reject_root_polls() {
         .await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
 }
-
 
 #[tokio::test]
 async fn a_zone_local_multiple_anonymous_poll_shows_only_each_viewers_ballot() {

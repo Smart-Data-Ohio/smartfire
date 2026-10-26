@@ -13,7 +13,9 @@ const BASE36_ALPHABET: &[u8; 36] = b"0123456789abcdefghijklmnopqrstuvwxyz";
 /// `SecureRandom.base36(28)` (`has_secure_token :key, length: 28`).
 pub fn generate_key() -> String {
     let mut rng = rand::rng();
-    (0..KEY_LENGTH).map(|_| BASE36_ALPHABET[rng.random_range(0..36)] as char).collect()
+    (0..KEY_LENGTH)
+        .map(|_| BASE36_ALPHABET[rng.random_range(0..36)] as char)
+        .collect()
 }
 
 /// `OpenSSL::Digest::MD5.base64digest` of the whole content (`compute_checksum_in_chunks`).

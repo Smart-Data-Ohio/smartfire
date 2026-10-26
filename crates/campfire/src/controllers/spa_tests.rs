@@ -8,10 +8,16 @@ use campfire_kit::Crypto as _;
 use regex::Regex;
 use serde_json::Value;
 
-use crate::controllers::presenters::test_support::{Browser, DAVID, JASON, Reply, Req, TestApp, seed_clock};
+use crate::controllers::presenters::test_support::{
+    Browser, DAVID, JASON, Reply, Req, TestApp, seed_clock,
+};
 
 async fn app(enabled: bool) -> Option<TestApp> {
-    let env: &[(&str, &str)] = if enabled { &[("SPA_ENABLED", "1")] } else { &[] };
+    let env: &[(&str, &str)] = if enabled {
+        &[("SPA_ENABLED", "1")]
+    } else {
+        &[]
+    };
     TestApp::boot_seed_with_env("default", seed_clock(), env).await
 }
 
@@ -28,24 +34,34 @@ fn session(a: &TestApp, b: &Browser<'_>) -> Value {
         .expect("a session cookie");
     let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
     campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
-        .decrypt_cookie(campfire_kit::session::SESSION_KEY, &raw, jiff::Timestamp::now())
+        .decrypt_cookie(
+            campfire_kit::session::SESSION_KEY,
+            &raw,
+            jiff::Timestamp::now(),
+        )
         .unwrap()
 }
 
 /// The first `<meta name>`'s content in a page.
 fn meta(page: &str, name: &str) -> Option<String> {
     let pattern = Regex::new(&format!(r#"<meta name="{name}" content="([^"]*)""#)).unwrap();
-    pattern.captures(page).map(|captures| captures[1].to_string())
+    pattern
+        .captures(page)
+        .map(|captures| captures[1].to_string())
 }
 
 fn boot_json(page: &str) -> Value {
-    let pattern = Regex::new(r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#).unwrap();
+    let pattern =
+        Regex::new(r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#).unwrap();
     serde_json::from_str(&pattern.captures(page).expect("the shell's boot JSON")[1]).unwrap()
 }
 
 /// A policy with its per-session nonce taken out.
 fn without_nonce(policy: &str) -> String {
-    Regex::new(r" 'nonce-[^']*'").unwrap().replace_all(policy, "").into_owned()
+    Regex::new(r" 'nonce-[^']*'")
+        .unwrap()
+        .replace_all(policy, "")
+        .into_owned()
 }
 
 /// The headers every classic page answers with (`security::default_headers`).
@@ -59,14 +75,24 @@ const SECURITY_HEADERS: &[&str] = &[
 ];
 
 async fn unenroll(a: &TestApp, user_id: i64) {
-    a.db().write(move |tx| User::find(tx.conn(), user_id)?.reset_two_factor(tx)).await.unwrap();
+    a.db()
+        .write(move |tx| User::find(tx.conn(), user_id)?.reset_two_factor(tx))
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn workspace_styles_reach_the_shell_and_boot_with_the_classic_policy() {
     let Some(a) = app(true).await else { return };
     let css = ":root { --accent: red; } body::after { content: \"</style>&\"; }";
-    a.db().write(move |tx| Account::first(tx.conn())?.unwrap().update(tx, None, Some(Some(css)), None)).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            Account::first(tx.conn())?
+                .unwrap()
+                .update(tx, None, Some(Some(css)), None)
+        })
+        .await
+        .unwrap();
     let mut b = a.sign_in(DAVID).await;
     let classic = b.classic_page("/users/me/profile").await;
     assert_eq!(classic.status, StatusCode::FOUND);
@@ -76,25 +102,50 @@ async fn workspace_styles_reach_the_shell_and_boot_with_the_classic_policy() {
     assert_eq!(boot_json(&page.text())["customStyles"], css);
     let policy = page.header("content-security-policy").unwrap();
     assert!(policy.contains("style-src 'self' 'unsafe-inline'"));
-    assert_eq!(without_nonce(policy), without_nonce(classic.header("content-security-policy").unwrap()));
+    assert_eq!(
+        without_nonce(policy),
+        without_nonce(classic.header("content-security-policy").unwrap())
+    );
     let boot = b.send(json_request("/api/v1/boot")).await;
-    assert_eq!(serde_json::from_slice::<Value>(&boot.body).unwrap()["customStyles"], css);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&boot.body).unwrap()["customStyles"],
+        css
+    );
 }
 
 /// The old switches no longer turn the SPA off or send anyone to the classic pages.
 #[tokio::test]
 async fn the_spa_is_served_whatever_the_old_switches_say() {
-    for (enabled, default) in [("0", "classic"), ("false", "next"), ("", ""), ("1", "classic")] {
+    for (enabled, default) in [
+        ("0", "classic"),
+        ("false", "next"),
+        ("", ""),
+        ("1", "classic"),
+    ] {
         let env = [("SPA_ENABLED", enabled), ("SPA_DEFAULT", default)];
-        let Some(a) = TestApp::boot_seed_with_env("default", seed_clock(), &env).await else { return };
+        let Some(a) = TestApp::boot_seed_with_env("default", seed_clock(), &env).await else {
+            return;
+        };
         let mut b = a.sign_in(DAVID).await;
         for path in ["/app", "/app/", "/app/rooms/1"] {
             let reply = b.get(path).await;
-            assert_eq!((reply.status, reply.content_type()), (StatusCode::OK, Some("text/html; charset=utf-8")), "{env:?} {path}");
+            assert_eq!(
+                (reply.status, reply.content_type()),
+                (StatusCode::OK, Some("text/html; charset=utf-8")),
+                "{env:?} {path}"
+            );
         }
-        assert_eq!(b.send(json_request("/api/v1/boot")).await.status, StatusCode::OK, "{env:?}");
+        assert_eq!(
+            b.send(json_request("/api/v1/boot")).await.status,
+            StatusCode::OK,
+            "{env:?}"
+        );
         let classic = b.get("/searches?q=fire").await;
-        assert_eq!(classic.location(), Some("http://campfire.test/app/search?q=fire"), "{env:?}");
+        assert_eq!(
+            classic.location(),
+            Some("http://campfire.test/app/search?q=fire"),
+            "{env:?}"
+        );
     }
 }
 
@@ -105,15 +156,29 @@ async fn signed_out_visitors_sign_in_and_come_back() {
     let mut b = a.anonymous();
     let page = b.get("/app/rooms/42?tab=files").await;
     assert_eq!(page.status, StatusCode::FOUND);
-    assert_eq!(page.location(), Some("http://campfire.test/app/session/new"));
-    assert_eq!(session(&a, &b)["return_to_after_authenticating"], "http://campfire.test/app/rooms/42?tab=files");
+    assert_eq!(
+        page.location(),
+        Some("http://campfire.test/app/session/new")
+    );
+    assert_eq!(
+        session(&a, &b)["return_to_after_authenticating"],
+        "http://campfire.test/app/rooms/42?tab=files"
+    );
 
     // The retained sign-in page is the SPA's now; its JSON sign-in sends them back to the room.
     let retained = b.get("/session/new").await;
-    assert_eq!(retained.location(), Some("http://campfire.test/app/session/new"));
+    assert_eq!(
+        retained.location(),
+        Some("http://campfire.test/app/session/new")
+    );
     assert_eq!(b.get("/app/session/new").await.status, StatusCode::OK);
-    assert_eq!(session(&a, &b)["return_to_after_authenticating"], "http://campfire.test/app/rooms/42?tab=files");
-    let signed_in = b.password_sign_in("david@37signals.com", "secret123456").await;
+    assert_eq!(
+        session(&a, &b)["return_to_after_authenticating"],
+        "http://campfire.test/app/rooms/42?tab=files"
+    );
+    let signed_in = b
+        .password_sign_in("david@37signals.com", "secret123456")
+        .await;
     assert_eq!(signed_in.status, StatusCode::OK, "{}", signed_in.text());
     assert_eq!(
         signed_in.json(),
@@ -122,10 +187,20 @@ async fn signed_out_visitors_sign_in_and_come_back() {
     );
 
     let mut anonymous = a.anonymous();
-    assert_eq!(anonymous.send(json_request("/api/v1/boot")).await.status, StatusCode::UNAUTHORIZED);
-    assert_eq!(anonymous.get("/api/v1/boot").await.location(), Some("http://campfire.test/app/session/new"));
+    assert_eq!(
+        anonymous.send(json_request("/api/v1/boot")).await.status,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        anonymous.get("/api/v1/boot").await.location(),
+        Some("http://campfire.test/app/session/new")
+    );
     for path in ["/app", "/app/"] {
-        assert_eq!(anonymous.get(path).await.location(), Some("http://campfire.test/app/session/new"), "{path}");
+        assert_eq!(
+            anonymous.get(path).await.location(),
+            Some("http://campfire.test/app/session/new"),
+            "{path}"
+        );
     }
 }
 
@@ -140,29 +215,65 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
     assert_eq!(shell.content_type(), Some("text/html; charset=utf-8"));
     // Any client route deep-links to the shell, the design system's kitchen sink included.
     let kitchen_sink = b.get("/app/_kitchen-sink").await;
-    assert_eq!((kitchen_sink.status, kitchen_sink.content_type()), (StatusCode::OK, Some("text/html; charset=utf-8")));
-    assert!(kitchen_sink.text().contains(r#"<script type="application/json" id="boot""#));
+    assert_eq!(
+        (kitchen_sink.status, kitchen_sink.content_type()),
+        (StatusCode::OK, Some("text/html; charset=utf-8"))
+    );
+    assert!(
+        kitchen_sink
+            .text()
+            .contains(r#"<script type="application/json" id="boot""#)
+    );
 
     for name in SECURITY_HEADERS.iter().chain(&["x-version", "x-rev"]) {
         assert!(shell.header(name).is_some(), "{name}");
         assert_eq!(shell.header(name), classic.header(name), "{name}");
     }
-    let policy = shell.header("content-security-policy").expect("the shell's policy");
-    assert_eq!(without_nonce(policy), without_nonce(classic.header("content-security-policy").unwrap()));
+    let policy = shell
+        .header("content-security-policy")
+        .expect("the shell's policy");
+    assert_eq!(
+        without_nonce(policy),
+        without_nonce(classic.header("content-security-policy").unwrap())
+    );
     let nonce = meta(&shell.text(), "csp-nonce").expect("the csp-nonce meta tag");
     assert!(policy.contains(&format!("script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-{nonce}'")), "{policy}");
-    for directive in ["default-src 'self'", "style-src 'self' 'unsafe-inline'", "connect-src 'self'", "worker-src 'self' blob:"] {
-        assert!(policy.contains(directive), "Vite's module scripts, styles, fetches and workers are 'self': {policy}");
+    for directive in [
+        "default-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "connect-src 'self'",
+        "worker-src 'self' blob:",
+    ] {
+        assert!(
+            policy.contains(directive),
+            "Vite's module scripts, styles, fetches and workers are 'self': {policy}"
+        );
     }
 
     let page = shell.text();
-    assert_eq!(meta(&page, "csrf-param").as_deref(), Some("authenticity_token"));
+    assert_eq!(
+        meta(&page, "csrf-param").as_deref(),
+        Some("authenticity_token")
+    );
     let token = meta(&page, "csrf-token").expect("the csrf-token meta tag");
-    assert!(b.real_authenticity_token().unwrap().is_valid(&token, "/rooms/1/messages", "post"), "the meta token verifies against the session");
+    assert!(
+        b.real_authenticity_token()
+            .unwrap()
+            .is_valid(&token, "/rooms/1/messages", "post"),
+        "the meta token verifies against the session"
+    );
 
     let (user, account, settings) = a
         .db()
-        .read(|conn| Ok((User::find(conn, DAVID)?, Account::first(conn)?.unwrap(), UserStatusSettings::for_ids(conn, &[DAVID])?.remove(&DAVID).unwrap())))
+        .read(|conn| {
+            Ok((
+                User::find(conn, DAVID)?,
+                Account::first(conn)?.unwrap(),
+                UserStatusSettings::for_ids(conn, &[DAVID])?
+                    .remove(&DAVID)
+                    .unwrap(),
+            ))
+        })
         .await
         .unwrap();
     assert_eq!(
@@ -188,7 +299,10 @@ async fn the_shell_reads_the_appearance_settings_and_escapes_the_boot_json() {
     let name = "</script><script>alert(1)</script><!-- \u{2028}";
     a.db()
         .write(move |tx| {
-            tx.conn().execute("UPDATE users SET name=?, theme='dark', text_size='larger' WHERE id=?", rusqlite::params![name, DAVID])?;
+            tx.conn().execute(
+                "UPDATE users SET name=?, theme='dark', text_size='larger' WHERE id=?",
+                rusqlite::params![name, DAVID],
+            )?;
             Ok(())
         })
         .await
@@ -196,7 +310,14 @@ async fn the_shell_reads_the_appearance_settings_and_escapes_the_boot_json() {
     let page = a.sign_in(DAVID).await.get("/app").await.text();
     assert!(!page.contains("<script>alert(1)"), "{page}");
     let boot = boot_json(&page);
-    assert_eq!((boot["user"]["name"].as_str(), boot["theme"].as_str(), boot["textSize"].as_str()), (Some(name), Some("dark"), Some("larger")));
+    assert_eq!(
+        (
+            boot["user"]["name"].as_str(),
+            boot["theme"].as_str(),
+            boot["textSize"].as_str()
+        ),
+        (Some(name), Some("dark"), Some("larger"))
+    );
 }
 
 #[tokio::test]
@@ -206,12 +327,23 @@ async fn the_boot_api_is_the_shells_boot_json_and_csrf_token() {
     let shell = boot_json(&b.get("/app").await.text());
     let reply = b.send(json_request("/api/v1/boot")).await;
     assert_eq!(reply.status, StatusCode::OK);
-    assert_eq!(reply.content_type(), Some("application/json; charset=utf-8"));
+    assert_eq!(
+        reply.content_type(),
+        Some("application/json; charset=utf-8")
+    );
     assert_eq!(reply.header("cache-control"), Some("no-store"));
     assert!(reply.header("x-content-type-options").is_some());
     let mut json = reply.json();
-    let token = json.as_object_mut().unwrap().remove("csrfToken").expect("a csrfToken");
-    assert!(b.real_authenticity_token().unwrap().is_valid(token.as_str().unwrap(), "/rooms/1/messages", "post"));
+    let token = json
+        .as_object_mut()
+        .unwrap()
+        .remove("csrfToken")
+        .expect("a csrfToken");
+    assert!(b.real_authenticity_token().unwrap().is_valid(
+        token.as_str().unwrap(),
+        "/rooms/1/messages",
+        "post"
+    ));
     assert_eq!(json, shell);
 }
 
@@ -220,9 +352,18 @@ async fn deactivated_users_are_signed_out_of_the_spa() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(JASON).await;
     assert_eq!(b.get("/app").await.status, StatusCode::OK);
-    a.db().write(|tx| User::find(tx.conn(), JASON)?.deactivate(tx)).await.unwrap();
-    assert_eq!(b.get("/app").await.location(), Some("http://campfire.test/app/session/new"));
-    assert_eq!(b.send(json_request("/api/v1/boot")).await.status, StatusCode::UNAUTHORIZED);
+    a.db()
+        .write(|tx| User::find(tx.conn(), JASON)?.deactivate(tx))
+        .await
+        .unwrap();
+    assert_eq!(
+        b.get("/app").await.location(),
+        Some("http://campfire.test/app/session/new")
+    );
+    assert_eq!(
+        b.send(json_request("/api/v1/boot")).await.status,
+        StatusCode::UNAUTHORIZED
+    );
 }
 
 #[tokio::test]
@@ -232,14 +373,26 @@ async fn two_step_enrollment_is_enforced_on_the_spa() {
     let mut b = a.sign_in(DAVID).await;
     a.db()
         .write(|tx| {
-            tx.conn().execute("UPDATE sessions SET two_factor_verified_at=NULL WHERE user_id=?", [DAVID])?;
+            tx.conn().execute(
+                "UPDATE sessions SET two_factor_verified_at=NULL WHERE user_id=?",
+                [DAVID],
+            )?;
             Ok(())
         })
         .await
         .unwrap();
-    assert_eq!(b.get("/app/rooms/1").await.location(), Some("http://campfire.test/app/two_factor/setup?required=true"));
-    assert_eq!(session(&a, &b)["return_to_after_authenticating"], "http://campfire.test/app/rooms/1");
-    assert_eq!(b.send(json_request("/api/v1/boot")).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        b.get("/app/rooms/1").await.location(),
+        Some("http://campfire.test/app/two_factor/setup?required=true")
+    );
+    assert_eq!(
+        session(&a, &b)["return_to_after_authenticating"],
+        "http://campfire.test/app/rooms/1"
+    );
+    assert_eq!(
+        b.send(json_request("/api/v1/boot")).await.status,
+        StatusCode::FORBIDDEN
+    );
 }
 
 #[tokio::test]
@@ -256,11 +409,30 @@ async fn assets_carry_the_security_headers_and_a_shareable_policy() {
         br: Some(b"brotli"),
         gz: Some(b"gzip"),
     };
-    let served = campfire_spa::Served { file: &FILE, content_encoding: Some("br"), body: b"brotli" };
-    let response = super::served_response(&a.booted.fixture_kit, served, "public, immutable, max-age=31556952");
-    let header = |name: &str| response.headers().get(name).map(|v| v.to_str().unwrap().to_string());
-    assert_eq!(header("cache-control").as_deref(), Some("public, immutable, max-age=31556952, no-transform"));
-    assert_eq!(header("content-type").as_deref(), Some("text/javascript; charset=utf-8"));
+    let served = campfire_spa::Served {
+        file: &FILE,
+        content_encoding: Some("br"),
+        body: b"brotli",
+    };
+    let response = super::served_response(
+        &a.booted.fixture_kit,
+        served,
+        "public, immutable, max-age=31556952",
+    );
+    let header = |name: &str| {
+        response
+            .headers()
+            .get(name)
+            .map(|v| v.to_str().unwrap().to_string())
+    };
+    assert_eq!(
+        header("cache-control").as_deref(),
+        Some("public, immutable, max-age=31556952, no-transform")
+    );
+    assert_eq!(
+        header("content-type").as_deref(),
+        Some("text/javascript; charset=utf-8")
+    );
     assert_eq!(header("content-encoding").as_deref(), Some("br"));
     assert_eq!(header("vary").as_deref(), Some("accept-encoding"));
     assert_eq!(header("content-length").as_deref(), Some("6"));
@@ -268,14 +440,40 @@ async fn assets_carry_the_security_headers_and_a_shareable_policy() {
         assert_eq!(header(name).as_deref(), classic.header(name), "{name}");
     }
     let policy = header("content-security-policy").unwrap();
-    assert!(!policy.contains("nonce"), "a public, cached response never carries a session's nonce");
-    assert_eq!(policy, without_nonce(classic.header("content-security-policy").unwrap()));
-    assert!(response.extensions().get::<campfire_kit::deflater::StaticFile>().is_some());
+    assert!(
+        !policy.contains("nonce"),
+        "a public, cached response never carries a session's nonce"
+    );
+    assert_eq!(
+        policy,
+        without_nonce(classic.header("content-security-policy").unwrap())
+    );
+    assert!(
+        response
+            .extensions()
+            .get::<campfire_kit::deflater::StaticFile>()
+            .is_some()
+    );
 
-    static UNHASHED: campfire_spa::File = campfire_spa::File { path: "assets/unhashed.js", immutable: false, ..FILE };
-    let unhashed = campfire_spa::Served { file: &UNHASHED, content_encoding: None, body: b"export {}" };
-    let response = super::served_response(&a.booted.fixture_kit, unhashed, "public, immutable, max-age=31556952");
-    assert_eq!(response.headers()["cache-control"], format!("{}, no-transform", campfire_spa::REVALIDATE_CACHE_CONTROL));
+    static UNHASHED: campfire_spa::File = campfire_spa::File {
+        path: "assets/unhashed.js",
+        immutable: false,
+        ..FILE
+    };
+    let unhashed = campfire_spa::Served {
+        file: &UNHASHED,
+        content_encoding: None,
+        body: b"export {}",
+    };
+    let response = super::served_response(
+        &a.booted.fixture_kit,
+        unhashed,
+        "public, immutable, max-age=31556952",
+    );
+    assert_eq!(
+        response.headers()["cache-control"],
+        format!("{}, no-transform", campfire_spa::REVALIDATE_CACHE_CONTROL)
+    );
     assert!(response.headers().get("content-encoding").is_none());
 }
 
@@ -285,18 +483,40 @@ async fn embedded_assets_are_served_by_path_and_unknown_ones_are_not_found() {
     let mut b = a.anonymous();
     let unknown = b.get("/no-such-page").await;
     let missing = b.get("/app/assets/missing-AbCd1234.js").await;
-    assert_eq!((missing.status, missing.body.clone()), (StatusCode::NOT_FOUND, unknown.body), "a public 404, not a sign-in redirect");
+    assert_eq!(
+        (missing.status, missing.body.clone()),
+        (StatusCode::NOT_FOUND, unknown.body),
+        "a public 404, not a sign-in redirect"
+    );
 
     // A real dist (built locally, or by the Frontend job's `cargo test -p campfire_spa`).
     for file in campfire_spa::files() {
         let path = format!("/app/{}", file.path);
-        let reply: Reply = b.send(Req::new(Method::GET, &path).header("accept-encoding", "gzip, br")).await;
+        let reply: Reply = b
+            .send(Req::new(Method::GET, &path).header("accept-encoding", "gzip, br"))
+            .await;
         assert_eq!(reply.status, StatusCode::OK, "{path}");
         assert_eq!(reply.content_type(), Some(file.content_type), "{path}");
-        let expected = file.br.map(|br| (Some("br"), br)).unwrap_or((None, file.identity));
-        assert_eq!((reply.header("content-encoding"), &reply.body[..]), expected, "{path}");
-        assert_eq!(reply.header("set-cookie"), None, "{path}: no session for a static file");
-        assert!(reply.header("cache-control").is_some_and(|cc| cc.ends_with(", no-transform")), "{path}: never gzipped again");
+        let expected = file
+            .br
+            .map(|br| (Some("br"), br))
+            .unwrap_or((None, file.identity));
+        assert_eq!(
+            (reply.header("content-encoding"), &reply.body[..]),
+            expected,
+            "{path}"
+        );
+        assert_eq!(
+            reply.header("set-cookie"),
+            None,
+            "{path}: no session for a static file"
+        );
+        assert!(
+            reply
+                .header("cache-control")
+                .is_some_and(|cc| cc.ends_with(", no-transform")),
+            "{path}: never gzipped again"
+        );
     }
 }
 
@@ -336,13 +556,21 @@ async fn pwa_worker_selection_ignores_the_old_switches_and_choices() {
         let shell = b.get("/app/").await;
         let boot = b.send(json_request("/api/v1/boot")).await;
         let worker = Value::from("/service-worker.js");
-        assert_eq!(boot_json(&shell.text())["serviceWorkerUrl"], worker, "{label}");
+        assert_eq!(
+            boot_json(&shell.text())["serviceWorkerUrl"],
+            worker,
+            "{label}"
+        );
         assert_eq!(boot.json()["serviceWorkerUrl"], worker, "{label}");
         // The auth pages are the SPA's now and name the same worker: two-step setup is where a
         // password sign-in can land, and its load registers the signed-in person's worker.
         unenroll(&a, DAVID).await;
         let retained = b.get("/two_factor_setup").await;
-        assert_eq!(retained.location(), Some("http://campfire.test/app/two_factor/setup"), "{label}");
+        assert_eq!(
+            retained.location(),
+            Some("http://campfire.test/app/two_factor/setup"),
+            "{label}"
+        );
         let setup = b.get("/app/two_factor/setup").await;
         assert_eq!(setup.status, StatusCode::OK, "{label}");
         assert_eq!(
@@ -352,7 +580,11 @@ async fn pwa_worker_selection_ignores_the_old_switches_and_choices() {
         );
         let mut anonymous = a.anonymous();
         let retained = anonymous.get("/session/new").await;
-        assert_eq!(retained.location(), Some("http://campfire.test/app/session/new"), "{label}");
+        assert_eq!(
+            retained.location(),
+            Some("http://campfire.test/app/session/new"),
+            "{label}"
+        );
         let signed_out = anonymous.get("/app/session/new").await;
         assert_eq!(signed_out.status, StatusCode::OK, "{label}");
         assert!(
@@ -369,32 +601,78 @@ async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
     let json = manifest.json();
     assert_eq!(json["start_url"], "/");
     assert_eq!(json["scope"], "/");
-    assert!(json.get("id").is_none(), "the historical manifest uses start_url as its implicit id");
+    assert!(
+        json.get("id").is_none(),
+        "the historical manifest uses start_url as its implicit id"
+    );
     let alias = a.anonymous().get("/app/manifest.webmanifest").await;
     assert_eq!(alias.status, StatusCode::FOUND);
-    assert_eq!(alias.header("location"), Some("http://campfire.test/webmanifest.json"));
+    assert_eq!(
+        alias.header("location"),
+        Some("http://campfire.test/webmanifest.json")
+    );
     let shell = a.sign_in(DAVID).await.get("/app/").await;
-    assert!(shell.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
+    assert!(
+        shell
+            .text()
+            .contains("<link rel=\"manifest\" href=\"/webmanifest.json\"")
+    );
     let signed_out = a.anonymous().get("/app/session/new").await;
     assert_eq!(signed_out.status, StatusCode::OK);
-    assert!(signed_out.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
+    assert!(
+        signed_out
+            .text()
+            .contains("<link rel=\"manifest\" href=\"/webmanifest.json\"")
+    );
 }
 
 fn link_href(page: &str, rel: &str, link_type: Option<&str>) -> Option<String> {
-    let link_type = link_type.map_or(String::new(), |link_type| format!(r#" type="{}""#, regex::escape(link_type)));
-    let pattern = Regex::new(&format!(r#"<link rel="{}"{link_type} href="([^"]*)" />"#, regex::escape(rel))).unwrap();
-    pattern.captures(page).map(|captures| captures[1].replace("&amp;", "&"))
+    let link_type = link_type.map_or(String::new(), |link_type| {
+        format!(r#" type="{}""#, regex::escape(link_type))
+    });
+    let pattern = Regex::new(&format!(
+        r#"<link rel="{}"{link_type} href="([^"]*)" />"#,
+        regex::escape(rel)
+    ))
+    .unwrap();
+    pattern
+        .captures(page)
+        .map(|captures| captures[1].replace("&amp;", "&"))
 }
 
 #[tokio::test]
 async fn pages_and_favicon_ico_show_smartfires_mark_until_a_logo_is_attached() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
-    let mark = |name: &str| std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../spa/favicon").join(name)).unwrap();
-    for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
-        assert!(page.contains("<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />"), "{page}");
-        assert_eq!(link_href(&page, "icon", Some("image/svg+xml")).as_deref(), Some("/favicon.svg"), "{page}");
-        assert_eq!(link_href(&page, "apple-touch-icon", None).as_deref(), Some("/apple-touch-icon.png"), "{page}");
+    let mark = |name: &str| {
+        std::fs::read(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../spa/favicon")
+                .join(name),
+        )
+        .unwrap()
+    };
+    for page in [
+        david.get("/app/").await.text(),
+        a.anonymous().get("/app/session/new").await.text(),
+        a.anonymous().get("/app/about").await.text(),
+    ] {
+        assert!(
+            page.contains(
+                "<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />"
+            ),
+            "{page}"
+        );
+        assert_eq!(
+            link_href(&page, "icon", Some("image/svg+xml")).as_deref(),
+            Some("/favicon.svg"),
+            "{page}"
+        );
+        assert_eq!(
+            link_href(&page, "apple-touch-icon", None).as_deref(),
+            Some("/apple-touch-icon.png"),
+            "{page}"
+        );
     }
     for (path, content_type) in [
         ("favicon.ico", "image/x-icon"),
@@ -408,16 +686,42 @@ async fn pages_and_favicon_ico_show_smartfires_mark_until_a_logo_is_attached() {
         assert_eq!(response.body, mark(path), "{path}");
     }
 
-    let logo = std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/users_logos/moon.jpg")).unwrap();
-    let upload = david.write(Req::new(Method::PATCH, "/account").multipart(&[], ("account[logo]", "moon.jpg", "image/jpeg", &logo))).await;
+    let logo = std::fs::read(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/users_logos/moon.jpg"),
+    )
+    .unwrap();
+    let upload = david
+        .write(
+            Req::new(Method::PATCH, "/account")
+                .multipart(&[], ("account[logo]", "moon.jpg", "image/jpeg", &logo)),
+        )
+        .await;
     assert_eq!(upload.status, StatusCode::FOUND);
     let manifest = a.anonymous().get("/webmanifest.json").await.json();
-    let small = manifest["icons"][0]["src"].as_str().unwrap().replace("&amp;", "&");
-    assert!(small.starts_with("/account/logo?") && small.contains("v="), "{small}");
-    for page in [david.get("/app/").await.text(), a.anonymous().get("/app/session/new").await.text(), a.anonymous().get("/app/about").await.text()] {
-        assert_eq!(link_href(&page, "icon", Some("image/png")).as_deref(), Some(small.as_str()), "the manifest's small icon: {page}");
+    let small = manifest["icons"][0]["src"]
+        .as_str()
+        .unwrap()
+        .replace("&amp;", "&");
+    assert!(
+        small.starts_with("/account/logo?") && small.contains("v="),
+        "{small}"
+    );
+    for page in [
+        david.get("/app/").await.text(),
+        a.anonymous().get("/app/session/new").await.text(),
+        a.anonymous().get("/app/about").await.text(),
+    ] {
+        assert_eq!(
+            link_href(&page, "icon", Some("image/png")).as_deref(),
+            Some(small.as_str()),
+            "the manifest's small icon: {page}"
+        );
         let touch = link_href(&page, "apple-touch-icon", None).unwrap();
-        assert_eq!(touch, small.replace("size=small", "size=touch"), "versioned like the manifest's icon: {page}");
+        assert_eq!(
+            touch,
+            small.replace("size=small", "size=touch"),
+            "versioned like the manifest's icon: {page}"
+        );
         assert!(!page.contains("/favicon."), "{page}");
     }
     let icon = a.anonymous().get(&small).await;
@@ -436,7 +740,10 @@ fn decode_png(bytes: &[u8]) -> (u32, u32, Vec<[u8; 3]>) {
     let info = reader.next_frame(&mut buffer).unwrap();
     let channels = info.color_type.samples();
     assert!(channels >= 3, "{:?}", info.color_type);
-    let pixels = buffer[..info.buffer_size()].chunks(channels).map(|pixel| [pixel[0], pixel[1], pixel[2]]).collect();
+    let pixels = buffer[..info.buffer_size()]
+        .chunks(channels)
+        .map(|pixel| [pixel[0], pixel[1], pixel[2]])
+        .collect();
     (info.width, info.height, pixels)
 }
 
@@ -450,23 +757,39 @@ async fn a_wide_logos_apple_touch_icon_is_a_180_square_with_the_logo_centred_on_
         let mut encoder = png::Encoder::new(&mut wide, width, height);
         encoder.set_color(png::ColorType::Rgba);
         let mut writer = encoder.write_header().unwrap();
-        writer.write_image_data(&[200, 0, 0, 255].repeat((width * height) as usize)).unwrap();
+        writer
+            .write_image_data(&[200, 0, 0, 255].repeat((width * height) as usize))
+            .unwrap();
     }
-    let upload = david.write(Req::new(Method::PATCH, "/account").multipart(&[], ("account[logo]", "wide.png", "image/png", &wide))).await;
+    let upload = david
+        .write(
+            Req::new(Method::PATCH, "/account")
+                .multipart(&[], ("account[logo]", "wide.png", "image/png", &wide)),
+        )
+        .await;
     assert_eq!(upload.status, StatusCode::FOUND);
     let page = david.get("/app/").await.text();
     let touch = link_href(&page, "apple-touch-icon", None).expect("an apple-touch-icon");
     let icon = a.anonymous().get(&touch).await;
-    assert_eq!((icon.status, icon.content_type()), (StatusCode::OK, Some("image/png")));
+    assert_eq!(
+        (icon.status, icon.content_type()),
+        (StatusCode::OK, Some("image/png"))
+    );
     let (width, height, pixels) = decode_png(&icon.body);
     assert_eq!((width, height), (180, 180));
     let at = |x: u32, y: u32| pixels[(y * width + x) as usize];
     let red = |[r, g, b]: [u8; 3]| r > 150 && g < 50 && b < 50;
     assert_eq!(at(0, 0), [255, 255, 255], "padding, not the logo stretched");
     assert_eq!(at(179, 179), [255, 255, 255]);
-    assert!(red(at(0, 90)) && red(at(179, 90)) && red(at(90, 90)), "the logo spans the width");
+    assert!(
+        red(at(0, 90)) && red(at(179, 90)) && red(at(90, 90)),
+        "the logo spans the width"
+    );
     let rows = (0..height).filter(|&y| red(at(90, y))).count();
-    assert!((58..=62).contains(&rows), "a 3:1 logo keeps its shape: {rows} rows");
+    assert!(
+        (58..=62).contains(&rows),
+        "a 3:1 logo keeps its shape: {rows} rows"
+    );
 }
 
 const OLD_CHROME: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
@@ -474,9 +797,23 @@ const OLD_CHROME: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 async fn assert_images_for_an_old_browser(browser: &mut Browser<'_>, icons: &[(&str, &str)]) {
     for (path, content_type) in icons {
         for method in [Method::GET, Method::HEAD] {
-            let response = browser.send(Req::new(method.clone(), path).header("user-agent", OLD_CHROME).header("accept", "*/*")).await;
-            assert_eq!((response.status, response.content_type()), (StatusCode::OK, Some(*content_type)), "{method} {path}");
-            assert_eq!(response.body.is_empty(), method == Method::HEAD, "{method} {path}");
+            let response = browser
+                .send(
+                    Req::new(method.clone(), path)
+                        .header("user-agent", OLD_CHROME)
+                        .header("accept", "*/*"),
+                )
+                .await;
+            assert_eq!(
+                (response.status, response.content_type()),
+                (StatusCode::OK, Some(*content_type)),
+                "{method} {path}"
+            );
+            assert_eq!(
+                response.body.is_empty(),
+                method == Method::HEAD,
+                "{method} {path}"
+            );
         }
     }
 }
@@ -485,29 +822,63 @@ async fn assert_images_for_an_old_browser(browser: &mut Browser<'_>, icons: &[(&
 async fn icons_are_images_for_an_old_browser_and_answer_head_and_conditional_requests() {
     let Some(a) = app(true).await else { return };
     let mut anonymous = a.anonymous();
-    let blocked = anonymous.send(Req::new(Method::GET, "/session/new").header("user-agent", OLD_CHROME)).await;
-    assert!(blocked.text().contains("Upgrade to a supported web browser"), "the gate still applies to pages");
-    assert_images_for_an_old_browser(&mut anonymous, &[
-        ("/favicon.ico", "image/x-icon"),
-        ("/favicon.svg", "image/svg+xml"),
-        ("/favicon.png", "image/png"),
-        ("/apple-touch-icon.png", "image/png"),
-    ]).await;
+    let blocked = anonymous
+        .send(Req::new(Method::GET, "/session/new").header("user-agent", OLD_CHROME))
+        .await;
+    assert!(
+        blocked
+            .text()
+            .contains("Upgrade to a supported web browser"),
+        "the gate still applies to pages"
+    );
+    assert_images_for_an_old_browser(
+        &mut anonymous,
+        &[
+            ("/favicon.ico", "image/x-icon"),
+            ("/favicon.svg", "image/svg+xml"),
+            ("/favicon.png", "image/png"),
+            ("/apple-touch-icon.png", "image/png"),
+        ],
+    )
+    .await;
 
     let mut david = a.sign_in(DAVID).await;
-    let logo = std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/users_logos/moon.jpg")).unwrap();
-    let upload = david.write(Req::new(Method::PATCH, "/account").multipart(&[], ("account[logo]", "moon.jpg", "image/jpeg", &logo))).await;
+    let logo = std::fs::read(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../vectors/users_logos/moon.jpg"),
+    )
+    .unwrap();
+    let upload = david
+        .write(
+            Req::new(Method::PATCH, "/account")
+                .multipart(&[], ("account[logo]", "moon.jpg", "image/jpeg", &logo)),
+        )
+        .await;
     assert_eq!(upload.status, StatusCode::FOUND);
     let page = david.get("/app/").await.text();
-    let (icon, touch) = (link_href(&page, "icon", Some("image/png")).unwrap(), link_href(&page, "apple-touch-icon", None).unwrap());
-    assert_images_for_an_old_browser(&mut anonymous, &[("/favicon.ico", "image/png"), (&icon, "image/png"), (&touch, "image/png")]).await;
+    let (icon, touch) = (
+        link_href(&page, "icon", Some("image/png")).unwrap(),
+        link_href(&page, "apple-touch-icon", None).unwrap(),
+    );
+    assert_images_for_an_old_browser(
+        &mut anonymous,
+        &[
+            ("/favicon.ico", "image/png"),
+            (&icon, "image/png"),
+            (&touch, "image/png"),
+        ],
+    )
+    .await;
 
     let first = anonymous.get("/favicon.ico").await;
     let etag = first.header("etag").expect("an ETag").to_string();
-    let revalidated = anonymous.send(Req::new(Method::GET, "/favicon.ico").header("if-none-match", &etag)).await;
+    let revalidated = anonymous
+        .send(Req::new(Method::GET, "/favicon.ico").header("if-none-match", &etag))
+        .await;
     assert_eq!(revalidated.status, StatusCode::NOT_MODIFIED);
     assert!(revalidated.body.is_empty());
-    let changed = anonymous.send(Req::new(Method::GET, "/favicon.ico").header("if-none-match", "W/\"stale\"")).await;
+    let changed = anonymous
+        .send(Req::new(Method::GET, "/favicon.ico").header("if-none-match", "W/\"stale\""))
+        .await;
     assert_eq!((changed.status, changed.body), (StatusCode::OK, first.body));
 }
 
@@ -584,12 +955,18 @@ async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_sh
         let file = campfire_spa::pwa::file(path, None).unwrap();
         assert_eq!(reply.status, StatusCode::OK);
         assert_eq!(reply.content_type(), Some(file.file.content_type));
-        assert_eq!(reply.body, root.body, "older bundles use the same root resource");
+        assert_eq!(
+            reply.body, root.body,
+            "older bundles use the same root resource"
+        );
         assert_eq!(reply.body, file.body);
         assert_eq!(reply.header("set-cookie"), None);
         if path == "service-worker.js" {
             assert_eq!(reply.header("service-worker-allowed"), Some("/"));
-            assert_eq!(reply.header("cache-control"), Some("no-cache, no-transform"));
+            assert_eq!(
+                reply.header("cache-control"),
+                Some("no-cache, no-transform")
+            );
         }
     }
 }

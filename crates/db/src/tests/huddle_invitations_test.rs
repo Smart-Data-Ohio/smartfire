@@ -79,7 +79,7 @@ fn issuance_invitations_match_forty_nine_rails_scenarios() {
             Ok(())
         });
         if case["sound_allowed"] == false {
-            db.write(|tx| Ok(tx.conn().execute("UPDATE users SET dnd_enabled=1",[])?));
+            db.write(|tx| Ok(tx.conn().execute("UPDATE users SET dnd_enabled=1", [])?));
         }
         db.sink.take();
         let session = case["session_id"].as_i64().unwrap();

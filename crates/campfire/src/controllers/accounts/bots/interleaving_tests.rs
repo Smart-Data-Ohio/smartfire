@@ -1,11 +1,11 @@
 //! Real writer-queue interleavings, compared to pinned Rails' independent saves.
+use crate::controllers::presenters::test_support::{BENDER, Req, TestApp};
+use axum::http::Method;
 use campfire_db::Agent;
 use campfire_db::AgentChanges;
 use campfire_db::User;
 use serde_json::Value;
 use serde_json::json;
-use crate::controllers::presenters::test_support::{BENDER, Req, TestApp};
-use axum::http::Method;
 
 fn changes(value: &Value) -> AgentChanges {
     AgentChanges {

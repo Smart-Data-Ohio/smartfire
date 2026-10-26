@@ -159,7 +159,11 @@ async fn legacy_missing_url_redirects_with_exact_alert_and_never_creates_agent()
     );
     let shell = admin.get("/app/").await;
     assert_eq!(shell.status, StatusCode::OK);
-    assert!(shell.text().contains("Set a webhook URL before generating a signing secret."));
+    assert!(
+        shell
+            .text()
+            .contains("Set a webhook URL before generating a signing secret.")
+    );
     test.booted
         .app
         .db

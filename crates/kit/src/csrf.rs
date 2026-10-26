@@ -64,7 +64,8 @@ impl RealToken {
 
     /// `csrf_token_hmac`
     fn hmac(&self, identifier: &str) -> Vec<u8> {
-        let mut mac = Hmac::<Sha256>::new_from_slice(&self.bytes).expect("HMAC takes any key length");
+        let mut mac =
+            Hmac::<Sha256>::new_from_slice(&self.bytes).expect("HMAC takes any key length");
         mac.update(identifier.as_bytes());
         mac.finalize().into_bytes().to_vec()
     }
@@ -85,7 +86,9 @@ impl RealToken {
         if encoded.is_empty() {
             return false;
         }
-        let Some(token) = urlsafe_decode(encoded) else { return false };
+        let Some(token) = urlsafe_decode(encoded) else {
+            return false;
+        };
         if token.len() == TOKEN_LENGTH {
             // An unmasked token, as issued before masking.
             fixed_length_secure_compare(&token, &self.bytes)
@@ -94,7 +97,10 @@ impl RealToken {
             let unmasked: Vec<u8> = pad.iter().zip(encrypted).map(|(a, b)| a ^ b).collect();
             fixed_length_secure_compare(&unmasked, &self.global())
                 || fixed_length_secure_compare(&unmasked, &self.bytes)
-                || fixed_length_secure_compare(&unmasked, &self.per_form(path.strip_suffix('/').unwrap_or(path), method))
+                || fixed_length_secure_compare(
+                    &unmasked,
+                    &self.per_form(path.strip_suffix('/').unwrap_or(path), method),
+                )
         } else {
             false
         }
@@ -111,7 +117,10 @@ pub struct AuthenticityTokens {
 
 impl AuthenticityTokens {
     pub fn new(real: RealToken, request_path: &str) -> Self {
-        Self { real, request_path: request_path.to_string() }
+        Self {
+            real,
+            request_path: request_path.to_string(),
+        }
     }
 
     /// `form_authenticity_token`: the masked global token (`csrf_meta_tags`).
@@ -158,9 +167,15 @@ pub fn normalize_action_path(action: &str, request_path: &str) -> String {
 
 /// `URI.parse(url).path`: what's left once the scheme, authority, query and fragment are gone.
 fn uri_path(url: &str) -> &str {
-    let rest = if has_scheme(url) { &url[url.find(':').unwrap() + 1..] } else { url };
+    let rest = if has_scheme(url) {
+        &url[url.find(':').unwrap() + 1..]
+    } else {
+        url
+    };
     let rest = match rest.strip_prefix("//") {
-        Some(authority_and_path) => authority_and_path.find('/').map_or("", |i| &authority_and_path[i..]),
+        Some(authority_and_path) => authority_and_path
+            .find('/')
+            .map_or("", |i| &authority_and_path[i..]),
         None => rest,
     };
     let end = rest.find(['?', '#']).unwrap_or(rest.len());
@@ -171,8 +186,13 @@ fn has_scheme(url: &str) -> bool {
     match url.find(':') {
         Some(i) => {
             let scheme = &url[..i];
-            scheme.bytes().next().is_some_and(|b| b.is_ascii_alphabetic())
-                && scheme.bytes().all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b))
+            scheme
+                .bytes()
+                .next()
+                .is_some_and(|b| b.is_ascii_alphabetic())
+                && scheme
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b))
                 && !url[..i].contains(['/', '?', '#'])
         }
         None => false,
@@ -197,7 +217,14 @@ fn encode(bytes: &[u8]) -> String {
 /// `Base64.urlsafe_decode64`: pads a short unpadded string, then decodes strictly, accepting
 /// either alphabet.
 fn urlsafe_decode(encoded: &str) -> Option<Vec<u8>> {
-    let mut translated: String = encoded.chars().map(|c| match c { '-' => '+', '_' => '/', c => c }).collect();
+    let mut translated: String = encoded
+        .chars()
+        .map(|c| match c {
+            '-' => '+',
+            '_' => '/',
+            c => c,
+        })
+        .collect();
     if !encoded.ends_with('=') {
         while !translated.len().is_multiple_of(4) {
             translated.push('=');
@@ -216,7 +243,8 @@ mod tests {
     use serde_json::Value;
 
     fn vectors() -> Value {
-        let json: Value = serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap();
+        let json: Value =
+            serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap();
         json["csrf"].clone()
     }
 
@@ -227,7 +255,10 @@ mod tests {
     #[test]
     fn global_token_matches_rails() {
         let vectors = vectors();
-        assert_eq!(hex::encode(session_token(&vectors).global()), vectors["global_token_hex"].as_str().unwrap());
+        assert_eq!(
+            hex::encode(session_token(&vectors).global()),
+            vectors["global_token_hex"].as_str().unwrap()
+        );
     }
 
     #[test]
@@ -238,9 +269,17 @@ mod tests {
             let action = case["action"].as_str().unwrap();
             let page = case["page_path"].as_str().unwrap();
             let normalized = normalize_action_path(action, page);
-            assert_eq!(normalized, case["normalized_action_path"].as_str().unwrap(), "{action:?} on {page}");
+            assert_eq!(
+                normalized,
+                case["normalized_action_path"].as_str().unwrap(),
+                "{action:?} on {page}"
+            );
             let method = case["method"].as_str().unwrap();
-            assert_eq!(hex::encode(token.per_form(&normalized, method)), case["unmasked_hex"].as_str().unwrap(), "{case}");
+            assert_eq!(
+                hex::encode(token.per_form(&normalized, method)),
+                case["unmasked_hex"].as_str().unwrap(),
+                "{case}"
+            );
         }
     }
 
@@ -251,7 +290,11 @@ mod tests {
         let cases = vectors["validity"].as_array().unwrap();
         assert!(cases.len() > 100);
         for case in cases {
-            let valid = token.is_valid(case["token"].as_str().unwrap(), case["path"].as_str().unwrap(), case["method"].as_str().unwrap());
+            let valid = token.is_valid(
+                case["token"].as_str().unwrap(),
+                case["path"].as_str().unwrap(),
+                case["method"].as_str().unwrap(),
+            );
             assert_eq!(valid, case["expected"].as_bool().unwrap(), "{case}");
         }
     }
@@ -259,7 +302,8 @@ mod tests {
     #[test]
     fn origin_check_matches_rails() {
         for case in vectors()["origin"].as_array().unwrap() {
-            let result = valid_request_origin(case["origin"].as_str(), case["base_url"].as_str().unwrap());
+            let result =
+                valid_request_origin(case["origin"].as_str(), case["base_url"].as_str().unwrap());
             match &case["expected"] {
                 Value::Bool(expected) => assert_eq!(result, Ok(*expected), "{case}"),
                 _ => assert_eq!(result, Err(NullOrigin), "{case}"),
@@ -288,9 +332,18 @@ mod tests {
 
         let form = token.masked(Some(("/session", "post")));
         assert!(token.is_valid(&form, "/session", "POST"));
-        assert!(token.is_valid(&form, "/session/", "POST"), "the request path's trailing slash is ignored");
-        assert!(!token.is_valid(&form, "/session", "DELETE"), "bound to the method");
-        assert!(!token.is_valid(&form, "/rooms/1", "POST"), "bound to the action");
+        assert!(
+            token.is_valid(&form, "/session/", "POST"),
+            "the request path's trailing slash is ignored"
+        );
+        assert!(
+            !token.is_valid(&form, "/session", "DELETE"),
+            "bound to the method"
+        );
+        assert!(
+            !token.is_valid(&form, "/rooms/1", "POST"),
+            "bound to the action"
+        );
     }
 
     #[test]
@@ -298,17 +351,26 @@ mod tests {
         let token = RealToken::decode(&generate()).unwrap();
         let other = RealToken::decode(&generate()).unwrap();
         let masked = token.masked(None);
-        assert!(!other.is_valid(&masked, "/session", "POST"), "another session's token");
+        assert!(
+            !other.is_valid(&masked, "/session", "POST"),
+            "another session's token"
+        );
 
         let mut bytes = urlsafe_decode(&masked).unwrap();
         for index in [0, 31, 32, 63] {
             bytes[index] ^= 1;
             let tampered = encode(&bytes);
-            assert!(!token.is_valid(&tampered, "/session", "POST"), "flipped byte {index}");
+            assert!(
+                !token.is_valid(&tampered, "/session", "POST"),
+                "flipped byte {index}"
+            );
             bytes[index] ^= 1;
         }
         for malformed in ["", "!!!!", "QQ", &masked[..masked.len() - 2]] {
-            assert!(!token.is_valid(malformed, "/session", "POST"), "{malformed:?}");
+            assert!(
+                !token.is_valid(malformed, "/session", "POST"),
+                "{malformed:?}"
+            );
         }
     }
 

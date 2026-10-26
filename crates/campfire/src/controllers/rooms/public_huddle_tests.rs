@@ -82,7 +82,10 @@ async fn public_huddle_http_matches_production_rails() {
     use campfire_db::{CachedStatements, Membership, Role, Status, Timestamp};
     let vectors: serde_json::Value =
         serde_json::from_str(include_str!("public_huddle_vectors.json")).unwrap();
-    let uuid = regex::Regex::new(r"\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z").unwrap();
+    let uuid = regex::Regex::new(
+        r"\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z",
+    )
+    .unwrap();
     let identity = regex::Regex::new(r"\Acampfire-participant-[0-9a-f]{64}\z").unwrap();
     for case in vectors["cases"].as_array().unwrap() {
         let name = case["name"].as_str().unwrap();

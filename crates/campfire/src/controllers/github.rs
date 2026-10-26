@@ -34,7 +34,6 @@ mod lifecycle_tests;
 #[cfg(test)]
 mod agent_tests;
 
-
 #[cfg(test)]
 mod room_card_tests;
 
@@ -45,7 +44,6 @@ mod cutover_d_tests;
 pub(crate) mod webhooks {
     use crate::integrations::github::webhooks;
     pub(crate) use campfire_controllers::controllers::github::webhooks::*;
-
 
     mod tests;
 }

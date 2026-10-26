@@ -18,8 +18,14 @@ fn payload(v: &Value) -> PushPayload {
 #[test]
 fn ws17_event_board_and_huddle_pushers_match_50_actual_rails_source_cases() {
     let golden = vectors();
-    assert_eq!(golden["reference"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
-    assert_eq!(golden["board_reference"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
+    assert_eq!(
+        golden["reference"],
+        &include_str!("../../../../parity/reference.sha").trim()[..8]
+    );
+    assert_eq!(
+        golden["board_reference"],
+        &include_str!("../../../../parity/reference.sha").trim()[..8]
+    );
     let now = stamp(golden["now"].as_str().unwrap());
     for row in golden["rows"].as_array().unwrap() {
         let t = TestDb::with_clock(TestClock::frozen_at(now), 4);
@@ -159,26 +165,44 @@ fn ws17_huddle_join_only_one_process_claims_and_reruns_preserve_timestamp() {
 fn ignore_queued_board_nudge_rechecks_its_authors_policy_at_delivery() {
     let golden = vectors();
     let now = stamp(golden["now"].as_str().unwrap());
-    let row = golden["rows"].as_array().unwrap().iter().find(|row| row["name"] == "board_nudge").unwrap();
+    let row = golden["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["name"] == "board_nudge")
+        .unwrap();
     let t = TestDb::with_clock(TestClock::frozen_at(now), 4);
     let sql = row["setup_sql"].as_str().unwrap().to_owned();
-    t.write(move |tx| { tx.conn().execute_batch(&sql)?; Ok(()) });
+    t.write(move |tx| {
+        tx.conn().execute_batch(&sql)?;
+        Ok(())
+    });
     let nudge_id = row["nudge_id"].as_i64().unwrap();
-    t.read(|conn| { assert!(board_nudge_push(conn, nudge_id, now)?.is_some()); Ok(()) });
+    t.read(|conn| {
+        assert!(board_nudge_push(conn, nudge_id, now)?.is_some());
+        Ok(())
+    });
     t.write(move |tx| {
         let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
         let author = crate::ChannelThread::find(tx.conn(), nudge.thread_id)?.creator_id;
         crate::models::user_block::UserBlock::set(tx, nudge.recipient_id, author, true)
     });
-    t.read(|conn| { assert!(board_nudge_push(conn, nudge_id, now)?.is_none()); Ok(()) });
+    t.read(|conn| {
+        assert!(board_nudge_push(conn, nudge_id, now)?.is_none());
+        Ok(())
+    });
 }
-
 
 #[test]
 fn queued_private_board_nudge_rechecks_thread_access_at_delivery() {
     let golden = vectors();
     let now = stamp(golden["now"].as_str().unwrap());
-    let row = golden["rows"].as_array().unwrap().iter().find(|row| row["name"] == "board_nudge").unwrap();
+    let row = golden["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["name"] == "board_nudge")
+        .unwrap();
     let t = TestDb::with_clock(TestClock::frozen_at(now), 4);
     let setup = row["setup_sql"].as_str().unwrap().to_owned();
     let nudge_id = row["nudge_id"].as_i64().unwrap();
@@ -186,25 +210,52 @@ fn queued_private_board_nudge_rechecks_thread_access_at_delivery() {
         tx.conn().execute_batch(&setup)?;
         let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
         let original = crate::ChannelThread::find(tx.conn(), nudge.thread_id)?;
-        let private = crate::ChannelThread::create(tx, crate::NewChannelThread {
-            room_id: original.room_id, creator_id: original.creator_id, name: Some("Private nudge".into()), work_status: Some("in_progress".into()), visibility: crate::channel_thread::ThreadVisibility::Private, ..Default::default()
-        })?;
-        tx.conn().execute("UPDATE board_sla_nudges SET channel_thread_id=? WHERE id=?", [private.id, nudge_id])?;
-        tx.conn().execute("UPDATE users SET role=0 WHERE id=?", [nudge.recipient_id])?;
+        let private = crate::ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: original.room_id,
+                creator_id: original.creator_id,
+                name: Some("Private nudge".into()),
+                work_status: Some("in_progress".into()),
+                visibility: crate::channel_thread::ThreadVisibility::Private,
+                ..Default::default()
+            },
+        )?;
+        tx.conn().execute(
+            "UPDATE board_sla_nudges SET channel_thread_id=? WHERE id=?",
+            [private.id, nudge_id],
+        )?;
+        tx.conn()
+            .execute("UPDATE users SET role=0 WHERE id=?", [nudge.recipient_id])?;
 
         Ok(())
     });
-    assert!(t.read(|conn| board_nudge_push(conn, nudge_id, now)).is_none());
+    assert!(
+        t.read(|conn| board_nudge_push(conn, nudge_id, now))
+            .is_none()
+    );
     t.write(move |tx| {
         let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
-        tx.conn().execute("INSERT INTO thread_access_memberships(thread_id,user_id,created_at) VALUES (?,?,?)", rusqlite::params![nudge.thread_id,nudge.recipient_id,tx.now()])?;
+        tx.conn().execute(
+            "INSERT INTO thread_access_memberships(thread_id,user_id,created_at) VALUES (?,?,?)",
+            rusqlite::params![nudge.thread_id, nudge.recipient_id, tx.now()],
+        )?;
         Ok(())
     });
-    assert!(t.read(|conn| board_nudge_push(conn, nudge_id, now)).is_some());
+    assert!(
+        t.read(|conn| board_nudge_push(conn, nudge_id, now))
+            .is_some()
+    );
     t.write(move |tx| {
         let nudge = BoardNudgeSource::find(tx.conn(), nudge_id)?;
-        tx.conn().execute("DELETE FROM thread_access_memberships WHERE thread_id=? AND user_id=?", [nudge.thread_id,nudge.recipient_id])?;
+        tx.conn().execute(
+            "DELETE FROM thread_access_memberships WHERE thread_id=? AND user_id=?",
+            [nudge.thread_id, nudge.recipient_id],
+        )?;
         Ok(())
     });
-    assert!(t.read(|conn| board_nudge_push(conn, nudge_id, now)).is_none());
+    assert!(
+        t.read(|conn| board_nudge_push(conn, nudge_id, now))
+            .is_none()
+    );
 }

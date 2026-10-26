@@ -1,11 +1,11 @@
 //! `test/models/user_test.rb`, `user/bot_test.rb`, `user/role_test.rb`, plus Bannable.
 
 use super::*;
-use crate::{
-    Ban, Membership, Message, NewUser, PasswordDigest, PushSubscription, Role, Room, RoomType, Search, Session,
-    Status, User, UserChanges, Webhook,
-};
 use crate::models::user::{BOT_KEY_PLACEHOLDER, digest_bot_token, secure_compare};
+use crate::{
+    Ban, Membership, Message, NewUser, PasswordDigest, PushSubscription, Role, Room, RoomType,
+    Search, Session, Status, User, UserChanges, Webhook,
+};
 
 fn user(t: &TestDb, label: &str) -> User {
     let user_id = id(label);
@@ -32,11 +32,14 @@ fn profile_identity_normalizes_counts_unicode_and_clears_to_the_account_name() {
     let original = user(&t, "david");
     let mut changed = original.clone();
     let changed = t.write(move |tx| {
-        changed.update(tx, UserChanges {
-            pronouns: Some(Some(format!("  {}  ", "é".repeat(40)))),
-            nickname: Some(Some(format!("  {}  ", "名".repeat(32)))),
-            ..Default::default()
-        })?;
+        changed.update(
+            tx,
+            UserChanges {
+                pronouns: Some(Some(format!("  {}  ", "é".repeat(40)))),
+                nickname: Some(Some(format!("  {}  ", "名".repeat(32)))),
+                ..Default::default()
+            },
+        )?;
         Ok(changed)
     });
     assert_eq!(changed.pronouns.as_deref(), Some("é".repeat(40).as_str()));
@@ -45,9 +48,14 @@ fn profile_identity_normalizes_counts_unicode_and_clears_to_the_account_name() {
     assert_eq!(changed, user(&t, "david"));
     let cleared = t.write(move |tx| {
         let mut changed = changed;
-        changed.update(tx, UserChanges {
-            pronouns: Some(Some("  ".into())), nickname: Some(None), ..Default::default()
-        })?;
+        changed.update(
+            tx,
+            UserChanges {
+                pronouns: Some(Some("  ".into())),
+                nickname: Some(None),
+                ..Default::default()
+            },
+        )?;
         Ok(changed)
     });
     assert_eq!(cleared.pronouns, None);
@@ -60,15 +68,27 @@ fn profile_identity_rejects_controls_and_long_values_without_partial_writes() {
     let t = TestDb::new();
     let before = user(&t, "david");
     for (pronouns, nickname) in [
-        (Some("é".repeat(41)), None), (None, Some("名".repeat(33))),
-        (Some("they\nthem".into()), None), (None, Some("\tNick".into())),
-        (None, Some("Nick\u{7f}".into())), (Some("\u{85}".into()), None),
+        (Some("é".repeat(41)), None),
+        (None, Some("名".repeat(33))),
+        (Some("they\nthem".into()), None),
+        (None, Some("\tNick".into())),
+        (None, Some("Nick\u{7f}".into())),
+        (Some("\u{85}".into()), None),
     ] {
         let mut changed = before.clone();
-        let error = t.try_write(move |tx| changed.update(tx, UserChanges {
-            name: Some("should not save".into()),
-            pronouns: pronouns.map(Some), nickname: nickname.map(Some), ..Default::default()
-        })).unwrap_err();
+        let error = t
+            .try_write(move |tx| {
+                changed.update(
+                    tx,
+                    UserChanges {
+                        name: Some("should not save".into()),
+                        pronouns: pronouns.map(Some),
+                        nickname: nickname.map(Some),
+                        ..Default::default()
+                    },
+                )
+            })
+            .unwrap_err();
         assert!(matches!(error, crate::Error::RecordInvalid(_)));
         assert_eq!(user(&t, "david"), before);
     }
@@ -77,15 +97,30 @@ fn profile_identity_rejects_controls_and_long_values_without_partial_writes() {
 #[test]
 fn profile_identity_creation_uses_the_same_validation() {
     let t = TestDb::new();
-    let created = t.write(|tx| User::create(tx, NewUser {
-        name: "Account name".into(), pronouns: Some("  she/her  ".into()),
-        nickname: Some("  Nick  ".into()), ..Default::default()
-    }));
+    let created = t.write(|tx| {
+        User::create(
+            tx,
+            NewUser {
+                name: "Account name".into(),
+                pronouns: Some("  she/her  ".into()),
+                nickname: Some("  Nick  ".into()),
+                ..Default::default()
+            },
+        )
+    });
     assert_eq!(created.display_name(), "Nick");
     assert_eq!(created.pronouns.as_deref(), Some("she/her"));
-    assert!(matches!(t.try_write(|tx| User::create(tx, NewUser {
-        name: "Account name".into(), nickname: Some("bad\nname".into()), ..Default::default()
-    })), Err(crate::Error::RecordInvalid(_))));
+    assert!(matches!(
+        t.try_write(|tx| User::create(
+            tx,
+            NewUser {
+                name: "Account name".into(),
+                nickname: Some("bad\nname".into()),
+                ..Default::default()
+            }
+        )),
+        Err(crate::Error::RecordInvalid(_))
+    ));
 }
 
 #[test]
@@ -93,9 +128,13 @@ fn profile_identity_is_used_in_push_titles_and_mention_picker_queries() {
     let t = TestDb::new();
     let mut author = user(&t, "david");
     let author = t.write(move |tx| {
-        author.update(tx, UserChanges {
-            nickname: Some(Some("Nickname".into())), ..Default::default()
-        })?;
+        author.update(
+            tx,
+            UserChanges {
+                nickname: Some(Some("Nickname".into())),
+                ..Default::default()
+            },
+        )?;
         Ok(author)
     });
     t.read(|conn| {
@@ -108,8 +147,14 @@ fn profile_identity_is_used_in_push_titles_and_mention_picker_queries() {
         let direct = PushSubscription::payload_for(conn, &text, &room, &message)?;
         assert_eq!(direct.title, "Nickname");
         let (matches, _) = crate::autocomplete_users::page(conn, None, Some("Nickname"), 0, 20)?;
-        assert_eq!(matches.iter().map(|user| user.id).collect::<Vec<_>>(), [author.id]);
-        assert_eq!(crate::autocomplete_users::count(conn, None, Some("Nickname"))?, 1);
+        assert_eq!(
+            matches.iter().map(|user| user.id).collect::<Vec<_>>(),
+            [author.id]
+        );
+        assert_eq!(
+            crate::autocomplete_users::count(conn, None, Some("Nickname"))?,
+            1
+        );
         Ok(())
     });
 }
@@ -313,13 +358,18 @@ fn create_bot() {
     let stored = t.read(|c| User::find(c, bot.id));
     assert_eq!(stored.bot_token_digest, Some(digest_bot_token(&token)));
     let plaintext: Option<String> = t.read(|c| {
-        Ok(c.query_row("SELECT bot_token FROM users WHERE id = ?", [bot.id], |r| r.get(0))?)
+        Ok(
+            c.query_row("SELECT bot_token FROM users WHERE id = ?", [bot.id], |r| {
+                r.get(0)
+            })?,
+        )
     });
     assert_eq!(plaintext, None, "the plaintext column is never written");
     assert_eq!(stored.plain_bot_key(), None);
     assert_eq!(stored.bot_key(), BOT_KEY_PLACEHOLDER);
     assert_eq!(
-        t.read(|c| User::authenticate_bot(c, &format!("{}-{token}", bot.id))).map(|u| u.id),
+        t.read(|c| User::authenticate_bot(c, &format!("{}-{token}", bot.id)))
+            .map(|u| u.id),
         Some(bot.id)
     );
 }
@@ -339,7 +389,10 @@ fn bot_token_digest_matches_rails() {
 fn fixture_bot_authenticates_by_digest() {
     let t = TestDb::new();
     let key = format!("{}-BenderToken1", id("bender"));
-    assert_eq!(t.read(|c| User::authenticate_bot(c, &key)).map(|u| u.id), Some(id("bender")));
+    assert_eq!(
+        t.read(|c| User::authenticate_bot(c, &key)).map(|u| u.id),
+        Some(id("bender"))
+    );
 }
 
 /// A tampered key is refused: every changed character of the token, a truncated or extended
@@ -365,15 +418,24 @@ fn tampered_bot_keys_are_refused() {
     tampered.push(format!("{}-{token}", id("bender")));
     tampered.push(format!("{}-{}", bot.id, digest_bot_token(&token)));
     for key in &tampered {
-        assert!(t.read(|c| User::authenticate_bot(c, key)).is_none(), "{key}");
+        assert!(
+            t.read(|c| User::authenticate_bot(c, key)).is_none(),
+            "{key}"
+        );
     }
 
     let bot_id = bot.id;
     t.write(move |tx| {
-        tx.conn().execute("UPDATE users SET bot_token = 'DecoyToken12' WHERE id = ?", [bot_id])?;
+        tx.conn().execute(
+            "UPDATE users SET bot_token = 'DecoyToken12' WHERE id = ?",
+            [bot_id],
+        )?;
         Ok(())
     });
-    assert!(t.read(|c| User::authenticate_bot(c, &format!("{bot_id}-DecoyToken12"))).is_none());
+    assert!(
+        t.read(|c| User::authenticate_bot(c, &format!("{bot_id}-DecoyToken12")))
+            .is_none()
+    );
     assert!(t.read(|c| User::authenticate_bot(c, &key)).is_some());
 }
 
@@ -390,9 +452,16 @@ fn a_bot_without_a_digest_cannot_authenticate_until_its_key_is_reset() {
         )?;
         Ok(())
     });
-    assert!(t.read(|c| User::authenticate_bot(c, &format!("{bot_id}-OldRelease12"))).is_none());
+    assert!(
+        t.read(|c| User::authenticate_bot(c, &format!("{bot_id}-OldRelease12")))
+            .is_none()
+    );
     let new_key = t.write(move |tx| User::find(tx.conn(), bot_id)?.reset_bot_key(tx));
-    assert_eq!(t.read(|c| User::authenticate_bot(c, &new_key)).map(|u| u.id), Some(bot_id));
+    assert_eq!(
+        t.read(|c| User::authenticate_bot(c, &new_key))
+            .map(|u| u.id),
+        Some(bot_id)
+    );
 }
 
 /// `secure_compare`: equal only for identical bytes of the same length.
@@ -433,7 +502,10 @@ fn reset_bot_key() {
     let bot = t.write(|tx| User::create_bot(tx, "Bender", None));
     let bot_id = bot.id;
     t.write(move |tx| {
-        tx.conn().execute("UPDATE users SET bot_token = 'PreRetire123' WHERE id = ?", [bot_id])?;
+        tx.conn().execute(
+            "UPDATE users SET bot_token = 'PreRetire123' WHERE id = ?",
+            [bot_id],
+        )?;
         Ok(())
     });
     let first = bot.bot_key();
@@ -449,7 +521,11 @@ fn reset_bot_key() {
     let (_, token) = second.split_once('-').unwrap();
     assert_eq!(stored.bot_token_digest, Some(digest_bot_token(token)));
     let plaintext: Option<String> = t.read(|c| {
-        Ok(c.query_row("SELECT bot_token FROM users WHERE id = ?", [bot_id], |r| r.get(0))?)
+        Ok(
+            c.query_row("SELECT bot_token FROM users WHERE id = ?", [bot_id], |r| {
+                r.get(0)
+            })?,
+        )
     });
     assert_eq!(plaintext, None);
     assert!(t.read(|c| User::authenticate_bot(c, &first)).is_none());
@@ -479,14 +555,23 @@ fn authenticate_bot() {
         format!("+{}-{token}", bot.id),
         format!("99999999999999999999999-{token}"),
     ] {
-        assert!(t.read(|c| User::authenticate_bot(c, &key)).is_none(), "{key:?}");
+        assert!(
+            t.read(|c| User::authenticate_bot(c, &key)).is_none(),
+            "{key:?}"
+        );
     }
     // `find_by(id: "007")` casts the id.
-    assert!(t.read(|c| User::authenticate_bot(c, &format!("00{}-{token}", bot.id))).is_some());
+    assert!(
+        t.read(|c| User::authenticate_bot(c, &format!("00{}-{token}", bot.id)))
+            .is_some()
+    );
     // A deactivated bot doesn't authenticate.
     let mut deactivated = bot.clone();
     t.write(move |tx| deactivated.deactivate(tx));
-    assert!(t.read(|c| User::authenticate_bot(c, &bot.bot_key())).is_none());
+    assert!(
+        t.read(|c| User::authenticate_bot(c, &bot.bot_key()))
+            .is_none()
+    );
 }
 
 #[test]

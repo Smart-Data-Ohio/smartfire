@@ -975,7 +975,10 @@ impl Group {
         // so every case runs against what production serves (never the classic page test mode).
         let mut env = vec![
             ("SPA_ENABLED", if spa_enabled { "1" } else { "0" }),
-            ("SPA_DEFAULT", if spa_default_next { "next" } else { "classic" }),
+            (
+                "SPA_DEFAULT",
+                if spa_default_next { "next" } else { "classic" },
+            ),
         ];
         env.extend(fixtures.env());
         let app = match fixtures.github_network() {

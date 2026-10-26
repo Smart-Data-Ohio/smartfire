@@ -66,10 +66,6 @@ async fn settings(app: &TestApp) -> UserStatusSettings {
 
 // Real socket on the seeded HTTP app, so this checks sink registration and broadcast guards too.
 
-
-
-
-
 async fn replay(names: &[&str]) {
     let golden: Value = serde_json::from_str(include_str!(
         "../../../../../../vectors/ws17_status_requests.json"
@@ -149,7 +145,6 @@ async fn replay(names: &[&str]) {
             Ok(q.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?.iter().map(|s|json!({"class":"Calendar::MeetingRefreshJob","args":[serde_json::from_str::<Value>(s).unwrap()["user_id"]]})).collect())
         }).await.unwrap();
         assert_eq!(json!(jobs), row["jobs"], "{name}");
-
     }
 }
 

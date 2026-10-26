@@ -8,7 +8,12 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
         serde_json::from_str(include_str!("../../../../../vectors/slack/runs_http.json")).unwrap();
     let selected = std::env::var("WS16_RUN_HTTP_CASE").ok();
     let mut checked = 0;
-    for case in cases.as_array().unwrap().iter().filter(|case| !case["method"].as_str().unwrap_or("GET").eq_ignore_ascii_case("get")) {
+    for case in cases.as_array().unwrap().iter().filter(|case| {
+        !case["method"]
+            .as_str()
+            .unwrap_or("GET")
+            .eq_ignore_ascii_case("get")
+    }) {
         if selected
             .as_ref()
             .is_some_and(|name| case["name"].as_str() != Some(name))
@@ -49,7 +54,12 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
             .unwrap_or(json!({}));
         let (status, headers, actual) =
             wire_request(&f, method, path, body, case["bad_csrf"] == true).await;
-        assert_eq!(actual, case["response_body"].as_str().unwrap(), "{} legacy write response", case["name"]);
+        assert_eq!(
+            actual,
+            case["response_body"].as_str().unwrap(),
+            "{} legacy write response",
+            case["name"]
+        );
         assert_eq!(
             status,
             case["status_code"].as_u64().unwrap() as u16,
@@ -240,7 +250,7 @@ async fn slack_personal_opt_in_oauth_preview_import_and_undo_over_real_http() {
         .unwrap();
     let (code, _, _) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
     assert_eq!(code, 302);
-assert!(f.server.received().is_empty());
+    assert!(f.server.received().is_empty());
     let (code, headers, _) = wire_request(
         &f,
         "GET",
@@ -300,7 +310,7 @@ assert!(f.server.received().is_empty());
     assert_eq!(code, 302);
     assert_eq!(headers["location"], "http://example.org/app/settings/slack");
     let (_, _, _) = wire_request(&f, "GET", "/slack/imports", Value::Null, false).await;
-let (code, headers, _) = wire_request(
+    let (code, headers, _) = wire_request(
         &f,
         "POST",
         "/slack/imports",
@@ -335,7 +345,7 @@ let (code, headers, _) = wire_request(
         false,
     )
     .await;
-let (code,headers,_)=wire_request(&f,"POST","/slack/imports",json!({"mode":"import","dry_run_id":preview,"conversation_ids":["CPRIV","GMPIM","DIM"],"preset":"full"}),false).await;
+    let (code,headers,_)=wire_request(&f,"POST","/slack/imports",json!({"mode":"import","dry_run_id":preview,"conversation_ids":["CPRIV","GMPIM","DIM"],"preset":"full"}),false).await;
     assert_eq!(code, 302);
     let id = headers["location"]
         .to_str()
@@ -363,7 +373,7 @@ let (code,headers,_)=wire_request(&f,"POST","/slack/imports",json!({"mode":"impo
     )
     .await;
     assert_eq!(code, 302);
-let (code, _, _) = wire_request(
+    let (code, _, _) = wire_request(
         &f,
         "POST",
         &format!("/slack/imports/{id}/undo"),
@@ -410,7 +420,7 @@ let (code, _, _) = wire_request(
         false,
     )
     .await;
-f.app
+    f.app
         .db
         .read(move |c| {
             assert_eq!(
@@ -534,7 +544,7 @@ async fn slack_admin_credentials_preview_plan_import_progress_and_undo_over_http
     let (_, _, _) =
         wire_request_with_session(&f, "GET", &preview_path, Value::Null, false, values.clone())
             .await;
-f.app.db.write(move |tx|{
+    f.app.db.write(move |tx|{
         let stats=json!({"conversations":[{"id":"C111","name":"general","type":"public_channel","target":{"action":"create"}},{"id":"C222","name":"random","type":"private_channel","target":{"action":"create"}}],"samples":[{"conversation":"general","slack_text":"<&>","markdown":"**HTTP preview** <script>alert(1)</script>"}]});
         tx.conn().execute("UPDATE slack_imports SET status='completed',stats=? WHERE id=?",rusqlite::params![stats.to_string(),preview])?;Ok(())
     }).await.unwrap();
@@ -546,7 +556,7 @@ f.app.db.write(move |tx|{
         false,
     )
     .await;
-let (code, headers, _) = wire_request(
+    let (code, headers, _) = wire_request(
         &f,
         "POST",
         &format!("{preview_path}/import"),
@@ -577,7 +587,7 @@ let (code, headers, _) = wire_request(
     )
     .await;
     assert_eq!(code, 302);
-f.app
+    f.app
         .db
         .write(move |tx| {
             tx.conn().execute(
@@ -596,8 +606,8 @@ f.app
         false,
     )
     .await;
-let (_, _, _) = wire_request(&f, "GET", &import_path, Value::Null, false).await;
-let (code, _, _) =
+    let (_, _, _) = wire_request(&f, "GET", &import_path, Value::Null, false).await;
+    let (code, _, _) =
         wire_request(&f, "POST", &format!("{import_path}/undo"), json!({}), false).await;
     assert_eq!(code, 302);
     let run = f

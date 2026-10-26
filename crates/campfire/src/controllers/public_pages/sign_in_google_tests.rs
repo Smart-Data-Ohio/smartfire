@@ -26,7 +26,10 @@ async fn configured_sign_in_offers_google_with_its_domains() {
         let mut browser = app.anonymous();
         let retained = browser.get("/session/new").await;
         assert_eq!(retained.status, axum::http::StatusCode::FOUND);
-        assert_eq!(retained.location(), Some("http://campfire.test/app/session/new"));
+        assert_eq!(
+            retained.location(),
+            Some("http://campfire.test/app/session/new")
+        );
         let page = browser.get("/app/session/new").await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
         let methods = crate::controllers::spa::signed_out_contracts_tests::inline_boot(&page)
@@ -40,7 +43,11 @@ async fn configured_sign_in_offers_google_with_its_domains() {
             case["name"]
         );
         if configured {
-            assert_eq!(methods["googleDomains"], case["domains"], "{}: domains", case["name"]);
+            assert_eq!(
+                methods["googleDomains"], case["domains"],
+                "{}: domains",
+                case["name"]
+            );
         }
     }
 }

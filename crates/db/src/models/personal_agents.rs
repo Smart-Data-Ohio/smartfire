@@ -52,7 +52,9 @@ pub fn grantable_rooms(conn: &crate::Connection, owner_id: i64) -> Result<Vec<Gr
     let policy = super::agent_access::personal_room_sql("?", "r.id");
     crate::sql::query_all(
         conn,
-        &format!("SELECT r.id,r.name,r.type!='Rooms::Open' FROM rooms r WHERE ({policy}) ORDER BY r.name,r.id"),
+        &format!(
+            "SELECT r.id,r.name,r.type!='Rooms::Open' FROM rooms r WHERE ({policy}) ORDER BY r.name,r.id"
+        ),
         [owner_id],
         |r| {
             Ok(GrantableRoom {

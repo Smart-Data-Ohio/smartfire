@@ -64,10 +64,19 @@ async fn app() -> (TestApp, Arc<Recorded>) {
     app_with_env(&[]).await
 }
 async fn app_with_env(env: &[(&str, &str)]) -> (TestApp, Arc<Recorded>) {
-    app_with_clock(crate::controllers::presenters::test_support::seed_clock(), env).await
+    app_with_clock(
+        crate::controllers::presenters::test_support::seed_clock(),
+        env,
+    )
+    .await
 }
-async fn app_with_clock(clock: campfire_kit::SharedClock, env: &[(&str, &str)]) -> (TestApp, Arc<Recorded>) {
-    let app = TestApp::boot_seed_with_env("default", clock, env).await.expect("pinned default seed required");
+async fn app_with_clock(
+    clock: campfire_kit::SharedClock,
+    env: &[(&str, &str)],
+) -> (TestApp, Arc<Recorded>) {
+    let app = TestApp::boot_seed_with_env("default", clock, env)
+        .await
+        .expect("pinned default seed required");
     let recorded = Arc::new(Recorded {
         response: Mutex::new(Err(())),
         calls: Mutex::new(vec![]),
@@ -92,7 +101,11 @@ async fn app_with_clock(clock: campfire_kit::SharedClock, env: &[(&str, &str)]) 
     (app, recorded)
 }
 fn token(claims: Value) -> String {
-    token_with_key(claims, "fixture", include_bytes!("../integrations/google/signing.der"))
+    token_with_key(
+        claims,
+        "fixture",
+        include_bytes!("../integrations/google/signing.der"),
+    )
 }
 fn token_with_key(claims: Value, kid: &str, key_bytes: &[u8]) -> String {
     use ring::signature::{RSA_PKCS1_SHA256, RsaKeyPair};
@@ -302,7 +315,10 @@ async fn sudo_contract_google_round_trip_resumes_json_once_with_identical_audit(
             // without starting a flow, and that page confirms the held form post as below.
             let retained = b.write(Req::new(Method::POST, "/sudo/google")).await;
             assert_eq!(retained.status, StatusCode::SEE_OTHER);
-            assert_eq!(retained.location(), Some("http://campfire.test/app/sudo/new"));
+            assert_eq!(
+                retained.location(),
+                Some("http://campfire.test/app/sudo/new")
+            );
             assert!(r.calls.lock().unwrap().is_empty());
         }
         let q = start_sudo(&mut b).await;
@@ -480,7 +496,10 @@ async fn sudo_contract_api_gate_google_continuation_goes_through_the_spa() {
         // starting a flow; the SPA starts it, and the callback returns to its continuation.
         let retained = b.write(Req::new(Method::POST, "/sudo/google")).await;
         assert_eq!(retained.status, StatusCode::SEE_OTHER);
-        assert_eq!(retained.location(), Some("http://campfire.test/app/sudo/new"));
+        assert_eq!(
+            retained.location(),
+            Some("http://campfire.test/app/sudo/new")
+        );
         let q = start_sudo(&mut b).await;
         answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
         let reply = if cancelled {
@@ -798,11 +817,17 @@ async fn enrolled_google_sign_in_is_pending_until_second_factor_and_remembered_d
         b.get("/two_factor_challenge").await.location(),
         Some("http://campfire.test/app/two_factor/challenge")
     );
-    assert_eq!(b.get("/app/two_factor/challenge").await.status, StatusCode::OK);
     assert_eq!(
-        b.send(Req::new(Method::GET, "/api/v1/two_factor/challenge").header("accept", "application/json"))
-            .await
-            .status,
+        b.get("/app/two_factor/challenge").await.status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        b.send(
+            Req::new(Method::GET, "/api/v1/two_factor/challenge")
+                .header("accept", "application/json")
+        )
+        .await
+        .status,
         StatusCode::OK
     );
     let token = a
@@ -928,7 +953,9 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
             callback(&mut b, "unused").await.status,
             StatusCode::NOT_FOUND
         );
-        let signed_in = b.password_sign_in("david@37signals.com", "secret123456").await;
+        let signed_in = b
+            .password_sign_in("david@37signals.com", "secret123456")
+            .await;
         assert_eq!(
             signed_in.json(),
             json!({"kind":"signedIn","location":"http://campfire.test/app/"}),
@@ -1404,7 +1431,9 @@ const OTHER_ATTEMPT: &str = "attempt-0000000000000002";
 /// A frozen clock the test can move, and an app where DAVID has a linked Google identity.
 async fn linked_app() -> (TestApp, Arc<Recorded>, Arc<campfire_kit::FrozenClock>) {
     let clock = Arc::new(campfire_kit::FrozenClock::new(
-        crate::controllers::presenters::test_support::SEED_NOW.parse().unwrap(),
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
     ));
     let (a, r) = app_with_clock(clock.clone(), &[]).await;
     a.db().write(|tx| {
@@ -1434,7 +1463,11 @@ async fn start_attempt(
     attempt: &str,
 ) -> std::collections::BTreeMap<String, String> {
     let reply = b
-        .write(json_request(Method::POST, "/api/v1/sudo/google", json!({ "attempt": attempt })))
+        .write(json_request(
+            Method::POST,
+            "/api/v1/sudo/google",
+            json!({ "attempt": attempt }),
+        ))
         .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     url::Url::parse(reply.json()["location"].as_str().unwrap())
@@ -1445,15 +1478,25 @@ async fn start_attempt(
 }
 
 /// Google answers for DAVID and the browser follows the callback back to the SPA.
-async fn finish(a: &TestApp, r: &Recorded, b: &mut Browser<'_>, q: &std::collections::BTreeMap<String, String>) {
+async fn finish(
+    a: &TestApp,
+    r: &Recorded,
+    b: &mut Browser<'_>,
+    q: &std::collections::BTreeMap<String, String>,
+) {
     answer(r, claims(a, q, "david", "david@smartdata.net"));
     let reply = callback(b, &q["state"]).await;
-    assert_eq!(reply.location(), Some("http://campfire.test/app/sudo/continue"));
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/app/sudo/continue")
+    );
 }
 
 /// The continuation's answer for `attempt`, less the session it names (see `sudo_session`).
 async fn continuation(b: &mut Browser<'_>, attempt: &str) -> Value {
-    let reply = b.get(&format!("/api/v1/sudo/continue?attempt={attempt}")).await;
+    let reply = b
+        .get(&format!("/api/v1/sudo/continue?attempt={attempt}"))
+        .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     without_session(reply.json())
 }
@@ -1467,7 +1510,9 @@ fn without_session(mut reply: Value) -> Value {
 
 /// The signed-in session a sudo reply names.
 fn sudo_session(reply: &Value) -> i64 {
-    reply["session"].as_i64().unwrap_or_else(|| panic!("no session in {reply}"))
+    reply["session"]
+        .as_i64()
+        .unwrap_or_else(|| panic!("no session in {reply}"))
 }
 
 fn named(attempt: &str, path: &str) -> Value {
@@ -1481,7 +1526,11 @@ async fn sudo_attempt_continuation_names_its_attempt_and_reads_again_until_ackno
     hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
     for bad in ["short", "attempt with spaces 0000", &"x".repeat(65)] {
         let refused = b
-            .write(json_request(Method::POST, "/api/v1/sudo/google", json!({ "attempt": bad })))
+            .write(json_request(
+                Method::POST,
+                "/api/v1/sudo/google",
+                json!({ "attempt": bad }),
+            ))
             .await;
         assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{bad}");
     }
@@ -1492,14 +1541,29 @@ async fn sudo_attempt_continuation_names_its_attempt_and_reads_again_until_ackno
     assert_eq!(first, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
     // A read whose answer was lost is answered the same way again.
     assert_eq!(continuation(&mut b, ATTEMPT).await, first);
-    assert_eq!(continuation(&mut b, OTHER_ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(
+        continuation(&mut b, OTHER_ATTEMPT).await,
+        json!({"kind":"confirmed","retry":null})
+    );
     assert_eq!(continuation(&mut b, ATTEMPT).await, first);
 
     let acknowledged = b
-        .write(json_request(Method::DELETE, &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"), json!({})))
+        .write(json_request(
+            Method::DELETE,
+            &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"),
+            json!({}),
+        ))
         .await;
-    assert_eq!(acknowledged.status, StatusCode::NO_CONTENT, "{}", acknowledged.text());
-    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(
+        acknowledged.status,
+        StatusCode::NO_CONTENT,
+        "{}",
+        acknowledged.text()
+    );
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        json!({"kind":"confirmed","retry":null})
+    );
     assert_eq!(actions(&a).await, vec!["sudo.confirm.success"]);
 }
 
@@ -1515,7 +1579,10 @@ async fn sudo_attempt_an_abandoned_attempt_never_takes_a_later_confirmation() {
     let q = start_attempt(&mut b, OTHER_ATTEMPT).await;
     finish(&a, &r, &mut b, &q).await;
 
-    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        json!({"kind":"confirmed","retry":null})
+    );
     assert_eq!(
         continuation(&mut b, OTHER_ATTEMPT).await,
         json!({"kind":"confirmed","retry":{"method":"PATCH","path":"/api/v1/admin/custom_styles","returnTo":"/app/admin"},"attempt":OTHER_ATTEMPT})
@@ -1533,15 +1600,29 @@ async fn sudo_attempt_belongs_to_the_session_that_started_it() {
     // Another session of the same person, freshly confirmed by password.
     let mut other = a.sign_in(DAVID).await;
     let confirmed = other
-        .write(json_request(Method::POST, "/api/v1/sudo", json!({"kind":"password","password":"secret123456"})))
+        .write(json_request(
+            Method::POST,
+            "/api/v1/sudo",
+            json!({"kind":"password","password":"secret123456"}),
+        ))
         .await;
     assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
-    assert_eq!(continuation(&mut other, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(
+        continuation(&mut other, ATTEMPT).await,
+        json!({"kind":"confirmed","retry":null})
+    );
     // Its acknowledgement doesn't reach the first session's attempt either.
     other
-        .write(json_request(Method::DELETE, &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"), json!({})))
+        .write(json_request(
+            Method::DELETE,
+            &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"),
+            json!({}),
+        ))
         .await;
-    assert_eq!(continuation(&mut b, ATTEMPT).await, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        named(ATTEMPT, "/api/v1/admin/workspace/join_code")
+    );
 }
 
 #[tokio::test]
@@ -1553,21 +1634,34 @@ async fn sudo_attempt_expires_after_ten_minutes() {
     finish(&a, &r, &mut b, &q).await;
 
     clock.advance(jiff::SignedDuration::from_mins(9));
-    assert_eq!(continuation(&mut b, ATTEMPT).await, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        named(ATTEMPT, "/api/v1/admin/workspace/join_code")
+    );
     clock.advance(jiff::SignedDuration::from_mins(2));
     // Still a fresh confirmation (15 minutes), but no longer this attempt's.
-    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        json!({"kind":"confirmed","retry":null})
+    );
 }
 
 #[tokio::test]
 async fn sudo_attempt_retained_form_and_unnamed_google_flows_record_no_attempt() {
     let (a, r, _) = linked_app().await;
     let mut b = a.sign_in(DAVID).await;
-    b.write(Req::new(Method::POST, "/account/join_code").header("referer", "http://campfire.test/app/admin")).await;
+    b.write(
+        Req::new(Method::POST, "/account/join_code")
+            .header("referer", "http://campfire.test/app/admin"),
+    )
+    .await;
     // SPA cutover: the retained page's Google form goes to the SPA's sudo page and starts nothing.
     let retained = b.write(Req::new(Method::POST, "/sudo/google")).await;
     assert_eq!(retained.status, StatusCode::SEE_OTHER);
-    assert_eq!(retained.location(), Some("http://campfire.test/app/sudo/new"));
+    assert_eq!(
+        retained.location(),
+        Some("http://campfire.test/app/sudo/new")
+    );
     // A Google start that names no attempt ends at the plain continuation.
     let q = start_sudo(&mut b).await;
     finish(&a, &r, &mut b, &q).await;
@@ -1575,13 +1669,23 @@ async fn sudo_attempt_retained_form_and_unnamed_google_flows_record_no_attempt()
         continuation(&mut b, ATTEMPT).await,
         json!({"kind":"confirmed","retry":{"method":"POST","path":"/account/join_code","returnTo":"/app/admin"}})
     );
-    assert_eq!(continuation(&mut b, ATTEMPT).await, json!({"kind":"confirmed","retry":null}));
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        json!({"kind":"confirmed","retry":null})
+    );
     let cookies = b.cookie_header();
     assert!(!cookies.is_empty());
     use campfire_kit::Crypto;
-    let raw = cookies.split("; ").find_map(|p| p.strip_prefix("_campfire_session=")).unwrap();
+    let raw = cookies
+        .split("; ")
+        .find_map(|p| p.strip_prefix("_campfire_session="))
+        .unwrap();
     let session = campfire_kit::RailsCrypto::new(a.booted.app.secrets.clone())
-        .decrypt_cookie("_campfire_session", &rails_compat::cookies::unescape(raw), a.booted.app.clock.now())
+        .decrypt_cookie(
+            "_campfire_session",
+            &rails_compat::cookies::unescape(raw),
+            a.booted.app.clock.now(),
+        )
         .unwrap();
     assert!(session.get("sudo_google_attempt").is_none());
 }
@@ -1613,10 +1717,15 @@ async fn sudo_attempt_a_google_flow_finished_under_another_session_records_nothi
     sign_in_again(&a, &mut b).await;
     answer(&r, claims(&a, &q, "david", "david@smartdata.net"));
     let reply = callback(&mut b, &q["state"]).await;
-    assert_eq!(reply.location(), Some("http://campfire.test/app/sudo/continue"));
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/app/sudo/continue")
+    );
 
     // The new session isn't confirmed by it, and the attempt is never named.
-    let read = b.get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}")).await;
+    let read = b
+        .get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}"))
+        .await;
     assert_eq!(read.status, StatusCode::FORBIDDEN, "{}", read.text());
     assert!(read.json().get("attempt").is_none());
 }
@@ -1632,16 +1741,27 @@ async fn sudo_attempt_a_record_answers_only_the_session_that_finished_it() {
 
     sign_in_again(&a, &mut b).await;
     let confirmed = b
-        .write(json_request(Method::POST, "/api/v1/sudo", json!({"kind":"password","password":"secret123456"})))
+        .write(json_request(
+            Method::POST,
+            "/api/v1/sudo",
+            json!({"kind":"password","password":"secret123456"}),
+        ))
         .await;
     assert_eq!(confirmed.status, StatusCode::OK, "{}", confirmed.text());
     let read = continuation(&mut b, ATTEMPT).await;
     assert!(read.get("attempt").is_none(), "{read}");
     // Nor does the other session's acknowledgement remove it.
-    b.write(json_request(Method::DELETE, &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"), json!({})))
-        .await;
+    b.write(json_request(
+        Method::DELETE,
+        &format!("/api/v1/sudo/continue?attempt={ATTEMPT}"),
+        json!({}),
+    ))
+    .await;
     b.absorb_cookie_header(&first_session);
-    assert_eq!(continuation(&mut b, ATTEMPT).await, named(ATTEMPT, "/api/v1/admin/workspace/join_code"));
+    assert_eq!(
+        continuation(&mut b, ATTEMPT).await,
+        named(ATTEMPT, "/api/v1/admin/workspace/join_code")
+    );
 }
 
 #[tokio::test]
@@ -1650,7 +1770,11 @@ async fn sudo_attempt_replies_name_the_signed_in_session() {
     let mut b = a.sign_in(DAVID).await;
     hold(&mut b, Method::POST, "/api/v1/admin/workspace/join_code").await;
     let started = b
-        .write(json_request(Method::POST, "/api/v1/sudo/google", json!({ "attempt": ATTEMPT })))
+        .write(json_request(
+            Method::POST,
+            "/api/v1/sudo/google",
+            json!({ "attempt": ATTEMPT }),
+        ))
         .await
         .json();
     let session = sudo_session(&started);
@@ -1661,12 +1785,18 @@ async fn sudo_attempt_replies_name_the_signed_in_session() {
             .map(|(k, v)| (k.into_owned(), v.into_owned()))
             .collect();
     finish(&a, &r, &mut b, &q).await;
-    let read = b.get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}")).await.json();
+    let read = b
+        .get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}"))
+        .await
+        .json();
     assert_eq!(sudo_session(&read), session);
 
     // Signed in again: the page can tell its hand-off came from another session.
     sign_in_again(&a, &mut b).await;
-    let again = b.get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}")).await.json();
+    let again = b
+        .get(&format!("/api/v1/sudo/continue?attempt={ATTEMPT}"))
+        .await
+        .json();
     assert_ne!(sudo_session(&again), session);
     assert!(again.get("attempt").is_none(), "{again}");
 }

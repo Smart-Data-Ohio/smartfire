@@ -2,7 +2,7 @@
 
 use super::channel_thread_test::{create_thread, frozen, post_reply, post_root};
 use super::*;
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::models::message_pin::{CapReached, MAX_PER_ROOM, message_path};
 use crate::{Error, Membership, Message, MessagePin, Room, User};
 
@@ -10,7 +10,11 @@ fn pin(t: &TestDb, message: &Message, pinner: &str) -> MessagePin {
     try_pin(t, message, pinner).unwrap()
 }
 
-fn try_pin(t: &TestDb, message: &Message, pinner: &str) -> std::result::Result<MessagePin, CapReached> {
+fn try_pin(
+    t: &TestDb,
+    message: &Message,
+    pinner: &str,
+) -> std::result::Result<MessagePin, CapReached> {
     let (message, pinner) = (message.clone(), id(pinner));
     t.write(move |tx| MessagePin::pin(tx, &message, pinner))
 }
@@ -25,7 +29,13 @@ fn first(t: &TestDb) -> Message {
 }
 
 fn room_message_count(t: &TestDb, room: &str) -> i64 {
-    t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ?"#, [id(room)]))
+    t.read(|c| {
+        crate::sql::count(
+            c,
+            r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ?"#,
+            [id(room)],
+        )
+    })
 }
 
 fn pin_count(t: &TestDb) -> i64 {
@@ -34,10 +44,16 @@ fn pin_count(t: &TestDb) -> i64 {
 
 /// The broadcasts to `[designers, :messages]` since event `from`.
 fn room_broadcasts(t: &TestDb, from: usize) -> Vec<Broadcast> {
-    t.events()[from..].iter().filter_map(|e| e.as_broadcast()).filter(|change| match change {
-        Broadcast::MessagePinned { message_id } | Broadcast::MessageCreated { message_id } => t.read(|conn| Message::find(conn, *message_id)).room_id == id("designers"),
-        _ => false,
-    }).collect()
+    t.events()[from..]
+        .iter()
+        .filter_map(|e| e.as_broadcast())
+        .filter(|change| match change {
+            Broadcast::MessagePinned { message_id } | Broadcast::MessageCreated { message_id } => {
+                t.read(|conn| Message::find(conn, *message_id)).room_id == id("designers")
+            }
+            _ => false,
+        })
+        .collect()
 }
 
 fn newest_root(t: &TestDb, room: &str) -> Message {
@@ -62,15 +78,24 @@ fn pinning_records_the_pin_and_posts_a_channel_note_as_the_pinner() {
     let pin = pin(&t, &message, "david");
     assert_eq!(pin_count(&t), 1);
     assert_eq!(room_message_count(&t, "designers"), before + 1);
-    assert_eq!((pin.message_id, pin.room_id, pin.pinner_id), (message.id, id("designers"), id("david")));
+    assert_eq!(
+        (pin.message_id, pin.room_id, pin.pinner_id),
+        (message.id, id("designers"), id("david"))
+    );
     assert!(t.read(|c| MessagePin::pinned(c, message.id)));
 
     let note = newest_root(&t, "designers");
     assert_eq!(note.creator_id, id("david"));
     assert!(note.system_note);
     let path = format!("/rooms/{}/@{}", id("designers"), message.id);
-    assert_eq!(note.markdown_source.as_deref(), Some(format!("pinned a message: [jump to message]({path})").as_str()));
-    assert!(t.read(|c| note.plain_text_body(c, &BasicRichText)).contains("pinned a message"));
+    assert_eq!(
+        note.markdown_source.as_deref(),
+        Some(format!("pinned a message: [jump to message]({path})").as_str())
+    );
+    assert!(
+        t.read(|c| note.plain_text_body(c, &BasicRichText))
+            .contains("pinned a message")
+    );
 }
 
 #[test]
@@ -78,10 +103,23 @@ fn a_thread_message_pin_links_into_its_thread() {
     let t = frozen();
     let thread = create_thread(&t, "designers", "jason", None, Some("Deep dive"));
     let reply = post_reply(&t, thread.id, "jason", "Threaded thought");
-    assert_eq!(message_path(&reply), format!("/rooms/{}?message_id={}&thread={}", id("designers"), reply.id, thread.id));
+    assert_eq!(
+        message_path(&reply),
+        format!(
+            "/rooms/{}?message_id={}&thread={}",
+            id("designers"),
+            reply.id,
+            thread.id
+        )
+    );
     pin(&t, &reply, "david");
     let note = newest_root(&t, "designers");
-    assert!(note.markdown_source.unwrap().ends_with(&format!("(/rooms/{}?message_id={}&thread={})", id("designers"), reply.id, thread.id)));
+    assert!(note.markdown_source.unwrap().ends_with(&format!(
+        "(/rooms/{}?message_id={}&thread={})",
+        id("designers"),
+        reply.id,
+        thread.id
+    )));
 }
 
 #[test]
@@ -92,30 +130,59 @@ fn pinning_broadcasts_the_badge_count_and_panel_list() {
     pin(&t, &message, "david");
     let broadcasts = room_broadcasts(&t, from);
     let note = newest_root(&t, "designers");
-    assert_eq!(broadcasts, vec![
-        Broadcast::MessagePinned { message_id: message.id },
-        Broadcast::MessageCreated { message_id: note.id },
-    ]);
-
+    assert_eq!(
+        broadcasts,
+        vec![
+            Broadcast::MessagePinned {
+                message_id: message.id
+            },
+            Broadcast::MessageCreated {
+                message_id: note.id
+            },
+        ]
+    );
 }
 
 #[test]
 fn pin_notes_are_quiet_system_notes() {
     let t = frozen();
     let message = first(&t);
-    let unread = |t: &TestDb| t.read(|c| Membership::find_by_room_and_user(c, id("designers"), id("jason"))).unwrap().unread_at;
+    let unread = |t: &TestDb| {
+        t.read(|c| Membership::find_by_room_and_user(c, id("designers"), id("jason")))
+            .unwrap()
+            .unread_at
+    };
     let unread_before = unread(&t);
-    let items_before = t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "activity_items""#, []));
+    let items_before =
+        t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "activity_items""#, []));
     let from = t.events().len();
     pin(&t, &message, "david");
     let events = &t.events()[from..];
-    assert!(!events.iter().any(|e| matches!(e, Event::PushMessage { .. } | Event::Job(_))), "{events:#?}");
-    assert!(!events.iter().filter_map(|e| e.as_broadcast()).any(|b| b.channel_frames().into_iter().any(|(stream, _)| stream.contains("unread"))), "no unread broadcast");
+    assert!(
+        !events
+            .iter()
+            .any(|e| matches!(e, Event::PushMessage { .. } | Event::Job(_))),
+        "{events:#?}"
+    );
+    assert!(
+        !events.iter().filter_map(|e| e.as_broadcast()).any(|b| b
+            .channel_frames()
+            .into_iter()
+            .any(|(stream, _)| stream.contains("unread"))),
+        "no unread broadcast"
+    );
     assert_eq!(unread(&t), unread_before);
-    assert_eq!(t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "activity_items""#, [])), items_before);
+    assert_eq!(
+        t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "activity_items""#, [])),
+        items_before
+    );
     let note = newest_root(&t, "designers");
     assert!(note.system_note);
-    assert!(!t.read(|c| Message::search_in_room(c, id("designers"), "pinned")).iter().any(|m| m.id == note.id));
+    assert!(
+        !t.read(|c| Message::search_in_room(c, id("designers"), "pinned"))
+            .iter()
+            .any(|m| m.id == note.id)
+    );
 }
 
 /// "pin notes by agents record no delivery events": no job (agent events are WS11's).
@@ -125,7 +192,11 @@ fn pin_notes_by_agents_enqueue_nothing() {
     let message = first(&t);
     let from = t.events().len();
     pin(&t, &message, "bender");
-    assert!(!t.events()[from..].iter().any(|e| matches!(e, Event::PushMessage { .. } | Event::Job(_))));
+    assert!(
+        !t.events()[from..]
+            .iter()
+            .any(|e| matches!(e, Event::PushMessage { .. } | Event::Job(_)))
+    );
 }
 
 #[test]
@@ -177,10 +248,15 @@ fn fill_room(t: &TestDb, prefix: &str) {
                     tx,
                     crate::NewMessage {
                         client_message_id: Some(format!("{prefix}-{n}")),
-                        ..super::channel_thread_test::markdown("designers", "david", &format!("Pinnable {n}"))
+                        ..super::channel_thread_test::markdown(
+                            "designers",
+                            "david",
+                            &format!("Pinnable {n}"),
+                        )
                     },
                 )?;
-                MessagePin::pin(tx, &message, message.creator_id)?.map_err(|e| Error::Other(e.0))?;
+                MessagePin::pin(tx, &message, message.creator_id)?
+                    .map_err(|e| Error::Other(e.0))?;
             }
             Ok(())
         }
@@ -192,7 +268,9 @@ fn fill_room(t: &TestDb, prefix: &str) {
 fn re_pinning_in_a_full_room_returns_success() {
     let t = frozen();
     fill_room(&t, "repin-cap");
-    let repinned = t.read(|c| Message::find_duplicate(c, id("designers"), id("david"), "repin-cap-0")).unwrap();
+    let repinned = t
+        .read(|c| Message::find_duplicate(c, id("designers"), id("david"), "repin-cap-0"))
+        .unwrap();
     let pin = pin(&t, &repinned, "david");
     assert_eq!(pin.message_id, repinned.id);
     assert_eq!(pin_count(&t), MAX_PER_ROOM);
@@ -205,7 +283,12 @@ fn pins_cap_at_50_per_room() {
     let extra = post_root(&t, "designers", "david", "One too many");
     let before = room_message_count(&t, "designers");
     let from = t.events().len();
-    assert_eq!(try_pin(&t, &extra, "david"), Err(CapReached("This channel already has 50 pinned messages".into())));
+    assert_eq!(
+        try_pin(&t, &extra, "david"),
+        Err(CapReached(
+            "This channel already has 50 pinned messages".into()
+        ))
+    );
     assert_eq!(pin_count(&t), MAX_PER_ROOM);
     assert_eq!(room_message_count(&t, "designers"), before);
     assert!(room_broadcasts(&t, from).is_empty());
@@ -223,7 +306,11 @@ fn pin_change_broadcasts_are_skipped_when_the_pin_transaction_rolls_back() {
     assert!(result.is_err());
     assert!(!t.read(|c| MessagePin::pinned(c, id("first"))));
     assert!(room_broadcasts(&t, from).is_empty());
-    assert_eq!(t.read(|c| Room::find(c, id("designers"))).pins_changed_at, None, "no stamp either");
+    assert_eq!(
+        t.read(|c| Room::find(c, id("designers"))).pins_changed_at,
+        None,
+        "no stamp either"
+    );
 }
 
 #[test]
@@ -246,7 +333,12 @@ fn deactivating_a_user_keeps_their_pins_attributed() {
     let message = first(&t);
     pin(&t, &message, "kevin");
     t.write(|tx| User::find(tx.conn(), id("kevin"))?.deactivate(tx));
-    assert_eq!(t.read(|c| MessagePin::find_by_message(c, message.id)).unwrap().pinner_id, id("kevin"));
+    assert_eq!(
+        t.read(|c| MessagePin::find_by_message(c, message.id))
+            .unwrap()
+            .pinner_id,
+        id("kevin")
+    );
 }
 
 #[test]
@@ -258,7 +350,12 @@ fn unpinning_removes_the_pin_and_broadcasts_without_a_note() {
     let from = t.events().len();
     unpin(&t, &pin);
     let broadcasts = room_broadcasts(&t, from);
-    assert_eq!(broadcasts, vec![Broadcast::MessagePinned { message_id: message.id }]);
+    assert_eq!(
+        broadcasts,
+        vec![Broadcast::MessagePinned {
+            message_id: message.id
+        }]
+    );
     assert_eq!(room_message_count(&t, "designers"), before);
     assert_eq!(pin_count(&t), 0);
     assert!(!t.read(|c| MessagePin::pinned(c, message.id)));
@@ -270,7 +367,10 @@ fn pins_order_newest_first() {
     let first_pin = pin(&t, &first(&t), "david");
     t.travel(1);
     let second_pin = pin(&t, &t.read(|c| Message::find(c, id("second"))), "david");
-    assert_eq!(t.read(|c| MessagePin::ordered_for_room(c, id("designers"))), vec![second_pin, first_pin]);
+    assert_eq!(
+        t.read(|c| MessagePin::ordered_for_room(c, id("designers"))),
+        vec![second_pin, first_pin]
+    );
 }
 
 #[test]
@@ -281,9 +381,15 @@ fn destroying_the_message_destroys_its_pin() {
     let from = t.events().len();
     t.travel(60);
     t.write(move |tx| message.destroy(tx));
-    assert_eq!(t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "message_pins""#, [])), 0);
+    assert_eq!(
+        t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "message_pins""#, [])),
+        0
+    );
     assert_eq!(t.events()[from..].iter().filter(|e| matches!(e.as_broadcast(), Some(Broadcast::MessagePinned { message_id }) if message_id == id("first"))).count(), 1);
-    assert_eq!(t.read(|c| Room::find(c, id("designers"))).pins_changed_at, Some(t.now()));
+    assert_eq!(
+        t.read(|c| Room::find(c, id("designers"))).pins_changed_at,
+        Some(t.now())
+    );
 }
 
 #[test]
@@ -304,32 +410,86 @@ fn pins_validate_their_message_room_and_uniqueness() {
     assert_eq!(errors.on("message_id"), vec!["has already been taken"]);
 }
 
-
 #[test]
 fn private_pin_notes_and_counts_follow_current_thread_access() {
     let t = frozen();
-    let thread = t.write(|tx| crate::ChannelThread::create(tx, crate::NewChannelThread {
-        room_id: id("designers"), creator_id: id("jz"), name: Some("Private pins".into()),
-        visibility: crate::channel_thread::ThreadVisibility::Private, ..Default::default()
-    }));
+    let thread = t.write(|tx| {
+        crate::ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: id("designers"),
+                creator_id: id("jz"),
+                name: Some("Private pins".into()),
+                visibility: crate::channel_thread::ThreadVisibility::Private,
+                ..Default::default()
+            },
+        )
+    });
     let reply = post_reply(&t, thread.id, "jz", "Private pinned message");
-    let roots_before = t.read(|c| crate::sql::count(c, "SELECT COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NULL", [id("designers")]));
+    let roots_before = t.read(|c| {
+        crate::sql::count(
+            c,
+            "SELECT COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NULL",
+            [id("designers")],
+        )
+    });
     let pinned = pin(&t, &reply, "jz");
     let notes = t.read(|c| Message::in_thread(c, thread.id));
-    let note = notes.iter().find(|message| message.system_note).expect("pin note in private thread");
+    let note = notes
+        .iter()
+        .find(|message| message.system_note)
+        .expect("pin note in private thread");
     assert_eq!(note.thread_id, Some(thread.id));
-    assert!(note.markdown_source.as_ref().unwrap().contains(&message_path(&reply)));
-    assert_eq!(t.read(|c| crate::sql::count(c, "SELECT COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NULL", [id("designers")])), roots_before);
-    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("jz"))), 1);
-    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))), 0);
+    assert!(
+        note.markdown_source
+            .as_ref()
+            .unwrap()
+            .contains(&message_path(&reply))
+    );
+    assert_eq!(
+        t.read(|c| crate::sql::count(
+            c,
+            "SELECT COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NULL",
+            [id("designers")]
+        )),
+        roots_before
+    );
+    assert_eq!(
+        t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("jz"))),
+        1
+    );
+    assert_eq!(
+        t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))),
+        0
+    );
     let tid = thread.id;
-    t.write(move |tx| { crate::Room::find(tx.conn(), id("designers"))?.grant_to(tx, &[id("kevin")])?; crate::ChannelThread::find(tx.conn(), tid)?.add_access_member(tx, id("jz"), id("kevin"))?; Ok(()) });
-    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))), 1);
-    t.write(move |tx| crate::ChannelThread::find(tx.conn(), tid)?.remove_access_member(tx, id("jz"), id("kevin")));
-    assert_eq!(t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))), 0);
+    t.write(move |tx| {
+        crate::Room::find(tx.conn(), id("designers"))?.grant_to(tx, &[id("kevin")])?;
+        crate::ChannelThread::find(tx.conn(), tid)?.add_access_member(tx, id("jz"), id("kevin"))?;
+        Ok(())
+    });
+    assert_eq!(
+        t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))),
+        1
+    );
+    t.write(move |tx| {
+        crate::ChannelThread::find(tx.conn(), tid)?.remove_access_member(tx, id("jz"), id("kevin"))
+    });
+    assert_eq!(
+        t.read(|c| MessagePin::count_for_viewer(c, id("designers"), id("kevin"))),
+        0
+    );
     unpin(&t, &pinned);
     pin(&t, &reply, "jz");
-    assert_eq!(t.read(|c| crate::sql::count(c, "SELECT COUNT(*) FROM messages WHERE thread_id=? AND system_note=1", [tid])), 1, "private pin notes deduplicate in their thread");
+    assert_eq!(
+        t.read(|c| crate::sql::count(
+            c,
+            "SELECT COUNT(*) FROM messages WHERE thread_id=? AND system_note=1",
+            [tid]
+        )),
+        1,
+        "private pin notes deduplicate in their thread"
+    );
 }
 
 #[test]
@@ -337,20 +497,27 @@ fn private_pins_do_not_consume_an_uninvited_room_members_pin_limit() {
     let t = frozen();
     let private_message = t.write(|tx| {
         Room::find(tx.conn(), id("designers"))?.grant_to(tx, &[id("kevin")])?;
-        let mut thread = crate::ChannelThread::create(tx, crate::NewChannelThread {
-            room_id: id("designers"),
-            creator_id: id("jz"),
-            visibility: crate::channel_thread::ThreadVisibility::Private,
-            ..Default::default()
-        })?;
+        let mut thread = crate::ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: id("designers"),
+                creator_id: id("jz"),
+                visibility: crate::channel_thread::ThreadVisibility::Private,
+                ..Default::default()
+            },
+        )?;
         let mut last = None;
         for n in 0..MAX_PER_ROOM {
-            let message = thread.post_message(tx, id("jz"), crate::NewMessage {
-                room_id: thread.room_id,
-                creator_id: id("jz"),
-                markdown_source: Some(format!("Private pin {n}")),
-                ..Default::default()
-            })?;
+            let message = thread.post_message(
+                tx,
+                id("jz"),
+                crate::NewMessage {
+                    room_id: thread.room_id,
+                    creator_id: id("jz"),
+                    markdown_source: Some(format!("Private pin {n}")),
+                    ..Default::default()
+                },
+            )?;
             MessagePin::pin(tx, &message, id("jz"))?.unwrap();
             last = Some(message);
         }
@@ -363,5 +530,8 @@ fn private_pins_do_not_consume_an_uninvited_room_members_pin_limit() {
     let visible = post_root(&t, "designers", "kevin", "Public pin");
     pin(&t, &visible, "kevin");
     assert_eq!(pin_count(&t), MAX_PER_ROOM + 1);
-    assert_eq!(t.read(|conn| MessagePin::count_for_viewer(conn, id("designers"), id("kevin"))), 1);
+    assert_eq!(
+        t.read(|conn| MessagePin::count_for_viewer(conn, id("designers"), id("kevin"))),
+        1
+    );
 }

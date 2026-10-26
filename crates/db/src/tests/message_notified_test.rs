@@ -3,8 +3,8 @@ use crate::models::notification_push::{MessageNotified, NotifiedUser};
 use crate::models::user_block::UserBlock;
 use crate::rich_text::mention_attachment_for;
 use crate::{
-    ChannelThread, Involvement, Membership, Message, MessageChanges, NewChannelThread,
-    NewMessage, PushSubscription, Room, ThreadInvolvement, ThreadMembership,
+    ChannelThread, Involvement, Membership, Message, MessageChanges, NewChannelThread, NewMessage,
+    PushSubscription, Room, ThreadInvolvement, ThreadMembership,
 };
 
 fn post(t: &TestDb, room: &str, creator: &str, body: String) -> Message {
@@ -22,16 +22,21 @@ fn recipients(t: &TestDb, message: &Message) -> Vec<NotifiedUser> {
 }
 
 fn notified(t: &TestDb, message: &Message) -> Vec<i64> {
-    recipients(t, message).into_iter().map(|r| r.user_id).collect()
+    recipients(t, message)
+        .into_iter()
+        .map(|r| r.user_id)
+        .collect()
 }
 
 fn pushed(t: &TestDb, message: &Message) -> Vec<i64> {
     t.read(|c| {
-        Ok(PushSubscription::pushes_for(c, &BasicRichText, message, t.now())?
-            .1
-            .into_iter()
-            .map(|s| s.user_id)
-            .collect())
+        Ok(
+            PushSubscription::pushes_for(c, &BasicRichText, message, t.now())?
+                .1
+                .into_iter()
+                .map(|s| s.user_id)
+                .collect(),
+        )
     })
 }
 
@@ -63,7 +68,10 @@ fn a_room_message_notifies_members_watching_live_whom_web_push_skips() {
     assert!(ids.contains(&id("jason")), "{ids:?}");
     assert!(!ids.contains(&id("david")), "never the author: {ids:?}");
     let pushed = pushed(&t, &message);
-    assert!(!pushed.contains(&id("jason")), "web push skips a live viewer: {pushed:?}");
+    assert!(
+        !pushed.contains(&id("jason")),
+        "web push skips a live viewer: {pushed:?}"
+    );
 }
 
 #[test]
@@ -71,18 +79,35 @@ fn a_member_who_ignores_the_author_is_flagged_and_gets_no_web_push() {
     let t = TestDb::new();
     let jason = id("jason");
     let before = post(&t, "designers", "david", "Before".into());
-    assert!(pushed(&t, &before).contains(&jason), "{:?}", pushed(&t, &before));
+    assert!(
+        pushed(&t, &before).contains(&jason),
+        "{:?}",
+        pushed(&t, &before)
+    );
 
     t.write(|tx| UserBlock::set(tx, id("jason"), id("david"), true));
     let message = post(&t, "designers", "david", "After".into());
 
     let flagged = recipients(&t, &message);
     assert!(
-        flagged.contains(&NotifiedUser { user_id: jason, ignores_author: true }),
+        flagged.contains(&NotifiedUser {
+            user_id: jason,
+            ignores_author: true
+        }),
         "{flagged:?}"
     );
-    assert!(flagged.iter().filter(|r| r.user_id != jason).all(|r| !r.ignores_author), "{flagged:?}");
-    assert!(!pushed(&t, &message).contains(&jason), "{:?}", pushed(&t, &message));
+    assert!(
+        flagged
+            .iter()
+            .filter(|r| r.user_id != jason)
+            .all(|r| !r.ignores_author),
+        "{flagged:?}"
+    );
+    assert!(
+        !pushed(&t, &message).contains(&jason),
+        "{:?}",
+        pushed(&t, &message)
+    );
 }
 
 #[test]
@@ -95,8 +120,18 @@ fn a_mentions_room_notifies_a_real_mention_not_an_id_in_a_code_block() {
     let jason = id("jason");
 
     let plain = post(&t, "designers", "david", "Hello".into());
-    let code = post(&t, "designers", "david", format!(r#"<pre>data-user-id="{jason}"</pre>"#));
-    let mention = post(&t, "designers", "david", format!("Hey {}", mention_attachment_for(jason)));
+    let code = post(
+        &t,
+        "designers",
+        "david",
+        format!(r#"<pre>data-user-id="{jason}"</pre>"#),
+    );
+    let mention = post(
+        &t,
+        "designers",
+        "david",
+        format!("Hey {}", mention_attachment_for(jason)),
+    );
 
     assert!(!notified(&t, &plain).contains(&jason));
     assert!(!notified(&t, &code).contains(&jason));
@@ -123,7 +158,10 @@ fn every_reply_in_a_followed_thread_notifies_its_follower() {
     });
     let reply = |text: &str| {
         let mut thread = thread.clone();
-        let attributes = NewMessage { markdown_source: Some(text.into()), ..Default::default() };
+        let attributes = NewMessage {
+            markdown_source: Some(text.into()),
+            ..Default::default()
+        };
         t.write(move |tx| thread.post_message(tx, id("jz"), attributes))
     };
 
@@ -141,7 +179,11 @@ fn out_of_office_keeps_notifying_when_the_person_kept_notifications_on() {
         t.write(move |tx| {
             tx.conn().execute(
                 "UPDATE users SET ooo_until=?, ooo_notify_enabled=? WHERE id=?",
-                rusqlite::params![tx.now().since(jiff::SignedDuration::from_hours(1)), keep, id("jason")],
+                rusqlite::params![
+                    tx.now().since(jiff::SignedDuration::from_hours(1)),
+                    keep,
+                    id("jason")
+                ],
             )?;
             Ok(())
         })
@@ -192,7 +234,11 @@ fn a_streaming_message_emits_it_once_at_its_finalize() {
     t.sink.take();
 
     let mut loud = stream("Thinking");
-    assert_eq!(emitted(&t), Vec::<i64>::new(), "the placeholder notifies no one");
+    assert_eq!(
+        emitted(&t),
+        Vec::<i64>::new(),
+        "the placeholder notifies no one"
+    );
     let id = loud.id;
     t.write(move |tx| loud.finalize_stream(tx));
     t.write(move |tx| Message::find(tx.conn(), id)?.finalize_stream(tx));
@@ -200,7 +246,11 @@ fn a_streaming_message_emits_it_once_at_its_finalize() {
 
     let mut quiet = stream("Never mind");
     t.write(move |tx| quiet.finalize_stream_quietly(tx));
-    assert_eq!(emitted(&t), Vec::<i64>::new(), "a quiet finalize notifies no one");
+    assert_eq!(
+        emitted(&t),
+        Vec::<i64>::new(),
+        "a quiet finalize notifies no one"
+    );
 }
 
 #[test]
@@ -208,44 +258,96 @@ fn an_active_computer_silences_the_phone_push_but_not_the_notification() {
     let t = TestDb::new();
     let jason = id("jason");
     t.write(|tx| {
-        tx.conn().execute("UPDATE push_subscriptions SET device_class='mobile' WHERE user_id=?", [id("jason")])?;
+        tx.conn().execute(
+            "UPDATE push_subscriptions SET device_class='mobile' WHERE user_id=?",
+            [id("jason")],
+        )?;
         Ok(())
     });
     let thread = t.write(|tx| {
         let thread = ChannelThread::create(
             tx,
-            NewChannelThread { room_id: id("designers"), creator_id: id("david"), name: Some("Plans".into()), ..Default::default() },
+            NewChannelThread {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                name: Some("Plans".into()),
+                ..Default::default()
+            },
         )?;
-        ThreadMembership::join(tx, thread.id, id("jason"))?.update_involvement(tx, ThreadInvolvement::Everything)?;
+        ThreadMembership::join(tx, thread.id, id("jason"))?
+            .update_involvement(tx, ThreadInvolvement::Everything)?;
         Ok(thread)
     });
     let reply = |text: &str| {
         let mut thread = thread.clone();
-        let attributes = NewMessage { markdown_source: Some(text.into()), ..Default::default() };
+        let attributes = NewMessage {
+            markdown_source: Some(text.into()),
+            ..Default::default()
+        };
         t.write(move |tx| thread.post_message(tx, id("david"), attributes))
     };
     let thread_pushed = |message: &Message| {
-        t.read(|c| ChannelThread::push_recipients_with_policy(c, &BasicRichText, thread.id, message.id, t.now()))
-            .into_iter()
-            .map(|push| push.user_id)
-            .collect::<Vec<_>>()
+        t.read(|c| {
+            ChannelThread::push_recipients_with_policy(
+                c,
+                &BasicRichText,
+                thread.id,
+                message.id,
+                t.now(),
+            )
+        })
+        .into_iter()
+        .map(|push| push.user_id)
+        .collect::<Vec<_>>()
     };
 
     let room_before = post(&t, "designers", "david", "Away".into());
     let thread_before = reply("Away");
-    assert!(pushed(&t, &room_before).contains(&jason), "the phone gets the room push");
-    assert!(thread_pushed(&thread_before).contains(&jason), "the phone gets the thread push");
+    assert!(
+        pushed(&t, &room_before).contains(&jason),
+        "the phone gets the room push"
+    );
+    assert!(
+        thread_pushed(&thread_before).contains(&jason),
+        "the phone gets the thread push"
+    );
 
     t.write(|tx| {
-        let session = crate::Session::start(tx, id("jason"), Some("Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0"), None)?;
-        crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(crate::DeviceClass::Desktop))?;
+        let session = crate::Session::start(
+            tx,
+            id("jason"),
+            Some("Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0"),
+            None,
+        )?;
+        crate::WorkspacePresenceLease::establish_for_device(
+            tx,
+            id("jason"),
+            session.id,
+            Some(crate::DeviceClass::Desktop),
+        )?;
         Ok(())
     });
     let room = post(&t, "designers", "david", "At the computer".into());
     let in_thread = reply("At the computer");
 
-    assert!(!pushed(&t, &room).contains(&jason), "{:?}", pushed(&t, &room));
-    assert!(!thread_pushed(&in_thread).contains(&jason), "{:?}", thread_pushed(&in_thread));
-    assert!(notified(&t, &room).contains(&jason), "{:?}", notified(&t, &room));
-    assert!(notified(&t, &in_thread).contains(&jason), "{:?}", notified(&t, &in_thread));
+    assert!(
+        !pushed(&t, &room).contains(&jason),
+        "{:?}",
+        pushed(&t, &room)
+    );
+    assert!(
+        !thread_pushed(&in_thread).contains(&jason),
+        "{:?}",
+        thread_pushed(&in_thread)
+    );
+    assert!(
+        notified(&t, &room).contains(&jason),
+        "{:?}",
+        notified(&t, &room)
+    );
+    assert!(
+        notified(&t, &in_thread).contains(&jason),
+        "{:?}",
+        notified(&t, &in_thread)
+    );
 }

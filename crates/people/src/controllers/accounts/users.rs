@@ -15,12 +15,18 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::ensure_can_administer(c)?;
     let mut user = set_user(c).await?;
     concerns::sudo::require_sudo_mode(c).await?;
-    let role = match c.params.require("user")?.get("role").and_then(|role| role.as_str()) {
+    let role = match c
+        .params
+        .require("user")?
+        .get("role")
+        .and_then(|role| role.as_str())
+    {
         Some("administrator") => Role::Administrator,
         _ => Role::Member,
     };
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    let saved = c.app()
+    let saved = c
+        .app()
         .db
         .write(move |tx| {
             // Rails validates every persisted preference before saving a new role.
@@ -43,7 +49,9 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let mut user = set_user(c).await?;
     concerns::sudo::require_sudo_mode(c).await?;
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    crate::integrations::google::calendar::stop_remote(c.app(), user.id).await.map_err(Error::internal)?;
+    crate::integrations::google::calendar::stop_remote(c.app(), user.id)
+        .await
+        .map_err(Error::internal)?;
     c.app()
         .db
         .write(move |tx| crate::authentication::deactivate_user(tx, &mut user, &audit))
@@ -54,7 +62,11 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 
 /// `User.active.find(params[:user_id] || params[:id])`
 async fn set_user(c: &Ctx) -> Result<User> {
-    let id = c.param_str("user_id").or_else(|| c.param_str("id")).and_then(cast_integer).ok_or(Error::NotFound)?;
+    let id = c
+        .param_str("user_id")
+        .or_else(|| c.param_str("id"))
+        .and_then(cast_integer)
+        .ok_or(Error::NotFound)?;
     c.app()
         .db
         .read(move |conn| match User::find_active(conn, id) {

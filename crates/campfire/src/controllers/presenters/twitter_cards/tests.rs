@@ -52,14 +52,19 @@ async fn ws15e_x_legacy_boxes_switch_to_cards_only_with_a_post_row_and_backfill(
             tx.conn()
                 .execute("DELETE FROM twitter_posts WHERE post_id='202'", [])?;
             let scanned = references::backfill(tx, false)?;
-            assert_eq!(scanned, 3, "two matching seed messages plus this legacy message");
+            assert_eq!(
+                scanned, 3,
+                "two matching seed messages plus this legacy message"
+            );
             assert_eq!(Post::for_message(tx.conn(), message.id)?[0].post_id, "202");
             Ok(message)
         })
         .await
         .unwrap();
     let mut browser = app.david();
-    let _page = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
+    let _page = browser
+        .get(&format!("/api/v1/rooms/{ALL_TALK}/messages"))
+        .await;
     let app2 = app.booted.app.clone();
     app.db()
         .read(move |c| {
@@ -104,7 +109,9 @@ async fn ws15e_x_pending_render_recovers_once_and_suppression_does_not_hide_x() 
         .unwrap();
     for _ in 0..2 {
         let mut browser = app.david();
-        let page = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
+        let page = browser
+            .get(&format!("/api/v1/rooms/{ALL_TALK}/messages"))
+            .await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
     }
     app.db()
@@ -129,7 +136,9 @@ async fn ws15e_x_pending_render_recovers_once_and_suppression_does_not_hide_x() 
             Ok(())
         }).await.unwrap();
         let mut browser = app.david();
-        let page = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
+        let page = browser
+            .get(&format!("/api/v1/rooms/{ALL_TALK}/messages"))
+            .await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
         app.db().read(|c|{assert_eq!(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
     }
@@ -151,8 +160,12 @@ async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_resul
     let app2 = app.booted.app.clone();
     app.db()
         .read(move |c| {
-            let presenter = super::super::Presenter::new(c, &app2, None).preload_payload(&messages)?;
-            let views = messages.iter().map(|message| presenter.twitter_posts(message)).collect::<campfire_db::Result<Vec<_>>>()?;
+            let presenter =
+                super::super::Presenter::new(c, &app2, None).preload_payload(&messages)?;
+            let views = messages
+                .iter()
+                .map(|message| presenter.twitter_posts(message))
+                .collect::<campfire_db::Result<Vec<_>>>()?;
             let reads = Arc::new(AtomicUsize::new(0));
             let observed = reads.clone();
             c.authorizer(Some(move |context: rusqlite::hooks::AuthContext<'_>| {
@@ -208,8 +221,6 @@ async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_resul
         .unwrap();
 }
 
-
-
 #[tokio::test]
 async fn ws15e_x_render_and_broadcast_sibling_claims_rollback_if_enqueue_is_rejected() {
     let app = app().await;
@@ -222,11 +233,10 @@ async fn ws15e_x_render_and_broadcast_sibling_claims_rollback_if_enqueue_is_reje
         Ok((message,posts.iter().map(|p|p.id).collect::<Vec<_>>()))
     }).await.unwrap();
     let mut browser = app.david();
-    let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
-    assert_eq!(
-        response.status,
-        axum::http::StatusCode::OK
-    );
+    let response = browser
+        .get(&format!("/api/v1/rooms/{ALL_TALK}/messages"))
+        .await;
+    assert_eq!(response.status, axum::http::StatusCode::OK);
     let first = ids[0];
     let result = app
         .db()
@@ -267,7 +277,9 @@ async fn ws15e_x_render_and_broadcast_sibling_claims_rollback_if_enqueue_is_reje
         })
         .await
         .unwrap();
-    let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
+    let response = browser
+        .get(&format!("/api/v1/rooms/{ALL_TALK}/messages"))
+        .await;
     assert_eq!(response.status, axum::http::StatusCode::OK);
     app.db()
         .read(|c| {

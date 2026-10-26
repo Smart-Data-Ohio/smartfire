@@ -24,37 +24,65 @@ async fn review_pr206_settings() {
 async fn original_review_subset(names: &[&str]) {
     let mut golden: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/board_automation_review_settings.json"
-    )).unwrap();
-    golden["rows"].as_array_mut().unwrap().retain(|r|names.contains(&r["name"].as_str().unwrap()));
-    assert_eq!(golden["rows"].as_array().unwrap().len(),names.len());
+    ))
+    .unwrap();
+    golden["rows"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|r| names.contains(&r["name"].as_str().unwrap()));
+    assert_eq!(golden["rows"].as_array().unwrap().len(), names.len());
     check_settings(golden).await;
 }
 
 #[tokio::test]
 async fn review_pr206_original_malformed_arrays() {
-    original_review_subset(&["nested-array-empty","nested-array-hash","nested-array-string","top-array-empty","top-array-hash","top-array-string"]).await;
+    original_review_subset(&[
+        "nested-array-empty",
+        "nested-array-hash",
+        "nested-array-string",
+        "top-array-empty",
+        "top-array-hash",
+        "top-array-string",
+    ])
+    .await;
 }
 
 #[tokio::test]
 async fn review_pr206_original_missing_and_underscored_assignees() {
-    original_review_subset(&["zero-assignee-omitted","zero-assignee-blank","zero-assignee-null","underscored-assignee"]).await;
+    original_review_subset(&[
+        "zero-assignee-omitted",
+        "zero-assignee-blank",
+        "zero-assignee-null",
+        "underscored-assignee",
+    ])
+    .await;
 }
 
 #[tokio::test]
 async fn review_pr206_original_unicode_blank() {
-    original_review_subset(&["nbsp-clear","emspace-clear","ideographic-clear","mixed-unicode-clear"]).await;
+    original_review_subset(&[
+        "nbsp-clear",
+        "emspace-clear",
+        "ideographic-clear",
+        "mixed-unicode-clear",
+    ])
+    .await;
 }
 
 #[tokio::test]
 async fn review_pr206_round2_sla_shapes() {
     let mut golden: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/board_automation_review_round2_settings.json"
-    )).unwrap();
-    golden["rows"].as_array_mut().unwrap().retain(|r| r["name"].as_str().unwrap().starts_with("shape-"));
+    ))
+    .unwrap();
+    golden["rows"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|r| r["name"].as_str().unwrap().starts_with("shape-"));
     let rows = golden["rows"].as_array().unwrap();
-    assert_eq!(rows.len(),128);
-    for (status,count) in [(302,66),(422,35),(500,27)] {
-        assert_eq!(rows.iter().filter(|r|r["status"]==status).count(),count);
+    assert_eq!(rows.len(), 128);
+    for (status, count) in [(302, 66), (422, 35), (500, 27)] {
+        assert_eq!(rows.iter().filter(|r| r["status"] == status).count(), count);
     }
     check_settings(golden).await;
 }
@@ -63,8 +91,12 @@ async fn review_pr206_round2_sla_shapes() {
 async fn review_pr206_round2_scalar_tags() {
     let mut golden: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/board_automation_review_round2_settings.json"
-    )).unwrap();
-    golden["rows"].as_array_mut().unwrap().retain(|r|r["name"].as_str().unwrap().starts_with("scalar-tag-"));
+    ))
+    .unwrap();
+    golden["rows"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|r| r["name"].as_str().unwrap().starts_with("scalar-tag-"));
     check_settings(golden).await;
 }
 
@@ -80,7 +112,12 @@ async fn check_settings(golden: Value) {
         .collect::<Vec<_>>();
     let mut mismatches = Vec::new();
     let mut approved_differences = 0;
-    for row in golden["rows"].as_array().unwrap().iter().filter(|row| row["method"] != "get") {
+    for row in golden["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| row["method"] != "get")
+    {
         let app = TestApp::boot_frozen_with_env(&vapid)
             .await
             .expect("default seed required")
@@ -132,7 +169,15 @@ async fn check_settings(golden: Value) {
         assert_eq!(response.status.as_u16(), expected_status, "{name}");
         assert_eq!(response.location(), row["location"].as_str(), "{name}");
         if expected_status != 422 {
-            assert_eq!(response.text(), if approved_bad_request { "" } else { row["body"].as_str().unwrap() }, "{name}");
+            assert_eq!(
+                response.text(),
+                if approved_bad_request {
+                    ""
+                } else {
+                    row["body"].as_str().unwrap()
+                },
+                "{name}"
+            );
         } else {
             assert!(response.text().is_empty(), "{name}");
         }
@@ -484,8 +529,18 @@ async fn assert_digest_broadcast_bytes(app: &TestApp, rooms: String) {
         Ok(conn.prepare("SELECT id FROM messages WHERE system_note=1 AND room_id IN (SELECT value FROM json_each(?)) ORDER BY id")?
             .query_map([rooms], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)
     }).await.unwrap();
-    let published = crate::channels::board_digests::deliver(&app.booted.app.cable, &app.booted.app, &DigestNotes { message_ids: ids.clone() }).unwrap();
-    assert_eq!(published, ids, "JSON digest publication IDs retain their order");
+    let published = crate::channels::board_digests::deliver(
+        &app.booted.app.cable,
+        &app.booted.app,
+        &DigestNotes {
+            message_ids: ids.clone(),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        published, ids,
+        "JSON digest publication IDs retain their order"
+    );
 }
 
 // Only pinned, explicitly approved crash inputs may change the Rails 500 response.

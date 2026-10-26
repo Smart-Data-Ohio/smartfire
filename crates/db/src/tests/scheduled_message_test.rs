@@ -151,7 +151,10 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
         blob_ids
     );
     assert_eq!(drop_item(&t, &row).event_type, "scheduled_message_dropped");
-    assert_eq!(t.read(|conn| row.attachment_spoilers_for(conn, &blob_ids)), [true, false]);
+    assert_eq!(
+        t.read(|conn| row.attachment_spoilers_for(conn, &blob_ids)),
+        [true, false]
+    );
     assert!(!t.events().iter().any(|event| matches!(
         event.as_broadcast(),
         Some(crate::broadcasts::Broadcast::MessageCreated { .. })
@@ -173,14 +176,27 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
         )?;
         retry.set_attachment_spoilers(tx, &[true, false])?;
         let source = retry.markdown_source.clone();
-        retry.update_with_attachments(tx, &source, retry.send_at, None, Some(&[blob_ids[1], blob_ids[0]]))?;
+        retry.update_with_attachments(
+            tx,
+            &source,
+            retry.send_at,
+            None,
+            Some(&[blob_ids[1], blob_ids[0]]),
+        )?;
         Ok(retry)
     });
-    assert_eq!(t.read(|conn| retry.attachment_spoilers_for(conn, &[blob_ids[1], blob_ids[0]])), [false, true]);
-    assert_eq!(t.read(|conn| retry.attachment_spoilers_for(conn, &[blob_ids[0]])), [true]);
+    assert_eq!(
+        t.read(|conn| retry.attachment_spoilers_for(conn, &[blob_ids[1], blob_ids[0]])),
+        [false, true]
+    );
+    assert_eq!(
+        t.read(|conn| retry.attachment_spoilers_for(conn, &[blob_ids[0]])),
+        [true]
+    );
     t.read(|conn| {
         for (_, blob) in retry.attachments(conn)? {
-            let metadata: serde_json::Value = serde_json::from_str(blob.metadata.as_deref().unwrap()).unwrap();
+            let metadata: serde_json::Value =
+                serde_json::from_str(blob.metadata.as_deref().unwrap()).unwrap();
             assert_eq!(metadata["scheduled_by"], retry.user_id);
         }
         Ok(())
@@ -199,8 +215,13 @@ fn same_size_attachment_corruption_drops_the_entire_scheduled_group() {
             .collect::<Vec<_>>(),
         [blob_ids[1], blob_ids[0]]
     );
-    assert_eq!(t.read(|conn| message.attachments(conn))
-        .iter().map(|(attachment, _)| attachment.spoiler).collect::<Vec<_>>(), [false, true]);
+    assert_eq!(
+        t.read(|conn| message.attachments(conn))
+            .iter()
+            .map(|(attachment, _)| attachment.spoiler)
+            .collect::<Vec<_>>(),
+        [false, true]
+    );
     t.read(|conn| {
         for (_, blob) in message.attachments(conn)? {
             assert!(!blob.metadata.unwrap().contains("scheduled_by"));
@@ -730,26 +751,46 @@ fn removed_private_author_is_not_sendable_and_dispatch_drops_once() {
         if crate::Membership::find_by_room_and_user(tx.conn(), id("watercooler"), user)?.is_none() {
             crate::Membership::create_default(tx, id("watercooler"), user)?;
         }
-        let thread = ChannelThread::create(tx, crate::NewChannelThread {
-            room_id: id("watercooler"), creator_id: user,
-            visibility: crate::models::channel_thread::ThreadVisibility::Private,
-            ..Default::default()
-        })?;
-        let row = ScheduledMessage::create(tx, NewScheduledMessage {
-            user_id: user, room_id: thread.room_id, thread_id: Some(thread.id),
-            reply_to_message_id: None, markdown_source: "Own draft".into(),
-            send_at: tx.now().since(jiff::SignedDuration::from_mins(1)),
-        })?;
+        let thread = ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: id("watercooler"),
+                creator_id: user,
+                visibility: crate::models::channel_thread::ThreadVisibility::Private,
+                ..Default::default()
+            },
+        )?;
+        let row = ScheduledMessage::create(
+            tx,
+            NewScheduledMessage {
+                user_id: user,
+                room_id: thread.room_id,
+                thread_id: Some(thread.id),
+                reply_to_message_id: None,
+                markdown_source: "Own draft".into(),
+                send_at: tx.now().since(jiff::SignedDuration::from_mins(1)),
+            },
+        )?;
         assert!(row.sendable(tx.conn())?);
-        assert!(ScheduledMessage::sendable_ids(tx.conn(), std::slice::from_ref(&row))?.contains(&row.id));
+        assert!(
+            ScheduledMessage::sendable_ids(tx.conn(), std::slice::from_ref(&row))?
+                .contains(&row.id)
+        );
         thread.remove_access_member(tx, user, user)?;
         assert!(!row.sendable(tx.conn())?);
         assert!(ScheduledMessage::sendable_ids(tx.conn(), std::slice::from_ref(&row))?.is_empty());
-        assert!(ScheduledMessage::owned_by(tx.conn(), user, false)?.iter().any(|draft| draft.id == row.id));
+        assert!(
+            ScheduledMessage::owned_by(tx.conn(), user, false)?
+                .iter()
+                .any(|draft| draft.id == row.id)
+        );
         Ok(row)
     });
     t.travel(120);
-    assert!(t.read(|conn| ScheduledMessage::due_candidate_ids(conn, t.now())).contains(&row.id));
+    assert!(
+        t.read(|conn| ScheduledMessage::due_candidate_ids(conn, t.now()))
+            .contains(&row.id)
+    );
     let before = count(&t);
     assert!(!send(&t, &row, true));
     let dropped = reload(&t, &row);
@@ -758,5 +799,9 @@ fn removed_private_author_is_not_sendable_and_dispatch_drops_once() {
     assert_eq!(dropped.markdown_source, "Own draft");
     assert!(!send(&t, &row, true));
     assert_eq!(count(&t), before);
-    assert!(t.read(|conn| ScheduledMessage::due_candidate_ids(conn, t.now())).iter().all(|id| *id != row.id));
+    assert!(
+        t.read(|conn| ScheduledMessage::due_candidate_ids(conn, t.now()))
+            .iter()
+            .all(|id| *id != row.id)
+    );
 }

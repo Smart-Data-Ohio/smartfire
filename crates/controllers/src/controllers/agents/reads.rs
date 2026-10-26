@@ -232,10 +232,14 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
                 let selected = agent_reading::visible_work_by_ids(conn, &agent, &ids, true)?;
                 match selected
                     .first()
-                    .map(|thread| campfire_db::models::agent_work::show_work(conn, &agent, thread.id))
+                    .map(|thread| {
+                        campfire_db::models::agent_work::show_work(conn, &agent, thread.id)
+                    })
                     .transpose()?
                 {
-                    Some(campfire_db::models::agent_work::Outcome::Success { payload, .. }) => vec![payload],
+                    Some(campfire_db::models::agent_work::Outcome::Success { payload, .. }) => {
+                        vec![payload]
+                    }
                     _ => Vec::new(),
                 }
             } else if op == "list_board_posts" {
@@ -295,7 +299,8 @@ async fn work(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceRe
         .app()
         .db
         .read_snapshot(move |conn| {
-            let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            let agent =
+                Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
             let owner = agent.owner_id;
             let current = agent_reading::visible_work_by_ids(
                 conn,

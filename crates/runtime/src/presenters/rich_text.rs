@@ -8,7 +8,6 @@ use rails_compat::Secrets;
 use rails_compat::global_id::{self, ATTACHABLE_PURPOSE, GlobalId};
 use std::{cell::RefCell, collections::HashMap};
 
-
 pub struct DbResolver<'a> {
     pub conn: &'a Connection,
     pub secrets: &'a Secrets,
@@ -66,11 +65,11 @@ impl<'a> DbResolver<'a> {
 
 impl campfire_richtext::markdown::IconResolver for DbResolver<'_> {
     fn find(&self, name: &str) -> Option<campfire_richtext::markdown::Icon> {
-        use campfire_richtext::markdown::{Icon, IconCatalog};
         use campfire_presentation::{
             helpers::AvatarIcon,
             messages::reactions::{static_icon, static_icon_name},
         };
+        use campfire_richtext::markdown::{Icon, IconCatalog};
         use rusqlite::OptionalExtension;
         let name = name.trim().to_lowercase();
         let icon = static_icon(&name);

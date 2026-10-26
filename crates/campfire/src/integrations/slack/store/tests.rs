@@ -2,9 +2,10 @@ use super::super::client::tests::fake;
 use super::super::jobs::tests::{run, setup, start};
 use super::super::{client::Client, jobs::perform_import, runner::Runner};
 use super::*;
-use campfire_app::integrations::slack::runner::Store;
+use crate::integrations::test_support::Route;
 use campfire_app::integrations::slack::runner::Operation;
 use campfire_app::integrations::slack::runner::Progress;
+use campfire_app::integrations::slack::runner::Store;
 use campfire_app::integrations::slack::runner::array;
 use campfire_app::integrations::slack::users;
 use campfire_app::integrations::slack::writer;
@@ -16,7 +17,6 @@ use rusqlite::params;
 use serde_json::Value;
 use serde_json::json;
 use std::collections::HashSet;
-use crate::integrations::test_support::Route;
 use std::time::Duration;
 
 #[tokio::test]

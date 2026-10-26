@@ -26,7 +26,8 @@ pub const MAX_MESSAGE: usize = 1 << 20;
 /// Smaller frames go out uncompressed even when compression is on: not worth a deflate stream.
 const MIN_COMPRESSED: usize = 256;
 /// The extension response: every message compressed on its own, in both directions.
-const DEFLATE_RESPONSE: &str = "permessage-deflate; server_no_context_takeover; client_no_context_takeover";
+const DEFLATE_RESPONSE: &str =
+    "permessage-deflate; server_no_context_takeover; client_no_context_takeover";
 /// RFC 6455's key suffix.
 const ACCEPT_GUID: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 /// A sync-flushed deflate stream ends with these; RFC 7692 leaves them off the wire.
@@ -57,13 +58,21 @@ impl Frame {
 
     /// The payload for a socket with compression on: `Some(deflated)` when compressing is worth it.
     fn deflated(&self) -> Option<&[u8]> {
-        (self.0.text.len() >= MIN_COMPRESSED).then(|| &**self.0.deflated.get_or_init(|| deflate(self.0.text.as_bytes())))
+        (self.0.text.len() >= MIN_COMPRESSED).then(|| {
+            &**self
+                .0
+                .deflated
+                .get_or_init(|| deflate(self.0.text.as_bytes()))
+        })
     }
 }
 
 impl From<String> for Frame {
     fn from(text: String) -> Self {
-        Frame(Arc::new(Payload { text: text.into_boxed_str(), deflated: OnceLock::new() }))
+        Frame(Arc::new(Payload {
+            text: text.into_boxed_str(),
+            deflated: OnceLock::new(),
+        }))
     }
 }
 
@@ -100,7 +109,9 @@ fn deflate(input: &[u8]) -> Box<[u8]> {
             out.reserve(out.capacity());
         }
         let consumed = compress.total_in() as usize;
-        compress.compress_vec(&input[consumed..], &mut out, FlushCompress::Sync).expect("deflate doesn't fail on valid input");
+        compress
+            .compress_vec(&input[consumed..], &mut out, FlushCompress::Sync)
+            .expect("deflate doesn't fail on valid input");
         if compress.total_in() as usize == input.len() && out.len() < out.capacity() {
             break;
         }
@@ -126,7 +137,11 @@ impl Handshake {
     pub fn accept(headers: &HeaderMap) -> Option<Self> {
         let version = headers.get(header::SEC_WEBSOCKET_VERSION)?;
         let key = headers.get(header::SEC_WEBSOCKET_KEY)?;
-        if version != "13" || STANDARD.decode(key.as_bytes()).map_or(true, |decoded| decoded.len() != 16) {
+        if version != "13"
+            || STANDARD
+                .decode(key.as_bytes())
+                .map_or(true, |decoded| decoded.len() != 16)
+        {
             return None;
         }
         let mut sha = Sha1::new();
@@ -146,9 +161,15 @@ impl Handshake {
     pub fn response_headers(&self, headers: &mut HeaderMap) {
         headers.insert(header::UPGRADE, HeaderValue::from_static("websocket"));
         headers.insert(header::CONNECTION, HeaderValue::from_static("upgrade"));
-        headers.insert(header::SEC_WEBSOCKET_ACCEPT, HeaderValue::from_str(&self.accept).expect("base64 is a header value"));
+        headers.insert(
+            header::SEC_WEBSOCKET_ACCEPT,
+            HeaderValue::from_str(&self.accept).expect("base64 is a header value"),
+        );
         if self.deflate {
-            headers.insert(header::SEC_WEBSOCKET_EXTENSIONS, HeaderValue::from_static(DEFLATE_RESPONSE));
+            headers.insert(
+                header::SEC_WEBSOCKET_EXTENSIONS,
+                HeaderValue::from_static(DEFLATE_RESPONSE),
+            );
         }
     }
 
@@ -165,10 +186,14 @@ fn acceptable_deflate_offer(offer: &str) -> bool {
         return false;
     }
     params.all(|param| {
-        let (name, value) = param.split_once('=').map_or((param, None), |(n, v)| (n.trim(), Some(v.trim().trim_matches('"'))));
+        let (name, value) = param.split_once('=').map_or((param, None), |(n, v)| {
+            (n.trim(), Some(v.trim().trim_matches('"')))
+        });
         match name {
             "server_no_context_takeover" | "client_no_context_takeover" => value.is_none(),
-            "client_max_window_bits" => value.is_none_or(|v| v.parse::<u8>().is_ok_and(|bits| (8..=15).contains(&bits))),
+            "client_max_window_bits" => {
+                value.is_none_or(|v| v.parse::<u8>().is_ok_and(|bits| (8..=15).contains(&bits)))
+            }
             "server_max_window_bits" => value == Some("15"),
             _ => false,
         }
@@ -202,7 +227,11 @@ pub struct Reader<R> {
 
 impl<R: AsyncRead + Unpin> Reader<R> {
     pub fn new(io: R, deflate: bool) -> Self {
-        Self { io, deflate, partial: None }
+        Self {
+            io,
+            deflate,
+            partial: None,
+        }
     }
 
     /// The next message or control frame, reassembling fragments and decompressing.
@@ -213,22 +242,29 @@ impl<R: AsyncRead + Unpin> Reader<R> {
                 OP_CLOSE => return close_code(&payload).map(Incoming::Close),
                 OP_PING => return Ok(Incoming::Ping(payload)),
                 OP_PONG => return Ok(Incoming::Pong),
-                OP_TEXT | OP_BINARY if self.partial.is_none() => self.partial = Some((opcode, rsv1, payload)),
+                OP_TEXT | OP_BINARY if self.partial.is_none() => {
+                    self.partial = Some((opcode, rsv1, payload))
+                }
                 OP_CONTINUATION if !rsv1 => match self.partial.as_mut() {
-                    Some((_, _, data)) if data.len() + payload.len() <= MAX_MESSAGE => data.extend_from_slice(&payload),
+                    Some((_, _, data)) if data.len() + payload.len() <= MAX_MESSAGE => {
+                        data.extend_from_slice(&payload)
+                    }
                     Some(_) => return Err(protocol_error("message too big")),
                     None => return Err(protocol_error("continuation without a message")),
                 },
                 _ => return Err(protocol_error("unexpected frame")),
             }
             if fin {
-                let (opcode, compressed, data) = self.partial.take().expect("a message was started");
+                let (opcode, compressed, data) =
+                    self.partial.take().expect("a message was started");
                 if compressed && !self.deflate {
                     return Err(protocol_error("compressed frame without the extension"));
                 }
                 let data = if compressed { inflate(&data)? } else { data };
                 return Ok(match opcode {
-                    OP_TEXT => Incoming::Text(String::from_utf8(data).map_err(|_| protocol_error("invalid UTF-8"))?),
+                    OP_TEXT => Incoming::Text(
+                        String::from_utf8(data).map_err(|_| protocol_error("invalid UTF-8"))?,
+                    ),
                     _ => Incoming::Binary,
                 });
             }
@@ -337,15 +373,22 @@ impl<W: AsyncWrite + Unpin> Writer<W> {
         self.send_frames(frames.iter()).await
     }
 
-    pub(crate) async fn send_frames<'a>(&mut self, frames: impl Iterator<Item = &'a Frame>) -> io::Result<()> {
+    pub(crate) async fn send_frames<'a>(
+        &mut self,
+        frames: impl Iterator<Item = &'a Frame>,
+    ) -> io::Result<()> {
         let payloads: Vec<(bool, &[u8])> = frames
-            .map(|frame| match self.deflate.then(|| frame.deflated()).flatten() {
-                Some(deflated) => (true, deflated),
-                None => (false, frame.as_str().as_bytes()),
-            })
+            .map(
+                |frame| match self.deflate.then(|| frame.deflated()).flatten() {
+                    Some(deflated) => (true, deflated),
+                    None => (false, frame.as_str().as_bytes()),
+                },
+            )
             .collect();
-        let headers: Vec<([u8; 10], usize)> =
-            payloads.iter().map(|(compressed, payload)| header(OP_TEXT, *compressed, payload.len())).collect();
+        let headers: Vec<([u8; 10], usize)> = payloads
+            .iter()
+            .map(|(compressed, payload)| header(OP_TEXT, *compressed, payload.len()))
+            .collect();
         let mut slices: Vec<IoSlice<'_>> = Vec::with_capacity(payloads.len() * 2);
         for ((header, len), (_, payload)) in headers.iter().zip(&payloads) {
             slices.push(IoSlice::new(&header[..*len]));
@@ -384,7 +427,9 @@ impl<W: AsyncWrite + Unpin> Writer<W> {
             write_all_vectored(io, slices).await?;
             io.flush().await
         };
-        tokio::time::timeout(WRITE_TIMEOUT, write).await.unwrap_or_else(|_| Err(io::ErrorKind::TimedOut.into()))
+        tokio::time::timeout(WRITE_TIMEOUT, write)
+            .await
+            .unwrap_or_else(|_| Err(io::ErrorKind::TimedOut.into()))
     }
 }
 
@@ -407,7 +452,10 @@ fn header(opcode: u8, compressed: bool, len: usize) -> ([u8; 10], usize) {
     (header, used)
 }
 
-async fn write_all_vectored<W: AsyncWrite + Unpin>(io: &mut W, mut slices: &mut [IoSlice<'_>]) -> io::Result<()> {
+async fn write_all_vectored<W: AsyncWrite + Unpin>(
+    io: &mut W,
+    mut slices: &mut [IoSlice<'_>],
+) -> io::Result<()> {
     while !slices.is_empty() {
         let written = io.write_vectored(slices).await?;
         if written == 0 {
@@ -467,10 +515,29 @@ mod tests {
         let mut bytes = client_frame(OP_TEXT, true, false, br#"{"command":"subscribe"}"#);
         bytes.extend(client_frame(OP_TEXT, false, false, b"hel"));
         bytes.extend(client_frame(OP_PING, true, false, b"p"));
-        bytes.extend(client_frame(OP_CONTINUATION, true, false, "lo ☃".as_bytes()));
-        bytes.extend(client_frame(OP_TEXT, true, true, &deflated(&"compressed ".repeat(100))));
-        bytes.extend(client_frame(OP_CLOSE, true, false, &[&1001u16.to_be_bytes()[..], "going away".as_bytes()].concat()));
-        let read: Vec<Incoming> = read_all(bytes, true).await.into_iter().map(Result::unwrap).collect();
+        bytes.extend(client_frame(
+            OP_CONTINUATION,
+            true,
+            false,
+            "lo ☃".as_bytes(),
+        ));
+        bytes.extend(client_frame(
+            OP_TEXT,
+            true,
+            true,
+            &deflated(&"compressed ".repeat(100)),
+        ));
+        bytes.extend(client_frame(
+            OP_CLOSE,
+            true,
+            false,
+            &[&1001u16.to_be_bytes()[..], "going away".as_bytes()].concat(),
+        ));
+        let read: Vec<Incoming> = read_all(bytes, true)
+            .await
+            .into_iter()
+            .map(Result::unwrap)
+            .collect();
         assert_eq!(
             read,
             vec![
@@ -488,29 +555,41 @@ mod tests {
         let unmasked = vec![0x81, 0x02, b'h', b'i'];
         let cases = [
             unmasked,
-            client_frame(OP_TEXT, true, true, &deflated("hi")),     // compressed, not negotiated
-            client_frame(OP_TEXT, true, false, &[0xff, 0xfe]),     // not UTF-8
-            client_frame(OP_CONTINUATION, true, false, b"x"),      // nothing to continue
-            client_frame(OP_PING, false, false, b"x"),             // fragmented control frame
-            client_frame(0x3, true, false, b"x"),                  // reserved opcode
+            client_frame(OP_TEXT, true, true, &deflated("hi")), // compressed, not negotiated
+            client_frame(OP_TEXT, true, false, &[0xff, 0xfe]),  // not UTF-8
+            client_frame(OP_CONTINUATION, true, false, b"x"),   // nothing to continue
+            client_frame(OP_PING, false, false, b"x"),          // fragmented control frame
+            client_frame(0x3, true, false, b"x"),               // reserved opcode
             client_frame(OP_TEXT, true, false, &vec![b'a'; MAX_MESSAGE + 1]),
-            client_frame(OP_CLOSE, true, false, &[0x03]),                       // one-byte close
-            client_frame(OP_CLOSE, true, false, &1005u16.to_be_bytes()),        // reserved code
-            client_frame(OP_CLOSE, true, false, &[0x03, 0xe8, 0xff]),           // reason not UTF-8
+            client_frame(OP_CLOSE, true, false, &[0x03]), // one-byte close
+            client_frame(OP_CLOSE, true, false, &1005u16.to_be_bytes()), // reserved code
+            client_frame(OP_CLOSE, true, false, &[0x03, 0xe8, 0xff]), // reason not UTF-8
         ];
         for bytes in cases {
             let read = read_all(bytes, false).await;
-            assert!(read.last().unwrap().as_ref().is_err_and(|e| e.kind() == io::ErrorKind::InvalidData), "{read:?}");
+            assert!(
+                read.last()
+                    .unwrap()
+                    .as_ref()
+                    .is_err_and(|e| e.kind() == io::ErrorKind::InvalidData),
+                "{read:?}"
+            );
         }
     }
 
     #[tokio::test]
     async fn writes_shared_frames_compressed_only_when_worth_it() {
         let small = Frame::from(r#"{"type":"ping","message":1}"#);
-        let big = Frame::from(format!(r#"{{"identifier":"x","message":"{}"}}"#, "<div>message</div>".repeat(200)));
+        let big = Frame::from(format!(
+            r#"{{"identifier":"x","message":"{}"}}"#,
+            "<div>message</div>".repeat(200)
+        ));
         for deflate in [false, true] {
             let mut out = Vec::new();
-            Writer::new(&mut out, deflate).send(&[small.clone(), big.clone()]).await.unwrap();
+            Writer::new(&mut out, deflate)
+                .send(&[small.clone(), big.clone()])
+                .await
+                .unwrap();
             // Read them back as a client would: unmasked frames, RSV1 for compressed ones.
             let mut at = 0;
             let mut texts = Vec::new();
@@ -519,26 +598,52 @@ mod tests {
                 assert_eq!(b0 & 0x80, 0x80);
                 assert_eq!(b1 & 0x80, 0, "server frames are unmasked");
                 let (len, start) = match b1 & 0x7f {
-                    126 => (u16::from_be_bytes([out[at + 2], out[at + 3]]) as usize, at + 4),
-                    127 => (u64::from_be_bytes(out[at + 2..at + 10].try_into().unwrap()) as usize, at + 10),
+                    126 => (
+                        u16::from_be_bytes([out[at + 2], out[at + 3]]) as usize,
+                        at + 4,
+                    ),
+                    127 => (
+                        u64::from_be_bytes(out[at + 2..at + 10].try_into().unwrap()) as usize,
+                        at + 10,
+                    ),
                     len => (len as usize, at + 2),
                 };
                 let payload = &out[start..start + len];
-                let text = if b0 & 0x40 != 0 { String::from_utf8(inflate(payload).unwrap()).unwrap() } else { String::from_utf8(payload.to_vec()).unwrap() };
+                let text = if b0 & 0x40 != 0 {
+                    String::from_utf8(inflate(payload).unwrap()).unwrap()
+                } else {
+                    String::from_utf8(payload.to_vec()).unwrap()
+                };
                 texts.push((b0 & 0x40 != 0, text));
                 at = start + len;
             }
-            assert_eq!(texts, vec![(false, small.as_str().to_string()), (deflate, big.as_str().to_string())]);
+            assert_eq!(
+                texts,
+                vec![
+                    (false, small.as_str().to_string()),
+                    (deflate, big.as_str().to_string())
+                ]
+            );
         }
         let compressed = big.deflated().unwrap();
-        assert!(compressed.len() < big.as_str().len() / 10, "{} bytes", compressed.len());
-        assert!(std::ptr::eq(compressed, big.clone().deflated().unwrap()), "compressed once, shared by clones");
+        assert!(
+            compressed.len() < big.as_str().len() / 10,
+            "{} bytes",
+            compressed.len()
+        );
+        assert!(
+            std::ptr::eq(compressed, big.clone().deflated().unwrap()),
+            "compressed once, shared by clones"
+        );
     }
 
     fn handshake(extensions: &[&str]) -> Option<Handshake> {
         let mut headers = HeaderMap::new();
         headers.insert(header::SEC_WEBSOCKET_VERSION, "13".parse().unwrap());
-        headers.insert(header::SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==".parse().unwrap());
+        headers.insert(
+            header::SEC_WEBSOCKET_KEY,
+            "dGhlIHNhbXBsZSBub25jZQ==".parse().unwrap(),
+        );
         for extension in extensions {
             headers.append(header::SEC_WEBSOCKET_EXTENSIONS, extension.parse().unwrap());
         }
@@ -548,18 +653,46 @@ mod tests {
     #[test]
     fn handshakes_and_negotiates_compression() {
         // RFC 6455's example key.
-        assert_eq!(handshake(&[]).unwrap().accept, "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
+        assert_eq!(
+            handshake(&[]).unwrap().accept,
+            "s3pPLMBiTxaQ9kYGzzhZRbK+xOo="
+        );
         assert!(!handshake(&[]).unwrap().deflate());
         // What Chrome, Firefox and Safari offer.
-        assert!(handshake(&["permessage-deflate; client_max_window_bits"]).unwrap().deflate());
-        assert!(handshake(&["x-webkit-deflate-frame", "permessage-deflate"]).unwrap().deflate());
-        assert!(handshake(&["permessage-deflate; server_no_context_takeover; client_max_window_bits=10"]).unwrap().deflate());
-        assert!(!handshake(&["permessage-deflate; server_max_window_bits=10"]).unwrap().deflate());
-        assert!(!handshake(&["permessage-deflate; unknown"]).unwrap().deflate());
+        assert!(
+            handshake(&["permessage-deflate; client_max_window_bits"])
+                .unwrap()
+                .deflate()
+        );
+        assert!(
+            handshake(&["x-webkit-deflate-frame", "permessage-deflate"])
+                .unwrap()
+                .deflate()
+        );
+        assert!(
+            handshake(&[
+                "permessage-deflate; server_no_context_takeover; client_max_window_bits=10"
+            ])
+            .unwrap()
+            .deflate()
+        );
+        assert!(
+            !handshake(&["permessage-deflate; server_max_window_bits=10"])
+                .unwrap()
+                .deflate()
+        );
+        assert!(
+            !handshake(&["permessage-deflate; unknown"])
+                .unwrap()
+                .deflate()
+        );
 
         let mut headers = HeaderMap::new();
         headers.insert(header::SEC_WEBSOCKET_VERSION, "8".parse().unwrap());
-        headers.insert(header::SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==".parse().unwrap());
+        headers.insert(
+            header::SEC_WEBSOCKET_KEY,
+            "dGhlIHNhbXBsZSBub25jZQ==".parse().unwrap(),
+        );
         assert!(Handshake::accept(&headers).is_none());
     }
 }

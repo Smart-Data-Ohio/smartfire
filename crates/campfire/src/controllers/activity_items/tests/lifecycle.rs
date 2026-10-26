@@ -77,7 +77,13 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
             );
             continue;
         }
-        if step["method"].as_str().is_some_and(|method| method.eq_ignore_ascii_case("GET")) && step["accept"] != "application/json" { continue; }
+        if step["method"]
+            .as_str()
+            .is_some_and(|method| method.eq_ignore_ascii_case("GET"))
+            && step["accept"] != "application/json"
+        {
+            continue;
+        }
         let method =
             Method::from_bytes(step["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap();
         let req = Req::new(method.clone(), step["path"].as_str().unwrap())
@@ -93,7 +99,16 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
         }
         assert_eq!(
             response.status.as_u16() as u64,
-            if step["accept"] == "text/vnd.turbo-stream.html" && !method.eq(&Method::DELETE) && step["status"].as_u64().unwrap() < 400 { 406 } else if method.eq(&Method::DELETE) && step["accept"] != "application/json" { 204 } else { step["status"].as_u64().unwrap() },
+            if step["accept"] == "text/vnd.turbo-stream.html"
+                && !method.eq(&Method::DELETE)
+                && step["status"].as_u64().unwrap() < 400
+            {
+                406
+            } else if method.eq(&Method::DELETE) && step["accept"] != "application/json" {
+                204
+            } else {
+                step["status"].as_u64().unwrap()
+            },
             "{}: {}",
             step["name"],
             response.text()

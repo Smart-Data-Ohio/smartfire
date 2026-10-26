@@ -316,26 +316,35 @@ enum PostCheck {
     Finished(PostResult),
 }
 
-fn check_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveInput) -> Result<PostCheck> {
+fn check_service(
+    tx: &mut Tx<'_>,
+    agent_id: i64,
+    a: &NewMessage,
+    drive: &DriveInput,
+) -> Result<PostCheck> {
     use super::agent_service::{ServiceResult, invalid};
     let thread = if let Some(id) = a.thread_id {
         let Some(thread) =
             crate::ChannelThread::find_by_id(tx.conn(), id)?.filter(|t| t.room_id == a.room_id)
         else {
-            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::fail(
-                "Thread not found",
-                404,
-            ))));
+            return Ok(PostCheck::Finished(PostResult::Denied(
+                ServiceResult::fail("Thread not found", 404),
+            )));
         };
-        let user: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
+        let user: i64 =
+            tx.conn()
+                .query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |row| {
+                    row.get(0)
+                })?;
         if !thread.readable_by(tx.conn(), user)? {
-            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::fail("Thread not found",404))));
+            return Ok(PostCheck::Finished(PostResult::Denied(
+                ServiceResult::fail("Thread not found", 404),
+            )));
         }
         if thread.locked_at.is_some() {
-            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::fail(
-                "This thread is locked",
-                422,
-            ))));
+            return Ok(PostCheck::Finished(PostResult::Denied(
+                ServiceResult::fail("This thread is locked", 422),
+            )));
         }
         Some(thread)
     } else {
@@ -349,9 +358,13 @@ fn check_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveIn
         None
     };
     match prepare(tx, agent_id, a.room_id, a.client_message_id.as_deref())? {
-        PostingCheck::Replay(message) => return Ok(PostCheck::Finished(PostResult::Posted(message))),
+        PostingCheck::Replay(message) => {
+            return Ok(PostCheck::Finished(PostResult::Posted(message)));
+        }
         PostingCheck::Budget(payload) => {
-            return Ok(PostCheck::Finished(PostResult::Denied(ServiceResult::budget(payload))));
+            return Ok(PostCheck::Finished(PostResult::Denied(
+                ServiceResult::budget(payload),
+            )));
         }
         PostingCheck::Allowed => {}
     }
@@ -366,7 +379,12 @@ fn check_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveIn
 }
 
 /// The same service preflight, before the app stages an attachment. The writer checks again.
-pub fn preflight_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: &DriveInput) -> Result<Option<PostResult>> {
+pub fn preflight_service(
+    tx: &mut Tx<'_>,
+    agent_id: i64,
+    a: &NewMessage,
+    drive: &DriveInput,
+) -> Result<Option<PostResult>> {
     Ok(match check_service(tx, agent_id, a, drive)? {
         PostCheck::Allowed(_) => None,
         PostCheck::Finished(result) => Some(result),
@@ -374,14 +392,22 @@ pub fn preflight_service(tx: &mut Tx<'_>, agent_id: i64, a: &NewMessage, drive: 
 }
 
 /// Agents::Posting. Caller supplies authenticated room membership and post grant.
-pub fn post_service(tx: &mut Tx<'_>, agent_id: i64, a: NewMessage, drive: DriveInput) -> Result<PostResult> {
+pub fn post_service(
+    tx: &mut Tx<'_>,
+    agent_id: i64,
+    a: NewMessage,
+    drive: DriveInput,
+) -> Result<PostResult> {
     post_service_with_preparation(tx, agent_id, a, drive, |_, _| Ok(()))
 }
 
 /// Storage preparation runs in the message savepoint. Denials roll back its rows and callbacks.
 /// REST and MCP still call the same posting service, with the app owning upload staging.
 pub fn post_service_with_preparation(
-    tx: &mut Tx<'_>, agent_id: i64, a: NewMessage, drive: DriveInput,
+    tx: &mut Tx<'_>,
+    agent_id: i64,
+    a: NewMessage,
+    drive: DriveInput,
     prepare_attachment: impl FnOnce(&mut Tx<'_>, &mut NewMessage) -> Result<()>,
 ) -> Result<PostResult> {
     let result = save_service_with_preparation(tx, agent_id, a, drive, prepare_attachment)?;
@@ -395,7 +421,10 @@ pub fn post_service_with_preparation(
 /// Root attachment posts process their committed upload before broadcasting and fan-out,
 /// matching `Agents::Posting.post_root`. Other callers retain transactional delivery.
 pub fn save_service_with_preparation(
-    tx: &mut Tx<'_>, agent_id: i64, mut a: NewMessage, drive: DriveInput,
+    tx: &mut Tx<'_>,
+    agent_id: i64,
+    mut a: NewMessage,
+    drive: DriveInput,
     prepare_attachment: impl FnOnce(&mut Tx<'_>, &mut NewMessage) -> Result<()>,
 ) -> Result<PostResult> {
     use super::agent_service::invalid;
@@ -403,9 +432,17 @@ pub fn save_service_with_preparation(
         PostCheck::Allowed(thread) => thread,
         PostCheck::Finished(result) => return Ok(result),
     };
-    if let DriveInput::Ids(ids) = drive { a.drive_file_ids = ids; }
-    if a.markdown_source.is_some() { a.body = None; }
-    a.creator_id = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| r.get(0))?;
+    if let DriveInput::Ids(ids) = drive {
+        a.drive_file_ids = ids;
+    }
+    if a.markdown_source.is_some() {
+        a.body = None;
+    }
+    a.creator_id =
+        tx.conn()
+            .query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| {
+                r.get(0)
+            })?;
     let message = match tx.savepoint(|tx| {
         prepare_attachment(tx, &mut a)?;
         if let Some(mut thread) = thread {
@@ -423,7 +460,9 @@ pub fn save_service_with_preparation(
 
 pub fn broadcast_stream_start(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     use crate::broadcasts::Broadcast;
-    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
+    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MessageCreated {
+        message_id: message.id,
+    }));
     Ok(())
 }
 
@@ -450,9 +489,13 @@ pub fn broadcast_unread_room(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     } else {
         Vec::new()
     };
-    let user_ids = memberships.into_iter()
-        .filter(|m| m.involvement != Some(crate::Involvement::Muted) || mentions.contains(&m.user_id))
-        .map(|m| m.user_id).collect();
+    let user_ids = memberships
+        .into_iter()
+        .filter(|m| {
+            m.involvement != Some(crate::Involvement::Muted) || mentions.contains(&m.user_id)
+        })
+        .map(|m| m.user_id)
+        .collect();
     tx.emit_after_commit(crate::Event::broadcast(&Broadcast::UnreadRoom {
         user_ids,
         room_id: message.room_id,

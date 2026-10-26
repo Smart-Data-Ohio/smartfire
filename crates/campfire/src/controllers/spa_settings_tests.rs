@@ -82,11 +82,18 @@ const APPEARANCE: &[&str] = &["theme", "textSize", "timeZone"];
 
 #[tokio::test]
 async fn pronouns_and_nickname_round_trip_with_shared_display_identity() {
-    let Some(a) = app().await else { panic!("restored default seed required") };
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
     let mut b = a.sign_in(DAVID).await;
     let original = read(&mut b).await.profile.name;
-    let reply = write(&mut b, Method::PATCH, "/api/v1/settings/profile",
-        json!({"pronouns":"  they/them  ","nickname":"  D  "})).await;
+    let reply = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/profile",
+        json!({"pronouns":"  they/them  ","nickname":"  D  "}),
+    )
+    .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let saved: Value = parse(&reply);
     assert_eq!(saved["profile"]["pronouns"], "they/them");
@@ -94,24 +101,53 @@ async fn pronouns_and_nickname_round_trip_with_shared_display_identity() {
     assert_eq!(saved["profile"]["name"], original);
     let settings: Value = parse(&b.send(get("/api/v1/settings")).await);
     assert_eq!(settings["profile"], saved["profile"]);
-    for path in [format!("/api/v1/rooms/{ALL_TALK}/messages"), format!("/api/v1/rooms/{ALL_TALK}/members"),
-        format!("/api/v1/autocomplete/users?roomId={ALL_TALK}&query=D")] {
+    for path in [
+        format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        format!("/api/v1/rooms/{ALL_TALK}/members"),
+        format!("/api/v1/autocomplete/users?roomId={ALL_TALK}&query=D"),
+    ] {
         let reply = b.send(get(&path)).await;
         assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
         let data: Value = parse(&reply);
-        let users = data["users"].as_array().or_else(|| data["suggestions"].as_array()).unwrap();
-        let person = users.iter().map(|row| row.get("user").unwrap_or(row))
-            .find(|user| user["id"] == DAVID).unwrap();
+        let users = data["users"]
+            .as_array()
+            .or_else(|| data["suggestions"].as_array())
+            .unwrap();
+        let person = users
+            .iter()
+            .map(|row| row.get("user").unwrap_or(row))
+            .find(|user| user["id"] == DAVID)
+            .unwrap();
         assert_eq!(person["name"], "D", "{path}");
         assert_eq!(person["accountName"], original);
     }
     let person: Value = parse(&b.send(get(&format!("/api/v1/people/{DAVID}"))).await);
     assert_eq!(person["user"]["pronouns"], "they/them");
     let people: Value = parse(&b.send(get("/api/v1/admin/people")).await);
-    assert_eq!(people["people"].as_array().unwrap().iter().find(|row| row["id"] == DAVID).unwrap()["name"], original);
-    let unchanged = write(&mut b, Method::PATCH, "/api/v1/settings/profile", json!({"bio":"still me"})).await;
+    assert_eq!(
+        people["people"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == DAVID)
+            .unwrap()["name"],
+        original
+    );
+    let unchanged = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/profile",
+        json!({"bio":"still me"}),
+    )
+    .await;
     assert_eq!(parse::<Value>(&unchanged)["profile"]["nickname"], "D");
-    let cleared = write(&mut b, Method::PATCH, "/api/v1/settings/profile", json!({"nickname":" ","pronouns":""})).await;
+    let cleared = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/profile",
+        json!({"nickname":" ","pronouns":""}),
+    )
+    .await;
     assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
     assert!(parse::<Value>(&cleared)["profile"]["nickname"].is_null());
     let person: Value = parse(&b.send(get(&format!("/api/v1/people/{DAVID}"))).await);
@@ -120,13 +156,30 @@ async fn pronouns_and_nickname_round_trip_with_shared_display_identity() {
 
 #[tokio::test]
 async fn pronouns_and_nickname_validation_is_atomic() {
-    let Some(a) = app().await else { panic!("restored default seed required") };
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
     let mut b = a.sign_in(DAVID).await;
     let before: Value = parse(&b.send(get("/api/v1/settings")).await);
-    for (field, value) in [("pronouns", "x".repeat(41)), ("nickname", "x".repeat(33)),
-        ("pronouns", "they\nthem".into()), ("nickname", "\tNick".into())] {
-        let reply = write(&mut b, Method::PATCH, "/api/v1/settings/profile", json!({field:value,"name":"should not save"})).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    for (field, value) in [
+        ("pronouns", "x".repeat(41)),
+        ("nickname", "x".repeat(33)),
+        ("pronouns", "they\nthem".into()),
+        ("nickname", "\tNick".into()),
+    ] {
+        let reply = write(
+            &mut b,
+            Method::PATCH,
+            "/api/v1/settings/profile",
+            json!({field:value,"name":"should not save"}),
+        )
+        .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
         assert!(error(&reply)["fields"][field].is_array());
         let after: Value = parse(&b.send(get("/api/v1/settings")).await);
         assert_eq!(after["profile"], before["profile"]);
@@ -135,8 +188,14 @@ async fn pronouns_and_nickname_validation_is_atomic() {
 
 #[tokio::test]
 async fn profile_identity_changes_reach_other_users_and_refresh_direct_labels() {
-    let Some(a) = app().await else { panic!("restored default seed required") };
-    let room = a.db().write(|tx| campfire_db::Room::find_or_create_direct_for(tx, &[DAVID, JASON], DAVID)).await.unwrap();
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
+    let room = a
+        .db()
+        .write(|tx| campfire_db::Room::find_or_create_direct_for(tx, &[DAVID, JASON], DAVID))
+        .await
+        .unwrap();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let router = a.booted.router.clone();
@@ -144,23 +203,35 @@ async fn profile_identity_changes_reach_other_users_and_refresh_direct_labels() 
     let mut writer = a.sign_in(DAVID).await;
     let observer = a.sign_in(JASON).await;
     let mut sync = Sync::connect(addr, &observer.cookie_header()).await;
-    for body in [json!({"nickname":"NickExample","pronouns":"they/them"}), json!({"nickname":""})] {
+    for body in [
+        json!({"nickname":"NickExample","pronouns":"they/them"}),
+        json!({"nickname":""}),
+    ] {
         let response = write(&mut writer, Method::PATCH, "/api/v1/settings/profile", body).await;
         assert_eq!(response.status, StatusCode::OK, "{}", response.text());
         let settings: api::Settings = parse(&response);
-        let expected = settings.profile.nickname.as_deref().unwrap_or(&settings.profile.name);
+        let expected = settings
+            .profile
+            .nickname
+            .as_deref()
+            .unwrap_or(&settings.profile.name);
         let mut identity = None;
         let mut label = None;
         while identity.is_none() || label.is_none() {
             if let api::ServerFrame::Batch { events } = sync.next().await {
                 for event in events {
-                    assert!(!matches!(event.payload, api::SyncPayload::SettingsUpdated(_)), "private settings must stay with their owner");
+                    assert!(
+                        !matches!(event.payload, api::SyncPayload::SettingsUpdated(_)),
+                        "private settings must stay with their owner"
+                    );
                     let payload = serde_json::to_value(&event.payload).unwrap();
                     if payload["type"] == "user.updated" && payload["data"]["id"] == DAVID {
                         assert_eq!(event.topic, "user");
                         identity = Some(payload["data"].clone());
                     }
-                    if let api::SyncPayload::SidebarRowUpserted(row) = event.payload && row.room.id == room.id {
+                    if let api::SyncPayload::SidebarRowUpserted(row) = event.payload
+                        && row.room.id == room.id
+                    {
                         label = Some(row.display_name);
                     }
                 }
@@ -182,9 +253,17 @@ async fn personal_appearance_round_trips_through_settings_boot_and_me() {
         json!({"version":1,"palette":"ocean","font":"serif","density":"compact","motion":"reduce","tokens":{"--accent":"#123abc","--bg-app":"rgb(10, 20, 30)"}}),
         json!({"version":7,"future":{"keep":[1,2,3]},"palette":"future"}),
     ] {
-        let Some(a) = app().await else { panic!("restored default seed required") };
+        let Some(a) = app().await else {
+            panic!("restored default seed required")
+        };
         let mut b = a.sign_in(DAVID).await;
-        let reply = write(&mut b, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":preferences})).await;
+        let reply = write(
+            &mut b,
+            Method::PATCH,
+            "/api/v1/settings/appearance",
+            json!({"appearancePreferences":preferences}),
+        )
+        .await;
         assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
         let settings: Value = parse(&reply);
         assert_eq!(settings["appearance"]["appearancePreferences"], preferences);
@@ -192,7 +271,13 @@ async fn personal_appearance_round_trips_through_settings_boot_and_me() {
         assert_eq!(me["preferences"]["appearancePreferences"], preferences);
         let boot: Value = parse(&b.send(get("/api/v1/boot")).await);
         assert_eq!(boot["appearancePreferences"], preferences);
-        let unchanged = write(&mut b, Method::PATCH, "/api/v1/settings/appearance", json!({"theme":"dark"})).await;
+        let unchanged = write(
+            &mut b,
+            Method::PATCH,
+            "/api/v1/settings/appearance",
+            json!({"theme":"dark"}),
+        )
+        .await;
         let settings: Value = parse(&unchanged);
         assert_eq!(settings["appearance"]["appearancePreferences"], preferences);
     }
@@ -203,17 +288,37 @@ async fn personal_appearance_rejects_invalid_inputs_without_changing_the_account
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;
     for preferences in [
-        json!([]), json!({"version":0}), json!({"version":null}),
-        json!({"version":1,"palette":"unknown"}), json!({"version":1,"font":"unknown"}),
-        json!({"version":1,"density":"tiny"}), json!({"version":1,"motion":true}),
-        json!({"version":1,"other":1}), json!({"version":1,"tokens":{"--font-sans":"#123456"}}),
+        json!([]),
+        json!({"version":0}),
+        json!({"version":null}),
+        json!({"version":1,"palette":"unknown"}),
+        json!({"version":1,"font":"unknown"}),
+        json!({"version":1,"density":"tiny"}),
+        json!({"version":1,"motion":true}),
+        json!({"version":1,"other":1}),
+        json!({"version":1,"tokens":{"--font-sans":"#123456"}}),
         json!({"version":1,"tokens":{"--accent":"url(https://example.com)"}}),
         json!({"version":1,"tokens":{"--accent":"rgb(999, 0, 0)"}}),
         json!({"version":99,"future":"x".repeat(8193)}),
     ] {
-        let reply = write(&mut b, Method::PATCH, "/api/v1/settings/appearance", json!({"theme":"dark","appearancePreferences":preferences})).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
-        assert!(reply.text().contains("appearancePreferences"), "{}", reply.text());
+        let reply = write(
+            &mut b,
+            Method::PATCH,
+            "/api/v1/settings/appearance",
+            json!({"theme":"dark","appearancePreferences":preferences}),
+        )
+        .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
+        assert!(
+            reply.text().contains("appearancePreferences"),
+            "{}",
+            reply.text()
+        );
         let me: Value = parse(&b.send(get("/api/v1/me")).await);
         assert_eq!(me["preferences"]["theme"], "system");
         assert!(me["preferences"]["appearancePreferences"].is_null());
@@ -222,29 +327,60 @@ async fn personal_appearance_rejects_invalid_inputs_without_changing_the_account
 
 #[tokio::test]
 async fn personal_appearance_partial_writes_merge_and_share_the_me_revision() {
-    let Some(a) = app().await else { panic!("restored default seed required") };
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
     let mut first = a.sign_in(DAVID).await;
     let mut second = a.sign_in(DAVID).await;
-    let palette = write(&mut first, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":{"palette":"ocean"}})).await;
+    let palette = write(
+        &mut first,
+        Method::PATCH,
+        "/api/v1/settings/appearance",
+        json!({"appearancePreferences":{"palette":"ocean"}}),
+    )
+    .await;
     assert_eq!(palette.status, StatusCode::OK, "{}", palette.text());
     let palette: api::Settings = parse(&palette);
-    let font = write(&mut second, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":{"font":"mono"}})).await;
+    let font = write(
+        &mut second,
+        Method::PATCH,
+        "/api/v1/settings/appearance",
+        json!({"appearancePreferences":{"font":"mono"}}),
+    )
+    .await;
     assert_eq!(font.status, StatusCode::OK, "{}", font.text());
     let font: api::Settings = parse(&font);
     assert!(font.revision > palette.revision);
-    assert_eq!(font.appearance.appearance_preferences.unwrap().0, json!({"version":1,"palette":"ocean","font":"mono"}));
+    assert_eq!(
+        font.appearance.appearance_preferences.unwrap().0,
+        json!({"version":1,"palette":"ocean","font":"mono"})
+    );
     let me: api::Me = parse(&first.send(get("/api/v1/me")).await);
     assert_eq!(me.preferences.settings_revision, font.revision);
-    assert_eq!(me.preferences.appearance_preferences.unwrap().0, json!({"version":1,"palette":"ocean","font":"mono"}));
-    let cleared = write(&mut first, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":{"palette":null}})).await;
+    assert_eq!(
+        me.preferences.appearance_preferences.unwrap().0,
+        json!({"version":1,"palette":"ocean","font":"mono"})
+    );
+    let cleared = write(
+        &mut first,
+        Method::PATCH,
+        "/api/v1/settings/appearance",
+        json!({"appearancePreferences":{"palette":null}}),
+    )
+    .await;
     assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
     let cleared: api::Settings = parse(&cleared);
-    assert_eq!(cleared.appearance.appearance_preferences.unwrap().0, json!({"version":1,"font":"mono"}));
+    assert_eq!(
+        cleared.appearance.appearance_preferences.unwrap().0,
+        json!({"version":1,"font":"mono"})
+    );
 }
 
 #[tokio::test]
 async fn personal_appearance_writes_reach_another_user_session() {
-    let Some(a) = app().await else { panic!("restored default seed required") };
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let router = a.booted.router.clone();
@@ -253,12 +389,25 @@ async fn personal_appearance_writes_reach_another_user_session() {
     let desktop = a.sign_in(DAVID).await;
     let mut sync = Sync::connect(addr, &desktop.cookie_header()).await;
     let preferences = json!({"version":1,"palette":"ocean","font":"serif"});
-    let response = write(&mut phone, Method::PATCH, "/api/v1/settings/appearance", json!({"appearancePreferences":preferences})).await;
+    let response = write(
+        &mut phone,
+        Method::PATCH,
+        "/api/v1/settings/appearance",
+        json!({"appearancePreferences":preferences}),
+    )
+    .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-    let event = sync.until_event(|payload| matches!(payload, api::SyncPayload::SettingsUpdated(_))).await;
+    let event = sync
+        .until_event(|payload| matches!(payload, api::SyncPayload::SettingsUpdated(_)))
+        .await;
     assert_eq!(event.topic, "user");
-    let api::SyncPayload::SettingsUpdated(settings) = event.payload else { unreachable!() };
-    assert_eq!(settings.appearance.appearance_preferences.unwrap().0, preferences);
+    let api::SyncPayload::SettingsUpdated(settings) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(
+        settings.appearance.appearance_preferences.unwrap().0,
+        preferences
+    );
     server.abort();
 }
 const CALLS: &[&str] = &["voiceMode", "pushToTalkKey"];
@@ -438,8 +587,6 @@ async fn the_settings_read_as_the_classic_profile_page_shows_them() {
     assert_eq!(settings.calls.push_to_talk_key.as_deref(), Some("`"));
     assert_eq!(settings.integrations.manage_path, "/users/me/profile");
     assert_eq!(settings.integrations.slack_import_path, "/slack/imports");
-
-
 }
 
 #[tokio::test]
@@ -743,21 +890,58 @@ async fn notifications_save_as_the_classic_forms_do() {
 
 #[tokio::test]
 async fn the_message_sound_starts_on_and_survives_the_other_notification_writes() {
-    let Some(a) = app().await else { panic!("restored default seed required") };
+    let Some(a) = app().await else {
+        panic!("restored default seed required")
+    };
     let mut b = a.sign_in(DAVID).await;
     assert!(read(&mut b).await.notifications.message_sound);
 
-    let off = spa(&mut b, Method::PATCH, "/api/v1/settings/notifications", json!({"messageSound": false})).await;
+    let off = spa(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"messageSound": false}),
+    )
+    .await;
     assert!(!off.notifications.message_sound);
 
-    let level = spa(&mut b, Method::PATCH, "/api/v1/settings/notifications", json!({"defaultNotificationLevel": "mentions", "inbox": {"agent_work": false}})).await;
-    assert!(!level.notifications.message_sound, "a level or inbox save keeps it");
-    classic(&mut b, form("/users/me/profile", Method::PATCH, &[("user[inbox_preferences][event_reminders]", "0")])).await;
-    assert!(!read(&mut b).await.notifications.message_sound, "the classic profile form keeps it");
+    let level = spa(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"defaultNotificationLevel": "mentions", "inbox": {"agent_work": false}}),
+    )
+    .await;
+    assert!(
+        !level.notifications.message_sound,
+        "a level or inbox save keeps it"
+    );
+    classic(
+        &mut b,
+        form(
+            "/users/me/profile",
+            Method::PATCH,
+            &[("user[inbox_preferences][event_reminders]", "0")],
+        ),
+    )
+    .await;
+    assert!(
+        !read(&mut b).await.notifications.message_sound,
+        "the classic profile form keeps it"
+    );
 
-    let on = spa(&mut b, Method::PATCH, "/api/v1/settings/notifications", json!({"messageSound": true})).await;
+    let on = spa(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"messageSound": true}),
+    )
+    .await;
     assert!(on.notifications.message_sound);
-    assert_eq!(on.notifications.default_notification_level, api::NotificationLevel::Mentions);
+    assert_eq!(
+        on.notifications.default_notification_level,
+        api::NotificationLevel::Mentions
+    );
 }
 
 #[tokio::test]
@@ -1372,7 +1556,6 @@ impl Sync {
     }
 }
 
-
 #[tokio::test]
 async fn a9_notification_writes_reach_all_of_the_users_sync_sessions() {
     let Some(a) = app().await else {
@@ -1620,47 +1803,98 @@ async fn a9_involvement_returns_the_settings_revision_and_cleared_override() {
 
 #[tokio::test]
 async fn a9_every_settings_write_advances_a_persisted_revision() {
-    let Some(app) = app().await else { panic!("restored default seed required") };
+    let Some(app) = app().await else {
+        panic!("restored default seed required")
+    };
     let mut b = app.sign_in(DAVID).await;
     let initial = b.send(get("/api/v1/settings")).await;
-    let mut revision = parse::<serde_json::Value>(&initial)["revision"].as_i64()
+    let mut revision = parse::<serde_json::Value>(&initial)["revision"]
+        .as_i64()
         .expect("settings GET returns a server revision");
     let initial_count = b.send(get("/api/v1/activity/unread_count")).await;
     let mut activity_revision = parse::<api::ActivityUnreadCount>(&initial_count).unread_revision;
     let allowance = format!("/api/v1/settings/dnd_allowances/{KEVIN}");
     for (method, path, body) in [
-        (Method::PATCH, "/api/v1/settings/profile", json!({"bio":"revision test"})),
+        (
+            Method::PATCH,
+            "/api/v1/settings/profile",
+            json!({"bio":"revision test"}),
+        ),
         (Method::DELETE, "/api/v1/settings/avatar", json!({})),
-        (Method::PATCH, "/api/v1/settings/appearance", json!({"theme":"dark"})),
-        (Method::PATCH, "/api/v1/settings/calls", json!({"voiceMode":"push_to_talk"})),
-        (Method::PATCH, "/api/v1/settings/status", json!({"presenceSetting":"auto"})),
-        (Method::PATCH, "/api/v1/settings/notifications", json!({"dndEnabled":false})),
+        (
+            Method::PATCH,
+            "/api/v1/settings/appearance",
+            json!({"theme":"dark"}),
+        ),
+        (
+            Method::PATCH,
+            "/api/v1/settings/calls",
+            json!({"voiceMode":"push_to_talk"}),
+        ),
+        (
+            Method::PATCH,
+            "/api/v1/settings/status",
+            json!({"presenceSetting":"auto"}),
+        ),
+        (
+            Method::PATCH,
+            "/api/v1/settings/notifications",
+            json!({"dndEnabled":false}),
+        ),
         (Method::POST, allowance.as_str(), json!({})),
         (Method::DELETE, allowance.as_str(), json!({})),
     ] {
         let response = write(&mut b, method, path, body).await;
-        assert_eq!(response.status, StatusCode::OK, "{path}: {}", response.text());
-        let next = parse::<serde_json::Value>(&response)["revision"].as_i64().unwrap();
+        assert_eq!(
+            response.status,
+            StatusCode::OK,
+            "{path}: {}",
+            response.text()
+        );
+        let next = parse::<serde_json::Value>(&response)["revision"]
+            .as_i64()
+            .unwrap();
         assert!(next > revision, "{path} did not advance revision");
         revision = next;
         let read = b.send(get("/api/v1/settings")).await;
         assert_eq!(parse::<serde_json::Value>(&read)["revision"], revision);
-        let persisted = app.booted.app.db.read(|conn| {
-            Ok(conn.query_row("SELECT activity_revision FROM users WHERE id=?", [DAVID], |r| r.get::<_, i64>(0))?)
-        }).await.unwrap();
+        let persisted = app
+            .booted
+            .app
+            .db
+            .read(|conn| {
+                Ok(conn.query_row(
+                    "SELECT activity_revision FROM users WHERE id=?",
+                    [DAVID],
+                    |r| r.get::<_, i64>(0),
+                )?)
+            })
+            .await
+            .unwrap();
         assert_eq!(persisted, revision);
         let count = b.send(get("/api/v1/activity/unread_count")).await;
         let next = parse::<api::ActivityUnreadCount>(&count).unread_revision;
-        assert!(next > activity_revision, "{path} did not advance the count revision");
+        assert!(
+            next > activity_revision,
+            "{path} did not advance the count revision"
+        );
         activity_revision = next;
     }
-    let rejected = write(&mut b, Method::PATCH, "/api/v1/settings/notifications",
-        json!({"roomMute":{"roomId":i64::MAX,"duration":"forever"}})).await;
+    let rejected = write(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/settings/notifications",
+        json!({"roomMute":{"roomId":i64::MAX,"duration":"forever"}}),
+    )
+    .await;
     assert_eq!(rejected.status, StatusCode::NOT_FOUND);
     let read = b.send(get("/api/v1/settings")).await;
     assert_eq!(parse::<api::Settings>(&read).revision, revision);
     let count = b.send(get("/api/v1/activity/unread_count")).await;
-    assert_eq!(parse::<api::ActivityUnreadCount>(&count).unread_revision, activity_revision);
+    assert_eq!(
+        parse::<api::ActivityUnreadCount>(&count).unread_revision,
+        activity_revision
+    );
 }
 
 async fn notification_delivery_app() -> (TestApp, Arc<campfire_kit::clock::FrozenClock>) {
@@ -1684,9 +1918,9 @@ async fn assert_room_notification_delivery(
 ) {
     app.db()
         .write(|tx| {
-            let mut membership = campfire_db::Membership::find_by_room_and_user(
-                tx.conn(), ALL_TALK, DAVID,
-            )?.unwrap();
+            let mut membership =
+                campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, DAVID)?
+                    .unwrap();
             membership.read(tx)?;
             tx.conn().execute(
                 "UPDATE memberships SET connected_at=NULL WHERE id=?",
@@ -1697,63 +1931,105 @@ async fn assert_room_notification_delivery(
         .await
         .unwrap();
     let source = source.to_owned();
-    let message = app.db().write(move |tx| {
-        campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK,
-            creator_id: JASON,
-            markdown_source: Some(source),
-            ..Default::default()
+    let message = app
+        .db()
+        .write(move |tx| {
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: JASON,
+                    markdown_source: Some(source),
+                    ..Default::default()
+                },
+            )
         })
-    }).await.unwrap();
+        .await
+        .unwrap();
     let broadcasts = app.booted.app.broadcasts.clone();
     let rich_text = app.db().env().rich_text.clone();
-    app.db().read(move |conn| {
-        let room = campfire_db::Room::find(conn, ALL_TALK)?;
-        broadcasts.unread_room(conn, &room, &message, &*rich_text)
-    }).await.unwrap();
+    app.db()
+        .read(move |conn| {
+            let room = campfire_db::Room::find(conn, ALL_TALK)?;
+            broadcasts.unread_room(conn, &room, &message, &*rich_text)
+        })
+        .await
+        .unwrap();
 
-    let unreads = crate::channels::tests::support::identifier(
-        json!({"channel":"UnreadRoomsChannel"}),
-    );
-    let receipt = tokio::time::timeout(Duration::from_secs(1), client.next_text()).await.ok();
+    let unreads =
+        crate::channels::tests::support::identifier(json!({"channel":"UnreadRoomsChannel"}));
+    let receipt = tokio::time::timeout(Duration::from_secs(1), client.next_text())
+        .await
+        .ok();
     if let Some(receipt) = &receipt {
-        assert_eq!(*receipt, crate::channels::tests::support::delivery(
-            &unreads, &format!(r#"{{"roomId":{ALL_TALK}}}"#),
-        ));
+        assert_eq!(
+            *receipt,
+            crate::channels::tests::support::delivery(
+                &unreads,
+                &format!(r#"{{"roomId":{ALL_TALK}}}"#),
+            )
+        );
     }
     client.assert_silent().await;
-    let unread = app.db().read(|conn| {
-        Ok(campfire_db::Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)?
-            .unwrap().unread())
-    }).await.unwrap();
+    let unread = app
+        .db()
+        .read(|conn| {
+            Ok(
+                campfire_db::Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)?
+                    .unwrap()
+                    .unread(),
+            )
+        })
+        .await
+        .unwrap();
     // Read through the API again, as a reload does, rather than reusing the settings response.
     let sidebar: api::Sidebar = parse(&browser.send(get("/api/v1/sidebar")).await);
-    let row = sidebar.rows.iter().find(|row| row.room.id == ALL_TALK).unwrap();
-    assert_eq!((unread, receipt.is_some(), row.notification_count),
-        (expected.0, expected.0, expected.1));
+    let row = sidebar
+        .rows
+        .iter()
+        .find(|row| row.room.id == ALL_TALK)
+        .unwrap();
+    assert_eq!(
+        (unread, receipt.is_some(), row.notification_count),
+        (expected.0, expected.0, expected.1)
+    );
 }
 
 async fn inherited_notification_delivery(stored: &str, default: &str, notifications: i64) {
     let (app, _) = notification_delivery_app().await;
     let mut browser = app.sign_in(DAVID).await;
-    let response = write(&mut browser, Method::PUT,
+    let response = write(
+        &mut browser,
+        Method::PUT,
         &format!("/api/v1/rooms/{ALL_TALK}/involvement"),
         json!({"involvement":stored}),
-    ).await;
+    )
+    .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-    let response = write(&mut browser, Method::PATCH,
+    let response = write(
+        &mut browser,
+        Method::PATCH,
         "/api/v1/settings/notifications",
         json!({"defaultNotificationLevel":default,
             "roomNotification":{"roomId":ALL_TALK,"level":null}}),
-    ).await;
+    )
+    .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     let (mut client, server) =
         crate::controllers::messages::attachment_processing_tests::subscribe(&app).await;
-    client.confirm(&crate::channels::tests::support::identifier(
-        json!({"channel":"UnreadRoomsChannel"}),
-    )).await;
-    assert_room_notification_delivery(&app, &mut client, &mut browser,
-        "An ordinary message without a mention", (true, notifications)).await;
+    client
+        .confirm(&crate::channels::tests::support::identifier(
+            json!({"channel":"UnreadRoomsChannel"}),
+        ))
+        .await;
+    assert_room_notification_delivery(
+        &app,
+        &mut client,
+        &mut browser,
+        "An ordinary message without a mention",
+        (true, notifications),
+    )
+    .await;
     server.abort();
 }
 
@@ -1777,28 +2053,48 @@ async fn a9_unread_delivery_all_to_default_no_notifications() {
 async fn a9_unread_delivery_resumes_at_timed_mute_expiry() {
     let (app, clock) = notification_delivery_app().await;
     let mut browser = app.sign_in(DAVID).await;
-    let response = write(&mut browser, Method::PUT,
+    let response = write(
+        &mut browser,
+        Method::PUT,
         &format!("/api/v1/rooms/{ALL_TALK}/involvement"),
         json!({"involvement":"muted"}),
-    ).await;
+    )
+    .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-    let response = write(&mut browser, Method::PATCH,
+    let response = write(
+        &mut browser,
+        Method::PATCH,
         "/api/v1/settings/notifications",
         json!({"defaultNotificationLevel":"everything",
             "roomNotification":{"roomId":ALL_TALK,"level":null},
             "roomMute":{"roomId":ALL_TALK,"duration":"minutes15"}}),
-    ).await;
+    )
+    .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     let (mut client, server) =
         crate::controllers::messages::attachment_processing_tests::subscribe(&app).await;
-    client.confirm(&crate::channels::tests::support::identifier(
-        json!({"channel":"UnreadRoomsChannel"}),
-    )).await;
-    assert_room_notification_delivery(&app, &mut client, &mut browser,
-        &format!("A muted mention of <@{DAVID}>"), (false, 0)).await;
+    client
+        .confirm(&crate::channels::tests::support::identifier(
+            json!({"channel":"UnreadRoomsChannel"}),
+        ))
+        .await;
+    assert_room_notification_delivery(
+        &app,
+        &mut client,
+        &mut browser,
+        &format!("A muted mention of <@{DAVID}>"),
+        (false, 0),
+    )
+    .await;
     clock.advance(jiff::SignedDuration::from_secs(900));
-    assert_room_notification_delivery(&app, &mut client, &mut browser,
-        "The first ordinary message after expiry", (true, 1)).await;
+    assert_room_notification_delivery(
+        &app,
+        &mut client,
+        &mut browser,
+        "The first ordinary message after expiry",
+        (true, 1),
+    )
+    .await;
     server.abort();
 }
 
@@ -1885,7 +2181,10 @@ async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
     assert_eq!(muted.status, StatusCode::OK, "{}", muted.text());
     let settings_before = parse::<Value>(&muted);
     let count_before = parse::<Value>(&browser.send(get("/api/v1/activity/unread_count")).await);
-    assert_eq!(settings_before["evaluatedAt"], "2035-01-01T12:00:00.000000000Z");
+    assert_eq!(
+        settings_before["evaluatedAt"],
+        "2035-01-01T12:00:00.000000000Z"
+    );
     assert_eq!(count_before["evaluatedAt"], settings_before["evaluatedAt"]);
     assert_eq!(push_badge(&app).await, 0);
     assert_legacy_badges(&mut browser, 0).await;
@@ -1915,8 +2214,14 @@ async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
     let count_after = parse::<Value>(&browser.send(get("/api/v1/activity/unread_count")).await);
     let list_after = parse::<Value>(&browser.send(get("/api/v1/activity")).await);
     assert_eq!(settings_after["revision"], settings_before["revision"]);
-    assert_eq!(count_after["unreadRevision"], count_before["unreadRevision"]);
-    assert_eq!(settings_after["evaluatedAt"], "2035-01-01T12:15:00.000000000Z");
+    assert_eq!(
+        count_after["unreadRevision"],
+        count_before["unreadRevision"]
+    );
+    assert_eq!(
+        settings_after["evaluatedAt"],
+        "2035-01-01T12:15:00.000000000Z"
+    );
     assert_eq!(count_after["evaluatedAt"], settings_after["evaluatedAt"]);
     assert_eq!(list_after["evaluatedAt"], settings_after["evaluatedAt"]);
     assert_eq!(settings_after["notifications"]["roomMuteUntil"], json!({}));

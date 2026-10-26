@@ -259,8 +259,6 @@ pub(super) async fn next_broadcast(socket: &mut Socket) -> Result<Option<Value>,
     }
 }
 
-
-
 #[tokio::test]
 async fn working_presence_silence_transport_failure_is_invalid() {
     let test = boot_seed("default").await.expect("default seed");

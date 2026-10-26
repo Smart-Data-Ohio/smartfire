@@ -1,10 +1,7 @@
 //! Fresh Rails HTTP sections, persisted sends and ordered publications.
 //! Failing-first controls: 91cb61210 renders send-now in UTC and grows the
 //! visible-row reads faster than Rails. No expected fields construct real output.
-use super::{
-    comparison_support,
-    quote_integration_tests::{app_rows},
-};
+use super::{comparison_support, quote_integration_tests::app_rows};
 use crate::controllers::presenters::test_support::*;
 use campfire_db::{NewScheduledMessage, ScheduledMessage};
 use serde_json::{Value, json};
@@ -84,7 +81,6 @@ async fn send_now_preserves_viewer_zone_in_fresh_rails_frames_and_rows() {
             })
             .await
             .unwrap();
-
     }
     println!(
         "WS8bm2 review229 send-now: 3 viewer zones; complete fresh Rails HTTP responses, persisted rows and ordered frames byte-identical"

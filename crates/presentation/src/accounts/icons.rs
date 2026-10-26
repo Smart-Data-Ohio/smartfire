@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug)]
 pub struct Icon {
     pub id: i64,

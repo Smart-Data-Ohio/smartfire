@@ -1,20 +1,27 @@
 //! Real room/thread header security checks for every merged shared message form.
-use std::sync::Arc;
+use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{Boost, ChannelThread, Message, NewChannelThread, NewMessage, ThreadMembership};
 use campfire_kit::clock::FrozenClock;
 use serde_json::Value;
-use crate::controllers::presenters::test_support::*;
+use std::sync::Arc;
 
-
-
-fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/cached-csrf.json")).unwrap() }
+fn oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/cached-csrf.json"
+    ))
+    .unwrap()
+}
 
 async fn fixture() -> TestApp {
     // Rails queues a fetch for a new reference even when its fixture card is fresh.
     // These cache/form tests supply fixed fetched cards; provider execution has
     // separate tests. Stop the consumer before mounting the shared cached bytes.
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap())))
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
     app.db().write(|tx| {
         let pr=crate::integrations::github::pull_requests::PullRequest::for_reference(tx,"rails","rails",3141)?;
         tx.conn().execute("UPDATE github_pull_requests SET private=0,title='Cached card',state='open',fetched_at=?,fetch_requested_at=NULL,updated_at=? WHERE id=?",(tx.now(),tx.now(),pr.id))?;
@@ -39,35 +46,136 @@ async fn fixture() -> TestApp {
 }
 
 async fn submit_cached_forms(room_shell: bool) {
-    let oracle=if room_shell {serde_json::from_str::<Value>(include_str!("../../../../../vectors/messaging/room-csrf.json")).unwrap()} else {oracle()};
-    let app=fixture().await;
-    let mut first=app.david();let foreign=first.authenticity_token().await;
-    let mut viewer=app.sign_in(JASON).await;
-    let token=viewer.authenticity_token().await;
-    let rendered=oracle["forms"].as_array().unwrap().iter().map(|row| {
-        let mut params=row["params"].as_object().unwrap().iter().map(|(k,v)|
-            (k.clone(),v.as_str().or_else(||v.as_array().and_then(|v|v.first()).and_then(Value::as_str)).unwrap().to_owned())
-        ).collect::<std::collections::BTreeMap<_,_>>();
-        params.insert("_method".into(),row["method"].as_str().unwrap().into());
-        (row["action"].as_str().unwrap().to_owned(),params)
-    }).collect::<Vec<_>>();
-    for ((action,mut params),expected) in rendered.into_iter().zip(oracle["forms"].as_array().unwrap()) {
+    let oracle = if room_shell {
+        serde_json::from_str::<Value>(include_str!(
+            "../../../../../vectors/messaging/room-csrf.json"
+        ))
+        .unwrap()
+    } else {
+        oracle()
+    };
+    let app = fixture().await;
+    let mut first = app.david();
+    let foreign = first.authenticity_token().await;
+    let mut viewer = app.sign_in(JASON).await;
+    let token = viewer.authenticity_token().await;
+    let rendered = oracle["forms"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| {
+            let mut params = row["params"]
+                .as_object()
+                .unwrap()
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        v.as_str()
+                            .or_else(|| {
+                                v.as_array().and_then(|v| v.first()).and_then(Value::as_str)
+                            })
+                            .unwrap()
+                            .to_owned(),
+                    )
+                })
+                .collect::<std::collections::BTreeMap<_, _>>();
+            params.insert("_method".into(), row["method"].as_str().unwrap().into());
+            (row["action"].as_str().unwrap().to_owned(), params)
+        })
+        .collect::<Vec<_>>();
+    for ((action, mut params), expected) in rendered
+        .into_iter()
+        .zip(oracle["forms"].as_array().unwrap())
+    {
         assert!(!params.contains_key("authenticity_token"));
-        let method=params.remove("_method").unwrap_or("post".into());
-        assert_eq!(action,expected["action"].as_str().unwrap());assert_eq!(method,expected["method"].as_str().unwrap());
-        let actual=params.iter().map(|(key,value)| (key.clone(),if key.ends_with("[]") {serde_json::json!([value])} else {serde_json::json!(value)})).collect::<serde_json::Map<_,_>>();
-        assert_eq!(Value::Object(actual),expected["params"]);
-        let pairs=params.iter().map(|(k,v)|(k.as_str(),v.as_str())).collect::<Vec<_>>();
-        let request=|| Req::new(Method::from_bytes(method.to_uppercase().as_bytes()).unwrap(),&action).form(&pairs).header("accept","text/vnd.turbo-stream.html, text/html, application/xhtml+xml");
-        let before=app.db().read(|conn| Ok((Message::count(conn)?,conn.query_row("SELECT COUNT(*) FROM boosts",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM channel_threads",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM poll_votes",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
-        for csrf in [None,Some(foreign.as_str())] {
-            let mut req=request();if let Some(csrf)=csrf {req=req.header("x-csrf-token",csrf);}
-            assert_eq!(viewer.send(req).await.status,StatusCode::UNPROCESSABLE_ENTITY,"{method} {action}");
+        let method = params.remove("_method").unwrap_or("post".into());
+        assert_eq!(action, expected["action"].as_str().unwrap());
+        assert_eq!(method, expected["method"].as_str().unwrap());
+        let actual = params
+            .iter()
+            .map(|(key, value)| {
+                (
+                    key.clone(),
+                    if key.ends_with("[]") {
+                        serde_json::json!([value])
+                    } else {
+                        serde_json::json!(value)
+                    },
+                )
+            })
+            .collect::<serde_json::Map<_, _>>();
+        assert_eq!(Value::Object(actual), expected["params"]);
+        let pairs = params
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect::<Vec<_>>();
+        let request = || {
+            Req::new(
+                Method::from_bytes(method.to_uppercase().as_bytes()).unwrap(),
+                &action,
+            )
+            .form(&pairs)
+            .header(
+                "accept",
+                "text/vnd.turbo-stream.html, text/html, application/xhtml+xml",
+            )
+        };
+        let before = app
+            .db()
+            .read(|conn| {
+                Ok((
+                    Message::count(conn)?,
+                    conn.query_row("SELECT COUNT(*) FROM boosts", [], |r| r.get::<_, i64>(0))?,
+                    conn.query_row("SELECT COUNT(*) FROM channel_threads", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                    conn.query_row("SELECT COUNT(*) FROM poll_votes", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                ))
+            })
+            .await
+            .unwrap();
+        for csrf in [None, Some(foreign.as_str())] {
+            let mut req = request();
+            if let Some(csrf) = csrf {
+                req = req.header("x-csrf-token", csrf);
+            }
+            assert_eq!(
+                viewer.send(req).await.status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{method} {action}"
+            );
         }
-        let after=app.db().read(|conn| Ok((Message::count(conn)?,conn.query_row("SELECT COUNT(*) FROM boosts",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM channel_threads",[],|r|r.get::<_,i64>(0))?,conn.query_row("SELECT COUNT(*) FROM poll_votes",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
-        assert_eq!(before,after,"forgery refusals do not write");
-        let response=viewer.send(request().header("x-csrf-token",&token)).await;
-        assert_eq!(response.status.as_u16(),if action.ends_with("/vote") { 302 } else { expected["status"].as_u64().unwrap() as u16 },"{method} {action}: {}",response.text());
+        let after = app
+            .db()
+            .read(|conn| {
+                Ok((
+                    Message::count(conn)?,
+                    conn.query_row("SELECT COUNT(*) FROM boosts", [], |r| r.get::<_, i64>(0))?,
+                    conn.query_row("SELECT COUNT(*) FROM channel_threads", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                    conn.query_row("SELECT COUNT(*) FROM poll_votes", [], |r| {
+                        r.get::<_, i64>(0)
+                    })?,
+                ))
+            })
+            .await
+            .unwrap();
+        assert_eq!(before, after, "forgery refusals do not write");
+        let response = viewer.send(request().header("x-csrf-token", &token)).await;
+        assert_eq!(
+            response.status.as_u16(),
+            if action.ends_with("/vote") {
+                302
+            } else {
+                expected["status"].as_u64().unwrap() as u16
+            },
+            "{method} {action}: {}",
+            response.text()
+        );
     }
 }
 

@@ -2,7 +2,11 @@
 use crate::app::AppCtx;
 use crate::integrations::slack::oauth;
 use crate::presenters::pagination::Page;
-use campfire_db::{User, models::slack::{SlackConnection, SlackWorkspace}, models::slack_import::SlackImport};
+use campfire_db::{
+    User,
+    models::slack::{SlackConnection, SlackWorkspace},
+    models::slack_import::SlackImport,
+};
 use campfire_kit::{Ctx, Error, Result};
 use campfire_presentation::slack::{Issue, RoomTarget, RunData, RunSummary, SetupData};
 use rusqlite::{OptionalExtension, params};
@@ -11,7 +15,9 @@ use serde_json::Value;
 /// The setup page's state for administrator `uid`: the app credentials, their Slack connection,
 /// the active run and the manifest.
 pub async fn setup_data(c: &Ctx, uid: i64) -> Result<SetupData> {
-    let crypto = std::sync::Arc::new(rails_compat::ar_encryption::ArEncryption::new(&c.app().secrets));
+    let crypto = std::sync::Arc::new(rails_compat::ar_encryption::ArEncryption::new(
+        &c.app().secrets,
+    ));
     let mut data=c.app().db.read(move|conn| {
   let w=SlackWorkspace::current(conn)?;let connection=SlackConnection::for_user(conn,uid)?;
   let active=conn.query_row("SELECT id,kind,mode,status FROM slack_imports WHERE status IN ('queued','running','undoing') ORDER BY created_at DESC, id DESC LIMIT 1",[],|r|Ok(RunSummary{id:r.get(0)?,kind:r.get(1)?,mode:r.get(2)?,status:r.get(3)?})).optional()?;
@@ -37,7 +43,9 @@ pub async fn zone(c: &Ctx, id: i64) -> Result<campfire_presentation::time::Zone>
         .read(move |conn| User::saved_time_zone(conn, id))
         .await
         .map_err(Error::internal)?;
-    Ok(campfire_presentation::time::Zone::for_user(saved.as_deref()))
+    Ok(campfire_presentation::time::Zone::for_user(
+        saved.as_deref(),
+    ))
 }
 pub fn data(
     conn: &rusqlite::Connection,
@@ -83,7 +91,9 @@ pub async fn list(c: &Ctx, uid: Option<i64>) -> Result<Vec<RunData>> {
 /// The personal page's setup state for `uid`: whether an administrator set up the import, and
 /// the person's own Slack connection.
 pub async fn personal_data(c: &Ctx, uid: i64) -> Result<campfire_presentation::slack::SetupData> {
-    let crypto = std::sync::Arc::new(rails_compat::ar_encryption::ArEncryption::new(&c.app().secrets));
+    let crypto = std::sync::Arc::new(rails_compat::ar_encryption::ArEncryption::new(
+        &c.app().secrets,
+    ));
     c.app()
         .db
         .read(move |conn| {

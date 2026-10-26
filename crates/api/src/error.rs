@@ -111,11 +111,18 @@ fn envelope(c: &Ctx, error: &Error) -> Option<ApiError> {
                     Db::NotPrivate => campfire_api_types::ThreadAccessRefusal::NotPrivate,
                     Db::InviteForbidden => campfire_api_types::ThreadAccessRefusal::InviteForbidden,
                     Db::RemoveForbidden => campfire_api_types::ThreadAccessRefusal::RemoveForbidden,
-                    Db::ParentRoomRequired => campfire_api_types::ThreadAccessRefusal::ParentRoomRequired,
-                    Db::VisibilityImmutable => campfire_api_types::ThreadAccessRefusal::VisibilityImmutable,
+                    Db::ParentRoomRequired => {
+                        campfire_api_types::ThreadAccessRefusal::ParentRoomRequired
+                    }
+                    Db::VisibilityImmutable => {
+                        campfire_api_types::ThreadAccessRefusal::VisibilityImmutable
+                    }
                 };
-                ApiError::ThreadAccess { message: error.to_string(), reason }
-            },
+                ApiError::ThreadAccess {
+                    message: error.to_string(),
+                    reason,
+                }
+            }
             campfire_db::Error::FieldValidation(fields) => ApiError::Validation {
                 message: "Invalid slash command options".into(),
                 fields: fields.clone(),

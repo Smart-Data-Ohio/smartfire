@@ -125,10 +125,20 @@ async fn create_board(c: &mut Ctx, room: Room) -> Result {
 
 async fn create_channel(c: &mut Ctx, room: Room) -> Result {
     let attributes = permitted(c, &["name", "auto_archive_after_minutes", "visibility"])?;
-    let visibility = match attributes.get("visibility").and_then(messages::string_column).as_deref() {
+    let visibility = match attributes
+        .get("visibility")
+        .and_then(messages::string_column)
+        .as_deref()
+    {
         None | Some("public") => campfire_db::models::channel_thread::ThreadVisibility::Public,
         Some("private") => campfire_db::models::channel_thread::ThreadVisibility::Private,
-        _ => return render_error(c, StatusCode::UNPROCESSABLE_ENTITY, "Visibility must be public or private"),
+        _ => {
+            return render_error(
+                c,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "Visibility must be public or private",
+            );
+        }
     };
     let parent = source(c)?
         .get("parent_message_id")
@@ -176,7 +186,9 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             .db
             .read(move |conn| {
                 let duplicate = Message::find_duplicate(conn, room_id, creator, &client_id)?;
-                let Some(id) = duplicate.and_then(|message| message.thread_id) else { return Ok(None); };
+                let Some(id) = duplicate.and_then(|message| message.thread_id) else {
+                    return Ok(None);
+                };
                 let thread = ChannelThread::find(conn, id)?;
                 if !thread.readable_by(conn, creator)? {
                     return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
@@ -207,7 +219,8 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
         let assignment = messages::stage_attachment(
             c,
             messages::attachment_assignment(&initial)?.unwrap_or(Assignment::Unchanged),
-        ).await?;
+        )
+        .await?;
         if matches!(assignment, Assignment::Invalid) {
             return Err(Error::internal(anyhow::anyhow!("invalid attachment")));
         }
@@ -233,7 +246,8 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             }
         });
         let storage = c.app().storage.clone();
-        let thread = c.app()
+        let thread = c
+            .app()
             .db
             .write(move |tx| {
                 let room = Room::find(tx.conn(), room_id)?;
@@ -261,7 +275,14 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                             "reply_notify_author violates NOT NULL".into(),
                         ));
                     }
-                    let blob = messages::attachment_blob(tx, assignment, messages::AttachmentPolicy::SignedBlob { actor_id: Some(creator) }, "attachment")?;
+                    let blob = messages::attachment_blob(
+                        tx,
+                        assignment,
+                        messages::AttachmentPolicy::SignedBlob {
+                            actor_id: Some(creator),
+                        },
+                        "attachment",
+                    )?;
                     let message = thread.post_message(
                         tx,
                         creator,
@@ -305,7 +326,11 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
 
 pub async fn update(c: &mut Ctx) -> Result {
     if source(c)?.contains_key("visibility") {
-        return render_error(c, StatusCode::FORBIDDEN, "Thread visibility cannot be changed");
+        return render_error(
+            c,
+            StatusCode::FORBIDDEN,
+            "Thread visibility cannot be changed",
+        );
     }
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
@@ -408,7 +433,8 @@ pub async fn update(c: &mut Ctx) -> Result {
                 // The persisted model's name is non-null; nil fails its blank validation.
                 thread.update_metadata(
                     tx,
-                    name.as_ref().map(|name| name.as_deref().unwrap_or_default()),
+                    name.as_ref()
+                        .map(|name| name.as_deref().unwrap_or_default()),
                     minutes,
                     tags.as_deref(),
                 )?;
@@ -440,9 +466,8 @@ pub async fn update(c: &mut Ctx) -> Result {
             })();
             outcome.map(|()| {
                 let work_changed = thread.work_changed_from(&before);
-                let model_published = campfire_db::models::channel_thread::ThreadWorkChange::pending(
-                    tx, thread_id,
-                );
+                let model_published =
+                    campfire_db::models::channel_thread::ThreadWorkChange::pending(tx, thread_id);
                 // Tag assignment can change work in an earlier after-commit callback. Check
                 // after those callbacks, on the writer, before another queued write can run.
                 tx.after_commit(move |tx| {
@@ -503,7 +528,8 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let (room, thread) = scope(c).await?;
     let actor = require_current_user(c)?.clone();
     let id = thread.id;
-    let private = thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private;
+    let private =
+        thread.visibility == campfire_db::models::channel_thread::ThreadVisibility::Private;
     let removed = c
         .app()
         .db
@@ -525,7 +551,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         Ok(false) => return Ok(concerns::head(StatusCode::FORBIDDEN)),
         Err(error) => return Err(db_error(error)),
         Ok(true) if !private => c.app().broadcasts.thread_removed(id, room.id),
-        Ok(true) => {},
+        Ok(true) => {}
     }
     if c.format()? == Some(&format::HTML) {
         c.redirect_to(&c.url_for(&format!("/rooms/{}", room.id)))

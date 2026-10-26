@@ -39,8 +39,9 @@ async fn phrases(app: &TestApp) -> Vec<String> {
 async fn ws17_review_sigma_keywords_deduplicate_through_http() {
     let app = boot().await;
     let mut browser = app.david();
-    let reply = browser.write(Req::new(Method::PATCH, PATH)
-        .form(&[("user[keyword_alerts]", "οσ\nΟΣ")])).await;
+    let reply = browser
+        .write(Req::new(Method::PATCH, PATH).form(&[("user[keyword_alerts]", "οσ\nΟΣ")]))
+        .await;
     assert_eq!(reply.status, StatusCode::FOUND);
     assert_eq!(phrases(&app).await, ["οσ"]);
 }
@@ -115,9 +116,7 @@ async fn ws17_toggles_keep_notifying_while_out_of_office_defaulting_off() {
     for (input, expected) in [("1", true), ("0", false)] {
         assert_eq!(
             browser
-                .write(
-                    Req::new(Method::PATCH, PATH).form(&[("user[ooo_notify_enabled]", input)])
-                )
+                .write(Req::new(Method::PATCH, PATH).form(&[("user[ooo_notify_enabled]", input)]))
                 .await
                 .status,
             StatusCode::FOUND
@@ -250,10 +249,7 @@ async fn ws17_keyword_input_shapes_match_actual_rails_params_and_writes() {
             .write(
                 Req::new(Method::PATCH, PATH)
                     .header("content-type", "application/json")
-                    .body(
-                        serde_json::json!({"user":{"keyword_alerts": row["input"]}})
-                            .to_string(),
-                    ),
+                    .body(serde_json::json!({"user":{"keyword_alerts": row["input"]}}).to_string()),
             )
             .await;
         assert_eq!(reply.status, StatusCode::FOUND, "{row}: {}", reply.text());
@@ -285,7 +281,10 @@ async fn ws17_invalid_keyword_replacements_keep_the_previous_phrases() {
         .await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(!settings(&app).await.dnd_enabled);
-    assert_eq!(phrases(&app).await, ["production", "deploy <freeze> & ready"]);
+    assert_eq!(
+        phrases(&app).await,
+        ["production", "deploy <freeze> & ready"]
+    );
 }
 
 #[tokio::test]

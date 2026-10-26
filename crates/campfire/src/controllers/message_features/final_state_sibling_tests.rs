@@ -1,5 +1,5 @@
 use super::comparison_support::{row, same_row};
-use super::quote_integration_tests::{app_rows};
+use super::quote_integration_tests::app_rows;
 use crate::integrations::link_embed::{Embed, metadata_parser::Metadata};
 use serde_json::{Value, json};
 #[tokio::test]
@@ -29,7 +29,6 @@ async fn final_state_sibling_claims_match_rails() {
    if mode=="suppressed"{tx.conn().execute("UPDATE messages SET markdown_source='Newer message state',embeds_suppressed=1 WHERE id=?",[message])?;}else{tx.conn().execute("DELETE FROM link_embed_references WHERE message_id=?",[message])?;tx.conn().execute("UPDATE messages SET markdown_source='Newer message state' WHERE id=?",[message])?;}Ok(())
   }).await.unwrap();
 
-
         let data = case.clone();
         let(actual,pending)=app.db().read(move|c|{same_row(&row(c,"messages",message)?,&data["message"],"superseding message");let pending=c.prepare("SELECT arguments FROM background_jobs WHERE job_class='LinkEmbed::FetchJob' ORDER BY id")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().map(|s|serde_json::from_str::<Value>(&s).unwrap()["embed_id"].clone()).collect::<Vec<_>>();Ok((row(c,"link_embeds",sibling)?,json!(pending)))}).await.unwrap();
         println!(
@@ -46,7 +45,6 @@ async fn final_state_sibling_claims_match_rails() {
                 case["kind"], case["mode"], case["pending"]
             ));
         }
-
     }
     println!(
         "WS8bm2 final-state siblings Rust: 6/6 transactions; complete persisted rows, durable sibling jobs and exact frames checked"
@@ -120,7 +118,6 @@ async fn final_state_sibling_queue_failure_rolls_back_metadata_claim_and_jobs() 
             })
             .await
             .unwrap();
-
     }
     println!(
         "WS8bm2 final-state sibling queue failures: 2/2 transactions rolled back metadata, claims, durable jobs and frames"

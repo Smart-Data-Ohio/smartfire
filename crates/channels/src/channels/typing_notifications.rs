@@ -24,7 +24,11 @@ enum Conversation {
 
 impl TypingNotificationsChannel {
     pub fn new(db: Database) -> Self {
-        Self { db, room: None, conversation: None }
+        Self {
+            db,
+            room: None,
+            conversation: None,
+        }
     }
 
     /// `subscribed`: `@room = find_room`; `@conversation` is its thread `params[:thread_id]` (when
@@ -40,12 +44,16 @@ impl TypingNotificationsChannel {
                 Some(thread_id) => {
                     let room_id = room.id;
                     let user_id = sub.current_user().id;
-                    let found = self.db.read(move |conn| {
-                        match campfire_db::ChannelThread::find_by_id(conn, thread_id)? {
-                            Some(thread) => Ok(thread.room_id == room_id && thread.readable_by(conn, user_id)?),
-                            None => Ok(false),
-                        }
-                    }).await?;
+                    let found = self
+                        .db
+                        .read(move |conn| {
+                            match campfire_db::ChannelThread::find_by_id(conn, thread_id)? {
+                                Some(thread) => Ok(thread.room_id == room_id
+                                    && thread.readable_by(conn, user_id)?),
+                                None => Ok(false),
+                            }
+                        })
+                        .await?;
                     found.then_some(Conversation::Thread(thread_id))
                 }
                 None => None,
@@ -67,10 +75,20 @@ impl TypingNotificationsChannel {
 
     /// `broadcast_typing(action)`: only while the user is still in the room (and the thread still
     /// in it), then `broadcast_to @conversation, action:, user: current_user.slice(:id, :name)`.
-    async fn broadcast(&self, action: &'static str, sub: &Subscription<CableUser>) -> ChannelResult {
-        let (Some(conversation), Some(gid)) = (self.conversation, self.conversation_gid()) else { return Ok(()) };
+    async fn broadcast(
+        &self,
+        action: &'static str,
+        sub: &Subscription<CableUser>,
+    ) -> ChannelResult {
+        let (Some(conversation), Some(gid)) = (self.conversation, self.conversation_gid()) else {
+            return Ok(());
+        };
         // `@conversation` is only set with `@room`.
-        let room_id = self.room.as_ref().map(|room| room.id).ok_or_else(|| ChannelError("undefined method 'id' for nil".into()))?;
+        let room_id = self
+            .room
+            .as_ref()
+            .map(|room| room.id)
+            .ok_or_else(|| ChannelError("undefined method 'id' for nil".into()))?;
         let user_id = sub.current_user().id;
         let allowed = self
             .db
@@ -80,10 +98,14 @@ impl TypingNotificationsChannel {
                 }
                 let allowed = match conversation {
                     Conversation::Room => true,
-                    Conversation::Thread(thread_id) => match campfire_db::ChannelThread::find_by_id(conn, thread_id)? {
-                        Some(thread) => thread.room_id == room_id && thread.readable_by(conn, user_id)?,
-                        None => false,
-                    },
+                    Conversation::Thread(thread_id) => {
+                        match campfire_db::ChannelThread::find_by_id(conn, thread_id)? {
+                            Some(thread) => {
+                                thread.room_id == room_id && thread.readable_by(conn, user_id)?
+                            }
+                            None => false,
+                        }
+                    }
                 };
                 if allowed {
                     Ok(Some(User::find(conn, user_id)?.display_name().to_owned()))
@@ -94,7 +116,13 @@ impl TypingNotificationsChannel {
             .await?;
         if let Some(name) = allowed {
             let user = sub.current_user();
-            let payload = Payload { action, user: UserAttributes { id: user.id, name: &name } };
+            let payload = Payload {
+                action,
+                user: UserAttributes {
+                    id: user.id,
+                    name: &name,
+                },
+            };
             sub.broadcast_to(&[&gid.to_param()], &payload);
             if sub.server().sync_wanted() {
                 let topic = match conversation {
@@ -137,7 +165,12 @@ impl Channel<CableUser> for TypingNotificationsChannel {
         self.subscribe(sub).await
     }
 
-    async fn perform(&mut self, action: &str, _data: &Params, sub: &mut Subscription<CableUser>) -> ChannelResult<bool> {
+    async fn perform(
+        &mut self,
+        action: &str,
+        _data: &Params,
+        sub: &mut Subscription<CableUser>,
+    ) -> ChannelResult<bool> {
         if sub.rejected() {
             return Ok(false);
         }

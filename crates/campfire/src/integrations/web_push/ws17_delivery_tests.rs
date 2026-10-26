@@ -42,13 +42,19 @@ fn with_pool(original: &App, pool: Pool) -> App {
 }
 
 async fn deliver_original_message_push(app: &App, pool: &Pool, class: &'static str) {
-    app.db.write(move |tx| {
-        assert_eq!(tx.conn().execute(
-            "UPDATE background_jobs SET run_at=? WHERE job_class=?",
-            rusqlite::params![tx.now(), class],
-        )?, 1);
-        Ok(())
-    }).await.unwrap();
+    app.db
+        .write(move |tx| {
+            assert_eq!(
+                tx.conn().execute(
+                    "UPDATE background_jobs SET run_at=? WHERE job_class=?",
+                    rusqlite::params![tx.now(), class],
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
     let runner = campfire_jobs::start(
         app.db.clone(),
         app.jobs.queue.clone(),
@@ -119,7 +125,11 @@ async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
             Ok(message)
         }).await.unwrap();
         let message_id = message.id;
-        let original_class = if threaded { "ChannelThread::PushMessageJob" } else { "Room::PushMessageJob" };
+        let original_class = if threaded {
+            "ChannelThread::PushMessageJob"
+        } else {
+            "Room::PushMessageJob"
+        };
         let jobs = message_push_jobs(&db).await;
         let arguments = if let Some(thread_id) = message.thread_id {
             serde_json::json!({"thread_id": thread_id, "message_id": message_id})
@@ -128,11 +138,19 @@ async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
         };
         assert_eq!(jobs.len(), 1);
         assert_eq!(jobs[0].0, original_class);
-        assert_eq!(serde_json::from_str::<Value>(&jobs[0].1).unwrap(), arguments);
+        assert_eq!(
+            serde_json::from_str::<Value>(&jobs[0].1).unwrap(),
+            arguments
+        );
         db.write(|tx| {
-            tx.conn().execute("UPDATE background_jobs SET run_at='2099-01-01 00:00:00'", [])?;
+            tx.conn().execute(
+                "UPDATE background_jobs SET run_at='2099-01-01 00:00:00'",
+                [],
+            )?;
             Ok(())
-        }).await.unwrap();
+        })
+        .await
+        .unwrap();
         let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
         let app = with_pool(&original, pool.clone());
         if original_delivered {
@@ -142,37 +160,70 @@ async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
         let jobs_before_edit = message_push_jobs(&db).await;
         let now = db.env().now();
         for &mentioned in edits {
-            let (before, unread) = db.read(move |conn| Ok((
-                ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
-                ActivityItem::unread_snapshot(conn, DAVID, now)?,
-            ))).await.unwrap();
+            let (before, unread) = db
+                .read(move |conn| {
+                    Ok((
+                        ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
+                        ActivityItem::unread_snapshot(conn, DAVID, now)?,
+                    ))
+                })
+                .await
+                .unwrap();
             db.write(move |tx| {
                 let mut message = Message::find(tx.conn(), message_id)?;
-                message.edit(tx, MessageChanges {
-                    markdown_source: Some(if mentioned {
-                        format!("Answer <@{JASON}> <@{DAVID}>")
-                    } else {
-                        format!("Answer <@{JASON}>")
-                    }),
-                    ..Default::default()
+                message.edit(
+                    tx,
+                    MessageChanges {
+                        markdown_source: Some(if mentioned {
+                            format!("Answer <@{JASON}> <@{DAVID}>")
+                        } else {
+                            format!("Answer <@{JASON}>")
+                        }),
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+            let (activity, after) = db
+                .read(move |conn| {
+                    Ok((
+                        ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
+                        ActivityItem::unread_snapshot(conn, DAVID, now)?,
+                    ))
                 })
-            }).await.unwrap();
-            let (activity, after) = db.read(move |conn| Ok((
-                ActivityItem::find_by_user_and_source(conn, DAVID, "Message", message_id)?,
-                ActivityItem::unread_snapshot(conn, DAVID, now)?,
-            ))).await.unwrap();
+                .await
+                .unwrap();
             if mentioned || promoted {
                 let activity = activity.unwrap();
-                assert_eq!(activity.event_type, if mentioned { "mention" } else if threaded { "thread_activity" } else { "reply" });
+                assert_eq!(
+                    activity.event_type,
+                    if mentioned {
+                        "mention"
+                    } else if threaded {
+                        "thread_activity"
+                    } else {
+                        "reply"
+                    }
+                );
                 assert!(activity.unread());
-                if let Some(before) = &before { assert_eq!(activity.id, before.id); }
+                if let Some(before) = &before {
+                    assert_eq!(activity.id, before.id);
+                }
             } else {
                 assert!(activity.is_none());
             }
             let was_unread = before.is_some_and(|item| item.unread());
-            assert_eq!(after.count, unread.count + i64::from(mentioned || promoted) - i64::from(was_unread));
+            assert_eq!(
+                after.count,
+                unread.count + i64::from(mentioned || promoted) - i64::from(was_unread)
+            );
             assert!(after.revision > unread.revision);
-            assert_eq!(message_push_jobs(&db).await, jobs_before_edit, "edits must not enqueue or modify pushes");
+            assert_eq!(
+                message_push_jobs(&db).await,
+                jobs_before_edit,
+                "edits must not enqueue or modify pushes"
+            );
         }
         if !original_delivered {
             deliver_original_message_push(&app, &pool, original_class).await;
@@ -181,19 +232,44 @@ async fn mention_edit_delivery(edits: &[bool], original_delivered: bool) {
         pool.shutdown().await;
         let requests = service.server.received();
         let david_pushed = promoted || (!original_delivered && *edits.last().unwrap());
-        assert_eq!(requests.len(), 2 + usize::from(david_pushed), "threaded={threaded}, promoted={promoted}, edits={edits:?}");
-        for (endpoint, count) in [("/fcm/send/abc", usize::from(david_pushed)), ("/fcm/send/123", 1), ("/fcm/send/456", 1)] {
-            assert_eq!(requests.iter().filter(|request| request.target == endpoint).count(), count, "{endpoint}");
+        assert_eq!(
+            requests.len(),
+            2 + usize::from(david_pushed),
+            "threaded={threaded}, promoted={promoted}, edits={edits:?}"
+        );
+        for (endpoint, count) in [
+            ("/fcm/send/abc", usize::from(david_pushed)),
+            ("/fcm/send/123", 1),
+            ("/fcm/send/456", 1),
+        ] {
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| request.target == endpoint)
+                    .count(),
+                count,
+                "{endpoint}"
+            );
         }
         for request in requests {
             let delivered: Value = serde_json::from_str(&receiver.open(&request.body)).unwrap();
             if threaded {
                 assert_eq!(delivered["title"], "Mention edits");
-                assert!(delivered["options"]["data"]["path"].as_str().unwrap().contains(&format!("message_id={message_id}")));
+                assert!(
+                    delivered["options"]["data"]["path"]
+                        .as_str()
+                        .unwrap()
+                        .contains(&format!("message_id={message_id}"))
+                );
             } else {
                 assert_eq!(delivered["options"]["data"]["path"], "/rooms/654632876");
             }
-            assert!(delivered["options"]["body"].as_str().unwrap().contains("Answer"));
+            assert!(
+                delivered["options"]["body"]
+                    .as_str()
+                    .unwrap()
+                    .contains("Answer")
+            );
         }
     }
 }
@@ -586,15 +662,26 @@ async fn ignore_queued_huddle_deliveries_recheck_sender_policy_in_the_real_regis
         let receiver = Receiver::new();
         let pool = Pool::new(service.net.clone(), vapid(), |_| Ok::<_, String>(()));
         let app = with_pool(&original, pool.clone());
-        let row = vectors()["rows"].as_array().unwrap().iter().find(|r| r["name"] == name).unwrap().clone();
+        let row = vectors()["rows"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["name"] == name)
+            .unwrap()
+            .clone();
         let recipient = row["recipient_id"].as_i64().unwrap();
         let sender = row["sender_id"].as_i64().unwrap();
         let sub = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
         db.write(move |tx| {
-            tx.conn().execute_batch(row["setup_sql"].as_str().unwrap())?;
-            tx.conn().execute("UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=?", rusqlite::params![sub.endpoint, sub.p256dh_key, sub.auth_key])?;
+            tx.conn()
+                .execute_batch(row["setup_sql"].as_str().unwrap())?;
+            tx.conn().execute(
+                "UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=?",
+                rusqlite::params![sub.endpoint, sub.p256dh_key, sub.auth_key],
+            )?;
             let room = row["room_id"].as_i64().unwrap();
-            let payload: PushPayload = serde_json::from_value(row["deliveries"][0]["payload"].clone()).unwrap();
+            let payload: PushPayload =
+                serde_json::from_value(row["deliveries"][0]["payload"].clone()).unwrap();
             let queued = if name == "join_baseline" {
                 enqueue_huddle_join(tx, room, recipient, sender, payload)?
             } else {
@@ -602,11 +689,27 @@ async fn ignore_queued_huddle_deliveries_recheck_sender_policy_in_the_real_regis
             };
             assert!(queued);
             campfire_db::models::user_block::UserBlock::set(tx, recipient, sender, true)
-        }).await.unwrap();
-        let runner = campfire_jobs::start(db.clone(), app.jobs.queue.clone(), crate::jobs::registry(), app.clone(), crate::queue::runner_config(&app.config));
-        wait_for_jobs_and_deliveries(&db, &pool, &["Huddle::InvitationDeliveryJob", "Huddle::JoinDeliveryJob"]).await;
+        })
+        .await
+        .unwrap();
+        let runner = campfire_jobs::start(
+            db.clone(),
+            app.jobs.queue.clone(),
+            crate::jobs::registry(),
+            app.clone(),
+            crate::queue::runner_config(&app.config),
+        );
+        wait_for_jobs_and_deliveries(
+            &db,
+            &pool,
+            &["Huddle::InvitationDeliveryJob", "Huddle::JoinDeliveryJob"],
+        )
+        .await;
         runner.shutdown(Duration::from_secs(5)).await;
         pool.shutdown().await;
-        assert!(service.server.received().is_empty(), "{name} sent after a block");
+        assert!(
+            service.server.received().is_empty(),
+            "{name} sent after a block"
+        );
     }
 }

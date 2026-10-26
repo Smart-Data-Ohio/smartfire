@@ -119,15 +119,11 @@ async fn raw_cap_http_inputs_match_all_81_rails_casts_errors_and_strong_paramete
                     "daily_board_post_cap" => "Daily board post cap",
                     _ => "Daily external action cap",
                 };
-                for _error in case["errors"].as_array().unwrap() {
-
-                }
+                for _error in case["errors"].as_array().unwrap() {}
                 let _raw = match &case["input"] {
                     Value::String(s) => s.clone(),
                     v => v.to_string(),
                 };
-
-
             }
         } else {
             assert_redirect(&response, "http://campfire.test/account/bots");
@@ -185,7 +181,6 @@ async fn icon_http_updates_match_all_21_rails_normalizations_and_reject_atomical
                 before,
                 "bad icon persisted agent, bot or audit: {case}"
             );
-
         } else {
             assert_redirect(&response, "http://campfire.test/account/bots");
             let after = snapshot(&test, bot).await;
@@ -228,7 +223,6 @@ async fn bot_creation_uses_owner_icon_validation_and_never_inserts_unknown_icons
         )
         .await;
     assert_eq!(rejected.status, StatusCode::UNPROCESSABLE_ENTITY);
-
 
     test.booted
         .app

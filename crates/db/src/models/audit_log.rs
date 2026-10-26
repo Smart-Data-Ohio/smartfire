@@ -253,7 +253,9 @@ fn secret_key(key: &str) -> bool {
             return true;
         }
         let next = boundaries.partition_point(|&pos| pos <= matched.start());
-        let Some(&boundary) = boundaries.get(next) else { break };
+        let Some(&boundary) = boundaries.get(next) else {
+            break;
+        };
         offset = boundary;
     }
     false
@@ -327,7 +329,7 @@ pub fn webhook_origin_summary(url: Option<&str>) -> Result<Option<Value>> {
             if uri.scheme.as_deref().is_some_and(|s| !is_blank(s))
                 && uri.host.as_deref().is_some_and(|s| !is_blank(s)) =>
         {
-            uri.scheme = uri.scheme.map(|s|s.to_ascii_lowercase());
+            uri.scheme = uri.scheme.map(|s| s.to_ascii_lowercase());
             uri.userinfo = None;
             uri.path = None;
             uri.query = None;

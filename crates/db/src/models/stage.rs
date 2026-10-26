@@ -3,7 +3,9 @@ use super::huddle_grant::HuddleGrant;
 use super::room_delete::HuddleConfig;
 use super::stream::Stream;
 use crate::sql::{self, query_all};
-use crate::{Connection, Event, Membership, Message, NewMessage, Result, Room, StageRole, Tx, User};
+use crate::{
+    Connection, Event, Membership, Message, NewMessage, Result, Room, StageRole, Tx, User,
+};
 
 /// Rails' per-instance `live_streams` association cache. A loaded empty
 /// association is distinct from an unloaded one and performs no extra query.
@@ -13,10 +15,19 @@ pub struct StageRoom {
 }
 impl StageRoom {
     pub fn find(conn: &Connection, id: i64) -> Result<Option<Self>> {
-        Ok(Room::find_by_id(conn, id)?.filter(Room::stage).map(|room| Self { room, live_streams: None }))
+        Ok(Room::find_by_id(conn, id)?
+            .filter(Room::stage)
+            .map(|room| Self {
+                room,
+                live_streams: None,
+            }))
     }
     pub fn preload_live_streams(&mut self, conn: &Connection) -> Result<()> {
-        self.live_streams = Some(Stream::live_for_room(conn, self.room.id)?.into_iter().collect());
+        self.live_streams = Some(
+            Stream::live_for_room(conn, self.room.id)?
+                .into_iter()
+                .collect(),
+        );
         Ok(())
     }
     pub fn loaded_live_streams(&self) -> Option<&[Stream]> {

@@ -3,7 +3,11 @@ use campfire_api_types as api;
 use campfire_db::models::workspace_presence_lease::Presence as LeasePresence;
 use campfire_db::{Connection, Timestamp, UserStatusSettings, WorkspacePresenceLease};
 
-pub fn presences(conn: &Connection, ids: &[i64], now: Timestamp) -> campfire_db::Result<Vec<api::UserPresence>> {
+pub fn presences(
+    conn: &Connection,
+    ids: &[i64],
+    now: Timestamp,
+) -> campfire_db::Result<Vec<api::UserPresence>> {
     let mut people: Vec<UserStatusSettings> = UserStatusSettings::for_ids(conn, ids)?
         .into_values()
         .filter(UserStatusSettings::active_human)
@@ -38,7 +42,10 @@ pub fn profile_status(
     now: Timestamp,
 ) -> campfire_db::Result<campfire_presentation::users::statuses::ProfileStatus> {
     profile_status_in_zone(
-        conn, user_id, viewer_id, now,
+        conn,
+        user_id,
+        viewer_id,
+        now,
         crate::context::renderer_time_zone().tz(),
     )
 }

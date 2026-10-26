@@ -210,11 +210,19 @@ fn is_empty(conn: &Connection) -> Result<bool> {
     Ok(!conn.prepare("SELECT 1 FROM sqlite_master")?.exists([])?)
 }
 
-fn load_schema(conn: &mut Connection, files: &Files<'_>, environment: &str, clock: &dyn Clock) -> Result<()> {
+fn load_schema(
+    conn: &mut Connection,
+    files: &Files<'_>,
+    environment: &str,
+    clock: &dyn Clock,
+) -> Result<()> {
     let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
     tx.execute_batch(files.schema_sql)?;
     for table in lines(files.schema_sequences) {
-        tx.execute("INSERT INTO sqlite_sequence (name, seq) VALUES (?, 0)", [table])?;
+        tx.execute(
+            "INSERT INTO sqlite_sequence (name, seq) VALUES (?, 0)",
+            [table],
+        )?;
     }
 
     for version in lines(files.schema_migrations) {
@@ -270,11 +278,18 @@ pub fn schema_sha1(contents: &[u8]) -> String {
 /// The schema files for the baseline plus `catalog`: loads the baseline into an empty database,
 /// applies the migrations with the same code `campfire db-migrate` runs, and dumps the result.
 /// Migrations that leave rows behind are refused: a fresh load can't reproduce data.
-pub fn generate(catalog: &[crate::migrations::Migration]) -> std::result::Result<Dump, crate::migrations::Error> {
+pub fn generate(
+    catalog: &[crate::migrations::Migration],
+) -> std::result::Result<Dump, crate::migrations::Error> {
     use crate::migrations::{Error as MigrationError, migrate_with};
     let mut conn = Connection::open_in_memory()?;
     conn.pragma_update(None, "foreign_keys", true)?;
-    load_schema(&mut conn, &BASELINE, "production", &crate::time::SystemClock)?;
+    load_schema(
+        &mut conn,
+        &BASELINE,
+        "production",
+        &crate::time::SystemClock,
+    )?;
     let manifest: Vec<&str> = baseline_versions()
         .map(|version| -> &str { version })
         .chain(catalog.iter().map(|m| m.version.as_str()))
@@ -288,7 +303,9 @@ pub fn generate(catalog: &[crate::migrations::Migration]) -> std::result::Result
         .query_map([], |r| r.get(0))?
         .collect::<rusqlite::Result<_>>()?;
     for table in tables {
-        let rows: i64 = conn.query_row(&format!(r#"SELECT count(*) FROM "{table}""#), [], |r| r.get(0))?;
+        let rows: i64 = conn.query_row(&format!(r#"SELECT count(*) FROM "{table}""#), [], |r| {
+            r.get(0)
+        })?;
         if rows > 0 {
             return Err(MigrationError::Catalog(format!(
                 "the migrations leave {rows} rows in {table}: a fresh database couldn't have them"
@@ -353,7 +370,10 @@ mod tests {
 
     fn prepared() -> Connection {
         let mut conn = Connection::open_in_memory().unwrap();
-        assert_eq!(prepare(&mut conn, "production", &SystemClock).unwrap(), Prepared::Loaded);
+        assert_eq!(
+            prepare(&mut conn, "production", &SystemClock).unwrap(),
+            Prepared::Loaded
+        );
         conn
     }
 
@@ -374,12 +394,32 @@ mod tests {
         assert_eq!(versions.first(), Some(&"20231215043540"));
         assert_eq!(versions.last(), Some(&"20261003180000"));
         for (name, contents, sha256) in [
-            ("schema.sql", BASELINE.schema_sql, "8087be3847f61d3d390881f0d9a714da6c89bfed6a49c6d013c33c65353dabc1"),
-            ("schema_migrations.txt", BASELINE.schema_migrations, "eee52ef4996494591474c15f4dd5c54c7a2b0b8d40ae5cb2b79503a60714f7fa"),
-            ("schema_sequences.txt", BASELINE.schema_sequences, "5dbef42959e66e2389c3b9a4b3a9ca74b7df176d471e84ea5c19fb79a48b25ad"),
-            ("schema_sha1.txt", include_str!("../baseline/schema_sha1.txt"), "4649da67165b760883605a1a3c038e6016269971e70c758d210425cc7334f499"),
+            (
+                "schema.sql",
+                BASELINE.schema_sql,
+                "8087be3847f61d3d390881f0d9a714da6c89bfed6a49c6d013c33c65353dabc1",
+            ),
+            (
+                "schema_migrations.txt",
+                BASELINE.schema_migrations,
+                "eee52ef4996494591474c15f4dd5c54c7a2b0b8d40ae5cb2b79503a60714f7fa",
+            ),
+            (
+                "schema_sequences.txt",
+                BASELINE.schema_sequences,
+                "5dbef42959e66e2389c3b9a4b3a9ca74b7df176d471e84ea5c19fb79a48b25ad",
+            ),
+            (
+                "schema_sha1.txt",
+                include_str!("../baseline/schema_sha1.txt"),
+                "4649da67165b760883605a1a3c038e6016269971e70c758d210425cc7334f499",
+            ),
         ] {
-            assert_eq!(hex::encode(sha2::Sha256::digest(contents)), sha256, "baseline/{name} changed");
+            assert_eq!(
+                hex::encode(sha2::Sha256::digest(contents)),
+                sha256,
+                "baseline/{name} changed"
+            );
         }
     }
 
@@ -388,7 +428,11 @@ mod tests {
         // The FTS5 index and Rails' own two tables (every other table is `schema.sql`'s, which
         // `a_prepared_database_has_exactly_schema_sql` and `schema_files_are_frozen` cover).
         let conn = prepared();
-        for table in ["message_search_index", "schema_migrations", "ar_internal_metadata"] {
+        for table in [
+            "message_search_index",
+            "schema_migrations",
+            "ar_internal_metadata",
+        ] {
             assert!(table_exists(&conn, table).unwrap(), "missing table {table}");
         }
         // Partial and expression indexes come through as written.
@@ -427,7 +471,11 @@ mod tests {
             prepare(&mut conn, "production", &SystemClock).unwrap(),
             Prepared::UpToDate
         );
-        assert_eq!(dump_schema(&conn), before, "prepare never alters an existing database");
+        assert_eq!(
+            dump_schema(&conn),
+            before,
+            "prepare never alters an existing database"
+        );
 
         // `assume_migrated_upto_version`: the newest version first, then the rest newest first.
         let versions: Vec<String> = conn
@@ -481,8 +529,14 @@ mod tests {
 
         let error = prepare(&mut conn, "production", &SystemClock).unwrap_err();
         let message = error.to_string();
-        assert!(message.contains(&format!("missing migrations {newest}")), "{message}");
-        assert!(message.contains("run `campfire db-migrate DATABASE` with this build"), "{message}");
+        assert!(
+            message.contains(&format!("missing migrations {newest}")),
+            "{message}"
+        );
+        assert!(
+            message.contains("run `campfire db-migrate DATABASE` with this build"),
+            "{message}"
+        );
         assert!(!message.contains("unknown"), "{message}");
         assert_eq!(dump_schema(&conn), before);
     }
@@ -490,21 +544,29 @@ mod tests {
     #[test]
     fn prepare_refuses_a_database_with_unknown_migrations() {
         let mut conn = prepared();
-        conn.execute("INSERT INTO schema_migrations (version) VALUES ('29991231235959')", [])
-            .unwrap();
+        conn.execute(
+            "INSERT INTO schema_migrations (version) VALUES ('29991231235959')",
+            [],
+        )
+        .unwrap();
         let found = mismatch(prepare(&mut conn, "production", &SystemClock));
         assert_eq!(found.missing, Vec::<String>::new());
         assert_eq!(found.unknown, ["29991231235959"]);
         let message = Error::SchemaMismatch(found).to_string();
-        assert!(message.contains("unknown migrations 29991231235959"), "{message}");
+        assert!(
+            message.contains("unknown migrations 29991231235959"),
+            "{message}"
+        );
     }
 
     #[test]
     fn prepare_refuses_a_database_that_rails_never_prepared() {
         // Upstream's schema: tables, but none of our versions (and no schema_migrations at all).
         let mut conn = Connection::open_in_memory().unwrap();
-        conn.execute_batch(r#"CREATE TABLE "users" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL)"#)
-            .unwrap();
+        conn.execute_batch(
+            r#"CREATE TABLE "users" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL)"#,
+        )
+        .unwrap();
         let found = mismatch(prepare(&mut conn, "production", &SystemClock));
         assert_eq!(found.missing.len(), migration_versions().count());
         assert!(found.unknown.is_empty());
@@ -519,8 +581,16 @@ mod tests {
         if std::env::var_os("CAMPFIRE_SCHEMA_DUMP").is_some_and(|value| value == "write") {
             let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
             std::fs::write(src.join("schema.sql"), &generated.schema_sql).unwrap();
-            std::fs::write(src.join("schema_migrations.txt"), &generated.schema_migrations).unwrap();
-            std::fs::write(src.join("schema_sequences.txt"), &generated.schema_sequences).unwrap();
+            std::fs::write(
+                src.join("schema_migrations.txt"),
+                &generated.schema_migrations,
+            )
+            .unwrap();
+            std::fs::write(
+                src.join("schema_sequences.txt"),
+                &generated.schema_sequences,
+            )
+            .unwrap();
             return;
         }
         assert!(
@@ -558,8 +628,14 @@ mod tests {
              UPDATE \"rooms\" SET \"topic\" = \"name\" WHERE \"name\" IS NOT NULL;",
         )];
         let next = generate(&example).unwrap();
-        assert!(next.schema_migrations.starts_with("20991231235959\n20261003180000\n"));
-        assert!(next.schema_sql.contains(r#"CREATE INDEX "index_rooms_on_topic""#));
+        assert!(
+            next.schema_migrations
+                .starts_with("20991231235959\n20261003180000\n")
+        );
+        assert!(
+            next.schema_sql
+                .contains(r#"CREATE INDEX "index_rooms_on_topic""#)
+        );
         let manifest: Vec<&str> = lines(&next.schema_migrations).collect();
 
         let mut db = Connection::open_in_memory().unwrap();
@@ -569,10 +645,18 @@ mod tests {
              VALUES ('All Talk', 'Rooms::Open', 1, '2026-01-01', '2026-01-01');",
         )
         .unwrap();
-        assert_eq!(migrate_with(&mut db, &manifest, &example).unwrap(), ["20991231235959"]);
+        assert_eq!(
+            migrate_with(&mut db, &manifest, &example).unwrap(),
+            ["20991231235959"]
+        );
         let mismatch = schema_mismatch_against(&db, &manifest).unwrap();
-        assert!(mismatch.missing.is_empty() && mismatch.unknown.is_empty(), "{mismatch}");
-        let topic: String = db.query_row("SELECT topic FROM rooms", [], |r| r.get(0)).unwrap();
+        assert!(
+            mismatch.missing.is_empty() && mismatch.unknown.is_empty(),
+            "{mismatch}"
+        );
+        let topic: String = db
+            .query_row("SELECT topic FROM rooms", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(topic, "All Talk");
         let migrated = dump(&db).unwrap();
         assert_eq!(migrated.schema_sql, next.schema_sql);
@@ -582,9 +666,18 @@ mod tests {
         load_schema(&mut fresh, &next.files(), "production", &SystemClock).unwrap();
         assert_eq!(dump(&fresh).unwrap(), next);
 
-        assert!(migrate_with(&mut db, &manifest, &example).unwrap().is_empty(), "idempotent");
+        assert!(
+            migrate_with(&mut db, &manifest, &example)
+                .unwrap()
+                .is_empty(),
+            "idempotent"
+        );
         let found = mismatch_of(&db);
-        assert_eq!(found.unknown, ["20991231235959"], "this build refuses the newer database");
+        assert_eq!(
+            found.unknown,
+            ["20991231235959"],
+            "this build refuses the newer database"
+        );
         assert!(crate::migrations::migrate(&mut db).is_err());
     }
 

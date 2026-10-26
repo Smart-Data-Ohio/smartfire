@@ -38,7 +38,12 @@ fn spec_json() -> Value {
 fn a_bot_avatar_names_its_choices_as_the_library_does() {
     assert_wire(&spec(), spec_json());
     assert_wire(
-        &BotAvatarSpec { kind: BotAvatarType::Puddle, face: BotAvatarFace::Eyes, accessory: None, ..spec() },
+        &BotAvatarSpec {
+            kind: BotAvatarType::Puddle,
+            face: BotAvatarFace::Eyes,
+            accessory: None,
+            ..spec()
+        },
         json!({"type": "puddle", "color": "#ff8a5c", "face": "eyes", "accessory": null}),
     );
     for (accessory, wire) in [
@@ -48,7 +53,12 @@ fn a_bot_avatar_names_its_choices_as_the_library_does() {
     ] {
         assert_eq!(serde_json::to_value(accessory).unwrap(), json!(wire));
     }
-    assert!(serde_json::from_value::<BotAvatarSpec>(json!({"type": "dragon", "color": "#ff8a5c", "face": "eyes", "accessory": null})).is_err());
+    assert!(
+        serde_json::from_value::<BotAvatarSpec>(
+            json!({"type": "dragon", "color": "#ff8a5c", "face": "eyes", "accessory": null})
+        )
+        .is_err()
+    );
 }
 
 #[test]

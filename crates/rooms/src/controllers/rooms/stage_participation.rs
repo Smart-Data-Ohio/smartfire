@@ -140,6 +140,12 @@ fn deny(c: &mut Ctx, denial: Denial) -> Result {
     };
     Ok(c.render_as(status, "text/plain; charset=utf-8", message))
 }
-async fn respond(c: &mut Ctx, room_id: i64, _member_id: i64, _partial: &str, _target: &str) -> Result {
+async fn respond(
+    c: &mut Ctx,
+    room_id: i64,
+    _member_id: i64,
+    _partial: &str,
+    _target: &str,
+) -> Result {
     c.redirect_to(&c.url_for(&campfire_routes::room(room_id)))
 }

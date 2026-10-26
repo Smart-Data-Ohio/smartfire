@@ -12,15 +12,28 @@ static AFTER_DUPLICATE_CHECK: Mutex<Option<HashMap<String, Arc<Barrier>>>> = Mut
 static BEFORE_POLL_CREATE_WRITE: Mutex<Option<HashMap<String, WriteHold>>> = Mutex::new(None);
 
 pub fn hold_before_poll_create_write(client_message_id: &str) -> WriteHold {
-    let held = WriteHold { reached: Arc::new(Barrier::new(2)), release: Arc::new(Barrier::new(2)) };
-    let copy = WriteHold { reached: held.reached.clone(), release: held.release.clone() };
-    BEFORE_POLL_CREATE_WRITE.lock().unwrap().get_or_insert_with(HashMap::new)
+    let held = WriteHold {
+        reached: Arc::new(Barrier::new(2)),
+        release: Arc::new(Barrier::new(2)),
+    };
+    let copy = WriteHold {
+        reached: held.reached.clone(),
+        release: held.release.clone(),
+    };
+    BEFORE_POLL_CREATE_WRITE
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
         .insert(client_message_id.to_owned(), held);
     copy
 }
 
 pub(crate) async fn before_poll_create_write(client_message_id: &str) {
-    let held = BEFORE_POLL_CREATE_WRITE.lock().unwrap().as_mut().and_then(|held| held.remove(client_message_id));
+    let held = BEFORE_POLL_CREATE_WRITE
+        .lock()
+        .unwrap()
+        .as_mut()
+        .and_then(|held| held.remove(client_message_id));
     if let Some(held) = held {
         held.reached.wait().await;
         held.release.wait().await;
@@ -171,13 +184,17 @@ static AFTER_SIDEBAR_MEMBERSHIPS: SnapshotHolds = Mutex::new(None);
 fn hold_snapshot(holds: &SnapshotHolds, database: &Path, id: i64) -> SnapshotHold {
     let (reached, ready) = tokio::sync::oneshot::channel();
     let (release, wait) = mpsc::channel();
-    holds.lock().unwrap().get_or_insert_with(HashMap::new).insert(
-        (database.to_owned(), id),
-        SnapshotPause {
-            reached,
-            release: wait,
-        },
-    );
+    holds
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .insert(
+            (database.to_owned(), id),
+            SnapshotPause {
+                reached,
+                release: wait,
+            },
+        );
     SnapshotHold {
         reached: ready,
         release,
@@ -264,7 +281,9 @@ pub(crate) fn read_after_sidebar_snapshot(database: &Path, room_id: i64) -> bool
     true
 }
 
-type DeliveryHolds = Mutex<Option<HashMap<(PathBuf, i64), (WriteHold, fn(&campfire_api_types::SyncPayload) -> bool)>>>;
+type DeliveryHolds = Mutex<
+    Option<HashMap<(PathBuf, i64), (WriteHold, fn(&campfire_api_types::SyncPayload) -> bool)>>,
+>;
 static BEFORE_SYNC_DELIVERY: DeliveryHolds = Mutex::new(None);
 
 /// Pauses a viewer's next batch holding an event `held` matches, before its delivery

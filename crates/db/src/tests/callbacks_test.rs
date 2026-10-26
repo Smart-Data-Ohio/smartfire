@@ -251,7 +251,10 @@ fn recorded_searches_carry_a_dedup_key() {
         })
     };
     t.write(move |tx| Search::record(tx, david, "pizza place"));
-    assert_eq!(dedup_key(&t, "pizza place"), [Some("pizza place".to_string())]);
+    assert_eq!(
+        dedup_key(&t, "pizza place"),
+        [Some("pizza place".to_string())]
+    );
 
     t.write(move |tx| {
         let now = tx.now();

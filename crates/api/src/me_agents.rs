@@ -109,13 +109,17 @@ pub(crate) fn enabled(conn: &Connection) -> campfire_db::Result<()> {
 }
 pub(crate) fn saved_error(error: campfire_db::Error) -> Error {
     match &error {
-        campfire_db::Error::Other(message) if message == DISABLED => refuse(api::ApiError::Forbidden {
-            message: DISABLED_MESSAGE.into(),
-        }),
-        campfire_db::Error::Other(message) if message == LIMIT => refuse(api::ApiError::Validation {
-            message: "Personal agent limit reached".into(),
-            fields: [("base".to_string(), vec![LIMIT_MESSAGE.to_string()])].into(),
-        }),
+        campfire_db::Error::Other(message) if message == DISABLED => {
+            refuse(api::ApiError::Forbidden {
+                message: DISABLED_MESSAGE.into(),
+            })
+        }
+        campfire_db::Error::Other(message) if message == LIMIT => {
+            refuse(api::ApiError::Validation {
+                message: "Personal agent limit reached".into(),
+                fields: [("base".to_string(), vec![LIMIT_MESSAGE.to_string()])].into(),
+            })
+        }
         _ => Error::internal(error),
     }
 }
@@ -362,7 +366,12 @@ async fn reply_agent(c: &mut Ctx, id: i64, owner_id: i64) -> Result {
         .app()
         .db
         .read(move |conn| {
-            present(conn, &secrets, personal_agents::owned(conn, owner_id, id)?, now)
+            present(
+                conn,
+                &secrets,
+                personal_agents::owned(conn, owner_id, id)?,
+                now,
+            )
         })
         .await
         .map_err(saved_error)?;

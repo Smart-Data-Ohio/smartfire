@@ -292,13 +292,15 @@ async fn favourites_count_only_shown_ones_and_tell_the_other_tabs() {
 
     // Hide Quiet Corner, the second favourite.
     let hide = format!("/api/v1/rooms/{QUIET_CORNER}/involvement");
-    let hidden: api::Membership = involvement(&send(
-        &mut david,
-        Method::PUT,
-        &hide,
-        json!({"involvement": "invisible"}),
-    )
-    .await);
+    let hidden: api::Membership = involvement(
+        &send(
+            &mut david,
+            Method::PUT,
+            &hide,
+            json!({"involvement": "invisible"}),
+        )
+        .await,
+    );
     assert_eq!(hidden.involvement, api::Involvement::Invisible);
     sync.until(
         |e| matches!(&e.payload, api::SyncPayload::SidebarRowRemoved(r) if r.room_id == QUIET_CORNER),
@@ -478,13 +480,15 @@ async fn involvement_answers_the_membership_and_mutes_read() {
     sync.welcome().await;
     let path = format!("/api/v1/rooms/{ALL_TALK}/involvement");
 
-    let muted: api::Membership = involvement(&send(
-        &mut david,
-        Method::PUT,
-        &path,
-        json!({"involvement": "muted"}),
-    )
-    .await);
+    let muted: api::Membership = involvement(
+        &send(
+            &mut david,
+            Method::PUT,
+            &path,
+            json!({"involvement": "muted"}),
+        )
+        .await,
+    );
     assert_eq!(muted.involvement, api::Involvement::Muted);
     assert_eq!(muted.unread_at, None);
     both(
@@ -509,13 +513,15 @@ async fn involvement_answers_the_membership_and_mutes_read() {
         |_| false,
     )
     .await;
-    let back: api::Membership = involvement(&send(
-        &mut david,
-        Method::PUT,
-        &path,
-        json!({"involvement": "everything"}),
-    )
-    .await);
+    let back: api::Membership = involvement(
+        &send(
+            &mut david,
+            Method::PUT,
+            &path,
+            json!({"involvement": "everything"}),
+        )
+        .await,
+    );
     assert_eq!(back.involvement, api::Involvement::Everything);
     sync.until(row_of(ALL_TALK), |_| false).await;
 
@@ -538,13 +544,15 @@ async fn involvement_answers_the_membership_and_mutes_read() {
 
     // Any level for any kind of room; an unknown one is a 422; not a member, a 404.
     let direct = format!("/api/v1/rooms/{DIRECT_DAVID_JASON}/involvement");
-    let hidden: api::Membership = involvement(&send(
-        &mut david,
-        Method::PUT,
-        &direct,
-        json!({"involvement": "invisible"}),
-    )
-    .await);
+    let hidden: api::Membership = involvement(
+        &send(
+            &mut david,
+            Method::PUT,
+            &direct,
+            json!({"involvement": "invisible"}),
+        )
+        .await,
+    );
     assert_eq!(hidden.involvement, api::Involvement::Invisible);
     let loud = send(
         &mut david,
@@ -701,9 +709,6 @@ async fn classic_organising_tells_the_spa_tabs() {
 
 /// The classic frames for a run of classic organising, with or without the SPA and a sync
 /// socket open.
-
-
-
 
 #[tokio::test]
 async fn a_favourite_in_a_deleted_room_isnt_counted() {
@@ -890,7 +895,8 @@ async fn a_mute_sends_room_read_regardless_of_concurrent_unread_changes() {
 
     // Unread when looked up, read by another tab before the write: publish read anyway.
     set_unread(true).await.unwrap();
-    let muted: api::Membership = involvement(&mute_while_unread_changes(&a, &mut david, false).await);
+    let muted: api::Membership =
+        involvement(&mute_while_unread_changes(&a, &mut david, false).await);
     assert_eq!(muted.unread_at, None);
     both(&mut sync, room_read, muted_row).await;
     // Unmuting publishes the row again; no `room.read` arrives before it either.
@@ -912,7 +918,8 @@ async fn a_mute_sends_room_read_regardless_of_concurrent_unread_changes() {
 
     // Read when looked up, unread again before the write: the mute clears it, and says so.
     set_unread(false).await.unwrap();
-    let muted: api::Membership = involvement(&mute_while_unread_changes(&a, &mut david, true).await);
+    let muted: api::Membership =
+        involvement(&mute_while_unread_changes(&a, &mut david, true).await);
     assert_eq!(muted.unread_at, None);
     both(&mut sync, room_read, muted_row).await;
     server.abort();
@@ -921,10 +928,16 @@ async fn a_mute_sends_room_read_regardless_of_concurrent_unread_changes() {
 #[tokio::test]
 async fn workspace_layout_is_admin_only_and_visible_in_snapshots() {
     let Some(a) = app(true).await else { return };
-    a.db().write(|tx| {
-        tx.conn().execute("UPDATE rooms SET type = 'Rooms::Closed' WHERE id = ?", [ALL_PETS])?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE rooms SET type = 'Rooms::Closed' WHERE id = ?",
+                [ALL_PETS],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let mut david = a.sign_in(DAVID).await;
     let mut kevin = a.sign_in(KEVIN).await;
     let reply = send(
@@ -958,7 +971,11 @@ async fn workspace_layout_is_admin_only_and_visible_in_snapshots() {
         let sidebar: serde_json::Value = parse(&reply);
         assert_eq!(
             sidebar["workspaceLayout"]["categories"],
-            if visible { json!([category.clone()]) } else { json!([]) }
+            if visible {
+                json!([category.clone()])
+            } else {
+                json!([])
+            }
         );
         let rooms = sidebar["workspaceLayout"]["rooms"].as_array().unwrap();
         assert_eq!(rooms.iter().any(|room| room["roomId"] == ALL_PETS), visible);
@@ -973,10 +990,16 @@ async fn workspace_layout_is_admin_only_and_visible_in_snapshots() {
 #[tokio::test]
 async fn workspace_layout_broadcasts_each_members_visible_rooms() {
     let Some(a) = app(true).await else { return };
-    a.db().write(|tx| {
-        tx.conn().execute("UPDATE rooms SET type = 'Rooms::Closed' WHERE id = ?", [ALL_PETS])?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE rooms SET type = 'Rooms::Closed' WHERE id = ?",
+                [ALL_PETS],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
     let kevin = a.sign_in(KEVIN).await;
@@ -995,13 +1018,23 @@ async fn workspace_layout_broadcasts_each_members_visible_rooms() {
     let category: serde_json::Value = parse(&created);
     let id = category["id"].as_i64().unwrap();
     for (sync, visible) in [(&mut ds, true), (&mut ks, false)] {
-        let event = sync.until(
-            |event| matches!(&event.payload, api::SyncPayload::WorkspaceLayoutUpdated(_)),
-            |_| false,
-        )
-        .await;
-        let api::SyncPayload::WorkspaceLayoutUpdated(layout) = event.payload else { unreachable!() };
-        assert_eq!(layout.categories.iter().map(|row| row.id).collect::<Vec<_>>(), if visible { vec![id] } else { vec![] });
+        let event = sync
+            .until(
+                |event| matches!(&event.payload, api::SyncPayload::WorkspaceLayoutUpdated(_)),
+                |_| false,
+            )
+            .await;
+        let api::SyncPayload::WorkspaceLayoutUpdated(layout) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!(
+            layout
+                .categories
+                .iter()
+                .map(|row| row.id)
+                .collect::<Vec<_>>(),
+            if visible { vec![id] } else { vec![] }
+        );
     }
     let moved = send(
         &mut david,
@@ -1028,7 +1061,14 @@ async fn workspace_layout_broadcasts_each_members_visible_rooms() {
             .await;
         let value = serde_json::to_value(&event.payload).unwrap();
         assert_eq!(event.topic, "user");
-        assert_eq!(value["data"]["categories"], if visible { json!([category.clone()]) } else { json!([]) });
+        assert_eq!(
+            value["data"]["categories"],
+            if visible {
+                json!([category.clone()])
+            } else {
+                json!([])
+            }
+        );
         assert!(
             !value["data"]["rooms"]
                 .as_array()

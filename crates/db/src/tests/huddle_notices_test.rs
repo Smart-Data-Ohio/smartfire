@@ -220,18 +220,38 @@ fn huddle_push_scopes_and_throttle_match_thirty_six_rails_scenarios() {
     }
 }
 
-
 #[test]
 fn ignore_huddle_leave_keeps_each_notice_and_marks_only_the_blockers_payload() {
-    let vectors: Value = serde_json::from_str(include_str!("../models/huddle_notice_vectors.json")).unwrap();
-    let case = vectors["cases"].as_array().unwrap().iter().find(|case| case["operation"] == "leave" && case["broadcasts"].as_array().unwrap().iter().any(|frame| frame["payload"]["huddleJoinNotice"]["eventType"] == "huddle_left")).unwrap();
+    let vectors: Value =
+        serde_json::from_str(include_str!("../models/huddle_notice_vectors.json")).unwrap();
+    let case =
+        vectors["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|case| {
+                case["operation"] == "leave"
+                    && case["broadcasts"].as_array().unwrap().iter().any(|frame| {
+                        frame["payload"]["huddleJoinNotice"]["eventType"] == "huddle_left"
+                    })
+            })
+            .unwrap();
     let mut observed = Vec::new();
     for ignored in [false, true] {
         let t = TestDb::new();
-        t.clock.travel_to(Timestamp::from_second(vectors["now"].as_i64().unwrap()));
+        t.clock
+            .travel_to(Timestamp::from_second(vectors["now"].as_i64().unwrap()));
         let input = case["input"].clone();
         let grant_id = case["grant_id"].as_i64().unwrap();
-        let viewer = case["broadcasts"][0]["stream"].as_str().unwrap().strip_prefix("user_").unwrap().strip_suffix("_huddle_notices").unwrap().parse::<i64>().unwrap();
+        let viewer = case["broadcasts"][0]["stream"]
+            .as_str()
+            .unwrap()
+            .strip_prefix("user_")
+            .unwrap()
+            .strip_suffix("_huddle_notices")
+            .unwrap()
+            .parse::<i64>()
+            .unwrap();
         t.write(move |tx| {
             load(tx, &input)?;
             let grant = HuddleGrant::find_by_id(tx.conn(), grant_id)?.unwrap();
@@ -239,11 +259,41 @@ fn ignore_huddle_leave_keeps_each_notice_and_marks_only_the_blockers_payload() {
             Ok(())
         });
         t.sink.take();
-        t.write(move |tx| huddle_notices::notify_leave(tx, &HuddleGrant::find_by_id(tx.conn(), grant_id)?.unwrap()));
-        let frames = t.events().iter().filter_map(|event| match event.as_broadcast()? { crate::broadcasts::Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())), _ => None }).collect::<Vec<_>>();
-        let blocked = frames.iter().find(|(stream, _)| *stream == format!("user_{viewer}_huddle_notices")).unwrap();
-        assert_eq!(blocked.1["huddleJoinNotice"]["unchanged"], if ignored { json!(true) } else { Value::Null });
-        observed.push(frames.iter().map(|(stream, payload)| (stream.clone(), payload["huddleJoinNotice"]["eventType"].clone())).collect::<Vec<_>>());
+        t.write(move |tx| {
+            huddle_notices::notify_leave(
+                tx,
+                &HuddleGrant::find_by_id(tx.conn(), grant_id)?.unwrap(),
+            )
+        });
+        let frames = t
+            .events()
+            .iter()
+            .filter_map(|event| match event.as_broadcast()? {
+                crate::broadcasts::Broadcast::Cable { stream, payload } => {
+                    Some((stream.clone(), payload.clone()))
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let blocked = frames
+            .iter()
+            .find(|(stream, _)| *stream == format!("user_{viewer}_huddle_notices"))
+            .unwrap();
+        assert_eq!(
+            blocked.1["huddleJoinNotice"]["unchanged"],
+            if ignored { json!(true) } else { Value::Null }
+        );
+        observed.push(
+            frames
+                .iter()
+                .map(|(stream, payload)| {
+                    (
+                        stream.clone(),
+                        payload["huddleJoinNotice"]["eventType"].clone(),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        );
     }
     assert_eq!(observed[0], observed[1]);
 }

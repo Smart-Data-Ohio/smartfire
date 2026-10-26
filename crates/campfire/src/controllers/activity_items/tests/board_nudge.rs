@@ -12,7 +12,12 @@ fn oracle() -> Value {
 #[tokio::test]
 async fn board_nudge_inbox_matches_rails_complete_responses_and_permissions() {
     let mut differences = Vec::new();
-    for case in oracle()["http"].as_array().unwrap().iter().filter(|case| case["accept"] == "application/json") {
+    for case in oracle()["http"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["accept"] == "application/json")
+    {
         let app = TestApp::boot_frozen()
             .await
             .unwrap()
@@ -43,7 +48,6 @@ async fn board_nudge_inbox_matches_rails_complete_responses_and_permissions() {
         if response.text() != case["body"].as_str().unwrap() {
             differences.push(case["name"].clone());
         }
-
     }
     assert!(
         differences.is_empty(),
@@ -86,7 +90,10 @@ async fn board_nudge_inbox_batches_distinct_sources_threads_and_boards() {
             .await;
         app.db().stop_capturing_read_queries();
         assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-        assert_eq!(response.json()["activity_items"].as_array().unwrap().len(), size as usize);
+        assert_eq!(
+            response.json()["activity_items"].as_array().unwrap().len(),
+            size as usize
+        );
         let reads = log.lock().unwrap().len();
         println!("WS12 BoardSlaNudge inbox: {size} distinct boards/sources; {reads} reader SQL");
         counts.push(reads);

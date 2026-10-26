@@ -37,16 +37,18 @@ use tokio::task::JoinHandle;
 
 use crate::app::App;
 
-pub mod periodic;
 mod messaging;
+pub mod periodic;
 // The integrations' job handlers, which render messages.
-pub mod integrations;
 pub mod agent_jobs;
 pub mod attachment_processing;
 pub mod huddle;
+pub mod integrations;
 mod notifications;
 
-use crate::queue::{AdHocQueue, AdHocWork, AnalyzeJob, PurgeJob, Registry, RemoveBannedContentJob, discard_missing};
+use crate::queue::{
+    AdHocQueue, AdHocWork, AnalyzeJob, PurgeJob, Registry, RemoveBannedContentJob, discard_missing,
+};
 
 /// Every job class the app performs: core's, and the integrations'.
 pub fn registry() -> Registry {
@@ -68,7 +70,6 @@ pub fn registry() -> Registry {
     crate::integrations::google::calendar_sync::register(&mut registry);
     registry
 }
-
 
 /// The running jobs: the durable queue's runner, the ad hoc workers, and the periodic loops.
 pub struct Runner {
@@ -96,15 +97,21 @@ impl Runner {
     async fn stop_inner(&mut self, grace: Duration) {
         let _ = self.periodic_stopping.send(true);
         join_or_abort(
-            std::mem::take(&mut self.periodic), grace, "periodic tasks still running at shutdown were aborted",
-        ).await;
+            std::mem::take(&mut self.periodic),
+            grace,
+            "periodic tasks still running at shutdown were aborted",
+        )
+        .await;
         if let Some(durable) = self.durable.take() {
             durable.shutdown(grace).await;
         }
         let _ = self.ad_hoc_stopping.send(true);
         join_or_abort(
-            std::mem::take(&mut self.ad_hoc), grace, "ad hoc jobs still running at shutdown were aborted",
-        ).await;
+            std::mem::take(&mut self.ad_hoc),
+            grace,
+            "ad hoc jobs still running at shutdown were aborted",
+        )
+        .await;
     }
 }
 
@@ -121,7 +128,13 @@ async fn join_or_abort(tasks: Vec<JoinHandle<()>>, grace: Duration, abandoned: &
 
 /// Starts performing jobs: the durable queue's (recovering those a previous process left
 /// running once their leases expire), the ad hoc ones, and the periodic loops.
-pub fn start(app: App, registry: Registry, ad_hoc: AdHocQueue, config: RunnerConfig, periodic: periodic::Loops) -> Runner {
+pub fn start(
+    app: App,
+    registry: Registry,
+    ad_hoc: AdHocQueue,
+    config: RunnerConfig,
+    periodic: periodic::Loops,
+) -> Runner {
     app.jobs.set_delivery(crate::queue::Delivery {
         broadcast: crate::channels::sink::deliver,
         digest_notes: crate::channels::board_digests::deliver,
@@ -129,15 +142,28 @@ pub fn start(app: App, registry: Registry, ad_hoc: AdHocQueue, config: RunnerCon
     app.jobs.set_cable(app.cable.clone());
     app.jobs.set_app(&app);
     let workers = app.config.job_concurrency.max(1);
-    let durable = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), config);
+    let durable = campfire_jobs::start(
+        app.db.clone(),
+        app.jobs.queue.clone(),
+        registry,
+        app.clone(),
+        config,
+    );
 
     let (ad_hoc_stopping, _) = watch::channel(false);
     let receiver = Arc::new(Mutex::new(ad_hoc.0));
-    let ad_hoc = (0..workers).map(|_| tokio::spawn(work(receiver.clone(), ad_hoc_stopping.subscribe()))).collect();
+    let ad_hoc = (0..workers)
+        .map(|_| tokio::spawn(work(receiver.clone(), ad_hoc_stopping.subscribe())))
+        .collect();
 
     let (periodic_stopping, _) = watch::channel(false);
     let periodic = periodic.spawn(&app, &periodic_stopping);
-    Runner { durable: Some(durable), ad_hoc_stopping, ad_hoc, periodic_stopping, periodic,
+    Runner {
+        durable: Some(durable),
+        ad_hoc_stopping,
+        ad_hoc,
+        periodic_stopping,
+        periodic,
     }
 }
 
@@ -147,13 +173,18 @@ async fn work(queue: Arc<Mutex<mpsc::Receiver<AdHocWork>>>, mut stopping: watch:
         match AssertUnwindSafe(work).catch_unwind().await {
             Ok(Ok(())) => tracing::info!(job = name, "performed"),
             Ok(Err(error)) => tracing::error!(job = name, %error, "job failed"),
-            Err(panic) => tracing::error!(job = name, panic = panic_message(&*panic), "job panicked"),
+            Err(panic) => {
+                tracing::error!(job = name, panic = panic_message(&*panic), "job panicked")
+            }
         }
     }
 }
 
 /// The next ad hoc job; once the runner is stopping, the queue closes and what's left drains.
-async fn next(queue: &Mutex<mpsc::Receiver<AdHocWork>>, stopping: &mut watch::Receiver<bool>) -> Option<AdHocWork> {
+async fn next(
+    queue: &Mutex<mpsc::Receiver<AdHocWork>>,
+    stopping: &mut watch::Receiver<bool>,
+) -> Option<AdHocWork> {
     let mut queue = queue.lock().await;
     tokio::select! {
         work = queue.recv() => work,
@@ -172,7 +203,11 @@ async fn stopped(stopping: &mut watch::Receiver<bool>) {
 }
 
 fn panic_message(panic: &(dyn std::any::Any + Send)) -> &str {
-    panic.downcast_ref::<&str>().copied().or_else(|| panic.downcast_ref::<String>().map(String::as_str)).unwrap_or("Box<dyn Any>")
+    panic
+        .downcast_ref::<&str>()
+        .copied()
+        .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
+        .unwrap_or("Box<dyn Any>")
 }
 
 /// `RemoveBannedContentJob`: `user.remove_banned_content`, which destroys each of the user's
@@ -191,7 +226,10 @@ async fn remove_banned_content(app: App, job: RemoveBannedContentJob, _: Executi
     for message in messages {
         let (removed, room_id) = (message.clone(), message.room_id);
         app.db.write(move |tx| message.destroy(tx)).await?;
-        let room = app.db.read(move |conn| campfire_db::Room::find(conn, room_id)).await?;
+        let room = app
+            .db
+            .read(move |conn| campfire_db::Room::find(conn, room_id))
+            .await?;
         app.broadcasts.message_remove(&room, &removed);
     }
     Ok(Outcome::Done)
@@ -229,4 +267,3 @@ async fn quote_cards_refresh(app: App, job: QuoteCardsRefresh, _: Execution) -> 
         .await?;
     Ok(Outcome::Done)
 }
-

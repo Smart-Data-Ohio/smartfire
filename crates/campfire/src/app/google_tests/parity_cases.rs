@@ -1,6 +1,8 @@
 //! Pinned Rails request/flash/audit/identity observations for complete Google controller cases.
 use super::*;
-use crate::controllers::presenters::test_support::{Reply, spa_auth_locations, with_fixed_render_secrets};
+use crate::controllers::presenters::test_support::{
+    Reply, spa_auth_locations, with_fixed_render_secrets,
+};
 use campfire_kit::{Crypto, FrozenClock, RailsCrypto};
 use std::time::Duration;
 fn session(a: &TestApp, b: &Browser<'_>) -> Value {
@@ -61,7 +63,9 @@ async fn spa_password_sign_in(b: &mut Browser<'_>, email: &str, password: &str) 
 fn spa_json_feedback(observed: &mut Value, reply: &Reply) {
     let body: Value = serde_json::from_slice(&reply.body).unwrap_or(Value::Null);
     // The settings API nests its refusal under `error`; the sudo API's is a top-level `message`.
-    let refusal = body["error"]["message"].as_str().or(body["message"].as_str());
+    let refusal = body["error"]["message"]
+        .as_str()
+        .or(body["message"].as_str());
     if let Some(alert) = refusal.filter(|_| reply.status == StatusCode::UNPROCESSABLE_ENTITY) {
         observed["flash"] = json!({"alert":alert});
     } else if let Some(notice) = body["notice"].as_str() {
@@ -185,9 +189,10 @@ async fn google_rejected_identity_preserves_saved_destination_for_password_fallb
         "../../../../../vectors/google_controller_cases.json"
     ))
     .unwrap();
-    oracle["rows"].as_array_mut().unwrap().retain(|row| {
-        row["spec"]["scenario"] == "admin_link_required_return_to"
-    });
+    oracle["rows"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|row| row["spec"]["scenario"] == "admin_link_required_return_to");
     assert_eq!(oracle["rows"].as_array().unwrap().len(), 1);
     run_cases(oracle).await;
 }
@@ -197,9 +202,10 @@ async fn google_unconfigured_callback_matches_pinned_rails_empty_not_found() {
         "../../../../../vectors/google_controller_cases.json"
     ))
     .unwrap();
-    oracle["rows"].as_array_mut().unwrap().retain(|row| {
-        row["spec"]["scenario"] == "unconfigured_callback"
-    });
+    oracle["rows"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|row| row["spec"]["scenario"] == "unconfigured_callback");
     assert_eq!(oracle["rows"].as_array().unwrap().len(), 1);
     run_cases(oracle).await;
 }
@@ -241,24 +247,33 @@ async fn run_cases(oracle: Value) {
     for original in oracle["rows"].as_array().unwrap() {
         let mut row = original.clone();
         let purpose = row["spec"]["purpose"].as_str().unwrap().to_owned();
-        if row["result"]["location"] == "http://campfire.test/" && purpose == "sign_in" && row["result"]["delta"][1].as_i64().unwrap_or(0) > 0 {
+        if row["result"]["location"] == "http://campfire.test/"
+            && purpose == "sign_in"
+            && row["result"]["delta"][1].as_i64().unwrap_or(0) > 0
+        {
             row["result"]["location"] = json!("http://campfire.test/app/");
         } else if row["result"]["location"] == "http://campfire.test/users/me/profile" {
-            row["result"]["location"] = json!(if purpose == "reauth" { "http://campfire.test/app/settings/security" } else { "http://campfire.test/app/settings/integrations" });
+            row["result"]["location"] = json!(if purpose == "reauth" {
+                "http://campfire.test/app/settings/security"
+            } else {
+                "http://campfire.test/app/settings/integrations"
+            });
         }
         if row["spec"]["continuation"] == true {
             row["result"].as_object_mut().unwrap().remove("same_member");
             // SPA cutover: the retained sudo prompt page (`start.prompt`) is the SPA's; its JSON
             // is checked below.
             row["start"].as_object_mut().unwrap().remove("prompt");
-
         }
         if row["result"]["password_login"]["location"] == "http://campfire.test/account/edit" {
             row["result"]["password_login"]["location"] = json!("http://campfire.test/app/admin");
         }
         // SPA cutover: the retained sign-in, two-step and sudo pages the rows name are the SPA's.
         spa_auth_locations(&mut row);
-        if let Some(protected) = row["result"].get_mut("protected").and_then(Value::as_array_mut) {
+        if let Some(protected) = row["result"]
+            .get_mut("protected")
+            .and_then(Value::as_array_mut)
+        {
             // SPA cutover: the profile's two-step changes are the SPA settings' JSON writes.
             protected.iter_mut().for_each(spa_json_write);
         }
@@ -276,9 +291,15 @@ async fn run_cases(oracle: Value) {
                 let result = row["result"].as_object_mut().unwrap();
                 result.remove("body");
                 result.insert("status".into(), json!(302));
-                result.insert("location".into(), json!("http://campfire.test/app/sudo/continue"));
+                result.insert(
+                    "location".into(),
+                    json!("http://campfire.test/app/sudo/continue"),
+                );
                 if scenario == "expired_flow" {
-                    result.insert("flash".into(), json!({"alert":"Confirmation expired. Try again."}));
+                    result.insert(
+                        "flash".into(),
+                        json!({"alert":"Confirmation expired. Try again."}),
+                    );
                 }
             }
         }
@@ -301,7 +322,10 @@ async fn run_cases(oracle: Value) {
         a.booted.app.google.install(SignIn::with_client(
             config(if scenario == "provision_org" {
                 &["example.org"]
-            } else if matches!(scenario, "unconfigured" | "unconfigured_password" | "unconfigured_callback") {
+            } else if matches!(
+                scenario,
+                "unconfigured" | "unconfigured_password" | "unconfigured_callback"
+            ) {
                 &[]
             } else {
                 &["smartdata.net", "cnbssoftware.com"]
@@ -389,11 +413,13 @@ async fn run_cases(oracle: Value) {
                 .unwrap();
             // SPA cutover: the SPA's join page signs up through the JSON API.
             let joined = b
-                .write(Req::new(Method::POST, &format!("/api/v1/join/{code}")).json_body(&json!({
-                    "name": "Pre-claimer",
-                    "emailAddress": "newhire@smartdata.net",
-                    "password": "secret123456",
-                })))
+                .write(
+                    Req::new(Method::POST, &format!("/api/v1/join/{code}")).json_body(&json!({
+                        "name": "Pre-claimer",
+                        "emailAddress": "newhire@smartdata.net",
+                        "password": "secret123456",
+                    })),
+                )
                 .await;
             assert!(joined.status.is_success(), "{}", joined.text());
             b.write(Req::new(Method::DELETE, "/session")).await;
@@ -474,8 +500,14 @@ async fn run_cases(oracle: Value) {
                 .await;
             assert_eq!(ready.status, StatusCode::OK, "{}", ready.text());
             let methods = ready.json()["reauthentication"]["methods"].clone();
-            assert!(methods.as_array().unwrap().contains(&json!("google")), "{methods}");
-            assert!(!methods.as_array().unwrap().contains(&json!("password")), "{methods}");
+            assert!(
+                methods.as_array().unwrap().contains(&json!("google")),
+                "{methods}"
+            );
+            assert!(
+                !methods.as_array().unwrap().contains(&json!("password")),
+                "{methods}"
+            );
         }
         let mut start_reply = if purpose == "sudo" {
             b.write(Req::new(Method::POST, path).header("accept", "application/json"))
@@ -488,7 +520,9 @@ async fn run_cases(oracle: Value) {
             // retained form post was redirected there.
             let location = start_reply.json()["location"].as_str().unwrap().to_owned();
             start_reply.status = StatusCode::FOUND;
-            start_reply.headers.insert("location", location.parse().unwrap());
+            start_reply
+                .headers
+                .insert("location", location.parse().unwrap());
         }
         let mut started = json!({"status":start_reply.status.as_u16()});
         if scenario == "unconfigured_callback" {
@@ -727,12 +761,16 @@ async fn run_cases(oracle: Value) {
             if lifecycle {
                 observed["lifecycle"] = lifecycle_observation(&a, &history).await;
                 if scenario == "admin_link_required_return_to" {
-                    observed["return_to"] = session(&a, &b)["return_to_after_authenticating"].clone();
+                    observed["return_to"] =
+                        session(&a, &b)["return_to_after_authenticating"].clone();
                     b.get(cb.location().unwrap()).await;
                     let calls = r.calls.lock().unwrap().len();
-                    let reply = spa_password_sign_in(&mut b, "legacy@smartdata.net", "secret123456").await;
-                    observed["password_login"] = observation(&a, &b, &reply, &before, &r, calls, &password).await;
-                    observed["password_login"]["return_to"] = session(&a, &b)["return_to_after_authenticating"].clone();
+                    let reply =
+                        spa_password_sign_in(&mut b, "legacy@smartdata.net", "secret123456").await;
+                    observed["password_login"] =
+                        observation(&a, &b, &reply, &before, &r, calls, &password).await;
+                    observed["password_login"]["return_to"] =
+                        session(&a, &b)["return_to_after_authenticating"].clone();
                 }
                 if matches!(
                     scenario,
@@ -813,11 +851,18 @@ async fn run_cases(oracle: Value) {
             let mut observed = observation(&a, &b, &start_reply, &before, &r, 0, &password).await;
             spa_json_feedback(&mut observed, &start_reply);
             if scenario == "unconfigured_callback" {
-                let reply = b.get("/session/google/callback?state=fixture-state&code=fixture-code").await;
+                let reply = b
+                    .get("/session/google/callback?state=fixture-state&code=fixture-code")
+                    .await;
                 observed = observation(&a, &b, &reply, &before, &r, 0, &password).await;
                 observed["body"] = json!(reply.text());
-                observed["content_type"] = json!(reply.content_type().map(|v| v.split(';').next().unwrap()));
-                assert_eq!(reply.body, row["result"]["body"].as_str().unwrap().as_bytes(), "unconfigured callback must match the complete Rails body");
+                observed["content_type"] =
+                    json!(reply.content_type().map(|v| v.split(';').next().unwrap()));
+                assert_eq!(
+                    reply.body,
+                    row["result"]["body"].as_str().unwrap().as_bytes(),
+                    "unconfigured callback must match the complete Rails body"
+                );
             }
             if scenario == "unconfigured_password" {
                 b.get("/app/session/new").await;
@@ -843,8 +888,13 @@ async fn run_cases(oracle: Value) {
         assert_eq!(json!(token_columns), oracle["identity_token_columns"]);
         assert_eq!(started, row["start"], "{}: authorize", row["spec"]);
         if actual != row["result"] {
-            let path = std::env::temp_dir().join(format!("google-contract-{}.json", uuid::Uuid::new_v4()));
-            std::fs::write(path, json!({"spec":row["spec"],"actual":actual,"expected":row["result"]}).to_string()).unwrap();
+            let path =
+                std::env::temp_dir().join(format!("google-contract-{}.json", uuid::Uuid::new_v4()));
+            std::fs::write(
+                path,
+                json!({"spec":row["spec"],"actual":actual,"expected":row["result"]}).to_string(),
+            )
+            .unwrap();
         }
         assert_eq!(
             actual, row["result"],

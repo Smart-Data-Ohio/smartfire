@@ -49,8 +49,9 @@ impl ToSql for ThreadInvolvement {
 impl FromSql for ThreadInvolvement {
     fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
         let name = value.as_str()?;
-        ThreadInvolvement::from_name(name)
-            .ok_or_else(|| FromSqlError::Other(format!("unknown thread involvement {name:?}").into()))
+        ThreadInvolvement::from_name(name).ok_or_else(|| {
+            FromSqlError::Other(format!("unknown thread involvement {name:?}").into())
+        })
     }
 }
 
@@ -86,8 +87,13 @@ impl ThreadMembership {
     }
 
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
-        query_one(conn, r#"SELECT * FROM "thread_memberships" WHERE "thread_memberships"."id" = ? LIMIT 1"#, [id], Self::from_row)?
-            .or_not_found("ThreadMembership")
+        query_one(
+            conn,
+            r#"SELECT * FROM "thread_memberships" WHERE "thread_memberships"."id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("ThreadMembership")
     }
 
     /// `thread.memberships.find_by(user_id:)` (`ChannelThread#membership_for`)
@@ -96,10 +102,19 @@ impl ThreadMembership {
         thread_id: i64,
         user_id: i64,
     ) -> Result<Option<Self>> {
-        let unread = format!("({}) AND ({})", super::ignore_policy::thread_unread_sql(), super::channel_thread::readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id"));
+        let unread = format!(
+            "({}) AND ({})",
+            super::ignore_policy::thread_unread_sql(),
+            super::channel_thread::readable_by_sql(
+                "thread_memberships.thread_id",
+                "thread_memberships.user_id"
+            )
+        );
         query_one(
             conn,
-            &format!("SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE thread_id=? AND user_id=? LIMIT 1"),
+            &format!(
+                "SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE thread_id=? AND user_id=? LIMIT 1"
+            ),
             [thread_id, user_id],
             Self::from_policy_row,
         )
@@ -130,10 +145,19 @@ impl ThreadMembership {
         if thread_ids.is_empty() {
             return Ok(Vec::new());
         }
-        let unread = format!("({}) AND ({})", super::ignore_policy::thread_unread_sql(), super::channel_thread::readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id"));
+        let unread = format!(
+            "({}) AND ({})",
+            super::ignore_policy::thread_unread_sql(),
+            super::channel_thread::readable_by_sql(
+                "thread_memberships.thread_id",
+                "thread_memberships.user_id"
+            )
+        );
         query_all(
             conn,
-            &format!("SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE user_id=? AND thread_id IN (SELECT value FROM json_each(?))"),
+            &format!(
+                "SELECT thread_memberships.*, CASE WHEN {unread} THEN unread_at END AS visible_unread_at FROM thread_memberships WHERE user_id=? AND thread_id IN (SELECT value FROM json_each(?))"
+            ),
             params![user_id, serde_json::json!(thread_ids).to_string()],
             Self::from_policy_row,
         )
@@ -141,10 +165,19 @@ impl ThreadMembership {
 
     /// `user.thread_memberships.unread`
     pub fn unread_for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
-        let unread = format!("({}) AND ({})", super::ignore_policy::thread_unread_sql(), super::channel_thread::readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id"));
+        let unread = format!(
+            "({}) AND ({})",
+            super::ignore_policy::thread_unread_sql(),
+            super::channel_thread::readable_by_sql(
+                "thread_memberships.thread_id",
+                "thread_memberships.user_id"
+            )
+        );
         query_all(
             conn,
-            &format!("SELECT thread_memberships.* FROM thread_memberships WHERE user_id=? AND {unread} ORDER BY id"),
+            &format!(
+                "SELECT thread_memberships.* FROM thread_memberships WHERE user_id=? AND {unread} ORDER BY id"
+            ),
             [user_id],
             Self::from_row,
         )
@@ -154,9 +187,11 @@ impl ThreadMembership {
     /// (`find_by!`, so `RecordNotFound` otherwise); then `find_or_create_by!`.
     pub fn join(tx: &mut Tx<'_>, thread_id: i64, user_id: i64) -> Result<Self> {
         let thread = ChannelThread::find(tx.conn(), thread_id)?;
-        Membership::find_by_room_and_user(tx.conn(), thread.room_id, user_id)?.or_not_found("Membership")?;
+        Membership::find_by_room_and_user(tx.conn(), thread.room_id, user_id)?
+            .or_not_found("Membership")?;
         if thread.visibility == super::channel_thread::ThreadVisibility::Private
-            && !thread.readable_by(tx.conn(), user_id)? {
+            && !thread.readable_by(tx.conn(), user_id)?
+        {
             return Err(crate::Error::RecordNotFound("ChannelThread"));
         }
         if let Some(existing) = Self::find_by_thread_and_user(tx.conn(), thread_id, user_id)? {
@@ -166,7 +201,12 @@ impl ThreadMembership {
     }
 
     /// `ThreadMembership.create!(thread:, user:, involvement:)`: `joined_at` defaults to now.
-    pub fn create(tx: &mut Tx<'_>, thread_id: i64, user_id: i64, involvement: ThreadInvolvement) -> Result<Self> {
+    pub fn create(
+        tx: &mut Tx<'_>,
+        thread_id: i64,
+        user_id: i64,
+        involvement: ThreadInvolvement,
+    ) -> Result<Self> {
         Self::validate(tx.conn(), thread_id, user_id)?.into_result()?;
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
@@ -185,20 +225,29 @@ impl ThreadMembership {
             r#"SELECT 1 AS one FROM "memberships" INNER JOIN "channel_threads" ON "channel_threads"."room_id" = "memberships"."room_id" WHERE "channel_threads"."id" = ? AND "memberships"."user_id" = ? LIMIT 1"#,
             [thread_id, user_id],
         )?;
-        let thread_exists = sql::exists(conn, r#"SELECT 1 AS one FROM "channel_threads" WHERE "id" = ? LIMIT 1"#, [thread_id])?;
+        let thread_exists = sql::exists(
+            conn,
+            r#"SELECT 1 AS one FROM "channel_threads" WHERE "id" = ? LIMIT 1"#,
+            [thread_id],
+        )?;
         if thread_exists && !member {
             errors.add("user", "must belong to the parent room");
         }
         if let Some(thread) = ChannelThread::find_by_id(conn, thread_id)?
             && thread.visibility == super::channel_thread::ThreadVisibility::Private
-            && !thread.readable_by(conn, user_id)? {
+            && !thread.readable_by(conn, user_id)?
+        {
             errors.add("thread", "is inaccessible");
         }
         Ok(errors)
     }
 
     /// `update!(involvement:)`, validated like any save.
-    pub fn update_involvement(&mut self, tx: &mut Tx<'_>, involvement: ThreadInvolvement) -> Result<()> {
+    pub fn update_involvement(
+        &mut self,
+        tx: &mut Tx<'_>,
+        involvement: ThreadInvolvement,
+    ) -> Result<()> {
         if involvement == self.involvement {
             return Ok(());
         }

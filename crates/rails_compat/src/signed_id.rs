@@ -14,13 +14,32 @@ use crate::message_verifier::{Digest, Encoding, MessageVerifier, Serializer};
 pub const SALT: &str = "active_record/signed_id";
 
 /// `model_name` is the record's *base* class name, e.g. "User" or "Room" (not "Rooms::Open").
-pub fn generate(secrets: &Secrets, model_name: &str, id: i64, purpose: Option<&str>, expires_at: Option<Timestamp>) -> String {
-    verifier(secrets).generate(&Value::from(id), Some(&combine_purposes(model_name, purpose)), expires_at)
+pub fn generate(
+    secrets: &Secrets,
+    model_name: &str,
+    id: i64,
+    purpose: Option<&str>,
+    expires_at: Option<Timestamp>,
+) -> String {
+    verifier(secrets).generate(
+        &Value::from(id),
+        Some(&combine_purposes(model_name, purpose)),
+        expires_at,
+    )
 }
 
 /// `find_signed`'s verification step: the id to look up, or `None`.
-pub fn verify(secrets: &Secrets, model_name: &str, signed_id: &str, purpose: Option<&str>, now: Timestamp) -> Option<i64> {
-    match verifier(secrets).verify(signed_id, Some(&combine_purposes(model_name, purpose)), now).ok()? {
+pub fn verify(
+    secrets: &Secrets,
+    model_name: &str,
+    signed_id: &str,
+    purpose: Option<&str>,
+    now: Timestamp,
+) -> Option<i64> {
+    match verifier(secrets)
+        .verify(signed_id, Some(&combine_purposes(model_name, purpose)), now)
+        .ok()?
+    {
         Value::Number(n) => n.as_i64(),
         // `find_by(id: "7")` casts the string.
         Value::String(s) => s.trim().parse().ok(),
@@ -34,7 +53,13 @@ pub const TRANSFER_EXPIRES_IN: SignedDuration = SignedDuration::from_hours(4);
 /// `User#transfer_id` (`app/models/user/transferable.rb`):
 /// `signed_id(purpose: :transfer, expires_in: 4.hours)`.
 pub fn transfer_id(secrets: &Secrets, user_id: i64, now: Timestamp) -> String {
-    generate(secrets, "User", user_id, Some("transfer"), Some(now + TRANSFER_EXPIRES_IN))
+    generate(
+        secrets,
+        "User",
+        user_id,
+        Some("transfer"),
+        Some(now + TRANSFER_EXPIRES_IN),
+    )
 }
 
 /// `User.find_by_transfer_id(id)`'s verification step: `find_signed(id, purpose: :transfer)`.
@@ -55,8 +80,16 @@ pub fn verify_avatar_token(secrets: &Secrets, signed_id: &str, now: Timestamp) -
 
 pub fn verifier(secrets: &Secrets) -> MessageVerifier {
     let secret = secrets.key_generator.generate_key(SALT, 64);
-    let fallback = MessageVerifier::new(secret.clone(), Digest::Sha1, Encoding::Strict, Serializer::JsonWithFallback { allow_marshal: true });
-    MessageVerifier::new(secret, Digest::Sha256, Encoding::UrlSafe, Serializer::Json).fall_back_to(fallback)
+    let fallback = MessageVerifier::new(
+        secret.clone(),
+        Digest::Sha1,
+        Encoding::Strict,
+        Serializer::JsonWithFallback {
+            allow_marshal: true,
+        },
+    );
+    MessageVerifier::new(secret, Digest::Sha256, Encoding::UrlSafe, Serializer::Json)
+        .fall_back_to(fallback)
 }
 
 /// `combine_signed_id_purposes`: `[base_class.name.underscore, purpose.to_s].compact_blank.join("/")`.
@@ -77,8 +110,10 @@ fn underscore(name: &str) -> String {
         if c.is_ascii_uppercase() {
             let previous = i.checked_sub(1).map(|j| chars[j]);
             let next = chars.get(i + 1);
-            let after_lower_or_digit = previous.is_some_and(|p| p.is_ascii_lowercase() || p.is_ascii_digit());
-            let acronym_end = previous.is_some_and(|p| p.is_ascii_uppercase()) && next.is_some_and(|n| n.is_ascii_lowercase());
+            let after_lower_or_digit =
+                previous.is_some_and(|p| p.is_ascii_lowercase() || p.is_ascii_digit());
+            let acronym_end = previous.is_some_and(|p| p.is_ascii_uppercase())
+                && next.is_some_and(|n| n.is_ascii_lowercase());
             if after_lower_or_digit || acronym_end {
                 out.push('_');
             }
@@ -108,13 +143,33 @@ mod tests {
         let now: Timestamp = "2026-01-01T12:00:00Z".parse().unwrap();
         let transfer = transfer_id(&secrets, 7, now);
         let avatar = avatar_token(&secrets, 7);
-        assert_eq!(verify_transfer_id(&secrets, &transfer, now + TRANSFER_EXPIRES_IN - SignedDuration::from_secs(1)), Some(7));
-        assert_eq!(verify_transfer_id(&secrets, &transfer, now + TRANSFER_EXPIRES_IN), None);
-        assert_eq!(verify_avatar_token(&secrets, &avatar, now + SignedDuration::from_hours(24 * 365 * 50)), Some(7));
+        assert_eq!(
+            verify_transfer_id(
+                &secrets,
+                &transfer,
+                now + TRANSFER_EXPIRES_IN - SignedDuration::from_secs(1)
+            ),
+            Some(7)
+        );
+        assert_eq!(
+            verify_transfer_id(&secrets, &transfer, now + TRANSFER_EXPIRES_IN),
+            None
+        );
+        assert_eq!(
+            verify_avatar_token(
+                &secrets,
+                &avatar,
+                now + SignedDuration::from_hours(24 * 365 * 50)
+            ),
+            Some(7)
+        );
         assert_eq!(verify_transfer_id(&secrets, &avatar, now), None);
         assert_eq!(verify_avatar_token(&secrets, &transfer, now), None);
         let room_avatar = generate(&secrets, "Room", 7, Some("avatar"), None);
         assert_eq!(verify_avatar_token(&secrets, &room_avatar, now), None);
-        assert_eq!(verify_avatar_token(&Secrets::new(&"b".repeat(128)), &avatar, now), None);
+        assert_eq!(
+            verify_avatar_token(&Secrets::new(&"b".repeat(128)), &avatar, now),
+            None
+        );
     }
 }

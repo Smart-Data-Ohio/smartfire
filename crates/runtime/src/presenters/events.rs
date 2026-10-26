@@ -1,8 +1,8 @@
 //! Preload event card facts once, with no request or viewer state in the provider.
-use campfire_db::{CalendarEvent, Connection, Message, Result, Room, User};
-use campfire_presentation::events::CardView;
-use campfire_kit::{Ctx, Error, StatusCode};
 use crate::app::AppCtx;
+use campfire_db::{CalendarEvent, Connection, Message, Result, Room, User};
+use campfire_kit::{Ctx, Error, StatusCode};
+use campfire_presentation::events::CardView;
 
 pub fn for_message(conn: &Connection, message: &Message) -> Result<Vec<CardView>> {
     Ok(for_messages(conn, std::slice::from_ref(message))?
@@ -92,7 +92,9 @@ pub fn calendar_time(time: Timestamp) -> campfire_presentation::time::CalendarTi
     let (proxy, shift) = time.calendar_proxy();
     campfire_presentation::time::CalendarTime::new(proxy, shift)
 }
-use campfire_presentation::events::pages::{AttendeeView, IndexView, PageEvent, ShowView, VenueView};
+use campfire_presentation::events::pages::{
+    AttendeeView, IndexView, PageEvent, ShowView, VenueView,
+};
 
 pub fn room_name(conn: &Connection, room: &Room, user: &User) -> Result<String> {
     let names = if room.direct() {
@@ -346,7 +348,9 @@ pub async fn viewer_zone(c: &Ctx, id: i64) -> campfire_kit::Result<String> {
         })
         .await
         .map_err(|error| match error {
-            campfire_db::Error::RecordNotFound(_) => Error::Halt(Box::new(crate::concerns::head(StatusCode::NOT_FOUND))),
+            campfire_db::Error::RecordNotFound(_) => {
+                Error::Halt(Box::new(crate::concerns::head(StatusCode::NOT_FOUND)))
+            }
             other => crate::context::db_error(other),
         })
 }

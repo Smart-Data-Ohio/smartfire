@@ -3,8 +3,8 @@ use campfire_app::net::http;
 use campfire_app::net::http::Timeouts;
 use rails_compat::jwt::livekit;
 use serde_json::Value;
-use std::time::Duration;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use tokio::task::JoinHandle;
@@ -460,9 +460,9 @@ async fn cleanup_failed_network_retains_retry_and_absent_participant_completes()
 
 #[tokio::test]
 async fn huddle_reconciler_ends_a_quiet_presenter_without_admin_configuration() {
-    use crate::controllers::presenters::test_support::{TestApp,DAVID};
-    let app=TestApp::boot().await.expect("WS13 needs the parity seed");
-    let db=app.booted.app.db.clone();
+    use crate::controllers::presenters::test_support::{DAVID, TestApp};
+    let app = TestApp::boot().await.expect("WS13 needs the parity seed");
+    let db = app.booted.app.db.clone();
     app.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let stream=db.write(|tx| {
         let room=campfire_db::Room::create_for(tx,campfire_db::RoomType::Stage,Some("WS13 stale presenter"),DAVID,&[DAVID])?;
@@ -472,23 +472,59 @@ async fn huddle_reconciler_ends_a_quiet_presenter_without_admin_configuration() 
         tx.conn().execute("UPDATE huddle_grants SET last_seen_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(31)),grant.id])?;
         Ok(tx.conn().query_row("INSERT INTO streams(room_id,membership_id,user_id,quality,started_at,created_at,updated_at) VALUES(?,?,?,'1080p15',?,?,?) RETURNING id",rusqlite::params![room.id,member.id,DAVID,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?)
     }).await.unwrap();
-    assert_eq!(crate::jobs::huddle::reconcile(&db,RoomService::new(Config::default())).await.unwrap(),0);
-    assert!(db.read(move |conn|Ok(conn.query_row("SELECT ended_at IS NOT NULL FROM streams WHERE id=?",[stream],|r|r.get::<_,bool>(0))?)).await.unwrap(),"the process reconciler left a quiet presenter live");
+    assert_eq!(
+        crate::jobs::huddle::reconcile(&db, RoomService::new(Config::default()))
+            .await
+            .unwrap(),
+        0
+    );
+    assert!(
+        db.read(move |conn| Ok(conn.query_row(
+            "SELECT ended_at IS NOT NULL FROM streams WHERE id=?",
+            [stream],
+            |r| r.get::<_, bool>(0)
+        )?))
+        .await
+        .unwrap(),
+        "the process reconciler left a quiet presenter live"
+    );
 }
 
 #[tokio::test]
 async fn resolver_failure_preserves_prior_items_and_does_not_stop_cleanup() {
     let (logs, _guard) = Ws13bLogs::capture();
-    use campfire_db::models::{huddle_cleanup::{HuddleCleanup,Operation},huddle_grant::HuddleGrant};
-    use crate::controllers::presenters::test_support::{TestApp,DAVID,JASON,KEVIN,DIRECT_DAVID_JASON};
-    let app=TestApp::boot().await.expect("WS13 needs the parity seed");
-    let db=app.booted.app.db.clone();
+    use crate::controllers::presenters::test_support::{
+        DAVID, DIRECT_DAVID_JASON, JASON, KEVIN, TestApp,
+    };
+    use campfire_db::models::{
+        huddle_cleanup::{HuddleCleanup, Operation},
+        huddle_grant::HuddleGrant,
+    };
+    let app = TestApp::boot().await.expect("WS13 needs the parity seed");
+    let db = app.booted.app.db.clone();
     app.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let grant=db.write(|tx| {
-        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
-        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})
-    }).await.unwrap();
+    let grant = db
+        .write(|tx| {
+            let session = campfire_db::Session::start(tx, DAVID, None, None)?;
+            let member = campfire_db::Membership::find_by_room_and_user(
+                tx.conn(),
+                DIRECT_DAVID_JASON,
+                DAVID,
+            )?
+            .unwrap();
+            HuddleGrant::issue(
+                tx,
+                session.id,
+                member.id,
+                member.room_id,
+                &campfire_db::models::room_delete::HuddleConfig {
+                    api_secret: Some("ws13-fixture-value".into()),
+                    admin_configured: false,
+                },
+            )
+        })
+        .await
+        .unwrap();
     let (first,second,cleanup,stream)=db.write(move |tx| {
         let first=campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),JASON,"HuddleGrant",grant.id)?.unwrap().id;
         let second=campfire_db::ActivityItem::refresh_unread(tx,KEVIN,"HuddleGrant",grant.id,"huddle_started")?.id;
@@ -499,48 +535,113 @@ async fn resolver_failure_preserves_prior_items_and_does_not_stop_cleanup() {
         tx.conn().execute_batch(&format!("CREATE TRIGGER ws13_require_resolution_order BEFORE UPDATE ON huddle_cleanups WHEN NEW.id={cleanup} AND ((SELECT event_type FROM activity_items WHERE id={first})!='huddle_missed' OR (SELECT ended_at FROM streams WHERE id={stream}) IS NULL) BEGIN SELECT RAISE(ABORT,'ws13 cleanup ran first'); END"))?;
         Ok((first,second,cleanup,stream))
     }).await.unwrap();
-    let server=Server::start(404,Duration::ZERO).await;
-    assert_eq!(crate::jobs::huddle::reconcile(&db,RoomService::new(config(&server.url))).await.unwrap(),1);
+    let server = Server::start(404, Duration::ZERO).await;
+    assert_eq!(
+        crate::jobs::huddle::reconcile(&db, RoomService::new(config(&server.url)))
+            .await
+            .unwrap(),
+        1
+    );
     db.read(move |conn| {
-        assert_eq!(campfire_db::ActivityItem::find(conn,first)?.event_type,"huddle_missed");
-        assert_eq!(campfire_db::ActivityItem::find(conn,second)?.event_type,"huddle_started");
-        assert!(HuddleCleanup::find_by_id(conn,cleanup)?.unwrap().completed_at.is_some());
-        assert!(conn.query_row("SELECT ended_at IS NOT NULL FROM streams WHERE id=?",[stream],|r|r.get::<_,bool>(0))?);
+        assert_eq!(
+            campfire_db::ActivityItem::find(conn, first)?.event_type,
+            "huddle_missed"
+        );
+        assert_eq!(
+            campfire_db::ActivityItem::find(conn, second)?.event_type,
+            "huddle_started"
+        );
+        assert!(
+            HuddleCleanup::find_by_id(conn, cleanup)?
+                .unwrap()
+                .completed_at
+                .is_some()
+        );
+        assert!(conn.query_row(
+            "SELECT ended_at IS NOT NULL FROM streams WHERE id=?",
+            [stream],
+            |r| r.get::<_, bool>(0)
+        )?);
         Ok(())
-    }).await.unwrap();
-    assert_eq!(server.received.lock().unwrap().len(),1);
+    })
+    .await
+    .unwrap();
+    assert_eq!(server.received.lock().unwrap().len(), 1);
     logs.assert_oracle("resolver_sql_failure");
 }
 
-fn stage_stream_state_fixture(tx:&mut campfire_db::Tx<'_>,quality:&str)->campfire_db::Result<i64> {
+fn stage_stream_state_fixture(
+    tx: &mut campfire_db::Tx<'_>,
+    quality: &str,
+) -> campfire_db::Result<i64> {
     use crate::controllers::presenters::test_support::DAVID;
-    let room=campfire_db::Room::create_for(tx,campfire_db::RoomType::Stage,Some("WS13 phase failure stage"),DAVID,&[DAVID])?;
-    let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),room.id,DAVID)?.unwrap();
+    let room = campfire_db::Room::create_for(
+        tx,
+        campfire_db::RoomType::Stage,
+        Some("WS13 phase failure stage"),
+        DAVID,
+        &[DAVID],
+    )?;
+    let member =
+        campfire_db::Membership::find_by_room_and_user(tx.conn(), room.id, DAVID)?.unwrap();
     Ok(tx.conn().query_row("INSERT INTO streams(room_id,membership_id,user_id,quality,started_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?) RETURNING id",rusqlite::params![room.id,member.id,DAVID,quality,tx.now(),tx.now(),tx.now()],|r|r.get(0))?)
 }
 
 #[tokio::test]
 async fn huddle_stale_stream_failure_preserves_prior_ends_and_does_not_stop_cleanup() {
     let (logs, _guard) = Ws13bLogs::capture();
-    use campfire_db::models::huddle_cleanup::{HuddleCleanup,Operation};
-    let app=crate::controllers::presenters::test_support::TestApp::boot().await.expect("WS13 needs the parity seed");
-    let db=app.booted.app.db.clone();
+    use campfire_db::models::huddle_cleanup::{HuddleCleanup, Operation};
+    let app = crate::controllers::presenters::test_support::TestApp::boot()
+        .await
+        .expect("WS13 needs the parity seed");
+    let db = app.booted.app.db.clone();
     app.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let (first,second,cleanup)=db.write(|tx| {
-        let first=stage_stream_state_fixture(tx,"1080p15")?;
-        let second=stage_stream_state_fixture(tx,"4k60")?;
-        let cleanup=HuddleCleanup::create(tx,Operation::DeleteRoom,"ws13-stream-failure",None,None,false)?.id;
-        Ok((first,second,cleanup))
-    }).await.unwrap();
-    let server=Server::start(404,Duration::ZERO).await;
-    assert_eq!(crate::jobs::huddle::reconcile(&db,RoomService::new(config(&server.url))).await.unwrap(),1);
+    let (first, second, cleanup) = db
+        .write(|tx| {
+            let first = stage_stream_state_fixture(tx, "1080p15")?;
+            let second = stage_stream_state_fixture(tx, "4k60")?;
+            let cleanup = HuddleCleanup::create(
+                tx,
+                Operation::DeleteRoom,
+                "ws13-stream-failure",
+                None,
+                None,
+                false,
+            )?
+            .id;
+            Ok((first, second, cleanup))
+        })
+        .await
+        .unwrap();
+    let server = Server::start(404, Duration::ZERO).await;
+    assert_eq!(
+        crate::jobs::huddle::reconcile(&db, RoomService::new(config(&server.url)))
+            .await
+            .unwrap(),
+        1
+    );
     db.read(move |conn| {
-        assert!(conn.query_row("SELECT ended_at IS NOT NULL FROM streams WHERE id=?",[first],|r|r.get::<_,bool>(0))?);
-        assert!(conn.query_row("SELECT ended_at IS NULL FROM streams WHERE id=?",[second],|r|r.get::<_,bool>(0))?);
-        assert!(HuddleCleanup::find_by_id(conn,cleanup)?.unwrap().completed_at.is_some());
+        assert!(conn.query_row(
+            "SELECT ended_at IS NOT NULL FROM streams WHERE id=?",
+            [first],
+            |r| r.get::<_, bool>(0)
+        )?);
+        assert!(conn.query_row(
+            "SELECT ended_at IS NULL FROM streams WHERE id=?",
+            [second],
+            |r| r.get::<_, bool>(0)
+        )?);
+        assert!(
+            HuddleCleanup::find_by_id(conn, cleanup)?
+                .unwrap()
+                .completed_at
+                .is_some()
+        );
         Ok(())
-    }).await.unwrap();
-    assert_eq!(server.received.lock().unwrap().len(),1);
+    })
+    .await
+    .unwrap();
+    assert_eq!(server.received.lock().unwrap().len(), 1);
     logs.assert_oracle("stream_validation_failure");
 }
 
@@ -626,11 +727,28 @@ async fn one_huddle_pass_runs_all_three_phases_in_rails_order() {
         .expect("WS13b requires the parity seed");
     let db = app.booted.app.db.clone();
     app.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let grant=db.write(|tx| {
-        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
-        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13b-fixture-value".into()),admin_configured:false})
-    }).await.unwrap();
+    let grant = db
+        .write(|tx| {
+            let session = campfire_db::Session::start(tx, DAVID, None, None)?;
+            let member = campfire_db::Membership::find_by_room_and_user(
+                tx.conn(),
+                DIRECT_DAVID_JASON,
+                DAVID,
+            )?
+            .unwrap();
+            HuddleGrant::issue(
+                tx,
+                session.id,
+                member.id,
+                member.room_id,
+                &campfire_db::models::room_delete::HuddleConfig {
+                    api_secret: Some("ws13b-fixture-value".into()),
+                    admin_configured: false,
+                },
+            )
+        })
+        .await
+        .unwrap();
     let cleanup=db.write(move |tx| {
         let item=campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),JASON,"HuddleGrant",grant.id)?.unwrap().id;
         tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(120)),item])?;

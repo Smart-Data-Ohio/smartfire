@@ -20,8 +20,18 @@ fn oracle_row(name: &str) -> Value {
 }
 
 fn assert_response(response: &Reply, row: &Value) {
-    if row["content_type"].as_str().is_some_and(|mime| mime.contains("turbo-stream")) {
-        assert_eq!(response.status, if row["status"] == 200 { StatusCode::CREATED } else { StatusCode::from_u16(row["status"].as_u64().unwrap() as u16).unwrap() });
+    if row["content_type"]
+        .as_str()
+        .is_some_and(|mime| mime.contains("turbo-stream"))
+    {
+        assert_eq!(
+            response.status,
+            if row["status"] == 200 {
+                StatusCode::CREATED
+            } else {
+                StatusCode::from_u16(row["status"].as_u64().unwrap() as u16).unwrap()
+            }
+        );
         assert!(response.text().is_empty());
         return;
     }
@@ -47,7 +57,9 @@ fn assert_response(response: &Reply, row: &Value) {
 async fn app() -> TestApp {
     TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap())))
         .await
-        .unwrap().without_job_runner().await
+        .unwrap()
+        .without_job_runner()
+        .await
 }
 async fn thread(app: &TestApp) -> i64 {
     app.db()
@@ -116,7 +128,11 @@ async fn missing_thread_original_fails_in_job_after_post_and_reopen_commit() {
     );
     assert_eq!(reply.status, StatusCode::CREATED);
     assert_eq!(state, (1, true, false));
-    assert!(super::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+    assert!(
+        super::attachment_processing_tests::perform_queued(&app, 1)
+            .await
+            .is_err()
+    );
     assert_eq!(file_snapshot(app.booted.app.storage.service.root()), files);
 }
 
@@ -221,8 +237,16 @@ async fn thread_media_failure_preserves_committed_upload_and_discards_failed_var
             .await;
         assert_eq!(response.status, StatusCode::CREATED, "initial={initial}");
         let files = file_snapshot(app.booted.app.storage.service.root());
-        assert!(super::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
-        assert_eq!(file_snapshot(app.booted.app.storage.service.root()), files, "failed derivative cannot remove the committed original");
+        assert!(
+            super::attachment_processing_tests::perform_queued(&app, 1)
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            file_snapshot(app.booted.app.storage.service.root()),
+            files,
+            "failed derivative cannot remove the committed original"
+        );
         app.db().read(|c| {
             assert_eq!(c.query_row("SELECT count(*) FROM messages WHERE client_message_id='failed-variant'", [], |r| r.get::<_,i64>(0))?, 1);
             assert_eq!(c.query_row("SELECT count(*) FROM active_storage_variant_records WHERE blob_id IN (SELECT blob_id FROM active_storage_attachments WHERE record_type='Message' AND record_id IN (SELECT id FROM messages WHERE client_message_id='failed-variant'))", [], |r| r.get::<_,i64>(0))?, 0);
@@ -537,7 +561,9 @@ async fn initial_attachment_capability_and_media_matrix_matches_rails() {
             row["now"].as_str().unwrap().parse().unwrap(),
         )))
         .await
-        .unwrap().without_job_runner().await;
+        .unwrap()
+        .without_job_runner()
+        .await;
         let before = app
             .db()
             .read(|c| {
@@ -692,7 +718,13 @@ async fn variant_analysis_jobs_share_the_representation_transaction() {
         };
         let response=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json").body(json!({"thread":{"name":"Reject variant"},"message":{"markdown_source":"Keep boundaries","client_message_id":"reject-variant-analysis","attachment":signed}}).to_string())).await;
         assert_eq!(response.status, StatusCode::CREATED, "{kind}");
-        if kind != "root" { assert!(super::attachment_processing_tests::perform_queued(&app, 1).await.is_err()); }
+        if kind != "root" {
+            assert!(
+                super::attachment_processing_tests::perform_queued(&app, 1)
+                    .await
+                    .is_err()
+            );
+        }
         let after = row_snapshot(&app).await;
         {
             // Root Message.create_with_attachment! committed before representation processing.

@@ -79,7 +79,15 @@ impl AgentGrant {
         )
     }
     pub fn effective_for_agent(conn: &Connection, agent_id: i64) -> Result<Vec<Self>> {
-        query_all(conn, &format!("SELECT g.* FROM agent_grants g WHERE g.agent_id=? AND ({}) ORDER BY g.id", effective_active_sql("g")), [agent_id], Self::from_row)
+        query_all(
+            conn,
+            &format!(
+                "SELECT g.* FROM agent_grants g WHERE g.agent_id=? AND ({}) ORDER BY g.id",
+                effective_active_sql("g")
+            ),
+            [agent_id],
+            Self::from_row,
+        )
     }
     pub fn all_revoked(conn: &Connection) -> Result<Vec<Self>> {
         query_all(
@@ -171,7 +179,11 @@ impl AgentGrant {
                 errors.add("room", "must be a non-direct room for a personal agent");
             }
             let room = super::agent_access::personal_room_sql("a.owner_id", "?");
-            if !exists(conn, &format!("SELECT 1 FROM agents a WHERE a.id=? AND ({room})"), params![a.agent_id, a.room_id])? {
+            if !exists(
+                conn,
+                &format!("SELECT 1 FROM agents a WHERE a.id=? AND ({room})"),
+                params![a.agent_id, a.room_id],
+            )? {
                 errors.add("room", "must be a live room the owner belongs to");
             }
         }

@@ -269,14 +269,20 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
     let workspace = api::Workspace {
         afk_policy: {
             let policy = account.settings().afk_policy();
-            api::AfkPolicy { room_id: policy.room_id, timeout_minutes: policy.timeout_minutes }
+            api::AfkPolicy {
+                room_id: policy.room_id,
+                timeout_minutes: policy.timeout_minutes,
+            }
         },
         name: account.name.clone(),
-        logo_url: branding.logo_url.unwrap_or_else(|| account_presenters::fresh_account_logo_path(Some(&account), None)),
+        logo_url: branding
+            .logo_url
+            .unwrap_or_else(|| account_presenters::fresh_account_logo_path(Some(&account), None)),
         logo_still_url: branding.logo_still_url,
         banner_url: branding.banner_url,
         banner_still_url: branding.banner_still_url,
-        invite_splash_url: presenters::workspace_branding::invite_splash_url(c.app(), account.id).await?,
+        invite_splash_url: presenters::workspace_branding::invite_splash_url(c.app(), account.id)
+            .await?,
         logo_attached,
         join_url: c.url_for(&campfire_routes::join(&account.join_code)),
         can_administer,
@@ -290,7 +296,10 @@ async fn reply_workspace(c: &mut Ctx) -> Result {
         version: c.app().config.app_version.clone(),
         description: account.settings().description().to_string(),
         vanity_slug: account.settings().vanity_slug().map(str::to_string),
-        vanity_url: account.settings().vanity_slug().map(|slug| c.url_for(&campfire_routes::join(slug))),
+        vanity_url: account
+            .settings()
+            .vanity_slug()
+            .map(|slug| c.url_for(&campfire_routes::join(slug))),
     };
     c.json(StatusCode::OK, &workspace)
 }
@@ -318,7 +327,10 @@ async fn save_workspace(c: &mut Ctx) -> Result {
     if let Some(limit) = update.member_agent_limit
         && !(0..=campfire_db::models::account::MAX_UPLOAD_LIMIT_BYTES).contains(&limit)
     {
-        return Err(fail(c, validation("memberAgentLimit", "must be a non-negative safe integer")));
+        return Err(fail(
+            c,
+            validation("memberAgentLimit", "must be a non-negative safe integer"),
+        ));
     }
     let description = update
         .description
@@ -343,14 +355,20 @@ async fn save_workspace(c: &mut Ctx) -> Result {
             )]
         });
     if let Some(enabled) = update.member_agents_enabled {
-        settings.get_or_insert_with(Vec::new).push(("member_agents_enabled".into(), enabled.to_string()));
+        settings
+            .get_or_insert_with(Vec::new)
+            .push(("member_agents_enabled".into(), enabled.to_string()));
     }
     if let Some(limit) = update.member_agent_limit {
-        settings.get_or_insert_with(Vec::new).push(("member_agent_limit".into(), limit.to_string()));
+        settings
+            .get_or_insert_with(Vec::new)
+            .push(("member_agent_limit".into(), limit.to_string()));
     }
     if let Some(policy) = update.afk_policy {
-        settings.get_or_insert_with(Vec::new)
-            .push(("afk_policy".into(), serde_json::to_string(&policy).expect("AFK policy encodes")));
+        settings.get_or_insert_with(Vec::new).push((
+            "afk_policy".into(),
+            serde_json::to_string(&policy).expect("AFK policy encodes"),
+        ));
     }
     if let Some(bytes) = update.upload_limit_bytes {
         settings
@@ -394,7 +412,13 @@ async fn attach_banner(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateBanner = body(c).await?;
     let prepared = branding_image(c, &update.signed_id, Kind::Banner).await?;
-    write_workspace_image(c, "banner", Assignment::Existing(prepared.blob.clone()), Some(prepared)).await?;
+    write_workspace_image(
+        c,
+        "banner",
+        Assignment::Existing(prepared.blob.clone()),
+        Some(prepared),
+    )
+    .await?;
     reply_workspace(c).await
 }
 
@@ -505,7 +529,9 @@ async fn write_workspace(
             let before = account.clone();
             let before_logo =
                 attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
-            let before_banner = attachments::attached_blob(tx.conn(), "Account", account.id, "banner")?.map(|blob| blob.id);
+            let before_banner =
+                attachments::attached_blob(tx.conn(), "Account", account.id, "banner")?
+                    .map(|blob| blob.id);
             let settings: Option<Vec<(&str, &str)>> = settings.as_ref().map(|settings| {
                 settings
                     .iter()
@@ -513,10 +539,16 @@ async fn write_workspace(
                     .collect()
             });
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
-            if before.settings().stage_audience_budget() != account.settings().stage_audience_budget() {
-                let stages = tx.conn().prepare_cached(
-                    "SELECT id FROM rooms WHERE type='Rooms::Stage' AND deleted_at IS NULL",
-                )?.query_map([], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            if before.settings().stage_audience_budget()
+                != account.settings().stage_audience_budget()
+            {
+                let stages = tx
+                    .conn()
+                    .prepare_cached(
+                        "SELECT id FROM rooms WHERE type='Rooms::Stage' AND deleted_at IS NULL",
+                    )?
+                    .query_map([], |row| row.get::<_, i64>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?;
                 for room_id in stages {
                     tx.emit_after_commit(campfire_db::Event::broadcast(
                         &campfire_db::models::huddle_effects::StageRoster { room_id },
@@ -527,8 +559,16 @@ async fn write_workspace(
             attachments::assign(tx, Record::account(account.id, &secrets), "banner", banner)?;
             let after_logo =
                 attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
-            let after_banner = attachments::attached_blob(tx.conn(), "Account", account.id, "banner")?.map(|blob| blob.id);
-            Ok((before, account, before_logo, after_logo, Some((before_banner, after_banner))))
+            let after_banner =
+                attachments::attached_blob(tx.conn(), "Account", account.id, "banner")?
+                    .map(|blob| blob.id);
+            Ok((
+                before,
+                account,
+                before_logo,
+                after_logo,
+                Some((before_banner, after_banner)),
+            ))
         })
         .await
         .map_err(campfire_runtime::context::db_error)?;
@@ -623,7 +663,11 @@ async fn new_join_code(c: &mut Ctx) -> Result {
 // --- People ------------------------------------------------------------------------------------
 
 /// One row of the people list, the administrator-only fields blanked for everyone else.
-fn person(summary: campfire_presentation::users::UserSummary, viewer: i64, admin: bool) -> api::Person {
+fn person(
+    summary: campfire_presentation::users::UserSummary,
+    viewer: i64,
+    admin: bool,
+) -> api::Person {
     let offer = summary.offer_google_email_link();
     api::Person {
         id: summary.id,

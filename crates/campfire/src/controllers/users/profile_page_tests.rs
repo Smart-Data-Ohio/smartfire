@@ -24,7 +24,6 @@ async fn rejected_owner_settings_show_errors_without_persisting_changes() {
             .write(Req::new(axum::http::Method::PATCH, "/users/me/profile").form(&fields))
             .await;
         assert_eq!(page.status, axum::http::StatusCode::UNPROCESSABLE_ENTITY);
-
     }
     let facts = app
         .db()

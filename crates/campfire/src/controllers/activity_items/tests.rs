@@ -2,9 +2,9 @@
 use crate::controllers::presenters::test_support::{Req, TestApp};
 use axum::http::{Method, StatusCode};
 
-mod review_regressions;
-mod lifecycle;
 mod board_nudge;
+mod lifecycle;
+mod review_regressions;
 
 // Rails fixture requests disable forgery verification; remove only those dynamic fields.
 
@@ -13,7 +13,10 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
     let corpus: serde_json::Value =
         serde_json::from_str(include_str!("../../../../../vectors/inbox-http.json")).unwrap();
     let setup = corpus["setup"].as_array().unwrap();
-    for case in corpus["cases"].as_array().unwrap().iter().filter(|case| case["accept"] == "application/json" || !case["method"].as_str().unwrap().eq_ignore_ascii_case("GET")) {
+    for case in corpus["cases"].as_array().unwrap().iter().filter(|case| {
+        case["accept"] == "application/json"
+            || !case["method"].as_str().unwrap().eq_ignore_ascii_case("GET")
+    }) {
         let t = TestApp::boot_frozen()
             .await
             .expect("pinned default seed")
@@ -46,7 +49,8 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
         .body(serde_json::to_vec(&case["params"]).unwrap());
         let response = browser.send(req).await;
         let name = case["name"].as_str().unwrap().to_owned();
-        let retired_stream = case["accept"] == "text/vnd.turbo-stream.html" && case["status"].as_u64().unwrap() < 400;
+        let retired_stream = case["accept"] == "text/vnd.turbo-stream.html"
+            && case["status"].as_u64().unwrap() < 400;
         let expected_status = if retired_stream {
             StatusCode::NOT_ACCEPTABLE.as_u16()
         } else {
@@ -63,9 +67,17 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
             assert_eq!(response.location(), None, "{name}");
         } else if case["accept"] == "application/json" {
             for key in ["content-type", "cache-control", "pragma", "location"] {
-                assert_eq!(response.header(key), case["headers"][key].as_str(), "{name}: {key}");
+                assert_eq!(
+                    response.header(key),
+                    case["headers"][key].as_str(),
+                    "{name}: {key}"
+                );
             }
-            assert_eq!(response.text(), case["body"].as_str().unwrap(), "{name}: legacy JSON bytes");
+            assert_eq!(
+                response.text(),
+                case["body"].as_str().unwrap(),
+                "{name}: legacy JSON bytes"
+            );
         }
 
         let expected = case["opened_state"]
@@ -108,5 +120,4 @@ async fn ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions() {
             .await
             .unwrap();
     }
-
 }

@@ -14,9 +14,9 @@ use rusqlite::Connection;
 
 use crate::database::Tx;
 use crate::error::{Error, Result};
-use crate::models::{ChannelThread, Membership, Message, NewMessage, Room};
 use crate::models::active_storage::Blob;
 use crate::models::channel_webhook::ChannelWebhook;
+use crate::models::{ChannelThread, Membership, Message, NewMessage, Room};
 
 /// `Messages::Forwarder::MAX_DESTINATIONS`
 pub const MAX_DESTINATIONS: usize = 5;
@@ -30,11 +30,17 @@ pub struct Destination {
 
 impl Destination {
     pub fn room(room_id: i64) -> Self {
-        Self { room_id: Some(room_id), thread_id: None }
+        Self {
+            room_id: Some(room_id),
+            thread_id: None,
+        }
     }
 
     pub fn thread(room_id: i64, thread_id: i64) -> Self {
-        Self { room_id: Some(room_id), thread_id: Some(thread_id) }
+        Self {
+            room_id: Some(room_id),
+            thread_id: Some(thread_id),
+        }
     }
 }
 
@@ -73,7 +79,9 @@ pub trait BlobCopier {
     fn discard(&self, blobs: &[Blob]);
     /// Small runtime seam for `save_forward! -> message.process_attachment`. Model-only
     /// callers without media processing retain the existing adapter contract.
-    fn process(&self, _tx: &mut Tx<'_>, _message: &Message) -> Result<()> { Ok(()) }
+    fn process(&self, _tx: &mut Tx<'_>, _message: &Message) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// `Messages::Forwarder.call(source:, destinations:, note:, creator:)`. The outer `Result` is
@@ -86,15 +94,28 @@ pub fn forward(
     creator_id: i64,
     copier: &dyn BlobCopier,
 ) -> Result<std::result::Result<Vec<Forwarded>, Refusal>> {
-    forward_with_client_ids(tx, source, destinations, note, creator_id, copier, &mut crate::sql::uuid)
+    forward_with_client_ids(
+        tx,
+        source,
+        destinations,
+        note,
+        creator_id,
+        copier,
+        &mut crate::sql::uuid,
+    )
 }
 
 /// The same forward operation with `Random.uuid` supplied as an input, so differential tests
 /// can lend both runtimes identical random IDs without rewriting their response bytes.
 #[allow(clippy::too_many_arguments)]
 pub fn forward_with_client_ids(
-    tx: &mut Tx<'_>, source: &Message, destinations: &[Destination], note: Option<&str>,
-    creator_id: i64, copier: &dyn BlobCopier, client_id: &mut dyn FnMut() -> String,
+    tx: &mut Tx<'_>,
+    source: &Message,
+    destinations: &[Destination],
+    note: Option<&str>,
+    creator_id: i64,
+    copier: &dyn BlobCopier,
+    client_id: &mut dyn FnMut() -> String,
 ) -> Result<std::result::Result<Vec<Forwarded>, Refusal>> {
     if !crate::models::message_quote::visible(tx.conn(), source, creator_id)? {
         return Ok(Err(invalid("That message is unavailable")));
@@ -107,7 +128,17 @@ pub fn forward_with_client_ids(
     let mut copied = Vec::new();
     let mut results = Vec::new();
     for (room, thread) in destinations {
-        match create_forward(tx, source, room, thread, note, creator_id, copier, &mut copied, client_id()) {
+        match create_forward(
+            tx,
+            source,
+            room,
+            thread,
+            note,
+            creator_id,
+            copier,
+            &mut copied,
+            client_id(),
+        ) {
             Ok(Ok(result)) => results.push(result),
             Ok(Err(refusal)) => {
                 copier.discard(&copied);
@@ -131,11 +162,15 @@ fn normalize_destinations(
     creator_id: i64,
 ) -> Result<std::result::Result<Vec<Target>, Refusal>> {
     if destinations.is_empty() || destinations.len() > MAX_DESTINATIONS {
-        return Ok(Err(Refusal::TooManyDestinations(format!("Choose between 1 and {MAX_DESTINATIONS} destinations"))));
+        return Ok(Err(Refusal::TooManyDestinations(format!(
+            "Choose between 1 and {MAX_DESTINATIONS} destinations"
+        ))));
     }
     let mut normalized: Vec<Target> = Vec::new();
     for destination in destinations {
-        let Some(room_id) = destination.room_id else { return Ok(Err(invalid("A destination room is required"))) };
+        let Some(room_id) = destination.room_id else {
+            return Ok(Err(invalid("A destination room is required")));
+        };
         let Some(room) = Room::find_for_user(conn, creator_id, room_id)? else {
             return Ok(Err(invalid("You cannot forward to that room")));
         };
@@ -144,7 +179,9 @@ fn normalize_destinations(
         }
         let thread = match destination.thread_id {
             Some(thread_id) => {
-                let Some(thread) = ChannelThread::find_by_id(conn, thread_id)?.filter(|thread| thread.room_id == room.id) else {
+                let Some(thread) = ChannelThread::find_by_id(conn, thread_id)?
+                    .filter(|thread| thread.room_id == room.id)
+                else {
                     return Ok(Err(invalid("That thread is unavailable")));
                 };
                 if !thread.readable_by(conn, creator_id)? {
@@ -162,7 +199,10 @@ fn normalize_destinations(
         };
         normalized.push((room, thread));
     }
-    let mut keys: Vec<(i64, Option<i64>)> = normalized.iter().map(|(room, thread)| (room.id, thread.as_ref().map(|t| t.id))).collect();
+    let mut keys: Vec<(i64, Option<i64>)> = normalized
+        .iter()
+        .map(|(room, thread)| (room.id, thread.as_ref().map(|t| t.id)))
+        .collect();
     keys.sort();
     keys.dedup();
     if keys.len() != normalized.len() {
@@ -188,7 +228,9 @@ fn create_forward(
     if Membership::find_by_room_and_user(tx.conn(), room.id, creator_id)?.is_none() {
         return Ok(Err(invalid("You cannot forward to that room")));
     }
-    let attributes = build_forward(tx, source, &room, note, creator_id, copier, copied, client_id)?;
+    let attributes = build_forward(
+        tx, source, &room, note, creator_id, copier, copied, client_id,
+    )?;
     match thread {
         Some(mut thread) => {
             thread.reload(tx.conn())?;
@@ -203,13 +245,21 @@ fn create_forward(
             ChannelWebhook::copy_message(tx, source.id, message.id)?;
             copier.process(tx, &message)?;
             thread.reload(tx.conn())?;
-            Ok(Ok(Forwarded { message, room, thread: Some(thread) }))
+            Ok(Ok(Forwarded {
+                message,
+                room,
+                thread: Some(thread),
+            }))
         }
         None => {
             let message = Message::create(tx, attributes)?;
             ChannelWebhook::copy_message(tx, source.id, message.id)?;
             copier.process(tx, &message)?;
-            Ok(Ok(Forwarded { message, room, thread: None }))
+            Ok(Ok(Forwarded {
+                message,
+                room,
+                thread: None,
+            }))
         }
     }
 }
@@ -229,12 +279,20 @@ fn build_forward(
     client_id: String,
 ) -> Result<NewMessage> {
     let body = snapshot_body(tx.conn(), source)?;
-    let body = tx.rich_text().try_canonicalize_html(tx.conn(), &body).map_err(Error::Other)?;
+    let body = tx
+        .rich_text()
+        .try_canonicalize_html(tx.conn(), &body)
+        .map_err(Error::Other)?;
     let mut attachment_blob_id = None;
     let mut attachment_blob_ids = Vec::new();
     let files = source.attachments(tx.conn())?;
-    let grouped = files.iter().any(|(attachment, _)| attachment.name == "attachments");
-    let attachment_spoilers = files.iter().map(|(attachment, _)| attachment.spoiler).collect();
+    let grouped = files
+        .iter()
+        .any(|(attachment, _)| attachment.name == "attachments");
+    let attachment_spoilers = files
+        .iter()
+        .map(|(attachment, _)| attachment.spoiler)
+        .collect();
     for (_, blob) in files {
         let copy = copier.copy(tx, &blob)?;
         if !grouped {
@@ -267,10 +325,16 @@ fn build_forward(
 /// `<br>`) when it's a forward with one.
 fn snapshot_body(conn: &Connection, source: &Message) -> Result<String> {
     let html = source.body_html(conn)?.unwrap_or_default();
-    Ok(match source.forward_note.as_deref().filter(|note| !note.trim().is_empty()) {
-        Some(note) => format!("<p>{}</p>{html}", html_escape(note).replace('\n', "<br>")),
-        None => html,
-    })
+    Ok(
+        match source
+            .forward_note
+            .as_deref()
+            .filter(|note| !note.trim().is_empty())
+        {
+            Some(note) => format!("<p>{}</p>{html}", html_escape(note).replace('\n', "<br>")),
+            None => html,
+        },
+    )
 }
 
 /// `ERB::Util.html_escape`

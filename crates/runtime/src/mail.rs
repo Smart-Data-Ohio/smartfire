@@ -60,8 +60,18 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
     };
     let message = match job.notification {
         Notification::OAuthRefreshReuse { user_id } => {
-            let user = app.db.read(move |conn|User::find(conn,user_id)).await.map_err(crate::queue::discard_missing)?;
-            outbound::oauth_refresh_reuse(&app.mail.config,&outbound::User {name:user.name,email:user.email_address.unwrap_or_default()})
+            let user = app
+                .db
+                .read(move |conn| User::find(conn, user_id))
+                .await
+                .map_err(crate::queue::discard_missing)?;
+            outbound::oauth_refresh_reuse(
+                &app.mail.config,
+                &outbound::User {
+                    name: user.name,
+                    email: user.email_address.unwrap_or_default(),
+                },
+            )
         }
         Notification::Lockout { user_id } => {
             let user = app
@@ -132,7 +142,11 @@ async fn incineration(app: App, job: IncinerationJob, _: campfire_jobs::Executio
         .await?;
     Ok(Outcome::Done)
 }
-pub async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execution) -> JobResult {
+pub async fn message_created(
+    app: App,
+    job: MessageCreated,
+    _: campfire_jobs::Execution,
+) -> JobResult {
     let message = app
         .db
         .read(move |conn| Message::find(conn, job.message_id))
@@ -158,13 +172,12 @@ pub async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Ex
             .await
             .map_err(|e| JobError::from(anyhow::anyhow!(e.to_string())))?;
     }
-    let refreshes = app.db
+    let refreshes = app
+        .db
         .read({
             let app = app.clone();
             let message = message.clone();
-            move |conn| {
-                publish(conn, &app, &message)
-            }
+            move |conn| publish(conn, &app, &message)
         })
         .await?;
     crate::controllers::presenters::refresh_after_render(&app.db, refreshes).await;
@@ -187,11 +200,7 @@ fn publish(
 ) -> campfire_db::Result<crate::presenters::RenderRefreshes> {
     let room = Room::find(conn, message.room_id)?;
     let refreshes = crate::presenters::broadcast_refreshes(conn, app, message)?;
-    app.broadcasts.message_create(
-        conn,
-        &room,
-        message,
-        &*app.db.env().rich_text,
-    )?;
+    app.broadcasts
+        .message_create(conn, &room, message, &*app.db.env().rich_text)?;
     Ok(refreshes)
 }

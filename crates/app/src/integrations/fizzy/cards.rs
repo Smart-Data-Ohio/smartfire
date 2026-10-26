@@ -52,12 +52,24 @@ impl Card {
             .collect::<std::result::Result<_, _>>()?)
     }
     /// Read-only page preload seam; preserve the single-message card ordering.
-    pub fn for_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
-        let mut result: std::collections::HashMap<i64, Vec<Self>> = ids.iter().map(|id| (*id, Vec::new())).collect();
-        if ids.is_empty() { return Ok(result); }
+    pub fn for_messages(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
+        let mut result: std::collections::HashMap<i64, Vec<Self>> =
+            ids.iter().map(|id| (*id, Vec::new())).collect();
+        if ids.is_empty() {
+            return Ok(result);
+        }
         let mut query = conn.prepare("SELECT c.*, r.message_id AS referenced_message_id FROM fizzy_cards c JOIN fizzy_card_references r ON r.fizzy_card_id=c.id WHERE r.message_id IN (SELECT value FROM json_each(?)) ORDER BY r.message_id,c.account_id,c.number")?;
-        for row in query.query_map([serde_json::json!(ids).to_string()], |row| Ok((row.get::<_, i64>("referenced_message_id")?, Self::from_row(row)?)))? {
-            let (id, card) = row?; result.entry(id).or_default().push(card);
+        for row in query.query_map([serde_json::json!(ids).to_string()], |row| {
+            Ok((
+                row.get::<_, i64>("referenced_message_id")?,
+                Self::from_row(row)?,
+            ))
+        })? {
+            let (id, card) = row?;
+            result.entry(id).or_default().push(card);
         }
         Ok(result)
     }
@@ -205,4 +217,3 @@ pub fn sync_message(
     }
     Ok(())
 }
-

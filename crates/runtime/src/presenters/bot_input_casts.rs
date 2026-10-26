@@ -17,7 +17,6 @@ pub fn datetime(
 
 pub fn extended_datetime(at: Timestamp, zone: &Zone, suffix: bool) -> String {
     rails_compat::datetime::render(at, zone.tz(), suffix)
-
 }
 
 /// GithubConnectionsController calls `params[:access_token].to_s.strip` before

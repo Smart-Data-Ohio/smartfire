@@ -39,7 +39,10 @@ fn person_json() -> serde_json::Value {
 fn the_workspace_and_its_writes() {
     assert_wire(
         &Workspace {
-            afk_policy: crate::AfkPolicy { room_id: None, timeout_minutes: 5 },
+            afk_policy: crate::AfkPolicy {
+                room_id: None,
+                timeout_minutes: 5,
+            },
             name: "Smart Data".into(),
             logo_url: "/account/logo?v=1700000000".into(),
             logo_still_url: None,
@@ -80,7 +83,12 @@ fn the_workspace_and_its_writes() {
             "vanityUrl": "https://chat.example/join/smart-data"
         }),
     );
-    assert_wire(&UpdateInviteSplash { signed_id: "blob-3".into() }, json!({"signedId":"blob-3"}));
+    assert_wire(
+        &UpdateInviteSplash {
+            signed_id: "blob-3".into(),
+        },
+        json!({"signedId":"blob-3"}),
+    );
     assert_wire(
         &UpdateWorkspace {
             afk_policy: None,
@@ -357,10 +365,21 @@ fn the_welcome_settings_and_what_a_viewer_reads() {
                     emoji: Some("👋".into()),
                     description: "Introduce yourself".into(),
                 },
-                WelcomeRoomEdit { room_id: None, keep: Some("opaque".into()), emoji: None, description: "".into() },
+                WelcomeRoomEdit {
+                    room_id: None,
+                    keep: Some("opaque".into()),
+                    emoji: None,
+                    description: "".into(),
+                },
             ],
             guide: vec![
-                GuideResourceEdit { title: "Start here".into(), emoji: None, room_id: Some(3), keep: None, body: None },
+                GuideResourceEdit {
+                    title: "Start here".into(),
+                    emoji: None,
+                    room_id: Some(3),
+                    keep: None,
+                    body: None,
+                },
                 GuideResourceEdit {
                     title: "Hours".into(),
                     emoji: Some("🕘".into()),
@@ -369,7 +388,10 @@ fn the_welcome_settings_and_what_a_viewer_reads() {
                     body: Some("9 to 5".into()),
                 },
             ],
-            choices: vec![WelcomeRoomChoice { id: 3, name: "general".into() }],
+            choices: vec![WelcomeRoomChoice {
+                id: 3,
+                name: "general".into(),
+            }],
         },
         json!({
             "message": "Say **hi**",
@@ -385,16 +407,34 @@ fn the_welcome_settings_and_what_a_viewer_reads() {
         }),
     );
     // A section left out of the update stays as stored; `keep` may be left out of a row.
-    assert_wire(&WelcomeUpdate { message: Some("Hi".into()), rooms: None, guide: None }, json!({"message": "Hi"}));
-    let update: WelcomeUpdate =
-        serde_json::from_value(json!({"guide": [{"title": "T", "emoji": null, "roomId": 3, "body": null}]})).unwrap();
+    assert_wire(
+        &WelcomeUpdate {
+            message: Some("Hi".into()),
+            rooms: None,
+            guide: None,
+        },
+        json!({"message": "Hi"}),
+    );
+    let update: WelcomeUpdate = serde_json::from_value(
+        json!({"guide": [{"title": "T", "emoji": null, "roomId": 3, "body": null}]}),
+    )
+    .unwrap();
     assert_eq!(update.message, None);
     assert_eq!(update.guide.unwrap()[0].keep, None);
     assert_wire(
         &WelcomeSettings {
             message: "Say **hi**".into(),
-            rooms: vec![WelcomeRoom { room_id: 3, emoji: None, description: "".into() }],
-            guide: vec![GuideResource { title: "Start".into(), emoji: None, room_id: Some(3), body: None }],
+            rooms: vec![WelcomeRoom {
+                room_id: 3,
+                emoji: None,
+                description: "".into(),
+            }],
+            guide: vec![GuideResource {
+                title: "Start".into(),
+                emoji: None,
+                room_id: Some(3),
+                body: None,
+            }],
         },
         json!({
             "message": "Say **hi**",
@@ -419,7 +459,11 @@ fn the_welcome_settings_and_what_a_viewer_reads() {
                 title: "Start here".into(),
                 emoji: None,
                 body_html: None,
-                room: Some(GuideRoom { id: 3, name: "general".into(), joined: true }),
+                room: Some(GuideRoom {
+                    id: 3,
+                    name: "general".into(),
+                    joined: true,
+                }),
             }],
             can_administer: false,
         },

@@ -121,15 +121,27 @@ fn only_intentional_aliases_share_a_url() {
             (
                 "/app/settings/devices".to_string(),
                 vec![
-                    ("users/push_subscriptions#index", "/users/me/push_subscriptions"),
-                    ("users/push_subscriptions#index", "/users/:user_id/push_subscriptions"),
+                    (
+                        "users/push_subscriptions#index",
+                        "/users/me/push_subscriptions"
+                    ),
+                    (
+                        "users/push_subscriptions#index",
+                        "/users/:user_id/push_subscriptions"
+                    ),
                 ],
             ),
             (
                 "/app/admin/slack/runs/7".to_string(),
                 vec![
-                    ("accounts/slack_import_runs#show", "/account/slack_import/runs/:id"),
-                    ("accounts/slack_import_runs#status", "/account/slack_import/runs/:id/status"),
+                    (
+                        "accounts/slack_import_runs#show",
+                        "/account/slack_import/runs/:id"
+                    ),
+                    (
+                        "accounts/slack_import_runs#status",
+                        "/account/slack_import/runs/:id/status"
+                    ),
                 ],
             ),
             (
@@ -166,7 +178,10 @@ fn only_intentional_aliases_share_a_url() {
                 "/app/r/7/t/8".to_string(),
                 vec![
                     ("channel_threads#show", "/rooms/:room_id/threads/:id"),
-                    ("channel_threads#content", "/rooms/:room_id/threads/:id/content"),
+                    (
+                        "channel_threads#content",
+                        "/rooms/:room_id/threads/:id/content"
+                    ),
                     (
                         "channel_thread_messages#index",
                         "/rooms/:room_id/threads/:thread_id/messages",
@@ -507,25 +522,43 @@ fn room_new_and_edit_pages_open_the_create_dialog_and_the_settings() {
 #[test]
 fn fragments_opened_as_pages_map_to_their_screen() {
     assert_eq!(
-        spa_url("channel_threads#content", "/rooms/7/threads/8/content", None).as_deref(),
+        spa_url(
+            "channel_threads#content",
+            "/rooms/7/threads/8/content",
+            None
+        )
+        .as_deref(),
         Some("/app/r/7/t/8")
     );
     // The content's reply anchor is the thread route's `m`.
     for (query, spa) in [
         ("message_id=123", "/app/r/7/t/8?m=123"),
         ("message_id=%31%32%33&x=1", "/app/r/7/t/8?m=123&x=1"),
-        ("message_id=5&message_id=123&classic=1", "/app/r/7/t/8?m=123"),
+        (
+            "message_id=5&message_id=123&classic=1",
+            "/app/r/7/t/8?m=123",
+        ),
         ("message_id=latest", "/app/r/7/t/8"),
         ("message_id=", "/app/r/7/t/8"),
     ] {
         assert_eq!(
-            spa_url("channel_threads#content", "/rooms/7/threads/8/content", Some(query)).as_deref(),
+            spa_url(
+                "channel_threads#content",
+                "/rooms/7/threads/8/content",
+                Some(query)
+            )
+            .as_deref(),
             Some(spa),
             "{query}"
         );
     }
     assert_eq!(
-        spa_url("channel_thread_messages#index", "/rooms/7/threads/8/messages", None).as_deref(),
+        spa_url(
+            "channel_thread_messages#index",
+            "/rooms/7/threads/8/messages",
+            None
+        )
+        .as_deref(),
         Some("/app/r/7/t/8")
     );
     assert_eq!(
@@ -692,12 +725,21 @@ fn room_notification_queries_open_the_thread_or_message() {
 
 #[test]
 fn confirmed_room_queries_remove_rejected_record_parameters() {
-    let refused = ConfirmedRoomQuery { thread: None, message: None };
+    let refused = ConfirmedRoomQuery {
+        thread: None,
+        message: None,
+    };
     for (query, target) in [
         ("thread=9", "/app/r/12"),
         ("message_id=4&source=mail", "/app/r/12?source=mail"),
-        ("th%72ead=%39&message%5Fid=4&note=a%20b&source=mail&source=push", "/app/r/12?note=a%20b&source=mail&source=push"),
-        ("thread=9&thread=8&message_id=4&message_id=5&classic=1&x=1", "/app/r/12?x=1"),
+        (
+            "th%72ead=%39&message%5Fid=4&note=a%20b&source=mail&source=push",
+            "/app/r/12?note=a%20b&source=mail&source=push",
+        ),
+        (
+            "thread=9&thread=8&message_id=4&message_id=5&classic=1&x=1",
+            "/app/r/12?x=1",
+        ),
     ] {
         assert_eq!(
             spa_url_confirmed("rooms#show", "/rooms/12", Some(query), refused).as_deref(),

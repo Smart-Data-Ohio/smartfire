@@ -119,7 +119,8 @@ impl KeywordAlert {
     }
 
     pub fn destroy(&self, tx: &Tx<'_>) -> Result<()> {
-        let removed = tx.conn()
+        let removed = tx
+            .conn()
             .execute_cached("DELETE FROM keyword_alerts WHERE id = ?", [self.id])?;
         if removed != 0 {
             super::user::profile_settings::bump_revision(tx, self.user_id)?;

@@ -138,7 +138,10 @@ mod tests {
             .iter()
             .map(|sound| match (sound.text, sound.image) {
                 (Some(text), None) => format!("{}\ttext:{text}\n", sound.name),
-                (None, Some(image)) => format!("{}\timage:{}:{}:{}\n", sound.name, image.name, image.width, image.height),
+                (None, Some(image)) => format!(
+                    "{}\timage:{}:{}:{}\n",
+                    sound.name, image.name, image.width, image.height
+                ),
                 other => panic!("{}: a sound has text or an image: {other:?}", sound.name),
             })
             .collect();
@@ -160,7 +163,8 @@ mod tests {
     /// Every builtin sound plays `NAME.mp3` and shows its image from the port's assets.
     #[test]
     fn builtin_sound_assets_exist() {
-        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../static_assets/media");
+        let assets =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../static_assets/media");
         for sound in BUILTIN {
             let mp3 = assets.join(format!("sounds/{}.mp3", sound.name));
             assert!(mp3.is_file(), "{} is missing", mp3.display());

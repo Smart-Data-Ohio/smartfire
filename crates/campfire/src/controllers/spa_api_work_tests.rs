@@ -1372,9 +1372,6 @@ async fn overlapping_api_work_and_classic_rename_cannot_publish_a_stale_snapshot
 /// The classic frames of a board post's work change through `channel_threads#update`: its rows
 /// and its column, and the `thread.updated` beside them when the sync engine is on.
 
-
-
-
 #[tokio::test]
 async fn thread_updates_waiting_on_a_thread_hold_no_readers() {
     let a = app(true).await.expect("the frozen default seed");
@@ -1457,33 +1454,82 @@ async fn thread_updates_waiting_on_a_thread_hold_no_readers() {
 #[tokio::test]
 async fn private_work_switcher_and_forward_api_rows_follow_current_access() {
     let a = app(true).await.expect("restored default seed");
-    let (private_id, public_id) = a.db().write(|tx| {
-        let mut ids = Vec::new();
-        for visibility in [campfire_db::channel_thread::ThreadVisibility::Private, campfire_db::channel_thread::ThreadVisibility::Public] {
-            ids.push(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-                room_id: DESIGNERS, creator_id: DAVID, name: Some(format!("Picker {visibility:?}")),
-                work_status: Some("planned".into()), visibility, ..Default::default()
-            })?.id);
-        }
-        Ok((ids[0],ids[1]))
-    }).await.unwrap();
+    let (private_id, public_id) = a
+        .db()
+        .write(|tx| {
+            let mut ids = Vec::new();
+            for visibility in [
+                campfire_db::channel_thread::ThreadVisibility::Private,
+                campfire_db::channel_thread::ThreadVisibility::Public,
+            ] {
+                ids.push(
+                    campfire_db::ChannelThread::create(
+                        tx,
+                        campfire_db::NewChannelThread {
+                            room_id: DESIGNERS,
+                            creator_id: DAVID,
+                            name: Some(format!("Picker {visibility:?}")),
+                            work_status: Some("planned".into()),
+                            visibility,
+                            ..Default::default()
+                        },
+                    )?
+                    .id,
+                );
+            }
+            Ok((ids[0], ids[1]))
+        })
+        .await
+        .unwrap();
     let mut kevin = a.sign_in(KEVIN).await;
     for visible in [false, true, false] {
         if visible {
-            a.db().write(move |tx| { campfire_db::ChannelThread::find(tx.conn(), private_id)?.add_access_member(tx, DAVID, KEVIN)?; Ok(()) }).await.unwrap();
+            a.db()
+                .write(move |tx| {
+                    campfire_db::ChannelThread::find(tx.conn(), private_id)?
+                        .add_access_member(tx, DAVID, KEVIN)?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
         }
         let work: api::WorkList = parse(&kevin.send(get("/api/v1/work?state=all")).await);
         assert!(work.threads.iter().any(|row| row.thread.id == public_id));
-        assert_eq!(work.threads.iter().any(|row| row.thread.id == private_id), visible);
+        assert_eq!(
+            work.threads.iter().any(|row| row.thread.id == private_id),
+            visible
+        );
         let switcher: api::Switcher = parse(&kevin.send(get("/api/v1/switcher")).await);
-        assert!(switcher.threads.iter().any(|row| row.thread_id == public_id));
-        assert_eq!(switcher.threads.iter().any(|row| row.thread_id == private_id), visible);
-        let forwards: api::ForwardDestinationList = parse(&kevin.send(get("/api/v1/forward_destinations")).await);
-        let room = forwards.destinations.iter().find(|room| room.room_id == DESIGNERS).unwrap();
+        assert!(
+            switcher
+                .threads
+                .iter()
+                .any(|row| row.thread_id == public_id)
+        );
+        assert_eq!(
+            switcher
+                .threads
+                .iter()
+                .any(|row| row.thread_id == private_id),
+            visible
+        );
+        let forwards: api::ForwardDestinationList =
+            parse(&kevin.send(get("/api/v1/forward_destinations")).await);
+        let room = forwards
+            .destinations
+            .iter()
+            .find(|room| room.room_id == DESIGNERS)
+            .unwrap();
         assert!(room.threads.iter().any(|row| row.id == public_id));
         assert_eq!(room.threads.iter().any(|row| row.id == private_id), visible);
         if visible {
-            a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), private_id)?.remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+            a.db()
+                .write(move |tx| {
+                    campfire_db::ChannelThread::find(tx.conn(), private_id)?
+                        .remove_access_member(tx, DAVID, KEVIN)
+                })
+                .await
+                .unwrap();
         }
     }
 }

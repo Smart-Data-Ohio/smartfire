@@ -53,10 +53,11 @@ async fn original_mutation(name: &str) {
             })?)
         }).await.unwrap();
         assert_eq!(state, case["state"], "{}", case["name"]);
-        if reply.status == StatusCode::UNPROCESSABLE_ENTITY { assert!(reply.body.is_empty()); }
+        if reply.status == StatusCode::UNPROCESSABLE_ENTITY {
+            assert!(reply.body.is_empty());
+        }
     }
 }
-
 
 macro_rules! original_mutations {
     ($($test:ident => $name:literal),+ $(,)?) => { $(

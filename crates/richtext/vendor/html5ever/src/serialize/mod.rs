@@ -67,7 +67,7 @@ fn tagname(name: &QualName) -> LocalName {
         ref ns => {
             // FIXME(#122)
             warn!("node with weird namespace {ns:?}");
-        },
+        }
     }
 
     name.local.clone()
@@ -146,13 +146,13 @@ impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
                     if name.local != local_name!("xmlns") {
                         self.writer.write_all(b"xmlns:")?;
                     }
-                },
+                }
                 ns!(xlink) => self.writer.write_all(b"xlink:")?,
                 ref ns => {
                     // FIXME(#122)
                     warn!("attr with weird namespace {ns:?}");
                     self.writer.write_all(b"unknown_namespace:")?;
-                },
+                }
             }
 
             self.writer.write_all(name.local.as_bytes())?;
@@ -199,7 +199,7 @@ impl<Wr: Write> Serializer for HtmlSerializer<Wr> {
             None if self.opts.create_missing_parent => {
                 warn!("missing ElemInfo, creating default.");
                 Default::default()
-            },
+            }
             _ => panic!("no ElemInfo"),
         };
         if info.ignore_children {

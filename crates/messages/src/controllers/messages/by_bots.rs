@@ -7,8 +7,9 @@ use campfire_db::{Message, Room, Timeline};
 use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permit_keys};
 
 use super::{
-    AttachmentPolicy, MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message_with_agent_policy, destroy_message, release_webhooks,
-    ensure_can_administer, find_paged_messages, present, set_message, update_message,
+    AttachmentPolicy, MessageParams, attachment_assignment, broadcast_create, broadcast_replace,
+    create_message_with_agent_policy, destroy_message, ensure_can_administer, find_paged_messages,
+    present, release_webhooks, set_message, update_message,
 };
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
@@ -27,7 +28,10 @@ pub async fn index(c: &mut Ctx) -> Result {
     set_pagination_headers(c, &room, &messages).await?;
     c.respond_to(&[&format::JSON])?;
     let body = present(c, move |presenter| {
-        let messages = messages.iter().map(|m| presenter.agent_message_payload(m)).collect::<campfire_db::Result<Vec<_>>>()?;
+        let messages = messages
+            .iter()
+            .map(|m| presenter.agent_message_payload(m))
+            .collect::<campfire_db::Result<Vec<_>>>()?;
         Ok(campfire_presentation::helpers::to_rails_json(&messages))
     })
     .await?;
@@ -49,21 +53,49 @@ async fn create_action(c: &mut Ctx) -> Result {
     if room.board() {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    let input=c.params.get("message").and_then(|p|p.get("client_message_id")).map(Param::to_json);
-    let client_id=campfire_db::models::agent_posting::client_ids::ClientId::from_json(input.as_ref());
-    let client_message_id=client_id.stored;
+    let input = c
+        .params
+        .get("message")
+        .and_then(|p| p.get("client_message_id"))
+        .map(Param::to_json);
+    let client_id =
+        campfire_db::models::agent_posting::client_ids::ClientId::from_json(input.as_ref());
+    let client_message_id = client_id.stored;
     // Posting's replay/budget checks precede attachment validation and staging. The final
     // write repeats the check in its transaction so concurrent posts cannot overrun a cap.
-    let (user_id, room_id, replay_id) = (require_current_user(c)?.id, room.id, client_message_id.clone());
-    let lookup=client_id.lookup.clone();
-    let preflight = c.app().db.write(move |tx| campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, user_id, room_id, replay_id.as_deref(), &lookup)).await.map_err(db_error)?;
+    let (user_id, room_id, replay_id) = (
+        require_current_user(c)?.id,
+        room.id,
+        client_message_id.clone(),
+    );
+    let lookup = client_id.lookup.clone();
+    let preflight = c
+        .app()
+        .db
+        .write(move |tx| {
+            campfire_db::models::agent_posting::prepare_for_user_with_lookup(
+                tx,
+                user_id,
+                room_id,
+                replay_id.as_deref(),
+                &lookup,
+            )
+        })
+        .await
+        .map_err(db_error)?;
     match preflight {
         Some(campfire_db::models::agent_posting::PostingCheck::Replay(message)) => {
             let location = c.url_for(&campfire_routes::message(message.id));
             return c.head_with_location(StatusCode::CREATED, &location);
         }
-        Some(campfire_db::models::agent_posting::PostingCheck::Budget(payload)) => return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &format::JSON, payload.to_string())),
-        _ => {},
+        Some(campfire_db::models::agent_posting::PostingCheck::Budget(payload)) => {
+            return Ok(c.render(
+                StatusCode::TOO_MANY_REQUESTS,
+                &format::JSON,
+                payload.to_string(),
+            ));
+        }
+        _ => {}
     }
     let mut attributes = create_message_params(c)?;
     attributes.client_message_id = client_message_id;
@@ -75,7 +107,13 @@ async fn create_action(c: &mut Ctx) -> Result {
             message
         }
         campfire_db::models::agent_posting::PostingOutcome::Replay(message) => message,
-        campfire_db::models::agent_posting::PostingOutcome::Budget(payload) => return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &format::JSON, payload.to_string())),
+        campfire_db::models::agent_posting::PostingOutcome::Budget(payload) => {
+            return Ok(c.render(
+                StatusCode::TOO_MANY_REQUESTS,
+                &format::JSON,
+                payload.to_string(),
+            ));
+        }
     };
 
     let location = c.url_for(&campfire_routes::message(message.id));
@@ -135,7 +173,12 @@ fn ensure_can_manage_bot_message(c: &mut Ctx, message: &Message) -> Result<()> {
 async fn set_room(c: &mut Ctx) -> Result<Room> {
     let user_id = require_current_user(c)?.id;
     let room = match c.param_str("room_id").and_then(cast_integer) {
-        Some(id) => c.app().db.read(move |conn| Room::find_for_user(conn, user_id, id)).await.map_err(db_error)?,
+        Some(id) => c
+            .app()
+            .db
+            .read(move |conn| Room::find_for_user(conn, user_id, id))
+            .await
+            .map_err(db_error)?,
         None => None,
     };
     match room {
@@ -157,14 +200,20 @@ fn create_message_params(c: &Ctx) -> Result<MessageParams> {
     if c.request.media_type().as_deref() == Some("application/json")
         && c.params.get("sticker_id").is_some()
     {
-        let sticker_id = c.params.get("sticker_id")
+        let sticker_id = c
+            .params
+            .get("sticker_id")
             .and_then(|value| value.to_json().as_i64())
-            .ok_or_else(|| campfire_kit::Error::BadRequest("sticker_id must be an integer".into()))?;
+            .ok_or_else(|| {
+                campfire_kit::Error::BadRequest("sticker_id must be an integer".into())
+            })?;
         let text = |key: &str| -> Result<Option<String>> {
             match c.params.get(key) {
                 None | Some(Param::Null) => Ok(None),
                 Some(Param::Str(value)) => Ok(Some(value.clone())),
-                _ => Err(campfire_kit::Error::BadRequest(format!("{key} must be a string"))),
+                _ => Err(campfire_kit::Error::BadRequest(format!(
+                    "{key} must be a string"
+                ))),
             }
         };
         let mut attributes = message_params(c)?;
@@ -180,9 +229,23 @@ fn create_message_params(c: &Ctx) -> Result<MessageParams> {
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     if c.params.get("attachment").is_some_and(|p| !p.is_null()) {
         let permitted = c.params.permit(&permit_keys(&["attachment"]));
-        Ok(MessageParams { clear_markdown_source: true, attachment: attachment_assignment(&permitted)?, attachment_policy: AttachmentPolicy::SignedBlob { actor_id: Some(require_current_user(c)?.id) }, ..MessageParams::default() })
+        Ok(MessageParams {
+            clear_markdown_source: true,
+            attachment: attachment_assignment(&permitted)?,
+            attachment_policy: AttachmentPolicy::SignedBlob {
+                actor_id: Some(require_current_user(c)?.id),
+            },
+            ..MessageParams::default()
+        })
     } else {
-        Ok(MessageParams { clear_markdown_source: true, body: Some(raw_request_body(c)), attachment_policy: AttachmentPolicy::SignedBlob { actor_id: Some(require_current_user(c)?.id) }, ..MessageParams::default() })
+        Ok(MessageParams {
+            clear_markdown_source: true,
+            body: Some(raw_request_body(c)),
+            attachment_policy: AttachmentPolicy::SignedBlob {
+                actor_id: Some(require_current_user(c)?.id),
+            },
+            ..MessageParams::default()
+        })
     }
 }
 
@@ -207,9 +270,13 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
             let count = Message::count_roots_in_room(conn, room_id)?;
             let next_page = match (first, last) {
                 (Some(_), Some(last)) if after => {
-                    Message::exists_after(conn, Timeline::Room(room_id), &last)?.then_some(("after", last.id))
+                    Message::exists_after(conn, Timeline::Room(room_id), &last)?
+                        .then_some(("after", last.id))
                 }
-                (Some(first), Some(_)) => Message::exists_before(conn, Timeline::Room(room_id), &first)?.then_some(("before", first.id)),
+                (Some(first), Some(_)) => {
+                    Message::exists_before(conn, Timeline::Room(room_id), &first)?
+                        .then_some(("before", first.id))
+                }
                 _ => None,
             };
             Ok((count, next_page))
@@ -219,7 +286,10 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
     c.set_header("x-total-count", &count.to_string());
     if let Some((key, id)) = next_page {
         let bot_key = c.param_str("bot_key").unwrap_or_default().to_string();
-        let url = c.url_for(&format!("{}?{key}={id}", campfire_routes::room_bot_messages(room_id, bot_key)));
+        let url = c.url_for(&format!(
+            "{}?{key}={id}",
+            campfire_routes::room_bot_messages(room_id, bot_key)
+        ));
         c.set_header("link", &format!("<{url}>; rel=\"next\""));
     }
     Ok(())
@@ -227,6 +297,9 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
 
 /// `render :show` (`messages/by_bots/show.json.jbuilder`).
 async fn render_show(c: &mut Ctx, message: Message) -> Result<Response> {
-    let body = present(c, move |presenter| Ok(presenter.agent_message_payload(&message)?.to_string())).await?;
+    let body = present(c, move |presenter| {
+        Ok(presenter.agent_message_payload(&message)?.to_string())
+    })
+    .await?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))
 }

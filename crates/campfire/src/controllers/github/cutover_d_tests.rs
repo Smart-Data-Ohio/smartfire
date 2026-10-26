@@ -588,7 +588,10 @@ async fn cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger
             .iter()
             .find(|r| r["event_type"] == "github_action_completed");
         if case == "left_room" {
-            assert!(row.is_none(), "completion leaked after leaving its room: {poll}");
+            assert!(
+                row.is_none(),
+                "completion leaked after leaving its room: {poll}"
+            );
             let (status, _) = bearer(
                 &f,
                 "POST",
@@ -684,7 +687,6 @@ async fn cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger
             assert_eq!(body["outcome"], "acknowledged"); // WS15g-006 response
             assert_eq!(completion(&f, approval).await.2, "acknowledged"); // WS15g-006 DB
         }
-
     }
 }
 #[tokio::test]
@@ -715,8 +717,7 @@ impl std::io::Write for Logs {
         Ok(())
     }
 }
-impl Logs {
-}
+impl Logs {}
 async fn front_post(f: &Fresh, path: &str, body: Value) -> u16 {
     let mut values = grant_sudo_access(f).await;
     let raw = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, [7u8; 32]);
@@ -863,8 +864,8 @@ async fn cutover_d_request_logs_filter_link_comment_and_review_credentials() {
         if kind != "link" {
             assert_eq!(status, 200);
         } // WS15g-015,016 response
-         // WS15g-013,015,016 positive request log
-         // WS15g-013,015,016 token absent
+        // WS15g-013,015,016 positive request log
+        // WS15g-013,015,016 token absent
     }
     assert_eq!(
         crate::security::parameter_filter()
@@ -911,8 +912,8 @@ async fn cutover_d_write_timeout_logs_warning_without_member_token() {
         crate::integrations::github::client::ErrorKind::Other
     ); // WS15g-061 error class
     assert!(error.message.contains("Could not reach GitHub")); // WS15g-061 error message
-     // WS15g-061 warning
-     // WS15g-061 privacy
+    // WS15g-061 warning
+    // WS15g-061 privacy
 }
 #[tokio::test]
 async fn cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http() {
@@ -1234,14 +1235,26 @@ fn fetch_routes() -> Vec<Route> {
         Route::new("GET","api.github.com","/repos/rails/rails/pulls/123/files?per_page=100",200).body(r#"[{"filename":"app/models/user.rb","additions":3,"deletions":1,"status":"modified"}]"#)
     ]
 }
-async fn socket(f: &Fresh, model: &str, id: i64) -> (crate::controllers::spa::api_tests::Sync, tokio::task::JoinHandle<()>) {
+async fn socket(
+    f: &Fresh,
+    model: &str,
+    id: i64,
+) -> (
+    crate::controllers::spa::api_tests::Sync,
+    tokio::task::JoinHandle<()>,
+) {
     campfire_api::install(&f.app);
     let listener = crate::test_support::bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = f.app.cable.sync_router::<()>("/api/v1/sync");
     let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    let topic = if model == "ChannelThread" { format!("thread:{id}") } else { format!("room:{id}") };
-    let mut socket = crate::controllers::spa::api_tests::Sync::connect(address, &f.cookie, &[topic]).await;
+    let topic = if model == "ChannelThread" {
+        format!("thread:{id}")
+    } else {
+        format!("room:{id}")
+    };
+    let mut socket =
+        crate::controllers::spa::api_tests::Sync::connect(address, &f.cookie, &[topic]).await;
     socket.welcome().await;
     (socket, server)
 }
@@ -1304,10 +1317,17 @@ async fn cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_wit
             .await
             .unwrap();
         run_registered(&f, &["Github::FetchPullRequestJob"]).await;
-        f.app.db.read(move |c| {
-            assert_eq!(PullRequest::find(c, pr)?.title.as_deref(), Some("Add shiny things"));
-            Ok(())
-        }).await.unwrap();
+        f.app
+            .db
+            .read(move |c| {
+                assert_eq!(
+                    PullRequest::find(c, pr)?.title.as_deref(),
+                    Some("Add shiny things")
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
         serving.abort();
     }
 }

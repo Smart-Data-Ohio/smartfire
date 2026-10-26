@@ -30,7 +30,12 @@ pub trait RichText: Send + Sync {
     /// to, with `@[Name]` tokens resolved against the room's members. The app plugs in
     /// `campfire_richtext::markdown::render` (WS5); the default is [`BasicRichText`]'s stand-in,
     /// which escapes the source into paragraphs and resolves mentions the same way.
-    fn render_markdown(&self, conn: &Connection, source: &str, room_id: i64) -> Result<String, String> {
+    fn render_markdown(
+        &self,
+        conn: &Connection,
+        source: &str,
+        room_id: i64,
+    ) -> Result<String, String> {
         Ok(basic_markdown(conn, source, room_id))
     }
 
@@ -49,7 +54,12 @@ pub trait RichText: Send + Sync {
 
     /// `Message::Markdown.plain_text(body)`: the plain text of a Markdown-rendered body. The
     /// default reads it like any other body.
-    fn markdown_plain_text(&self, conn: &Connection, html: &str, user_names: UserNames<'_>) -> String {
+    fn markdown_plain_text(
+        &self,
+        conn: &Connection,
+        html: &str,
+        user_names: UserNames<'_>,
+    ) -> String {
         self.to_plain_text(conn, html, user_names)
     }
     /// Fallible write/read paths. Defaults keep lightweight test/owner adapters compatible;
@@ -57,16 +67,25 @@ pub trait RichText: Send + Sync {
     fn try_canonicalize_html(&self, conn: &Connection, html: &str) -> Result<String, String> {
         Ok(self.canonicalize_html(conn, html))
     }
-    fn try_to_plain_text(&self, conn: &Connection, html: &str, names: UserNames<'_>) -> Result<String, String> {
+    fn try_to_plain_text(
+        &self,
+        conn: &Connection,
+        html: &str,
+        names: UserNames<'_>,
+    ) -> Result<String, String> {
         Ok(self.to_plain_text(conn, html, names))
     }
-    fn try_markdown_plain_text(&self, conn: &Connection, html: &str, names: UserNames<'_>) -> Result<String, String> {
+    fn try_markdown_plain_text(
+        &self,
+        conn: &Connection,
+        html: &str,
+        names: UserNames<'_>,
+    ) -> Result<String, String> {
         Ok(self.markdown_plain_text(conn, html, names))
     }
     fn try_mentioned_user_ids(&self, conn: &Connection, html: &str) -> Result<Vec<i64>, String> {
         Ok(self.mentioned_user_ids(conn, html))
     }
-
 }
 
 /// `Message::Markdown::MENTION_TOKEN_PATTERN` (`/(?<!\\)@\[(?<name>[^\[\]\r\n]+)\]/`): the
@@ -82,7 +101,9 @@ pub fn mention_token_names(source: &str) -> Vec<String> {
             continue;
         }
         let rest = &source[start + 2..];
-        let Some(end) = rest.find(['[', ']', '\r', '\n']) else { break };
+        let Some(end) = rest.find(['[', ']', '\r', '\n']) else {
+            break;
+        };
         if end > 0 && rest.as_bytes()[end] == b']' {
             names.push(rest[..end].to_string());
             i = start + 2 + end + 1;
@@ -98,7 +119,11 @@ fn basic_markdown(conn: &Connection, source: &str, room_id: i64) -> String {
         let mut stmt = conn
             .prepare_cached(r#"SELECT "users"."id" FROM "users" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE "memberships"."room_id" = ? AND "users"."name" = ? AND "users"."status" = 0"#)
             .ok()?;
-        let ids: Vec<i64> = stmt.query_map(rusqlite::params![room_id, name], |r| r.get(0)).ok()?.filter_map(|r| r.ok()).collect();
+        let ids: Vec<i64> = stmt
+            .query_map(rusqlite::params![room_id, name], |r| r.get(0))
+            .ok()?
+            .filter_map(|r| r.ok())
+            .collect();
         (ids.len() == 1).then(|| ids[0])
     };
     source
@@ -108,7 +133,11 @@ fn basic_markdown(conn: &Connection, source: &str, room_id: i64) -> String {
             let mut html = escape(paragraph);
             for name in mention_token_names(paragraph) {
                 if let Some(id) = member_id(&name) {
-                    html = html.replacen(&format!("@[{}]", escape(&name)), &mention_attachment_for(id), 1);
+                    html = html.replacen(
+                        &format!("@[{}]", escape(&name)),
+                        &mention_attachment_for(id),
+                        1,
+                    );
                 }
             }
             format!("<p>{html}</p>")
@@ -118,7 +147,10 @@ fn basic_markdown(conn: &Connection, source: &str, room_id: i64) -> String {
 }
 
 fn escape(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// Tag stripping plus unverified SGID decoding. Campfire accepts unverified user SGIDs
@@ -255,7 +287,11 @@ mod tests {
     #[test]
     fn plain_text_strips_tags() {
         assert_eq!(
-            BasicRichText.to_plain_text(&memory(), "<span>My hovercraft is full of eels</span>", &no_users),
+            BasicRichText.to_plain_text(
+                &memory(),
+                "<span>My hovercraft is full of eels</span>",
+                &no_users
+            ),
             "My hovercraft is full of eels"
         );
         assert_eq!(
@@ -268,16 +304,23 @@ mod tests {
     fn plain_text_renders_mentions() {
         let html = format!("Hey {}", mention_attachment_for(7));
         assert_eq!(
-            BasicRichText.to_plain_text(&memory(), &html, &|id| (id == 7).then(|| "Kevin".to_string())),
+            BasicRichText.to_plain_text(&memory(), &html, &|id| (id == 7)
+                .then(|| "Kevin".to_string())),
             "Hey @Kevin"
         );
     }
 
     #[test]
     fn mention_tokens_skip_escaped_and_bracketed_names() {
-        assert_eq!(mention_token_names("hi @[Jason Fried] and \\@[Nope] and @[David]"), vec!["Jason Fried", "David"]);
+        assert_eq!(
+            mention_token_names("hi @[Jason Fried] and \\@[Nope] and @[David]"),
+            vec!["Jason Fried", "David"]
+        );
         assert_eq!(mention_token_names("@[a[b] @[]"), Vec::<String>::new());
-        assert_eq!(mention_token_names("@[Line\nbreak] @[Kevin]"), vec!["Kevin"]);
+        assert_eq!(
+            mention_token_names("@[Line\nbreak] @[Kevin]"),
+            vec!["Kevin"]
+        );
     }
 
     #[test]
@@ -287,6 +330,9 @@ mod tests {
             mention_attachment_for(127326141),
             mention_attachment_for(127326141)
         );
-        assert_eq!(BasicRichText.mentioned_user_ids(&memory(), &html), vec![127326141]);
+        assert_eq!(
+            BasicRichText.mentioned_user_ids(&memory(), &html),
+            vec![127326141]
+        );
     }
 }

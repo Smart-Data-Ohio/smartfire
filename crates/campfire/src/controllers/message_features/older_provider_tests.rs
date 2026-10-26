@@ -35,10 +35,15 @@ async fn check_window(app: &TestApp, group: &Value) {
         .await;
     assert_eq!(response.status, axum::http::StatusCode::OK);
     for id in group["old_ids"].as_array().unwrap() {
-                assert!(!response.json()["messages"].as_array().unwrap().iter().any(|message| message["id"] == *id));
-            }
+        assert!(
+            !response.json()["messages"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|message| message["id"] == *id)
+        );
+    }
 }
-
 
 #[tokio::test]
 async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer_cost() {
@@ -108,7 +113,7 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
                 .unwrap();
             app.db().stop_capturing_read_queries();
 
-        super::comparison_support::settle_jobs(&app).await;
+            super::comparison_support::settle_jobs(&app).await;
             let reads = queries
                 .lock()
                 .unwrap()
@@ -137,7 +142,6 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
             }
         }
         check_window(&app, group).await;
-
     }
     assert!(
         differences.is_empty(),
@@ -205,7 +209,6 @@ async fn durable_github_fetch_jobs_replace_older_public_private_and_unknown_card
             );
         }
         check_window(&app, group).await;
-
     }
     println!(
         "WS8bm2 older-provider jobs: 6/6 durable registered fetch jobs; 60/60 Rails WebSocket frames; 24/24 authenticated owner API reads; all roots outside current windows"

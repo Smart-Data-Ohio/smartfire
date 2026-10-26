@@ -1,5 +1,5 @@
 //! Actual job failure/deletion outcomes; response gates prove the read/write interleaving.
-use super::quote_integration_tests::{app_rows};
+use super::quote_integration_tests::app_rows;
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{
@@ -20,7 +20,6 @@ async fn old_embed_deleted_during_fetch_and_failed_writes_match_rails_durable_jo
     for group in oracle["groups"].as_array().unwrap() {
         for case in group["cases"].as_array().unwrap() {
             let app = app_rows(group["rows"].clone()).await;
-
 
             let id = group["embed_id"].as_i64().unwrap();
             let sibling = group["sibling_id"].as_i64().unwrap();
@@ -173,7 +172,6 @@ async fn old_embed_deleted_during_fetch_and_failed_writes_match_rails_durable_jo
                 })
                 .await
                 .unwrap();
-
         }
     }
     println!(
