@@ -1,10 +1,7 @@
 //! Actual owner registrations and durable retries, not replacement test handlers.
 //! Producer controls: check_calendar_retry_mutants.py (queue budget, payload,
 //! persisted failure write and unexpected real broadcast).
-use super::{
-    comparison_support,
-    quote_integration_tests::{insert_rows},
-};
+use super::{comparison_support, quote_integration_tests::insert_rows};
 use crate::{
     app::google_api_tests::{self as support, Recorded},
     controllers::presenters::test_support::*,
@@ -130,7 +127,6 @@ async fn calendar_retry_recovery_and_exhaustion_match_real_rails_jobs_with_flat_
                 }
             }
             support::install(&app, recorded.clone()).await;
-
 
             let mut changed = observe(&app).await;
             let mut registry = Registry::new();
@@ -273,7 +269,6 @@ async fn calendar_retry_recovery_and_exhaustion_match_real_rails_jobs_with_flat_
                 }
             }
             runner.shutdown(Duration::from_secs(1)).await;
-
         }
     }
     println!(

@@ -19,7 +19,6 @@ pub async fn update(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &serde_json::json!({"bot_key": key}))
 }
 
-
 /// `update`'s writes once the gates passed: a new key, then the audit. Answers the key.
 pub async fn reset_key(c: &Ctx, bot: User) -> Result<String> {
     let mut bot = bot;

@@ -173,7 +173,11 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
             };
             let body = match &sync_message {
                 Some(message) => campfire_runtime::presenters::stickers::webhook_payload(
-                    tx.conn(), &storage, message, base.as_deref(), body,
+                    tx.conn(),
+                    &storage,
+                    message,
+                    base.as_deref(),
+                    body,
                 )?,
                 None => body,
             };
@@ -345,4 +349,3 @@ fn ws11_retry_after_and_response_policy_match_rails_vectors() {
         assert_eq!(case["delay"].as_f64(), Some(wait.as_secs_f64()));
     }
 }
-

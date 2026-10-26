@@ -200,7 +200,10 @@ fn vanity_slug_cannot_look_like_an_invite_code() {
         validate_vanity_slug_for("team-room", &account.join_code).unwrap(),
         "team-room"
     );
-    assert_eq!(validate_vanity_slug("abcd-123-efgh").unwrap(), "abcd-123-efgh");
+    assert_eq!(
+        validate_vanity_slug("abcd-123-efgh").unwrap(),
+        "abcd-123-efgh"
+    );
 }
 
 #[test]

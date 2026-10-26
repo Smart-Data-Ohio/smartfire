@@ -38,49 +38,71 @@ fn rfc3986_uri() -> String {
     )
 }
 
-static RFC3986_URI: LazyLock<Regex> = LazyLock::new(|| Regex::new(&rfc3986_uri()).expect("valid regex"));
+static RFC3986_URI: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(&rfc3986_uri()).expect("valid regex"));
 
 /// `URI.parse(url).is_a?(URI::HTTP)`, without raising: `URI::InvalidURIError` is `false`.
 pub(crate) fn is_http(url: &str) -> bool {
     if !url.is_ascii() {
         return false;
     }
-    let Some(captures) = RFC3986_URI.captures(url) else { return false };
+    let Some(captures) = RFC3986_URI.captures(url) else {
+        return false;
+    };
     let scheme = &captures["scheme"];
     if !(scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https")) {
         return false;
     }
     // `URI::Generic#query=` refuses a `%` followed by two non-hex characters.
     !captures.name("query").is_some_and(|query| {
-        query.as_str().as_bytes().windows(3).any(|w| w[0] == b'%' && !w[1].is_ascii_hexdigit() && !w[2].is_ascii_hexdigit())
+        query
+            .as_str()
+            .as_bytes()
+            .windows(3)
+            .any(|w| w[0] == b'%' && !w[1].is_ascii_hexdigit() && !w[2].is_ascii_hexdigit())
     })
 }
 
 /// Rooms::EventsHelper#safe_meet_link: URI::HTTPS with a nonblank host,
 /// preserving Ruby's spelling while normalizing the scheme and default port.
 pub fn safe_https(value: &str) -> Option<String> {
-    if !is_http(value) { return None; }
-    let (scheme,rest)=value.split_once(':')?;
-    if !scheme.eq_ignore_ascii_case("https") {return None;}
-    let rest=rest.strip_prefix("//")?;
-    let end=rest.find(['/', '?', '#']).unwrap_or(rest.len());
-    let authority=&rest[..end];
-    let (userinfo,host_port)=authority.rsplit_once('@').map_or(("",authority),|(user,host)|(user,host));
-    let mut host=host_port;
-    let mut port=String::new();
-    if let Some((candidate,digits))=host_port.rsplit_once(':') && digits.bytes().all(|c|c.is_ascii_digit()) {
-        host=candidate;
+    if !is_http(value) {
+        return None;
+    }
+    let (scheme, rest) = value.split_once(':')?;
+    if !scheme.eq_ignore_ascii_case("https") {
+        return None;
+    }
+    let rest = rest.strip_prefix("//")?;
+    let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let authority = &rest[..end];
+    let (userinfo, host_port) = authority
+        .rsplit_once('@')
+        .map_or(("", authority), |(user, host)| (user, host));
+    let mut host = host_port;
+    let mut port = String::new();
+    if let Some((candidate, digits)) = host_port.rsplit_once(':')
+        && digits.bytes().all(|c| c.is_ascii_digit())
+    {
+        host = candidate;
         if !digits.is_empty() {
-            let number=digits.trim_start_matches('0');
-            let number=if number.is_empty() {"0"} else {number};
-            if number!="443" {port=format!(":{number}");}
+            let number = digits.trim_start_matches('0');
+            let number = if number.is_empty() { "0" } else { number };
+            if number != "443" {
+                port = format!(":{number}");
+            }
         }
     }
-    if host.is_empty() {return None;}
-    let userinfo=if authority.contains('@') {format!("{userinfo}@")} else {String::new()};
-    Some(format!("https://{userinfo}{host}{port}{}",&rest[end..]))
+    if host.is_empty() {
+        return None;
+    }
+    let userinfo = if authority.contains('@') {
+        format!("{userinfo}@")
+    } else {
+        String::new()
+    };
+    Some(format!("https://{userinfo}{host}{port}{}", &rest[end..]))
 }
-
 
 #[cfg(test)]
 mod tests {

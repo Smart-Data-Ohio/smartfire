@@ -1,6 +1,6 @@
 //! Chat commands from app/services/slash_commands, including registered agent invocations.
 //! Call in the request's write transaction; the HTTP membership boundary belongs to WS8b.
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::{
     ChannelThread, Error, Errors, Event, Membership, Message, NewMessage, Result, Room, SavedItem,
     Timestamp, Tx,
@@ -182,8 +182,7 @@ fn dispatch_with_time_zone(
     let Some(command) = lookup(&name) else {
         if let Some(result) = crate::models::agent_slash_command::invoke_with_options(
             tx, context, &name, args, options,
-        )?
-        {
+        )? {
             return Ok(result);
         };
         let mut names = available(context.thread_id.is_some())
@@ -534,18 +533,28 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
     };
     // Slash messages have no attachment assignment: both process_attachment calls are no-ops.
     let room = Room::find(tx.conn(), message.room_id)?;
-    tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
+    tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated {
+        message_id: message.id,
+    }));
     if message.thread_id.is_none() {
         let mentioned = message
             .mentionees(tx.conn(), tx.rich_text())?
             .iter()
             .map(|u| u.id)
             .collect::<Vec<_>>();
-        let user_ids = Membership::for_room(tx.conn(), room.id)?.into_iter()
-            .filter(|member| member.involvement != Some(crate::Involvement::Muted) || mentioned.contains(&member.user_id))
-            .map(|member| member.user_id).collect();
+        let user_ids = Membership::for_room(tx.conn(), room.id)?
+            .into_iter()
+            .filter(|member| {
+                member.involvement != Some(crate::Involvement::Muted)
+                    || mentioned.contains(&member.user_id)
+            })
+            .map(|member| member.user_id)
+            .collect();
         tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
-            user_ids, room_id: room.id, message_id: Some(message.id), author_id: message.creator_id,
+            user_ids,
+            room_id: room.id,
+            message_id: Some(message.id),
+            author_id: message.creator_id,
         }));
         crate::models::bot_webhook_fanout::deliver(tx, &message)?;
     }

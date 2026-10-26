@@ -55,7 +55,11 @@ pub(crate) fn event_capability_sql(agent: &str, room: &str, cap: &str) -> String
 fn capability_policy_sql(agent: &str, room: &str, cap: &str, event_history: bool) -> String {
     let workspace_room = format!(
         "({}NOT EXISTS (SELECT 1 FROM rooms policy_deleted WHERE policy_deleted.id=({room}) AND policy_deleted.deleted_at IS NOT NULL))",
-        if event_history { format!("({cap})='read_messages' OR ") } else { String::new() }
+        if event_history {
+            format!("({cap})='read_messages' OR ")
+        } else {
+            String::new()
+        }
     );
     let personal_room = personal_room_sql("policy_agent.owner_id", "policy_room.id");
     let live = agent_live("policy_agent");
@@ -75,7 +79,9 @@ fn capability_policy_sql(agent: &str, room: &str, cap: &str, event_history: bool
 /// A personal grant can name only a live non-direct room its active owner belongs to.
 /// This is shared by the grant writer, member room choices, and capability checks.
 pub fn personal_room_sql(owner: &str, room: &str) -> String {
-    format!("EXISTS (SELECT 1 FROM rooms grant_room JOIN memberships grant_owner ON grant_owner.room_id=grant_room.id JOIN users grant_user ON grant_user.id=grant_owner.user_id WHERE grant_room.id=({room}) AND grant_room.type!='Rooms::Direct' AND grant_room.deleted_at IS NULL AND grant_owner.user_id=({owner}) AND grant_user.status=0)")
+    format!(
+        "EXISTS (SELECT 1 FROM rooms grant_room JOIN memberships grant_owner ON grant_owner.room_id=grant_room.id JOIN users grant_user ON grant_user.id=grant_owner.user_id WHERE grant_room.id=({room}) AND grant_room.type!='Rooms::Direct' AND grant_room.deleted_at IS NULL AND grant_owner.user_id=({owner}) AND grant_user.status=0)"
+    )
 }
 
 pub fn is_personal_user(conn: &Connection, user_id: i64) -> Result<bool> {

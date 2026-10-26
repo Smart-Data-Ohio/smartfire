@@ -67,7 +67,9 @@ pub(crate) fn message_sticker(
     message: &Message,
 ) -> campfire_db::Result<Option<api::MessageSticker>> {
     campfire_runtime::presenters::stickers::message_sticker(
-        conn, message, campfire_runtime::presenters::stickers::StickerUrls::Session,
+        conn,
+        message,
+        campfire_runtime::presenters::stickers::StickerUrls::Session,
     )
 }
 

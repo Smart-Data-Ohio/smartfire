@@ -23,7 +23,12 @@ pub enum OAuthState {
 }
 
 impl OAuthState {
-    pub const ALL: [OAuthState; 4] = [OAuthState::GoogleSignIn, OAuthState::GoogleOAuth, OAuthState::GithubAppOAuth, OAuthState::SlackOAuth];
+    pub const ALL: [OAuthState; 4] = [
+        OAuthState::GoogleSignIn,
+        OAuthState::GoogleOAuth,
+        OAuthState::GithubAppOAuth,
+        OAuthState::SlackOAuth,
+    ];
 
     pub fn verifier_name(self) -> &'static str {
         match self {
@@ -36,13 +41,19 @@ impl OAuthState {
 
     /// `state_verifier.generate(raw_state)`.
     pub fn generate(self, secrets: &Secrets, raw_state: &str) -> String {
-        app_verifier(secrets, self.verifier_name()).generate(&Value::String(raw_state.to_string()), None, None)
+        app_verifier(secrets, self.verifier_name()).generate(
+            &Value::String(raw_state.to_string()),
+            None,
+            None,
+        )
     }
 
     /// `state_verifier.verified(state)`: whatever value was signed (the controllers then compare
     /// it with the session's state, so a non-string simply fails that comparison).
     pub fn verified(self, secrets: &Secrets, state: &str, now: Timestamp) -> Option<Value> {
-        app_verifier(secrets, self.verifier_name()).verify(state, None, now).ok()
+        app_verifier(secrets, self.verifier_name())
+            .verify(state, None, now)
+            .ok()
     }
 }
 
@@ -60,7 +71,9 @@ pub mod embed_image {
 
     /// `verifier.verified(signed)`.
     pub fn verified(secrets: &Secrets, signed: &str, now: Timestamp) -> Option<Value> {
-        app_verifier(secrets, VERIFIER_NAME).verify(signed, None, now).ok()
+        app_verifier(secrets, VERIFIER_NAME)
+            .verify(signed, None, now)
+            .ok()
     }
 
     /// `Embeds::ImageProxy.verified_url(signed)`: a signed string that `URI.parse`s as http(s).
@@ -85,7 +98,11 @@ pub mod bot_reply {
         let mut data = Map::new();
         data.insert("bot_id".into(), bot_id.into());
         data.insert("room_id".into(), room_id.into());
-        app_verifier(secrets, VERIFIER_NAME).generate(&Value::Object(data), None, Some(now + EXPIRES_IN))
+        app_verifier(secrets, VERIFIER_NAME).generate(
+            &Value::Object(data),
+            None,
+            Some(now + EXPIRES_IN),
+        )
     }
 
     /// The token half of `User.authenticate_bot_reply_token(token, room_id:)`: the stripped token
@@ -94,9 +111,12 @@ pub mod bot_reply {
     /// *active bot* with that id (`active_bots.find_by(id:)`, which casts the value like Active
     /// Record does) that is a member of the room.
     pub fn verify(secrets: &Secrets, token: &str, room_id: &str, now: Timestamp) -> Option<Value> {
-        let data = app_verifier(secrets, VERIFIER_NAME).verify(crate::ruby::strip(token), None, now).ok()?;
+        let data = app_verifier(secrets, VERIFIER_NAME)
+            .verify(crate::ruby::strip(token), None, now)
+            .ok()?;
         let data = data.as_object()?;
-        (metadata::ruby_to_s(data.get("room_id")) == room_id).then(|| data.get("bot_id").cloned().unwrap_or(Value::Null))
+        (metadata::ruby_to_s(data.get("room_id")) == room_id)
+            .then(|| data.get("bot_id").cloned().unwrap_or(Value::Null))
     }
 }
 
@@ -117,10 +137,20 @@ mod tests {
         let secrets = secrets();
         for state in OAuthState::ALL {
             let message = state.generate(&secrets, "raw");
-            assert_eq!(state.verified(&secrets, &message, now()), Some(Value::from("raw")));
-            assert_eq!(state.verified(&Secrets::new(&"b".repeat(128)), &message, now()), None);
+            assert_eq!(
+                state.verified(&secrets, &message, now()),
+                Some(Value::from("raw"))
+            );
+            assert_eq!(
+                state.verified(&Secrets::new(&"b".repeat(128)), &message, now()),
+                None
+            );
             for other in OAuthState::ALL.into_iter().filter(|other| *other != state) {
-                assert_eq!(other.verified(&secrets, &message, now()), None, "{state:?} under {other:?}");
+                assert_eq!(
+                    other.verified(&secrets, &message, now()),
+                    None,
+                    "{state:?} under {other:?}"
+                );
             }
             assert_eq!(embed_image::verified(&secrets, &message, now()), None);
             let mut tampered = message.clone();
@@ -134,21 +164,58 @@ mod tests {
     fn embed_urls_must_be_signed_http() {
         let secrets = secrets();
         let signed = embed_image::sign(&secrets, "https://example.com/a.png");
-        assert_eq!(embed_image::verified_url(&secrets, &signed, now()).as_deref(), Some("https://example.com/a.png"));
-        assert_eq!(embed_image::verified_url(&secrets, &embed_image::sign(&secrets, "file:///etc/passwd"), now()), None);
-        let bot_signed = app_verifier(&secrets, bot_reply::VERIFIER_NAME).generate(&Value::from("https://example.com/a.png"), None, None);
-        assert_eq!(embed_image::verified_url(&secrets, &bot_signed, now()), None);
+        assert_eq!(
+            embed_image::verified_url(&secrets, &signed, now()).as_deref(),
+            Some("https://example.com/a.png")
+        );
+        assert_eq!(
+            embed_image::verified_url(
+                &secrets,
+                &embed_image::sign(&secrets, "file:///etc/passwd"),
+                now()
+            ),
+            None
+        );
+        let bot_signed = app_verifier(&secrets, bot_reply::VERIFIER_NAME).generate(
+            &Value::from("https://example.com/a.png"),
+            None,
+            None,
+        );
+        assert_eq!(
+            embed_image::verified_url(&secrets, &bot_signed, now()),
+            None
+        );
     }
 
     #[test]
     fn bot_reply_tokens_expire_and_are_bound_to_the_room() {
         let secrets = secrets();
         let token = bot_reply::token_for(&secrets, 3, 1, now());
-        assert_eq!(bot_reply::verify(&secrets, &token, "1", now()), Some(Value::from(3)));
-        assert_eq!(bot_reply::verify(&secrets, &format!(" {token}\n"), "1", now()), Some(Value::from(3)));
+        assert_eq!(
+            bot_reply::verify(&secrets, &token, "1", now()),
+            Some(Value::from(3))
+        );
+        assert_eq!(
+            bot_reply::verify(&secrets, &format!(" {token}\n"), "1", now()),
+            Some(Value::from(3))
+        );
         assert_eq!(bot_reply::verify(&secrets, &token, "2", now()), None);
-        assert_eq!(bot_reply::verify(&secrets, &token, "1", now() + bot_reply::EXPIRES_IN - SignedDuration::from_secs(1)), Some(Value::from(3)));
-        assert_eq!(bot_reply::verify(&secrets, &token, "1", now() + bot_reply::EXPIRES_IN), None);
-        assert_eq!(bot_reply::verify(&Secrets::new(&"b".repeat(128)), &token, "1", now()), None);
+        assert_eq!(
+            bot_reply::verify(
+                &secrets,
+                &token,
+                "1",
+                now() + bot_reply::EXPIRES_IN - SignedDuration::from_secs(1)
+            ),
+            Some(Value::from(3))
+        );
+        assert_eq!(
+            bot_reply::verify(&secrets, &token, "1", now() + bot_reply::EXPIRES_IN),
+            None
+        );
+        assert_eq!(
+            bot_reply::verify(&Secrets::new(&"b".repeat(128)), &token, "1", now()),
+            None
+        );
     }
 }

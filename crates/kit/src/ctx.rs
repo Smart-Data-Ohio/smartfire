@@ -86,7 +86,10 @@ pub struct Freshness {
 
 impl Freshness {
     pub fn etag(validator: impl Into<String>) -> Self {
-        Self { etag: Some(validator.into()), ..Self::default() }
+        Self {
+            etag: Some(validator.into()),
+            ..Self::default()
+        }
     }
 }
 
@@ -142,11 +145,18 @@ impl Ctx {
     /// Count a streamed upload's bytes as they arrive, stopping before writing a chunk that
     /// exceeds the action's limit or the configured request limit.
     pub async fn spool_body(&mut self, limit: usize) -> Result<()> {
-        let limit = self.kit.config().max_body_bytes.map_or(limit, |configured| configured.min(limit));
+        let limit = self
+            .kit
+            .config()
+            .max_body_bytes
+            .map_or(limit, |configured| configured.min(limit));
         if let Some(body) = self.streaming_body.take() {
-            let body = body.into_inner().map_err(|error| Error::internal(anyhow::anyhow!(error.to_string())))?;
+            let body = body
+                .into_inner()
+                .map_err(|error| Error::internal(anyhow::anyhow!(error.to_string())))?;
             self.unread_body = crate::body::validate_unparsed(body, Some(limit))
-                .await.map_err(|error| Error::Status(error.status()))?;
+                .await
+                .map_err(|error| Error::Status(error.status()))?;
             self.defer_spooled_params();
         }
         Ok(())
@@ -164,7 +174,8 @@ impl Ctx {
         }
         self.spooled_params_pending = false;
         let parsed = crate::body::parse_spooled(&self.request.headers, self.unread_body.as_mut())
-            .await.map_err(|error| Error::Status(error.status()))?;
+            .await
+            .map_err(|error| Error::Status(error.status()))?;
         self.request_params = parsed.params?;
         self.params = self.request_params.clone();
         self.params.merge(&self.query_params);
@@ -181,7 +192,9 @@ impl Ctx {
         if let Some(file) = self.unread_body.take() {
             return Ok(file.into_std().await);
         }
-        let file = tokio::task::spawn_blocking(tempfile::tempfile).await.map_err(std::io::Error::other)??;
+        let file = tokio::task::spawn_blocking(tempfile::tempfile)
+            .await
+            .map_err(std::io::Error::other)??;
         let mut file = tokio::fs::File::from_std(file);
         file.write_all(self.request.raw_post()).await?;
         file.seek(std::io::SeekFrom::Start(0)).await?;
@@ -253,7 +266,10 @@ impl Ctx {
     /// `wrap_parameters format: [:json]`: for a JSON request, nest the body params under `key`
     /// unless it's already there. `include` is the model's attribute names when it has a model.
     pub fn wrap_parameters(&mut self, key: &str, include: Option<&[&str]>) {
-        let is_json = format::content_mime_type(self.request.content_type()).ok().flatten() == Some(&format::JSON);
+        let is_json = format::content_mime_type(self.request.content_type())
+            .ok()
+            .flatten()
+            == Some(&format::JSON);
         if !is_json || self.params.contains_key(key) {
             return;
         }
@@ -327,9 +343,9 @@ impl Ctx {
     /// Snapshot for rendering without accessing Rails' lazy flash hash. Merely
     /// preparing a frame context must not initialize and sweep saved flash.
     pub fn peek_flash(&mut self) -> Flash {
-        self.flash.clone().unwrap_or_else(|| {
-            Flash::from_session_value(self.session().get("flash"))
-        })
+        self.flash
+            .clone()
+            .unwrap_or_else(|| Flash::from_session_value(self.session().get("flash")))
     }
 
     /// `flash`, loaded from the session on first use.
@@ -372,31 +388,43 @@ impl Ctx {
         if !self.kit.config().forgery_protection_origin_check {
             return Ok(true);
         }
-        csrf::valid_request_origin(self.request.origin(), &self.request.base_url())
-            .map_err(|_| Error::InvalidAuthenticityToken("The browser returned a 'null' origin".into()))
+        csrf::valid_request_origin(self.request.origin(), &self.request.base_url()).map_err(|_| {
+            Error::InvalidAuthenticityToken("The browser returned a 'null' origin".into())
+        })
     }
 
     /// `any_authenticity_token_valid?` over `[params[:authenticity_token], request.x_csrf_token]`.
     fn any_authenticity_token_valid(&mut self) -> bool {
-        let candidates: Vec<String> = [self.params.str(csrf::PARAM), self.request.header(csrf::HEADER)]
-            .into_iter()
-            .flatten()
-            .filter(|token| !token.is_empty())
-            .map(str::to_string)
-            .collect();
+        let candidates: Vec<String> = [
+            self.params.str(csrf::PARAM),
+            self.request.header(csrf::HEADER),
+        ]
+        .into_iter()
+        .flatten()
+        .filter(|token| !token.is_empty())
+        .map(str::to_string)
+        .collect();
         if candidates.is_empty() {
             return false;
         }
         let real = self.real_csrf_token();
-        let (path, method) = (self.request.path().to_string(), self.request.method.as_str().to_string());
-        candidates.iter().any(|token| real.is_valid(token, &path, &method))
+        let (path, method) = (
+            self.request.path().to_string(),
+            self.request.method.as_str().to_string(),
+        );
+        candidates
+            .iter()
+            .any(|token| real.is_valid(token, &path, &method))
     }
 
     /// `real_csrf_token`: the session's token, or a new one (kept for this request and stored
     /// into the session when it commits).
     fn real_csrf_token(&mut self) -> RealToken {
         if self.csrf_token.is_none() {
-            let stored = self.session().get_str(csrf::SESSION_KEY).map(str::to_string);
+            let stored = self
+                .session()
+                .get_str(csrf::SESSION_KEY)
+                .map(str::to_string);
             self.csrf_token = Some(stored.unwrap_or_else(csrf::generate));
         }
         match self.csrf_token.as_deref().and_then(RealToken::decode) {
@@ -447,7 +475,11 @@ impl Ctx {
 
     /// `rate_limit` with the default `with:` (`raise ActionController::TooManyRequests`, a 429).
     pub fn rate_limit(&mut self, limit: &RateLimit) -> Result<()> {
-        if self.rate_limited(limit, None)? { Err(Error::Status(StatusCode::TOO_MANY_REQUESTS)) } else { Ok(()) }
+        if self.rate_limited(limit, None)? {
+            Err(Error::Status(StatusCode::TOO_MANY_REQUESTS))
+        } else {
+            Ok(())
+        }
     }
 
     // --- Content Security Policy -----------------------------------------------------------------
@@ -474,16 +506,23 @@ impl Ctx {
     /// `ActionDispatch::ContentSecurityPolicy::Middleware`: the policy header on a controller
     /// response, except a 304 or one that already carries a policy.
     fn apply_content_security_policy(&mut self, response: &mut Response) {
-        let Some(policy) = self.kit.config().content_security_policy.clone() else { return };
-        let present = ["content-security-policy", "content-security-policy-report-only"]
-            .iter()
-            .any(|name| response.headers.contains_key(*name));
+        let Some(policy) = self.kit.config().content_security_policy.clone() else {
+            return;
+        };
+        let present = [
+            "content-security-policy",
+            "content-security-policy-report-only",
+        ]
+        .iter()
+        .any(|name| response.headers.contains_key(*name));
         if response.status == StatusCode::NOT_MODIFIED || present {
             return;
         }
         let nonce = self.csp_nonce();
         if let Ok(value) = HeaderValue::from_str(&policy.build(nonce.as_deref())) {
-            response.headers.insert(HeaderName::from_static(policy.header_name()), value);
+            response
+                .headers
+                .insert(HeaderName::from_static(policy.header_name()), value);
         }
     }
 
@@ -494,7 +533,10 @@ impl Ctx {
         if self.formats.is_none() {
             self.formats = Some(format::formats(&self.negotiation_input()));
         }
-        self.formats.clone().unwrap().map_err(|_| Error::UnknownFormat)
+        self.formats
+            .clone()
+            .unwrap()
+            .map_err(|_| Error::UnknownFormat)
     }
 
     fn negotiation_input(&self) -> NegotiationInput<'_> {
@@ -510,7 +552,9 @@ impl Ctx {
     /// `_set_vary_header`, which every `render` runs (not `head` or `redirect_to`): `Vary: Accept`
     /// when the format came from the `Accept` header, unless the response already varies.
     pub fn set_vary_header(&self, response: Response) -> Response {
-        if response.headers.contains_key(header::VARY) || !format::should_apply_vary_header(&self.negotiation_input()) {
+        if response.headers.contains_key(header::VARY)
+            || !format::should_apply_vary_header(&self.negotiation_input())
+        {
             return response;
         }
         response.header(header::VARY, "Accept")
@@ -526,7 +570,11 @@ impl Ctx {
     pub fn respond_to(&mut self, offered: &[Format]) -> Result<Format> {
         let formats = self.formats()?;
         let chosen = format::negotiate(&formats, offered).ok_or(Error::UnknownFormat)?;
-        let chosen = if *chosen == format::ALL { offered.first().copied().unwrap_or(&format::HTML) } else { chosen };
+        let chosen = if *chosen == format::ALL {
+            offered.first().copied().unwrap_or(&format::HTML)
+        } else {
+            chosen
+        };
         self.rendered_format = Some(chosen);
         Ok(chosen)
     }
@@ -550,7 +598,12 @@ impl Ctx {
     }
 
     /// `render` with an explicit content type (`render json:`, `send_data`, ...).
-    pub fn render_as(&mut self, status: StatusCode, content_type: &str, body: impl Into<Bytes>) -> Response {
+    pub fn render_as(
+        &mut self,
+        status: StatusCode,
+        content_type: &str,
+        body: impl Into<Bytes>,
+    ) -> Response {
         self.set_vary_header(Response::with_body(status, content_type, body))
     }
 
@@ -562,13 +615,22 @@ impl Ctx {
     /// from the template the lookup found, not from the request, so an `.html.erb`-only action
     /// answers `text/html` even when the `Accept` header prefers another type. Pick the template
     /// with [`Ctx::respond_to`] (the implicit render's lookup) when an action has several.
-    pub fn render(&mut self, status: StatusCode, template: Format, body: impl Into<Bytes>) -> Response {
+    pub fn render(
+        &mut self,
+        status: StatusCode,
+        template: Format,
+        body: impl Into<Bytes>,
+    ) -> Response {
         self.rendered_format = Some(template);
         self.render_as(status, &format!("{}; charset=utf-8", template.string), body)
     }
 
     /// `render json:`
-    pub fn json<T: Serialize + ?Sized>(&mut self, status: StatusCode, value: &T) -> Result<Response> {
+    pub fn json<T: Serialize + ?Sized>(
+        &mut self,
+        status: StatusCode,
+        value: &T,
+    ) -> Result<Response> {
         let body = serde_json::to_vec(value).map_err(Error::internal)?;
         Ok(self.render_as(status, response::JSON_UTF8, body))
     }
@@ -616,11 +678,18 @@ impl Ctx {
             self.flash().set_alert(alert);
         }
         let location = self.compute_location(location)?;
-        if location.bytes().any(|b| matches!(b, 0x00..=0x08 | 0x0A..=0x1F)) {
-            return Err(Error::UnsafeRedirect(format!("The redirect URL {location} contains illegal characters")));
+        if location
+            .bytes()
+            .any(|b| matches!(b, 0x00..=0x08 | 0x0A..=0x1F))
+        {
+            return Err(Error::UnsafeRedirect(format!(
+                "The redirect URL {location} contains illegal characters"
+            )));
         }
         if !options.allow_other_host && !self.url_host_allowed(&location) {
-            return Err(Error::UnsafeRedirect(format!("Unsafe redirect to {location:?}")));
+            return Err(Error::UnsafeRedirect(format!(
+                "Unsafe redirect to {location:?}"
+            )));
         }
         Ok(Response::new(options.status.unwrap_or(StatusCode::FOUND))
             .content_type(response::HTML_UTF8)
@@ -642,17 +711,25 @@ impl Ctx {
             let bytes = location.as_bytes();
             location.starts_with("//")
                 || (bytes.first().is_some_and(u8::is_ascii_alphabetic)
-                    && location
-                        .find(':')
-                        .is_some_and(|i| location[..i].bytes().all(|b| b.is_ascii_alphanumeric() || b"-+.".contains(&b))))
+                    && location.find(':').is_some_and(|i| {
+                        location[..i]
+                            .bytes()
+                            .all(|b| b.is_ascii_alphanumeric() || b"-+.".contains(&b))
+                    }))
         };
         let url = if is_absolute {
             location.to_string()
         } else {
             if !location.is_empty() && !location.starts_with('/') && !location.starts_with('?') {
-                return Err(Error::UnsafeRedirect(format!("Path relative URL redirect detected: {location:?}")));
+                return Err(Error::UnsafeRedirect(format!(
+                    "Path relative URL redirect detected: {location:?}"
+                )));
             }
-            format!("{}{}{location}", self.request.protocol(), self.request.host_with_port())
+            format!(
+                "{}{}{location}",
+                self.request.protocol(),
+                self.request.host_with_port()
+            )
         };
         Ok(url.replace(['\0', '\r', '\n'], ""))
     }
@@ -668,21 +745,36 @@ impl Ctx {
     /// An absolute URL for `path` on this request's host (what `*_url` helpers produce with
     /// `default_url_options` from `SetCurrentRequest`).
     pub fn url_for(&self, path: &str) -> String {
-        format!("{}{}{path}", self.request.protocol(), self.request.host_with_port())
+        format!(
+            "{}{}{path}",
+            self.request.protocol(),
+            self.request.host_with_port()
+        )
     }
 
     /// `send_file path, type:, disposition:, filename:`
-    pub fn send_file(&mut self, path: impl AsRef<Path>, mut options: SendOptions) -> Result<Response> {
+    pub fn send_file(
+        &mut self,
+        path: impl AsRef<Path>,
+        mut options: SendOptions,
+    ) -> Result<Response> {
         let path = path.as_ref();
         let metadata = std::fs::metadata(path).ok().filter(|m| m.is_file());
         let Some(metadata) = metadata else {
-            return Err(Error::internal(anyhow::anyhow!("Cannot read file {}", path.display())));
+            return Err(Error::internal(anyhow::anyhow!(
+                "Cannot read file {}",
+                path.display()
+            )));
         };
         if options.filename.is_none() {
             options.filename = path.file_name().map(|n| n.to_string_lossy().into_owned());
         }
         let range = self.request.header("range").map(str::to_string);
-        Ok(response::send(&options, range.as_deref(), SendBody::File(path.to_path_buf(), metadata.len())))
+        Ok(response::send(
+            &options,
+            range.as_deref(),
+            SendBody::File(path.to_path_buf(), metadata.len()),
+        ))
     }
 
     /// `send_data data, type:, disposition:, filename:`
@@ -696,14 +788,20 @@ impl Ctx {
     /// `fresh_when`: sets ETag/Last-Modified and returns `Some(304)` when the request is fresh.
     pub fn fresh_when(&mut self, freshness: Freshness) -> Option<Response> {
         self.cache_control.no_store = false;
-        let etagged = freshness.strong_etag.is_some() || freshness.etag.is_some() || freshness.template.is_some();
+        let etagged = freshness.strong_etag.is_some()
+            || freshness.etag.is_some()
+            || freshness.template.is_some();
         if etagged {
             let (validator, weak) = match &freshness.strong_etag {
                 Some(strong) => (Some(strong.clone()), false),
                 None => (freshness.etag.clone(), true),
             };
             let etag = self.combine_etags(validator, &freshness);
-            let value = if weak { format!("W/\"{etag}\"") } else { format!("\"{etag}\"") };
+            let value = if weak {
+                format!("W/\"{etag}\"")
+            } else {
+                format!("\"{etag}\"")
+            };
             self.set_header(header::ETAG, &value);
         }
         if let Some(last_modified) = freshness.last_modified {
@@ -712,7 +810,11 @@ impl Ctx {
         if freshness.public {
             self.cache_control.public = true;
         }
-        if self.is_fresh() { Some(self.head(StatusCode::NOT_MODIFIED)) } else { None }
+        if self.is_fresh() {
+            Some(self.head(StatusCode::NOT_MODIFIED))
+        } else {
+            None
+        }
     }
 
     /// `stale?`: the inverse of freshness, after setting the validators.
@@ -735,20 +837,40 @@ impl Ctx {
                 match value {
                     serde_json::Value::Null => String::new(),
                     serde_json::Value::String(value) => value.clone(),
-                    serde_json::Value::Array(values) => values.iter().map(expand).collect::<Vec<_>>().join("/"),
-                    serde_json::Value::Object(values) => values.iter().map(|(key,value)|format!("{key}/{}",expand(value))).collect::<Vec<_>>().join("/"),
+                    serde_json::Value::Array(values) => {
+                        values.iter().map(expand).collect::<Vec<_>>().join("/")
+                    }
+                    serde_json::Value::Object(values) => values
+                        .iter()
+                        .map(|(key, value)| format!("{key}/{}", expand(value)))
+                        .collect::<Vec<_>>()
+                        .join("/"),
                     value => value.to_string(),
                 }
             }
-            parts.push(flash.keys().map(|key|format!("{key}/{}",expand(flash.get(key).unwrap()))).collect::<Vec<_>>().join("/"));
+            parts.push(
+                flash
+                    .keys()
+                    .map(|key| format!("{key}/{}", expand(flash.get(key).unwrap())))
+                    .collect::<Vec<_>>()
+                    .join("/"),
+            );
         }
         hex::encode(&Sha256::digest(parts.join("/"))[..16])
     }
 
     /// Rails `request.fresh?(response)` for controllers with an explicit ETag (WS8br2 icons).
     pub fn is_fresh(&self) -> bool {
-        let header = |name| self.headers.get(name).and_then(|v: &HeaderValue| v.to_str().ok());
-        is_fresh(&self.request, header(header::ETAG), header(header::LAST_MODIFIED))
+        let header = |name| {
+            self.headers
+                .get(name)
+                .and_then(|v: &HeaderValue| v.to_str().ok())
+        };
+        is_fresh(
+            &self.request,
+            header(header::ETAG),
+            header(header::LAST_MODIFIED),
+        )
     }
 
     /// `expires_in seconds, public:, stale_while_revalidate:, ...`
@@ -769,18 +891,29 @@ impl Ctx {
 
     /// `expires_now`
     pub fn expires_now(&mut self) {
-        self.cache_control = CacheControl { no_cache: true, ..CacheControl::default() };
+        self.cache_control = CacheControl {
+            no_cache: true,
+            ..CacheControl::default()
+        };
     }
 
     /// `no_store`
     pub fn no_store(&mut self) {
-        self.cache_control = CacheControl { no_store: true, ..CacheControl::default() };
+        self.cache_control = CacheControl {
+            no_store: true,
+            ..CacheControl::default()
+        };
     }
 
     /// Set a response header ahead of the response (`response.headers[...] = ...`).
     pub fn set_header(&mut self, name: impl TryInto<HeaderName>, value: &str) {
-        let name = name.try_into().unwrap_or_else(|_| panic!("invalid header name"));
-        self.headers.insert(name, HeaderValue::from_str(value).expect("invalid header value"));
+        let name = name
+            .try_into()
+            .unwrap_or_else(|_| panic!("invalid header name"));
+        self.headers.insert(
+            name,
+            HeaderValue::from_str(value).expect("invalid header value"),
+        );
     }
 
     /// A controller that includes `ActionController::Live` (`ActiveStorage::Streaming` does):
@@ -791,7 +924,11 @@ impl Ctx {
     }
 
     fn default_headers(&self) -> &[(HeaderName, HeaderValue)] {
-        if self.live { &[] } else { &self.kit.config().default_headers }
+        if self.live {
+            &[]
+        } else {
+            &self.kit.config().default_headers
+        }
     }
 
     // --- Finishing -----------------------------------------------------------------------------
@@ -836,7 +973,10 @@ impl Ctx {
         if !response.headers.contains_key(header::CONTENT_TYPE)
             && !matches!(response.status.as_u16(), 100..=199 | 204 | 205 | 304)
         {
-            response.headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(response::HTML_UTF8));
+            response.headers.insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static(response::HTML_UTF8),
+            );
         }
         rack_etag(&mut response, !self.live, self.session_bound_body);
         self.conditional_get(&mut response);
@@ -864,9 +1004,9 @@ impl Ctx {
     /// `verify_same_origin_request`: a GET that renders JavaScript for a non-XHR request is a
     /// cross-origin `<script>` embed.
     fn verify_same_origin_request(&self, response: &Response) -> Result<()> {
-        let javascript = response
-            .get_header(header::CONTENT_TYPE)
-            .is_some_and(|ct| ct.starts_with("text/javascript") || ct.starts_with("application/javascript"));
+        let javascript = response.get_header(header::CONTENT_TYPE).is_some_and(|ct| {
+            ct.starts_with("text/javascript") || ct.starts_with("application/javascript")
+        });
         if self.marked_for_same_origin_verification && javascript && !self.request.is_xhr() {
             return Err(Error::InvalidCrossOriginRequest);
         }
@@ -886,7 +1026,10 @@ impl Ctx {
                 }
             }
         }
-        if self.session.is_loaded() && self.session.contains_key("flash") && self.session.get("flash").is_none() {
+        if self.session.is_loaded()
+            && self.session.contains_key("flash")
+            && self.session.get("flash").is_none()
+        {
             self.session.remove("flash");
         }
     }
@@ -899,7 +1042,10 @@ impl Ctx {
         let now = self.now();
         self.session.commit(&mut self.cookies, now)?;
 
-        for cookie in self.cookies.set_cookie_headers(self.request.is_ssl(), &self.request.host()) {
+        for cookie in self
+            .cookies
+            .set_cookie_headers(self.request.is_ssl(), &self.request.host())
+        {
             if self.session_cookie_overflow_response.is_some()
                 && cookie.len() >= crate::cookies::MAX_COOKIE_SIZE
             {
@@ -908,7 +1054,10 @@ impl Ctx {
                     cookie.len()
                 )));
             }
-            response.headers.append(header::SET_COOKIE, HeaderValue::from_str(&cookie).map_err(Error::internal)?);
+            response.headers.append(
+                header::SET_COOKIE,
+                HeaderValue::from_str(&cookie).map_err(Error::internal)?,
+            );
         }
         Ok(())
     }
@@ -920,18 +1069,28 @@ impl Ctx {
         }
         let mut cache_control = self.cache_control.clone();
         if cache_control.is_empty()
-            && (response.headers.contains_key(header::ETAG) || response.headers.contains_key(header::LAST_MODIFIED))
+            && (response.headers.contains_key(header::ETAG)
+                || response.headers.contains_key(header::LAST_MODIFIED))
         {
-            cache_control = CacheControl { max_age: Some(0), must_revalidate: true, ..CacheControl::default() };
+            cache_control = CacheControl {
+                max_age: Some(0),
+                must_revalidate: true,
+                ..CacheControl::default()
+            };
         }
         if let Some(value) = cache_control.to_header() {
-            response.headers.insert(header::CACHE_CONTROL, HeaderValue::from_str(&value).unwrap());
+            response.headers.insert(
+                header::CACHE_CONTROL,
+                HeaderValue::from_str(&value).unwrap(),
+            );
         }
     }
 
     /// `Rack::ConditionalGet`
     fn conditional_get(&self, response: &mut Response) {
-        if !matches!(self.request.method, Method::GET | Method::HEAD) || response.status != StatusCode::OK {
+        if !matches!(self.request.method, Method::GET | Method::HEAD)
+            || response.status != StatusCode::OK
+        {
             return;
         }
         // Rack::ConditionalGet compares one exact ETag, unlike Rails' request.fresh?
@@ -939,7 +1098,11 @@ impl Ctx {
         let fresh = if let Some(validator) = self.request.header("if-none-match") {
             response.get_header(header::ETAG) == Some(validator)
         } else {
-            is_fresh(&self.request, None, response.get_header(header::LAST_MODIFIED))
+            is_fresh(
+                &self.request,
+                None,
+                response.get_header(header::LAST_MODIFIED),
+            )
         };
         if fresh {
             response.status = StatusCode::NOT_MODIFIED;
@@ -957,7 +1120,12 @@ impl Ctx {
             tracing::info!(error = %error, path = self.request.path(), "request rejected");
         }
         let formats = self.formats().unwrap_or_default();
-        crate::exceptions::render(self.kit.error_pages(), error.status(), formats.first().copied(), self.request.is_head())
+        crate::exceptions::render(
+            self.kit.error_pages(),
+            error.status(),
+            formats.first().copied(),
+            self.request.is_head(),
+        )
     }
 }
 
@@ -966,9 +1134,17 @@ impl Ctx {
 fn is_fresh(request: &Request, etag: Option<&str>, last_modified: Option<&str>) -> bool {
     if let Some(if_none_match) = request.header("if-none-match") {
         let Some(etag) = etag else { return false };
-        if_none_match.split(',').map(str::trim).any(|v| v == etag || v == "*")
-    } else if let Some(since) = request.header("if-modified-since").and_then(clock::parse_httpdate) {
-        last_modified.and_then(clock::parse_httpdate).is_some_and(|last_modified| since >= last_modified)
+        if_none_match
+            .split(',')
+            .map(str::trim)
+            .any(|v| v == etag || v == "*")
+    } else if let Some(since) = request
+        .header("if-modified-since")
+        .and_then(clock::parse_httpdate)
+    {
+        last_modified
+            .and_then(clock::parse_httpdate)
+            .is_some_and(|last_modified| since >= last_modified)
     } else {
         false
     }
@@ -983,30 +1159,48 @@ fn is_fresh(request: &Request, etag: Option<&str>, last_modified: Option<&str>) 
 /// kept as one stored gzip piece: the store would fill with pages no other request renders.
 fn rack_etag(response: &mut Response, digestible: bool, session_bound: bool) {
     let mut digested = false;
-    let skip = !digestible || response.headers.contains_key(header::ETAG) || response.headers.contains_key(header::LAST_MODIFIED);
+    let skip = !digestible
+        || response.headers.contains_key(header::ETAG)
+        || response.headers.contains_key(header::LAST_MODIFIED);
     let digests = matches!(response.status.as_u16(), 200 | 201) && !skip;
     if let Body::Bytes(bytes) = &response.body {
         // A page with cached fragments splits at them. Any other page that's digested anyway is one
         // text part, so the SHA-256 it already needs also keys its stored gzip piece: a page that
         // renders the same (the sidebar, say) compresses once instead of on every request.
-        let parts = if response.cached_fragments.is_empty() { None } else { PageParts::new(bytes, &response.cached_fragments) };
+        let parts = if response.cached_fragments.is_empty() {
+            None
+        } else {
+            PageParts::new(bytes, &response.cached_fragments)
+        };
         let whole = digests && !session_bound;
-        response.page_parts = parts.or_else(|| if whole { PageParts::whole(bytes) } else { None }).map(std::sync::Arc::new);
+        response.page_parts = parts
+            .or_else(|| if whole { PageParts::whole(bytes) } else { None })
+            .map(std::sync::Arc::new);
     }
     if digests
         && let Body::Bytes(bytes) = &response.body
-            && !bytes.is_empty() {
-                // A page of cached fragments hashes its parts' digests rather than the whole body.
-                let hex = match &response.page_parts {
-                    Some(parts) => parts.etag(bytes),
-                    None => hex::encode(Sha256::digest(bytes)),
-                };
-                response.headers.insert(header::ETAG, HeaderValue::from_str(&format!("W/\"{}\"", &hex[..32])).unwrap());
-                digested = true;
-            }
+        && !bytes.is_empty()
+    {
+        // A page of cached fragments hashes its parts' digests rather than the whole body.
+        let hex = match &response.page_parts {
+            Some(parts) => parts.etag(bytes),
+            None => hex::encode(Sha256::digest(bytes)),
+        };
+        response.headers.insert(
+            header::ETAG,
+            HeaderValue::from_str(&format!("W/\"{}\"", &hex[..32])).unwrap(),
+        );
+        digested = true;
+    }
     if !response.headers.contains_key(header::CACHE_CONTROL) {
-        let value = if digested { "max-age=0, private, must-revalidate" } else { "no-cache" };
-        response.headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(value));
+        let value = if digested {
+            "max-age=0, private, must-revalidate"
+        } else {
+            "no-cache"
+        };
+        response
+            .headers
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static(value));
     }
 }
 
@@ -1016,7 +1210,11 @@ fn url_host(url: &str) -> Option<String> {
         rest
     } else {
         let (scheme, rest) = url.split_once("://")?;
-        if scheme.is_empty() || !scheme.bytes().all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b)) {
+        if scheme.is_empty()
+            || !scheme
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b))
+        {
             return None;
         }
         rest

@@ -1,6 +1,6 @@
-use campfire_db::Message;
-use crate::integrations::link_embed::Reference;
 use crate::controllers::presenters::test_support::*;
+use crate::integrations::link_embed::Reference;
+use campfire_db::Message;
 use campfire_db::NewMessage;
 use std::time::Duration;
 async fn app() -> TestApp {
@@ -65,11 +65,18 @@ async fn ws15e_linkedin_real_fetches_and_room_html_use_each_reference() {
         crate::integrations::link_embed::fetcher::fetch(&app.booted.app, &net, embed.id)
             .await
             .unwrap();
-        let metadata=app.db().read(move |conn| Ok(Reference::for_message(conn,&message)?[0].embed.clone())).await.unwrap();
+        let metadata = app
+            .db()
+            .read(move |conn| Ok(Reference::for_message(conn, &message)?[0].embed.clone()))
+            .await
+            .unwrap();
         match index {
-            0 => { assert_eq!(metadata.title.as_deref(),Some("Jane & Jerry <3")); assert_eq!(metadata.description.as_deref(),Some("We shipped it.")); }
+            0 => {
+                assert_eq!(metadata.title.as_deref(), Some("Jane & Jerry <3"));
+                assert_eq!(metadata.description.as_deref(), Some("We shipped it."));
+            }
             1 => assert!(metadata.title.is_none()),
-            2 => assert_eq!(metadata.title.as_deref(),Some("Open post")),
+            2 => assert_eq!(metadata.title.as_deref(), Some("Open post")),
             _ => unreachable!(),
         }
     }

@@ -97,7 +97,11 @@ impl From<HttpError> for Failure {
         Self::Transport(error)
     }
 }
-pub async fn get(net: &Network, path: &str, timeouts: &Timeouts) -> Result<(u16, Vec<u8>), Failure> {
+pub async fn get(
+    net: &Network,
+    path: &str,
+    timeouts: &Timeouts,
+) -> Result<(u16, Vec<u8>), Failure> {
     // DNS, all address attempts and TLS share Net::HTTP's one open_timeout.
     let endpoint = Endpoint {
         https: true,

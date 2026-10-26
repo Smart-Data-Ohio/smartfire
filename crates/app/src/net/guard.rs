@@ -21,11 +21,18 @@ pub enum GuardError {
 
 /// `RestrictedHTTP::PrivateNetworkGuard.resolve(hostname)`: the first public address.
 pub async fn resolve(resolver: &dyn Resolver, host: &str) -> Result<IpAddr, GuardError> {
-    resolve_public_ips(resolver, host).await?.into_iter().next().ok_or_else(|| GuardError::Violation(host.to_string()))
+    resolve_public_ips(resolver, host)
+        .await?
+        .into_iter()
+        .next()
+        .ok_or_else(|| GuardError::Violation(host.to_string()))
 }
 
 /// `Surfguard.resolve_public_ips(host)`. Malformed input comes back empty rather than raising.
-pub async fn resolve_public_ips(resolver: &dyn Resolver, host: &str) -> Result<Vec<IpAddr>, GuardError> {
+pub async fn resolve_public_ips(
+    resolver: &dyn Resolver,
+    host: &str,
+) -> Result<Vec<IpAddr>, GuardError> {
     // The fork's shim tries AI_NUMERICHOST before Surfguard, including bracketed
     // IPv4 and legacy inet_aton spellings. Names are handed to Resolv unchanged.
     if host.is_empty() {
@@ -35,17 +42,25 @@ pub async fn resolve_public_ips(resolver: &dyn Resolver, host: &str) -> Result<V
     let bare = bare.strip_suffix(']').unwrap_or(bare);
     let addresses = match getaddrinfo_numeric(bare).or_else(|| ip_literal(host)) {
         Some(ip) => vec![ip],
-        None => resolver.lookup(host).await.map_err(|_| GuardError::Unresolvable)?,
+        None => resolver
+            .lookup(host)
+            .await
+            .map_err(|_| GuardError::Unresolvable)?,
     };
     if addresses.is_empty() {
         return Err(GuardError::Unresolvable);
     }
-    let (v4, v6): (Vec<IpAddr>, Vec<IpAddr>) = addresses.into_iter().filter(|ip| !blocked_address(*ip)).partition(IpAddr::is_ipv4);
+    let (v4, v6): (Vec<IpAddr>, Vec<IpAddr>) = addresses
+        .into_iter()
+        .filter(|ip| !blocked_address(*ip))
+        .partition(IpAddr::is_ipv4);
     Ok(v4.into_iter().chain(v6).collect())
 }
 
 #[cfg(test)]
-fn blocked_at_reference_pin(ip: IpAddr) -> bool { blocked_address(ip) }
+fn blocked_at_reference_pin(ip: IpAddr) -> bool {
+    blocked_address(ip)
+}
 
 /// Webhooks share the same Surfguard policy at the reference pin.
 pub async fn resolve_webhook(resolver: &dyn Resolver, host: &str) -> Result<IpAddr, GuardError> {
@@ -64,7 +79,11 @@ fn ip_literal(text: &str) -> Option<IpAddr> {
     // IPAddr only takes four decimal octets without leading zeros ("01" is rejected)
     let octets: Vec<&str> = text.split('.').collect();
     if octets.len() == 4
-        && octets.iter().all(|o| !o.is_empty() && o.bytes().all(|b| b.is_ascii_digit()) && (o.len() == 1 || !o.starts_with('0')))
+        && octets.iter().all(|o| {
+            !o.is_empty()
+                && o.bytes().all(|b| b.is_ascii_digit())
+                && (o.len() == 1 || !o.starts_with('0'))
+        })
     {
         return text.parse::<Ipv4Addr>().ok().map(IpAddr::V4);
     }
@@ -88,17 +107,22 @@ fn inet_aton(text: &str) -> Option<Ipv4Addr> {
     }
     let mut values = Vec::with_capacity(parts.len());
     for part in &parts {
-        let (digits, radix) = if let Some(hex) = part.strip_prefix("0x").or_else(|| part.strip_prefix("0X")) {
-            (hex, 16)
-        } else if part.len() > 1 && part.starts_with('0') {
-            (&part[1..], 8)
-        } else {
-            (*part, 10)
-        };
+        let (digits, radix) =
+            if let Some(hex) = part.strip_prefix("0x").or_else(|| part.strip_prefix("0X")) {
+                (hex, 16)
+            } else if part.len() > 1 && part.starts_with('0') {
+                (&part[1..], 8)
+            } else {
+                (*part, 10)
+            };
         if part.is_empty() || !digits.chars().all(|c| c.is_digit(radix)) {
             return None;
         }
-        let value = if digits.is_empty() { 0 } else { u64::from_str_radix(digits, radix).ok()? };
+        let value = if digits.is_empty() {
+            0
+        } else {
+            u64::from_str_radix(digits, radix).ok()?
+        };
         if value > u32::MAX as u64 {
             return None;
         }
@@ -208,7 +232,10 @@ fn disallowed_ipv4(ip: u32) -> bool {
 }
 
 fn disallowed_ipv6(ip: u128) -> bool {
-    in_v6(ip, UNIQUE_LOCAL) || ip == 1 || in_v6(ip, LINK_LOCAL_V6) || DISALLOWED_IPV6.iter().any(|range| in_v6(ip, *range))
+    in_v6(ip, UNIQUE_LOCAL)
+        || ip == 1
+        || in_v6(ip, LINK_LOCAL_V6)
+        || DISALLOWED_IPV6.iter().any(|range| in_v6(ip, *range))
 }
 
 #[cfg(test)]
@@ -303,23 +330,67 @@ mod tests {
     async fn resolves_hosts_like_the_private_network_guard() {
         let resolver = FakeResolver::new([
             ("www.example.com", vec!["93.184.216.34"]),
-            ("mixed.example", vec!["10.0.0.1", "2606:2800:220:1:248:1893:25c8:1946", "::1", "93.184.216.39"]),
+            (
+                "mixed.example",
+                vec![
+                    "10.0.0.1",
+                    "2606:2800:220:1:248:1893:25c8:1946",
+                    "::1",
+                    "93.184.216.39",
+                ],
+            ),
             ("private.example", vec!["192.168.1.10"]),
         ]);
         let ip = |s: &str| s.parse::<IpAddr>().unwrap();
-        assert_eq!(resolve(&resolver, "www.example.com").await, Ok(ip("93.184.216.34")));
+        assert_eq!(
+            resolve(&resolver, "www.example.com").await,
+            Ok(ip("93.184.216.34"))
+        );
         assert_eq!(
             resolve_public_ips(&resolver, "mixed.example").await,
-            Ok(vec![ip("93.184.216.39"), ip("2606:2800:220:1:248:1893:25c8:1946")])
+            Ok(vec![
+                ip("93.184.216.39"),
+                ip("2606:2800:220:1:248:1893:25c8:1946")
+            ])
         );
-        assert_eq!(resolve(&resolver, "private.example").await, Err(GuardError::Violation("private.example".into())));
-        assert_eq!(resolve(&resolver, "nowhere.example").await, Err(GuardError::Unresolvable));
+        assert_eq!(
+            resolve(&resolver, "private.example").await,
+            Err(GuardError::Violation("private.example".into()))
+        );
+        assert_eq!(
+            resolve(&resolver, "nowhere.example").await,
+            Err(GuardError::Unresolvable)
+        );
         assert_eq!(resolve(&resolver, "8.8.8.8").await, Ok(ip("8.8.8.8")));
-        assert_eq!(resolve(&resolver, "[2606:2800:220:1:248:1893:25c8:1946]").await, Ok(ip("2606:2800:220:1:248:1893:25c8:1946")));
-        for host in ["127.0.0.1", "0x7f.1", "2130706433", "[::1]", "::1", "[fd00::1]"] {
-            assert!(matches!(resolve(&resolver, host).await, Err(GuardError::Violation(_))), "{host:?}");
+        assert_eq!(
+            resolve(&resolver, "[2606:2800:220:1:248:1893:25c8:1946]").await,
+            Ok(ip("2606:2800:220:1:248:1893:25c8:1946"))
+        );
+        for host in [
+            "127.0.0.1",
+            "0x7f.1",
+            "2130706433",
+            "[::1]",
+            "::1",
+            "[fd00::1]",
+        ] {
+            assert!(
+                matches!(
+                    resolve(&resolver, host).await,
+                    Err(GuardError::Violation(_))
+                ),
+                "{host:?}"
+            );
         }
-        assert_eq!(resolver.lookups(), vec!["www.example.com", "mixed.example", "private.example", "nowhere.example"]);
+        assert_eq!(
+            resolver.lookups(),
+            vec![
+                "www.example.com",
+                "mixed.example",
+                "private.example",
+                "nowhere.example"
+            ]
+        );
     }
 }
 
@@ -331,7 +402,8 @@ mod ws15e_tests {
 
     #[tokio::test]
     async fn ws15e_matches_our_rails_guard_corpus() {
-        let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/ws15e_embeds.json")).unwrap();
+        let vectors: Value =
+            serde_json::from_str(include_str!("../../../../vectors/ws15e_embeds.json")).unwrap();
         let mut failures = Vec::new();
         for case in vectors["addresses"].as_array().unwrap() {
             let address = case["address"].as_str().unwrap();
@@ -342,7 +414,12 @@ mod ws15e_tests {
         }
         for case in vectors["hosts"].as_array().unwrap() {
             let host = case["host"].as_str().unwrap();
-            let answers = case["answers"].as_array().unwrap().iter().map(|s| s.as_str().unwrap()).collect();
+            let answers = case["answers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|s| s.as_str().unwrap())
+                .collect();
             let resolver = FakeResolver::new([(host, answers)]);
             let actual = match resolve(&resolver, host).await {
                 Ok(ip) => json!({"ip": ip.to_string()}),
@@ -358,10 +435,15 @@ mod ws15e_tests {
                 ));
             }
         }
-        assert!(failures.is_empty(), "{} guard differences:\n{}", failures.len(), failures.join("\n"));
+        assert!(
+            failures.is_empty(),
+            "{} guard differences:\n{}",
+            failures.len(),
+            failures.join("\n")
+        );
     }
 }
 
 #[cfg(test)]
-#[path="guard_case_tests.rs"]
+#[path = "guard_case_tests.rs"]
 mod named_case_tests;

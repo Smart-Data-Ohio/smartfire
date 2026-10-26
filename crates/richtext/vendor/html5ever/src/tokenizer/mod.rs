@@ -329,7 +329,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     self.temp_buf.borrow_mut().push_char(data);
                 }
                 None
-            },
+            }
             Some(matched) => Some(matched),
         }
     }
@@ -346,7 +346,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     Some(x) => {
                         *x += dt;
                         false
-                    },
+                    }
                     None => true,
                 };
                 if new {
@@ -424,7 +424,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
         match self.current_tag_kind.get() {
             StartTag => {
                 *self.last_start_tag_name.borrow_mut() = Some(name.clone());
-            },
+            }
             EndTag => {
                 if !self.current_tag_attrs.borrow().is_empty() {
                     self.emit_error(Borrowed("Attributes on an end tag"));
@@ -432,7 +432,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                 if self.current_tag_self_closing.get() {
                     self.emit_error(Borrowed("Self-closing end tag"));
                 }
-            },
+            }
         }
 
         let token = TagToken(Tag {
@@ -447,15 +447,15 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             TokenSinkResult::Plaintext => {
                 self.state.set(states::Plaintext);
                 ProcessResult::Continue
-            },
+            }
             TokenSinkResult::Script(node) => {
                 self.state.set(states::Data);
                 ProcessResult::Script(node)
-            },
+            }
             TokenSinkResult::RawData(kind) => {
                 self.state.set(states::RawData(kind));
                 ProcessResult::Continue
-            },
+            }
         }
     }
 
@@ -495,7 +495,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             Some(last) => {
                 (self.current_tag_kind.get() == EndTag)
                     && (**self.current_tag_name.borrow() == **last)
-            },
+            }
             None => false,
         }
     }
@@ -757,12 +757,12 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         self.emit_char('\0');
-                    },
+                    }
                     FromSet('&') => go!(self: consume_char_ref),
                     FromSet('<') => go!(self: to TagOpen),
                     FromSet(c) => {
                         self.emit_char(c);
-                    },
+                    }
                     NotFromSet(b) => self.emit_chars(b),
                 }
             },
@@ -773,7 +773,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
-                    },
+                    }
                     FromSet('&') => go!(self: consume_char_ref),
                     FromSet('<') => go!(self: to RawLessThanSign Rcdata),
                     FromSet(c) => self.emit_char(c),
@@ -787,7 +787,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
-                    },
+                    }
                     FromSet('<') => go!(self: to RawLessThanSign Rawtext),
                     FromSet(c) => self.emit_char(c),
                     NotFromSet(b) => self.emit_chars(b),
@@ -800,7 +800,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
-                    },
+                    }
                     FromSet('<') => go!(self: to RawLessThanSign ScriptData),
                     FromSet(c) => self.emit_char(c),
                     NotFromSet(b) => self.emit_chars(b),
@@ -813,11 +813,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
-                    },
+                    }
                     FromSet('-') => {
                         self.emit_char('-');
                         go!(self: to ScriptDataEscapedDash Escaped);
-                    },
+                    }
                     FromSet('<') => go!(self: to RawLessThanSign ScriptDataEscaped Escaped),
                     FromSet(c) => self.emit_char(c),
                     NotFromSet(b) => self.emit_chars(b),
@@ -830,15 +830,15 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
-                    },
+                    }
                     FromSet('-') => {
                         self.emit_char('-');
                         go!(self: to ScriptDataEscapedDash DoubleEscaped);
-                    },
+                    }
                     FromSet('<') => {
                         self.emit_char('<');
                         go!(self: to RawLessThanSign ScriptDataEscaped DoubleEscaped)
-                    },
+                    }
                     FromSet(c) => self.emit_char(c),
                     NotFromSet(b) => self.emit_chars(b),
                 }
@@ -850,7 +850,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
-                    },
+                    }
                     FromSet(c) => self.emit_char(c),
                     NotFromSet(b) => self.emit_chars(b),
                 }
@@ -864,14 +864,14 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '?' => {
                         self.bad_char_error();
                         go!(self: clear_comment; reconsume BogusComment)
-                    },
+                    }
                     c => match lower_ascii_letter(c) {
                         Some(cl) => go!(self: create_tag StartTag cl; to TagName),
                         None => {
                             self.bad_char_error();
                             self.emit_char('<');
                             go!(self: reconsume Data)
-                        },
+                        }
                     },
                 }
             },
@@ -882,13 +882,13 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '>' => {
                         self.bad_char_error();
                         go!(self: to Data)
-                    },
+                    }
                     c => match lower_ascii_letter(c) {
                         Some(cl) => go!(self: create_tag EndTag cl; to TagName),
                         None => {
                             self.bad_char_error();
                             go!(self: clear_comment; reconsume BogusComment)
-                        },
+                        }
                     },
                 }
             },
@@ -902,7 +902,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_tag '\u{fffd}')
-                    },
+                    }
                     c => go!(self: push_tag (c.to_ascii_lowercase())),
                 }
             },
@@ -917,11 +917,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                             self.emit_char('<');
                             self.emit_char(c);
                             go!(self: to ScriptDataEscapeStart DoubleEscaped);
-                        },
+                        }
                         None => {
                             self.emit_char('<');
                             go!(self: reconsume RawData ScriptDataEscaped Escaped);
-                        },
+                        }
                     },
                 }
             },
@@ -933,7 +933,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         go!(self: clear_temp);
                         self.emit_char('/');
                         go!(self: to ScriptDataDoubleEscapeEnd);
-                    },
+                    }
                     _ => go!(self: reconsume RawData ScriptDataEscaped DoubleEscaped),
                 }
             },
@@ -947,11 +947,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         self.emit_char('<');
                         self.emit_char('!');
                         go!(self: to ScriptDataEscapeStart Escaped);
-                    },
+                    }
                     _ => {
                         self.emit_char('<');
                         go!(self: reconsume RawData kind);
-                    },
+                    }
                 }
             },
 
@@ -964,7 +964,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         self.emit_char('<');
                         self.emit_char('/');
                         go!(self: reconsume RawData kind);
-                    },
+                    }
                 }
             },
 
@@ -988,7 +988,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         self.emit_char('/');
                         self.emit_temp_buf();
                         go!(self: reconsume RawData kind);
-                    },
+                    }
                 }
             },
 
@@ -1004,12 +1004,12 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         };
                         self.emit_char(c);
                         go!(self: to RawData ScriptDataEscaped esc);
-                    },
+                    }
                     _ => match lower_ascii_letter(c) {
                         Some(cl) => {
                             go!(self: push_temp cl);
                             self.emit_char(c);
-                        },
+                        }
                         None => go!(self: reconsume RawData ScriptDataEscaped Escaped),
                     },
                 }
@@ -1021,7 +1021,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '-' => {
                         self.emit_char('-');
                         go!(self: to ScriptDataEscapeStartDash);
-                    },
+                    }
                     _ => go!(self: reconsume RawData ScriptData),
                 }
             },
@@ -1032,7 +1032,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '-' => {
                         self.emit_char('-');
                         go!(self: to ScriptDataEscapedDashDash Escaped);
-                    },
+                    }
                     _ => go!(self: reconsume RawData ScriptData),
                 }
             },
@@ -1043,22 +1043,22 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '-' => {
                         self.emit_char('-');
                         go!(self: to ScriptDataEscapedDashDash kind);
-                    },
+                    }
                     '<' => {
                         if kind == DoubleEscaped {
                             self.emit_char('<');
                         }
                         go!(self: to RawLessThanSign ScriptDataEscaped kind);
-                    },
+                    }
                     '\0' => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
                         go!(self: to RawData ScriptDataEscaped kind)
-                    },
+                    }
                     c => {
                         self.emit_char(c);
                         go!(self: to RawData ScriptDataEscaped kind);
-                    },
+                    }
                 }
             },
 
@@ -1067,26 +1067,26 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                 match get_char!(self, input) {
                     '-' => {
                         self.emit_char('-');
-                    },
+                    }
                     '<' => {
                         if kind == DoubleEscaped {
                             self.emit_char('<');
                         }
                         go!(self: to RawLessThanSign ScriptDataEscaped kind);
-                    },
+                    }
                     '>' => {
                         self.emit_char('>');
                         go!(self: to RawData ScriptData);
-                    },
+                    }
                     '\0' => {
                         self.bad_char_error();
                         self.emit_char('\u{fffd}');
                         go!(self: to RawData ScriptDataEscaped kind)
-                    },
+                    }
                     c => {
                         self.emit_char(c);
                         go!(self: to RawData ScriptDataEscaped kind);
-                    },
+                    }
                 }
             },
 
@@ -1102,12 +1102,12 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         };
                         self.emit_char(c);
                         go!(self: to RawData ScriptDataEscaped esc);
-                    },
+                    }
                     _ => match lower_ascii_letter(c) {
                         Some(cl) => {
                             go!(self: push_temp cl);
                             self.emit_char(c);
-                        },
+                        }
                         None => go!(self: reconsume RawData ScriptDataEscaped DoubleEscaped),
                     },
                 }
@@ -1122,7 +1122,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: create_attr '\u{fffd}'; to AttributeName)
-                    },
+                    }
                     c => match lower_ascii_letter(c) {
                         Some(cl) => go!(self: create_attr cl; to AttributeName),
                         None => {
@@ -1131,7 +1131,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                             }
 
                             go!(self: create_attr c; to AttributeName);
-                        },
+                        }
                     },
                 }
             },
@@ -1146,7 +1146,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_name '\u{fffd}')
-                    },
+                    }
                     c => match lower_ascii_letter(c) {
                         Some(cl) => go!(self: push_name cl),
                         None => {
@@ -1154,7 +1154,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                                 self.bad_char_error();
                             }
                             go!(self: push_name c);
-                        },
+                        }
                     },
                 }
             },
@@ -1169,7 +1169,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: create_attr '\u{fffd}'; to AttributeName)
-                    },
+                    }
                     c => match lower_ascii_letter(c) {
                         Some(cl) => go!(self: create_attr cl; to AttributeName),
                         None => {
@@ -1178,7 +1178,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                             }
 
                             go!(self: create_attr c; to AttributeName);
-                        },
+                        }
                     },
                 }
             },
@@ -1195,7 +1195,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         go!(self: discard_char input);
                         self.bad_char_error();
                         go!(self: emit_tag Data)
-                    },
+                    }
                     _ => go!(self: to AttributeValue Unquoted),
                 }
             },
@@ -1208,7 +1208,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         go!(self: push_value '\u{fffd}')
-                    },
+                    }
                     FromSet(c) => go!(self: push_value c),
                     NotFromSet(ref b) => go!(self: append_value b),
                 }
@@ -1222,7 +1222,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     FromSet('\0') => {
                         self.bad_char_error();
                         go!(self: push_value '\u{fffd}')
-                    },
+                    }
                     FromSet(c) => go!(self: push_value c),
                     NotFromSet(ref b) => go!(self: append_value b),
                 }
@@ -1237,19 +1237,19 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                 ) {
                     FromSet('\t') | FromSet('\n') | FromSet('\x0C') | FromSet(' ') => {
                         go!(self: to BeforeAttributeName)
-                    },
+                    }
                     FromSet('&') => go!(self: consume_char_ref),
                     FromSet('>') => go!(self: emit_tag Data),
                     FromSet('\0') => {
                         self.bad_char_error();
                         go!(self: push_value '\u{fffd}')
-                    },
+                    }
                     FromSet(c) => {
                         if matches!(c, '"' | '\'' | '<' | '=' | '`') {
                             self.bad_char_error();
                         }
                         go!(self: push_value c);
-                    },
+                    }
                     NotFromSet(ref b) => go!(self: append_value b),
                 }
             },
@@ -1263,7 +1263,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     _ => {
                         self.bad_char_error();
                         go!(self: reconsume BeforeAttributeName)
-                    },
+                    }
                 }
             },
 
@@ -1273,11 +1273,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '>' => {
                         self.current_tag_self_closing.set(true);
                         go!(self: emit_tag Data);
-                    },
+                    }
                     _ => {
                         self.bad_char_error();
                         go!(self: reconsume BeforeAttributeName)
-                    },
+                    }
                 }
             },
 
@@ -1288,11 +1288,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_comment '\u{fffd}'; to Comment)
-                    },
+                    }
                     '>' => {
                         self.bad_char_error();
                         go!(self: emit_comment; to Data)
-                    },
+                    }
                     c => go!(self: push_comment c; to Comment),
                 }
             },
@@ -1304,11 +1304,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: append_comment "-\u{fffd}"; to Comment)
-                    },
+                    }
                     '>' => {
                         self.bad_char_error();
                         go!(self: emit_comment; to Data)
-                    },
+                    }
                     c => go!(self: push_comment '-'; push_comment c; to Comment),
                 }
             },
@@ -1321,7 +1321,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_comment '\u{fffd}')
-                    },
+                    }
                     c => go!(self: push_comment c),
                 }
             },
@@ -1358,7 +1358,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     _ => {
                         self.bad_char_error();
                         go!(self: reconsume CommentEnd)
-                    },
+                    }
                 }
             },
 
@@ -1369,7 +1369,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: append_comment "-\u{fffd}"; to Comment)
-                    },
+                    }
                     c => go!(self: push_comment '-'; push_comment c; to Comment),
                 }
             },
@@ -1391,11 +1391,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '>' => {
                         self.bad_char_error();
                         go!(self: emit_comment; to Data)
-                    },
+                    }
                     '\0' => {
                         self.bad_char_error();
                         go!(self: append_comment "--!\u{fffd}"; to Comment)
-                    },
+                    }
                     c => go!(self: append_comment "--!"; push_comment c; to Comment),
                 }
             },
@@ -1408,7 +1408,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     _ => {
                         self.bad_char_error();
                         go!(self: reconsume BeforeDoctypeName)
-                    },
+                    }
                 }
             },
 
@@ -1419,11 +1419,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: create_doctype; push_doctype_name '\u{fffd}'; to DoctypeName)
-                    },
+                    }
                     '>' => {
                         self.bad_char_error();
                         go!(self: create_doctype; force_quirks; emit_doctype; to Data)
-                    },
+                    }
                     c => go!(self: create_doctype; push_doctype_name (c.to_ascii_lowercase());
                                   to DoctypeName),
                 }
@@ -1437,7 +1437,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_doctype_name '\u{fffd}')
-                    },
+                    }
                     c => go!(self: push_doctype_name (c.to_ascii_lowercase())),
                 }
             },
@@ -1455,7 +1455,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                         _ => {
                             self.bad_char_error();
                             go!(self: force_quirks; reconsume BogusDoctype)
-                        },
+                        }
                     }
                 }
             },
@@ -1467,19 +1467,19 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '"' => {
                         self.bad_char_error();
                         go!(self: clear_doctype_id kind; to DoctypeIdentifierDoubleQuoted kind)
-                    },
+                    }
                     '\'' => {
                         self.bad_char_error();
                         go!(self: clear_doctype_id kind; to DoctypeIdentifierSingleQuoted kind)
-                    },
+                    }
                     '>' => {
                         self.bad_char_error();
                         go!(self: force_quirks; emit_doctype; to Data)
-                    },
+                    }
                     _ => {
                         self.bad_char_error();
                         go!(self: force_quirks; reconsume BogusDoctype)
-                    },
+                    }
                 }
             },
 
@@ -1492,11 +1492,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '>' => {
                         self.bad_char_error();
                         go!(self: force_quirks; emit_doctype; to Data)
-                    },
+                    }
                     _ => {
                         self.bad_char_error();
                         go!(self: force_quirks; reconsume BogusDoctype)
-                    },
+                    }
                 }
             },
 
@@ -1507,11 +1507,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_doctype_id kind '\u{fffd}')
-                    },
+                    }
                     '>' => {
                         self.bad_char_error();
                         go!(self: force_quirks; emit_doctype; to Data)
-                    },
+                    }
                     c => go!(self: push_doctype_id kind c),
                 }
             },
@@ -1523,11 +1523,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_doctype_id kind '\u{fffd}')
-                    },
+                    }
                     '>' => {
                         self.bad_char_error();
                         go!(self: force_quirks; emit_doctype; to Data)
-                    },
+                    }
                     c => go!(self: push_doctype_id kind c),
                 }
             },
@@ -1537,20 +1537,20 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                 match get_char!(self, input) {
                     '\t' | '\n' | '\x0C' | ' ' => {
                         go!(self: to BetweenDoctypePublicAndSystemIdentifiers)
-                    },
+                    }
                     '>' => go!(self: emit_doctype; to Data),
                     '"' => {
                         self.bad_char_error();
                         go!(self: clear_doctype_id System; to DoctypeIdentifierDoubleQuoted System)
-                    },
+                    }
                     '\'' => {
                         self.bad_char_error();
                         go!(self: clear_doctype_id System; to DoctypeIdentifierSingleQuoted System)
-                    },
+                    }
                     _ => {
                         self.bad_char_error();
                         go!(self: force_quirks; reconsume BogusDoctype)
-                    },
+                    }
                 }
             },
 
@@ -1562,7 +1562,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     _ => {
                         self.bad_char_error();
                         go!(self: reconsume BogusDoctype)
-                    },
+                    }
                 }
             },
 
@@ -1573,14 +1573,14 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '>' => go!(self: emit_doctype; to Data),
                     '"' => {
                         go!(self: clear_doctype_id System; to DoctypeIdentifierDoubleQuoted System)
-                    },
+                    }
                     '\'' => {
                         go!(self: clear_doctype_id System; to DoctypeIdentifierSingleQuoted System)
-                    },
+                    }
                     _ => {
                         self.bad_char_error();
                         go!(self: force_quirks; reconsume BogusDoctype)
-                    },
+                    }
                 }
             },
 
@@ -1590,7 +1590,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '>' => go!(self: emit_doctype; to Data),
                     '\0' => {
                         self.bad_char_error();
-                    },
+                    }
                     _ => (),
                 }
             },
@@ -1602,7 +1602,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.bad_char_error();
                         go!(self: push_comment '\u{fffd}')
-                    },
+                    }
                     c => go!(self: push_comment c),
                 }
             },
@@ -1633,7 +1633,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '\0' => {
                         self.emit_temp_buf();
                         self.emit_char('\0');
-                    },
+                    }
                     c => go!(self: push_temp c),
                 }
             },
@@ -1651,7 +1651,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                     '>' => {
                         self.emit_temp_buf();
                         go!(self: to Data);
-                    },
+                    }
                     _ => go!(self: push_temp ']'; push_temp ']'; reconsume CdataSection),
                 }
             },
@@ -1669,7 +1669,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             char_ref::Done => {
                 self.process_char_ref(tok.get_result());
                 return ProcessResult::Continue;
-            },
+            }
 
             char_ref::Stuck => ProcessResult::Suspend,
             char_ref::Progress => ProcessResult::Continue,
@@ -1715,7 +1715,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             Some(mut tok) => {
                 tok.end_of_file(self, &input);
                 self.process_char_ref(tok.get_result());
-            },
+            }
         }
 
         // Process all remaining buffered input.
@@ -1786,7 +1786,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             | states::ScriptDataEscapedDashDash(_) => {
                 self.bad_eof_error();
                 go!(self: to Data)
-            },
+            }
 
             states::BeforeAttributeValue => go!(self: reconsume AttributeValue Unquoted),
 
@@ -1794,36 +1794,36 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
                 self.bad_eof_error();
                 self.emit_char('<');
                 go!(self: to Data);
-            },
+            }
 
             states::EndTagOpen => {
                 self.bad_eof_error();
                 self.emit_char('<');
                 self.emit_char('/');
                 go!(self: to Data);
-            },
+            }
 
             states::RawLessThanSign(ScriptDataEscaped(DoubleEscaped)) => {
                 go!(self: to RawData ScriptDataEscaped DoubleEscaped)
-            },
+            }
 
             states::RawLessThanSign(kind) => {
                 self.emit_char('<');
                 go!(self: to RawData kind);
-            },
+            }
 
             states::RawEndTagOpen(kind) => {
                 self.emit_char('<');
                 self.emit_char('/');
                 go!(self: to RawData kind);
-            },
+            }
 
             states::RawEndTagName(kind) => {
                 self.emit_char('<');
                 self.emit_char('/');
                 self.emit_temp_buf();
                 go!(self: to RawData kind)
-            },
+            }
 
             states::ScriptDataEscapeStart(kind) => go!(self: to RawData ScriptDataEscaped kind),
 
@@ -1831,7 +1831,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
 
             states::ScriptDataDoubleEscapeEnd => {
                 go!(self: to RawData ScriptDataEscaped DoubleEscaped)
-            },
+            }
 
             states::CommentStart
             | states::CommentStartDash
@@ -1841,11 +1841,11 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             | states::CommentEndBang => {
                 self.bad_eof_error();
                 go!(self: emit_comment; to Data)
-            },
+            }
 
             states::CommentLessThanSign | states::CommentLessThanSignBang => {
                 go!(self: reconsume Comment)
-            },
+            }
 
             states::CommentLessThanSignBangDash => go!(self: reconsume CommentEndDash),
 
@@ -1854,7 +1854,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             states::Doctype | states::BeforeDoctypeName => {
                 self.bad_eof_error();
                 go!(self: create_doctype; force_quirks; emit_doctype; to Data)
-            },
+            }
 
             states::DoctypeName
             | states::AfterDoctypeName
@@ -1866,7 +1866,7 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             | states::BetweenDoctypePublicAndSystemIdentifiers => {
                 self.bad_eof_error();
                 go!(self: force_quirks; emit_doctype; to Data)
-            },
+            }
 
             states::BogusDoctype => go!(self: emit_doctype; to Data),
 
@@ -1875,13 +1875,13 @@ impl<Sink: TokenSink> Tokenizer<Sink> {
             states::MarkupDeclarationOpen => {
                 self.bad_char_error();
                 go!(self: to BogusComment)
-            },
+            }
 
             states::CdataSection => {
                 self.emit_temp_buf();
                 self.bad_eof_error();
                 go!(self: to Data)
-            },
+            }
 
             states::CdataSectionBracket => go!(self: push_temp ']'; to CdataSection),
 
@@ -2164,15 +2164,15 @@ mod test {
             match token {
                 CharacterTokens(b) => {
                     self.current_str.borrow_mut().push_slice(&b);
-                },
+                }
 
                 NullCharacterToken => {
                     self.current_str.borrow_mut().push_char('\0');
-                },
+                }
 
                 ParseError(_) => {
                     panic!("unexpected parse error");
-                },
+                }
 
                 TagToken(mut t) => {
                     // The spec seems to indicate that one can emit
@@ -2182,11 +2182,11 @@ mod test {
                         EndTag => {
                             t.self_closing = false;
                             t.attrs = vec![];
-                        },
+                        }
                         _ => t.attrs.sort_by(|a1, a2| a1.name.cmp(&a2.name)),
                     }
                     self.push(TagToken(t), line_number);
-                },
+                }
 
                 EOFToken => (),
 

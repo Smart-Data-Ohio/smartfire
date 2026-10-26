@@ -158,26 +158,44 @@ fn callback_rows(events: &[Event]) -> (Value, Value) {
             Event::PushMessage { .. } => jobs.push("Room::PushMessageJob".into()),
             Event::DeliverWebhook { .. } => jobs.push("Bot::WebhookJob".into()),
             Event::Job(job) => jobs.push(job.class.into()),
-            Event::Broadcast(request) if request.decode::<crate::models::user_status_settings::updates::StatusBadgeBroadcast>().is_some() => broadcasts.push(json!("status")),
+            Event::Broadcast(request)
+                if request
+                    .decode::<crate::models::user_status_settings::updates::StatusBadgeBroadcast>()
+                    .is_some() =>
+            {
+                broadcasts.push(json!("status"))
+            }
             Event::Broadcast(_) => match event.as_broadcast() {
                 Some(Broadcast::MessageCreated { .. }) => broadcasts.push(json!("message")),
                 Some(Broadcast::UserStatus { .. }) => broadcasts.push(json!("status")),
-                Some(broadcast) => for (stream, payload) in broadcast.channel_frames() { broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload})); },
-                None => {},
+                Some(broadcast) => {
+                    for (stream, payload) in broadcast.channel_frames() {
+                        broadcasts
+                            .push(json!({"method":"cable","stream":stream,"payload":payload}));
+                    }
+                }
+                None => {}
             },
-            _ => {},
+            _ => {}
         }
     }
     jobs.sort();
     (json!(jobs), json!(broadcasts))
 }
 fn expected_callbacks(value: &Value) -> Value {
-    json!(value.as_array().unwrap().iter().filter_map(|row| match row["partial"].as_str() {
-        Some("messages/message") => Some(json!("message")),
-        Some("users/statuses/badge") => Some(json!("status")),
-        Some("rooms/show/ooo_notice_line") => None,
-        _ => Some(row.clone()),
-    }).collect::<Vec<_>>())
+    json!(
+        value
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|row| match row["partial"].as_str() {
+                Some("messages/message") => Some(json!("message")),
+                Some("users/statuses/badge") => Some(json!("status")),
+                Some("rooms/show/ooo_notice_line") => None,
+                _ => Some(row.clone()),
+            })
+            .collect::<Vec<_>>()
+    )
 }
 fn sorted_callbacks(value: &Value) -> Value {
     let mut rows = value.as_array().unwrap().clone();
@@ -197,7 +215,8 @@ fn slash_review_dispatch_and_rows_match_rails() {
             .all(|key| actual[*key] == case[*key]);
         if rows_match
             && jobs == case["jobs"]
-            && sorted_callbacks(&broadcasts) == sorted_callbacks(&expected_callbacks(&case["broadcasts"]))
+            && sorted_callbacks(&broadcasts)
+                == sorted_callbacks(&expected_callbacks(&case["broadcasts"]))
         {
             passed += 1;
         } else {

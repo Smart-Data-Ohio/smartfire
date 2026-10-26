@@ -47,7 +47,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         Ok(scope) => scope,
         Err(reply) => return Ok(render(c, reply)),
     };
-    let pr_id=Some(scope.pull_request.id);
+    let pr_id = Some(scope.pull_request.id);
     let Some(account) = c
         .app()
         .github_accounts

@@ -284,7 +284,10 @@ fn dead_connection_sql(connection: &str) -> String {
 }
 
 pub fn sweep(tx: &Tx<'_>) -> Result<()> {
-    tx.conn().execute("DELETE FROM oauth_assertion_jtis WHERE expires_at<=?", [tx.now()])?;
+    tx.conn().execute(
+        "DELETE FROM oauth_assertion_jtis WHERE expires_at<=?",
+        [tx.now()],
+    )?;
     // Bot-user hard destruction deliberately preserves the legacy credential rows.
     tx.conn().execute("DELETE FROM oauth_connections WHERE NOT EXISTS (SELECT 1 FROM agent_credentials credential JOIN agents agent ON agent.id=credential.agent_id WHERE credential.id=oauth_connections.agent_credential_id)", [])?;
     let dead = dead_connection_sql("connection");

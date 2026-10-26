@@ -10,10 +10,14 @@ pub async fn require_token(c: &mut Ctx, rescue_forgery: bool) -> Result<CurrentA
         Err(Error::InvalidAuthenticityToken(_)) if rescue_forgery => reject_session(c),
         result => result,
     };
-    if super::oauth::challenge(c, &result) { return super::oauth::unauthorized(c); }
+    if super::oauth::challenge(c, &result) {
+        return super::oauth::unauthorized(c);
+    }
     result?;
     let result = token(c);
-    if super::oauth::challenge(c, &result) { return super::oauth::unauthorized(c); }
+    if super::oauth::challenge(c, &result) {
+        return super::oauth::unauthorized(c);
+    }
     result
 }
 

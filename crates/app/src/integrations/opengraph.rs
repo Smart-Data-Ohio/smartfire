@@ -49,7 +49,8 @@ pub enum UnfurlError {
 /// The action after `params.require(:url)` (a missing or blank `url` is the controller's 400).
 /// One that runs out of time unfurls nothing.
 pub async fn unfurl(net: &Network, url: &str) -> Result<Unfurl, UnfurlError> {
-    let fizzy_base = std::env::var("FIZZY_API_BASE_URL").unwrap_or_else(|_| "https://app.fizzy.do".to_string());
+    let fizzy_base =
+        std::env::var("FIZZY_API_BASE_URL").unwrap_or_else(|_| "https://app.fizzy.do".to_string());
     let classifier = crate::integrations::link_embed::url_classifier::github_pr_url(url)
         || crate::integrations::link_embed::url_classifier::fizzy_card_url(url, &fizzy_base);
     if classifier {
@@ -58,17 +59,27 @@ pub async fn unfurl(net: &Network, url: &str) -> Result<Unfurl, UnfurlError> {
     unfurl_within(net, url, UNFURL_DEADLINE).await
 }
 
-async fn unfurl_within(net: &Network, url: &str, deadline: Duration) -> Result<Unfurl, UnfurlError> {
+async fn unfurl_within(
+    net: &Network,
+    url: &str,
+    deadline: Duration,
+) -> Result<Unfurl, UnfurlError> {
     static SLOTS: Semaphore = Semaphore::const_new(MAX_CONCURRENT_UNFURLS);
     let unfurling = async {
         let _slot = SLOTS.acquire().await.expect("never closed");
         let mut opengraph = Metadata::from_url(net, url).await?;
-        Ok(if opengraph.validate(net).await? { Unfurl::Json(opengraph.to_json()) } else { Unfurl::NoContent })
+        Ok(if opengraph.validate(net).await? {
+            Unfurl::Json(opengraph.to_json())
+        } else {
+            Unfurl::NoContent
+        })
     };
-    tokio::time::timeout(deadline, unfurling).await.unwrap_or_else(|_| {
-        tracing::warn!("Gave up unfurling {url} after {deadline:?}");
-        Ok(Unfurl::NoContent)
-    })
+    tokio::time::timeout(deadline, unfurling)
+        .await
+        .unwrap_or_else(|_| {
+            tracing::warn!("Gave up unfurling {url} after {deadline:?}");
+            Ok(Unfurl::NoContent)
+        })
 }
 
 /// Pages parsed at once. The blocking work outlives an unfurl that gives up at its deadline, so
@@ -77,7 +88,8 @@ const MAX_CONCURRENT_PARSES: usize = 4;
 
 /// Runs CPU-bound work (parsing and sanitizing pages of up to 5MB) on the blocking pool.
 async fn off_the_runtime<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> T {
-    static PARSES: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(MAX_CONCURRENT_PARSES)));
+    static PARSES: LazyLock<Arc<Semaphore>> =
+        LazyLock::new(|| Arc::new(Semaphore::new(MAX_CONCURRENT_PARSES)));
     let permit = PARSES.clone().acquire_owned().await.expect("never closed");
     tokio::task::spawn_blocking(move || {
         let _permit = permit;

@@ -184,7 +184,8 @@ impl FixtureContext {
             "no_rooms" => {
                 app.db()
                     .write(|tx| {
-                        tx.conn().execute("DELETE FROM memberships WHERE user_id=?", [DAVID])?;
+                        tx.conn()
+                            .execute("DELETE FROM memberships WHERE user_id=?", [DAVID])?;
                         Ok(())
                     })
                     .await

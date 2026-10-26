@@ -1,8 +1,8 @@
 //! WS8's shared reader through the production presenter; rendered bytes come from Rails.
 use super::super::test_support::{ALL_TALK, BENDER, DAVID, SEED_NOW, TestApp};
 use campfire_db::Message;
-use campfire_runtime::presenters::Presenter;
 use campfire_db::{ChannelThread, NewChannelThread, NewMessage, ThreadMembership};
+use campfire_runtime::presenters::Presenter;
 use serde_json::Value;
 use std::sync::Arc;
 fn oracle() -> Value {
@@ -64,7 +64,7 @@ async fn ws11_live_message_presenter_matches_rails_rendered_bytes_and_request_pe
                     room_id: ALL_TALK,
                     creator_id: BENDER,
                     markdown_source: Some("Answer".into()),
-                client_message_id: Some("ws11-presenter-reply".into()),
+                    client_message_id: Some("ws11-presenter-reply".into()),
                     reply_to_message_id: Some(m.id),
                     reply_notify_author: Some(true),
                     forwarded_from_message_id: Some(m.id),
@@ -128,7 +128,7 @@ async fn ws11_live_message_presenter_matches_rails_rendered_bytes_and_request_pe
                     creator_id: BENDER,
                     thread_id: Some(tid),
                     markdown_source: Some("Thread reply".into()),
-                client_message_id: Some("ws11-presenter-thread".into()),
+                    client_message_id: Some("ws11-presenter-thread".into()),
                     streaming: true,
                     ..Default::default()
                 },

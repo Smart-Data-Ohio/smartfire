@@ -17,20 +17,37 @@ pub fn opengraph_attributes(body: Option<&[u8]>) -> Vec<(&'static str, String)> 
     // Only the `ATTRIBUTES` keys are sliced out, so only they are kept.
     let mut found: [Option<String>; ATTRIBUTES.len()] = Default::default();
     for meta in metas.iter().filter(|m| is_opengraph_tag(m)) {
-        let key = if meta.has_attr("property") { "property" } else { "name" };
+        let key = if meta.has_attr("property") {
+            "property"
+        } else {
+            "name"
+        };
         let name = meta.attr(key).unwrap_or("").replace("og:", "");
-        let Some(index) = ATTRIBUTES.iter().position(|a| *a == name) else { continue };
-        let Some(content) = meta.attr("content").filter(|c| !is_blank(c)) else { continue };
-        let content = if meta_encoding.is_some() { content.to_string() } else { content.chars().filter(char::is_ascii).collect() };
+        let Some(index) = ATTRIBUTES.iter().position(|a| *a == name) else {
+            continue;
+        };
+        let Some(content) = meta.attr("content").filter(|c| !is_blank(c)) else {
+            continue;
+        };
+        let content = if meta_encoding.is_some() {
+            content.to_string()
+        } else {
+            content.chars().filter(char::is_ascii).collect()
+        };
         found[index] = Some(content);
     }
 
-    ATTRIBUTES.into_iter().zip(found).filter_map(|(key, value)| Some((key, value?))).collect()
+    ATTRIBUTES
+        .into_iter()
+        .zip(found)
+        .filter_map(|(key, value)| Some((key, value?)))
+        .collect()
 }
 
 /// `//*/meta[starts-with(@property, "og:") or starts-with(@name, "og:")]`
 fn is_opengraph_tag(meta: &Element) -> bool {
-    meta.attr("property").is_some_and(|p| p.starts_with("og:")) || meta.attr("name").is_some_and(|n| n.starts_with("og:"))
+    meta.attr("property").is_some_and(|p| p.starts_with("og:"))
+        || meta.attr("name").is_some_and(|n| n.starts_with("og:"))
 }
 
 /// `String#blank?`: empty or only (Unicode) whitespace.
@@ -55,21 +72,30 @@ mod tests {
     #[test]
     fn extracts_opengraph_tags() {
         let html = "<html><head><meta property=\"og:url\" content=\"https://example.com\"><meta property=\"og:title\" content=\"Hey!\"><meta property=\"og:description\" content=\"desc..\"><meta property=\"og:image\" content=\"https://example.com/image.png\"></head></html>";
-        assert_eq!(opengraph_attributes(Some(html.as_bytes())), expected("desc.."));
+        assert_eq!(
+            opengraph_attributes(Some(html.as_bytes())),
+            expected("desc..")
+        );
     }
 
     /// test/models/opengraph/document_test.rb: name attributes.
     #[test]
     fn ws15e_rails_document_name_attributes() {
         let html = r#"<html><head><meta name="og:url" content="https://example.com"><meta name="og:title" content="Hey!"><meta name="og:description" content="desc.."><meta name="og:image" content="https://example.com/image.png"></head></html>"#;
-        assert_eq!(opengraph_attributes(Some(html.as_bytes())), expected("desc.."));
+        assert_eq!(
+            opengraph_attributes(Some(html.as_bytes())),
+            expected("desc..")
+        );
     }
 
     /// test/models/opengraph/document_test.rb: absent encoding with non-UTF8 characters.
     #[test]
     fn ws15e_rails_document_absent_encoding() {
         let html = "<html><head><meta name=\"og:url\" content=\"https://example.com\"><meta name=\"og:title\" content=\"Hey!\"><meta name=\"og:description\" content=\"Hello â\u{0080}\u{0099}World\"><meta name=\"og:image\" content=\"https://example.com/image.png\"></head></html>";
-        assert_eq!(opengraph_attributes(Some(html.as_bytes())), expected("Hello World"));
+        assert_eq!(
+            opengraph_attributes(Some(html.as_bytes())),
+            expected("Hello World")
+        );
         assert!(opengraph_attributes(None).is_empty());
     }
 
@@ -89,9 +115,21 @@ mod tests {
             page + close
         };
         let pages = [
-            fill("<meta property=\"og:title\" content=\"x\" ", &|i| format!("a{i:07} "), ">"),
-            fill("<meta charset=utf-8>", &|i| format!("<meta property=\"og:t{i}\" content=\"x\">"), "<meta property=\"og:title\" content=\"x\">"),
-            fill("<meta property=\"og:title\" content=\"", &|_| "&amp;é".to_string(), "\">"),
+            fill(
+                "<meta property=\"og:title\" content=\"x\" ",
+                &|i| format!("a{i:07} "),
+                ">",
+            ),
+            fill(
+                "<meta charset=utf-8>",
+                &|i| format!("<meta property=\"og:t{i}\" content=\"x\">"),
+                "<meta property=\"og:title\" content=\"x\">",
+            ),
+            fill(
+                "<meta property=\"og:title\" content=\"",
+                &|_| "&amp;é".to_string(),
+                "\">",
+            ),
         ];
         for page in pages {
             // Keep the one-second parser budget independent of descheduling
@@ -100,7 +138,11 @@ mod tests {
             let found = opengraph_attributes(Some(page.as_bytes()));
             assert_eq!(found[0].0, "title");
             let elapsed = crate::test_support::cpu_time() - started;
-            assert!(elapsed < std::time::Duration::from_secs(1), "{elapsed:?} CPU for {}…", &page[..60]);
+            assert!(
+                elapsed < std::time::Duration::from_secs(1),
+                "{elapsed:?} CPU for {}…",
+                &page[..60]
+            );
         }
     }
 }

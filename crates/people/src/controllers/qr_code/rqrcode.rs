@@ -23,7 +23,9 @@ pub(super) fn svg_with_options(data: &[u8], module_size: usize, offset: usize) -
     out.push_str(&format!(
         r#"<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" viewBox="0 0 {dimension} {dimension}" shape-rendering="crispEdges">"#
     ));
-    out.push_str(&format!(r#"<rect width="{dimension}" height="{dimension}" x="0" y="0" fill="white"/>"#));
+    out.push_str(&format!(
+        r#"<rect width="{dimension}" height="{dimension}" x="0" y="0" fill="white"/>"#
+    ));
     for (row, cells) in modules.iter().enumerate() {
         for (col, &dark) in cells.iter().enumerate() {
             if dark {
@@ -50,8 +52,9 @@ const LEVEL_H: u32 = 2;
 
 /// `QRMAXBITS[:h]`
 const MAX_BITS_H: [usize; 40] = [
-    72, 128, 208, 288, 368, 480, 528, 688, 800, 976, 1120, 1264, 1440, 1576, 1784, 2024, 2264, 2504, 2728, 3080, 3248,
-    3536, 3712, 4112, 4304, 4768, 5024, 5288, 5608, 5960, 6344, 6760, 7208, 7688, 7888, 8432, 8768, 9136, 9776, 10208,
+    72, 128, 208, 288, 368, 480, 528, 688, 800, 976, 1120, 1264, 1440, 1576, 1784, 2024, 2264,
+    2504, 2728, 3080, 3248, 3536, 3712, 4112, 4304, 4768, 5024, 5288, 5608, 5960, 6344, 6760, 7208,
+    7688, 7888, 8432, 8768, 9136, 9776, 10208,
 ];
 
 /// The H rows of `QRRSBlock::RS_BLOCK_TABLE`: (count, total, data) groups.
@@ -178,16 +181,26 @@ impl<'a> Segment<'a> {
             Mode::AlphaNumeric => (2, 11, 6),
             Mode::Byte => (1, 8, 0),
         };
-        (length / chunk) * bits + if length.is_multiple_of(chunk) { 0 } else { extra }
+        (length / chunk) * bits
+            + if length.is_multiple_of(chunk) {
+                0
+            } else {
+                extra
+            }
     }
 
     fn write(&self, buffer: &mut BitBuffer) {
         buffer.put(self.mode as u32, 4);
-        buffer.put(self.data.len() as u32, length_in_bits(self.mode, buffer.version));
+        buffer.put(
+            self.data.len() as u32,
+            length_in_bits(self.mode, buffer.version),
+        );
         match self.mode {
             Mode::Number => {
                 for chunk in self.data.chunks(3) {
-                    let code = chunk.iter().fold(0u32, |acc, b| acc * 10 + u32::from(b - b'0'));
+                    let code = chunk
+                        .iter()
+                        .fold(0u32, |acc, b| acc * 10 + u32::from(b - b'0'));
                     buffer.put(code, [0, 4, 7, 10][chunk.len()]);
                 }
             }
@@ -233,7 +246,11 @@ struct BitBuffer {
 
 impl BitBuffer {
     fn new(version: usize) -> Self {
-        Self { version, buffer: Vec::new(), length: 0 }
+        Self {
+            version,
+            buffer: Vec::new(),
+            length: 0,
+        }
     }
 
     fn put(&mut self, num: u32, length: usize) {
@@ -377,7 +394,10 @@ fn create_data(version: usize, segment: &Segment) -> Vec<u8> {
     let mut ec_data: Vec<Vec<u32>> = Vec::new();
     for &(total, data_count) in &blocks {
         let ec_count = total - data_count;
-        let dc: Vec<u32> = buffer.buffer[offset..offset + data_count].iter().map(|&b| u32::from(b)).collect();
+        let dc: Vec<u32> = buffer.buffer[offset..offset + data_count]
+            .iter()
+            .map(|&b| u32::from(b))
+            .collect();
         offset += data_count;
         let rs_poly = error_correct_polynomial(ec_count, &gf);
         let ec_length = rs_poly.0.len() - 1;
@@ -385,7 +405,11 @@ fn create_data(version: usize, segment: &Segment) -> Vec<u8> {
         let ec: Vec<u32> = (0..ec_length)
             .map(|i| {
                 let index = i as i64 + mod_poly.0.len() as i64 - ec_length as i64;
-                if index >= 0 { mod_poly.0[index as usize] } else { 0 }
+                if index >= 0 {
+                    mod_poly.0[index as usize]
+                } else {
+                    0
+                }
             })
             .collect();
         dc_data.push(dc);
@@ -475,7 +499,9 @@ impl QrCode {
                 place_version_info(&mut grid, version, test);
             }
             map_data(&mut grid, &data, pattern);
-            grid.into_iter().map(|row| row.into_iter().map(|m| m.unwrap_or(false)).collect()).collect()
+            grid.into_iter()
+                .map(|row| row.into_iter().map(|m| m.unwrap_or(false)).collect())
+                .collect()
         };
 
         // `get_best_mask_pattern`: the first pattern with the fewest lost points.
@@ -486,7 +512,9 @@ impl QrCode {
                 best = (pattern, points);
             }
         }
-        Some(Self { modules: make(false, best.0) })
+        Some(Self {
+            modules: make(false, best.0),
+        })
     }
 }
 
@@ -593,7 +621,8 @@ fn map_data(grid: &mut Grid, data: &[u8], pattern: u32) {
                 let x = (c0 - c) as usize;
                 let y = row as usize;
                 if grid[y][x].is_none() {
-                    let mut dark = byte_index < data.len() && (data[byte_index] >> bit_index) & 1 == 1;
+                    let mut dark =
+                        byte_index < data.len() && (data[byte_index] >> bit_index) & 1 == 1;
                     if mask(pattern, y, x) {
                         dark = !dark;
                     }
@@ -651,7 +680,10 @@ fn lost_points(modules: &[Vec<bool>]) -> f64 {
     for row in 0..max {
         for col in 0..max {
             let value = modules[row][col];
-            if value == modules[row + 1][col] && value == modules[row][col + 1] && value == modules[row + 1][col + 1] {
+            if value == modules[row + 1][col]
+                && value == modules[row][col + 1]
+                && value == modules[row + 1][col + 1]
+            {
                 points += 3;
             }
         }
@@ -673,7 +705,10 @@ fn lost_points(modules: &[Vec<bool>]) -> f64 {
     }
 
     // Dark ratio.
-    let dark = modules.iter().map(|row| row.iter().filter(|&&m| m).count()).sum::<usize>();
+    let dark = modules
+        .iter()
+        .map(|row| row.iter().filter(|&&m| m).count())
+        .sum::<usize>();
     let ratio = dark as f64 / (count * count) as f64;
     let delta = (100.0 * ratio - 50.0).abs() / 5.0;
     points as f64 + delta * 10.0
@@ -709,21 +744,37 @@ mod tests {
 
     #[test]
     fn matches_rqrcode() {
-        let vectors: Vec<Vector> = serde_json::from_str(include_str!("testdata/rqrcode.json")).unwrap();
+        let vectors: Vec<Vector> =
+            serde_json::from_str(include_str!("testdata/rqrcode.json")).unwrap();
         assert!(vectors.len() >= 30);
         for vector in vectors {
             let input = decode_base64(&vector.input_base64);
             let segment = Segment::new(&input);
-            assert_eq!(minimum_version(&segment), Some(vector.version), "version for {:?}", vector.input_base64);
+            assert_eq!(
+                minimum_version(&segment),
+                Some(vector.version),
+                "version for {:?}",
+                vector.input_base64
+            );
             let modules: Vec<String> = QrCode::new(&input)
                 .unwrap()
                 .modules
                 .iter()
                 .map(|row| row.iter().map(|&m| if m { '1' } else { '0' }).collect())
                 .collect();
-            assert_eq!(modules.join("\n"), vector.modules, "modules for {:?}", vector.input_base64);
+            assert_eq!(
+                modules.join("\n"),
+                vector.modules,
+                "modules for {:?}",
+                vector.input_base64
+            );
             if let Some(svg) = vector.svg {
-                assert_eq!(svg_bytes(&input).as_deref(), Some(svg.as_str()), "svg for {:?}", vector.input_base64);
+                assert_eq!(
+                    svg_bytes(&input).as_deref(),
+                    Some(svg.as_str()),
+                    "svg for {:?}",
+                    vector.input_base64
+                );
             }
         }
     }

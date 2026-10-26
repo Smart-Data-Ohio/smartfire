@@ -60,12 +60,7 @@ async fn clear_audits(a: &TestApp) {
 async fn admin_browser(a: &TestApp) -> Browser<'_> {
     let mut b = a.sign_in(DAVID).await;
     b.get("/users/me/profile").await;
-    assert_eq!(
-        b.confirm_sudo("secret123456")
-            .await
-            .status,
-        StatusCode::OK
-    );
+    assert_eq!(b.confirm_sudo("secret123456").await.status, StatusCode::OK);
     b
 }
 fn logo_request(bytes: &[u8]) -> Req {
@@ -284,7 +279,10 @@ async fn logo_destroy_audits_even_when_the_attachment_is_already_absent() {
 }
 #[tokio::test]
 async fn account_audit_failure_preserves_rails_committed_settings_code_styles_and_logo() {
-    let oracle: Value = serde_json::from_str(include_str!("../../../../vectors/users_account_audit_failures.json")).unwrap();
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/users_account_audit_failures.json"
+    ))
+    .unwrap();
     for name in [
         "settings",
         "join_reset",
@@ -311,10 +309,14 @@ async fn account_audit_failure_preserves_rails_committed_settings_code_styles_an
                 "checksum":blob.checksum, "metadata":serde_json::from_str::<Value>(&blob.metadata.encode()).unwrap()
             })))
         }).await.unwrap();
-        assert_eq!(json!({
-            "status":response.status.as_u16(), "location":response.headers.get("location").map(|v|v.to_str().unwrap()),
-            "name":saved.name, "styles":saved.custom_styles, "restrict":saved.settings().restrict_room_creation_to_administrators(),
-            "code_changed":saved.join_code != before.join_code, "logo":blob.is_some(), "blob":blob, "audits":audits(&a).await
-        }), oracle["rows"][name], "{name}: production Rails response and committed account/blob/audit state");
+        assert_eq!(
+            json!({
+                "status":response.status.as_u16(), "location":response.headers.get("location").map(|v|v.to_str().unwrap()),
+                "name":saved.name, "styles":saved.custom_styles, "restrict":saved.settings().restrict_room_creation_to_administrators(),
+                "code_changed":saved.join_code != before.join_code, "logo":blob.is_some(), "blob":blob, "audits":audits(&a).await
+            }),
+            oracle["rows"][name],
+            "{name}: production Rails response and committed account/blob/audit state"
+        );
     }
 }

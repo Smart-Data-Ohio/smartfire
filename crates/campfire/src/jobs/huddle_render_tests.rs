@@ -7,7 +7,6 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use std::time::Duration;
 
-
 fn insert(tx: &campfire_db::Tx<'_>, table: &str, row: &Value) -> campfire_db::Result<()> {
     use rusqlite::types::Value as Sql;
     let row = row.as_object().unwrap();
@@ -42,14 +41,13 @@ fn insert(tx: &campfire_db::Tx<'_>, table: &str, row: &Value) -> campfire_db::Re
     Ok(())
 }
 
-
-
-
-
 async fn run(name: &str) {
     let vectors: Value =
         serde_json::from_str(include_str!("huddle_render_assertions.json")).unwrap();
-    assert_eq!(vectors["reference_pin"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
+    assert_eq!(
+        vectors["reference_pin"],
+        &include_str!("../../../../parity/reference.sha").trim()[..8]
+    );
     assert_eq!(vectors["cases"].as_array().unwrap().len(), 20);
     let case = vectors["cases"]
         .as_array()

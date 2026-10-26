@@ -81,11 +81,17 @@ impl Jwks {
     /// [`IdTokenError::Unavailable`].
     pub fn parse(body: &[u8]) -> Result<Self, IdTokenError> {
         let payload: Value = serde_json::from_slice(body).map_err(|_| IdTokenError::Unavailable)?;
-        let jwks = payload.get("keys").and_then(Value::as_array).filter(|_| payload.is_object()).ok_or(IdTokenError::Unavailable)?;
+        let jwks = payload
+            .get("keys")
+            .and_then(Value::as_array)
+            .filter(|_| payload.is_object())
+            .ok_or(IdTokenError::Unavailable)?;
 
         let mut keys: Vec<(String, RsaPublicKey)> = Vec::new();
         for jwk in jwks {
-            let Some((kid, key)) = rsa_from_jwk(jwk) else { continue };
+            let Some((kid, key)) = rsa_from_jwk(jwk) else {
+                continue;
+            };
             match keys.iter_mut().find(|(existing, _)| *existing == kid) {
                 Some(slot) => slot.1 = key,
                 None => keys.push((kid, key)),
@@ -102,13 +108,18 @@ impl Jwks {
     }
 
     pub fn get(&self, kid: &str) -> Option<&RsaPublicKey> {
-        self.keys.iter().find(|(existing, _)| existing == kid).map(|(_, key)| key)
+        self.keys
+            .iter()
+            .find(|(existing, _)| existing == kid)
+            .map(|(_, key)| key)
     }
 
     /// `KeyStore.public_key_for(kid)` against these keys (after any refetch): a missing `kid` is
     /// rejected as `unknown_key`.
     pub fn key_for(&self, kid: &str) -> Result<RsaPublicKey, IdTokenError> {
-        self.get(kid).cloned().ok_or(IdTokenError::Rejected(Rejection::UnknownKey))
+        self.get(kid)
+            .cloned()
+            .ok_or(IdTokenError::Rejected(Rejection::UnknownKey))
     }
 }
 
@@ -117,9 +128,16 @@ fn rsa_from_jwk(jwk: &Value) -> Option<(String, RsaPublicKey)> {
     if jwk.get("kty") != Some(&Value::from("RSA")) {
         return None;
     }
-    let field = |name: &str| jwk.get(name).and_then(Value::as_str).filter(|value| !ruby::str_blank(value));
+    let field = |name: &str| {
+        jwk.get(name)
+            .and_then(Value::as_str)
+            .filter(|value| !ruby::str_blank(value))
+    };
     let (kid, n, e) = (field("kid")?, field("n")?, field("e")?);
-    let key = RsaPublicKey::from_components(&encoding::urlsafe_decode(n)?, &encoding::urlsafe_decode(e)?)?;
+    let key = RsaPublicKey::from_components(
+        &encoding::urlsafe_decode(n)?,
+        &encoding::urlsafe_decode(e)?,
+    )?;
     Some((kid.to_string(), key))
 }
 
@@ -144,7 +162,9 @@ fn valid_domain(domain: &str) -> bool {
         && labels.iter().all(|label| {
             let bytes = label.as_bytes();
             !bytes.is_empty()
-                && bytes.iter().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || *b == b'-')
+                && bytes
+                    .iter()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || *b == b'-')
                 && bytes[0] != b'-'
                 && bytes[bytes.len() - 1] != b'-'
         })
@@ -181,14 +201,23 @@ pub fn verify_id_token(
     }
 
     let key = key_for(&ruby_to_s(header.get("kid")))?;
-    let decoded = decode(id_token, Key::Rs256(&key), &Validation::default(), now).map_err(|_| Rejection::BadToken)?;
-    let Value::Object(payload) = decoded.payload else { return Err(Rejection::BadToken.into()) };
+    let decoded = decode(id_token, Key::Rs256(&key), &Validation::default(), now)
+        .map_err(|_| Rejection::BadToken)?;
+    let Value::Object(payload) = decoded.payload else {
+        return Err(Rejection::BadToken.into());
+    };
 
     verify_claims(&payload, nonce, max_auth_age, config, now)?;
     Ok(payload)
 }
 
-fn verify_claims(payload: &Map<String, Value>, nonce: &str, max_auth_age: Option<i64>, config: &Config<'_>, now: i64) -> Result<(), Rejection> {
+fn verify_claims(
+    payload: &Map<String, Value>,
+    nonce: &str,
+    max_auth_age: Option<i64>,
+    config: &Config<'_>,
+    now: i64,
+) -> Result<(), Rejection> {
     if !matches!(payload.get("iss"), Some(Value::String(iss)) if ISSUERS.contains(&iss.as_str())) {
         return Err(Rejection::BadToken);
     }
@@ -210,7 +239,8 @@ fn verify_claims(payload: &Map<String, Value>, nonce: &str, max_auth_age: Option
     if payload.get("email_verified") != Some(&Value::Bool(true)) {
         return Err(Rejection::UnverifiedEmail);
     }
-    if !matches!(payload.get("nonce"), Some(Value::String(actual)) if bool::from(actual.as_bytes().ct_eq(nonce.as_bytes()))) {
+    if !matches!(payload.get("nonce"), Some(Value::String(actual)) if bool::from(actual.as_bytes().ct_eq(nonce.as_bytes())))
+    {
         return Err(Rejection::BadNonce);
     }
     verify_domain(payload, config.allowed_domains)
@@ -224,7 +254,9 @@ fn verify_audience(payload: &Map<String, Value>, client_id: &str) -> Result<(), 
     if !audiences.iter().any(|audience| audience == client_id) {
         return Err(Rejection::BadAudience);
     }
-    if (audiences.len() > 1 || !ruby::blank(payload.get("azp"))) && ruby_to_s(payload.get("azp")) != client_id {
+    if (audiences.len() > 1 || !ruby::blank(payload.get("azp")))
+        && ruby_to_s(payload.get("azp")) != client_id
+    {
         return Err(Rejection::BadAudience);
     }
     Ok(())
@@ -260,7 +292,11 @@ fn flatten_array(value: &Value, out: &mut Vec<String>) {
 fn verify_domain(payload: &Map<String, Value>, allowed: &[String]) -> Result<(), Rejection> {
     let domain = ruby::strip(&ruby_to_s(payload.get("hd"))).to_lowercase();
     let email = ruby::strip(&ruby_to_s(payload.get("email"))).to_lowercase();
-    let email_domain = ruby::split(&email, '@').last().copied().unwrap_or("").to_string();
+    let email_domain = ruby::split(&email, '@')
+        .last()
+        .copied()
+        .unwrap_or("")
+        .to_string();
     if !domain.is_empty() && allowed.contains(&domain) && allowed.contains(&email_domain) {
         Ok(())
     } else {
@@ -283,20 +319,41 @@ mod tests {
     /// reviewer's `aud: [{"nested": client}]` token with a matching `azp`, which Rails rejects.
     #[test]
     fn nested_hashes_never_name_the_audience() {
-        assert_eq!(audience(json!({"aud": [{"nested": CLIENT}], "azp": CLIENT})), Err(Rejection::BadAudience));
-        assert_eq!(audience(json!({"aud": [[{CLIENT: CLIENT}]], "azp": CLIENT})), Err(Rejection::BadAudience));
-        assert_eq!(audience(json!({"aud": {"x": {"y": CLIENT}}, "azp": CLIENT})), Err(Rejection::BadAudience));
+        assert_eq!(
+            audience(json!({"aud": [{"nested": CLIENT}], "azp": CLIENT})),
+            Err(Rejection::BadAudience)
+        );
+        assert_eq!(
+            audience(json!({"aud": [[{CLIENT: CLIENT}]], "azp": CLIENT})),
+            Err(Rejection::BadAudience)
+        );
+        assert_eq!(
+            audience(json!({"aud": {"x": {"y": CLIENT}}, "azp": CLIENT})),
+            Err(Rejection::BadAudience)
+        );
     }
 
     /// Only the top level goes through `Array()`: a hash there is its `[key, value]` pairs, and
     /// every element counts toward `many?`, hashes included.
     #[test]
     fn top_level_hashes_are_pairs_and_every_element_counts() {
-        assert_eq!(audience(json!({"aud": {"x": CLIENT}, "azp": CLIENT})), Ok(()));
-        assert_eq!(audience(json!({"aud": {"x": CLIENT}})), Err(Rejection::BadAudience));
+        assert_eq!(
+            audience(json!({"aud": {"x": CLIENT}, "azp": CLIENT})),
+            Ok(())
+        );
+        assert_eq!(
+            audience(json!({"aud": {"x": CLIENT}})),
+            Err(Rejection::BadAudience)
+        );
         assert_eq!(audience(json!({"aud": {CLIENT: null}})), Ok(()));
-        assert_eq!(audience(json!({"aud": [CLIENT, {"a": "b"}]})), Err(Rejection::BadAudience));
-        assert_eq!(audience(json!({"aud": [CLIENT, {"a": "b"}], "azp": CLIENT})), Ok(()));
+        assert_eq!(
+            audience(json!({"aud": [CLIENT, {"a": "b"}]})),
+            Err(Rejection::BadAudience)
+        );
+        assert_eq!(
+            audience(json!({"aud": [CLIENT, {"a": "b"}], "azp": CLIENT})),
+            Ok(())
+        );
         assert_eq!(audience(json!({"aud": [null, [CLIENT, null]]})), Ok(()));
     }
 }

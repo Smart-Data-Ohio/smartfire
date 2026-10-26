@@ -7,7 +7,9 @@
 use serde_json::Value;
 
 use crate::Error;
-use crate::attachables::{self, Attachable, Attachment, PlainTextRepresentation, RenderContext, attachment_from_node};
+use crate::attachables::{
+    self, Attachable, Attachment, PlainTextRepresentation, RenderContext, attachment_from_node,
+};
 use crate::dom::{Dom, NodeId};
 use crate::plain_text;
 use crate::ruby::{self, is_blank, presence, strip};
@@ -48,7 +50,9 @@ impl Content {
             sanitize_content_attribute(&mut dom, node)?;
             let attachment = attachment_from_node(&dom, node, ctx)?;
             match attachables::attachment_plain_text(&attachment) {
-                PlainTextRepresentation::Html(text) => dom.replace_with_html(node, &text).map_err(Error::Parse)?,
+                PlainTextRepresentation::Html(text) => {
+                    dom.replace_with_html(node, &text).map_err(Error::Parse)?
+                }
                 PlainTextRepresentation::Content(content) => {
                     let fragment = load_into(&mut dom, &content, ctx)?;
                     let children = dom.children(fragment).to_vec();
@@ -66,21 +70,40 @@ impl Content {
     }
 
     /// `render`, for content `depth` content attachments down, sanitized with `safe`.
-    fn render_nested(&self, ctx: &RenderContext, depth: usize, default_renderer: bool, safe: &SafeList) -> Result<String, Error> {
-        render_dom(self.dom.clone(), self.root, ctx, depth, default_renderer, safe)
+    fn render_nested(
+        &self,
+        ctx: &RenderContext,
+        depth: usize,
+        default_renderer: bool,
+        safe: &SafeList,
+    ) -> Result<String, Error> {
+        render_dom(
+            self.dom.clone(),
+            self.root,
+            ctx,
+            depth,
+            default_renderer,
+            safe,
+        )
     }
 
     /// `Content#to_s`: the content partial inside `layouts/action_text/contents/_content.html.erb`,
     /// which our fork overrides with a `trix-content` wrapper.
     pub fn to_rendered_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
-        Ok(format!("<div class=\"trix-content\">\n  {}\n</div>\n", self.render(ctx)?))
+        Ok(format!(
+            "<div class=\"trix-content\">\n  {}\n</div>\n",
+            self.render(ctx)?
+        ))
     }
 
     /// `to_rendered_html_with_layout` for a Markdown body, or a forwarded snapshot of one: the
     /// markup `markdown::render` stores survives (`SafeList::markdown_body`). The body's own
     /// markup is first held to what the renderer emits (`markdown::constrain_body_markup`), before
     /// its attachments render, so a mention's or a file's partial keeps its classes.
-    pub fn to_rendered_markdown_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
+    pub fn to_rendered_markdown_html_with_layout(
+        &self,
+        ctx: &RenderContext,
+    ) -> Result<String, Error> {
         let mut dom = self.dom.clone();
         crate::markdown::constrain_body_markup(&mut dom, self.root);
         let html = render_dom(dom, self.root, ctx, 0, false, &SafeList::markdown_body())?;
@@ -92,7 +115,10 @@ impl Content {
     /// ApplicationController.renderer. ActionView's new view has a nil context
     /// prefix, so AbstractRenderer#merge_prefix_into_object_path raises. The
     /// request renderer has a controller prefix and continues to render normally.
-    pub fn to_rendered_html_with_default_renderer(&self, ctx: &RenderContext) -> Result<String, Error> {
+    pub fn to_rendered_html_with_default_renderer(
+        &self,
+        ctx: &RenderContext,
+    ) -> Result<String, Error> {
         Ok(format!(
             "<div class=\"trix-content\">\n  {}\n</div>\n",
             self.render_nested(ctx, 0, true, &SafeList::action_text())?
@@ -101,7 +127,14 @@ impl Content {
 }
 
 /// `Content#render` of `dom`: attachments and galleries rendered, then sanitized with `safe`.
-fn render_dom(mut dom: Dom, root: NodeId, ctx: &RenderContext, depth: usize, default_renderer: bool, safe: &SafeList) -> Result<String, Error> {
+fn render_dom(
+    mut dom: Dom,
+    root: NodeId,
+    ctx: &RenderContext,
+    depth: usize,
+    default_renderer: bool,
+    safe: &SafeList,
+) -> Result<String, Error> {
     render_attachments(&mut dom, root, ctx, depth, default_renderer)?;
     render_attachment_galleries(&mut dom, root, ctx, depth, default_renderer)?;
     contain_spoiler_blocks(&mut dom, root);
@@ -117,7 +150,8 @@ pub fn load_into(dom: &mut Dom, html: &str, ctx: &RenderContext) -> Result<NodeI
     }
     for gallery in attachment_gallery_nodes(dom, root) {
         let html = format!("<div>{}</div>", dom.inner_html(gallery));
-        dom.replace_with_html(gallery, &html).map_err(Error::Parse)?;
+        dom.replace_with_html(gallery, &html)
+            .map_err(Error::Parse)?;
     }
     Ok(root)
 }
@@ -168,8 +202,11 @@ fn convert_trix_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext) ->
                 Value::Null | Value::Bool(false) => {}
                 Value::Object(map) => {
                     for (key, value) in map {
-                        if let Some(&(trix, _)) = TRIX_ATTRIBUTES.iter().find(|(trix, _)| *trix == key) {
-                            if let Some(existing) = attributes.iter_mut().find(|(k, _)| *k == trix) {
+                        if let Some(&(trix, _)) =
+                            TRIX_ATTRIBUTES.iter().find(|(trix, _)| *trix == key)
+                        {
+                            if let Some(existing) = attributes.iter_mut().find(|(k, _)| *k == trix)
+                            {
                                 existing.1 = value;
                             } else {
                                 attributes.push((trix, value));
@@ -182,7 +219,10 @@ fn convert_trix_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext) ->
         }
         let mut element_attrs: Vec<(&str, String)> = Vec::new();
         for name in ATTACHMENT_ATTRIBUTES {
-            let trix_name = TRIX_ATTRIBUTES.iter().find(|(_, dashed)| dashed == name).map(|(t, _)| *t);
+            let trix_name = TRIX_ATTRIBUTES
+                .iter()
+                .find(|(_, dashed)| dashed == name)
+                .map(|(t, _)| *t);
             if let Some((_, value)) = attributes.iter().find(|(k, _)| Some(*k) == trix_name) {
                 element_attrs.push((name, ruby::json_value_to_s(value)));
             }
@@ -190,13 +230,17 @@ fn convert_trix_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext) ->
         let replacement = if element_attrs.is_empty() {
             String::new()
         } else {
-            let pairs: Vec<(&str, &str)> = element_attrs.iter().map(|(k, v)| (*k, v.as_str())).collect();
+            let pairs: Vec<(&str, &str)> = element_attrs
+                .iter()
+                .map(|(k, v)| (*k, v.as_str()))
+                .collect();
             let element = dom.create_element(ATTACHMENT_TAG, &pairs);
             // Attachment.from_node resolves the attachable, which may raise
             attachment_from_node(dom, element, ctx)?;
             dom.to_html(element)
         };
-        dom.replace_with_html(node, &replacement).map_err(Error::Parse)?;
+        dom.replace_with_html(node, &replacement)
+            .map_err(Error::Parse)?;
     }
     Ok(())
 }
@@ -207,7 +251,8 @@ fn convert_trix_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext) ->
 /// Text's allowlist, and dropped if that leaves nothing.
 fn sanitize_content_attribute(dom: &mut Dom, node: NodeId) -> Result<(), Error> {
     if let Some(content) = dom.remove_attr(node, "content") {
-        let sanitized = sanitizer::sanitize(&content, &SafeList::action_text()).map_err(Error::Parse)?;
+        let sanitized =
+            sanitizer::sanitize(&content, &SafeList::action_text()).map_err(Error::Parse)?;
         if !is_blank(&sanitized) {
             dom.set_attr(node, "content", &sanitized);
         }
@@ -217,12 +262,22 @@ fn sanitize_content_attribute(dom: &mut Dom, node: NodeId) -> Result<(), Error> 
 
 /// `Attachment#with_full_attributes`: a new node carrying the node's attachment attributes, the
 /// attachable's own (sgid and content type, for a user), and the node's sgid if it had one.
-fn node_with_full_attributes(dom: &mut Dom, node: NodeId, attachable: &Attachable) -> Result<NodeId, Error> {
+fn node_with_full_attributes(
+    dom: &mut Dom,
+    node: NodeId,
+    attachable: &Attachable,
+) -> Result<NodeId, Error> {
     let mut attrs: Vec<(&str, String)> = Vec::new();
     for &name in ATTACHMENT_ATTRIBUTES {
         let value = match (name, attachable) {
-            ("sgid", Attachable::User(user)) => Some(dom.attr(node, "sgid").unwrap_or(&user.attachable_sgid).to_string()),
-            ("content-type", Attachable::User(_)) => Some(attachables::MENTION_CONTENT_TYPE.to_string()),
+            ("sgid", Attachable::User(user)) => Some(
+                dom.attr(node, "sgid")
+                    .unwrap_or(&user.attachable_sgid)
+                    .to_string(),
+            ),
+            ("content-type", Attachable::User(_)) => {
+                Some(attachables::MENTION_CONTENT_TYPE.to_string())
+            }
             _ => dom.attr(node, name).map(str::to_string),
         };
         if let Some(value) = value {
@@ -245,11 +300,19 @@ pub const MAX_CONTENT_ATTACHMENT_DEPTH: usize = 8;
 
 /// `render_action_text_attachment`, with nested content attachments rendered through
 /// `ContentAttachment#to_html` (the content partial, without the layout).
-pub fn render_attachment_html(attachment: &Attachment, ctx: &RenderContext) -> Result<String, Error> {
+pub fn render_attachment_html(
+    attachment: &Attachment,
+    ctx: &RenderContext,
+) -> Result<String, Error> {
     render_attachment_html_at(attachment, ctx, 0, false)
 }
 
-fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth: usize, default_renderer: bool) -> Result<String, Error> {
+fn render_attachment_html_at(
+    attachment: &Attachment,
+    ctx: &RenderContext,
+    depth: usize,
+    default_renderer: bool,
+) -> Result<String, Error> {
     attachables::render_attachment(attachment, ctx, &|content: &str| {
         if default_renderer {
             // Ruby evaluates content_instance before entering the object renderer.
@@ -260,7 +323,10 @@ fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth
             return Ok(String::new());
         }
         let content = Content::load(content, ctx)?;
-        Ok(format!("{}\n", content.render_nested(ctx, depth + 1, default_renderer, &SafeList::action_text())?))
+        Ok(format!(
+            "{}\n",
+            content.render_nested(ctx, depth + 1, default_renderer, &SafeList::action_text())?
+        ))
     })
 }
 
@@ -268,7 +334,18 @@ fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth
 fn closes_paragraph(name: &str) -> bool {
     matches!(
         name,
-        "address" | "article" | "aside" | "blockquote" | "details" | "dialog" | "div" | "dl" | "fieldset" | "figcaption" | "figure" | "footer"
+        "address"
+            | "article"
+            | "aside"
+            | "blockquote"
+            | "details"
+            | "dialog"
+            | "div"
+            | "dl"
+            | "fieldset"
+            | "figcaption"
+            | "figure"
+            | "footer"
             | "form"
             | "h1"
             | "h2"
@@ -299,13 +376,18 @@ fn closes_paragraph(name: &str) -> bool {
 }
 
 fn inside_spoiler(dom: &Dom, node: NodeId) -> bool {
-    dom.ancestors(node).iter().any(|&ancestor| sanitizer::is_spoiler_span(dom, ancestor))
+    dom.ancestors(node)
+        .iter()
+        .any(|&ancestor| sanitizer::is_spoiler_span(dom, ancestor))
 }
 
 /// Turns block tags under `root` into spans so a later HTML parse cannot lift them out of a spoiler.
 fn inline_blocks(dom: &mut Dom, root: NodeId) {
-    let blocks: Vec<NodeId> =
-        dom.descendants(root).into_iter().filter(|&node| dom.local_name(node).is_some_and(closes_paragraph)).collect();
+    let blocks: Vec<NodeId> = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|&node| dom.local_name(node).is_some_and(closes_paragraph))
+        .collect();
     for node in blocks {
         dom.set_local_name(node, "span");
     }
@@ -313,13 +395,23 @@ fn inline_blocks(dom: &mut Dom, root: NodeId) {
 
 /// A spoiler stays wrapped around a mention or any other expansion that would otherwise be a block.
 pub(crate) fn contain_spoiler_blocks(dom: &mut Dom, root: NodeId) {
-    let spoilers: Vec<NodeId> = dom.descendants(root).into_iter().filter(|&node| sanitizer::is_spoiler_span(dom, node)).collect();
+    let spoilers: Vec<NodeId> = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|&node| sanitizer::is_spoiler_span(dom, node))
+        .collect();
     for spoiler in spoilers {
         inline_blocks(dom, spoiler);
     }
 }
 
-fn render_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: usize, default_renderer: bool) -> Result<(), Error> {
+fn render_attachments(
+    dom: &mut Dom,
+    root: NodeId,
+    ctx: &RenderContext,
+    depth: usize,
+    default_renderer: bool,
+) -> Result<(), Error> {
     for node in attachment_nodes(dom, root) {
         sanitize_content_attribute(dom, node)?;
         let attachment = attachment_from_node(dom, node, ctx)?;
@@ -336,7 +428,8 @@ fn render_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: u
             inline_blocks(dom, full);
         }
         let replacement = dom.to_html(full);
-        dom.replace_with_html(node, &replacement).map_err(Error::Parse)?;
+        dom.replace_with_html(node, &replacement)
+            .map_err(Error::Parse)?;
     }
     Ok(())
 }
@@ -344,7 +437,8 @@ fn render_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: u
 const GALLERY_ATTACHMENT_PRESENTATION: &str = "gallery";
 
 fn is_gallery_attachment(dom: &Dom, node: NodeId) -> bool {
-    dom.local_name(node) == Some(ATTACHMENT_TAG) && dom.attr(node, "presentation") == Some(GALLERY_ATTACHMENT_PRESENTATION)
+    dom.local_name(node) == Some(ATTACHMENT_TAG)
+        && dom.attr(node, "presentation") == Some(GALLERY_ATTACHMENT_PRESENTATION)
 }
 
 /// `AttachmentGallery.find_attachment_gallery_nodes`: `div:has(A + A)` for gallery attachments A,
@@ -364,10 +458,12 @@ pub fn attachment_gallery_nodes(dom: &Dom, root: NodeId) -> Vec<NodeId> {
             })
         })
         .filter(|&div| {
-            dom.children(div).iter().all(|&child| match dom.text(child) {
-                Some(text) => text.chars().all(|c| c == '\n' || c == ' '),
-                None => is_gallery_attachment(dom, child),
-            })
+            dom.children(div)
+                .iter()
+                .all(|&child| match dom.text(child) {
+                    Some(text) => text.chars().all(|c| c == '\n' || c == ' '),
+                    None => is_gallery_attachment(dom, child),
+                })
         })
         .collect()
 }
@@ -401,7 +497,8 @@ fn render_attachment_galleries(
             members.len(),
             rendered
         );
-        dom.replace_with_html(gallery, &html).map_err(Error::Parse)?;
+        dom.replace_with_html(gallery, &html)
+            .map_err(Error::Parse)?;
     }
     Ok(())
 }

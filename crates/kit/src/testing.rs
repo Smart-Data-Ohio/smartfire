@@ -32,7 +32,9 @@ pub struct TestCrypto {
 
 impl Default for TestCrypto {
     fn default() -> Self {
-        Self { secret: "test-secret".into() }
+        Self {
+            secret: "test-secret".into(),
+        }
     }
 }
 
@@ -47,7 +49,13 @@ impl TestCrypto {
         hex::encode(&hasher.finalize()[..16])
     }
 
-    fn envelope(&self, kind: &str, name: &str, value: Value, expires_at: Option<Timestamp>) -> String {
+    fn envelope(
+        &self,
+        kind: &str,
+        name: &str,
+        value: Value,
+        expires_at: Option<Timestamp>,
+    ) -> String {
         let payload = json!({ "v": value, "exp": expires_at.map(|t| t.to_string()), "pur": format!("cookie.{name}") });
         let data = STANDARD.encode(payload.to_string());
         let digest = self.digest(&[kind, &data]);
@@ -64,9 +72,10 @@ impl TestCrypto {
             return None;
         }
         if let Some(exp) = payload["exp"].as_str()
-            && exp.parse::<Timestamp>().ok()? <= now {
-                return None;
-            }
+            && exp.parse::<Timestamp>().ok()? <= now
+        {
+            return None;
+        }
         Some(payload["v"].clone())
     }
 }
@@ -77,13 +86,18 @@ impl Crypto for TestCrypto {
     }
 
     fn verify_signed_cookie(&self, name: &str, raw: &str, now: Timestamp) -> Option<String> {
-        self.open("signed", name, raw, now)?.as_str().map(str::to_string)
+        self.open("signed", name, raw, now)?
+            .as_str()
+            .map(str::to_string)
     }
 
     fn encrypt_cookie(&self, name: &str, value: &Value, expires_at: Option<Timestamp>) -> String {
         // A random prefix so repeated encryptions differ, like AES-GCM with a fresh IV.
         let nonce: u32 = rand::random();
-        format!("{nonce:08x}{}", self.envelope("encrypted", name, value.clone(), expires_at))
+        format!(
+            "{nonce:08x}{}",
+            self.envelope("encrypted", name, value.clone(), expires_at)
+        )
     }
 
     fn decrypt_cookie(&self, name: &str, raw: &str, now: Timestamp) -> Option<Value> {

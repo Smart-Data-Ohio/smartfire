@@ -14,7 +14,8 @@ use campfire_db::models::audit_log::{Actor, Context};
 use campfire_db::models::user::profile_settings::{self, INBOX_KEYS};
 use campfire_db::models::user_status_settings::clock_time_to_minutes;
 use campfire_db::{
-    DndAllowedUser, Errors, Membership, PushSubscription, Session, User, UserChanges, UserStatusSettings,
+    DndAllowedUser, Errors, Membership, PushSubscription, Session, User, UserChanges,
+    UserStatusSettings,
 };
 use campfire_kit::{Ctx, Error, Kit, Param, Result, StatusCode, action, unparsed_action};
 use campfire_people::controllers::{
@@ -23,8 +24,8 @@ use campfire_people::controllers::{
 };
 use campfire_runtime::authentication;
 use campfire_runtime::concerns::{self, Authentication, Before, current_session};
-use campfire_runtime::presenters::attachments::{self, Assignment, Record};
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::attachments::{self, Assignment, Record};
 use campfire_runtime::presenters::{self, profile_sections};
 use serde::de::DeserializeOwned;
 
@@ -374,15 +375,27 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
                     value: value.clone(),
                 })
                 .collect(),
-            appearance_preferences: appearance.appearance_preferences.map(api::AppearancePreferences),
+            appearance_preferences: appearance
+                .appearance_preferences
+                .map(api::AppearancePreferences),
         },
         notifications: api::NotificationSettings {
-            default_notification_level: notification_level(status.notification_preferences.default_notification_level),
-            room_notification_levels: status.notification_preferences.room_notification_levels.iter()
-                .map(|(id, level)| (id.to_string(), level.map(notification_level))).collect(),
-            room_mute_until: status.notification_preferences.room_mute_until.iter()
+            default_notification_level: notification_level(
+                status.notification_preferences.default_notification_level,
+            ),
+            room_notification_levels: status
+                .notification_preferences
+                .room_notification_levels
+                .iter()
+                .map(|(id, level)| (id.to_string(), level.map(notification_level)))
+                .collect(),
+            room_mute_until: status
+                .notification_preferences
+                .room_mute_until
+                .iter()
                 .filter(|(_, until)| until.is_none_or(|until| until > now.jiff()))
-                .map(|(id, until)| (id.to_string(), until.map(|until| until.to_string()))).collect(),
+                .map(|(id, until)| (id.to_string(), until.map(|until| until.to_string())))
+                .collect(),
             dnd_enabled: sections.notifications.manual_dnd,
             quiet_hours_enabled: sections.notifications.quiet_hours,
             quiet_hours_start: sections.notifications.quiet_start.clone(),
@@ -449,13 +462,18 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
 async fn integrations(c: &Ctx, id: i64) -> Result<api::IntegrationSettings> {
     use campfire_app::integrations::{fizzy::accounts as fizzy, github::accounts as github};
     let now = c.now();
-    let (google, github, fizzy) = c.app().db.read(move |conn| {
-        Ok((
-            profile_sections::load(conn, id, now)?.google,
-            github::Account::for_user(conn, id)?,
-            fizzy::Account::for_user(conn, id)?,
-        ))
-    }).await.map_err(db_error)?;
+    let (google, github, fizzy) = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok((
+                profile_sections::load(conn, id, now)?.google,
+                github::Account::for_user(conn, id)?,
+                fizzy::Account::for_user(conn, id)?,
+            ))
+        })
+        .await
+        .map_err(db_error)?;
     let crypto = rails_compat::ar_encryption::ArEncryption::new(&c.app().secrets);
     let github = match github {
         None => api::Connection::Missing,
@@ -479,7 +497,9 @@ async fn integrations(c: &Ctx, id: i64) -> Result<api::IntegrationSettings> {
     let fizzy = match fizzy {
         None => api::Connection::Missing,
         Some(account) if !account.connected() => api::Connection::Rejected {
-            reason: account.disconnected_reason.filter(|s| !campfire_richtext::ruby::is_blank(s)),
+            reason: account
+                .disconnected_reason
+                .filter(|s| !campfire_richtext::ruby::is_blank(s)),
         },
         Some(account) => {
             let token = account.decrypt_access_token(&crypto);
@@ -490,7 +510,9 @@ async fn integrations(c: &Ctx, id: i64) -> Result<api::IntegrationSettings> {
                     app_token: false,
                 },
                 token,
-                account.disconnected_reason.filter(|s| !campfire_richtext::ruby::is_blank(s)),
+                account
+                    .disconnected_reason
+                    .filter(|s| !campfire_richtext::ruby::is_blank(s)),
                 fizzy::UNREADABLE_TOKEN_REASON,
             )
         }
@@ -522,7 +544,9 @@ fn usable_connection(
     match token {
         Ok(Some(_)) => connected,
         Ok(None) => api::Connection::Rejected { reason },
-        Err(_) => api::Connection::Rejected { reason: Some(unreadable.into()) },
+        Err(_) => api::Connection::Rejected {
+            reason: Some(unreadable.into()),
+        },
     }
 }
 
@@ -692,11 +716,15 @@ async fn save_profile(c: &mut Ctx) -> Result {
 pub(crate) async fn publish_identity(c: &mut Ctx, id: i64) -> Result<()> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
     let secrets = c.app().secrets.clone();
-    let (user, rooms) = c.app().db
+    let (user, rooms) = c
+        .app()
+        .db
         .read(move |conn| {
             let user = crate::dto::users(conn, &secrets, [id], now)?.remove(0);
-            let rooms = campfire_db::Room::for_user(conn, id)?.into_iter()
-                .filter(campfire_db::Room::direct).collect::<Vec<_>>();
+            let rooms = campfire_db::Room::for_user(conn, id)?
+                .into_iter()
+                .filter(campfire_db::Room::direct)
+                .collect::<Vec<_>>();
             Ok((user, rooms))
         })
         .await
@@ -845,7 +873,9 @@ async fn save_appearance(c: &mut Ctx) -> Result {
         theme: update.theme.map(theme_value),
         text_size: update.text_size.map(text_size_value),
         time_zone: update.time_zone,
-        appearance_preferences: update.appearance_preferences.map(|preferences| preferences.0),
+        appearance_preferences: update
+            .appearance_preferences
+            .map(|preferences| preferences.0),
         ..profile_settings::Changes::default()
     };
     write_profile(c, user, changes, settings, false, false).await?;
@@ -865,7 +895,9 @@ async fn save_calls(c: &mut Ctx) -> Result {
     reply(c, id).await
 }
 
-fn notification_level(level: campfire_db::models::notification_policy::NotificationLevel) -> api::NotificationLevel {
+fn notification_level(
+    level: campfire_db::models::notification_policy::NotificationLevel,
+) -> api::NotificationLevel {
     use campfire_db::models::notification_policy::NotificationLevel as Level;
     match level {
         Level::Everything => api::NotificationLevel::Everything,
@@ -873,7 +905,9 @@ fn notification_level(level: campfire_db::models::notification_policy::Notificat
         Level::Nothing => api::NotificationLevel::Nothing,
     }
 }
-fn stored_notification_level(level: api::NotificationLevel) -> campfire_db::models::notification_policy::NotificationLevel {
+fn stored_notification_level(
+    level: api::NotificationLevel,
+) -> campfire_db::models::notification_policy::NotificationLevel {
     use campfire_db::models::notification_policy::NotificationLevel as Level;
     match level {
         api::NotificationLevel::Everything => Level::Everything,
@@ -936,8 +970,16 @@ async fn save_notifications(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             settings.save_with_keywords(tx, keywords.as_deref())?;
-            if default_level.is_some() || room_notification.is_some() || room_mute.is_some() || message_sound.is_some() {
-                let mut preferences = campfire_db::models::notification_policy::NotificationPreferences::load(tx.conn(), id)?;
+            if default_level.is_some()
+                || room_notification.is_some()
+                || room_mute.is_some()
+                || message_sound.is_some()
+            {
+                let mut preferences =
+                    campfire_db::models::notification_policy::NotificationPreferences::load(
+                        tx.conn(),
+                        id,
+                    )?;
                 if let Some(level) = default_level {
                     preferences.default_notification_level = stored_notification_level(level);
                 }
@@ -947,7 +989,9 @@ async fn save_notifications(c: &mut Ctx) -> Result {
                 if let Some(change) = room_notification {
                     Membership::find_by_room_and_user(tx.conn(), change.room_id, id)?
                         .ok_or(campfire_db::Error::RecordNotFound("Membership"))?;
-                    preferences.room_notification_levels.insert(change.room_id, change.level.map(stored_notification_level));
+                    preferences
+                        .room_notification_levels
+                        .insert(change.room_id, change.level.map(stored_notification_level));
                 }
                 if let Some(change) = room_mute {
                     Membership::find_by_room_and_user(tx.conn(), change.room_id, id)?
@@ -962,13 +1006,26 @@ async fn save_notifications(c: &mut Ctx) -> Result {
                     if change.duration == api::RoomMuteDuration::Off {
                         preferences.room_mute_until.remove(&change.room_id);
                     } else {
-                        preferences.room_mute_until.insert(change.room_id, seconds.map(|seconds| tx.now().since(jiff::SignedDuration::from_secs(seconds)).jiff()));
+                        preferences.room_mute_until.insert(
+                            change.room_id,
+                            seconds.map(|seconds| {
+                                tx.now()
+                                    .since(jiff::SignedDuration::from_secs(seconds))
+                                    .jiff()
+                            }),
+                        );
                     }
                 }
-                profile_settings::update(tx, id, profile_settings::Changes {
-                    inbox_preferences: Some(serde_json::to_value(preferences).expect("notification preferences")),
-                    ..Default::default()
-                })?;
+                profile_settings::update(
+                    tx,
+                    id,
+                    profile_settings::Changes {
+                        inbox_preferences: Some(
+                            serde_json::to_value(preferences).expect("notification preferences"),
+                        ),
+                        ..Default::default()
+                    },
+                )?;
             }
             if inbox.is_some() {
                 profile_settings::update(
@@ -1336,7 +1393,13 @@ async fn integration_reply(
 ) -> Result {
     let notice = change.map_err(|alert| crate::admin::refusal(c, &alert))?;
     let integrations = integrations(c, id).await?;
-    c.json(StatusCode::OK, &api::IntegrationChange { integrations, notice })
+    c.json(
+        StatusCode::OK,
+        &api::IntegrationChange {
+            integrations,
+            notice,
+        },
+    )
 }
 
 async fn link_github(c: &mut Ctx) -> Result {
@@ -1397,21 +1460,29 @@ async fn account_two_factor(c: &Ctx, user: &User) -> Result<api::TwoFactorSettin
         .await
         .map_err(Error::internal)?;
     Ok(api::TwoFactorSettings {
-        confirmed_at: data.confirmed_at
+        confirmed_at: data
+            .confirmed_at
             .map(|at| time(campfire_db::Timestamp::from_jiff(at))),
         google: data.google,
         has_password: presenters::accounts::profile_has_password(user),
-        devices: data.devices.iter().map(|device| api::RememberedDevice {
-            id: device.id,
-            description: campfire_presentation::two_factor::device_description(device),
-            ip_address: device.ip_address.clone(),
-            last_used_at: device.last_used_at
-                .map(|at| time(campfire_db::Timestamp::from_jiff(at))),
-        }).collect(),
+        devices: data
+            .devices
+            .iter()
+            .map(|device| api::RememberedDevice {
+                id: device.id,
+                description: campfire_presentation::two_factor::device_description(device),
+                ip_address: device.ip_address.clone(),
+                last_used_at: device
+                    .last_used_at
+                    .map(|at| time(campfire_db::Timestamp::from_jiff(at))),
+            })
+            .collect(),
     })
 }
 
-fn account_membership(row: campfire_presentation::users::ProfileMembership) -> Result<api::RoomMembershipRow> {
+fn account_membership(
+    row: campfire_presentation::users::ProfileMembership,
+) -> Result<api::RoomMembershipRow> {
     // The presenter supplies the classic involvement name. A missing one (NULL, which the classic
     // row shows as "") stays `None`: no mention reaches it, so it isn't `mentions`.
     let involvement = if row.involvement.is_empty() {
@@ -1459,11 +1530,19 @@ async fn show_account(c: &mut Ctx) -> Result {
     let transfer = presenters::accounts::transfer_id(&c.app().secrets, user.id, c.now());
     let transfer_url = c.url_for(&campfire_routes::session_transfer(&transfer));
     let transfer_qr_svg = qr_code::transfer_svg(&transfer_url).ok_or_else(|| {
-        Error::internal(std::io::Error::other("the sign-in link doesn't fit a QR code"))
+        Error::internal(std::io::Error::other(
+            "the sign-in link doesn't fit a QR code",
+        ))
     })?;
     let settings = api::AccountSettings {
-        shared_rooms: shared.into_iter().map(account_membership).collect::<Result<_>>()?,
-        direct_rooms: direct.into_iter().map(account_membership).collect::<Result<_>>()?,
+        shared_rooms: shared
+            .into_iter()
+            .map(account_membership)
+            .collect::<Result<_>>()?,
+        direct_rooms: direct
+            .into_iter()
+            .map(account_membership)
+            .collect::<Result<_>>()?,
         two_factor,
         transfer_url,
         transfer_qr_svg,
@@ -1478,16 +1557,23 @@ fn reauth(value: &api::Reauthentication) -> Option<&str> {
         .then_some(value.reauth.as_str())
 }
 
-async fn two_factor_reply(c: &mut Ctx, user: &User, outcome: two_factor::ManagementOutcome) -> Result {
+async fn two_factor_reply(
+    c: &mut Ctx,
+    user: &User,
+    outcome: two_factor::ManagementOutcome,
+) -> Result {
     use two_factor::ManagementOutcome;
     match outcome {
         ManagementOutcome::Codes(codes) => c.json(StatusCode::OK, &api::BackupCodes { codes }),
         ManagementOutcome::Notice(notice) => {
             let two_factor = account_two_factor(c, user).await?;
-            c.json(StatusCode::OK, &api::TwoFactorChange {
-                notice: notice.into(),
-                two_factor,
-            })
+            c.json(
+                StatusCode::OK,
+                &api::TwoFactorChange {
+                    notice: notice.into(),
+                    two_factor,
+                },
+            )
         }
         ManagementOutcome::Alert(alert) => Err(crate::admin::refusal(c, alert)),
         ManagementOutcome::RateLimited => Err(fail(
@@ -1544,7 +1630,8 @@ async fn destroy_devices(c: &mut Ctx, all: bool) -> Result {
 
 async fn create_test_push(c: &mut Ctx) -> Result {
     let user = human_viewer(c).await?;
-    let id = c.param_str("id")
+    let id = c
+        .param_str("id")
         .and_then(concerns::cast_integer)
         .ok_or(Error::NotFound)?;
     test_notifications::enqueue(c, user.id, id).await?;

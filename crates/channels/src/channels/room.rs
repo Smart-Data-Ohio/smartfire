@@ -18,7 +18,10 @@ impl RoomChannel {
 }
 
 /// `RoomChannel#subscribed`: `stream_for @room` if the user is a member, else `reject`.
-pub async fn subscribe(db: &Database, sub: &mut Subscription<CableUser>) -> ChannelResult<Option<Room>> {
+pub async fn subscribe(
+    db: &Database,
+    sub: &mut Subscription<CableUser>,
+) -> ChannelResult<Option<Room>> {
     let room = find_room(db, sub).await?;
     match &room {
         Some(room) => sub.stream_for(&[&room_gid(room).to_param()]),
@@ -28,12 +31,17 @@ pub async fn subscribe(db: &Database, sub: &mut Subscription<CableUser>) -> Chan
 }
 
 /// `current_user.rooms.find_by(id: params[:room_id])`.
-pub(super) async fn find_room(db: &Database, sub: &Subscription<CableUser>) -> ChannelResult<Option<Room>> {
+pub(super) async fn find_room(
+    db: &Database,
+    sub: &Subscription<CableUser>,
+) -> ChannelResult<Option<Room>> {
     let Some(room_id) = sub.param("room_id").as_ref().and_then(cast_id) else {
         return Ok(None);
     };
     let user_id = sub.current_user().id;
-    Ok(db.read(move |conn| Room::find_for_user(conn, user_id, room_id)).await?)
+    Ok(db
+        .read(move |conn| Room::find_for_user(conn, user_id, room_id))
+        .await?)
 }
 
 /// How Active Record casts a value for an integer `id` condition: numbers are truncated,
@@ -41,7 +49,11 @@ pub(super) async fn find_room(db: &Database, sub: &Subscription<CableUser>) -> C
 /// (`non_numeric_string?`), which matches nothing. So does anything out of range.
 pub fn cast_id(value: &Value) -> Option<i64> {
     match value {
-        Value::Number(n) => n.as_i64().or_else(|| n.as_f64().filter(|f| f.is_finite() && f.abs() < 9.2e18).map(|f| f.trunc() as i64)),
+        Value::Number(n) => n.as_i64().or_else(|| {
+            n.as_f64()
+                .filter(|f| f.is_finite() && f.abs() < 9.2e18)
+                .map(|f| f.trunc() as i64)
+        }),
         Value::Bool(b) => Some(i64::from(*b)),
         Value::String(s) => ruby_to_i(s),
         _ => None,
@@ -64,7 +76,9 @@ fn ruby_to_i(s: &str) -> Option<i64> {
     for c in digits.chars() {
         match c {
             '0'..='9' => {
-                value = value.checked_mul(10)?.checked_add(i64::from(c as u8 - b'0'))?;
+                value = value
+                    .checked_mul(10)?
+                    .checked_add(i64::from(c as u8 - b'0'))?;
                 previous_underscore = false;
             }
             // Ruby allows single underscores between digits.
@@ -82,7 +96,12 @@ impl Channel<CableUser> for RoomChannel {
         Ok(())
     }
 
-    async fn perform(&mut self, action: &str, _data: &Params, sub: &mut Subscription<CableUser>) -> ChannelResult<bool> {
+    async fn perform(
+        &mut self,
+        action: &str,
+        _data: &Params,
+        sub: &mut Subscription<CableUser>,
+    ) -> ChannelResult<bool> {
         match action {
             "subscribed" if !sub.rejected() => self.subscribed(sub).await.map(|()| true),
             _ => Ok(false),

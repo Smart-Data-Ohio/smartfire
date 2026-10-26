@@ -154,9 +154,11 @@ async fn google_enrollment_audit_failure_matches_rails_over_http() {
     assert_eq!(verified, 0, "real Google first factor starts unverified");
     // SPA cutover: the SPA's setup screen reads (and issues) the setup secret through JSON.
     assert_eq!(
-        b.send(Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"))
-            .await
-            .status,
+        b.send(
+            Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json")
+        )
+        .await
+        .status,
         StatusCode::OK
     );
     a.db().write(|tx| {
@@ -171,7 +173,9 @@ async fn google_enrollment_audit_failure_matches_rails_over_http() {
     // SPA cutover: the SPA's setup screen enrolls with JSON, so the failure is compared with the
     // pinned retained page by status (and no redirect); its body is the API's.
     let reply = b
-        .write(Req::new(Method::POST, "/api/v1/two_factor/setup").json_body(&json!({ "code": code })))
+        .write(
+            Req::new(Method::POST, "/api/v1/two_factor/setup").json_body(&json!({ "code": code })),
+        )
         .await;
     assert_eq!(
         json!({"status":reply.status.as_u16(),"location":reply.location()}),

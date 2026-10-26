@@ -69,8 +69,10 @@ impl<'a> PollContext<'a> {
         access: &'a RepositoryAccess,
         events: &[AgentEvent],
     ) -> Result<Self> {
-        let owner_id =conn.query_row(
-            "SELECT owner_id FROM agents WHERE id=?",[agent_id],|row| row.get::<_, Option<i64>>(0),
+        let owner_id = conn.query_row(
+            "SELECT owner_id FROM agents WHERE id=?",
+            [agent_id],
+            |row| row.get::<_, Option<i64>>(0),
         )?;
         let names = |table: &str, ids: Vec<i64>| -> Result<HashMap<i64, Value>> {
             if ids.is_empty() {
@@ -230,7 +232,9 @@ impl<'a> PollContext<'a> {
                 payload["command"]["options"] = options.clone();
             }
         } else {
-            if e.room_id.is_none() { return Ok(None); }
+            if e.room_id.is_none() {
+                return Ok(None);
+            }
             let Some(message) = e
                 .message_id
                 .map(|id| Message::find_by_id(self.conn, id))
@@ -239,7 +243,13 @@ impl<'a> PollContext<'a> {
             else {
                 return Ok(None);
             };
-            payload["room"] = query_one(self.conn,"SELECT id,name FROM rooms WHERE id=?",[message.room_id],|row| Ok(json!({"id":row.get::<_,i64>(0)?,"name":row.get::<_,Option<String>>(1)?})))?.unwrap_or(Value::Null);
+            payload["room"] = query_one(
+                self.conn,
+                "SELECT id,name FROM rooms WHERE id=?",
+                [message.room_id],
+                |row| Ok(json!({"id":row.get::<_,i64>(0)?,"name":row.get::<_,Option<String>>(1)?})),
+            )?
+            .unwrap_or(Value::Null);
             // Rails emits hop before room/actor for message events. Preserve that wire order.
             let fields = payload.as_object_mut().expect("event object");
             let room = fields.shift_remove("room").expect("readable event room");
@@ -264,12 +274,18 @@ impl<'a> PollContext<'a> {
         Ok(Some(payload))
     }
     fn approval(&self, e: &AgentEvent) -> Result<Option<Value>> {
-        let Some(id) = e.agent_approval_id.or_else(|| e.metadata.get("approval_id").map(ruby_i64)) else {
+        let Some(id) = e
+            .agent_approval_id
+            .or_else(|| e.metadata.get("approval_id").map(ruby_i64))
+        else {
             return Ok(None);
         };
         query_one(
             self.conn,
-            &format!("SELECT a.*,{} FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=? AND a.agent_id=?", crate::User::projection("u", "decider_")),
+            &format!(
+                "SELECT a.*,{} FROM agent_approvals a LEFT JOIN users u ON u.id=a.decided_by_id WHERE a.id=? AND a.agent_id=?",
+                crate::User::projection("u", "decider_")
+            ),
             rusqlite::params![id, self.agent_id],
             |r| {
                 let expires = r.get::<_, Option<Timestamp>>("expires_at")?;
@@ -282,8 +298,10 @@ impl<'a> PollContext<'a> {
                 let decider = r
                     .get::<_, Option<i64>>("decider_id")?
                     .map(|_| {
-                        crate::User::from_prefixed_row(r, "decider_").map(|user| user.display_name().to_owned())
-                    }).transpose()?
+                        crate::User::from_prefixed_row(r, "decider_")
+                            .map(|user| user.display_name().to_owned())
+                    })
+                    .transpose()?
                     .map(Value::String)
                     .or_else(|| e.metadata.get("decided_by").cloned());
                 let note = r

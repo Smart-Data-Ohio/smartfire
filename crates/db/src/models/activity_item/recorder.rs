@@ -35,13 +35,26 @@ impl ActivityItem {
             None
         } else {
             Self::record_visible_for_recipient(
-                tx, user.id, "Message", message.id, message.thread_id, "thread_activity", Some(user),
+                tx,
+                user.id,
+                "Message",
+                message.id,
+                message.thread_id,
+                "thread_activity",
+                Some(user),
             )?
         };
-        Self::publish_recording_for_user(tx, user, &super::ActivityItemRecorded {
-            id: item.as_ref().map_or(0, |item| item.id), user_id: user.id,
-            room_id: Some(message.room_id), source_type: "Message".into(), source_id: message.id,
-        });
+        Self::publish_recording_for_user(
+            tx,
+            user,
+            &super::ActivityItemRecorded {
+                id: item.as_ref().map_or(0, |item| item.id),
+                user_id: user.id,
+                room_id: Some(message.room_id),
+                source_type: "Message".into(),
+                source_id: message.id,
+            },
+        );
         Ok(item)
     }
 
@@ -69,7 +82,13 @@ impl ActivityItem {
         event_type: super::ActivityEventType,
         authorization: super::SourceAuthorization,
     ) -> Result<Option<Self>> {
-        let Some(facts) = source_facts(tx, source, authorization, Some(&PersistedBudgetNoticeReader))? else {
+        let Some(facts) = source_facts(
+            tx,
+            source,
+            authorization,
+            Some(&PersistedBudgetNoticeReader),
+        )?
+        else {
             return Ok(None);
         };
         Self::record_for_current_recipient(tx, user_id, &facts, event_type, authorization)
@@ -128,7 +147,10 @@ impl ActivityItem {
             .filter(|user| Self::can_record_for_recipient(user, &facts, authorization))
             .collect::<Vec<_>>();
         // Personal write policy and grouped thread rows need each recipient's current state.
-        if !matches!(facts.source_type, "Message" | "WorkThreadEvent" | "BoardSlaNudge") {
+        if !matches!(
+            facts.source_type,
+            "Message" | "WorkThreadEvent" | "BoardSlaNudge"
+        ) {
             return Self::record_ungrouped_for_recipients(tx, &recipients, &facts, event_type);
         }
         let mut items = Vec::new();
@@ -152,10 +174,12 @@ impl ActivityItem {
             return Ok(Vec::new());
         }
         let rows = serde_json::json!(
-            recipients.iter()
+            recipients
+                .iter()
                 .map(|user| (user.id, tx.now().to_db(), tx.now().to_db()))
                 .collect::<Vec<_>>()
-        ).to_string();
+        )
+        .to_string();
         let mut inserted = crate::sql::query_all(
             tx.conn(),
             "INSERT INTO activity_items(user_id,source_type,source_id,event_type,created_at,updated_at) SELECT json_extract(value,'$[0]'),?2,?3,?4,json_extract(value,'$[1]'),json_extract(value,'$[2]') FROM json_each(?1) WHERE true ORDER BY key ON CONFLICT(user_id,source_type,source_id) DO NOTHING RETURNING user_id",
@@ -303,19 +327,66 @@ impl ActivityItem {
         recipient: Option<&User>,
     ) -> Result<Option<Self>> {
         let facts = match source_type {
-            "Message" => crate::sql::query_one(tx.conn(), "SELECT creator_id,room_id FROM messages WHERE id=?", [source_id], |row| Ok((row.get::<_, Option<i64>>(0)?, Some(row.get::<_, i64>(1)?))))?,
-            "WorkThreadEvent" => crate::sql::query_one(tx.conn(), "SELECT actor_id FROM work_thread_events WHERE id=?", [source_id], |row| Ok((row.get::<_, Option<i64>>(0)?, None)))?,
-            "BoardSlaNudge" => crate::sql::query_one(tx.conn(), "SELECT t.creator_id FROM board_sla_nudges n JOIN channel_threads t ON t.id=n.channel_thread_id WHERE n.id=?", [source_id], |row| Ok((row.get::<_, Option<i64>>(0)?, None)))?,
-            _ => return Self::record_visible_for_recipient(tx, user_id, source_type, source_id, thread_id, event_type, recipient),
+            "Message" => crate::sql::query_one(
+                tx.conn(),
+                "SELECT creator_id,room_id FROM messages WHERE id=?",
+                [source_id],
+                |row| Ok((row.get::<_, Option<i64>>(0)?, Some(row.get::<_, i64>(1)?))),
+            )?,
+            "WorkThreadEvent" => crate::sql::query_one(
+                tx.conn(),
+                "SELECT actor_id FROM work_thread_events WHERE id=?",
+                [source_id],
+                |row| Ok((row.get::<_, Option<i64>>(0)?, None)),
+            )?,
+            "BoardSlaNudge" => crate::sql::query_one(
+                tx.conn(),
+                "SELECT t.creator_id FROM board_sla_nudges n JOIN channel_threads t ON t.id=n.channel_thread_id WHERE n.id=?",
+                [source_id],
+                |row| Ok((row.get::<_, Option<i64>>(0)?, None)),
+            )?,
+            _ => {
+                return Self::record_visible_for_recipient(
+                    tx,
+                    user_id,
+                    source_type,
+                    source_id,
+                    thread_id,
+                    event_type,
+                    recipient,
+                );
+            }
         };
-        let Some((author, room_id)) = facts else { return Ok(None); };
-        let ignored = author.map(|author| super::super::ignore_policy::ignored(tx.conn(), user_id, author)).transpose()?.unwrap_or(false);
-        let item = if ignored { None } else {
-            Self::record_visible_for_recipient(tx, user_id, source_type, source_id, thread_id, event_type, recipient)?
+        let Some((author, room_id)) = facts else {
+            return Ok(None);
         };
-        Self::publish_recording(tx, &super::ActivityItemRecorded {
-            id: item.as_ref().map_or(0, |item| item.id), user_id, room_id, source_type: source_type.into(), source_id,
-        })?;
+        let ignored = author
+            .map(|author| super::super::ignore_policy::ignored(tx.conn(), user_id, author))
+            .transpose()?
+            .unwrap_or(false);
+        let item = if ignored {
+            None
+        } else {
+            Self::record_visible_for_recipient(
+                tx,
+                user_id,
+                source_type,
+                source_id,
+                thread_id,
+                event_type,
+                recipient,
+            )?
+        };
+        Self::publish_recording(
+            tx,
+            &super::ActivityItemRecorded {
+                id: item.as_ref().map_or(0, |item| item.id),
+                user_id,
+                room_id,
+                source_type: source_type.into(),
+                source_id,
+            },
+        )?;
         Ok(item)
     }
 
@@ -363,14 +434,25 @@ impl ActivityItem {
         Ok(Some(item))
     }
 
-    pub(super) fn publish_recording(tx: &mut Tx<'_>, recorded: &super::ActivityItemRecorded) -> Result<()> {
-        let Some(user) = User::find_by_id(tx.conn(), recorded.user_id)? else { return Ok(()); };
+    pub(super) fn publish_recording(
+        tx: &mut Tx<'_>,
+        recorded: &super::ActivityItemRecorded,
+    ) -> Result<()> {
+        let Some(user) = User::find_by_id(tx.conn(), recorded.user_id)? else {
+            return Ok(());
+        };
         Self::publish_recording_for_user(tx, &user, recorded);
         Ok(())
     }
 
-    fn publish_recording_for_user(tx: &mut Tx<'_>, user: &User, recorded: &super::ActivityItemRecorded) {
-        if !user.is_active() || user.is_bot() { return; }
+    fn publish_recording_for_user(
+        tx: &mut Tx<'_>,
+        user: &User,
+        recorded: &super::ActivityItemRecorded,
+    ) {
+        if !user.is_active() || user.is_bot() {
+            return;
+        }
         // Classic cable broadcasts share the global sequence too. Both slots come from the
         // unfiltered recording attempt, including ignored actors and unchanged grouped rows.
         tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::Cable {
@@ -387,7 +469,10 @@ impl ActivityItem {
         item: &Self,
         recipient: Option<&User>,
     ) -> Result<()> {
-        if matches!(item.source_type.as_str(), "Message" | "WorkThreadEvent" | "BoardSlaNudge") {
+        if matches!(
+            item.source_type.as_str(),
+            "Message" | "WorkThreadEvent" | "BoardSlaNudge"
+        ) {
             return Ok(());
         }
         match recipient {
@@ -530,20 +615,30 @@ fn source_facts(
 /// uniqueness/fanout callbacks remain in agent_posting; this adapter only reads.
 struct PersistedBudgetNoticeReader;
 impl super::AgentBudgetNoticeActivityReader for PersistedBudgetNoticeReader {
-    fn recording_recipient_ids(&self, conn: &crate::Connection, id: i64) -> Result<Option<Vec<i64>>> {
+    fn recording_recipient_ids(
+        &self,
+        conn: &crate::Connection,
+        id: i64,
+    ) -> Result<Option<Vec<i64>>> {
         crate::AgentBudgetNotice::find_by_id(conn, id)?
-            .map(|notice| notice.activity_recipient_ids(conn)).transpose()
+            .map(|notice| notice.activity_recipient_ids(conn))
+            .transpose()
     }
 }
 
 impl super::ActivityRecordingSource for crate::AgentBudgetNotice {
-    fn recording_facts(&self, conn: &crate::Connection) -> Result<Option<super::ActivityRecordingFacts>> {
+    fn recording_facts(
+        &self,
+        conn: &crate::Connection,
+    ) -> Result<Option<super::ActivityRecordingFacts>> {
         let Some(notice) = crate::AgentBudgetNotice::find_by_id(conn, self.id)? else {
             return Ok(None);
         };
         Ok(Some(super::ActivityRecordingFacts {
-            source_type: "AgentBudgetNotice", source_id: notice.id,
-            creator_id: None, thread_id: None,
+            source_type: "AgentBudgetNotice",
+            source_id: notice.id,
+            creator_id: None,
+            thread_id: None,
             recipient_ids: notice.activity_recipient_ids(conn)?,
         }))
     }

@@ -48,10 +48,9 @@ pub fn replace_keyword_alerts(tx: &mut Tx<'_>, user_id: i64, lines: &[String]) -
         .map(keyword_alert::normalize)
         .filter(|s| !s.chars().all(char::is_whitespace))
     {
-        if !phrases
-            .iter()
-            .any(|s: &String| rails_compat::unicode::downcase(s) == rails_compat::unicode::downcase(&phrase))
-        {
+        if !phrases.iter().any(|s: &String| {
+            rails_compat::unicode::downcase(s) == rails_compat::unicode::downcase(&phrase)
+        }) {
             phrases.push(phrase);
         }
         if phrases.len() > keyword_alert::MAX_PER_USER as usize {

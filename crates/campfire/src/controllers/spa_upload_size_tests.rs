@@ -331,7 +331,10 @@ async fn upload_size_missing_existing_files_defer_processing_but_still_enforce_t
     a.booted.app.storage.service.delete(&blob.key).unwrap();
     let signed =
         campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
-    for assignment in [Assignment::Signed(signed), Assignment::Existing(blob.clone())] {
+    for assignment in [
+        Assignment::Signed(signed),
+        Assignment::Existing(blob.clone()),
+    ] {
         let staged = assignment
             .clone()
             .stage_with_limit(&a.booted.app, blob.byte_size as u64)
@@ -356,7 +359,11 @@ async fn upload_size_existing_file_lengths_are_checked_before_assignment() {
         .booted
         .app
         .storage
-        .stage_bytes(b"a file", campfire_storage::Filename::new("file.txt"), Some("text/plain"))
+        .stage_bytes(
+            b"a file",
+            campfire_storage::Filename::new("file.txt"),
+            Some("text/plain"),
+        )
         .unwrap();
     let blob = a
         .db()
@@ -370,9 +377,16 @@ async fn upload_size_existing_file_lengths_are_checked_before_assignment() {
         (b"too long".as_slice(), StatusCode::PAYLOAD_TOO_LARGE),
     ] {
         std::fs::write(a.booted.app.storage.service.path_for(&blob.key), bytes).unwrap();
-        for assignment in [Assignment::Signed(signed.clone()), Assignment::Existing(blob.clone())] {
-            let result = assignment.stage_with_limit(&a.booted.app, blob.byte_size as u64).await;
-            assert!(matches!(result, Err(campfire_kit::Error::Status(status)) if status == expected));
+        for assignment in [
+            Assignment::Signed(signed.clone()),
+            Assignment::Existing(blob.clone()),
+        ] {
+            let result = assignment
+                .stage_with_limit(&a.booted.app, blob.byte_size as u64)
+                .await;
+            assert!(
+                matches!(result, Err(campfire_kit::Error::Status(status)) if status == expected)
+            );
         }
     }
 }

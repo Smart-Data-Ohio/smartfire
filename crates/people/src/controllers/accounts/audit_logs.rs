@@ -45,9 +45,17 @@ async fn show_with_limit(c: &mut Ctx, csv_export_limit: i64, _export_limit_label
     let zone = Zone::for_user(time_zone.as_deref());
     let filters = filters(|key| c.param_str(key).map(str::to_owned));
     let selection = selection(&filters, &zone)?;
-    let (count, entries) = c.app().db.read(move |conn| {
-        Ok((selection.count(conn)?, selection.entries(conn, csv_export_limit, 0)?))
-    }).await.map_err(Error::internal)?;
+    let (count, entries) = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok((
+                selection.count(conn)?,
+                selection.entries(conn, csv_export_limit, 0)?,
+            ))
+        })
+        .await
+        .map_err(Error::internal)?;
     let truncated = count > csv_export_limit;
     if csv {
         let suffix = if truncated {

@@ -9,7 +9,9 @@ use std::time::Duration;
 
 use campfire_db::{Database, Job, JobRequest, TestClock, Timestamp};
 use campfire_jobs::inspect;
-use campfire_jobs::{Execution, JobKind, JobQueue, Outcome, QueueConfig, RUNNING, Registry, RunnerConfig, start};
+use campfire_jobs::{
+    Execution, JobKind, JobQueue, Outcome, QueueConfig, RUNNING, Registry, RunnerConfig, start,
+};
 use serde::{Deserialize, Serialize};
 
 const CHILD: &str = "CAMPFIRE_JOBS_CRASH_CHILD";
@@ -35,14 +37,19 @@ fn config() -> RunnerConfig {
 }
 
 fn open(dir: &Path, clock: &TestClock) -> Database {
-    let env = campfire_db::Env { clock: Arc::new(clock.clone()), ..Default::default() };
+    let env = campfire_db::Env {
+        clock: Arc::new(clock.clone()),
+        ..Default::default()
+    };
     Database::open(campfire_db::Config::new(dir.join("jobs.sqlite3")), env).unwrap()
 }
 
 /// The process that dies: performs the job, says so, and hangs until it's killed.
 #[test]
 fn crash_child() {
-    let Some(dir) = std::env::var_os(CHILD).map(PathBuf::from) else { return };
+    let Some(dir) = std::env::var_os(CHILD).map(PathBuf::from) else {
+        return;
+    };
     let runtime = tokio::runtime::Runtime::new().unwrap();
     runtime.block_on(async move {
         let clock = TestClock::frozen_at(Timestamp::parse_db(T0).unwrap());
@@ -78,7 +85,10 @@ async fn a_job_whose_process_dies_is_retried_after_its_lease_expires() {
         }
     });
     let queue = JobQueue::new(&registry, &config()).unwrap();
-    let id = queue.perform_later(&db, JobRequest::new(&Deliver { message_id: 42 })).await.unwrap();
+    let id = queue
+        .perform_later(&db, JobRequest::new(&Deliver { message_id: 42 }))
+        .await
+        .unwrap();
 
     let mut child = Command::new(std::env::current_exe().unwrap())
         .args(["--exact", "crash_child", "--nocapture", "--test-threads=1"])
@@ -88,32 +98,66 @@ async fn a_job_whose_process_dies_is_retried_after_its_lease_expires() {
     let started = dir.path().join("started");
     let deadline = std::time::Instant::now() + Duration::from_secs(20);
     while !started.exists() {
-        assert!(std::time::Instant::now() < deadline, "the child never started the job");
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the child never started the job"
+        );
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert_eq!(std::fs::read_to_string(&started).unwrap(), "1");
     child.kill().unwrap(); // SIGKILL: no shutdown, no hand-back
     child.wait().unwrap();
 
-    let job = db.read(move |conn| inspect::find(conn, id)).await.unwrap().unwrap();
+    let job = db
+        .read(move |conn| inspect::find(conn, id))
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!((job.status.as_str(), job.attempts), (RUNNING, 1));
-    assert_eq!(job.lease_expires_at, Timestamp::parse_db("2026-09-29 12:00:30"));
+    assert_eq!(
+        job.lease_expires_at,
+        Timestamp::parse_db("2026-09-29 12:00:30")
+    );
     let dead = job.claimed_by.unwrap();
 
     // The next process boots while the dead one's lease is live: it leaves the job alone.
     let runner = start(db.clone(), queue, registry, (), config());
     tokio::time::sleep(Duration::from_millis(500)).await;
-    assert!(performed_rx.try_recv().is_err(), "retried while the lease was live");
-    let job = db.read(move |conn| inspect::find(conn, id)).await.unwrap().unwrap();
-    assert_eq!((job.status.as_str(), job.claimed_by.as_deref()), (RUNNING, Some(dead.as_str())));
+    assert!(
+        performed_rx.try_recv().is_err(),
+        "retried while the lease was live"
+    );
+    let job = db
+        .read(move |conn| inspect::find(conn, id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (job.status.as_str(), job.claimed_by.as_deref()),
+        (RUNNING, Some(dead.as_str()))
+    );
 
     clock.travel(jiff::SignedDuration::from_secs(29));
     tokio::time::sleep(Duration::from_millis(300)).await;
     assert!(performed_rx.try_recv().is_err(), "retried a second early");
 
     clock.travel(jiff::SignedDuration::from_secs(1));
-    let (message_id, executions) = tokio::time::timeout(Duration::from_secs(10), performed_rx.recv()).await.expect("retried").unwrap();
-    assert_eq!((message_id, executions), (42, 2), "the lost execution counts as an attempt");
+    let (message_id, executions) =
+        tokio::time::timeout(Duration::from_secs(10), performed_rx.recv())
+            .await
+            .expect("retried")
+            .unwrap();
+    assert_eq!(
+        (message_id, executions),
+        (42, 2),
+        "the lost execution counts as an attempt"
+    );
     runner.shutdown(Duration::from_secs(5)).await;
-    assert!(db.read(move |conn| inspect::find(conn, id)).await.unwrap().is_none(), "done");
+    assert!(
+        db.read(move |conn| inspect::find(conn, id))
+            .await
+            .unwrap()
+            .is_none(),
+        "done"
+    );
 }

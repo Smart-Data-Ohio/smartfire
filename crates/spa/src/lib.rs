@@ -28,8 +28,10 @@ mod embedded {
     include!(concat!(env!("OUT_DIR"), "/spa.rs"));
 }
 
+pub use boot::{
+    Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKind, script_json, text_size, theme,
+};
 pub use favicon::Favicon;
-pub use boot::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKind, script_json, text_size, theme};
 pub use serve::{File, Served, file};
 pub use shell::{render_shell, render_signed_out_shell};
 pub use signed_out::{SignedOutRoute, is_public_page, signed_out_route};

@@ -2,11 +2,11 @@
 
 use crate::app::AppCtx;
 use crate::concerns::{self, cast_integer, require_current_user};
+pub use crate::controllers::presenters::message_parts::poll_view;
 use crate::controllers::presenters::page::db_error;
+pub use crate::controllers::presenters::params::param_string;
 use campfire_db::{Message, Role, Room, Timestamp};
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, halt};
-pub use crate::controllers::presenters::message_parts::poll_view;
-pub use crate::controllers::presenters::params::param_string;
 
 pub async fn room(c: &mut Ctx) -> Result<Room> {
     c.rescue_not_found();
@@ -117,8 +117,16 @@ pub fn parse_time(
     parse_time_checked(raw, zone, now).map_err(db_error)
 }
 
-pub fn parse_time_checked(raw: &str, zone: &campfire_presentation::time::Zone, now: jiff::Timestamp) -> campfire_db::Result<Option<Timestamp>> {
-    campfire_db::slash_commands::time_parser::parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))
+pub fn parse_time_checked(
+    raw: &str,
+    zone: &campfire_presentation::time::Zone,
+    now: jiff::Timestamp,
+) -> campfire_db::Result<Option<Timestamp>> {
+    campfire_db::slash_commands::time_parser::parse_calendar(
+        raw,
+        zone.tz(),
+        Timestamp::from_jiff(now),
+    )
 }
 
 /// Rails JSON encodes Time in UTC with millisecond precision.
@@ -141,7 +149,10 @@ mod relative_split_input_tests;
 
 /// Presentation strings use WS11's shared wide-time renderer; view models never
 /// narrow an accepted database timestamp through Jiff.
-pub fn html_datetime(at: campfire_db::Timestamp, zone: &campfire_presentation::time::Zone) -> String {
+pub fn html_datetime(
+    at: campfire_db::Timestamp,
+    zone: &campfire_presentation::time::Zone,
+) -> String {
     rails_compat::datetime::render(at, zone.tz(), true)
 }
 pub fn html_long(at: campfire_db::Timestamp, zone: &campfire_presentation::time::Zone) -> String {

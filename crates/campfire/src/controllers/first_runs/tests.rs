@@ -22,7 +22,10 @@ async fn first_run_is_available_until_account_exists() {
     let page = browser.get("/first_run").await;
     assert_eq!(
         (page.status, page.location()),
-        (StatusCode::FOUND, Some("http://campfire.test/app/first_run"))
+        (
+            StatusCode::FOUND,
+            Some("http://campfire.test/app/first_run")
+        )
     );
     app.db()
         .write(|tx| Account::create(tx, "Chat"))
@@ -38,7 +41,10 @@ async fn first_run_is_available_until_account_exists() {
         .await;
     assert_eq!(
         (reply.status, reply.location()),
-        (StatusCode::SEE_OTHER, Some("http://campfire.test/app/first_run"))
+        (
+            StatusCode::SEE_OTHER,
+            Some("http://campfire.test/app/first_run")
+        )
     );
     assert_eq!(
         app.db()
@@ -83,7 +89,10 @@ async fn first_run_http_and_persisted_state_match_all_rails_cases() {
             .await;
         assert_eq!(
             (response.status, response.location()),
-            (StatusCode::SEE_OTHER, Some("http://campfire.test/app/first_run")),
+            (
+                StatusCode::SEE_OTHER,
+                Some("http://campfire.test/app/first_run")
+            ),
             "{name}"
         );
         assert_eq!(first_run_state(&app).await, empty, "{name}");
@@ -94,12 +103,18 @@ async fn first_run_http_and_persisted_state_match_all_rails_cases() {
             .unwrap()
             .to_owned();
         let mut submission = case["params"]["user"].clone();
-        if let Some(email) = submission.as_object_mut().and_then(|user| user.remove("email_address")) {
+        if let Some(email) = submission
+            .as_object_mut()
+            .and_then(|user| user.remove("email_address"))
+        {
             submission["emailAddress"] = email;
         }
         submission["account"] = case["params"]["account"].clone();
         let reply = browser
-            .send(json_request(Method::POST, "/api/v1/first_run", submission).header("x-csrf-token", &token))
+            .send(
+                json_request(Method::POST, "/api/v1/first_run", submission)
+                    .header("x-csrf-token", &token),
+            )
             .await;
         if case["status"] == 302 {
             assert_eq!(reply.status, StatusCode::OK, "{name}: {}", reply.text());
@@ -117,7 +132,12 @@ async fn first_run_http_and_persisted_state_match_all_rails_cases() {
         } else {
             // Rails failed these (400 without `user`, 500 without a name, after committing the
             // account); the contract refuses them before creating anything.
-            assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{name}: {}", reply.text());
+            assert_eq!(
+                reply.status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{name}: {}",
+                reply.text()
+            );
             assert_eq!(first_run_state(&app).await, empty, "{name}");
         }
     }
@@ -158,8 +178,17 @@ async fn five_concurrent_first_runs_create_one_administrator_and_room() {
             r.json()
         })
         .collect::<Vec<_>>();
-    assert!(answers.iter().all(|a| a["location"] == "http://campfire.test/"), "{answers:?}");
-    assert_eq!(answers.iter().filter(|a| a["kind"] == "signedIn").count(), 1, "{answers:?}");
+    assert!(
+        answers
+            .iter()
+            .all(|a| a["location"] == "http://campfire.test/"),
+        "{answers:?}"
+    );
+    assert_eq!(
+        answers.iter().filter(|a| a["kind"] == "signedIn").count(),
+        1,
+        "{answers:?}"
+    );
     app.db()
         .read(|c| {
             for table in ["accounts", "users", "rooms"] {
@@ -292,28 +321,72 @@ async fn submit(browser: &mut Browser<'_>, case: Case) -> (Reply, String) {
 async fn json_first_run_creates_the_rows_cookies_and_session_the_form_did() {
     let mut contracts = Vec::new();
     for case in [
-        Case { name: "New Person", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: false },
-        Case { name: "New Person", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: true },
-        Case { name: "", email: Some("new@37signals.com"), password: Some("secret123456"), avatar: false },
-        Case { name: "New Person", email: Some("new@37signals.com"), password: Some(""), avatar: false },
+        Case {
+            name: "New Person",
+            email: Some("new@37signals.com"),
+            password: Some("secret123456"),
+            avatar: false,
+        },
+        Case {
+            name: "New Person",
+            email: Some("new@37signals.com"),
+            password: Some("secret123456"),
+            avatar: true,
+        },
+        Case {
+            name: "",
+            email: Some("new@37signals.com"),
+            password: Some("secret123456"),
+            avatar: false,
+        },
+        Case {
+            name: "New Person",
+            email: Some("new@37signals.com"),
+            password: Some(""),
+            avatar: false,
+        },
         // Fields the retained form accepted when absent (vectors/users_first_run.json
         // missing_email, missing_password): no email address, no password.
-        Case { name: "New Person", email: None, password: Some("secret123456"), avatar: false },
-        Case { name: "New Person", email: Some("new@37signals.com"), password: None, avatar: false },
-        Case { name: "New Person", email: None, password: None, avatar: true },
+        Case {
+            name: "New Person",
+            email: None,
+            password: Some("secret123456"),
+            avatar: false,
+        },
+        Case {
+            name: "New Person",
+            email: Some("new@37signals.com"),
+            password: None,
+            avatar: false,
+        },
+        Case {
+            name: "New Person",
+            email: None,
+            password: None,
+            avatar: true,
+        },
     ] {
-        let label = format!("{}/{:?}/{:?}/{}", case.name, case.email, case.password, case.avatar);
+        let label = format!(
+            "{}/{:?}/{:?}/{}",
+            case.name, case.email, case.password, case.avatar
+        );
         let app = app().await;
         let mut browser = app.anonymous();
         let before = rows(&app).await;
         let form = submit_form(&mut browser, case).await;
         assert_eq!(
             (form.status, form.location()),
-            (StatusCode::SEE_OTHER, Some("http://campfire.test/app/first_run")),
+            (
+                StatusCode::SEE_OTHER,
+                Some("http://campfire.test/app/first_run")
+            ),
             "{label}"
         );
         assert_eq!(rows(&app).await, before, "{label}");
-        assert!(!browser.cookie_header().contains("session_token="), "{label}");
+        assert!(
+            !browser.cookie_header().contains("session_token="),
+            "{label}"
+        );
 
         let (reply, location) = submit(&mut browser, case).await;
         assert_eq!(location, "http://campfire.test/");
@@ -326,9 +399,17 @@ async fn json_first_run_creates_the_rows_cookies_and_session_the_form_did() {
         session.sort();
         // Signed in: home goes on to the administrator's two-step setup, as after the form.
         let home = browser.get("/").await.location().map(str::to_owned);
-        assert_eq!(home.as_deref(), Some("http://campfire.test/app/two_factor/setup?required=true"));
+        assert_eq!(
+            home.as_deref(),
+            Some("http://campfire.test/app/two_factor/setup?required=true")
+        );
         let cookies = cookie_contract(&reply);
-        assert!(cookies.iter().any(|cookie| cookie.starts_with("session_token=set")), "{cookies:?}");
+        assert!(
+            cookies
+                .iter()
+                .any(|cookie| cookie.starts_with("session_token=set")),
+            "{cookies:?}"
+        );
         contracts.push((cookies, session));
 
         let rows = rows(&app).await;
@@ -351,11 +432,16 @@ async fn json_first_run_creates_the_rows_cookies_and_session_the_form_did() {
         );
         assert_eq!(
             rows["users"][0][5],
-            json!(i64::from(case.password.is_some_and(|password| !password.is_empty()))),
+            json!(i64::from(
+                case.password.is_some_and(|password| !password.is_empty())
+            )),
             "{rows}"
         );
     }
-    assert!(contracts.windows(2).all(|pair| pair[0] == pair[1]), "{contracts:?}");
+    assert!(
+        contracts.windows(2).all(|pair| pair[0] == pair[1]),
+        "{contracts:?}"
+    );
 }
 
 #[tokio::test]
@@ -367,7 +453,8 @@ async fn json_first_run_refuses_malformed_submissions_before_creating_anything()
         .unwrap()
         .to_owned();
     let before = rows(&app).await;
-    let invalid = |field: &str, message: &str| json!({"kind":"error","fieldErrors":{field:[message]}});
+    let invalid =
+        |field: &str, message: &str| json!({"kind":"error","fieldErrors":{field:[message]}});
     let malformed = invalid("base", "The request body isn't valid.");
     let json = |body: &[u8]| {
         Req::new(Method::POST, "/api/v1/first_run")
@@ -377,7 +464,10 @@ async fn json_first_run_refuses_malformed_submissions_before_creating_anything()
     };
     for (request, answer) in [
         // Rails would commit the account and then fail on the missing name.
-        (json(br#"{"emailAddress":"new@37signals.com","password":"secret123456"}"#), &malformed),
+        (
+            json(br#"{"emailAddress":"new@37signals.com","password":"secret123456"}"#),
+            &malformed,
+        ),
         (json(b"{not json"), &malformed),
         (json(b""), &malformed),
         (
@@ -391,7 +481,10 @@ async fn json_first_run_refuses_malformed_submissions_before_creating_anything()
                 .header("accept", "application/json")
                 .multipart(
                     &[
-                        ("submission", r#"{"name":"A","emailAddress":"a@b.c","password":"x"}"#),
+                        (
+                            "submission",
+                            r#"{"name":"A","emailAddress":"a@b.c","password":"x"}"#,
+                        ),
                         ("avatar", "not-a-signed-id"),
                     ],
                     ("unused", "u.txt", "text/plain", b"u"),
@@ -400,7 +493,12 @@ async fn json_first_run_refuses_malformed_submissions_before_creating_anything()
         ),
     ] {
         let reply = browser.send(request.header("x-csrf-token", &token)).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
         assert_eq!(&reply.json(), answer);
         assert_eq!(rows(&app).await, before);
     }
@@ -408,7 +506,8 @@ async fn json_first_run_refuses_malformed_submissions_before_creating_anything()
 
 #[tokio::test]
 async fn json_first_run_takes_the_header_or_body_token_and_refuses_forgeries() {
-    let submission = json!({"name":"New Person","emailAddress":"new@37signals.com","password":"secret123456"});
+    let submission =
+        json!({"name":"New Person","emailAddress":"new@37signals.com","password":"secret123456"});
     let app = app().await;
     let mut browser = app.anonymous();
     let token = browser.get("/api/v1/first_run").await.json()["csrfToken"]
@@ -426,12 +525,20 @@ async fn json_first_run_takes_the_header_or_body_token_and_refuses_forgeries() {
         Req::new(Method::POST, "/api/v1/first_run")
             .header("accept", "application/json")
             .multipart(
-                &[("submission", &submission.to_string()), ("authenticity_token", "invalid")],
+                &[
+                    ("submission", &submission.to_string()),
+                    ("authenticity_token", "invalid"),
+                ],
                 ("avatar", "me.png", "image/png", AVATAR),
             ),
     ] {
         let reply = browser.send(rejected).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
         assert_eq!(rows(&app).await, before);
     }
     // The Rails body token alone, as the retained form posts it.
@@ -451,7 +558,10 @@ async fn json_first_run_takes_the_header_or_body_token_and_refuses_forgeries() {
             Req::new(Method::POST, "/api/v1/first_run")
                 .header("accept", "application/json")
                 .multipart(
-                    &[("submission", &submission.to_string()), ("authenticity_token", &token)],
+                    &[
+                        ("submission", &submission.to_string()),
+                        ("authenticity_token", &token),
+                    ],
                     ("avatar", "me.png", "image/png", AVATAR),
                 ),
         )
@@ -481,7 +591,10 @@ async fn once_set_up_every_first_run_path_goes_home_and_changes_nothing() {
     assert_eq!(browser.get("/app/first_run").await.location(), home);
     let state = browser.get("/api/v1/first_run").await;
     assert_eq!(state.status, StatusCode::OK);
-    assert_eq!(state.json(), json!({"kind":"navigate","location":"http://campfire.test/"}));
+    assert_eq!(
+        state.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/"})
+    );
     let reply = browser
         .send(
             json_request(
@@ -493,7 +606,10 @@ async fn once_set_up_every_first_run_path_goes_home_and_changes_nothing() {
         )
         .await;
     assert_eq!(reply.status, StatusCode::OK);
-    assert_eq!(reply.json(), json!({"kind":"navigate","location":"http://campfire.test/"}));
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/"})
+    );
     assert_eq!(rows(&app).await, before);
 
     // Signed in on a set-up workspace, the SPA page redirects exactly as the retained one.

@@ -95,7 +95,9 @@ async fn parity_room_scoped_endpoints_reject_deleted_rooms_even_with_membership(
         .await
         .unwrap();
     let mut david = app.david();
-    let reply = david.classic_page(&format!("/rooms/{ALL_TALK}/involvement")).await;
+    let reply = david
+        .classic_page(&format!("/rooms/{ALL_TALK}/involvement"))
+        .await;
     assert_eq!(reply.status, StatusCode::NOT_FOUND);
     let reply = david.classic_page(&format!("/rooms/{ALL_TALK}")).await;
     assert_eq!(reply.location(), Some("http://campfire.test/"));
@@ -169,7 +171,9 @@ async fn parity_closed_and_direct_nonmembers_cannot_mutate_or_read_settings() {
     let app = app().await;
     let mut kevin = app.sign_in(KEVIN).await;
     for id in [ALL_TALK, DIRECT_DAVID_JASON] {
-        let reply = kevin.classic_page(&format!("/rooms/{id}/involvement")).await;
+        let reply = kevin
+            .classic_page(&format!("/rooms/{id}/involvement"))
+            .await;
         assert_eq!(reply.status, StatusCode::NOT_FOUND);
         let reply = kevin
             .write(Req::new(Method::DELETE, &format!("/rooms/{id}.json")))
@@ -851,12 +855,33 @@ async fn parity_audit_failure_does_not_undo_completed_room_deletion() {
 #[tokio::test]
 async fn parity_category_name_uses_active_model_string_cast() {
     let app = app().await;
-    let reply = app.david().write(Req::new(Method::POST, "/room_categories")
-        .header("content-type", "application/json")
-        .body(serde_json::to_vec(&serde_json::json!({"room_category":{"name":false}})).unwrap())).await;
+    let reply = app
+        .david()
+        .write(
+            Req::new(Method::POST, "/room_categories")
+                .header("content-type", "application/json")
+                .body(
+                    serde_json::to_vec(&serde_json::json!({"room_category":{"name":false}}))
+                        .unwrap(),
+                ),
+        )
+        .await;
     assert_eq!(reply.status, StatusCode::FOUND);
-    let name = app.db().read(|conn| Ok(campfire_db::RoomCategory::ordered_for_user(conn, DAVID)?.last().unwrap().name.clone())).await.unwrap();
-    assert_eq!(serde_json::json!(name), oracle()["cases"]["category_false_name_state"]);
+    let name = app
+        .db()
+        .read(|conn| {
+            Ok(campfire_db::RoomCategory::ordered_for_user(conn, DAVID)?
+                .last()
+                .unwrap()
+                .name
+                .clone())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        serde_json::json!(name),
+        oracle()["cases"]["category_false_name_state"]
+    );
 }
 
 #[tokio::test]
@@ -874,10 +899,14 @@ async fn unread_facts_keep_tuple_boundaries_deleted_pointers_and_off_page_counts
             tx.conn().execute("UPDATE memberships SET unread_at='2026-03-02 15:00:00',last_read_message_id=? WHERE room_id=? AND user_id=?", (pointer, room, DAVID))?;
             Ok(())
         }).await.unwrap();
-        let found = app.db().read(move |conn| {
-            let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
-            crate::controllers::presenters::room_unread::first_unread(conn, &membership)
-        }).await.unwrap();
+        let found = app
+            .db()
+            .read(move |conn| {
+                let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
+                crate::controllers::presenters::room_unread::first_unread(conn, &membership)
+            })
+            .await
+            .unwrap();
         assert_eq!(found, Some(expected));
     }
     app.db().write(move |tx| {
@@ -887,18 +916,32 @@ async fn unread_facts_keep_tuple_boundaries_deleted_pointers_and_off_page_counts
         tx.conn().execute("DELETE FROM messages WHERE id=10002", [])?;
         Ok(())
     }).await.unwrap();
-    let found = app.db().read(move |conn| {
-        let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
-        crate::controllers::presenters::room_unread::first_unread(conn, &membership)
-    }).await.unwrap();
+    let found = app
+        .db()
+        .read(move |conn| {
+            let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
+            crate::controllers::presenters::room_unread::first_unread(conn, &membership)
+        })
+        .await
+        .unwrap();
     assert_eq!(found, Some((10003, 135)));
-    app.db().write(move |tx| {
-        tx.conn().execute("UPDATE memberships SET unread_at=NULL WHERE room_id=? AND user_id=?", (room, DAVID))?;
-        Ok(())
-    }).await.unwrap();
-    let found = app.db().read(move |conn| {
-        let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
-        crate::controllers::presenters::room_unread::first_unread(conn, &membership)
-    }).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE memberships SET unread_at=NULL WHERE room_id=? AND user_id=?",
+                (room, DAVID),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let found = app
+        .db()
+        .read(move |conn| {
+            let membership = Membership::find_by_room_and_user(conn, room, DAVID)?.unwrap();
+            crate::controllers::presenters::room_unread::first_unread(conn, &membership)
+        })
+        .await
+        .unwrap();
     assert_eq!(found, None);
 }

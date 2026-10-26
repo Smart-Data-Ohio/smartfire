@@ -1,9 +1,9 @@
 //! All thirteen JoinPusher declarations through the real WS17 policy/durable adapter.
 use crate::models::huddle_notices::{PushKind, PushPayload, PushRequest};
-use crate::models::notification_push::{self, HuddleJoinDeliveryJob, HuddlePushRequest};
 use crate::models::notification_policy::dnd_exceptions_for;
-use crate::{DndAllowedUser, Job, NotificationKind, NotificationPolicy, UserStatusSettings};
+use crate::models::notification_push::{self, HuddleJoinDeliveryJob, HuddlePushRequest};
 use crate::tests::TestDb;
+use crate::{DndAllowedUser, Job, NotificationKind, NotificationPolicy, UserStatusSettings};
 use crate::{Membership, Timestamp};
 use rusqlite::params;
 use serde_json::{Value, json};
@@ -55,16 +55,28 @@ fn run(number: i64) {
                     let membership = Membership::find(conn, member)?;
                     Ok(NotificationPolicy {
                         room_id: None,
-                        recipient: Some(&recipient), kind: NotificationKind::HuddleJoin,
-                        room_involvement: Some(membership.involvement), thread_involvement: None,
-                        mentioned: false, reply_to_recipient: false, keyword_matched: false,
-                        dnd_exception: dnd_exceptions_for(conn, &[user], Some(sender))?.contains(&user),
+                        recipient: Some(&recipient),
+                        kind: NotificationKind::HuddleJoin,
+                        room_involvement: Some(membership.involvement),
+                        thread_involvement: None,
+                        mentioned: false,
+                        reply_to_recipient: false,
+                        keyword_matched: false,
+                        dnd_exception: dnd_exceptions_for(conn, &[user], Some(sender))?
+                            .contains(&user),
                         now: db.now(),
-                    }.push())
+                    }
+                    .push())
                 });
-                assert_eq!(json!(policy), step["policy_allowed"], "{} actual WS17 policy", case["title"]);
+                assert_eq!(
+                    json!(policy),
+                    step["policy_allowed"],
+                    "{} actual WS17 policy",
+                    case["title"]
+                );
                 // Replay the source's exact wire DTO through the same adapter as the registered worker.
-                let wire: HuddlePushRequest = serde_json::from_value(serde_json::to_value(request).unwrap()).unwrap();
+                let wire: HuddlePushRequest =
+                    serde_json::from_value(serde_json::to_value(request).unwrap()).unwrap();
                 db.sink.take();
                 db.write(move |tx| notification_push::enqueue_huddle_request(tx, wire));
                 db.events().iter().filter_map(|event| match event {

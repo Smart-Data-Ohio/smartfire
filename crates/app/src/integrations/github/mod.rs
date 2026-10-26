@@ -1,10 +1,10 @@
 //! GitHub domain and fixed-host clients, matching our Rails `app/models/github/`.
 //! Controllers and HTML belong outside this module.
 
-pub mod approval_requests;
 pub mod accounts;
 pub mod actions;
 pub mod agent_actions;
+pub mod approval_requests;
 pub mod client;
 pub mod connections;
 pub mod fetcher;
@@ -39,4 +39,3 @@ fn boolean(value: &serde_json::Value) -> Option<bool> {
         _ => Some(true),
     }
 }
-

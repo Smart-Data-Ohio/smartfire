@@ -319,7 +319,9 @@ async fn slack_conversations_directs_reuse_member_sets_import_self_and_skip_slac
             &[json!("UOWNER")],
             &users,
             false,
-        )?.room.unwrap();
+        )?
+        .room
+        .unwrap();
         assert_eq!(
             notes.id,
             Room::note_to_self_for(tx.conn(), run.user_id)?.unwrap().id

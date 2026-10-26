@@ -1,16 +1,16 @@
 use super::*;
-use campfire_jobs::JobKind;
+use crate::controllers::presenters::test_support::TestApp;
+use crate::integrations::test_support::*;
 use campfire_app::integrations::twitter::post::Post;
 use campfire_app::net::Network;
 use campfire_app::net::http::HttpError;
 use campfire_app::net::http::Timeouts;
 use campfire_db::Timestamp;
+use campfire_jobs::JobKind;
+use rusqlite::params;
 use serde_json::Value;
 use serde_json::json;
 use std::time::Duration;
-use crate::controllers::presenters::test_support::TestApp;
-use crate::integrations::test_support::*;
-use rusqlite::params;
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
@@ -318,21 +318,48 @@ async fn ws15e_review_x_dns_and_tcp_share_one_open_budget() {
     use crate::net::{BoxFuture, Dialer, Resolver};
     struct SlowDns(Arc<dyn Resolver>);
     impl Resolver for SlowDns {
-        fn lookup<'a>(&'a self, host: &'a str) -> BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {
-            Box::pin(async move { tokio::time::sleep(Duration::from_millis(120)).await; self.0.lookup(host).await })
+        fn lookup<'a>(
+            &'a self,
+            host: &'a str,
+        ) -> BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {
+            Box::pin(async move {
+                tokio::time::sleep(Duration::from_millis(120)).await;
+                self.0.lookup(host).await
+            })
         }
     }
     struct SlowTcp(Arc<dyn Dialer>);
     impl Dialer for SlowTcp {
-        fn connect(&self, addr: std::net::SocketAddr) -> BoxFuture<'_, std::io::Result<tokio::net::TcpStream>> {
-            Box::pin(async move { tokio::time::sleep(Duration::from_millis(120)).await; self.0.connect(addr).await })
+        fn connect(
+            &self,
+            addr: std::net::SocketAddr,
+        ) -> BoxFuture<'_, std::io::Result<tokio::net::TcpStream>> {
+            Box::pin(async move {
+                tokio::time::sleep(Duration::from_millis(120)).await;
+                self.0.connect(addr).await
+            })
         }
     }
-    let (server,mut net,_,_) = tls_server(Route::new("GET",API_HOST,"/i/status/123",200).body("{}")).await;
+    let (server, mut net, _, _) =
+        tls_server(Route::new("GET", API_HOST, "/i/status/123", 200).body("{}")).await;
     net.resolver = Arc::new(SlowDns(net.resolver.clone()));
     net.dialer = Arc::new(SlowTcp(net.dialer.clone()));
-    let result = get(&net,"/i/status/123",&Timeouts {open:Duration::from_millis(200),..TIMEOUTS}).await;
-    eprintln!("REVIEW X combined open budget: received requests={}",server.received().len());
-    assert!(matches!(result,Err(Failure::Transport(HttpError::OpenTimeout))));
+    let result = get(
+        &net,
+        "/i/status/123",
+        &Timeouts {
+            open: Duration::from_millis(200),
+            ..TIMEOUTS
+        },
+    )
+    .await;
+    eprintln!(
+        "REVIEW X combined open budget: received requests={}",
+        server.received().len()
+    );
+    assert!(matches!(
+        result,
+        Err(Failure::Transport(HttpError::OpenTimeout))
+    ));
     assert!(server.received().is_empty());
 }

@@ -1,6 +1,6 @@
 use super::*;
-use campfire_db::models::agent_delivery as domain;
 use crate::controllers::presenters::test_support::TestApp;
+use campfire_db::models::agent_delivery as domain;
 use campfire_db::models::{
     agent_delivery::AgentEvent,
     agent_payloads::{self as payloads, Payload, RepositoryAccess},
@@ -12,7 +12,17 @@ use serde_json::{Value, json};
 pub(crate) fn install_payload_fixture(tx: &mut campfire_db::Tx<'_>) -> campfire_db::Result<()> {
     let now = Timestamp::from_jiff("2026-03-02T16:00:00Z".parse().unwrap());
     let room = 486777696;
-    for cap in ["read_messages","post_messages","react","external_action"] {campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:773018776,capability:cap.into(),granted_by_id:127326141,..Default::default()})?;}
+    for cap in ["read_messages", "post_messages", "react", "external_action"] {
+        campfire_db::AgentGrant::create(
+            tx,
+            campfire_db::NewGrant {
+                agent_id: 773018776,
+                capability: cap.into(),
+                granted_by_id: 127326141,
+                ..Default::default()
+            },
+        )?;
+    }
 
     let actor = 127326141;
     tx.conn().execute("INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,work_owner_id,result_markdown,result_updated_at,run_url,last_activity_at,created_at,updated_at) VALUES(900020001,?,?,'Work <>&','in_progress',394959859,'Done <>&',?,'https://example.test/run',?,?,?)",params![room,actor,now,now,now,now])?;
@@ -153,8 +163,18 @@ pub fn compare_payload_matrix(tx: &mut campfire_db::Tx<'_>) -> campfire_db::Resu
         let event_id = 900000000 + index as i64;
         tx.conn().execute("INSERT INTO agent_events(id,agent_id,event_type,outcome,metadata,room_id,actor_id,agent_approval_id,created_at) VALUES(?,773018776,?,'delivered',?,?,?,?,?)",params![event_id,kind,metadata,room,actor,approval,tx.now()])?;
         let e = AgentEvent::find(tx.conn(), event_id)?.unwrap();
-        if ["slash_no_actor","github_empty","snapshot","snapshot_handoff"].contains(&key) {
-            assert!(matches!(payloads::build(tx.conn(),tx.rich_text(),&e,&RepositoryAccess::default())?,Payload::Unavailable(_)));
+        if [
+            "slash_no_actor",
+            "github_empty",
+            "snapshot",
+            "snapshot_handoff",
+        ]
+        .contains(&key)
+        {
+            assert!(matches!(
+                payloads::build(tx.conn(), tx.rich_text(), &e, &RepositoryAccess::default())?,
+                Payload::Unavailable(_)
+            ));
             continue;
         }
         let Payload::Ready { body, sync_message } =
@@ -274,7 +294,7 @@ async fn ws11_non_message_webhooks_ignore_sync_reply_bodies() {
                 tx,
                 domain::NewEvent {
                     agent_id: 773018776,
-                    agent_approval_id:Some(900010001),
+                    agent_approval_id: Some(900010001),
                     event_type: "fizzy_action_completed".into(),
                     metadata: json!({"action":"fizzy.close","status":"completed"}),
                     ..Default::default()

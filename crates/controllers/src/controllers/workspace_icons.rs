@@ -78,5 +78,9 @@ pub async fn show(c: &mut Ctx) -> Result {
             ..Default::default()
         },
     );
-    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
+    Ok(if private {
+        response.header("cache-control", "private, no-store")
+    } else {
+        response
+    })
 }

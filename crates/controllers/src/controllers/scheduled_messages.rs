@@ -1,10 +1,7 @@
 //! `app/controllers/scheduled_messages_controller.rb`.
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::{
-    message_features as features,
-    presenters::page,
-};
+use crate::controllers::{message_features as features, presenters::page};
 use campfire_db::{ChannelThread, Message, NewScheduledMessage, ScheduledMessage};
 use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format, permit_keys};
 

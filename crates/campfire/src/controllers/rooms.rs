@@ -4,7 +4,6 @@
 
 pub use campfire_rooms::controllers::rooms::*;
 
-
 #[cfg(test)]
 mod call_lifecycle_tests;
 
@@ -56,11 +55,9 @@ mod opens_rails_cases;
 #[cfg(test)]
 mod closeds_rails_cases;
 
-
 #[cfg(test)]
 #[path = "rooms/members_rails_cases.rs"]
 mod members_rails_cases;
-
 
 #[cfg(test)]
 mod involvements_rails_cases;
@@ -90,11 +87,8 @@ mod native_integration_tests;
 #[cfg(test)]
 pub(crate) mod query_probe;
 
-
-
 #[cfg(test)]
 mod queue_recovery_tests;
-
 
 #[cfg(test)]
 mod public_huddle_tests;
@@ -111,11 +105,8 @@ mod review_tests;
 #[cfg(test)]
 mod call_channel_declaration_tests;
 
-
-
 #[cfg(test)]
 mod stream_controller_tests;
-
 
 #[cfg(test)]
 mod remaining_call_tests;
@@ -123,17 +114,11 @@ mod remaining_call_tests;
 #[cfg(test)]
 mod remaining_query_tests;
 
-
-
-
-
 #[cfg(test)]
 mod row_broadcast_tests;
 
-
 #[cfg(test)]
 pub(super) mod call_channel_broadcast_tests;
-
 
 #[cfg(test)]
 mod boards_domain_tests;
@@ -150,12 +135,10 @@ mod board_automation_tests;
 #[cfg(test)]
 mod original_audit_tests;
 
-
 #[cfg(test)]
 pub(crate) mod directs {
     pub(crate) use campfire_rooms::controllers::rooms::directs::*;
-
-    }
+}
 
 #[cfg(test)]
 pub(crate) mod events {

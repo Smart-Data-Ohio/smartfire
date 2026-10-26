@@ -49,22 +49,58 @@ unsafe extern "C" {
     fn vips_gifload_source(source: *mut c_void, out: *mut *mut VipsImage, ...) -> c_int;
     fn vips_webpload_source(source: *mut c_void, out: *mut *mut VipsImage, ...) -> c_int;
     fn vips_foreign_find_load_source(source: *mut c_void) -> *const c_char;
-    fn vips_image_new_from_source(source: *mut c_void, options: *const c_char, ...) -> *mut VipsImage;
-    fn vips_image_new_matrix_from_array(width: c_int, height: c_int, array: *const c_double, size: c_int) -> *mut VipsImage;
+    fn vips_image_new_from_source(
+        source: *mut c_void,
+        options: *const c_char,
+        ...
+    ) -> *mut VipsImage;
+    fn vips_image_new_matrix_from_array(
+        width: c_int,
+        height: c_int,
+        array: *const c_double,
+        size: c_int,
+    ) -> *mut VipsImage;
     fn vips_image_set_double(image: *mut VipsImage, name: *const c_char, d: c_double);
     fn vips_image_get_width(image: *const VipsImage) -> c_int;
     fn vips_image_get_height(image: *const VipsImage) -> c_int;
     fn vips_image_get_typeof(image: *const VipsImage, name: *const c_char) -> usize;
-    fn vips_image_get_as_string(image: *const VipsImage, name: *const c_char, out: *mut *mut c_char) -> c_int;
+    fn vips_image_get_as_string(
+        image: *const VipsImage,
+        name: *const c_char,
+        out: *mut *mut c_char,
+    ) -> c_int;
     fn vips_autorot(input: *mut VipsImage, out: *mut *mut VipsImage, ...) -> c_int;
-    fn vips_thumbnail_image(input: *mut VipsImage, out: *mut *mut VipsImage, width: c_int, ...) -> c_int;
-    fn vips_conv(input: *mut VipsImage, out: *mut *mut VipsImage, mask: *mut VipsImage, ...) -> c_int;
-    fn vips_colourspace(input: *mut VipsImage, out: *mut *mut VipsImage, space: c_int, ...) -> c_int;
+    fn vips_thumbnail_image(
+        input: *mut VipsImage,
+        out: *mut *mut VipsImage,
+        width: c_int,
+        ...
+    ) -> c_int;
+    fn vips_conv(
+        input: *mut VipsImage,
+        out: *mut *mut VipsImage,
+        mask: *mut VipsImage,
+        ...
+    ) -> c_int;
+    fn vips_colourspace(
+        input: *mut VipsImage,
+        out: *mut *mut VipsImage,
+        space: c_int,
+        ...
+    ) -> c_int;
     fn vips_image_hasalpha(image: *mut VipsImage) -> c_int;
     fn vips_array_double_new(array: *const c_double, n: c_int) -> *mut c_void;
     fn vips_area_unref(area: *mut c_void);
     fn vips_flatten(input: *mut VipsImage, out: *mut *mut VipsImage, ...) -> c_int;
-    fn vips_embed(input: *mut VipsImage, out: *mut *mut VipsImage, x: c_int, y: c_int, width: c_int, height: c_int, ...) -> c_int;
+    fn vips_embed(
+        input: *mut VipsImage,
+        out: *mut *mut VipsImage,
+        x: c_int,
+        y: c_int,
+        width: c_int,
+        height: c_int,
+        ...
+    ) -> c_int;
     fn vips_image_write_to_file(image: *mut VipsImage, name: *const c_char, ...) -> c_int;
     fn vips_avg(image: *mut VipsImage, out: *mut c_double, ...) -> c_int;
     fn g_object_unref(object: *mut c_void);
@@ -87,7 +123,11 @@ pub fn init() {
 
 pub fn version() -> String {
     init();
-    unsafe { CStr::from_ptr(vips_version_string()).to_string_lossy().into_owned() }
+    unsafe {
+        CStr::from_ptr(vips_version_string())
+            .to_string_lossy()
+            .into_owned()
+    }
 }
 
 pub struct Image(*mut VipsImage);
@@ -109,15 +149,30 @@ impl Image {
     }
 
     /// Emoji decoding evaluates every frame and rejects decoder warnings as well as errors.
-    pub fn open_emoji(path: &Path, content_type: &str, pages: i32, cancel: &Cancellation) -> Result<Image> {
+    pub fn open_emoji(
+        path: &Path,
+        content_type: &str,
+        pages: i32,
+        cancel: &Cancellation,
+    ) -> Result<Image> {
         Self::open_bounded(path, content_type, pages, true, cancel)
     }
 
-    fn open_bounded(path: &Path, content_type: &str, pages: i32, strict: bool, cancel: &Cancellation) -> Result<Image> {
+    fn open_bounded(
+        path: &Path,
+        content_type: &str,
+        pages: i32,
+        strict: bool,
+        cancel: &Cancellation,
+    ) -> Result<Image> {
         init();
         let source = cancellation::Source::open(path, cancel)?;
         let mut out = std::ptr::null_mut();
-        let fail_on = if strict { VIPS_FAIL_ON_WARNING } else { VIPS_FAIL_ON_ERROR };
+        let fail_on = if strict {
+            VIPS_FAIL_ON_WARNING
+        } else {
+            VIPS_FAIL_ON_ERROR
+        };
         macro_rules! load {
             ($loader:ident $(, $option:expr, $value:expr)*) => {
                 unsafe {
@@ -175,11 +230,19 @@ impl Image {
     }
 
     fn wrap(ptr: *mut VipsImage) -> Result<Image> {
-        if ptr.is_null() { Err(Error::Vips(take_error())) } else { Ok(Image(ptr)) }
+        if ptr.is_null() {
+            Err(Error::Vips(take_error()))
+        } else {
+            Ok(Image(ptr))
+        }
     }
 
     fn wrap_out(status: c_int, out: *mut VipsImage) -> Result<Image> {
-        if status != 0 { Err(Error::Vips(take_error())) } else { Image::wrap(out) }
+        if status != 0 {
+            Err(Error::Vips(take_error()))
+        } else {
+            Image::wrap(out)
+        }
     }
 
     /// `Vips::Image.new_from_file(path, access: :sequential)`, as the image analyzer opens files.
@@ -187,7 +250,12 @@ impl Image {
         init();
         let path = cstring(path)?;
         Image::wrap(unsafe {
-            vips_image_new_from_file(path.as_ptr(), c"access".as_ptr(), VIPS_ACCESS_SEQUENTIAL, std::ptr::null::<c_char>())
+            vips_image_new_from_file(
+                path.as_ptr(),
+                c"access".as_ptr(),
+                VIPS_ACCESS_SEQUENTIAL,
+                std::ptr::null::<c_char>(),
+            )
         })
     }
 
@@ -197,7 +265,14 @@ impl Image {
         init();
         let path = cstring(path)?;
         let image = if loader_accepts_page(&path) {
-            unsafe { vips_image_new_from_file(path.as_ptr(), c"page".as_ptr(), 0 as c_int, std::ptr::null::<c_char>()) }
+            unsafe {
+                vips_image_new_from_file(
+                    path.as_ptr(),
+                    c"page".as_ptr(),
+                    0 as c_int,
+                    std::ptr::null::<c_char>(),
+                )
+            }
         } else {
             unsafe { vips_image_new_from_file(path.as_ptr(), std::ptr::null::<c_char>()) }
         };
@@ -260,7 +335,14 @@ impl Image {
         let mask = sharpen_mask()?;
         let mut sharpened = std::ptr::null_mut();
         let status = unsafe {
-            vips_conv(thumbnail.0, &mut sharpened, mask.0, c"precision".as_ptr(), VIPS_PRECISION_INTEGER, std::ptr::null::<c_char>())
+            vips_conv(
+                thumbnail.0,
+                &mut sharpened,
+                mask.0,
+                c"precision".as_ptr(),
+                VIPS_PRECISION_INTEGER,
+                std::ptr::null::<c_char>(),
+            )
         };
         Image::wrap_out(status, sharpened)
     }
@@ -270,18 +352,40 @@ impl Image {
     pub fn resize_and_pad(&self, width: i32, height: i32) -> Result<Image> {
         let mut thumbnail = std::ptr::null_mut();
         let status = unsafe {
-            vips_thumbnail_image(self.0, &mut thumbnail, width as c_int, c"height".as_ptr(), height as c_int, c"no_rotate".as_ptr(), 1 as c_int, std::ptr::null::<c_char>())
+            vips_thumbnail_image(
+                self.0,
+                &mut thumbnail,
+                width as c_int,
+                c"height".as_ptr(),
+                height as c_int,
+                c"no_rotate".as_ptr(),
+                1 as c_int,
+                std::ptr::null::<c_char>(),
+            )
         };
         let thumbnail = Image::wrap_out(status, thumbnail)?;
         let mut srgb = std::ptr::null_mut();
-        let status = unsafe { vips_colourspace(thumbnail.0, &mut srgb, VIPS_INTERPRETATION_SRGB, std::ptr::null::<c_char>()) };
+        let status = unsafe {
+            vips_colourspace(
+                thumbnail.0,
+                &mut srgb,
+                VIPS_INTERPRETATION_SRGB,
+                std::ptr::null::<c_char>(),
+            )
+        };
         let mut image = Image::wrap_out(status, srgb)?;
         if unsafe { vips_image_hasalpha(image.0) } != 0 {
             let white: [c_double; 3] = [255.0; 3];
             let mut flat = std::ptr::null_mut();
             let status = unsafe {
                 let background = vips_array_double_new(white.as_ptr(), 3);
-                let status = vips_flatten(image.0, &mut flat, c"background".as_ptr(), background, std::ptr::null::<c_char>());
+                let status = vips_flatten(
+                    image.0,
+                    &mut flat,
+                    c"background".as_ptr(),
+                    background,
+                    std::ptr::null::<c_char>(),
+                );
                 vips_area_unref(background);
                 status
             };
@@ -290,7 +394,17 @@ impl Image {
         let (x, y) = ((width - image.width()) / 2, (height - image.height()) / 2);
         let mut padded = std::ptr::null_mut();
         let status = unsafe {
-            vips_embed(image.0, &mut padded, x, y, width, height, c"extend".as_ptr(), VIPS_EXTEND_WHITE, std::ptr::null::<c_char>())
+            vips_embed(
+                image.0,
+                &mut padded,
+                x,
+                y,
+                width,
+                height,
+                c"extend".as_ptr(),
+                VIPS_EXTEND_WHITE,
+                std::ptr::null::<c_char>(),
+            )
         };
         Image::wrap_out(status, padded)
     }
@@ -298,15 +412,24 @@ impl Image {
     /// `write_to_file(path)`: the saver and its defaults are picked from the extension.
     pub fn write_to_file(&self, path: &Path) -> Result<()> {
         let path = cstring(path)?;
-        let status = unsafe { vips_image_write_to_file(self.0, path.as_ptr(), std::ptr::null::<c_char>()) };
-        if status != 0 { Err(Error::Vips(take_error())) } else { Ok(()) }
+        let status =
+            unsafe { vips_image_write_to_file(self.0, path.as_ptr(), std::ptr::null::<c_char>()) };
+        if status != 0 {
+            Err(Error::Vips(take_error()))
+        } else {
+            Ok(())
+        }
     }
 
     /// Evaluates all pixels without allocating a full decoded animation in memory.
     pub fn average(&self) -> Result<f64> {
         let mut average = 0.0;
         let status = unsafe { vips_avg(self.0, &mut average, std::ptr::null::<c_char>()) };
-        if status != 0 { Err(Error::Vips(take_error())) } else { Ok(average) }
+        if status != 0 {
+            Err(Error::Vips(take_error()))
+        } else {
+            Ok(average)
+        }
     }
 }
 
@@ -343,7 +466,8 @@ fn loader_accepts_page(path: &CStr) -> bool {
 
 fn cstring(path: &Path) -> Result<CString> {
     use std::os::unix::ffi::OsStrExt;
-    CString::new(path.as_os_str().as_bytes()).map_err(|_| Error::Vips("path contains a NUL byte".into()))
+    CString::new(path.as_os_str().as_bytes())
+        .map_err(|_| Error::Vips("path contains a NUL byte".into()))
 }
 
 /// libvips' error buffer is process-wide; `vips_error_buffer_copy` takes and clears it under
@@ -354,7 +478,10 @@ fn take_error() -> String {
         if copy.is_null() {
             return String::new();
         }
-        let message = CStr::from_ptr(copy).to_string_lossy().trim_end().to_string();
+        let message = CStr::from_ptr(copy)
+            .to_string_lossy()
+            .trim_end()
+            .to_string();
         g_free(copy.cast());
         message
     }

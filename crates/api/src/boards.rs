@@ -4,17 +4,22 @@ use campfire_api_types as api;
 use campfire_app::app::{AppCtx, AppState};
 use campfire_db::models::channel_thread::{BOARD_POSTS_PER_PAGE, board_page_number};
 use campfire_db::{
-    BoardTag, BoardTagPolicy, ChannelThread, Connection, Message, NewChannelThread, NewMessage, Room, Tx, User,
+    BoardTag, BoardTagPolicy, ChannelThread, Connection, Message, NewChannelThread, NewMessage,
+    Room, Tx, User,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_messages::controllers::messages::{AttachmentPolicy, attachment_blob, require_current_posting_access};
-use campfire_runtime::presenters::attachments::{self, Assignment};
+use campfire_messages::controllers::messages::{
+    AttachmentPolicy, attachment_blob, require_current_posting_access,
+};
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::attachments::{self, Assignment};
 use rusqlite::OptionalExtension;
 
 use crate::agents::human;
 use crate::dto;
-use crate::endpoints::{before_actions, blob_exists, body, grouped_signed_ids, now, require_grouped_uploads, set_room};
+use crate::endpoints::{
+    before_actions, blob_exists, body, grouped_signed_ids, now, require_grouped_uploads, set_room,
+};
 use crate::error::{fail, not_found, record_invalid, validation};
 
 endpoint!(
@@ -40,16 +45,27 @@ fn tag_catalog(conn: &Connection, room_id: i64) -> campfire_db::Result<api::Boar
     let policy = BoardTagPolicy::for_room(conn, room_id)?;
     Ok(api::BoardTagCatalog {
         room_id,
-        tags: BoardTag::for_room(conn, room_id)?.into_iter().map(|tag| api::BoardTag {
-            id: tag.id, name: tag.name, emoji: tag.emoji, position: tag.position,
-        }).collect(),
+        tags: BoardTag::for_room(conn, room_id)?
+            .into_iter()
+            .map(|tag| api::BoardTag {
+                id: tag.id,
+                name: tag.name,
+                emoji: tag.emoji,
+                position: tag.position,
+            })
+            .collect(),
         tags_required: policy.tags_required,
         default_board_tag_id: policy.default_board_tag_id,
     })
 }
 
 async fn render_catalog(c: &mut Ctx, room_id: i64, status: StatusCode) -> Result {
-    let catalog = c.app().db.read(move |conn| tag_catalog(conn, room_id)).await.map_err(db_error)?;
+    let catalog = c
+        .app()
+        .db
+        .read(move |conn| tag_catalog(conn, room_id))
+        .await
+        .map_err(db_error)?;
     c.json(status, &catalog)
 }
 
@@ -61,7 +77,12 @@ async fn list_catalog(c: &mut Ctx) -> Result {
 async fn edit_scope(c: &mut Ctx) -> Result<(Room, User)> {
     let (room, viewer) = scope(c).await?;
     if !viewer.can_administer(Some(room.creator_id), false) {
-        return Err(fail(c, api::ApiError::Forbidden { message: "Not allowed".into() }));
+        return Err(fail(
+            c,
+            api::ApiError::Forbidden {
+                message: "Not allowed".into(),
+            },
+        ));
     }
     Ok((room, viewer))
 }
@@ -74,21 +95,32 @@ async fn write_catalog(
     write: impl FnOnce(&mut Tx<'_>) -> campfire_db::Result<()> + Send + 'static,
 ) -> Result {
     let (room_id, viewer_id) = (room.id, viewer.id);
-    let result = c.app().db.write(move |tx| {
-        // Recheck authority after waiting for the writer, like the post creation path.
-        let room = Room::find_for_user(tx.conn(), viewer_id, room_id)?.filter(Room::board);
-        let viewer = User::find_by_id(tx.conn(), viewer_id)?.filter(|user| user.is_active() && !user.is_bot());
-        let (Some(room), Some(viewer)) = (room, viewer) else { return Ok(Err(not_found())); };
-        if !viewer.can_administer(Some(room.creator_id), false) {
-            return Ok(Err(api::ApiError::Forbidden { message: "Not allowed".into() }));
-        }
-        write(tx)?;
-        Ok(Ok(()))
-    }).await;
+    let result = c
+        .app()
+        .db
+        .write(move |tx| {
+            // Recheck authority after waiting for the writer, like the post creation path.
+            let room = Room::find_for_user(tx.conn(), viewer_id, room_id)?.filter(Room::board);
+            let viewer = User::find_by_id(tx.conn(), viewer_id)?
+                .filter(|user| user.is_active() && !user.is_bot());
+            let (Some(room), Some(viewer)) = (room, viewer) else {
+                return Ok(Err(not_found()));
+            };
+            if !viewer.can_administer(Some(room.creator_id), false) {
+                return Ok(Err(api::ApiError::Forbidden {
+                    message: "Not allowed".into(),
+                }));
+            }
+            write(tx)?;
+            Ok(Ok(()))
+        })
+        .await;
     match result {
         Ok(Ok(())) => (),
         Ok(Err(error)) => return Err(fail(c, error)),
-        Err(campfire_db::Error::RecordInvalid(errors)) => return Err(fail(c, record_invalid(&errors, &[]))),
+        Err(campfire_db::Error::RecordInvalid(errors)) => {
+            return Err(fail(c, record_invalid(&errors, &[])));
+        }
         Err(error) => return Err(db_error(error)),
     }
     c.app().broadcasts.board_automations_changed(room_id);
@@ -101,31 +133,45 @@ async fn post_tag(c: &mut Ctx) -> Result {
     let room_id = room.id;
     write_catalog(c, room, viewer, StatusCode::CREATED, move |tx| {
         BoardTag::create(tx, room_id, &input.name, input.emoji.as_deref()).map(|_| ())
-    }).await
+    })
+    .await
 }
 
 async fn patch_tag(c: &mut Ctx) -> Result {
     let (room, viewer) = edit_scope(c).await?;
     let input: api::SaveBoardTag = body(c).await?;
-    let id = c.param_str("id").and_then(campfire_runtime::concerns::cast_integer).ok_or(campfire_kit::Error::NotFound)?;
+    let id = c
+        .param_str("id")
+        .and_then(campfire_runtime::concerns::cast_integer)
+        .ok_or(campfire_kit::Error::NotFound)?;
     let room_id = room.id;
     write_catalog(c, room, viewer, StatusCode::OK, move |tx| {
         BoardTag::update(tx, room_id, id, &input.name, input.emoji.as_deref()).map(|_| ())
-    }).await
+    })
+    .await
 }
 
 async fn delete_tag(c: &mut Ctx) -> Result {
     let (room, viewer) = edit_scope(c).await?;
-    let id = c.param_str("id").and_then(campfire_runtime::concerns::cast_integer).ok_or(campfire_kit::Error::NotFound)?;
+    let id = c
+        .param_str("id")
+        .and_then(campfire_runtime::concerns::cast_integer)
+        .ok_or(campfire_kit::Error::NotFound)?;
     let room_id = room.id;
-    write_catalog(c, room, viewer, StatusCode::OK, move |tx| BoardTag::destroy(tx, room_id, id)).await
+    write_catalog(c, room, viewer, StatusCode::OK, move |tx| {
+        BoardTag::destroy(tx, room_id, id)
+    })
+    .await
 }
 
 async fn put_tag_order(c: &mut Ctx) -> Result {
     let (room, viewer) = edit_scope(c).await?;
     let input: api::ReorderBoardTags = body(c).await?;
     let room_id = room.id;
-    write_catalog(c, room, viewer, StatusCode::OK, move |tx| BoardTag::reorder(tx, room_id, &input.tag_ids)).await
+    write_catalog(c, room, viewer, StatusCode::OK, move |tx| {
+        BoardTag::reorder(tx, room_id, &input.tag_ids)
+    })
+    .await
 }
 
 async fn patch_policy(c: &mut Ctx) -> Result {
@@ -133,8 +179,10 @@ async fn patch_policy(c: &mut Ctx) -> Result {
     let input: api::UpdateBoardTagPolicy = body(c).await?;
     let room_id = room.id;
     write_catalog(c, room, viewer, StatusCode::OK, move |tx| {
-        BoardTagPolicy::update(tx, room_id, input.tags_required, input.default_board_tag_id).map(|_| ())
-    }).await
+        BoardTagPolicy::update(tx, room_id, input.tags_required, input.default_board_tag_id)
+            .map(|_| ())
+    })
+    .await
 }
 
 async fn scope(c: &mut Ctx) -> Result<(Room, User)> {
@@ -323,8 +371,13 @@ async fn create_post(c: &mut Ctx) -> Result {
     let input: api::CreateBoardPost = body(c).await?;
     let (room_id, creator_id) = (room.id, viewer.id);
     let message = input.message.filter(|message| {
-        message.gif_slug.as_deref().is_some_and(|slug| !slug.trim().is_empty())
-            || !campfire_richtext::ruby::is_blank(campfire_richtext::ruby::strip(&message.markdown_source))
+        message
+            .gif_slug
+            .as_deref()
+            .is_some_and(|slug| !slug.trim().is_empty())
+            || !campfire_richtext::ruby::is_blank(campfire_richtext::ruby::strip(
+                &message.markdown_source,
+            ))
             || message
                 .attachment_signed_id
                 .as_ref()
@@ -397,7 +450,10 @@ async fn create_post(c: &mut Ctx) -> Result {
         return Err(fail(c, validation("name", "can't be blank")));
     }
     if input.name.chars().count() > 100 {
-        return Err(fail(c, validation("name", "is too long (maximum is 100 characters)")));
+        return Err(fail(
+            c,
+            validation("name", "is too long (maximum is 100 characters)"),
+        ));
     }
     // A new post has no messages yet, so its opener cannot reply on that conversation.
     if message
@@ -416,10 +472,29 @@ async fn create_post(c: &mut Ctx) -> Result {
         .as_ref()
         .and_then(|message| message.attachment_signed_id.clone())
         .filter(|id| !id.is_empty());
-    let signed_ids = grouped_signed_ids(c, signed_id.as_deref(), message.as_ref()
-        .and_then(|message| message.attachment_signed_ids.clone()).unwrap_or_default())?;
-    let gif_slug = crate::gifs::selection(c, message.as_ref().and_then(|message| message.gif_slug.as_deref()), signed_id.as_deref(), signed_ids.len())?;
-    let attachment_spoilers = crate::endpoints::file_spoilers(c, message.as_ref().and_then(|message| message.attachment_spoilers.clone()), signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
+    let signed_ids = grouped_signed_ids(
+        c,
+        signed_id.as_deref(),
+        message
+            .as_ref()
+            .and_then(|message| message.attachment_signed_ids.clone())
+            .unwrap_or_default(),
+    )?;
+    let gif_slug = crate::gifs::selection(
+        c,
+        message
+            .as_ref()
+            .and_then(|message| message.gif_slug.as_deref()),
+        signed_id.as_deref(),
+        signed_ids.len(),
+    )?;
+    let attachment_spoilers = crate::endpoints::file_spoilers(
+        c,
+        message
+            .as_ref()
+            .and_then(|message| message.attachment_spoilers.clone()),
+        signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()),
+    )?;
     require_grouped_uploads(c, &signed_ids).await?;
     if let Some(id) = &signed_id
         && !blob_exists(c, id).await?
@@ -433,7 +508,12 @@ async fn create_post(c: &mut Ctx) -> Result {
         Some(id) => Assignment::Signed(id).stage(c.app()).await?,
         None => Assignment::Unchanged,
     };
-    let mut files = attachments::stage_many(c.app(), signed_ids.into_iter().map(Assignment::Signed).collect(), campfire_runtime::concerns::require_current_user(c)?.id).await?;
+    let mut files = attachments::stage_many(
+        c.app(),
+        signed_ids.into_iter().map(Assignment::Signed).collect(),
+        campfire_runtime::concerns::require_current_user(c)?.id,
+    )
+    .await?;
     let message = if let Some(mut message) = message {
         message.drive_file_ids = Some(crate::drive::require_drive_file_ids(
             c,
@@ -444,7 +524,9 @@ async fn create_post(c: &mut Ctx) -> Result {
         None
     };
     if let Some(slug) = gif_slug {
-        files.push(Assignment::Create(crate::gifs::stage_gif(c, creator_id, &slug).await?));
+        files.push(Assignment::Create(
+            crate::gifs::stage_gif(c, creator_id, &slug).await?,
+        ));
     }
     let outcome = c
         .app()
@@ -465,10 +547,26 @@ async fn create_post(c: &mut Ctx) -> Result {
             {
                 return Ok((thread.id, false));
             }
-            let blob = attachment_blob(tx, attachment, AttachmentPolicy::OwnedUpload { uploader_id: creator_id }, "attachment_signed_id")?;
+            let blob = attachment_blob(
+                tx,
+                attachment,
+                AttachmentPolicy::OwnedUpload {
+                    uploader_id: creator_id,
+                },
+                "attachment_signed_id",
+            )?;
             let mut blobs = Vec::with_capacity(files.len() + 1);
             for file in files {
-                if let Some(blob) = attachment_blob(tx, file, AttachmentPolicy::OwnedUpload { uploader_id: creator_id }, "attachment_signed_ids")? { blobs.push(blob); }
+                if let Some(blob) = attachment_blob(
+                    tx,
+                    file,
+                    AttachmentPolicy::OwnedUpload {
+                        uploader_id: creator_id,
+                    },
+                    "attachment_signed_ids",
+                )? {
+                    blobs.push(blob);
+                }
             }
             let message = message.map(|message| NewMessage {
                 markdown_source: Some(message.markdown_source),
@@ -497,7 +595,9 @@ async fn create_post(c: &mut Ctx) -> Result {
             )?;
             if let Some(opener) = &opener {
                 blobs.extend(blob);
-                for blob in &blobs { attachments::enqueue_analysis(tx, blob); }
+                for blob in &blobs {
+                    attachments::enqueue_analysis(tx, blob);
+                }
                 campfire_db::models::message_attachment_processing::schedule_message(tx, opener)?;
             }
             Ok((thread.id, true))

@@ -89,7 +89,9 @@ async fn pr192_r3_fresh_video_retains_preview_and_variant_files() {
         .send(post(&app, source, "pr192-r3-fresh-video"))
         .await;
     assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
-    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
+    super::messages::attachment_processing_tests::perform_queued(&app, 1)
+        .await
+        .unwrap();
     let files = variant_files(&app, source).await;
     println!("PR192_R3_VIDEO status=201 variant_files={files:?}");
     assert_eq!(files.len(), 1);
@@ -130,24 +132,61 @@ async fn pr192_r3_fresh_video_retains_preview_and_variant_files() {
 async fn pr192_r3_reused_video_variant_keeps_the_same_usable_file() {
     let app = closed_thread().await;
     let source = fresh_source(&app, 9).await;
-    let reply = app.anonymous().send(post(&app, source, "pr192-video-first")).await;
+    let reply = app
+        .anonymous()
+        .send(post(&app, source, "pr192-video-first"))
+        .await;
     assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
-    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
+    super::messages::attachment_processing_tests::perform_queued(&app, 1)
+        .await
+        .unwrap();
     let first_files = variant_files(&app, source).await;
-    let snapshot = |storage: std::sync::Arc<campfire_storage::Storage>| move |conn: &campfire_db::Connection| {
-        let blob = Blob::find(conn, source).unwrap().unwrap();
-        let preview = storage.existing_preview_image(conn, &blob).unwrap().unwrap();
-        let webp = storage.existing_variant(conn, &preview, &Variation::format_only("webp")).unwrap().unwrap();
-        Ok([preview, webp].map(|b| (b.id, b.key.clone(), storage.service.download(&b.key).unwrap())))
+    let snapshot = |storage: std::sync::Arc<campfire_storage::Storage>| {
+        move |conn: &campfire_db::Connection| {
+            let blob = Blob::find(conn, source).unwrap().unwrap();
+            let preview = storage
+                .existing_preview_image(conn, &blob)
+                .unwrap()
+                .unwrap();
+            let webp = storage
+                .existing_variant(conn, &preview, &Variation::format_only("webp"))
+                .unwrap()
+                .unwrap();
+            Ok([preview, webp].map(|b| {
+                (
+                    b.id,
+                    b.key.clone(),
+                    storage.service.download(&b.key).unwrap(),
+                )
+            }))
+        }
     };
-    let first = app.db().read(snapshot(app.booted.app.storage.clone())).await.unwrap();
-    let reply = app.anonymous().send(post(&app, source, "pr192-video-second")).await;
+    let first = app
+        .db()
+        .read(snapshot(app.booted.app.storage.clone()))
+        .await
+        .unwrap();
+    let reply = app
+        .anonymous()
+        .send(post(&app, source, "pr192-video-second"))
+        .await;
     assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
-    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
+    super::messages::attachment_processing_tests::perform_queued(&app, 1)
+        .await
+        .unwrap();
     let files = variant_files(&app, source).await;
-    assert_eq!(files, first_files, "the second post must keep the existing variant record and file");
-    assert_eq!(app.db().read(snapshot(app.booted.app.storage.clone())).await.unwrap(), first,
-        "reposting must retain the original JPEG/WebP identities and bytes");
+    assert_eq!(
+        files, first_files,
+        "the second post must keep the existing variant record and file"
+    );
+    assert_eq!(
+        app.db()
+            .read(snapshot(app.booted.app.storage.clone()))
+            .await
+            .unwrap(),
+        first,
+        "reposting must retain the original JPEG/WebP identities and bytes"
+    );
     assert_eq!(
         files.len(),
         1,
@@ -206,16 +245,42 @@ async fn pr192_r3_video_insert_failure_preserves_committed_message_and_original(
         tx.conn().execute_batch("CREATE TRIGGER pr192_video_failure BEFORE INSERT ON active_storage_variant_records BEGIN SELECT RAISE(ABORT,'injected video variant failure'); END")?;
         Ok(())
     }).await.unwrap();
-    let reply = app.anonymous().send(post(&app, source, "pr192-video-failure")).await;
+    let reply = app
+        .anonymous()
+        .send(post(&app, source, "pr192-video-failure"))
+        .await;
     assert_eq!(reply.status.as_u16(), 201);
-    assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+    assert!(
+        super::messages::attachment_processing_tests::perform_queued(&app, 1)
+            .await
+            .is_err()
+    );
     assert!(variant_files(&app, source).await.is_empty());
-    app.db().read(move |c| {
-        assert!(campfire_db::Message::find_duplicate(c, 486777696, 394959859, "pr192-video-failure")?.is_some());
-        assert!(campfire_db::ChannelThread::find(c, THREAD)?.closed_at.is_none());
-        Ok(())
-    }).await.unwrap();
-    let blob = app.db().read(move |c| Ok(Blob::find(c, source).unwrap().unwrap())).await.unwrap();
+    app.db()
+        .read(move |c| {
+            assert!(
+                campfire_db::Message::find_duplicate(
+                    c,
+                    486777696,
+                    394959859,
+                    "pr192-video-failure"
+                )?
+                .is_some()
+            );
+            assert!(
+                campfire_db::ChannelThread::find(c, THREAD)?
+                    .closed_at
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let blob = app
+        .db()
+        .read(move |c| Ok(Blob::find(c, source).unwrap().unwrap()))
+        .await
+        .unwrap();
     assert!(app.booted.app.storage.service.exist(&blob.key));
 }
 #[tokio::test]

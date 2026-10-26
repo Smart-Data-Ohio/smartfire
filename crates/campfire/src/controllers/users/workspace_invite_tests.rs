@@ -40,7 +40,10 @@ async fn workspace_invite_enrollment_keeps_join_form_memberships_sessions_and_du
     let mut browser = app.anonymous();
     // The retained page and form go to the SPA's join page; the form creates nothing.
     let page = browser.get(&path).await;
-    assert_eq!((page.status, page.location()), (StatusCode::FOUND, Some(spa.as_str())));
+    assert_eq!(
+        (page.status, page.location()),
+        (StatusCode::FOUND, Some(spa.as_str()))
+    );
     let retained = browser
         .write(Req::new(Method::POST, &path).form(&[
             ("user[name]", "Invited"),
@@ -48,12 +51,20 @@ async fn workspace_invite_enrollment_keeps_join_form_memberships_sessions_and_du
             ("user[password]", "secret123456"),
         ]))
         .await;
-    assert_eq!((retained.status, retained.location()), (StatusCode::SEE_OTHER, Some(spa.as_str())));
+    assert_eq!(
+        (retained.status, retained.location()),
+        (StatusCode::SEE_OTHER, Some(spa.as_str()))
+    );
     assert_eq!(app.db().read(User::count).await.unwrap(), before);
-    let page = browser.send(Req::new(Method::GET, &format!("/api/v1{path}")).header("accept", "application/json")).await;
+    let page = browser
+        .send(Req::new(Method::GET, &format!("/api/v1{path}")).header("accept", "application/json"))
+        .await;
     assert_eq!(page.status, StatusCode::OK);
     assert_eq!(page.json()["kind"], "join");
-    assert_eq!(browser.get(&format!("/app{path}")).await.status, StatusCode::OK);
+    assert_eq!(
+        browser.get(&format!("/app{path}")).await.status,
+        StatusCode::OK
+    );
     assert_eq!(
         app.david().get(&path).await.location(),
         Some("http://campfire.test/")
@@ -83,7 +94,10 @@ async fn workspace_invite_enrollment_keeps_join_form_memberships_sessions_and_du
     let signup = browser
         .write(Req::new(Method::POST, &format!("/api/v1{path}")).json_body(&fields))
         .await;
-    assert_eq!(signup.json(), json!({"kind":"signedIn","location":"http://campfire.test/"}));
+    assert_eq!(
+        signup.json(),
+        json!({"kind":"signedIn","location":"http://campfire.test/"})
+    );
     let user = app
         .db()
         .read(|c| {
@@ -186,15 +200,30 @@ async fn workspace_invite_dead_and_unknown_gets_and_posts_render_clear_states() 
         let mut browser = app.anonymous();
         // The retained page and form go to the SPA's page, unchecked; it answers the state.
         let page = browser.get(&path).await;
-        assert_eq!((page.status, page.location()), (StatusCode::FOUND, Some(spa.as_str())), "{state}");
+        assert_eq!(
+            (page.status, page.location()),
+            (StatusCode::FOUND, Some(spa.as_str())),
+            "{state}"
+        );
         let post = browser
             .write(Req::new(Method::POST, &path).form(&[("user[name]", "Must not create")]))
             .await;
-        assert_eq!((post.status, post.location()), (StatusCode::SEE_OTHER, Some(spa.as_str())), "{state}");
-        assert_eq!(browser.get(&format!("/app{path}")).await.status, status, "{state}");
+        assert_eq!(
+            (post.status, post.location()),
+            (StatusCode::SEE_OTHER, Some(spa.as_str())),
+            "{state}"
+        );
+        assert_eq!(
+            browser.get(&format!("/app{path}")).await.status,
+            status,
+            "{state}"
+        );
         for reply in [
             browser
-                .send(Req::new(Method::GET, &format!("/api/v1{path}")).header("accept", "application/json"))
+                .send(
+                    Req::new(Method::GET, &format!("/api/v1{path}"))
+                        .header("accept", "application/json"),
+                )
                 .await,
             browser
                 .write(invite_json(&token, "Must not create", "dead@example.com"))

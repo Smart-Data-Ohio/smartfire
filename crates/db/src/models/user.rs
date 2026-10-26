@@ -2,9 +2,9 @@
 //! and Transferable are signed ids, which live in `rails_compat`).
 
 mod destruction;
-pub mod removal;
 pub mod icon;
 pub mod lifecycle;
+pub mod removal;
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
@@ -174,7 +174,11 @@ pub struct UserChanges {
 
 const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "icon_name", "name", "password_digest", "role", "status", "updated_at", "pronouns", "nickname") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
 
-fn profile_text(value: Option<String>, field: &'static str, limit: usize) -> Result<Option<String>> {
+fn profile_text(
+    value: Option<String>,
+    field: &'static str,
+    limit: usize,
+) -> Result<Option<String>> {
     let Some(value) = value else { return Ok(None) };
     let mut errors = crate::Errors::default();
     if value.chars().any(char::is_control) {
@@ -182,7 +186,10 @@ fn profile_text(value: Option<String>, field: &'static str, limit: usize) -> Res
     }
     let value = value.trim();
     if value.chars().count() > limit {
-        errors.add(field, format!("is too long (maximum is {limit} characters)"));
+        errors.add(
+            field,
+            format!("is too long (maximum is {limit} characters)"),
+        );
     }
     errors.into_result()?;
     Ok((!value.is_empty()).then(|| value.to_owned()))
@@ -368,7 +375,10 @@ impl User {
     }
 
     /// `User.active.find_by(email_address:)`: the lookup half of `authenticate_by`.
-    pub fn find_active_by_email_address(conn: &Connection, email_address: &str) -> Result<Option<Self>> {
+    pub fn find_active_by_email_address(
+        conn: &Connection,
+        email_address: &str,
+    ) -> Result<Option<Self>> {
         query_one(
             conn,
             r#"SELECT * FROM "users" WHERE "users"."status" = 0 AND "users"."email_address" = ? LIMIT 1"#,
@@ -406,7 +416,9 @@ impl User {
             return Ok(None);
         }
         // `find_by(id:)` casts "007" to 7; an id past the integer range finds nothing.
-        let Ok(id) = id.parse::<i64>() else { return Ok(None) };
+        let Ok(id) = id.parse::<i64>() else {
+            return Ok(None);
+        };
         let Some(bot) = query_one(
             conn,
             r#"SELECT * FROM "users" WHERE "users"."status" = 0 AND "users"."role" = 2 AND "users"."id" = ? LIMIT 1"#,
@@ -416,7 +428,9 @@ impl User {
         else {
             return Ok(None);
         };
-        if super::agent_access::is_personal_user(conn, bot.id)? { return Ok(None); }
+        if super::agent_access::is_personal_user(conn, bot.id)? {
+            return Ok(None);
+        }
         let Some(digest) = bot.bot_token_digest.as_deref().filter(|d| !is_blank(d)) else {
             return Ok(None);
         };
@@ -432,9 +446,16 @@ impl User {
 
     /// Slack's claimable human placeholders and deactivated historical authors.
     /// The status is assigned on creation, so deactivated authors never receive open rooms.
-    pub fn create_slack_placeholder(tx: &mut Tx<'_>, attributes: NewUser, active: bool,
-        time_zone: Option<&str>, link_allowed: bool) -> Result<Self> {
-        let zone = time_zone.filter(|name| active && crate::slash_commands::time_parser::known_zone(name).is_some());
+    pub fn create_slack_placeholder(
+        tx: &mut Tx<'_>,
+        attributes: NewUser,
+        active: bool,
+        time_zone: Option<&str>,
+        link_allowed: bool,
+    ) -> Result<Self> {
+        let zone = time_zone.filter(|name| {
+            active && crate::slash_commands::time_parser::known_zone(name).is_some()
+        });
         let user = Self::create_with_open_room_grant(tx, attributes, active)?;
         tx.conn().execute_cached(
             "UPDATE users SET status = ?, time_zone = ?, google_email_link_allowed = ? WHERE id = ?",
@@ -450,19 +471,35 @@ impl User {
     /// `User.create_bot!(name:, skip_open_room_grant: true)` for integration bots.
     pub fn create_integration_bot(tx: &mut Tx<'_>, name: &str) -> Result<Self> {
         let token = generate_bot_token();
-        Self::create_with_open_room_grant(tx, NewUser {
-            name: name.into(), role: Role::Bot,
-            bot_token_digest: Some(digest_bot_token(&token)), ..Default::default()
-        }, false)
+        Self::create_with_open_room_grant(
+            tx,
+            NewUser {
+                name: name.into(),
+                role: Role::Bot,
+                bot_token_digest: Some(digest_bot_token(&token)),
+                ..Default::default()
+            },
+            false,
+        )
     }
 
     pub(crate) fn create_webhook_author(tx: &mut Tx<'_>, name: &str) -> Result<Self> {
-        Self::create_with_open_room_grant(tx, NewUser {
-            name: name.into(), role: Role::WebhookAuthor, ..Default::default()
-        }, false)
+        Self::create_with_open_room_grant(
+            tx,
+            NewUser {
+                name: name.into(),
+                role: Role::WebhookAuthor,
+                ..Default::default()
+            },
+            false,
+        )
     }
 
-    pub(crate) fn create_with_open_room_grant(tx: &mut Tx<'_>, mut attributes: NewUser, grant: bool) -> Result<Self> {
+    pub(crate) fn create_with_open_room_grant(
+        tx: &mut Tx<'_>,
+        mut attributes: NewUser,
+        grant: bool,
+    ) -> Result<Self> {
         attributes.pronouns = profile_text(attributes.pronouns, "pronouns", 40)?;
         attributes.nickname = profile_text(attributes.nickname, "nickname", 32)?;
         attributes.icon_name = icon::normalize_name(attributes.icon_name.as_deref());
@@ -480,25 +517,42 @@ impl User {
                 attributes.name,
                 password_digest,
                 attributes.role,
-                if attributes.role == Role::WebhookAuthor { Status::Deactivated } else { Status::Active },
+                if attributes.role == Role::WebhookAuthor {
+                    Status::Deactivated
+                } else {
+                    Status::Active
+                },
                 now,
                 attributes.pronouns,
                 attributes.nickname
             ],
             |r| r.get(0),
         )?;
-        if grant && attributes.role != Role::WebhookAuthor { tx.after_commit(move |tx| grant_membership_to_open_rooms(tx, id)); }
+        if grant && attributes.role != Role::WebhookAuthor {
+            tx.after_commit(move |tx| grant_membership_to_open_rooms(tx, id));
+        }
         Self::find(tx.conn(), id)
     }
 
     /// `User.create_bot!`: stores the token's digest alone; the returned bot knows its key
     /// (`plain_bot_token`) until it's dropped.
     pub fn create_bot(tx: &mut Tx<'_>, name: &str, webhook_url: Option<&str>) -> Result<Self> {
-        Self::create_bot_with_attributes(tx, NewUser { name: name.into(), ..Default::default() }, webhook_url)
+        Self::create_bot_with_attributes(
+            tx,
+            NewUser {
+                name: name.into(),
+                ..Default::default()
+            },
+            webhook_url,
+        )
     }
 
     /// Bot creation with the same normalized/validated fields as ordinary User creation.
-    pub fn create_bot_with_attributes(tx: &mut Tx<'_>, mut attributes: NewUser, webhook_url: Option<&str>) -> Result<Self> {
+    pub fn create_bot_with_attributes(
+        tx: &mut Tx<'_>,
+        mut attributes: NewUser,
+        webhook_url: Option<&str>,
+    ) -> Result<Self> {
         let token = generate_bot_token();
         attributes.role = Role::Bot;
         attributes.bot_token_digest = Some(digest_bot_token(&token));
@@ -514,19 +568,37 @@ impl User {
 
     /// `Users::TimeZonesController`: auto-detection only fills an unset, non-explicit choice.
     /// Use the same User validations as the other settings writes, including persisted fields.
-    pub fn detect_browser_time_zone(tx: &Tx<'_>, user_id: i64, zone: &str) -> Result<Option<String>> {
+    pub fn detect_browser_time_zone(
+        tx: &Tx<'_>,
+        user_id: i64,
+        zone: &str,
+    ) -> Result<Option<String>> {
         let (saved, explicit): (Option<String>, bool) = tx.conn().query_row(
-            "SELECT time_zone,time_zone_explicit FROM users WHERE id=?", [user_id], |row| Ok((row.get(0)?,row.get(1)?)),
+            "SELECT time_zone,time_zone_explicit FROM users WHERE id=?",
+            [user_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )?;
         if crate::slash_commands::time_parser::known_zone(zone).is_some()
-            && !explicit && saved.as_deref().is_none_or(|zone| zone.chars().all(char::is_whitespace)) {
-            crate::slash_commands::user_settings::update(tx, user_id, serde_json::json!({"time_zone":zone}))?;
+            && !explicit
+            && saved
+                .as_deref()
+                .is_none_or(|zone| zone.chars().all(char::is_whitespace))
+        {
+            crate::slash_commands::user_settings::update(
+                tx,
+                user_id,
+                serde_json::json!({"time_zone":zone}),
+            )?;
         }
         Self::saved_time_zone(tx.conn(), user_id)
     }
 
     pub fn saved_time_zone(conn: &Connection, user_id: i64) -> Result<Option<String>> {
-        Ok(conn.query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| row.get(0))?)
+        Ok(
+            conn.query_row("SELECT time_zone FROM users WHERE id=?", [user_id], |row| {
+                row.get(0)
+            })?,
+        )
     }
 
     /// `Current.user.touch(:tour_completed_at)`: refresh both stamps, skipping validations.
@@ -543,8 +615,14 @@ impl User {
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
-        let pronouns = changes.pronouns.map(|value| profile_text(value, "pronouns", 40)).transpose()?;
-        let nickname = changes.nickname.map(|value| profile_text(value, "nickname", 32)).transpose()?;
+        let pronouns = changes
+            .pronouns
+            .map(|value| profile_text(value, "pronouns", 40))
+            .transpose()?;
+        let nickname = changes
+            .nickname
+            .map(|value| profile_text(value, "nickname", 32))
+            .transpose()?;
         let plain_bot_token = self.plain_bot_token.clone();
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
@@ -553,14 +631,20 @@ impl User {
             return Err(crate::Error::RecordNotFound("User"));
         }
         // `User::StatusSettings`: blank Not set normalizes to nil; unknown zones fail save.
-        let zone = changes.time_zone
+        let zone = changes
+            .time_zone
             .map(|zone| zone.filter(|value| !campfire_richtext::ruby::is_blank(value)));
-        let current_zone: Option<String> = tx.conn().query_row(
-            "SELECT time_zone FROM users WHERE id=?", [self.id], |r| r.get(0),
-        )?;
+        let current_zone: Option<String> =
+            tx.conn()
+                .query_row("SELECT time_zone FROM users WHERE id=?", [self.id], |r| {
+                    r.get(0)
+                })?;
         // Rails validates the effective zone on every save, including an unchanged
         // persisted value; no other field or security marker may bypass that validation.
-        if zone.as_ref().unwrap_or(&current_zone).as_deref()
+        if zone
+            .as_ref()
+            .unwrap_or(&current_zone)
+            .as_deref()
             .filter(|name| !campfire_richtext::ruby::is_blank(name))
             .is_some_and(|name| crate::slash_commands::time_parser::known_zone(name).is_none())
         {
@@ -568,8 +652,12 @@ impl User {
             errors.add("time_zone", "is not a valid time zone");
             return Err(crate::Error::RecordInvalid(errors));
         }
-        let icon = changes.icon_name.map(|name| icon::normalize_name(name.as_deref()));
-        if let Some(name) = &icon && *name != self.icon_name {
+        let icon = changes
+            .icon_name
+            .map(|name| icon::normalize_name(name.as_deref()));
+        if let Some(name) = &icon
+            && *name != self.icon_name
+        {
             icon::validate(tx.conn(), name.as_deref())?.into_result()?;
         }
         let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql>)> = Vec::new();
@@ -601,7 +689,11 @@ impl User {
         }
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
             if status != Status::Active {
-                crate::models::huddle_grant::HuddleGrant::revoke_for_user(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+                crate::models::huddle_grant::HuddleGrant::revoke_for_user(
+                    tx,
+                    self.id,
+                    &crate::models::room_delete::HuddleConfig::from_env(),
+                )?;
                 crate::models::AgentGrant::revoke_for_user(tx, self.id)?;
             }
             self.status = status;
@@ -682,7 +774,13 @@ impl User {
     }
 
     pub fn set_icon_name(&mut self, tx: &mut Tx<'_>, name: Option<&str>) -> Result<()> {
-        self.update(tx, UserChanges { icon_name: Some(name.map(str::to_owned)), ..Default::default() })
+        self.update(
+            tx,
+            UserChanges {
+                icon_name: Some(name.map(str::to_owned)),
+                ..Default::default()
+            },
+        )
     }
 
     /// `update_bot!`: the webhook first, then the user, in one transaction.
@@ -693,9 +791,11 @@ impl User {
         webhook_url: Option<&str>,
     ) -> Result<()> {
         Self::find(tx.conn(), self.id)?.ensure_account_user()?;
-        if webhook_url.is_some_and(|url| !url.trim().is_empty()) && super::agent_access::is_personal_user(tx.conn(), self.id)? {
+        if webhook_url.is_some_and(|url| !url.trim().is_empty())
+            && super::agent_access::is_personal_user(tx.conn(), self.id)?
+        {
             let mut errors = crate::Errors::default();
-            errors.add("webhook_url","is not available to personal agents");
+            errors.add("webhook_url", "is not available to personal agents");
             errors.into_result()?;
         }
         let webhook = Webhook::find_by_user(tx.conn(), self.id)?;
@@ -717,7 +817,7 @@ impl User {
         Self::find(tx.conn(), self.id)?.ensure_account_user()?;
         if super::agent_access::is_personal_user(tx.conn(), self.id)? {
             let mut errors = crate::Errors::default();
-            errors.add("bot_key","is not available to personal agents");
+            errors.add("bot_key", "is not available to personal agents");
             errors.into_result()?;
         }
         let token = generate_bot_token();
@@ -739,7 +839,11 @@ impl User {
     pub fn deactivate(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.deactivate_with_audit(tx, &super::audit_log::Context::default())
     }
-    pub fn deactivate_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
+    pub fn deactivate_with_audit(
+        &mut self,
+        tx: &mut Tx<'_>,
+        audit: &super::audit_log::Context,
+    ) -> Result<()> {
         self.close_remote_connections(tx, false);
         // An agent's approvals leave their owners' and admins' inboxes with its user.
         let approvals = crate::sql::query_all(
@@ -749,15 +853,20 @@ impl User {
             |row| row.get::<_, i64>(0),
         )?;
         crate::ActivityItem::emit_hidden_for_sources(tx, "AgentApproval", &approvals)?;
-        let hosted_stages = super::stage::hosted_room_ids(tx,self.id)?;
-        super::stream::Stream::end_for_user(tx,self.id)?;
+        let hosted_stages = super::stage::hosted_room_ids(tx, self.id)?;
+        super::stream::Stream::end_for_user(tx, self.id)?;
         let conn = tx.conn();
         conn.execute_cached(
             r#"DELETE FROM "memberships" WHERE ("memberships"."id") IN (SELECT "memberships"."id" FROM "memberships" INNER JOIN "rooms" AS "room" ON "room"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? AND "room"."type" != ?)"#,
             params![self.id, "Rooms::Direct"],
         )?;
         for room_id in hosted_stages {
-            super::stage::host_departed(tx,room_id,self.id,&super::room_delete::HuddleConfig::from_env())?;
+            super::stage::host_departed(
+                tx,
+                room_id,
+                self.id,
+                &super::room_delete::HuddleConfig::from_env(),
+            )?;
         }
         let conn = tx.conn();
         conn.execute_cached(
@@ -780,7 +889,10 @@ impl User {
         lifecycle::deactivate(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
         // app/models/user.rb: manual OOO cannot survive account deactivation.
-        conn.execute_cached("UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?", [self.id])?;
+        conn.execute_cached(
+            "UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?",
+            [self.id],
+        )?;
         self.update(
             tx,
             UserChanges {
@@ -802,7 +914,11 @@ impl User {
     pub fn ban(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.ban_with_audit(tx, &super::audit_log::Context::default())
     }
-    pub fn ban_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
+    pub fn ban_with_audit(
+        &mut self,
+        tx: &mut Tx<'_>,
+        audit: &super::audit_log::Context,
+    ) -> Result<()> {
         // create_bans_from_sessions: `sessions.pluck(:ip_address).compact_blank.uniq`
         let ips: Vec<Option<String>> = query_all(
             tx.conn(),
@@ -908,7 +1024,10 @@ impl User {
     /// letter or digit as a word character, so "Émile" contributes nothing.
     pub fn initials(&self) -> String {
         static WORD: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-            regex::Regex::new(r"\A[\p{Alphabetic}\p{Mark}\p{Number}\p{Connector_Punctuation}\p{Join_Control}]\z").unwrap()
+            regex::Regex::new(
+                r"\A[\p{Alphabetic}\p{Mark}\p{Number}\p{Connector_Punctuation}\p{Join_Control}]\z",
+            )
+            .unwrap()
         });
         let mut initials = String::new();
         let mut previous_word = false;
@@ -963,9 +1082,8 @@ impl User {
     /// value is still saved verbatim; only the security check uses this comparison.
     pub fn email_change_requested(&self, submitted: &str) -> bool {
         use campfire_richtext::ruby::strip;
-        rails_compat::unicode::fold(strip(submitted)) != rails_compat::unicode::fold(
-            strip(self.email_address.as_deref().unwrap_or("")),
-        )
+        rails_compat::unicode::fold(strip(submitted))
+            != rails_compat::unicode::fold(strip(self.email_address.as_deref().unwrap_or("")))
     }
 
     /// Google-provisioned accounts have no existing password to confirm.
@@ -1080,7 +1198,9 @@ const DUMMY_DIGEST: &str = "$2a$12$FiKmSp4UhLvSB4Sd/ZUjQunyKP6.NjDRHdr5LnKUVk.BU
 
 /// `after_create_commit :grant_membership_to_open_rooms`: `Rooms::Open.alive` (`app/models/user.rb`).
 fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
-    if super::agent_access::is_personal_user(tx.conn(), user_id)? { return Ok(()); }
+    if super::agent_access::is_personal_user(tx.conn(), user_id)? {
+        return Ok(());
+    }
     let sqlite_now = tx.env().sqlite_now_sql();
     let room_ids: Vec<i64> = query_all(
         tx.conn(),
@@ -1097,7 +1217,10 @@ fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
             r#"INSERT INTO "memberships" ("created_at","room_id","updated_at","user_id") VALUES {} ON CONFLICT  DO NOTHING RETURNING "id""#,
             rows.join(", ")
         );
-        let values: Vec<i64> = room_ids.iter().flat_map(|room_id| [*room_id, user_id]).collect();
+        let values: Vec<i64> = room_ids
+            .iter()
+            .flat_map(|room_id| [*room_id, user_id])
+            .collect();
         let mut stmt = tx.conn().prepare(&sql)?;
         let mut rows = stmt.query(rusqlite::params_from_iter(values))?;
         while rows.next()?.is_some() {}

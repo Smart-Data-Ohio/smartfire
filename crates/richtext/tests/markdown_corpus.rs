@@ -13,17 +13,34 @@ struct Oracle {
 }
 impl AttachableResolver for Oracle {
     fn preloaded_user_for_sgid(&self, sgid: &str) -> Option<MentionUser> {
-        self.preloaded.get(sgid).and_then(|id| self.users.iter().find(|u| u.id == *id)).cloned()
+        self.preloaded
+            .get(sgid)
+            .and_then(|id| self.users.iter().find(|u| u.id == *id))
+            .cloned()
     }
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
-        self.users.iter().find(|u| u.attachable_sgid == sgid).cloned().map_or(SignedLookup::Invalid, SignedLookup::User)
+        self.users
+            .iter()
+            .find(|u| u.attachable_sgid == sgid)
+            .cloned()
+            .map_or(SignedLookup::Invalid, SignedLookup::User)
     }
     fn embed_image_path(&self, url: &str) -> Result<String, campfire_richtext::Error> {
         Ok(self.images.get(url).unwrap().clone())
     }
     fn find_gid(&self, gid: &str) -> GidLookup {
-        let id = gid.split('?').next().unwrap().rsplit('/').next().and_then(|s| s.parse::<i64>().ok());
-        self.users.iter().find(|u| Some(u.id) == id && gid.contains("/User/")).cloned().map_or(GidLookup::NotFound, GidLookup::User)
+        let id = gid
+            .split('?')
+            .next()
+            .unwrap()
+            .rsplit('/')
+            .next()
+            .and_then(|s| s.parse::<i64>().ok());
+        self.users
+            .iter()
+            .find(|u| Some(u.id) == id && gid.contains("/User/"))
+            .cloned()
+            .map_or(GidLookup::NotFound, GidLookup::User)
     }
 }
 fn fixtures() -> (Value, Oracle, IconCatalog, Vec<RoomMember>) {
@@ -42,7 +59,10 @@ fn fixtures() -> (Value, Oracle, IconCatalog, Vec<RoomMember>) {
         .iter()
         .zip(json["users"].as_array().unwrap())
         .filter(|(_, u)| u["member"] == true)
-        .map(|(user, u)| RoomMember { user: user.clone(), active: u["active"] == true })
+        .map(|(user, u)| RoomMember {
+            user: user.clone(),
+            active: u["active"] == true,
+        })
         .collect();
     let images = serde_json::from_value(json["embed_images"].clone()).unwrap();
     let preloaded = serde_json::from_value(json["preloaded_sgids"].clone()).unwrap();
@@ -51,12 +71,35 @@ fn fixtures() -> (Value, Oracle, IconCatalog, Vec<RoomMember>) {
         let name = record["name"].as_str().unwrap().into();
         let title = record["title"].as_str().unwrap().into();
         if record["kind"] == "brand" {
-            icons.brands.insert(alias.clone(), Icon::Brand { name, title, url: record["url"].as_str().map(str::to_owned) });
+            icons.brands.insert(
+                alias.clone(),
+                Icon::Brand {
+                    name,
+                    title,
+                    url: record["url"].as_str().map(str::to_owned),
+                },
+            );
         } else {
-            icons.custom.insert(alias.clone(), Icon::Custom { name, title, url: record["url"].as_str().unwrap().into() });
+            icons.custom.insert(
+                alias.clone(),
+                Icon::Custom {
+                    name,
+                    title,
+                    url: record["url"].as_str().unwrap().into(),
+                },
+            );
         }
     }
-    (json, Oracle { users, images, preloaded }, icons, members)
+    (
+        json,
+        Oracle {
+            users,
+            images,
+            preloaded,
+        },
+        icons,
+        members,
+    )
 }
 #[test]
 fn ruby_differential_corpus_is_byte_identical() {
@@ -67,7 +110,10 @@ fn ruby_differential_corpus_is_byte_identical() {
             reference["mention_partial"].as_str().unwrap()
         );
     }
-    let ctx = RenderContext { resolver: &oracle, request_host: Some("once.campfire.test".into()) };
+    let ctx = RenderContext {
+        resolver: &oracle,
+        request_host: Some("once.campfire.test".into()),
+    };
     let mentions = members.as_slice();
     let mut failures = Vec::new();
     let cases = json["cases"].as_array().unwrap();
@@ -92,7 +138,10 @@ fn ruby_differential_corpus_is_byte_identical() {
             }
         };
         if c["mode"] == "sanitize" {
-            compare("output", markdown::sanitize_presentation(c["body"].as_str().unwrap(), &icons, host));
+            compare(
+                "output",
+                markdown::sanitize_presentation(c["body"].as_str().unwrap(), &icons, host),
+            );
         } else {
             let markdown = c["mode"] == "markdown";
             let body = if markdown {
@@ -102,25 +151,55 @@ fn ruby_differential_corpus_is_byte_identical() {
             } else {
                 c["body"].as_str().unwrap().into()
             };
-            compare("presentation", campfire_richtext::text_message_presentation(&body, markdown, false, &ctx, &icons, host));
+            compare(
+                "presentation",
+                campfire_richtext::text_message_presentation(
+                    &body, markdown, false, &ctx, &icons, host,
+                ),
+            );
             if markdown {
-                compare("forwarded_presentation", campfire_richtext::text_message_presentation(&body, false, true, &ctx, &icons, host));
+                compare(
+                    "forwarded_presentation",
+                    campfire_richtext::text_message_presentation(
+                        &body, false, true, &ctx, &icons, host,
+                    ),
+                );
             }
             let loaded = campfire_richtext::Content::load(&body, &ctx).unwrap();
             compare("editable", legacy_markdown::render(&loaded.to_html(), &ctx));
             compare(
                 "plain_text",
-                if markdown { markdown::plain_text(&body, &ctx, &icons) } else { campfire_richtext::to_plain_text(&body, &ctx) },
+                if markdown {
+                    markdown::plain_text(&body, &ctx, &icons)
+                } else {
+                    campfire_richtext::to_plain_text(&body, &ctx)
+                },
             );
             if let Some(ids) = c["mentioned"].as_array() {
-                let expected = ids.iter().map(|id| id.as_i64().unwrap()).collect::<Vec<_>>();
-                let actual = campfire_richtext::mentioned_users(&body, &ctx).unwrap().iter().map(|u| u.id).collect::<Vec<_>>();
+                let expected = ids
+                    .iter()
+                    .map(|id| id.as_i64().unwrap())
+                    .collect::<Vec<_>>();
+                let actual = campfire_richtext::mentioned_users(&body, &ctx)
+                    .unwrap()
+                    .iter()
+                    .map(|u| u.id)
+                    .collect::<Vec<_>>();
                 if actual != expected {
                     failures.push(format!("{name} mentioned: {actual:?} != {expected:?}"));
                 }
             }
         }
     }
-    println!("Ruby differential corpus: {} cases, {} diffs (no normalization or allowlist)", cases.len(), failures.len());
-    assert!(failures.is_empty(), "{} diffs; first failures: {:?}", failures.len(), &failures[..failures.len().min(30)]);
+    println!(
+        "Ruby differential corpus: {} cases, {} diffs (no normalization or allowlist)",
+        cases.len(),
+        failures.len()
+    );
+    assert!(
+        failures.is_empty(),
+        "{} diffs; first failures: {:?}",
+        failures.len(),
+        &failures[..failures.len().min(30)]
+    );
 }

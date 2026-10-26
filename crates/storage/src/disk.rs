@@ -41,7 +41,10 @@ pub struct DiskToken {
 impl DiskService {
     /// Campfire's `local` service: `root: Rails.root.join("storage", "files")` (config/storage.yml).
     pub fn new(root: impl Into<PathBuf>, name: impl Into<String>) -> Self {
-        Self { root: root.into(), name: name.into() }
+        Self {
+            root: root.into(),
+            name: name.into(),
+        }
     }
 
     pub fn name(&self) -> &str {
@@ -105,11 +108,17 @@ impl DiskService {
         let pattern = self.path_for(prefix);
         let pattern = pattern.to_string_lossy();
         let (dir, stem) = pattern.rsplit_once('/').unwrap_or((".", &pattern));
-        let Ok(entries) = fs::read_dir(dir) else { return Ok(()) };
+        let Ok(entries) = fs::read_dir(dir) else {
+            return Ok(());
+        };
         for entry in entries.flatten() {
             if entry.file_name().to_string_lossy().starts_with(stem) {
                 let path = entry.path();
-                if path.is_dir() { fs::remove_dir_all(path)? } else { fs::remove_file(path)? }
+                if path.is_dir() {
+                    fs::remove_dir_all(path)?
+                } else {
+                    fs::remove_file(path)?
+                }
             }
         }
         Ok(())
@@ -133,12 +142,22 @@ impl DiskService {
         let sanitized = filename.sanitized();
         let payload = Json::Object(vec![
             ("key".into(), key.into()),
-            ("disposition".into(), content_disposition_with(disposition, &sanitized).into()),
-            ("content_type".into(), content_type.map_or(Json::Null, Json::from)),
+            (
+                "disposition".into(),
+                content_disposition_with(disposition, &sanitized).into(),
+            ),
+            (
+                "content_type".into(),
+                content_type.map_or(Json::Null, Json::from),
+            ),
             ("service_name".into(), self.name.as_str().into()),
         ]);
         let encoded_key = verifier.generate(&payload.encode(), "blob_key", expires_at);
-        format!("/rails/active_storage/disk/{}/{}", escape_segment(&encoded_key), escape_path(&sanitized))
+        format!(
+            "/rails/active_storage/disk/{}/{}",
+            escape_segment(&encoded_key),
+            escape_path(&sanitized)
+        )
     }
 
     /// The path of `url_for_direct_upload`.
@@ -153,7 +172,10 @@ impl DiskService {
     ) -> String {
         let payload = Json::Object(vec![
             ("key".into(), key.into()),
-            ("content_type".into(), content_type.map_or(Json::Null, Json::from)),
+            (
+                "content_type".into(),
+                content_type.map_or(Json::Null, Json::from),
+            ),
             ("content_length".into(), content_length.into()),
             ("checksum".into(), checksum.into()),
             ("service_name".into(), self.name.as_str().into()),
@@ -172,22 +194,36 @@ impl DiskService {
 }
 
 /// `DiskController#decode_verified_key`.
-pub fn decode_verified_key(verifier: &dyn Verifier, encoded_key: &str, now: jiff::Timestamp) -> Option<DiskKey> {
+pub fn decode_verified_key(
+    verifier: &dyn Verifier,
+    encoded_key: &str,
+    now: jiff::Timestamp,
+) -> Option<DiskKey> {
     let data = Json::parse(&verifier.verified(encoded_key, "blob_key", now)?).ok()?;
     Some(DiskKey {
         key: data.get("key")?.as_str()?.to_string(),
         disposition: data.get("disposition")?.as_str()?.to_string(),
-        content_type: data.get("content_type").and_then(Json::as_str).map(str::to_string),
+        content_type: data
+            .get("content_type")
+            .and_then(Json::as_str)
+            .map(str::to_string),
         service_name: data.get("service_name")?.as_str()?.to_string(),
     })
 }
 
 /// `DiskController#decode_verified_token`.
-pub fn decode_verified_token(verifier: &dyn Verifier, encoded_token: &str, now: jiff::Timestamp) -> Option<DiskToken> {
+pub fn decode_verified_token(
+    verifier: &dyn Verifier,
+    encoded_token: &str,
+    now: jiff::Timestamp,
+) -> Option<DiskToken> {
     let data = Json::parse(&verifier.verified(encoded_token, "blob_token", now)?).ok()?;
     Some(DiskToken {
         key: data.get("key")?.as_str()?.to_string(),
-        content_type: data.get("content_type").and_then(Json::as_str).map(str::to_string),
+        content_type: data
+            .get("content_type")
+            .and_then(Json::as_str)
+            .map(str::to_string),
         content_length: data.get("content_length")?.as_i64()?,
         checksum: data.get("checksum")?.as_str()?.to_string(),
         service_name: data.get("service_name")?.as_str()?.to_string(),
@@ -202,5 +238,9 @@ fn folder_for(key: &str) -> String {
 }
 
 fn not_found(e: io::Error) -> Error {
-    if e.kind() == io::ErrorKind::NotFound { Error::FileNotFound } else { e.into() }
+    if e.kind() == io::ErrorKind::NotFound {
+        Error::FileNotFound
+    } else {
+        e.into()
+    }
 }

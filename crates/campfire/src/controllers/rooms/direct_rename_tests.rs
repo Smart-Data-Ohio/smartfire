@@ -57,7 +57,10 @@ async fn direct_rename_coercions_and_rejections_match_real_rails_requests() {
         );
         assert_eq!(reply.location(), row["location"].as_str());
         if reply.status == StatusCode::FOUND {
-            assert_eq!(super::direct_selection_tests::next_flash(&app, &reply, &mut cookie), row["next_flash"]);
+            assert_eq!(
+                super::direct_selection_tests::next_flash(&app, &reply, &mut cookie),
+                row["next_flash"]
+            );
             david.get("/app/").await;
         }
         let renderer = app.db().env().rich_text.clone();
@@ -83,8 +86,6 @@ async fn direct_rename_coercions_and_rejections_match_real_rails_requests() {
             row["delta"]
         );
         if let Some(_value) = row["error_value"].as_str() {
-
-
             assert_eq!(after, before, "invalid rename must not write");
             app.db()
                 .write(|tx| {
@@ -114,8 +115,6 @@ async fn named_pair_keeps_group_controls_and_cannot_be_deleted_by_a_plain_member
         .send(Req::new(Method::GET, &format!("/rooms/directs/{id}/edit")))
         .await;
     assert_eq!(page.status, StatusCode::FOUND);
-
-
 
     assert_eq!(
         member

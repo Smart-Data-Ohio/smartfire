@@ -55,7 +55,7 @@ fn run(number: i64, test: &str) {
     // This Rails declaration injects a quiet check. Exercise the production
     // policy path with equivalent real DND settings instead of replaying rings.
     if case["sound_allowed"] == false {
-        db.write(|tx| Ok(tx.conn().execute("UPDATE users SET dnd_enabled=1",[])?));
+        db.write(|tx| Ok(tx.conn().execute("UPDATE users SET dnd_enabled=1", [])?));
     }
     db.sink.take();
     for expected in case["results"].as_array().unwrap() {

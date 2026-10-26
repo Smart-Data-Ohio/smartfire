@@ -756,7 +756,10 @@ async fn outgoing_stickers(agent: bool, origin: Option<&str>) {
     let a = TestApp::boot_seed_with_env(
         "default",
         seed_clock(),
-        &[("SPA_ENABLED", "1"), ("APP_URL", origin.unwrap_or_default())],
+        &[
+            ("SPA_ENABLED", "1"),
+            ("APP_URL", origin.unwrap_or_default()),
+        ],
     )
     .await
     .expect("restored default seed")
@@ -844,7 +847,10 @@ async fn outgoing_stickers(agent: bool, origin: Option<&str>) {
         );
         assert!(image_url.contains("/rails/active_storage/blobs/redirect/"));
         for url in [&image_url, &still_url] {
-            assert_eq!(url::Url::parse(url).unwrap().origin().ascii_serialization(), origin);
+            assert_eq!(
+                url::Url::parse(url).unwrap().origin().ascii_serialization(),
+                origin
+            );
         }
         assert_eq!(fetch_url(&a, &image_url).await.body, GIF);
         let still = fetch_url(&a, &still_url).await;
@@ -978,9 +984,13 @@ async fn agent_cannot_reuse_a_sticker_image_in_a_private_thread() {
     let allowed = a
         .anonymous()
         .send(
-            json_req(Method::POST, &endpoint, &json!({
-                "thread_id":thread_id,"message":{"markdown_source":"Private reply"}
-            }))
+            json_req(
+                Method::POST,
+                &endpoint,
+                &json!({
+                    "thread_id":thread_id,"message":{"markdown_source":"Private reply"}
+                }),
+            )
             .header("authorization", &authorization),
         )
         .await;
@@ -988,9 +998,13 @@ async fn agent_cannot_reuse_a_sticker_image_in_a_private_thread() {
     let denied = a
         .anonymous()
         .send(
-            json_req(Method::POST, &endpoint, &json!({
-                "thread_id":thread_id,"message":{"attachment":signed_id}
-            }))
+            json_req(
+                Method::POST,
+                &endpoint,
+                &json!({
+                    "thread_id":thread_id,"message":{"attachment":signed_id}
+                }),
+            )
             .header("authorization", &authorization),
         )
         .await;
@@ -1013,7 +1027,11 @@ async fn agent_cannot_reuse_a_sticker_image_in_a_private_thread() {
     let count: i64 = a
         .db()
         .read(move |conn| {
-            Ok(conn.query_row("SELECT COUNT(*) FROM messages WHERE thread_id=?", [thread_id], |r| r.get(0))?)
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM messages WHERE thread_id=?",
+                [thread_id],
+                |r| r.get(0),
+            )?)
         })
         .await
         .unwrap();

@@ -20,8 +20,8 @@ use campfire_kit::{Error, Param, Result, UploadedFile};
 use campfire_storage::{Blob, Filename, Staged, Variation};
 
 use crate::active_storage::{keep_after_commit, stage_file};
-use crate::queue::AnalyzeJob;
 use crate::app::App;
+use crate::queue::AnalyzeJob;
 
 /// An uploaded file (`ActionDispatch::Http::UploadedFile`), still in its multipart tempfile.
 #[derive(Debug, Clone)]
@@ -36,14 +36,25 @@ impl Upload {
     /// here (`params.permit(...).compact` / `avatar=` with nil or "" deletes, see [`Assignment`]).
     pub fn from_param(param: Option<&Param>) -> Option<Upload> {
         let file = param.and_then(Param::as_file)?;
-        Some(Upload { file: file.clone(), filename: file.original_filename.clone(), content_type: file.content_type.clone() })
+        Some(Upload {
+            file: file.clone(),
+            filename: file.original_filename.clone(),
+            content_type: file.content_type.clone(),
+        })
     }
 
     /// Uploads the file to storage for a blob whose row is saved next, off the async threads.
     pub async fn stage(self, app: &App) -> Result<Staged> {
         let path = self.file.path().to_path_buf();
-        if tokio::fs::metadata(&path).await.map_err(Error::internal)?.len() != self.file.size {
-            return Err(Error::Status(campfire_kit::StatusCode::UNPROCESSABLE_ENTITY));
+        if tokio::fs::metadata(&path)
+            .await
+            .map_err(Error::internal)?
+            .len()
+            != self.file.size
+        {
+            return Err(Error::Status(
+                campfire_kit::StatusCode::UNPROCESSABLE_ENTITY,
+            ));
         }
         stage_file(app, path, Filename::new(self.filename), self.content_type).await
     }
@@ -75,8 +86,12 @@ impl Assignment {
         match params.get(key) {
             None => Ok(Assignment::Delete),
             Some(param) if param.is_null() || param.as_str() == Some("") => Ok(Assignment::Delete),
-            Some(param) if param.as_str().is_some() => Ok(Assignment::Signed(param.as_str().unwrap().to_string())),
-            Some(param) => Ok(Upload::from_param(Some(param)).map_or(Assignment::Invalid, Assignment::Create)),
+            Some(param) if param.as_str().is_some() => {
+                Ok(Assignment::Signed(param.as_str().unwrap().to_string()))
+            }
+            Some(param) => {
+                Ok(Upload::from_param(Some(param)).map_or(Assignment::Invalid, Assignment::Create))
+            }
         }
     }
 
@@ -89,7 +104,12 @@ impl Assignment {
         self.stage_bounded(app, Some(limit), None).await
     }
 
-    async fn stage_bounded(self, app: &App, limit: Option<u64>, scheduled_owner: Option<i64>) -> Result<Assignment<Staged>> {
+    async fn stage_bounded(
+        self,
+        app: &App,
+        limit: Option<u64>,
+        scheduled_owner: Option<i64>,
+    ) -> Result<Assignment<Staged>> {
         Ok(match self {
             Assignment::Unchanged => Assignment::Unchanged,
             Assignment::Delete => Assignment::Delete,
@@ -109,7 +129,10 @@ impl Assignment {
                     check_blob_size(app, &blob, limit).await?;
                 }
                 let storage = app.storage.clone();
-                let blob = tokio::task::spawn_blocking(move || storage.identify_blob(blob)).await.map_err(Error::internal)?.map_err(Error::internal)?;
+                let blob = tokio::task::spawn_blocking(move || storage.identify_blob(blob))
+                    .await
+                    .map_err(Error::internal)?
+                    .map_err(Error::internal)?;
                 Assignment::Existing(blob)
             }
             Assignment::Existing(blob) => {
@@ -125,15 +148,32 @@ impl Assignment {
 
 /// Only the scheduler may resolve a pending upload for its draft. Public attachment slots
 /// pass no scheduler, so they cannot publish a scheduled original or one of its derivatives.
-pub async fn resolve_signed_blob(app: &App, signed: &str, scheduled_owner: Option<i64>) -> Result<Blob> {
-    let id = campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, signed, app.clock.now())
-        .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid blob signature")))?;
-    let (blob, owners) = app.db.read(move |conn| {
-        Ok((Blob::find(conn, id).map_err(storage_error)?, scheduled_upload_owners(conn, id)?))
-    }).await.map_err(Error::internal)?;
+pub async fn resolve_signed_blob(
+    app: &App,
+    signed: &str,
+    scheduled_owner: Option<i64>,
+) -> Result<Blob> {
+    let id = campfire_storage::paths::verify_signed_blob_id(
+        &*app.storage.verifier,
+        signed,
+        app.clock.now(),
+    )
+    .ok_or_else(|| Error::internal(anyhow::anyhow!("invalid blob signature")))?;
+    let (blob, owners) = app
+        .db
+        .read(move |conn| {
+            Ok((
+                Blob::find(conn, id).map_err(storage_error)?,
+                scheduled_upload_owners(conn, id)?,
+            ))
+        })
+        .await
+        .map_err(Error::internal)?;
     let blob = blob.ok_or(Error::NotFound)?;
     if owners.iter().any(|owner| Some(*owner) != scheduled_owner) {
-        return Err(Error::Status(campfire_kit::StatusCode::UNPROCESSABLE_ENTITY));
+        return Err(Error::Status(
+            campfire_kit::StatusCode::UNPROCESSABLE_ENTITY,
+        ));
     }
     Ok(blob)
 }
@@ -153,18 +193,28 @@ pub fn scheduled_upload_owners(conn: &Connection, blob_id: i64) -> campfire_db::
          UNION SELECT s.user_id FROM roots r JOIN active_storage_attachments a ON a.blob_id=r.id
             JOIN scheduled_messages s ON s.id=a.record_id WHERE a.record_type='ScheduledMessage' AND a.name='attachments'"
     )?;
-    Ok(statement.query_map([blob_id], |row| row.get(0))?.collect::<rusqlite::Result<_>>()?)
+    Ok(statement
+        .query_map([blob_id], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?)
 }
 
 /// Stage every file before entering the message's write transaction.
-pub async fn stage_many(app: &App, assignments: Vec<Assignment>, scheduled_owner: i64) -> Result<Vec<Assignment<Staged>>> {
+pub async fn stage_many(
+    app: &App,
+    assignments: Vec<Assignment>,
+    scheduled_owner: i64,
+) -> Result<Vec<Assignment<Staged>>> {
     if assignments.is_empty() {
         return Ok(Vec::new());
     }
     let limit = crate::active_storage::upload_limit_bytes(app).await?;
     let mut staged = Vec::with_capacity(assignments.len());
     for assignment in assignments {
-        staged.push(assignment.stage_bounded(app, Some(limit as u64), Some(scheduled_owner)).await?);
+        staged.push(
+            assignment
+                .stage_bounded(app, Some(limit as u64), Some(scheduled_owner))
+                .await?,
+        );
     }
     Ok(staged)
 }
@@ -173,7 +223,10 @@ async fn check_file_size(path: &std::path::Path, declared: u64, limit: u64) -> R
     if declared > limit {
         return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
     }
-    let received = tokio::fs::metadata(path).await.map_err(Error::internal)?.len();
+    let received = tokio::fs::metadata(path)
+        .await
+        .map_err(Error::internal)?
+        .len();
     check_received_size(received, declared, limit)
 }
 
@@ -196,18 +249,30 @@ fn check_received_size(received: u64, declared: u64, limit: u64) -> Result<()> {
         return Err(Error::Status(campfire_kit::StatusCode::PAYLOAD_TOO_LARGE));
     }
     if received != declared {
-        return Err(Error::Status(campfire_kit::StatusCode::UNPROCESSABLE_ENTITY));
+        return Err(Error::Status(
+            campfire_kit::StatusCode::UNPROCESSABLE_ENTITY,
+        ));
     }
     Ok(())
 }
 
 /// `record.<name>.attached?`'s blob: the attachment's blob, if any.
-pub fn attached_blob(conn: &Connection, record_type: &str, record_id: i64, name: &str) -> campfire_db::Result<Option<Blob>> {
+pub fn attached_blob(
+    conn: &Connection,
+    record_type: &str,
+    record_id: i64,
+    name: &str,
+) -> campfire_db::Result<Option<Blob>> {
     Blob::attached(conn, record_type, record_id, name).map_err(storage_error)
 }
 
 /// Applies an assignment inside the record's save. Durable analysis jobs are atomic with it.
-pub fn assign(tx: &mut Tx<'_>, record: Record, name: &str, assignment: Assignment<Staged>) -> campfire_db::Result<()> {
+pub fn assign(
+    tx: &mut Tx<'_>,
+    record: Record,
+    name: &str,
+    assignment: Assignment<Staged>,
+) -> campfire_db::Result<()> {
     match assignment {
         Assignment::Unchanged => Ok(()),
         Assignment::Delete => {
@@ -216,8 +281,12 @@ pub fn assign(tx: &mut Tx<'_>, record: Record, name: &str, assignment: Assignmen
         }
         Assignment::Create(staged) => attach(tx, record, name, staged),
         Assignment::Existing(blob) => attach_existing(tx, record, name, blob),
-        Assignment::Signed(_) => Err(campfire_db::Error::Other("unstaged signed blob assignment".into())),
-        Assignment::Invalid => Err(campfire_db::Error::Other("Could not find or build blob: expected attachable".into())),
+        Assignment::Signed(_) => Err(campfire_db::Error::Other(
+            "unstaged signed blob assignment".into(),
+        )),
+        Assignment::Invalid => Err(campfire_db::Error::Other(
+            "Could not find or build blob: expected attachable".into(),
+        )),
     }
 }
 
@@ -258,7 +327,12 @@ impl Record {
     }
 
     pub fn sticker(id: i64) -> Self {
-        Self { record_type: "Sticker", table: "stickers", id, branding: None }
+        Self {
+            record_type: "Sticker",
+            table: "stickers",
+            id,
+            branding: None,
+        }
     }
 
     pub fn soundboard_sound(id: i64) -> Self {
@@ -280,13 +354,21 @@ impl Record {
     }
 
     fn branding_marker(self, name: &str) -> Option<rails_compat::blob_branding::Marker> {
-        self.branding.filter(|_| matches!(name, "logo" | "banner" | "invite_splash"))
+        self.branding
+            .filter(|_| matches!(name, "logo" | "banner" | "invite_splash"))
     }
 }
 
 /// `record.<name> = uploaded_file; record.save`: replaces any current attachment.
-pub fn attach(tx: &mut Tx<'_>, record: Record, name: &str, staged: Staged) -> campfire_db::Result<()> {
-    let blob = staged.insert(tx.conn(), tx.now().jiff()).map_err(storage_error)?;
+pub fn attach(
+    tx: &mut Tx<'_>,
+    record: Record,
+    name: &str,
+    staged: Staged,
+) -> campfire_db::Result<()> {
+    let blob = staged
+        .insert(tx.conn(), tx.now().jiff())
+        .map_err(storage_error)?;
     keep_after_commit(tx, staged);
     attach_existing(tx, record, name, blob)
 }
@@ -375,8 +457,10 @@ pub fn enqueue_analysis(tx: &mut Tx<'_>, blob: &Blob) {
                     return Ok(());
                 };
                 if !blob.is_analyzed() {
-                    blob.metadata.set("analyzed", campfire_storage::Json::Bool(true));
-                    blob.update_metadata(tx.conn(), blob.metadata.clone()).map_err(storage_error)?;
+                    blob.metadata
+                        .set("analyzed", campfire_storage::Json::Bool(true));
+                    blob.update_metadata(tx.conn(), blob.metadata.clone())
+                        .map_err(storage_error)?;
                     crate::active_storage::touch_attachment_records(tx, blob.id)?;
                 }
                 Ok(())
@@ -397,12 +481,17 @@ pub fn destroy(tx: &mut Tx<'_>, record: Record, name: &str) -> campfire_db::Resu
         )
         .map(Some)
         .or_else(|error| if error == rusqlite::Error::QueryReturnedNoRows { Ok(None) } else { Err(error) })?;
-    let Some((attachment_id, blob_id)) = attachment else { return Ok(false) };
+    let Some((attachment_id, blob_id)) = attachment else {
+        return Ok(false);
+    };
     if let Some(marker) = record.branding_marker(name) {
         // Keep queued analysis bounded after the Account and variant associations disappear.
         crate::active_storage::mark_branding_tree(tx.conn(), marker, blob_id)?;
     }
-    tx.conn().execute_cached("DELETE FROM active_storage_attachments WHERE id = ?1", [attachment_id])?;
+    tx.conn().execute_cached(
+        "DELETE FROM active_storage_attachments WHERE id = ?1",
+        [attachment_id],
+    )?;
     super::accounts::touch(tx.conn(), record.table, record.id, tx.now())?;
     forget_picked_avatar(tx, record, name)?;
     tx.emit_after_commit(Event::PurgeBlob { blob_id });
@@ -423,15 +512,24 @@ fn forget_picked_avatar(tx: &Tx<'_>, record: Record, name: &str) -> campfire_db:
 
 /// `record.<name>.variant(name).processed if record.<name>.variable?`: the processed variant's
 /// blob, or `None` when there's no attachment or it can't be transformed.
-pub async fn processed_variant(app: &App, record: Record, name: &str, transformations: Variation) -> Result<Option<Blob>> {
+pub async fn processed_variant(
+    app: &App,
+    record: Record,
+    name: &str,
+    transformations: Variation,
+) -> Result<Option<Blob>> {
     let name = name.to_string();
     let blob = app
         .db
         .read(move |conn| attached_blob(conn, record.record_type, record.id, &name))
         .await
         .map_err(Error::internal)?;
-    let Some(blob) = blob.filter(Blob::is_variable) else { return Ok(None) };
-    crate::active_storage::processed_representation(app, blob, transformations).await.map(Some)
+    let Some(blob) = blob.filter(Blob::is_variable) else {
+        return Ok(None);
+    };
+    crate::active_storage::processed_representation(app, blob, transformations)
+        .await
+        .map(Some)
 }
 
 pub fn storage_error(error: campfire_storage::Error) -> campfire_db::Error {

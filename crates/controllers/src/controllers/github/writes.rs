@@ -4,9 +4,7 @@ use crate::{
     concerns::{self, Before, cast_integer},
     controllers::presenters::page::db_error,
     integrations::github::{
-        client::PullRequestKey,
-        pull_requests::PullRequest,
-        threads::PullRequestThread,
+        client::PullRequestKey, pull_requests::PullRequest, threads::PullRequestThread,
         writes::Action,
     },
 };
@@ -66,7 +64,11 @@ async fn write(c: &mut Ctx, action: Action) -> Result {
     .map_err(db_error)?;
     let _ = thread;
     c.respond_to(&[&format::HTML])?;
-    Ok(c.head(if result.accepted { StatusCode::OK } else { StatusCode::UNPROCESSABLE_ENTITY }))
+    Ok(c.head(if result.accepted {
+        StatusCode::OK
+    } else {
+        StatusCode::UNPROCESSABLE_ENTITY
+    }))
 }
 pub async fn comment(c: &mut Ctx) -> Result {
     write(c, Action::Comment).await

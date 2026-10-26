@@ -227,7 +227,8 @@ impl GoogleIdentity {
                     }
                     .into(),
                     target: Some(Target::from(&user)),
-                    changes: allow.then(|| serde_json::json!({"email_address": user.email_address})),
+                    changes: allow
+                        .then(|| serde_json::json!({"email_address": user.email_address})),
                     ..Default::default()
                 },
                 context,

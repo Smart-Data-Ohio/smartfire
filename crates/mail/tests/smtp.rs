@@ -14,7 +14,9 @@ use tokio::{
 
 async fn listener() -> TcpListener {
     let range = std::env::var("MAIL_TEST_PORT_RANGE").unwrap_or_else(|_| "40000-40049".into());
-    let (first, last) = range.split_once('-').expect("MAIL_TEST_PORT_RANGE=start-end");
+    let (first, last) = range
+        .split_once('-')
+        .expect("MAIL_TEST_PORT_RANGE=start-end");
     let first: u16 = first.parse().unwrap();
     let last: u16 = last.parse().unwrap();
     for port in first..=last {

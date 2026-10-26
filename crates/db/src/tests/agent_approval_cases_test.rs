@@ -378,7 +378,15 @@ fn ws11_approval_case_ownerless_admin_deciders() {
 fn ws11_approval_case_decision_enqueues_after_commit() {
     let t = setup();
     let aid = t.write(|tx| {
-        crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:"external_action".into(),granted_by_id:id("david"),..Default::default()})?;
+        crate::AgentGrant::create(
+            tx,
+            crate::NewGrant {
+                agent_id: id("bender_agent"),
+                capability: "external_action".into(),
+                granted_by_id: id("david"),
+                ..Default::default()
+            },
+        )?;
         Ok(create(tx)?.id)
     });
     t.sink.take();
@@ -402,7 +410,15 @@ fn ws11_approval_case_decision_enqueues_after_commit() {
 fn ws11_approval_case_decision_waits_for_outer_transaction() {
     let t = setup();
     let aid = t.write(|tx| {
-        crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:"external_action".into(),granted_by_id:id("david"),..Default::default()})?;
+        crate::AgentGrant::create(
+            tx,
+            crate::NewGrant {
+                agent_id: id("bender_agent"),
+                capability: "external_action".into(),
+                granted_by_id: id("david"),
+                ..Default::default()
+            },
+        )?;
         Ok(create(tx)?.id)
     });
     t.sink.take();
@@ -527,7 +543,7 @@ fn ws11_approval_case_disabled_preference_preserves_decider_and_ordinary_mention
     ))
     .unwrap();
     let t = setup();
-    let body=oracle["body"].as_str().unwrap().to_owned();
+    let body = oracle["body"].as_str().unwrap().to_owned();
     let (approval, message) = t.write(move |tx| {
         tx.conn().execute(
             "UPDATE agents SET owner_id=? WHERE id=?",
@@ -570,9 +586,22 @@ fn ws11_review_approval_partial_fanout_reaches_owner_first() {
     });
     assert!(t.try_write(create).is_err());
     let notified = t.read(|c| {
-        Ok(c.prepare("SELECT user_id FROM activity_items WHERE source_type='AgentApproval' ORDER BY id")?.query_map([], |r| r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)
+        Ok(c.prepare(
+            "SELECT user_id FROM activity_items WHERE source_type='AgentApproval' ORDER BY id",
+        )?
+        .query_map([], |r| r.get::<_, i64>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
     });
-    println!("REVIEW approval-recipient failure: owner={} notified_users={notified:?}",id("kevin"));
-    let gold: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/agents_review_fixes_contract.json")).unwrap();
-    assert_eq!(serde_json::json!(notified),gold["results"]["approval"]["notified_users"]);
+    println!(
+        "REVIEW approval-recipient failure: owner={} notified_users={notified:?}",
+        id("kevin")
+    );
+    let gold: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agents_review_fixes_contract.json"
+    ))
+    .unwrap();
+    assert_eq!(
+        serde_json::json!(notified),
+        gold["results"]["approval"]["notified_users"]
+    );
 }

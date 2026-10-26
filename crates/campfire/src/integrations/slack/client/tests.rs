@@ -5,12 +5,12 @@ use std::sync::{
 };
 
 use super::*;
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route};
+use crate::net::tls_config;
 use campfire_app::net::Network;
 use serde_json::Value;
 use std::time::Duration;
 use tokio::time::Instant;
-use crate::net::tls_config;
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route};
 
 pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     let (mut servers, network) = fake_responses(vec![routes]).await;
@@ -60,8 +60,7 @@ async fn fake_responses(responses: Vec<Vec<Route>>) -> (Vec<FakeServer>, Network
         fn connect(
             &self,
             addr: std::net::SocketAddr,
-        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
-        {
+        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>> {
             assert_eq!(
                 addr.ip(),
                 "203.0.113.16".parse::<std::net::IpAddr>().unwrap()
@@ -171,8 +170,7 @@ async fn slack_client_network_final_message_matches_rails_through_actual_dialer(
         fn connect(
             &self,
             _: std::net::SocketAddr,
-        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
-        {
+        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>> {
             self.0.fetch_add(1, Ordering::SeqCst);
             Box::pin(async { Err(std::io::Error::other("fixture io")) })
         }
@@ -413,10 +411,7 @@ fn slack_client_vendored_fixtures_match_our_rails_files() {
         let path = entry.unwrap().path();
         assert_eq!(
             std::fs::read(&path).unwrap(),
-            std::fs::read(
-                reference.join(path.file_name().unwrap())
-            )
-            .unwrap()
+            std::fs::read(reference.join(path.file_name().unwrap())).unwrap()
         );
     }
 }
@@ -485,8 +480,7 @@ async fn slack_client_recovering_network_counts_failed_dials_and_success_once() 
         fn connect(
             &self,
             addr: std::net::SocketAddr,
-        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
-        {
+        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>> {
             if self.count.fetch_add(1, Ordering::SeqCst) < 2 {
                 Box::pin(async {
                     Err(std::io::Error::new(

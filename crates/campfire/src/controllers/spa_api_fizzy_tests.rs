@@ -671,34 +671,63 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
     (snapshot, frames)
 }
 
-
 #[tokio::test]
 async fn fizzy_source_requires_private_access_for_api_form_and_classic_post() {
     let app = TestApp::boot().await.unwrap();
-    let (thread_id, message_id) = app.db().write(|tx| {
-        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
-        let thread = ChannelThread::create(tx, NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, name: Some("Private Fizzy source".into()),
-            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
-        })?;
-        let message = Message::create(tx, NewMessage {
-            room_id: ALL_TALK, thread_id: Some(thread.id), creator_id: DAVID,
-            markdown_source: Some("Confidential Fizzy body".into()), ..Default::default()
-        })?;
-        Ok((thread.id, message.id))
-    }).await.unwrap();
+    let (thread_id, message_id) = app
+        .db()
+        .write(|tx| {
+            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            let thread = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("Private Fizzy source".into()),
+                    visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    thread_id: Some(thread.id),
+                    creator_id: DAVID,
+                    markdown_source: Some("Confidential Fizzy body".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((thread.id, message.id))
+        })
+        .await
+        .unwrap();
     let mut kevin = app.sign_in(KEVIN).await;
-    let classic = format!("/rooms/{ALL_TALK}/threads/{thread_id}/messages/{message_id}/fizzy_cards");
+    let classic =
+        format!("/rooms/{ALL_TALK}/threads/{thread_id}/messages/{message_id}/fizzy_cards");
     let api_form = format!("/api/v1{classic}/new");
     for visible in [false, true, false, true] {
         if visible {
-            app.db().write(move |tx| {
-                ChannelThread::find(tx.conn(), thread_id)?.add_access_member(tx, DAVID, KEVIN)?;
-                Ok(())
-            }).await.unwrap();
+            app.db()
+                .write(move |tx| {
+                    ChannelThread::find(tx.conn(), thread_id)?
+                        .add_access_member(tx, DAVID, KEVIN)?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
         }
         let response = kevin.send(super::api_tests::get(&api_form)).await;
-        assert_eq!(response.status, if visible { StatusCode::OK } else { StatusCode::NOT_FOUND }, "{}", response.text());
+        assert_eq!(
+            response.status,
+            if visible {
+                StatusCode::OK
+            } else {
+                StatusCode::NOT_FOUND
+            },
+            "{}",
+            response.text()
+        );
         if visible {
             let form: campfire_api_types::FizzyMessageCardForm = super::api_tests::parse(&response);
             assert_eq!(form.excerpt, "Confidential Fizzy body");
@@ -706,15 +735,35 @@ async fn fizzy_source_requires_private_access_for_api_form_and_classic_post() {
         } else {
             assert!(!response.text().contains("Confidential Fizzy body"));
         }
-        let response = kevin.write(Req::new(Method::POST, &classic)
-            .form(&[("board_id", "board"), ("title", "Card"), ("description", "Body")])).await;
+        let response = kevin
+            .write(Req::new(Method::POST, &classic).form(&[
+                ("board_id", "board"),
+                ("title", "Card"),
+                ("description", "Body"),
+            ]))
+            .await;
         if visible {
             assert!(response.status.is_redirection(), "{}", response.text());
-            assert!(response.header("location").unwrap().ends_with("/users/me/profile"));
-            app.db().write(move |tx| ChannelThread::find(tx.conn(), thread_id)?
-                .remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+            assert!(
+                response
+                    .header("location")
+                    .unwrap()
+                    .ends_with("/users/me/profile")
+            );
+            app.db()
+                .write(move |tx| {
+                    ChannelThread::find(tx.conn(), thread_id)?
+                        .remove_access_member(tx, DAVID, KEVIN)
+                })
+                .await
+                .unwrap();
         } else {
-            assert_eq!(response.status, StatusCode::NOT_FOUND, "{}", response.text());
+            assert_eq!(
+                response.status,
+                StatusCode::NOT_FOUND,
+                "{}",
+                response.text()
+            );
         }
     }
 }

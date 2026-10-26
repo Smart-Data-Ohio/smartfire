@@ -51,7 +51,10 @@ pub(crate) struct Harness {
 
 pub(crate) fn config() -> RunnerConfig {
     RunnerConfig {
-        queues: vec![QueueConfig::new("default", 3), QueueConfig::new("slack_import", 1)],
+        queues: vec![
+            QueueConfig::new("default", 3),
+            QueueConfig::new("slack_import", 1),
+        ],
         lease: Duration::from_secs(30),
         heartbeat: Duration::from_secs(10),
         poll: Duration::from_millis(50),
@@ -72,15 +75,32 @@ pub(crate) fn harness<C: Send + 'static>(registry: &Registry<C>, config: &Runner
     open(registry, config, dir)
 }
 
-pub(crate) fn open<C: Send + 'static>(registry: &Registry<C>, config: &RunnerConfig, dir: tempfile::TempDir) -> Harness {
+pub(crate) fn open<C: Send + 'static>(
+    registry: &Registry<C>,
+    config: &RunnerConfig,
+    dir: tempfile::TempDir,
+) -> Harness {
     let clock = TestClock::frozen_at(at(T0));
     let queue = JobQueue::new(registry, config).unwrap();
-    let sink = Arc::new(QueueSink { queue: queue.clone(), broken: Default::default() });
-    let env = campfire_db::Env { clock: Arc::new(clock.clone()), sink: sink.clone(), ..Default::default() };
+    let sink = Arc::new(QueueSink {
+        queue: queue.clone(),
+        broken: Default::default(),
+    });
+    let env = campfire_db::Env {
+        clock: Arc::new(clock.clone()),
+        sink: sink.clone(),
+        ..Default::default()
+    };
     let mut db_config = campfire_db::Config::new(dir.path().join("test.sqlite3"));
     db_config.readers = 2;
     let db = Database::open(db_config, env).unwrap();
-    Harness { db, clock, queue, sink, _dir: dir }
+    Harness {
+        db,
+        clock,
+        queue,
+        sink,
+        _dir: dir,
+    }
 }
 
 impl Harness {
@@ -103,7 +123,9 @@ impl Harness {
     }
 
     pub fn job(&self, id: i64) -> Option<JobRow> {
-        self.db.read_blocking(|conn| inspect::find(conn, id)).unwrap()
+        self.db
+            .read_blocking(|conn| inspect::find(conn, id))
+            .unwrap()
     }
 
     pub fn travel(&self, seconds: i64) {
@@ -118,7 +140,10 @@ impl Harness {
             if condition(&jobs) {
                 return jobs;
             }
-            assert!(tokio::time::Instant::now() < deadline, "timed out waiting for {what}: {jobs:#?}");
+            assert!(
+                tokio::time::Instant::now() < deadline,
+                "timed out waiting for {what}: {jobs:#?}"
+            );
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
     }
@@ -153,7 +178,10 @@ pub(crate) fn echo_registry() -> (Registry<()>, Performed) {
 }
 
 pub(crate) async fn next(performed: &mut Performed) -> (i64, u32) {
-    tokio::time::timeout(Duration::from_secs(10), performed.recv()).await.expect("a job was performed").unwrap()
+    tokio::time::timeout(Duration::from_secs(10), performed.recv())
+        .await
+        .expect("a job was performed")
+        .unwrap()
 }
 
 /// Concurrency seen by a handler: how many run at once, and the most that ever did.

@@ -29,10 +29,19 @@ async fn trailing(app: App, job: Trailing, _: Execution) -> JobResult {
     Ok(Outcome::Done)
 }
 
-
-
 #[cfg(any(test, feature = "test-support"))]
 pub async fn run_trailing_fixture(app: App, job: StreamTrailingBroadcastJob) {
-    let now=app.db.env().now();
-    trailing(app,Trailing(job),Execution{id:0,executions:1,enqueued_at:now,scheduled_at:now}).await.unwrap();
+    let now = app.db.env().now();
+    trailing(
+        app,
+        Trailing(job),
+        Execution {
+            id: 0,
+            executions: 1,
+            enqueued_at: now,
+            scheduled_at: now,
+        },
+    )
+    .await
+    .unwrap();
 }

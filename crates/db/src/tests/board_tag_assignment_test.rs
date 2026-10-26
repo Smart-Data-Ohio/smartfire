@@ -89,7 +89,10 @@ fn ws12_tag_assignment_validations_match_rails() {
                 )?;
             }
             if has("duplicate_zero") {
-                tx.conn().execute("UPDATE board_tag_assignments SET id=0 WHERE room_id=?", [board.id])?;
+                tx.conn().execute(
+                    "UPDATE board_tag_assignments SET id=0 WHERE room_id=?",
+                    [board.id],
+                )?;
                 let stored = BoardTagAssignment::find(tx.conn(), 0)?.unwrap();
                 assert!(stored.validate(tx.conn())?.is_empty());
             }
@@ -463,7 +466,8 @@ fn rule_matches_unicode_case_equivalent_catalog_tag() {
     rule(&t, room.id, "strasse", "jz");
     let thread = post(&t, room.id, vec!["strasse".into()], None);
     assert_eq!(
-        t.read(move |conn| ChannelThread::find(conn, thread.id)).work_owner_id,
+        t.read(move |conn| ChannelThread::find(conn, thread.id))
+            .work_owner_id,
         Some(id("jz"))
     );
 }

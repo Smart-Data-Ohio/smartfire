@@ -29,14 +29,20 @@ pub async fn shutdown_signal() {
 /// number of connected clients however little memory each takes.
 #[cfg(unix)]
 pub fn raise_open_file_limit() -> Option<u64> {
-    let mut limit = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+    let mut limit = libc::rlimit {
+        rlim_cur: 0,
+        rlim_max: 0,
+    };
     // SAFETY: getrlimit/setrlimit read and write one `rlimit` through a valid pointer.
     unsafe {
         if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) != 0 {
             return None;
         }
         if limit.rlim_cur < limit.rlim_max {
-            let raised = libc::rlimit { rlim_cur: limit.rlim_max, rlim_max: limit.rlim_max };
+            let raised = libc::rlimit {
+                rlim_cur: limit.rlim_max,
+                rlim_max: limit.rlim_max,
+            };
             if libc::setrlimit(libc::RLIMIT_NOFILE, &raised) == 0 {
                 return Some(raised.rlim_cur);
             }
@@ -55,7 +61,10 @@ mod open_file_limit_tests {
     #[test]
     fn raises_the_soft_limit_to_the_hard_one() {
         let limit = super::raise_open_file_limit().expect("getrlimit works");
-        let mut now = libc::rlimit { rlim_cur: 0, rlim_max: 0 };
+        let mut now = libc::rlimit {
+            rlim_cur: 0,
+            rlim_max: 0,
+        };
         // SAFETY: getrlimit writes one `rlimit` through a valid pointer.
         assert_eq!(unsafe { libc::getrlimit(libc::RLIMIT_NOFILE, &mut now) }, 0);
         assert_eq!(now.rlim_cur, now.rlim_max);

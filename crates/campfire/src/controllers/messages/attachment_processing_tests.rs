@@ -19,39 +19,72 @@ async fn attachment_processing_round3_grouped_slot_is_processed() {
     }).await.unwrap();
     perform_queued(&app, 1).await.unwrap();
     let storage = app.booted.app.storage.clone();
-    assert!(app.db().read(move |conn| {
-        Ok(storage.existing_preview_image(conn, &Blob::find(conn, blob).unwrap().unwrap()).unwrap().is_some())
-    }).await.unwrap(), "grouped video must receive its preview");
+    assert!(
+        app.db()
+            .read(move |conn| {
+                Ok(storage
+                    .existing_preview_image(conn, &Blob::find(conn, blob).unwrap().unwrap())
+                    .unwrap()
+                    .is_some())
+            })
+            .await
+            .unwrap(),
+        "grouped video must receive its preview"
+    );
     assert_eq!(state(&app, blob).await.0, None);
 }
 
 #[tokio::test]
 async fn attachment_processing_round3_completion_refreshes_both_slots() {
     let (app, clock, id, blob) = setup(false).await;
-    let grouped = app.db().write(move |tx| {
-        let message = Message::create(tx, NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("Grouped".into()),
-            client_message_id: Some("grouped-attachment-worker".into()),
-            attachment_blob_ids: vec![blob], ..Default::default()
-        })?;
-        campfire_db::models::message_attachment_processing::schedule(tx, id, blob);
-        Ok(message.id)
-    }).await.unwrap();
+    let grouped = app
+        .db()
+        .write(move |tx| {
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("Grouped".into()),
+                    client_message_id: Some("grouped-attachment-worker".into()),
+                    attachment_blob_ids: vec![blob],
+                    ..Default::default()
+                },
+            )?;
+            campfire_db::models::message_attachment_processing::schedule(tx, id, blob);
+            Ok(message.id)
+        })
+        .await
+        .unwrap();
     let (mut client, server) = json_subscribe(&app).await;
     let _server = AbortServer(server);
     app.publications().take();
-    clock.set(app.booted.app.clock.now().checked_add(jiff::SignedDuration::from_secs(10)).unwrap());
+    clock.set(
+        app.booted
+            .app
+            .clock
+            .now()
+            .checked_add(jiff::SignedDuration::from_secs(10))
+            .unwrap(),
+    );
     perform_queued(&app, 1).await.unwrap();
     for message in [id, grouped] {
         client.until(move |event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(updated) if updated.id == message), |_| false).await;
     }
     let now = app.booted.app.clock.now();
-    app.db().read(move |conn| {
-        for message in [id, grouped] {
-            assert_eq!(Message::find(conn, message)?.updated_at.jiff(), now, "owner {message} must refresh");
-        }
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .read(move |conn| {
+            for message in [id, grouped] {
+                assert_eq!(
+                    Message::find(conn, message)?.updated_at.jiff(),
+                    now,
+                    "owner {message} must refresh"
+                );
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 fn oracle() -> serde_json::Value {
@@ -62,12 +95,21 @@ fn oracle() -> serde_json::Value {
 }
 
 async fn render(app: &TestApp, id: i64) -> serde_json::Value {
-    let response = app.david().send(Req::new(axum::http::Method::GET, &format!("/api/v1/messages/{id}")).header("accept", "application/json")).await;
-    assert_eq!(response.status, axum::http::StatusCode::OK, "{}", response.text());
+    let response = app
+        .david()
+        .send(
+            Req::new(axum::http::Method::GET, &format!("/api/v1/messages/{id}"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(
+        response.status,
+        axum::http::StatusCode::OK,
+        "{}",
+        response.text()
+    );
     response.json()["message"].clone()
 }
-
-
 
 pub(crate) async fn perform_queued(app: &TestApp, attempts: u32) -> campfire_jobs::JobResult {
     let (id, arguments, now) = app.db().read(|c| Ok(c.query_row("SELECT id,arguments,created_at FROM background_jobs WHERE job_class=? AND status='ready' ORDER BY id DESC LIMIT 1", [CLASS], |r| Ok((r.get::<_, i64>(0)?, r.get::<_,String>(1)?, r.get::<_,Timestamp>(2)?)))?)).await.unwrap();
@@ -144,8 +186,10 @@ pub(crate) async fn setup(corrupt: bool) -> (TestApp, Arc<FrozenClock>, i64, i64
     (app, clock, id, blob_id)
 }
 
-async fn view(app:&TestApp,id:i64) { let message=render(app,id).await; assert_eq!(message["id"],id); }
-
+async fn view(app: &TestApp, id: i64) {
+    let message = render(app, id).await;
+    assert_eq!(message["id"], id);
+}
 
 async fn state(app: &TestApp, blob: i64) -> (Option<String>, Option<Timestamp>, i64) {
     app.db().read(move |c| {
@@ -194,19 +238,35 @@ pub(crate) async fn subscribe(
         socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
     };
     assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
-    let identifier = crate::channels::tests::support::identifier(json!({"channel":"RoomChannel","room_id":ALL_TALK}));
+    let identifier = crate::channels::tests::support::identifier(
+        json!({"channel":"RoomChannel","room_id":ALL_TALK}),
+    );
     client.confirm(&identifier).await;
     (client, serving)
 }
 
-pub(crate) async fn json_subscribe(app: &TestApp) -> (crate::controllers::spa::api_tests::Sync, tokio::task::JoinHandle<()>) {
+pub(crate) async fn json_subscribe(
+    app: &TestApp,
+) -> (
+    crate::controllers::spa::api_tests::Sync,
+    tokio::task::JoinHandle<()>,
+) {
     campfire_api::install(&app.booted.app);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    let router = app.booted.app.cable.sync_router::<()>(campfire_api::SYNC_PATH);
+    let router = app
+        .booted
+        .app
+        .cable
+        .sync_router::<()>(campfire_api::SYNC_PATH);
     let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
     let browser = app.sign_in(DAVID).await;
-    let mut sync = crate::controllers::spa::api_tests::Sync::connect(addr, &browser.cookie_header(), &[format!("room:{ALL_TALK}")]).await;
+    let mut sync = crate::controllers::spa::api_tests::Sync::connect(
+        addr,
+        &browser.cookie_header(),
+        &[format!("room:{ALL_TALK}")],
+    )
+    .await;
     sync.welcome().await;
     (sync, serving)
 }
@@ -278,54 +338,94 @@ async fn attachment_processing_completion_render_failure_retries_like_rails() {
     let (mut client, server) = json_subscribe(&app).await;
     seed_job(&app, id, blob).await;
     // Media and touch can succeed, but the detached completion presenter cannot render.
-    app.db().write(|tx| {
-        tx.conn().execute_batch("ALTER TABLE boosts RENAME TO unavailable_boosts")?;
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute_batch("ALTER TABLE boosts RENAME TO unavailable_boosts")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     app.publications().take();
     let runner = start(&app);
     let retry = tokio::time::timeout(Duration::from_secs(15), async {
         loop {
-            let row = app.db().read(|c| Ok(c.query_row(
-                "SELECT status,attempts,run_at FROM background_jobs WHERE job_class=?",
-                [CLASS], |r| Ok((r.get::<_,String>(0)?, r.get::<_,i64>(1)?, r.get::<_,Timestamp>(2)?)),
-            ).optional()?)).await.unwrap();
-            if row.as_ref().is_none_or(|r| r.0 == "ready" && r.1 > 0) { break row; }
+            let row = app
+                .db()
+                .read(|c| {
+                    Ok(c.query_row(
+                        "SELECT status,attempts,run_at FROM background_jobs WHERE job_class=?",
+                        [CLASS],
+                        |r| {
+                            Ok((
+                                r.get::<_, String>(0)?,
+                                r.get::<_, i64>(1)?,
+                                r.get::<_, Timestamp>(2)?,
+                            ))
+                        },
+                    )
+                    .optional()?)
+                })
+                .await
+                .unwrap();
+            if row.as_ref().is_none_or(|r| r.0 == "ready" && r.1 > 0) {
+                break row;
+            }
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
-    }).await.unwrap();
+    })
+    .await
+    .unwrap();
     runner.shutdown(Duration::from_secs(1)).await;
     let storage = app.booted.app.storage.clone();
-    let preview_attached = app.db().read(move |c| {
-        let source = Blob::find(c, blob).unwrap().unwrap();
-        Ok(storage.existing_preview_image(c, &source).unwrap().is_some())
-    }).await.unwrap();
+    let preview_attached = app
+        .db()
+        .read(move |c| {
+            let source = Blob::find(c, blob).unwrap().unwrap();
+            Ok(storage
+                .existing_preview_image(c, &source)
+                .unwrap()
+                .is_some())
+        })
+        .await
+        .unwrap();
     let (token, expires, count) = state(&app, blob).await;
     let expected: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../vectors/message_attachment_processing_failures.json"
-    )).unwrap();
+    ))
+    .unwrap();
     assert!(app.publications().take().is_empty());
-    assert_eq!(json!({
-        "preview_attached": preview_attached,
-        "retry_jobs": count,
-        "retry_executions": retry.as_ref().map(|r| vec![r.1]).unwrap_or_default(),
-        "lease": {"message_processing_token":token,"message_processing_expires_at":expires.map(|t| t.jiff().to_string())},
-    }), expected["completion_failure"], "a committed preview does not acknowledge a failed completion broadcast");
+    assert_eq!(
+        json!({
+            "preview_attached": preview_attached,
+            "retry_jobs": count,
+            "retry_executions": retry.as_ref().map(|r| vec![r.1]).unwrap_or_default(),
+            "lease": {"message_processing_token":token,"message_processing_expires_at":expires.map(|t| t.jiff().to_string())},
+        }),
+        expected["completion_failure"],
+        "a committed preview does not acknowledge a failed completion broadcast"
+    );
 
-    app.db().write(|tx| {
-        tx.conn().execute_batch("ALTER TABLE unavailable_boosts RENAME TO boosts")?;
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute_batch("ALTER TABLE unavailable_boosts RENAME TO boosts")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     clock.set(retry.unwrap().2.jiff());
     let runner = start(&app);
     tokio::time::timeout(Duration::from_secs(15), async {
         while state(&app, blob).await.2 != 0 {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
-    }).await.unwrap();
+    })
+    .await
+    .unwrap();
     runner.shutdown(Duration::from_secs(1)).await;
     client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && message.attachment.as_ref().is_some_and(|file| file.thumbnail_url.is_some())), |_| false).await;
-    assert!(render(&app,id).await["attachment"]["thumbnailUrl"].is_string());
+    assert!(render(&app, id).await["attachment"]["thumbnailUrl"].is_string());
     server.abort();
 }
 
@@ -335,12 +435,20 @@ async fn attachment_processing_duplicate_composer_response_keeps_recovery_reques
     // Duplicate submission skips broadcast_create: the response itself must drain intents,
     // including intents recorded by a warm PR-card collection cache key.
     for _ in 0..2 {
-        let response = app.david().write(Req::new(axum::http::Method::POST,
-            &format!("/rooms/{ALL_TALK}/messages"))
-            .header("accept", "text/vnd.turbo-stream.html")
-            .header("content-type", "application/json")
-            .body(json!({"message":{"client_message_id":"attachment-processing-1"}}).to_string())
-        ).await;
+        let response = app
+            .david()
+            .write(
+                Req::new(
+                    axum::http::Method::POST,
+                    &format!("/rooms/{ALL_TALK}/messages"),
+                )
+                .header("accept", "text/vnd.turbo-stream.html")
+                .header("content-type", "application/json")
+                .body(
+                    json!({"message":{"client_message_id":"attachment-processing-1"}}).to_string(),
+                ),
+            )
+            .await;
         assert_eq!(response.status.as_u16(), 201, "{}", response.text());
         assert_eq!(state(&app, blob).await.2, 1);
     }
@@ -349,20 +457,29 @@ async fn attachment_processing_duplicate_composer_response_keeps_recovery_reques
 #[tokio::test]
 async fn attachment_processing_quiet_stream_final_keeps_recovery_requests() {
     let (app, _, id, blob) = setup(true).await;
-    app.db().write(move |tx| {
-        tx.emit_after_commit(campfire_db::Event::broadcast(
-            &campfire_db::models::user::lifecycle::QuietStreamFinal { message_id: id }
-        ));
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            tx.emit_after_commit(campfire_db::Event::broadcast(
+                &campfire_db::models::user::lifecycle::QuietStreamFinal { message_id: id },
+            ));
+            Ok(())
+        })
+        .await
+        .unwrap();
     assert_eq!(state(&app, blob).await.2, 1);
 }
 
 fn event_oracle() -> serde_json::Value {
     let mut value: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../vectors/message_attachment_processing_events.json"
-    )).unwrap();
-    for row in value.as_object_mut().unwrap().values_mut() { if let Some(row) = row.as_object_mut() { row.remove("video_frames"); row.remove("poster_present"); } }
+    ))
+    .unwrap();
+    for row in value.as_object_mut().unwrap().values_mut() {
+        if let Some(row) = row.as_object_mut() {
+            row.remove("video_frames");
+            row.remove("poster_present");
+        }
+    }
     value
 }
 
@@ -395,10 +512,19 @@ async fn attachment_processing_step_create_retains_recovery_like_fresh_rails() {
     let (app, id, blob) = agent_step_video().await;
     let (_client, server) = subscribe(&app).await;
     app.publications().take();
-    let reply = app.anonymous().send(Req::new(axum::http::Method::POST, "/agents/steps")
-        .header("authorization", &format!("Bearer {}", crate::controllers::agent_http_tests::SECRET))
-        .header("accept", "application/json").header("content-type", "application/json")
-        .body(json!({"message_id":id,"name":"Inspect video"}).to_string())).await;
+    let reply = app
+        .anonymous()
+        .send(
+            Req::new(axum::http::Method::POST, "/agents/steps")
+                .header(
+                    "authorization",
+                    &format!("Bearer {}", crate::controllers::agent_http_tests::SECRET),
+                )
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .body(json!({"message_id":id,"name":"Inspect video"}).to_string()),
+        )
+        .await;
     let mut actual = event_snapshot(&app, blob).await;
     actual["http_status"] = json!(reply.status.as_u16());
     server.abort();
@@ -414,10 +540,19 @@ async fn attachment_processing_step_update_retains_recovery_like_fresh_rails() {
     }).await.unwrap();
     let (_client, server) = subscribe(&app).await;
     app.publications().take();
-    let reply = app.anonymous().send(Req::new(axum::http::Method::PATCH, &format!("/agents/steps/{step}"))
-        .header("authorization", &format!("Bearer {}", crate::controllers::agent_http_tests::SECRET))
-        .header("accept", "application/json").header("content-type", "application/json")
-        .body(json!({"status":"done"}).to_string())).await;
+    let reply = app
+        .anonymous()
+        .send(
+            Req::new(axum::http::Method::PATCH, &format!("/agents/steps/{step}"))
+                .header(
+                    "authorization",
+                    &format!("Bearer {}", crate::controllers::agent_http_tests::SECRET),
+                )
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .body(json!({"status":"done"}).to_string()),
+        )
+        .await;
     let mut actual = event_snapshot(&app, blob).await;
     actual["http_status"] = json!(reply.status.as_u16());
     server.abort();
@@ -429,37 +564,65 @@ async fn attachment_processing_full_render_event_sweep_matches_fresh_rails() {
     use campfire_db::{Event, broadcasts::Broadcast};
     let mut actuals = serde_json::Map::new();
     let mut expectations = serde_json::Map::new();
-    for kind in ["notifier", "digest", "system_note", "stage_note", "thread_indicator"] {
+    for kind in [
+        "notifier",
+        "digest",
+        "system_note",
+        "stage_note",
+        "thread_indicator",
+    ] {
         let (app, _, id, blob) = setup(true).await;
         if kind == "stage_note" {
-            app.db().write(move |tx| {
-                tx.conn().execute("UPDATE rooms SET type='Rooms::Stage' WHERE id=?", [ALL_TALK])?;
-                tx.conn().execute("UPDATE messages SET system_note=1 WHERE id=?", [id])?;
-                Ok(())
-            }).await.unwrap();
+            app.db()
+                .write(move |tx| {
+                    tx.conn().execute(
+                        "UPDATE rooms SET type='Rooms::Stage' WHERE id=?",
+                        [ALL_TALK],
+                    )?;
+                    tx.conn()
+                        .execute("UPDATE messages SET system_note=1 WHERE id=?", [id])?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
         }
         let (_client, server) = subscribe(&app).await;
         app.publications().take();
-        app.db().write(move |tx| {
-            let event = match kind {
-                "notifier" => Event::broadcast(&crate::integrations::github::notifier::MessageCreated {
-                    room_id:ALL_TALK, message_id:id, thread_id:None,
-                }),
-                "digest" | "system_note" => {
-                    if kind == "system_note" {
-                        tx.conn().execute("UPDATE messages SET system_note=1 WHERE id=?", [id])?;
+        app.db()
+            .write(move |tx| {
+                let event = match kind {
+                    "notifier" => {
+                        Event::broadcast(&crate::integrations::github::notifier::MessageCreated {
+                            room_id: ALL_TALK,
+                            message_id: id,
+                            thread_id: None,
+                        })
                     }
-                    Event::broadcast(&campfire_db::models::board_automations::DigestNotes {message_ids:vec![id]})
-                },
-                "stage_note" => Event::broadcast(&campfire_db::models::huddle_effects::StageEndedNote {message_id:id}),
-                "thread_indicator" => {
-                    Event::broadcast(&Broadcast::ThreadIndicator { message_id: id, reply_count: 1 })
-                },
-                _ => unreachable!(),
-            };
-            tx.emit_after_commit(event);
-            Ok(())
-        }).await.unwrap();
+                    "digest" | "system_note" => {
+                        if kind == "system_note" {
+                            tx.conn()
+                                .execute("UPDATE messages SET system_note=1 WHERE id=?", [id])?;
+                        }
+                        Event::broadcast(&campfire_db::models::board_automations::DigestNotes {
+                            message_ids: vec![id],
+                        })
+                    }
+                    "stage_note" => {
+                        Event::broadcast(&campfire_db::models::huddle_effects::StageEndedNote {
+                            message_id: id,
+                        })
+                    }
+                    "thread_indicator" => Event::broadcast(&Broadcast::ThreadIndicator {
+                        message_id: id,
+                        reply_count: 1,
+                    }),
+                    _ => unreachable!(),
+                };
+                tx.emit_after_commit(event);
+                Ok(())
+            })
+            .await
+            .unwrap();
         let expected = match kind {
             "notifier" | "digest" => "full_append",
             "stage_note" => "system_note",
@@ -470,7 +633,10 @@ async fn attachment_processing_full_render_event_sweep_matches_fresh_rails() {
         actuals.insert(kind.into(), actual);
         expectations.insert(kind.into(), event_oracle()[expected].clone());
     }
-    assert_eq!(actuals, expectations, "full render events must retain recovery; component-only events must not invent it");
+    assert_eq!(
+        actuals, expectations,
+        "full render events must retain recovery; component-only events must not invent it"
+    );
 }
 
 #[tokio::test]
@@ -516,7 +682,7 @@ async fn attachment_processing_terminal_failure_never_restarts_from_views() {
     }
     runner.shutdown(Duration::from_secs(1)).await;
     assert_eq!(state(&app, blob).await.0.as_deref(), Some("failed"));
-    let message=render(&app,id).await;
+    let message = render(&app, id).await;
     assert!(message["attachment"]["thumbnailUrl"].is_null());
     for _ in 0..3 {
         view(&app, id).await;
@@ -581,7 +747,7 @@ async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails()
     let (mut client, server) = json_subscribe(&app).await;
     let server = AbortServer(server);
     let expected = oracle()["success"].clone();
-    assert!(render(&app,id).await["attachment"]["thumbnailUrl"].is_null());
+    assert!(render(&app, id).await["attachment"]["thumbnailUrl"].is_null());
     let (token, expires, count) = state(&app, blob_id).await;
     assert_eq!(count, 1);
     assert_eq!(
@@ -599,7 +765,7 @@ async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails()
     app.publications().take();
     perform_queued(&app, 1).await.unwrap();
     client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && message.attachment.as_ref().is_some_and(|file| file.thumbnail_url.is_some())), |_| false).await;
-    assert!(render(&app,id).await["attachment"]["thumbnailUrl"].is_string());
+    assert!(render(&app, id).await["attachment"]["thumbnailUrl"].is_string());
     let storage = app.booted.app.storage.clone();
     let expected_message = expected["message"].clone();
     let expected_blob = expected["blob"].clone();
@@ -682,28 +848,44 @@ async fn bot_caption_edit_recovers_video_preview_after_enqueue_failure() {
     assert_eq!(token.as_deref(), Some("enqueue_failed:1"));
     assert_eq!(count, 0);
     clock.set(expires.unwrap().jiff());
-    app.db().write(|tx| {
-        tx.conn().execute_batch("DROP TRIGGER reject_bot_preview")?;
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn().execute_batch("DROP TRIGGER reject_bot_preview")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
 
     let path = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}");
     let mut bot = app.anonymous();
     for caption in ["Updated caption", "Another caption"] {
-        let response = bot.send(Req::new(axum::http::Method::PUT, &path).body(caption)).await;
+        let response = bot
+            .send(Req::new(axum::http::Method::PUT, &path).body(caption))
+            .await;
         assert_eq!(response.status.as_u16(), 200, "{}", response.text());
         assert_eq!(response.json()["body"]["plain_text"], caption);
         let (token, expires, count) = state(&app, blob).await;
-        assert_eq!(count, 1, "bot caption edits must recover the pending video preview exactly once");
+        assert_eq!(
+            count, 1,
+            "bot caption edits must recover the pending video preview exactly once"
+        );
         assert!(token.unwrap().ends_with(":1"));
         assert!(expires.is_some());
     }
-    app.db().read(move |conn| {
-        let message = Message::find(conn, id)?;
-        assert_eq!(message.attachment(conn)?.unwrap().1.id, blob);
-        assert!(message.body_html(conn)?.unwrap().contains("Another caption"));
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .read(move |conn| {
+            let message = Message::find(conn, id)?;
+            assert_eq!(message.attachment(conn)?.unwrap().1.id, blob);
+            assert!(
+                message
+                    .body_html(conn)?
+                    .unwrap()
+                    .contains("Another caption")
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -787,7 +969,7 @@ async fn attachment_processing_replacements_cover_room_thread_multipart_and_dire
                 .unwrap();
             assert_eq!(state(&app, replacement).await.2, 1);
             perform_queued(&app, 1).await.unwrap();
-            assert!(render(&app,message.id).await["attachment"]["thumbnailUrl"].is_string());
+            assert!(render(&app, message.id).await["attachment"]["thumbnailUrl"].is_string());
         }
     }
 }
@@ -830,7 +1012,10 @@ async fn attachment_processing_edited_scheduler_refreshes_every_other_current_ow
         .await
         .unwrap();
     assert_eq!(touched.updated_at.jiff(), campfire_kit::Clock::now(&*clock));
-    assert_eq!(render(&app,id).await["attachment"]["contentType"], "image/jpeg");
+    assert_eq!(
+        render(&app, id).await["attachment"]["contentType"],
+        "image/jpeg"
+    );
     server.abort();
 }
 
@@ -928,7 +1113,8 @@ async fn attachment_processing_agent_root_processes_before_its_create_broadcast(
         }).await.unwrap();
         let (mut client, server) = json_subscribe(&app).await;
         app.publications().take();
-        let signed = campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, blob, None);
+        let signed =
+            campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, blob, None);
         let response = app.anonymous().send(
             Req::new(axum::http::Method::POST, &format!("/rooms/{ALL_TALK}/agents/messages"))
                 .header("accept", "application/json")
@@ -938,15 +1124,32 @@ async fn attachment_processing_agent_root_processes_before_its_create_broadcast(
         ).await;
         assert_eq!(response.status.as_u16(), 201, "{}", response.text());
         let storage = app.booted.app.storage.clone();
-        app.db().read(move |conn| {
-            let source = Blob::find(conn, blob).unwrap().unwrap();
-            assert!(source.is_analyzed(), "Rails analyzes before broadcasting the root post");
-            assert_eq!(storage.existing_preview_image(conn, &source).unwrap().is_some(), !corrupt);
-            Ok(())
-        }).await.unwrap();
+        app.db()
+            .read(move |conn| {
+                let source = Blob::find(conn, blob).unwrap().unwrap();
+                assert!(
+                    source.is_analyzed(),
+                    "Rails analyzes before broadcasting the root post"
+                );
+                assert_eq!(
+                    storage
+                        .existing_preview_image(conn, &source)
+                        .unwrap()
+                        .is_some(),
+                    !corrupt
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
         let event = client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageCreated(message) if message.client_message_id == "root-processing-order"), |_| false).await;
-        let campfire_api_types::SyncPayload::MessageCreated(message) = event.payload else { unreachable!() };
-        assert_eq!(message.attachment.unwrap().thumbnail_url.is_some(), !corrupt);
+        let campfire_api_types::SyncPayload::MessageCreated(message) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!(
+            message.attachment.unwrap().thumbnail_url.is_some(),
+            !corrupt
+        );
         assert_eq!(state(&app, blob).await.2, if corrupt { 1 } else { 0 });
         server.abort();
     }

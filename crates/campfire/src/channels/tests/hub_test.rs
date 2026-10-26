@@ -7,9 +7,7 @@ use campfire_db::{Room, User};
 use serde_json::json;
 
 use super::support::{Client, delivery, identifier};
-use crate::controllers::presenters::test_support::{
-    DAVID, Req, TestApp, david_cookie,
-};
+use crate::controllers::presenters::test_support::{DAVID, Req, TestApp, david_cookie};
 
 const DISCONNECT_RECONNECT: &str = r#"{"type":"disconnect","reason":"remote","reconnect":true}"#;
 const UNAUTHORIZED: &str = r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#;
@@ -19,8 +17,6 @@ mod directory;
 
 #[path = "reads_test.rs"]
 mod reads;
-
-
 
 struct Hub {
     app: TestApp,
@@ -58,7 +54,6 @@ async fn boot_with_test_clock(clock: campfire_kit::SharedClock) -> Option<Hub> {
     })
 }
 
-
 impl Hub {
     async fn connect(&self, cookie: &str) -> Client {
         use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -83,8 +78,6 @@ impl Hub {
         assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
         client
     }
-
-
 }
 
 #[tokio::test]

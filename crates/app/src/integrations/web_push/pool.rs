@@ -48,7 +48,8 @@ impl Pool {
         F: Fn(i64) -> Result<(), E> + Send + 'static,
         E: Display,
     {
-        let handler: Handler = Box::new(move |id| invalid_subscription_handler(id).map_err(|e| e.to_string()));
+        let handler: Handler =
+            Box::new(move |id| invalid_subscription_handler(id).map_err(|e| e.to_string()));
         let (sender, receiver) = mpsc::channel::<i64>();
         let invalidator = std::thread::Builder::new()
             .name("web_push-invalidation".into())
@@ -58,9 +59,13 @@ impl Pool {
                     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| handler(id))) {
                         Ok(Ok(())) => {}
                         Ok(Err(message)) => {
-                            tracing::error!("Error in WebPush::Pool.invalid_subscription_handler: {message}")
+                            tracing::error!(
+                                "Error in WebPush::Pool.invalid_subscription_handler: {message}"
+                            )
                         }
-                        Err(_) => tracing::error!("Error in WebPush::Pool.invalid_subscription_handler: panic"),
+                        Err(_) => tracing::error!(
+                            "Error in WebPush::Pool.invalid_subscription_handler: panic"
+                        ),
                     }
                 }
             })
@@ -84,7 +89,13 @@ impl Pool {
 
     /// `queue(payload, subscriptions)`: in id order (`find_each`), each subscription's
     /// notification is built here (counting its badge) and delivered on the pool.
-    pub fn queue(&self, conn: &Connection, payload: &PushPayload, mut subscriptions: Vec<PushSubscription>, now: Timestamp) -> campfire_db::Result<()> {
+    pub fn queue(
+        &self,
+        conn: &Connection,
+        payload: &PushPayload,
+        mut subscriptions: Vec<PushSubscription>,
+        now: Timestamp,
+    ) -> campfire_db::Result<()> {
         subscriptions.sort_by_key(|s| s.id);
         for subscription in &subscriptions {
             self.deliver_later(Notification::build(conn, subscription, payload, now)?);
@@ -153,8 +164,14 @@ impl Inner {
     async fn deliver(&self, notification: &Notification) {
         match notification.deliver(&self.net, &self.vapid).await {
             Ok(_) => {}
-            Err(error) if error.invalidates_subscription() => self.invalidate_subscription_later(notification.subscription.id),
-            Err(error) => tracing::error!("Error in WebPush::Pool.deliver: {} {}", error.class_name(), error),
+            Err(error) if error.invalidates_subscription() => {
+                self.invalidate_subscription_later(notification.subscription.id)
+            }
+            Err(error) => tracing::error!(
+                "Error in WebPush::Pool.deliver: {} {}",
+                error.class_name(),
+                error
+            ),
         }
     }
 

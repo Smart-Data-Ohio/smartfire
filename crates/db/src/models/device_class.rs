@@ -45,6 +45,11 @@ mod tests {
     #[test]
     fn future_stored_metadata_is_unknown_instead_of_failing_a_recipient_batch() {
         let conn = rusqlite::Connection::open_in_memory().unwrap();
-        assert_eq!(conn.query_row("SELECT 'future-device'", [], |row| row.get::<_, DeviceClass>(0)).unwrap(), Unknown);
+        assert_eq!(
+            conn.query_row("SELECT 'future-device'", [], |row| row
+                .get::<_, DeviceClass>(0))
+                .unwrap(),
+            Unknown
+        );
     }
 }

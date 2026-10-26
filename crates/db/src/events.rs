@@ -117,7 +117,8 @@ impl Event {
     pub fn broadcast<B: Broadcast>(arguments: &B) -> Self {
         Event::Broadcast(BroadcastRequest {
             kind: B::KIND,
-            arguments: serde_json::to_value(arguments).expect("broadcast arguments serialize to JSON"),
+            arguments: serde_json::to_value(arguments)
+                .expect("broadcast arguments serialize to JSON"),
         })
     }
 
@@ -142,7 +143,9 @@ impl Event {
     /// The WS8 messaging description, if this is its broadcast kind.
     pub fn as_broadcast(&self) -> Option<crate::broadcasts::Broadcast> {
         match self {
-            Event::Broadcast(request) => request.decode::<crate::broadcasts::Broadcast>().and_then(|value| value.ok()),
+            Event::Broadcast(request) => request
+                .decode::<crate::broadcasts::Broadcast>()
+                .and_then(|value| value.ok()),
             _ => None,
         }
     }
@@ -152,13 +155,22 @@ pub trait EventSink: Send + Sync {
     /// Rails attaches a daily digest claim only after its explicit broadcast succeeds.
     /// The app returns the successfully published note IDs; recorder-only sinks retain
     /// their ordinary event behavior. Run outside the writer so rendering can read.
-    fn broadcast_digest_notes(&self, notes: &crate::models::board_automations::DigestNotes) -> Result<Vec<i64>> {
+    fn broadcast_digest_notes(
+        &self,
+        notes: &crate::models::board_automations::DigestNotes,
+    ) -> Result<Vec<i64>> {
         self.emit(Event::broadcast(notes));
         Ok(notes.message_ids.clone())
     }
     /// Peer model adapter. The default is a flagged uninstalled stub, as with
     /// `callbacks::Registry`; production Jobs dispatches its installed handlers.
-    fn model_callback(&self, _tx: &mut Tx<'_>, _callback: crate::callbacks::Callback) -> Result<()> { Ok(()) }
+    fn model_callback(
+        &self,
+        _tx: &mut Tx<'_>,
+        _callback: crate::callbacks::Callback,
+    ) -> Result<()> {
+        Ok(())
+    }
     /// Domain connected-account callbacks in User#deactivate. SQL only, on the triggering write.
     fn disconnect_user_accounts(&self, _tx: &mut Tx<'_>, _user_id: i64) -> Result<()> {
         Ok(())
@@ -166,16 +178,29 @@ pub trait EventSink: Send + Sync {
 
     /// Domain reference callbacks run on the message writer's transaction. No network or
     /// HTML belongs here; durable fetch requests must commit with their triggering message.
-    fn sync_message_references(&self, _tx: &mut Tx<'_>, _message: &crate::Message, _enqueue: bool) -> Result<()> {
+    fn sync_message_references(
+        &self,
+        _tx: &mut Tx<'_>,
+        _message: &crate::Message,
+        _enqueue: bool,
+    ) -> Result<()> {
         Ok(())
     }
 
     /// A real reference adapter at its position in Message#sync_all_references.
     /// Existing custom sinks retain their combined hook at the link phase.
-    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &crate::Message, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+    fn sync_message_reference_phase(
+        &self,
+        tx: &mut Tx<'_>,
+        message: &crate::Message,
+        phase: crate::callbacks::Phase,
+        enqueue: bool,
+    ) -> Result<()> {
         if phase == crate::callbacks::Phase::MessageLinkReferences {
             self.sync_message_references(tx, message, enqueue)
-        } else { Ok(()) }
+        } else {
+            Ok(())
+        }
     }
 
     /// Hands the event off, once its write has committed (or right away, for [`Tx::emit_now`]).
@@ -239,11 +264,22 @@ impl<T: EventSink + ?Sized> EventSink for Arc<T> {
         (**self).disconnect_user_accounts(tx, user_id)
     }
 
-    fn sync_message_references(&self, tx: &mut Tx<'_>, message: &crate::Message, enqueue: bool) -> Result<()> {
+    fn sync_message_references(
+        &self,
+        tx: &mut Tx<'_>,
+        message: &crate::Message,
+        enqueue: bool,
+    ) -> Result<()> {
         (**self).sync_message_references(tx, message, enqueue)
     }
 
-    fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &crate::Message, phase: crate::callbacks::Phase, enqueue: bool) -> Result<()> {
+    fn sync_message_reference_phase(
+        &self,
+        tx: &mut Tx<'_>,
+        message: &crate::Message,
+        phase: crate::callbacks::Phase,
+        enqueue: bool,
+    ) -> Result<()> {
         (**self).sync_message_reference_phase(tx, message, phase, enqueue)
     }
 
@@ -284,8 +320,13 @@ mod tests {
     /// A domain's job goes through the open variant and back without a central list.
     #[test]
     fn domain_jobs_round_trip_through_the_open_variant() {
-        let args = SyncEntry { event_id: 7, user_id: 9 };
-        let Event::Job(request) = Event::job(&args) else { panic!("not a job") };
+        let args = SyncEntry {
+            event_id: 7,
+            user_id: 9,
+        };
+        let Event::Job(request) = Event::job(&args) else {
+            panic!("not a job")
+        };
         assert_eq!(request.class, "Calendar::SyncEntryJob");
         assert_eq!(request.decode::<SyncEntry>().unwrap().unwrap(), args);
         assert!(request.decode::<Other>().is_none(), "another class's job");

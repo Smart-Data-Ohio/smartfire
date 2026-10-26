@@ -76,7 +76,8 @@ pub fn open_and_post(
         }
     }
     if agent.kind != crate::AgentKind::Personal
-        && !agent_access::has_capability_anywhere(tx.conn(), agent.id, "post_messages")? {
+        && !agent_access::has_capability_anywhere(tx.conn(), agent.id, "post_messages")?
+    {
         return Ok(fail("Forbidden: agent lacks post_messages capability", 403));
     }
     if !allowed(tx, &agent, target.id)? {
@@ -98,7 +99,8 @@ pub fn open_and_post(
     }
     if new_room {
         for membership in room.memberships(tx.conn())? {
-            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MembershipChanged { membership_id: membership.id,
+            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::MembershipChanged {
+                membership_id: membership.id,
             }));
         }
         let user = User::find(tx.conn(), agent.user_id)?;

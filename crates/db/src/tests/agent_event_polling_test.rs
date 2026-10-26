@@ -72,17 +72,43 @@ fn ws11_poll_skips_unreadable_message_payloads_and_advances_cursor() {
         tx.conn().execute("DELETE FROM agent_grants", [])?;
         let message = crate::Message::find(tx.conn(), id("fourth"))?;
         Room::find(tx.conn(), message.room_id)?.grant_to(tx, &[id("bender")])?;
-        let event = crate::models::agent_delivery::AgentEvent::create(tx, crate::models::agent_delivery::NewEvent {
-            agent_id: id("bender_agent"), room_id: Some(message.room_id), message_id: Some(message.id),
-            event_type: "mention".into(), outcome: Some("delivered".into()), ..Default::default()
-        })?;
+        let event = crate::models::agent_delivery::AgentEvent::create(
+            tx,
+            crate::models::agent_delivery::NewEvent {
+                agent_id: id("bender_agent"),
+                room_id: Some(message.room_id),
+                message_id: Some(message.id),
+                event_type: "mention".into(),
+                outcome: Some("delivered".into()),
+                ..Default::default()
+            },
+        )?;
         for missing in ["Message", "ChannelThread", "Room", "User"] {
-            let page = poll(tx.conn(), id("bender_agent"), Some(&json!(event.id - 1)), Some(&json!(1)), tx.now(), &Default::default(),
-                |_| Err(crate::Error::RecordNotFound(missing)))?;
-            assert_eq!(page, json!({"events": [], "next_since": event.id}), "{missing}");
+            let page = poll(
+                tx.conn(),
+                id("bender_agent"),
+                Some(&json!(event.id - 1)),
+                Some(&json!(1)),
+                tx.now(),
+                &Default::default(),
+                |_| Err(crate::Error::RecordNotFound(missing)),
+            )?;
+            assert_eq!(
+                page,
+                json!({"events": [], "next_since": event.id}),
+                "{missing}"
+            );
         }
-        let error = poll(tx.conn(), id("bender_agent"), Some(&json!(event.id - 1)), Some(&json!(1)), tx.now(), &Default::default(),
-            |_| Err(crate::Error::Other("presentation failure".into()))).unwrap_err();
+        let error = poll(
+            tx.conn(),
+            id("bender_agent"),
+            Some(&json!(event.id - 1)),
+            Some(&json!(1)),
+            tx.now(),
+            &Default::default(),
+            |_| Err(crate::Error::Other("presentation failure".into())),
+        )
+        .unwrap_err();
         assert!(matches!(error, crate::Error::Other(message) if message == "presentation failure"));
         Ok(())
     });

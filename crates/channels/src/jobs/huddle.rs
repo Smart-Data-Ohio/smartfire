@@ -58,9 +58,11 @@ impl campfire_db::Job for Ring {
 impl JobKind for Ring {}
 
 pub async fn ring(app: App, _: Ring, execution: Execution) -> JobResult {
-    app.db.write(move |tx| {
-        campfire_db::models::huddle_invitations::publish_queued_ring(tx, execution.id)
-    }).await?;
+    app.db
+        .write(move |tx| {
+            campfire_db::models::huddle_invitations::publish_queued_ring(tx, execution.id)
+        })
+        .await?;
     Ok(Outcome::Done)
 }
 

@@ -13,9 +13,20 @@ use crate::*;
 
 fn boot() -> Boot {
     Boot {
-        user: BootUser { id: 7, name: "David".into(), avatar_url: "/users/abc/avatar?v=1".into() },
+        user: BootUser {
+            id: 7,
+            name: "David".into(),
+            avatar_url: "/users/abc/avatar?v=1".into(),
+        },
         custom_styles: None,
-        account: BootAccount { name: Some("Smart Data".into()), logo_url: None, logo_still_url: None, banner_url: None, banner_still_url: None, upload_limit_bytes: 104_857_600 },
+        account: BootAccount {
+            name: Some("Smart Data".into()),
+            logo_url: None,
+            logo_still_url: None,
+            banner_url: None,
+            banner_still_url: None,
+            upload_limit_bytes: 104_857_600,
+        },
         theme: theme(Some("dark")),
         text_size: text_size(None),
         cable_url: "/cable".into(),
@@ -29,7 +40,9 @@ fn boot() -> Boot {
 
 /// The boot JSON a page carries, decoded.
 fn boot_json(html: &str) -> serde_json::Value {
-    let start = html.find("id=\"boot\"").expect("the page has the boot script");
+    let start = html
+        .find("id=\"boot\"")
+        .expect("the page has the boot script");
     let json = &html[html[start..].find('>').unwrap() + start + 1..];
     serde_json::from_str(&json[..json.find("</script>").unwrap()]).unwrap()
 }
@@ -43,11 +56,14 @@ fn fixture() -> &'static [File] {
         .into_iter()
         .map(|entry| {
             let bytes = std::fs::read(&entry.source).unwrap();
-            let encoded = |vite: &Option<std::path::PathBuf>, encode: fn(&[u8]) -> Vec<u8>| match vite {
-                Some(path) => Some(leak(std::fs::read(path).unwrap())),
-                None if entry.compressible() => embed::smaller(encode(&bytes), &bytes).map(leak),
-                None => None,
-            };
+            let encoded =
+                |vite: &Option<std::path::PathBuf>, encode: fn(&[u8]) -> Vec<u8>| match vite {
+                    Some(path) => Some(leak(std::fs::read(path).unwrap())),
+                    None if entry.compressible() => {
+                        embed::smaller(encode(&bytes), &bytes).map(leak)
+                    }
+                    None => None,
+                };
             File {
                 path: Box::leak(entry.path.clone().into_boxed_str()),
                 content_type: entry.content_type,
@@ -69,7 +85,9 @@ fn unbrotli(bytes: &[u8]) -> Vec<u8> {
 
 fn gunzip(bytes: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
-    flate2::read::GzDecoder::new(bytes).read_to_end(&mut out).unwrap();
+    flate2::read::GzDecoder::new(bytes)
+        .read_to_end(&mut out)
+        .unwrap();
     out
 }
 
@@ -99,14 +117,28 @@ fn built_dist_is_embedded_whole() {
         return;
     }
     assert!(!files().is_empty());
-    assert!(files().windows(2).all(|pair| pair[0].path < pair[1].path), "sorted for lookup");
+    assert!(
+        files().windows(2).all(|pair| pair[0].path < pair[1].path),
+        "sorted for lookup"
+    );
     let page = render_shell(&boot(), "token", Some("nonce"), &Favicon::Mark);
-    assert!(page.contains("<script nonce=\"nonce\" type=\"module\""), "Vite's entry script carries the nonce: {page}");
+    assert!(
+        page.contains("<script nonce=\"nonce\" type=\"module\""),
+        "Vite's entry script carries the nonce: {page}"
+    );
     assert_eq!(boot_json(&page)["account"]["name"], "Smart Data");
     for file in files() {
-        assert!(!file.path.starts_with('.') && !file.path.contains("/."), "{} is build metadata", file.path);
+        assert!(
+            !file.path.starts_with('.') && !file.path.contains("/."),
+            "{} is build metadata",
+            file.path
+        );
         assert_ne!(file.path, "index.html");
-        assert_ne!(file.content_type, "application/octet-stream", "{} has no known type", file.path);
+        assert_ne!(
+            file.content_type, "application/octet-stream",
+            "{} has no known type",
+            file.path
+        );
         let extension = file.path.rsplit_once('.').map_or("", |(_, ext)| ext);
         let expected = match extension {
             "js" => Some("text/javascript; charset=utf-8"),
@@ -119,13 +151,22 @@ fn built_dist_is_embedded_whole() {
             assert_eq!(file.content_type, expected, "{}", file.path);
         }
         if extension == "woff2" {
-            assert_eq!((file.br, file.gz), (None, None), "{}: woff2 is compressed already", file.path);
+            assert_eq!(
+                (file.br, file.gz),
+                (None, None),
+                "{}: woff2 is compressed already",
+                file.path
+            );
         }
         // The fonts' licences keep their names, so they're found beside the fonts (and revalidated).
         if file.path.starts_with("assets/LICENSE-") {
             assert!(!file.immutable && extension == "txt", "{}", file.path);
         } else if file.path.starts_with("assets/") && !file.path.ends_with(".map") {
-            assert!(file.immutable, "Vite hashes every asset's name: {}", file.path);
+            assert!(
+                file.immutable,
+                "Vite hashes every asset's name: {}",
+                file.path
+            );
         }
         if let Some(br) = file.br {
             assert_eq!(unbrotli(br), file.identity, "{}", file.path);
@@ -134,11 +175,22 @@ fn built_dist_is_embedded_whole() {
             assert_eq!(gunzip(gz), file.identity, "{}", file.path);
         }
         if embed::compressible(file.content_type) && file.identity.len() > 1024 {
-            assert!(file.br.is_some() && file.gz.is_some(), "{} is served compressed", file.path);
+            assert!(
+                file.br.is_some() && file.gz.is_some(),
+                "{} is served compressed",
+                file.path
+            );
         }
     }
-    let entry = page.split("src=\"/app/").nth(1).and_then(|rest| rest.split('"').next()).expect("an entry script");
-    assert!(file(entry, None).is_some(), "the shell's entry script {entry} is embedded");
+    let entry = page
+        .split("src=\"/app/")
+        .nth(1)
+        .and_then(|rest| rest.split('"').next())
+        .expect("an entry script");
+    assert!(
+        file(entry, None).is_some(),
+        "the shell's entry script {entry} is embedded"
+    );
 }
 
 // --- Embedding -----------------------------------------------------------------------------------
@@ -146,15 +198,30 @@ fn built_dist_is_embedded_whole() {
 #[test]
 fn embedding_keeps_servable_files_with_their_types_and_cache_policy() {
     let files = fixture();
-    let summary: Vec<(&str, &str, bool)> = files.iter().map(|f| (f.path, f.content_type, f.immutable)).collect();
+    let summary: Vec<(&str, &str, bool)> = files
+        .iter()
+        .map(|f| (f.path, f.content_type, f.immutable))
+        .collect();
     assert_eq!(
         summary,
         [
-            ("assets/index-B2x8Kq1f.js", "text/javascript; charset=utf-8", true),
+            (
+                "assets/index-B2x8Kq1f.js",
+                "text/javascript; charset=utf-8",
+                true
+            ),
             ("assets/index-Dk_9-xYz.css", "text/css; charset=utf-8", true),
             ("assets/logo-AbCdEf12.png", "image/png", true),
-            ("assets/unhashed.js", "text/javascript; charset=utf-8", false),
-            ("assets/vendor-Q1w2E3r4.js", "text/javascript; charset=utf-8", true),
+            (
+                "assets/unhashed.js",
+                "text/javascript; charset=utf-8",
+                false
+            ),
+            (
+                "assets/vendor-Q1w2E3r4.js",
+                "text/javascript; charset=utf-8",
+                true
+            ),
             ("favicon.svg", "image/svg+xml", false),
             ("offline.html", "text/html; charset=utf-8", false),
             ("service-worker.js", "text/javascript; charset=utf-8", false),
@@ -170,16 +237,30 @@ fn embedding_compresses_text_and_keeps_vites_own_encodings() {
     let js = find(files, "assets/index-B2x8Kq1f.js").unwrap();
     assert_eq!(unbrotli(js.br.unwrap()), js.identity);
     assert_eq!(gunzip(js.gz.unwrap()), js.identity);
-    assert!(js.br.unwrap().len() < js.gz.unwrap().len() && js.gz.unwrap().len() < js.identity.len());
+    assert!(
+        js.br.unwrap().len() < js.gz.unwrap().len() && js.gz.unwrap().len() < js.identity.len()
+    );
 
     let vendor = find(files, "assets/vendor-Q1w2E3r4.js").unwrap();
-    assert_eq!(vendor.br, Some(&b"vite's own brotli bytes"[..]), "Vite's .br is used as it is");
+    assert_eq!(
+        vendor.br,
+        Some(&b"vite's own brotli bytes"[..]),
+        "Vite's .br is used as it is"
+    );
     assert_eq!(gunzip(vendor.gz.unwrap()), vendor.identity);
 
     let png = find(files, "assets/logo-AbCdEf12.png").unwrap();
-    assert_eq!((png.br, png.gz), (None, None), "a PNG is compressed already");
+    assert_eq!(
+        (png.br, png.gz),
+        (None, None),
+        "a PNG is compressed already"
+    );
     let tiny = find(files, "assets/unhashed.js").unwrap();
-    assert_eq!((tiny.br, tiny.gz), (None, None), "an encoding no smaller than the file isn't kept");
+    assert_eq!(
+        (tiny.br, tiny.gz),
+        (None, None),
+        "an encoding no smaller than the file isn't kept"
+    );
 }
 
 #[test]
@@ -211,7 +292,11 @@ fn negotiation_prefers_brotli_then_gzip_then_the_file() {
     assert_eq!(encoding(Some("gzip, deflate, br, zstd")), Some("br"));
     assert_eq!(encoding(Some("gzip, deflate")), Some("gzip"));
     assert_eq!(encoding(Some("x-gzip")), Some("gzip"));
-    assert_eq!(encoding(Some("BR;q=0.5, GZIP;q=0.9")), Some("gzip"), "the client's q-values win");
+    assert_eq!(
+        encoding(Some("BR;q=0.5, GZIP;q=0.9")),
+        Some("gzip"),
+        "the client's q-values win"
+    );
     assert_eq!(encoding(Some("br;q=0, gzip")), Some("gzip"));
     assert_eq!(encoding(Some("*")), Some("br"));
     assert_eq!(encoding(Some("*;q=0")), None);
@@ -227,14 +312,24 @@ fn negotiation_prefers_brotli_then_gzip_then_the_file() {
 
     let png = find(fixture(), "assets/logo-AbCdEf12.png").unwrap();
     let served = negotiate(png, Some("br, gzip"));
-    assert_eq!((served.content_encoding, served.body, served.varies()), (None, png.identity, false));
+    assert_eq!(
+        (served.content_encoding, served.body, served.varies()),
+        (None, png.identity, false)
+    );
 }
 
 #[test]
 fn lookups_are_exact() {
     let files = fixture();
     assert!(find(files, "assets/index-B2x8Kq1f.js").is_some());
-    for path in ["index.html", "assets/../index.html", "/assets/index-B2x8Kq1f.js", "assets/index-B2x8Kq1f.js.br", ".vite/manifest.json", "assets"] {
+    for path in [
+        "index.html",
+        "assets/../index.html",
+        "/assets/index-B2x8Kq1f.js",
+        "assets/index-B2x8Kq1f.js.br",
+        ".vite/manifest.json",
+        "assets",
+    ] {
         assert_eq!(find(files, path), None, "{path}");
     }
 }
@@ -249,10 +344,16 @@ fn built_dist_ships_each_fonts_licence() {
     let licences = [
         ("inter-", "LICENSE-Inter.txt"),
         ("jetbrains-mono-", "LICENSE-JetBrainsMono.txt"),
-        ("atkinson-hyperlegible-next-", "LICENSE-AtkinsonHyperlegibleNext.txt"),
+        (
+            "atkinson-hyperlegible-next-",
+            "LICENSE-AtkinsonHyperlegibleNext.txt",
+        ),
         ("SourceSerif4-", "LICENSE-SourceSerif4.txt"),
     ];
-    let fonts: Vec<&File> = files().iter().filter(|file| file.path.ends_with(".woff2")).collect();
+    let fonts: Vec<&File> = files()
+        .iter()
+        .filter(|file| file.path.ends_with(".woff2"))
+        .collect();
     assert!(!fonts.is_empty(), "the build ships fonts");
     for font in fonts {
         let name = font.path.rsplit('/').next().unwrap_or(font.path);
@@ -261,7 +362,10 @@ fn built_dist_ships_each_fonts_licence() {
             .find(|(prefix, _)| name.starts_with(prefix))
             .unwrap_or_else(|| panic!("{name} has no licence listed here"));
         let path = format!("assets/{licence}");
-        let file = files().iter().find(|file| file.path == path).unwrap_or_else(|| panic!("{path} isn't in the build, beside {name}"));
+        let file = files()
+            .iter()
+            .find(|file| file.path == path)
+            .unwrap_or_else(|| panic!("{path} isn't in the build, beside {name}"));
         let text = std::str::from_utf8(file.identity).expect("the licence is text");
         assert!(text.contains("SIL Open Font License"), "{path}");
     }
@@ -272,14 +376,25 @@ fn built_dist_ships_each_fonts_licence() {
 #[test]
 fn workspace_styles_follow_the_base_sheets_without_html_breakout() {
     let mut boot = boot();
-    boot.custom_styles = Some(":root { --accent: red; } .label::after { content: \"</style><script>&\\\"\"; }".into());
-    let page = render("<head><!--boot--><link rel=\"stylesheet\" href=\"base.css\"></head>", &boot, "token", Some("nonce"), &Favicon::Mark);
+    boot.custom_styles = Some(
+        ":root { --accent: red; } .label::after { content: \"</style><script>&\\\"\"; }".into(),
+    );
+    let page = render(
+        "<head><!--boot--><link rel=\"stylesheet\" href=\"base.css\"></head>",
+        &boot,
+        "token",
+        Some("nonce"),
+        &Favicon::Mark,
+    );
     let expected = "<style id=\"workspace-styles\">:root { --accent: red; } .label::after { content: \"\\3c /style><script>&\\\"\"; }</style>";
     assert!(page.contains(expected), "{page}");
     assert!(page.find("base.css").unwrap() < page.find(expected).unwrap());
     assert_eq!(page.matches("</style>").count(), 1);
     assert!(!page.contains("</style><script>"));
-    assert_eq!(boot_json(&page)["customStyles"], boot.custom_styles.unwrap());
+    assert_eq!(
+        boot_json(&page)["customStyles"],
+        boot.custom_styles.unwrap()
+    );
 }
 
 #[test]
@@ -287,16 +402,35 @@ fn workspace_styles_preserve_range_queries_and_attribute_selectors() {
     let css = "@media (width < 720px) { [data-label=\"<雪\"] { color: red; } }";
     let mut boot = boot();
     boot.custom_styles = Some(css.into());
-    let page = render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark);
-    assert!(page.contains(&format!("<style id=\"workspace-styles\">{css}</style>")), "{page}");
+    let page = render(
+        "<head><!--boot--></head>",
+        &boot,
+        "token",
+        None,
+        &Favicon::Mark,
+    );
+    assert!(
+        page.contains(&format!("<style id=\"workspace-styles\">{css}</style>")),
+        "{page}"
+    );
 }
 
 #[test]
 fn workspace_style_end_tags_are_case_insensitive_and_require_a_delimiter() {
     let mut boot = boot();
-    boot.custom_styles = Some("body::after { content: \"</StYlE> </STYLE /> </style\n> </stylesheet>\"; }".into());
-    let page = render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark);
-    assert!(page.contains("content: \"\\3c /StYlE> \\3c /STYLE /> \\3c /style\n> </stylesheet>\"; }"), "{page}");
+    boot.custom_styles =
+        Some("body::after { content: \"</StYlE> </STYLE /> </style\n> </stylesheet>\"; }".into());
+    let page = render(
+        "<head><!--boot--></head>",
+        &boot,
+        "token",
+        None,
+        &Favicon::Mark,
+    );
+    assert!(
+        page.contains("content: \"\\3c /StYlE> \\3c /STYLE /> \\3c /style\n> </stylesheet>\"; }"),
+        "{page}"
+    );
 }
 
 #[test]
@@ -304,17 +438,36 @@ fn empty_workspace_styles_emit_no_element() {
     for css in [None, Some(String::new())] {
         let mut boot = boot();
         boot.custom_styles = css;
-        assert!(!render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark).contains("<style"));
+        assert!(
+            !render(
+                "<head><!--boot--></head>",
+                &boot,
+                "token",
+                None,
+                &Favicon::Mark
+            )
+            .contains("<style")
+        );
     }
 }
 
 #[test]
 fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
-    let template = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixture/index.html")).unwrap();
-    let page = render(&template, &boot(), "masked+token/=", Some("n0nce+/="), &Favicon::Mark);
+    let template = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixture/index.html"),
+    )
+    .unwrap();
+    let page = render(
+        &template,
+        &boot(),
+        "masked+token/=",
+        Some("n0nce+/="),
+        &Favicon::Mark,
+    );
     assert!(!page.contains("<!--boot-->"));
-    assert!(page.contains(
-        "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n\
+    assert!(
+        page.contains(
+            "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n\
          <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
          <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
          <link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n\
@@ -322,10 +475,17 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
          <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n\
          <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n\
          <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
-    ), "{page}");
+        ),
+        "{page}"
+    );
     assert!(page.contains("<script nonce=\"n0nce+/=\" type=\"module\" crossorigin src=\"/app/assets/index-B2x8Kq1f.js\"></script>"), "{page}");
     assert!(page.contains("<link nonce=\"n0nce+/=\" rel=\"modulepreload\" crossorigin href=\"/app/assets/vendor-Q1w2E3r4.js\">"), "{page}");
-    assert!(page.contains("<link rel=\"stylesheet\" crossorigin href=\"/app/assets/index-Dk_9-xYz.css\">"), "styles need no nonce");
+    assert!(
+        page.contains(
+            "<link rel=\"stylesheet\" crossorigin href=\"/app/assets/index-Dk_9-xYz.css\">"
+        ),
+        "styles need no nonce"
+    );
     assert_eq!(page.matches("nonce=").count(), 3);
     assert_eq!(
         boot_json(&page),
@@ -347,16 +507,31 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
     assert!(!without_nonce.contains("nonce"));
     assert!(without_nonce.contains("<script type=\"application/json\" id=\"boot\">"));
 
-    let no_placeholder = render("<html><head><title>x</title></head></html>", &boot(), "token", None, &Favicon::Mark);
-    assert!(no_placeholder.contains("id=\"boot\">{") && no_placeholder.contains("</script>\n</head>"), "{no_placeholder}");
+    let no_placeholder = render(
+        "<html><head><title>x</title></head></html>",
+        &boot(),
+        "token",
+        None,
+        &Favicon::Mark,
+    );
+    assert!(
+        no_placeholder.contains("id=\"boot\">{") && no_placeholder.contains("</script>\n</head>"),
+        "{no_placeholder}"
+    );
 }
 
 #[test]
 fn a_workspace_logo_replaces_the_mark_as_the_icon() {
-    let page = render("<head><!--boot--></head>", &boot(), "token", None, &Favicon::Logo {
-        icon: "/account/logo?v=20261019120000&size=small".into(),
-        touch_icon: "/account/logo?v=20261019120000&size=touch".into(),
-    });
+    let page = render(
+        "<head><!--boot--></head>",
+        &boot(),
+        "token",
+        None,
+        &Favicon::Logo {
+            icon: "/account/logo?v=20261019120000&size=small".into(),
+            touch_icon: "/account/logo?v=20261019120000&size=touch".into(),
+        },
+    );
     assert!(page.contains(
         "<link rel=\"icon\" type=\"image/png\" href=\"/account/logo?v=20261019120000&amp;size=small\" />\n\
          <link rel=\"apple-touch-icon\" href=\"/account/logo?v=20261019120000&amp;size=touch\" />\n"
@@ -368,14 +543,21 @@ fn a_workspace_logo_replaces_the_mark_as_the_icon() {
 fn the_marks_files_are_the_sizes_their_links_promise() {
     let png_size = |bytes: &[u8]| {
         assert_eq!(&bytes[..8], b"\x89PNG\r\n\x1a\n");
-        (u32::from_be_bytes(bytes[16..20].try_into().unwrap()), u32::from_be_bytes(bytes[20..24].try_into().unwrap()))
+        (
+            u32::from_be_bytes(bytes[16..20].try_into().unwrap()),
+            u32::from_be_bytes(bytes[20..24].try_into().unwrap()),
+        )
     };
     let served = |path| favicon::file(path).unwrap_or_else(|| panic!("{path}"));
     assert_eq!(png_size(served("favicon.png").body), (32, 32));
     assert_eq!(png_size(served("apple-touch-icon.png").body), (180, 180));
     let svg = served("favicon.svg");
     assert_eq!(svg.file.content_type, "image/svg+xml");
-    assert!(std::str::from_utf8(svg.body).unwrap().starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\">"));
+    assert!(
+        std::str::from_utf8(svg.body)
+            .unwrap()
+            .starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\">")
+    );
 
     let ico = served("favicon.ico").body;
     assert_eq!(&ico[..4], [0, 0, 1, 0], "an icon resource");
@@ -385,7 +567,11 @@ fn the_marks_files_are_the_sizes_their_links_promise() {
             let length = u32::from_le_bytes(entry[8..12].try_into().unwrap()) as usize;
             let offset = u32::from_le_bytes(entry[12..16].try_into().unwrap()) as usize;
             let size = png_size(&ico[offset..offset + length]);
-            assert_eq!((u32::from(entry[0]), u32::from(entry[1])), size, "entry {index} names its image's size");
+            assert_eq!(
+                (u32::from(entry[0]), u32::from(entry[1])),
+                size,
+                "entry {index} names its image's size"
+            );
             size.0
         })
         .collect();
@@ -395,7 +581,9 @@ fn the_marks_files_are_the_sizes_their_links_promise() {
 
 /// Every `<script>` start tag in `page`, up to its `>`.
 fn script_tags(page: &str) -> Vec<&str> {
-    page.match_indices("<script").map(|(start, _)| &page[start..start + page[start..].find('>').unwrap() + 1]).collect()
+    page.match_indices("<script")
+        .map(|(start, _)| &page[start..start + page[start..].find('>').unwrap() + 1])
+        .collect()
 }
 
 /// `frontend/index.html`'s own scripts (the blocking appearance initializer before the stylesheet
@@ -403,17 +591,35 @@ fn script_tags(page: &str) -> Vec<&str> {
 /// dist's, when one is embedded.
 #[test]
 fn every_script_in_the_spa_page_carries_the_nonce() {
-    let source = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/index.html")).unwrap();
-    let mut pages = vec![("frontend/index.html", render(&source, &boot(), "token", Some("n0nce"), &Favicon::Mark))];
+    let source = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/index.html"),
+    )
+    .unwrap();
+    let mut pages = vec![(
+        "frontend/index.html",
+        render(&source, &boot(), "token", Some("n0nce"), &Favicon::Mark),
+    )];
     if built() {
-        pages.push(("the embedded dist", render_shell(&boot(), "token", Some("n0nce"), &Favicon::Mark)));
+        pages.push((
+            "the embedded dist",
+            render_shell(&boot(), "token", Some("n0nce"), &Favicon::Mark),
+        ));
     }
     for (name, page) in pages {
         let tags = script_tags(&page);
-        assert!(page.contains("smartfire.appearance"), "{name} keeps the appearance initializer: {page}");
-        assert!(tags.len() >= 3, "{name}: the boot JSON, the initializer and the entry: {tags:?}");
+        assert!(
+            page.contains("smartfire.appearance"),
+            "{name} keeps the appearance initializer: {page}"
+        );
+        assert!(
+            tags.len() >= 3,
+            "{name}: the boot JSON, the initializer and the entry: {tags:?}"
+        );
         for tag in tags {
-            assert!(tag.contains(" nonce=\"n0nce\""), "{name}: {tag} runs only with the nonce");
+            assert!(
+                tag.contains(" nonce=\"n0nce\""),
+                "{name}: {tag} runs only with the nonce"
+            );
         }
     }
 }
@@ -428,15 +634,29 @@ fn boot_json_cannot_end_its_script_element() {
     }
     assert!(json.contains("\"name\":\"\\u003c/script\\u003e\\u003cscript\\u003ealert(1)\\u003c/script\\u003e\\u003c!-- \\u0026 \\u2028\\u2029\""), "{json}");
 
-    let page = render("<head><!--boot--></head>", &boot, "token", None, &Favicon::Mark);
+    let page = render(
+        "<head><!--boot--></head>",
+        &boot,
+        "token",
+        None,
+        &Favicon::Mark,
+    );
     assert_eq!(page.matches("</script>").count(), 1);
-    assert_eq!(boot_json(&page)["user"]["name"], boot.user.name, "the escapes decode to the name");
+    assert_eq!(
+        boot_json(&page)["user"]["name"],
+        boot.user.name,
+        "the escapes decode to the name"
+    );
 }
 
 #[test]
 fn boot_response_adds_the_csrf_token_to_the_boot_json() {
     let boot = boot();
-    let json = serde_json::to_value(BootResponse { boot: &boot, csrf_token: "token" }).unwrap();
+    let json = serde_json::to_value(BootResponse {
+        boot: &boot,
+        csrf_token: "token",
+    })
+    .unwrap();
     let mut expected = serde_json::to_value(&boot).unwrap();
     expected["csrfToken"] = "token".into();
     assert_eq!(json, expected);
@@ -444,9 +664,19 @@ fn boot_response_adds_the_csrf_token_to_the_boot_json() {
 
 #[test]
 fn theme_and_text_size_fall_back_like_the_layout() {
-    assert_eq!([theme(Some("light")), theme(Some("dark")), theme(Some("system")), theme(Some("neon")), theme(None)], ["light", "dark", "system", "system", "system"]);
     assert_eq!(
-        ["smaller", "small", "default", "large", "larger", "huge"].map(|size| text_size(Some(size))),
+        [
+            theme(Some("light")),
+            theme(Some("dark")),
+            theme(Some("system")),
+            theme(Some("neon")),
+            theme(None)
+        ],
+        ["light", "dark", "system", "system", "system"]
+    );
+    assert_eq!(
+        ["smaller", "small", "default", "large", "larger", "huge"]
+            .map(|size| text_size(Some(size))),
         ["smaller", "small", "default", "large", "larger", "default"]
     );
     assert_eq!(text_size(None), "default");
@@ -460,9 +690,16 @@ fn the_image_build_embeds_its_own_dist_and_tracks_it_by_content() {
     let build = std::fs::read_to_string(root.join("build.rs")).unwrap();
     assert!(build.contains("cargo:rerun-if-env-changed=SPA_DIST_DIGEST"));
     let dockerfile = std::fs::read_to_string(root.join("../../Dockerfile")).unwrap();
-    assert!(dockerfile.contains("COPY --from=spa /src/frontend/dist frontend/dist\nENV SPA_DIST=/src/frontend/dist\n"));
-    let build_step = dockerfile.split("RUN --mount=type=cache").find(|step| step.contains("cargo build")).unwrap();
-    let digest = build_step.find("export SPA_DIST_DIGEST=").expect("the cargo build step exports SPA_DIST_DIGEST");
+    assert!(dockerfile.contains(
+        "COPY --from=spa /src/frontend/dist frontend/dist\nENV SPA_DIST=/src/frontend/dist\n"
+    ));
+    let build_step = dockerfile
+        .split("RUN --mount=type=cache")
+        .find(|step| step.contains("cargo build"))
+        .unwrap();
+    let digest = build_step
+        .find("export SPA_DIST_DIGEST=")
+        .expect("the cargo build step exports SPA_DIST_DIGEST");
     assert!(Some(digest) < build_step.find("cargo build"));
 }
 
@@ -472,7 +709,11 @@ fn pwa_worker_and_offline_page_are_files_while_only_index_is_the_shell() {
     let offline = find(files, "offline.html").unwrap();
     assert_eq!(offline.content_type, "text/html; charset=utf-8");
     assert!(!offline.immutable);
-    assert!(std::str::from_utf8(offline.identity).unwrap().contains("/app/assets/index-B2x8Kq1f.js"));
+    assert!(
+        std::str::from_utf8(offline.identity)
+            .unwrap()
+            .contains("/app/assets/index-B2x8Kq1f.js")
+    );
     let worker = find(files, "service-worker.js").unwrap();
     assert_eq!(worker.content_type, "text/javascript; charset=utf-8");
     assert!(!worker.immutable);
@@ -490,9 +731,15 @@ fn optional_boot_flash_uses_camel_case_and_is_safe_in_the_shell() {
     let value = serde_json::to_value(&boot).unwrap();
     assert!(value.get("flash").is_none());
     for (kind, wire) in [(FlashKind::Notice, "notice"), (FlashKind::Alert, "alert")] {
-        boot.flash = Some(BootFlash { kind, message: "Connected <&> </script>.".into() });
+        boot.flash = Some(BootFlash {
+            kind,
+            message: "Connected <&> </script>.".into(),
+        });
         let html = render_shell(&boot, "TOKEN", Some("NONCE"), &Favicon::Mark);
-        assert_eq!(boot_json(&html)["flash"], serde_json::json!({"kind":wire,"message":"Connected <&> </script>."}));
+        assert_eq!(
+            boot_json(&html)["flash"],
+            serde_json::json!({"kind":wire,"message":"Connected <&> </script>."})
+        );
         assert!(!html.contains("Connected <&> </script>."));
     }
 }

@@ -1,14 +1,4 @@
 use super::*;
-use campfire_db::Job;
-use campfire_jobs::JobKind;
-use campfire_app::integrations::action_claims::FIZZY;
-use campfire_app::integrations::action_claims;
-use campfire_app::integrations::fizzy::accounts::Account;
-use campfire_app::integrations::fizzy::agent_action::Action;
-use rails_compat::ar_encryption::ArEncryption;
-use rusqlite::params;
-use serde_json::Value;
-use serde_json::json;
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{
@@ -16,6 +6,16 @@ use crate::{
         test_support::{FakeResolver, FakeServer, MappingDialer, Route, network},
     },
 };
+use campfire_app::integrations::action_claims;
+use campfire_app::integrations::action_claims::FIZZY;
+use campfire_app::integrations::fizzy::accounts::Account;
+use campfire_app::integrations::fizzy::agent_action::Action;
+use campfire_db::Job;
+use campfire_jobs::JobKind;
+use rails_compat::ar_encryption::ArEncryption;
+use rusqlite::params;
+use serde_json::Value;
+use serde_json::json;
 use std::sync::Arc;
 async fn app() -> TestApp {
     let mut app = TestApp::boot().await.expect("pinned seeds required");
@@ -146,9 +146,12 @@ async fn ws15e_fizzy_agent_execution_rechecks_and_records_once() {
         assert!(result["room"].is_null());
         assert!(result["message"].is_null());
         assert_eq!(result["outcome"], "delivered");
-        let deliverable=!["revoked_grant","room_grant","suspended"].contains(&case);
-        assert_eq!(result["webhook"], if deliverable {"pending"} else {"none"});
-        assert_eq!(result["jobs"], if deliverable {1} else {0});
+        let deliverable = !["revoked_grant", "room_grant", "suspended"].contains(&case);
+        assert_eq!(
+            result["webhook"],
+            if deliverable { "pending" } else { "none" }
+        );
+        assert_eq!(result["jobs"], if deliverable { 1 } else { 0 });
         assert_eq!(
             result["audits"],
             if case == "audit_failure" { 0 } else { 1 }
@@ -400,15 +403,48 @@ async fn ws15e_fizzy_agent_outcome_enqueue_failure_rolls_back_to_running_claim()
 async fn ws15e_review_deactivated_owner_must_not_execute_fizzy_action() {
     let app = app().await;
     let (id, agent) = setup(&app, "comment").await;
-    app.db().write(|tx| { campfire_db::User::find(tx.conn(), DAVID)?.deactivate(tx) }).await.unwrap();
+    app.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.deactivate(tx))
+        .await
+        .unwrap();
     let observed = app.db().read(move |c| Ok(c.query_row("SELECT u.status,a.disconnected_reason,g.suspended_at FROM users u JOIN fizzy_connected_accounts a ON a.user_id=u.id JOIN agents g ON g.owner_id=u.id WHERE u.id=? AND g.id=?",params![DAVID,agent],|r| Ok((r.get::<_,i64>(0)?,r.get::<_,Option<String>>(1)?,r.get::<_,Option<String>>(2)?)))?)).await.unwrap();
-    eprintln!("REVIEW deactivated owner: user_status={} disconnected_reason={:?} agent_suspended={:?}",observed.0,observed.1,observed.2);
-    let server = FakeServer::start_ws15e(vec![Route::new("POST","app.fizzy.do","/897362094/cards/579/comments.json",201).body("{\"url\":\"https://app.fizzy.do/comment\"}")]).await;
-    let resolver = Arc::new(FakeResolver::new([("app.fizzy.do",vec!["93.184.216.34"])]));
-    let dialer = Arc::new(MappingDialer {public:["93.184.216.34".parse().unwrap()].into(),to:server.addr,dialed:Default::default()});
-    execute(&app.booted.app,&network(resolver,dialer),"http://app.fizzy.do",id).await.unwrap();
-    eprintln!("REVIEW deactivated owner outbound requests={} outcome={}",server.received().len(),state(&app,id).await);
-    assert!(server.received().is_empty(), "Rails disconnects Fizzy and suspends owned agents during User#deactivate");
+    eprintln!(
+        "REVIEW deactivated owner: user_status={} disconnected_reason={:?} agent_suspended={:?}",
+        observed.0, observed.1, observed.2
+    );
+    let server = FakeServer::start_ws15e(vec![
+        Route::new(
+            "POST",
+            "app.fizzy.do",
+            "/897362094/cards/579/comments.json",
+            201,
+        )
+        .body("{\"url\":\"https://app.fizzy.do/comment\"}"),
+    ])
+    .await;
+    let resolver = Arc::new(FakeResolver::new([("app.fizzy.do", vec!["93.184.216.34"])]));
+    let dialer = Arc::new(MappingDialer {
+        public: ["93.184.216.34".parse().unwrap()].into(),
+        to: server.addr,
+        dialed: Default::default(),
+    });
+    execute(
+        &app.booted.app,
+        &network(resolver, dialer),
+        "http://app.fizzy.do",
+        id,
+    )
+    .await
+    .unwrap();
+    eprintln!(
+        "REVIEW deactivated owner outbound requests={} outcome={}",
+        server.received().len(),
+        state(&app, id).await
+    );
+    assert!(
+        server.received().is_empty(),
+        "Rails disconnects Fizzy and suspends owned agents during User#deactivate"
+    );
     assert_eq!(observed.0, 1);
     assert_eq!(observed.1.as_deref(), Some("Account deactivated"));
     assert!(observed.2.is_some());
@@ -417,113 +453,267 @@ async fn ws15e_review_deactivated_owner_must_not_execute_fizzy_action() {
         assert_eq!(c.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.suspend' AND target_type='Agent' AND target_id=?", [agent], |r|r.get::<_,i64>(0))?,1);
         Ok(())
     }).await.unwrap();
-    let result = state(&app,id).await;
+    let result = state(&app, id).await;
     assert_eq!(result["metadata"]["status"], "failed");
-    assert_eq!(result["metadata"]["message"], "Agent is suspended or deactivated");
+    assert_eq!(
+        result["metadata"]["message"],
+        "Agent is suspended or deactivated"
+    );
 }
 
 #[tokio::test]
 async fn ws15e_review_owner_ban_revokes_grants_and_does_not_restore_on_unban() {
     let app = app().await;
     let (_, agent) = setup(&app, "comment").await;
-    app.db().write(|tx| { tx.conn().execute("UPDATE sessions SET ip_address='93.184.216.34' WHERE user_id=?",[DAVID])?; campfire_db::User::find(tx.conn(), DAVID)?.ban(tx) }).await.unwrap();
-    app.db().read(move |c| {
-        assert!(c.query_row("SELECT suspended_at IS NOT NULL FROM agents WHERE id=?", [agent], |r|r.get::<_,bool>(0))?);
-        assert_eq!(c.query_row("SELECT COUNT(*) FROM agent_grants WHERE agent_id=? AND revoked_at IS NULL", [agent], |r|r.get::<_,i64>(0))?,0);
-        assert!(Account::for_user(c,DAVID)?.unwrap().connected(), "Rails ban suspends agents without disconnecting the linked account");
-        Ok(())
-    }).await.unwrap();
-    app.db().write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.unban(tx)).await.unwrap();
-    app.db().read(move |c| {
-        assert!(c.query_row("SELECT suspended_at IS NOT NULL FROM agents WHERE id=?", [agent], |r|r.get::<_,bool>(0))?);
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE sessions SET ip_address='93.184.216.34' WHERE user_id=?",
+                [DAVID],
+            )?;
+            campfire_db::User::find(tx.conn(), DAVID)?.ban(tx)
+        })
+        .await
+        .unwrap();
+    app.db()
+        .read(move |c| {
+            assert!(c.query_row(
+                "SELECT suspended_at IS NOT NULL FROM agents WHERE id=?",
+                [agent],
+                |r| r.get::<_, bool>(0)
+            )?);
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM agent_grants WHERE agent_id=? AND revoked_at IS NULL",
+                    [agent],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                0
+            );
+            assert!(
+                Account::for_user(c, DAVID)?.unwrap().connected(),
+                "Rails ban suspends agents without disconnecting the linked account"
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    app.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.unban(tx))
+        .await
+        .unwrap();
+    app.db()
+        .read(move |c| {
+            assert!(c.query_row(
+                "SELECT suspended_at IS NOT NULL FROM agents WHERE id=?",
+                [agent],
+                |r| r.get::<_, bool>(0)
+            )?);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn ws15e_review_legacy_inactive_owner_is_rechecked_at_execution() {
-    for status in [1,2] {
+    for status in [1, 2] {
         let app = app().await;
-        let (id,_) = setup(&app,"comment").await;
-        app.db().write(move |tx| { tx.conn().execute("UPDATE users SET status=? WHERE id=?",params![status,DAVID])?; Ok(()) }).await.unwrap();
-        let server = FakeServer::start_ws15e(vec![Route::new("POST","app.fizzy.do","/897362094/cards/579/comments.json",201).body("{}")]).await;
-        let resolver = Arc::new(FakeResolver::new([("app.fizzy.do",vec!["93.184.216.34"])]));
-        let dialer = Arc::new(MappingDialer {public:["93.184.216.34".parse().unwrap()].into(),to:server.addr,dialed:Default::default()});
-        execute(&app.booted.app,&network(resolver.clone(),dialer),"http://app.fizzy.do",id).await.unwrap();
-        assert!(server.received().is_empty(), "legacy unsafe rows cannot authorize a write");
+        let (id, _) = setup(&app, "comment").await;
+        app.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE users SET status=? WHERE id=?",
+                    params![status, DAVID],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let server = FakeServer::start_ws15e(vec![
+            Route::new(
+                "POST",
+                "app.fizzy.do",
+                "/897362094/cards/579/comments.json",
+                201,
+            )
+            .body("{}"),
+        ])
+        .await;
+        let resolver = Arc::new(FakeResolver::new([("app.fizzy.do", vec!["93.184.216.34"])]));
+        let dialer = Arc::new(MappingDialer {
+            public: ["93.184.216.34".parse().unwrap()].into(),
+            to: server.addr,
+            dialed: Default::default(),
+        });
+        execute(
+            &app.booted.app,
+            &network(resolver.clone(), dialer),
+            "http://app.fizzy.do",
+            id,
+        )
+        .await
+        .unwrap();
+        assert!(
+            server.received().is_empty(),
+            "legacy unsafe rows cannot authorize a write"
+        );
         assert!(resolver.lookups().is_empty());
-        assert_eq!(state(&app,id).await["metadata"]["message"], "Agent is suspended or deactivated");
+        assert_eq!(
+            state(&app, id).await["metadata"]["message"],
+            "Agent is suspended or deactivated"
+        );
     }
 }
 
 #[tokio::test]
 async fn ws15e_review_deactivation_account_failure_rolls_back_authority() {
     let app = app().await;
-    let (_,agent) = setup(&app,"comment").await;
+    let (_, agent) = setup(&app, "comment").await;
     app.db().write(|tx| {
         tx.conn().execute_batch("CREATE TEMP TRIGGER reject_deactivate_account BEFORE UPDATE OF disconnected_reason ON fizzy_connected_accounts BEGIN SELECT RAISE(ABORT,'disconnect failed'); END;")?;
         Ok(())
     }).await.unwrap();
-    let result = app.db().write(|tx| campfire_db::User::find(tx.conn(),DAVID)?.deactivate(tx)).await;
-    assert!(result.is_err(), "account disconnection must run inside the deactivation transaction");
-    app.db().read(move |c| {
-        assert!(campfire_db::User::find(c,DAVID)?.is_active());
-        assert!(Account::for_user(c,DAVID)?.unwrap().connected());
-        assert!(c.query_row("SELECT suspended_at IS NULL FROM agents WHERE id=?",[agent],|r|r.get::<_,bool>(0))?);
-        assert!(c.query_row("SELECT EXISTS(SELECT 1 FROM sessions WHERE user_id=?)",[DAVID],|r|r.get::<_,bool>(0))?);
-        assert!(c.query_row("SELECT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=? AND revoked_at IS NULL)",[agent],|r|r.get::<_,bool>(0))?);
-        Ok(())
-    }).await.unwrap();
+    let result = app
+        .db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.deactivate(tx))
+        .await;
+    assert!(
+        result.is_err(),
+        "account disconnection must run inside the deactivation transaction"
+    );
+    app.db()
+        .read(move |c| {
+            assert!(campfire_db::User::find(c, DAVID)?.is_active());
+            assert!(Account::for_user(c, DAVID)?.unwrap().connected());
+            assert!(c.query_row(
+                "SELECT suspended_at IS NULL FROM agents WHERE id=?",
+                [agent],
+                |r| r.get::<_, bool>(0)
+            )?);
+            assert!(c.query_row(
+                "SELECT EXISTS(SELECT 1 FROM sessions WHERE user_id=?)",
+                [DAVID],
+                |r| r.get::<_, bool>(0)
+            )?);
+            assert!(c.query_row(
+                "SELECT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=? AND revoked_at IS NULL)",
+                [agent],
+                |r| r.get::<_, bool>(0)
+            )?);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn ws15e_review_inactive_bot_status_revokes_its_grants() {
     let app = app().await;
-    let (_,agent) = setup(&app,"comment").await;
-    app.db().write(|tx| campfire_db::User::find(tx.conn(),BENDER)?.update(tx,campfire_db::UserChanges {status:Some(campfire_db::Status::Deactivated),..Default::default()})).await.unwrap();
-    app.db().read(move |c| {
-        assert_eq!(c.query_row("SELECT COUNT(*) FROM agent_grants WHERE agent_id=? AND revoked_at IS NULL",[agent],|r|r.get::<_,i64>(0))?,0);
-        // Direct status update runs the user callback; it does not invoke Agent#suspend!.
-        assert!(c.query_row("SELECT suspended_at IS NULL FROM agents WHERE id=?",[agent],|r|r.get::<_,bool>(0))?);
-        Ok(())
-    }).await.unwrap();
+    let (_, agent) = setup(&app, "comment").await;
+    app.db()
+        .write(|tx| {
+            campfire_db::User::find(tx.conn(), BENDER)?.update(
+                tx,
+                campfire_db::UserChanges {
+                    status: Some(campfire_db::Status::Deactivated),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    app.db()
+        .read(move |c| {
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM agent_grants WHERE agent_id=? AND revoked_at IS NULL",
+                    [agent],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                0
+            );
+            // Direct status update runs the user callback; it does not invoke Agent#suspend!.
+            assert!(c.query_row(
+                "SELECT suspended_at IS NULL FROM agents WHERE id=?",
+                [agent],
+                |r| r.get::<_, bool>(0)
+            )?);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn ws15e_review_legacy_deactivated_token_repairs_disconnection() {
     let app = app().await;
-    setup(&app,"comment").await;
+    setup(&app, "comment").await;
     let crypto = ArEncryption::new(&app.booted.app.secrets);
-    app.db().write(move |tx| {
-        tx.conn().execute("UPDATE users SET status=1 WHERE id=?",[DAVID])?;
-        let account = Account::for_user(tx.conn(),DAVID)?.unwrap();
-        assert!(account.usable_token(tx,&crypto)?.is_none());
-        assert_eq!(Account::for_user(tx.conn(),DAVID)?.unwrap().disconnected_reason.as_deref(),Some("Account deactivated"));
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            tx.conn()
+                .execute("UPDATE users SET status=1 WHERE id=?", [DAVID])?;
+            let account = Account::for_user(tx.conn(), DAVID)?.unwrap();
+            assert!(account.usable_token(tx, &crypto)?.is_none());
+            assert_eq!(
+                Account::for_user(tx.conn(), DAVID)?
+                    .unwrap()
+                    .disconnected_reason
+                    .as_deref(),
+                Some("Account deactivated")
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn ws15e_review_owner_suspension_quietly_finalizes_only_after_commit() {
-    use campfire_db::{Message,NewMessage};
+    use campfire_db::{Message, NewMessage};
     let app = app().await;
-    let (_,agent) = setup(&app,"comment").await;
+    let (_, agent) = setup(&app, "comment").await;
     let message = app.db().write(move |tx| {
         tx.conn().execute("UPDATE agents SET owner_id=?,working_presence='Thinking',working_presence_expires_at=? WHERE id=?",params![JASON,tx.now().since(jiff::SignedDuration::from_mins(5)),agent])?;
         Message::create(tx,NewMessage {room_id:ALL_TALK,creator_id:BENDER,client_message_id:Some("review-quiet-final".into()),markdown_source:Some("Partial draft".into()),streaming:true,..Default::default()})
     }).await.unwrap();
-    let jobs = app.db().read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-    let (mut client, serving) = crate::controllers::messages::attachment_processing_tests::json_subscribe(&app).await;
-    let rollback:campfire_db::Result<()> = app.db().write(|tx| {
-        campfire_db::User::find(tx.conn(),JASON)?.deactivate(tx)?;
-        Err(campfire_db::Error::Other("rollback owner removal".into()))
-    }).await;
+    let jobs = app
+        .db()
+        .read(|c| {
+            Ok(
+                c.query_row("SELECT COUNT(*) FROM background_jobs", [], |r| {
+                    r.get::<_, i64>(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    let (mut client, serving) =
+        crate::controllers::messages::attachment_processing_tests::json_subscribe(&app).await;
+    let rollback: campfire_db::Result<()> = app
+        .db()
+        .write(|tx| {
+            campfire_db::User::find(tx.conn(), JASON)?.deactivate(tx)?;
+            Err(campfire_db::Error::Other("rollback owner removal".into()))
+        })
+        .await;
     assert!(rollback.is_err());
-    let id=message.id;
-    assert!(app.db().read(move |c|Ok(Message::find(c,id)?.streaming)).await.unwrap());
-    app.db().write(|tx| campfire_db::User::find(tx.conn(),JASON)?.deactivate(tx)).await.unwrap();
+    let id = message.id;
+    assert!(
+        app.db()
+            .read(move |c| Ok(Message::find(c, id)?.streaming))
+            .await
+            .unwrap()
+    );
+    app.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), JASON)?.deactivate(tx))
+        .await
+        .unwrap();
     let event = client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && !message.streaming), |event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageUpdated(message) if message.id == id && message.streaming)).await;
-    let campfire_api_types::SyncPayload::MessageUpdated(update) = event.payload else { unreachable!() };
+    let campfire_api_types::SyncPayload::MessageUpdated(update) = event.payload else {
+        unreachable!()
+    };
     assert!(update.body_html.contains("Partial draft"));
     serving.abort();
     app.db().read(move |c| {
@@ -537,7 +727,7 @@ async fn ws15e_review_owner_suspension_quietly_finalizes_only_after_commit() {
 #[tokio::test]
 async fn ws15e_review_legacy_banned_owner_cannot_request_action() {
     let app = app().await;
-    let (_,agent) = setup(&app,"comment").await;
+    let (_, agent) = setup(&app, "comment").await;
     let crypto = ArEncryption::new(&app.booted.app.secrets);
     app.db().write(move |tx| {
         tx.conn().execute("UPDATE users SET status=2 WHERE id=?",[DAVID])?;
@@ -551,13 +741,30 @@ async fn ws15e_review_legacy_banned_owner_cannot_request_action() {
 
 #[tokio::test]
 async fn ws15e_review_invalid_owned_agent_blocks_deactivation_atomically() {
-    for mutation in ["status='unknown'", "description=printf('%0600d',1)", "daily_external_action_cap=0"] {
-        let app=app().await;
-        let (_,agent)=setup(&app,"comment").await;
-        let mutation=mutation.to_owned();
-        app.db().write(move |tx| {tx.conn().execute(&format!("UPDATE agents SET {mutation} WHERE id=?"),[agent])?;Ok(())}).await.unwrap();
-        let result=app.db().write(|tx|campfire_db::User::find(tx.conn(),DAVID)?.deactivate(tx)).await;
-        assert!(matches!(result,Err(campfire_db::Error::RecordInvalid(_))),"Rails Agent#suspend! runs update! validations");
+    for mutation in [
+        "status='unknown'",
+        "description=printf('%0600d',1)",
+        "daily_external_action_cap=0",
+    ] {
+        let app = app().await;
+        let (_, agent) = setup(&app, "comment").await;
+        let mutation = mutation.to_owned();
+        app.db()
+            .write(move |tx| {
+                tx.conn()
+                    .execute(&format!("UPDATE agents SET {mutation} WHERE id=?"), [agent])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let result = app
+            .db()
+            .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.deactivate(tx))
+            .await;
+        assert!(
+            matches!(result, Err(campfire_db::Error::RecordInvalid(_))),
+            "Rails Agent#suspend! runs update! validations"
+        );
         app.db().read(move |c| {
             assert!(campfire_db::User::find(c,DAVID)?.is_active());
             assert!(Account::for_user(c,DAVID)?.unwrap().connected());

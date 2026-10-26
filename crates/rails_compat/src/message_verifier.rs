@@ -38,8 +38,19 @@ pub enum Encoding {
 }
 
 impl MessageVerifier {
-    pub fn new(secret: Vec<u8>, digest: Digest, encoding: Encoding, serializer: Serializer) -> Self {
-        Self { secret, digest, encoding, serializer, rotations: Vec::new() }
+    pub fn new(
+        secret: Vec<u8>,
+        digest: Digest,
+        encoding: Encoding,
+        serializer: Serializer,
+    ) -> Self {
+        Self {
+            secret,
+            digest,
+            encoding,
+            serializer,
+            rotations: Vec::new(),
+        }
     }
 
     pub fn fall_back_to(mut self, rotation: MessageVerifier) -> Self {
@@ -47,22 +58,48 @@ impl MessageVerifier {
         self
     }
 
-    pub fn generate(&self, value: &Value, purpose: Option<&str>, expires_at: Option<Timestamp>) -> String {
-        self.sign(&metadata::serialize_with_metadata(self.serializer, value, purpose, expires_at))
+    pub fn generate(
+        &self,
+        value: &Value,
+        purpose: Option<&str>,
+        expires_at: Option<Timestamp>,
+    ) -> String {
+        self.sign(&metadata::serialize_with_metadata(
+            self.serializer,
+            value,
+            purpose,
+            expires_at,
+        ))
     }
 
     /// `generate` for data the caller already encoded as JSON (in this verifier's serializer, e.g.
     /// `ActiveSupport::JSON` escaping for app verifiers), so key order is under the caller's
     /// control: `{"_rails":{"data":<data_json>,"exp":..,"pur":..}}`.
-    pub fn generate_raw(&self, data_json: &str, purpose: Option<&str>, expires_at: Option<Timestamp>) -> String {
-        self.sign(&metadata::serialize_dumped_with_metadata(self.serializer, data_json.as_bytes(), purpose, expires_at))
+    pub fn generate_raw(
+        &self,
+        data_json: &str,
+        purpose: Option<&str>,
+        expires_at: Option<Timestamp>,
+    ) -> String {
+        self.sign(&metadata::serialize_dumped_with_metadata(
+            self.serializer,
+            data_json.as_bytes(),
+            purpose,
+            expires_at,
+        ))
     }
 
     /// `verified`, returning the data re-encoded as JSON in this verifier's serializer. Key order
     /// is kept (serde_json `preserve_order`); escapes and number formatting are normalized, which
     /// only matters if the caller re-signs the returned string.
-    pub fn verify_raw(&self, message: &str, purpose: Option<&str>, now: Timestamp) -> Result<String, Error> {
-        self.verify(message, purpose, now).map(|value| self.serializer.encode_json(&value))
+    pub fn verify_raw(
+        &self,
+        message: &str,
+        purpose: Option<&str>,
+        now: Timestamp,
+    ) -> Result<String, Error> {
+        self.verify(message, purpose, now)
+            .map(|value| self.serializer.encode_json(&value))
     }
 
     fn sign(&self, serialized: &[u8]) -> String {
@@ -76,7 +113,12 @@ impl MessageVerifier {
     }
 
     /// `verified`/`verify`: the value, or why it couldn't be read.
-    pub fn verify(&self, message: &str, purpose: Option<&str>, now: Timestamp) -> Result<Value, Error> {
+    pub fn verify(
+        &self,
+        message: &str,
+        purpose: Option<&str>,
+        now: Timestamp,
+    ) -> Result<Value, Error> {
         match self.read_message(message, purpose, now) {
             Err(error) if error.rotates() => {
                 for rotation in &self.rotations {
@@ -91,10 +133,23 @@ impl MessageVerifier {
         }
     }
 
-    fn read_message(&self, message: &str, purpose: Option<&str>, now: Timestamp) -> Result<Value, Error> {
-        let encoded = self.extract_encoded(message).ok_or(Error::InvalidSignature)?;
+    fn read_message(
+        &self,
+        message: &str,
+        purpose: Option<&str>,
+        now: Timestamp,
+    ) -> Result<Value, Error> {
+        let encoded = self
+            .extract_encoded(message)
+            .ok_or(Error::InvalidSignature)?;
         let decoded = encoding::urlsafe_decode(encoded).ok_or(Error::InvalidSignature)?;
-        metadata::deserialize_with_metadata(self.serializer, &decoded, purpose, now, encoding::urlsafe_decode)
+        metadata::deserialize_with_metadata(
+            self.serializer,
+            &decoded,
+            purpose,
+            now,
+            encoding::urlsafe_decode,
+        )
     }
 
     /// `extract_encoded`: the digest is the last `2 * digest_length` characters, preceded by `--`.
@@ -131,16 +186,17 @@ impl MessageVerifier {
     fn mac(&self, data: &str) -> Vec<u8> {
         match self.digest {
             Digest::Sha1 => {
-                let mut mac = Hmac::<sha1::Sha1>::new_from_slice(&self.secret).expect("HMAC takes any key length");
+                let mut mac = Hmac::<sha1::Sha1>::new_from_slice(&self.secret)
+                    .expect("HMAC takes any key length");
                 mac.update(data.as_bytes());
                 mac.finalize().into_bytes().to_vec()
             }
             Digest::Sha256 => {
-                let mut mac = Hmac::<sha2::Sha256>::new_from_slice(&self.secret).expect("HMAC takes any key length");
+                let mut mac = Hmac::<sha2::Sha256>::new_from_slice(&self.secret)
+                    .expect("HMAC takes any key length");
                 mac.update(data.as_bytes());
                 mac.finalize().into_bytes().to_vec()
             }
         }
     }
 }
-

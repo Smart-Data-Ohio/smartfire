@@ -14,8 +14,8 @@ use std::sync::Arc;
 
 use futures_util::stream::{AbortRegistration, Abortable, BoxStream, SelectAll};
 use futures_util::{FutureExt, StreamExt};
-use tokio::io::{ReadHalf, WriteHalf};
 use serde_json::Value;
+use tokio::io::{ReadHalf, WriteHalf};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
@@ -55,13 +55,19 @@ struct PendingFrame {
 
 impl From<Delivery> for PendingFrame {
     fn from(delivery: Delivery) -> Self {
-        Self { sequence: Some(delivery.sequence), frame: delivery.frame }
+        Self {
+            sequence: Some(delivery.sequence),
+            frame: delivery.frame,
+        }
     }
 }
 
 impl From<Frame> for PendingFrame {
     fn from(frame: Frame) -> Self {
-        Self { sequence: None, frame }
+        Self {
+            sequence: None,
+            frame,
+        }
     }
 }
 
@@ -74,7 +80,10 @@ impl From<String> for PendingFrame {
 impl Close {
     /// A stream fell behind (`reason: nil`, as `Connection::Base#close` without one).
     fn lagged() -> Self {
-        Close { reason: None, reconnect: Value::Bool(true) }
+        Close {
+            reason: None,
+            reconnect: Value::Bool(true),
+        }
     }
 }
 
@@ -100,7 +109,12 @@ const INCOMING_CAPACITY: usize = 16;
 pub(crate) type Io = hyper_util::rt::TokioIo<hyper::upgrade::Upgraded>;
 type Sink = Writer<WriteHalf<Io>>;
 
-pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>, io: Io, deflate: bool, request: ConnectRequest) {
+pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
+    server: Server<U>,
+    io: Io,
+    deflate: bool,
+    request: ConnectRequest,
+) {
     let (read, write) = tokio::io::split(io);
     let mut sink = Writer::new(write, deflate);
     let (reader, mut incoming) = spawn_reader(Reader::new(read, deflate));
@@ -116,7 +130,12 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
     let mut internal = InternalMessages::new();
     let identifier = user.connection_identifier();
     if !identifier.is_empty() {
-        internal.push(server.hub().subscribe(&internal_channel(&identifier), None).ordered_deliveries());
+        internal.push(
+            server
+                .hub()
+                .subscribe(&internal_channel(&identifier), None)
+                .ordered_deliveries(),
+        );
         // A ban or sign-out that disconnected this user between the check above and that
         // subscription went unheard, so check again now that it would be heard (Rails has this
         // gap).
@@ -133,8 +152,13 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
     heartbeat.mark_unchanged();
     let mut restarts = server.restarts();
 
-    let mut connection =
-        Connection { server, user: Arc::new(user), subscriptions: Vec::new(), pending: Vec::new(), started: Vec::new() };
+    let mut connection = Connection {
+        server,
+        user: Arc::new(user),
+        subscriptions: Vec::new(),
+        pending: Vec::new(),
+        started: Vec::new(),
+    };
 
     let mut close: Option<Close> = None;
     if sink.send(&[protocol::welcome().into()]).await.is_err() {
@@ -171,7 +195,9 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
             },
             Event::Incoming(message) => match message {
                 Some(Incoming::Text(text)) => connection.dispatch(&text).await,
-                Some(Incoming::Binary) => tracing::error!("Couldn't handle non-string message: Array"),
+                Some(Incoming::Binary) => {
+                    tracing::error!("Couldn't handle non-string message: Array")
+                }
                 Some(Incoming::Ping(payload)) => {
                     if sink.pong(&payload).await.is_err() {
                         break;
@@ -211,16 +237,27 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
                 connection.pending.push(ping.into());
             }
             Event::Restart => {
-                close = Some(Close { reason: Some(DisconnectReason::ServerRestart), reconnect: Value::Bool(true) });
+                close = Some(Close {
+                    reason: Some(DisconnectReason::ServerRestart),
+                    reconnect: Value::Bool(true),
+                });
             }
         }
 
-        deliveries.extend(connection.started.drain(..).map(|(subscriber, registration)| Abortable::new(subscriber.ordered_deliveries(), registration)));
+        deliveries.extend(
+            connection
+                .started
+                .drain(..)
+                .map(|(subscriber, registration)| {
+                    Abortable::new(subscriber.ordered_deliveries(), registration)
+                }),
+        );
         // A disconnect can be published after select chose an ordinary event, but before
         // batching finished. All queued frames predate this poll, so a disconnect published
         // after it cannot have a cutoff earlier than any frame we're about to write.
         if disconnect_sequence.is_none()
-            && let Some((sequence, remote)) = poll_remote_disconnect(&mut internal, config.stream_capacity)
+            && let Some((sequence, remote)) =
+                poll_remote_disconnect(&mut internal, config.stream_capacity)
         {
             disconnect_sequence = Some(sequence);
             if close.is_none() {
@@ -231,17 +268,25 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
             // Every earlier publication is already in its ring: broadcasting and sequence
             // assignment share the hub lock. Drain each stream only up to this disconnect,
             // so later producers cannot keep the socket open, then merge publication order.
-            let (prior, lagged) = drain_before_disconnect(std::mem::take(&mut deliveries), sequence);
-            connection.pending.extend(prior.into_iter().map(PendingFrame::from));
+            let (prior, lagged) =
+                drain_before_disconnect(std::mem::take(&mut deliveries), sequence);
+            connection
+                .pending
+                .extend(prior.into_iter().map(PendingFrame::from));
             if lagged {
                 close = Some(Close::lagged());
             }
         }
-        if !connection.flush(&mut sink, disconnect_sequence, config.max_write_batch).await {
+        if !connection
+            .flush(&mut sink, disconnect_sequence, config.max_write_batch)
+            .await
+        {
             break;
         }
         if let Some(Close { reason, reconnect }) = close.take() {
-            let _ = sink.send(&[protocol::disconnect(reason, &reconnect).into()]).await;
+            let _ = sink
+                .send(&[protocol::disconnect(reason, &reconnect).into()])
+                .await;
             close_socket(&mut sink, &mut incoming, config.close_timeout).await;
             break;
         }
@@ -254,9 +299,14 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
 /// Check the internal ring again at the write boundary, without mistaking a budget yield for
 /// an empty ring. Bound malformed-message scanning by the ring's rounded capacity plus a lag
 /// notification; concurrent publishers cannot keep this poll running indefinitely.
-fn poll_remote_disconnect(internal: &mut InternalMessages, capacity: usize) -> Option<(u64, Close)> {
+fn poll_remote_disconnect(
+    internal: &mut InternalMessages,
+    capacity: usize,
+) -> Option<(u64, Close)> {
     for _ in 0..=capacity.next_power_of_two() {
-        let message = tokio::task::unconstrained(internal.next()).now_or_never().flatten()?;
+        let message = tokio::task::unconstrained(internal.next())
+            .now_or_never()
+            .flatten()?;
         if let Ok(message) = message
             && let Some(remote) = process_internal_message(message.frame.as_str())
         {
@@ -268,13 +318,19 @@ fn poll_remote_disconnect(internal: &mut InternalMessages, capacity: usize) -> O
 
 /// The rings and the drain are bounded. Stop at the first later publication on each stream,
 /// rather than draining a SelectAll that concurrent producers could keep ready indefinitely.
-fn drain_before_disconnect(deliveries: SelectAll<Deliveries>, sequence: u64) -> (Vec<Delivery>, bool) {
+fn drain_before_disconnect(
+    deliveries: SelectAll<Deliveries>,
+    sequence: u64,
+) -> (Vec<Delivery>, bool) {
     let mut prior = Vec::new();
     let mut lagged = false;
     for mut stream in deliveries {
         // This finite drain must distinguish an empty ring from Tokio's cooperative-budget
         // yield, which otherwise looks Pending even with earlier frames still queued.
-        while let Some(result) = tokio::task::unconstrained(stream.next()).now_or_never().flatten() {
+        while let Some(result) = tokio::task::unconstrained(stream.next())
+            .now_or_never()
+            .flatten()
+        {
             match result {
                 Ok(delivery) if delivery.sequence < sequence => prior.push(delivery),
                 Ok(_) => break,
@@ -295,8 +351,12 @@ pub(crate) fn process_internal_reconnect(message: &str) -> Option<bool> {
 }
 
 /// [`poll_remote_disconnect`] for the sync socket: the disconnect's sequence and `reconnect`.
-pub(crate) fn poll_remote_reconnect(internal: &mut InternalMessages, capacity: usize) -> Option<(u64, bool)> {
-    poll_remote_disconnect(internal, capacity).map(|(sequence, close)| (sequence, close.reconnect != Value::Bool(false)))
+pub(crate) fn poll_remote_reconnect(
+    internal: &mut InternalMessages,
+    capacity: usize,
+) -> Option<(u64, bool)> {
+    poll_remote_disconnect(internal, capacity)
+        .map(|(sequence, close)| (sequence, close.reconnect != Value::Bool(false)))
 }
 
 /// `InternalChannel#process_internal_message`.
@@ -304,13 +364,21 @@ fn process_internal_message(message: &str) -> Option<Close> {
     let message: Value = serde_json::from_str(message).ok()?;
     (message.get("type")? == "disconnect").then(|| Close {
         reason: Some(DisconnectReason::Remote),
-        reconnect: message.get("reconnect").cloned().unwrap_or(Value::Bool(true)),
+        reconnect: message
+            .get("reconnect")
+            .cloned()
+            .unwrap_or(Value::Bool(true)),
     })
 }
 
 /// `Connection::Base#respond_to_invalid_request` for an unauthorized connection: tell the client
 /// not to reconnect, and close.
-async fn reject_unauthorized(mut sink: Sink, mut incoming: mpsc::Receiver<Incoming>, reader: JoinHandle<()>, config: &crate::Config) {
+async fn reject_unauthorized(
+    mut sink: Sink,
+    mut incoming: mpsc::Receiver<Incoming>,
+    reader: JoinHandle<()>,
+    config: &crate::Config,
+) {
     tracing::error!("An unauthorized connection attempt was rejected");
     let frame = protocol::disconnect(Some(DisconnectReason::Unauthorized), &Value::Bool(false));
     let _ = sink.send(&[frame.into()]).await;
@@ -320,7 +388,9 @@ async fn reject_unauthorized(mut sink: Sink, mut incoming: mpsc::Receiver<Incomi
 
 /// Reads the socket until it closes or errors, handing each message to the connection. It stops
 /// after a close frame, as the connection does.
-pub(crate) fn spawn_reader(mut reader: Reader<ReadHalf<Io>>) -> (JoinHandle<()>, mpsc::Receiver<Incoming>) {
+pub(crate) fn spawn_reader(
+    mut reader: Reader<ReadHalf<Io>>,
+) -> (JoinHandle<()>, mpsc::Receiver<Incoming>) {
     let (sender, receiver) = mpsc::channel(INCOMING_CAPACITY);
     let reader = tokio::spawn(async move {
         loop {
@@ -340,7 +410,11 @@ pub(crate) fn spawn_reader(mut reader: Reader<ReadHalf<Io>>) -> (JoinHandle<()>,
 
 /// Sends a normal close (1000, no reason, as `ClientSocket#close` defaults) and waits briefly
 /// for the client to finish the handshake.
-pub(crate) async fn close_socket(sink: &mut Sink, incoming: &mut mpsc::Receiver<Incoming>, timeout: std::time::Duration) {
+pub(crate) async fn close_socket(
+    sink: &mut Sink,
+    incoming: &mut mpsc::Receiver<Incoming>,
+    timeout: std::time::Duration,
+) {
     if sink.close(1000).await.is_ok() {
         let _ = tokio::time::timeout(timeout, async {
             while let Some(message) = incoming.recv().await {
@@ -357,7 +431,11 @@ impl<U: Send + Sync + 'static> Connection<U> {
     /// Writes the pending frames in order, in one vectored write where the socket takes it.
     async fn flush(&mut self, sink: &mut Sink, cutoff: Option<u64>, max_batch: usize) -> bool {
         if let Some(sequence) = cutoff {
-            self.pending.retain(|pending| pending.sequence.is_none_or(|published| published < sequence));
+            self.pending.retain(|pending| {
+                pending
+                    .sequence
+                    .is_none_or(|published| published < sequence)
+            });
             // The ordinary batch may contain earlier publications from different streams.
             // Merge it with the drain before any part of either batch reaches the socket.
             self.pending.sort_by_key(|pending| pending.sequence);
@@ -367,7 +445,11 @@ impl<U: Send + Sync + 'static> Connection<U> {
         }
         let mut written = true;
         for batch in self.pending.chunks(max_batch.max(1)) {
-            if sink.send_frames(batch.iter().map(|pending| &pending.frame)).await.is_err() {
+            if sink
+                .send_frames(batch.iter().map(|pending| &pending.frame))
+                .await
+                .is_err()
+            {
                 written = false;
                 break;
             }
@@ -404,10 +486,18 @@ impl<U: Send + Sync + 'static> Connection<U> {
         }
         // Bounds on what one socket can make the server hold (Rails has none). A page subscribes
         // to six channels with identifiers of a few hundred bytes.
-        if self.subscriptions.len() >= MAX_SUBSCRIPTIONS || identifier.len() > MAX_IDENTIFIER_BYTES {
-            return tracing::error!(subscriptions = self.subscriptions.len(), "Could not execute command: subscription limit reached");
+        if self.subscriptions.len() >= MAX_SUBSCRIPTIONS || identifier.len() > MAX_IDENTIFIER_BYTES
+        {
+            return tracing::error!(
+                subscriptions = self.subscriptions.len(),
+                "Could not execute command: subscription limit reached"
+            );
         }
-        let class_name = params.get("channel").and_then(Value::as_str).unwrap_or_default().to_string();
+        let class_name = params
+            .get("channel")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
         let Some(factory) = self.server.channel_factory(&class_name) else {
             return tracing::error!(channel = class_name, "Subscription class not found");
         };
@@ -434,7 +524,8 @@ impl<U: Send + Sync + 'static> Connection<U> {
         let index = self.position(identifier).expect("just added");
         let Entry { channel, sub } = &mut self.subscriptions[index];
         let result = channel.subscribed(sub).await;
-        self.pending.extend(sub.transmissions.drain(..).map(PendingFrame::from));
+        self.pending
+            .extend(sub.transmissions.drain(..).map(PendingFrame::from));
         self.started.append(&mut sub.started);
 
         if let Err(error) = result {
@@ -458,13 +549,17 @@ impl<U: Send + Sync + 'static> Connection<U> {
 
     /// `Subscriptions#remove_subscription` → `Channel::Base#unsubscribe_from_channel`.
     async fn remove_subscription(&mut self, index: usize) {
-        let Entry { mut channel, mut sub } = self.subscriptions.remove(index);
+        let Entry {
+            mut channel,
+            mut sub,
+        } = self.subscriptions.remove(index);
         sub.unsubscribed = true;
         if let Err(error) = channel.unsubscribed(&mut sub).await {
             tracing::error!(error = error.0, "Could not execute command");
         }
         sub.stop_all_streams();
-        self.pending.extend(sub.transmissions.drain(..).map(PendingFrame::from));
+        self.pending
+            .extend(sub.transmissions.drain(..).map(PendingFrame::from));
         self.started.append(&mut sub.started);
     }
 
@@ -473,7 +568,11 @@ impl<U: Send + Sync + 'static> Connection<U> {
         let Some(index) = self.find(data) else {
             return tracing::error!("Unable to find subscription with identifier");
         };
-        let payload = match data.get("data").and_then(Value::as_str).map(serde_json::from_str::<Value>) {
+        let payload = match data
+            .get("data")
+            .and_then(Value::as_str)
+            .map(serde_json::from_str::<Value>)
+        {
             Some(Ok(Value::Object(payload))) => payload,
             _ => return tracing::error!("Could not execute command: invalid data"),
         };
@@ -486,7 +585,8 @@ impl<U: Send + Sync + 'static> Connection<U> {
 
         let Entry { channel, sub } = &mut self.subscriptions[index];
         let result = channel.perform(&action, &payload, sub).await;
-        self.pending.extend(sub.transmissions.drain(..).map(PendingFrame::from));
+        self.pending
+            .extend(sub.transmissions.drain(..).map(PendingFrame::from));
         self.started.append(&mut sub.started);
         match result {
             Ok(true) => {}
@@ -503,10 +603,14 @@ impl<U: Send + Sync + 'static> Connection<U> {
     }
 
     fn find(&self, data: &Params) -> Option<usize> {
-        data.get("identifier").and_then(Value::as_str).and_then(|identifier| self.position(identifier))
+        data.get("identifier")
+            .and_then(Value::as_str)
+            .and_then(|identifier| self.position(identifier))
     }
 
     fn position(&self, identifier: &str) -> Option<usize> {
-        self.subscriptions.iter().position(|entry| &*entry.sub.identifier == identifier)
+        self.subscriptions
+            .iter()
+            .position(|entry| &*entry.sub.identifier == identifier)
     }
 }

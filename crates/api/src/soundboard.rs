@@ -85,7 +85,8 @@ async fn reply_catalog(c: &mut Ctx, status: StatusCode) -> Result {
 }
 
 async fn uploaded_audio(c: &mut Ctx, signed_id: &str) -> Result<Blob> {
-    let blob = attachments::resolve_signed_blob(c.app(), signed_id, None).await
+    let blob = attachments::resolve_signed_blob(c.app(), signed_id, None)
+        .await
         .map_err(|_| fail(c, validation("audio", "isn't an uploaded file")))?;
     if !(1..=MAX_AUDIO_BYTES).contains(&blob.byte_size) {
         return Err(fail(

@@ -1,7 +1,7 @@
 //! Full-app broadcasts across a real concurrent venue destroy and one failed note.
+use crate::controllers::presenters::test_support::{DAVID, TestApp};
 use crate::controllers::spa::api_tests::{Sync, serve};
 use campfire_api_types as api;
-use crate::controllers::presenters::test_support::{DAVID, TestApp};
 use campfire_db::{Connection, Database, Room};
 use serde_json::{Value, json};
 use std::ffi::{CStr, c_void};
@@ -122,11 +122,14 @@ async fn check_digest_kind(kind: &str) {
         .iter()
         .filter(|r| r["kind"] == kind)
     {
-        let app = TestApp::boot_frozen_with_env(&[("APP_URL", "http://example.com"), ("SPA_ENABLED", "1")])
-            .await
-            .unwrap()
-            .without_job_runner()
-            .await;
+        let app = TestApp::boot_frozen_with_env(&[
+            ("APP_URL", "http://example.com"),
+            ("SPA_ENABLED", "1"),
+        ])
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
         let setup = row["setup"].clone();
         app.db()
             .write(move |tx| {
@@ -139,7 +142,9 @@ async fn check_digest_kind(kind: &str) {
             .unwrap();
         let (addr, server) = serve(&app).await;
         let browser = app.sign_in(DAVID).await;
-        let topics = (974000000..974000034).map(|id| format!("room:{id}")).collect::<Vec<_>>();
+        let topics = (974000000..974000034)
+            .map(|id| format!("room:{id}"))
+            .collect::<Vec<_>>();
         let mut client = Sync::connect(addr, &browser.cookie_header(), &topics).await;
         client.welcome().await;
         let (ready_tx, ready_rx) = mpsc::channel();
@@ -209,15 +214,26 @@ async fn check_digest_kind(kind: &str) {
         assert_eq!(ids.len(), row["frames"].as_array().unwrap().len());
         let mut received = Vec::new();
         for _ in &ids {
-            let event = client.until(|event| matches!(event.payload, api::SyncPayload::MessageCreated(_)), |_| false).await;
-            let api::SyncPayload::MessageCreated(message) = event.payload else { unreachable!() };
+            let event = client
+                .until(
+                    |event| matches!(event.payload, api::SyncPayload::MessageCreated(_)),
+                    |_| false,
+                )
+                .await;
+            let api::SyncPayload::MessageCreated(message) = event.payload else {
+                unreachable!()
+            };
             assert!(message.system_note);
             received.push(message.id);
         }
         received.sort();
         assert_eq!(received, ids, "each successful digest ID arrived over JSON");
         app.booted.app.broadcasts.settle_sync().await;
-        campfire_app::cable::sync::publish(&app.booted.app.cable, campfire_cable::sync::Audience::User(DAVID), &api::SyncPayload::RoomRead(api::RoomRead { room_id: -999 }));
+        campfire_app::cable::sync::publish(
+            &app.booted.app.cable,
+            campfire_cable::sync::Audience::User(DAVID),
+            &api::SyncPayload::RoomRead(api::RoomRead { room_id: -999 }),
+        );
         client.until(|event| matches!(&event.payload, api::SyncPayload::RoomRead(read) if read.room_id == -999), |event| matches!(event.payload, api::SyncPayload::MessageCreated(_))).await;
         assert_eq!(stats.notes, row["notes"].as_u64().unwrap() as usize);
         let repeat = campfire_db::models::board_automations::dispatch_digests(app.db(), now)

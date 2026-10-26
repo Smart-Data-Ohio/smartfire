@@ -726,7 +726,9 @@ async fn execute(
             if let Some(denial) = denial {
                 return Ok(denial);
             }
-            if let Some(id) = args.get("sticker_id") && id.as_i64().is_none() {
+            if let Some(id) = args.get("sticker_id")
+                && id.as_i64().is_none()
+            {
                 return Err(ToolError::Invalid("sticker_id must be an integer".into()));
             }
             if args.get("body").is_none_or(blank)

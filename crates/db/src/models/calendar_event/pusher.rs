@@ -32,7 +32,9 @@ impl CalendarEvent {
         }
         let room = Room::find(conn, event.room_id)?;
         let title = if room.direct() {
-            User::find(conn, event.organizer_id)?.display_name().to_owned()
+            User::find(conn, event.organizer_id)?
+                .display_name()
+                .to_owned()
         } else {
             room.name.unwrap_or_default()
         };
@@ -62,7 +64,11 @@ impl CalendarEvent {
             params![event.room_id, event.id],
             |r| r.get(0),
         )?;
-        let recipient_ids = crate::models::ignore_policy::visible_recipients(conn, event.organizer_id, recipient_ids)?;
+        let recipient_ids = crate::models::ignore_policy::visible_recipients(
+            conn,
+            event.organizer_id,
+            recipient_ids,
+        )?;
         Ok(Some(ReminderPushSource {
             payload: ReminderPayload {
                 title,

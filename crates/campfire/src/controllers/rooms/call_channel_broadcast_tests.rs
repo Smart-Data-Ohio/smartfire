@@ -1,4 +1,4 @@
-use crate::controllers::presenters::test_support::{TestApp};
+use crate::controllers::presenters::test_support::TestApp;
 use campfire_kit::Crypto;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{Value, json};
@@ -20,7 +20,11 @@ pub(in crate::controllers) async fn next(socket: &mut Socket) -> Value {
     .await
     .expect("missing controller broadcast")
 }
-pub(in crate::controllers) async fn socket(test: &TestApp, addr: std::net::SocketAddr, user: i64) -> Socket {
+pub(in crate::controllers) async fn socket(
+    test: &TestApp,
+    addr: std::net::SocketAddr,
+    user: i64,
+) -> Socket {
     let session = test
         .db()
         .write(move |tx| {
@@ -58,7 +62,7 @@ pub(in crate::controllers) async fn socket(test: &TestApp, addr: std::net::Socke
     );
     let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
     assert_eq!(next(&mut socket).await["type"], "welcome");
-    let identifier=json!({"channel":"ReadRoomsChannel"}).to_string();
+    let identifier = json!({"channel":"ReadRoomsChannel"}).to_string();
     socket
         .send(Message::Text(
             json!({"command":"subscribe","identifier":identifier})

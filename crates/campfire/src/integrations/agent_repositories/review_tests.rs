@@ -1,11 +1,11 @@
 //! PR #176 regressions use the pinned Rails callbacks and real production adapters.
-use std::sync::Arc;
 use crate::controllers::presenters::test_support::{BENDER, DAVID, TestApp};
 use crate::integrations::{
     net::Network,
     test_support::{FakeResolver, FakeServer, MappingDialer, Route},
 };
 use serde_json::{Value, json};
+use std::sync::Arc;
 fn oracle() -> Value {
     serde_json::from_str(include_str!(
         "../../../../../vectors/agents_review_fixes_contract.json"
@@ -357,7 +357,7 @@ async fn ws11_review_deliverable_deletion_keeps_commit_on_ledger_failure() {
     }).await.unwrap();
     assert!(
         app.db
-            .write(move |tx| publish_deleted_webhook(tx,job))
+            .write(move |tx| publish_deleted_webhook(tx, job))
             .await
             .is_err(),
         "publication cannot bypass the failing ledger insert"

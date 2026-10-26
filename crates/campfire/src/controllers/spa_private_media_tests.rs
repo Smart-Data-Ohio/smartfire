@@ -9,15 +9,23 @@ const JZ: i64 = 773523953;
 
 #[tokio::test]
 async fn scheduled_files_private_media_requires_scheduler_and_current_thread_access() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut scheduler = a.sign_in(KEVIN).await;
     let mut reader = a.sign_in(JZ).await;
     let original = upload(&mut scheduler, "scheduled-private.png").await;
     let derivative = upload(&mut scheduler, "scheduled-private-variant.txt").await;
     let verifier = &*a.booted.app.storage.verifier;
     let clock = a.booted.app.clock.now();
-    let original_id = campfire_storage::paths::verify_signed_blob_id(verifier, &original.signed_id, clock).unwrap();
-    let child_id = campfire_storage::paths::verify_signed_blob_id(verifier, &derivative.signed_id, clock).unwrap();
+    let original_id =
+        campfire_storage::paths::verify_signed_blob_id(verifier, &original.signed_id, clock)
+            .unwrap();
+    let child_id =
+        campfire_storage::paths::verify_signed_blob_id(verifier, &derivative.signed_id, clock)
+            .unwrap();
     let thread_id = a.db().write(move |tx| {
         let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
             room_id: DESIGNERS, creator_id: KEVIN, name: Some("Scheduled private files".into()),
@@ -28,13 +36,23 @@ async fn scheduled_files_private_media_requires_scheduler_and_current_thread_acc
         campfire_db::Attachment::create(tx, "ActiveStorage::VariantRecord", tx.conn().last_insert_rowid(), "image", child_id)?;
         Ok(thread.id)
     }).await.unwrap();
-    let paths = a.db().read(move |conn| {
-        [original_id, child_id].into_iter().map(|id| {
-            campfire_storage::Blob::find(conn, id)
-                .map_err(|error| campfire_db::Error::Other(error.to_string()))?
-                .ok_or(campfire_db::Error::RecordNotFound("Blob"))
-        }).collect::<campfire_db::Result<Vec<_>>>()
-    }).await.unwrap().iter().map(|blob| campfire_storage::paths::blob_proxy_path(verifier, blob, None)).collect::<Vec<_>>();
+    let paths = a
+        .db()
+        .read(move |conn| {
+            [original_id, child_id]
+                .into_iter()
+                .map(|id| {
+                    campfire_storage::Blob::find(conn, id)
+                        .map_err(|error| campfire_db::Error::Other(error.to_string()))?
+                        .ok_or(campfire_db::Error::RecordNotFound("Blob"))
+                })
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
+        .await
+        .unwrap()
+        .iter()
+        .map(|blob| campfire_storage::paths::blob_proxy_path(verifier, blob, None))
+        .collect::<Vec<_>>();
     let response = scheduler.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages"),
         &json!({"markdownSource": "Scheduled private file", "sendAt": "2026-03-03T16:00:00Z", "threadId": thread_id, "attachmentSignedIds": [original.signed_id]}))).await;
     assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
@@ -45,7 +63,13 @@ async fn scheduled_files_private_media_requires_scheduler_and_current_thread_acc
         assert_eq!(allowed.status, StatusCode::OK);
         assert_eq!(allowed.header("cache-control"), Some("private, no-store"));
     }
-    let sent = scheduler.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{}/send_now", scheduled.id), &json!({}))).await;
+    let sent = scheduler
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/scheduled_messages/{}/send_now", scheduled.id),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(sent.status, StatusCode::OK, "{}", sent.text());
     let sent: api::ScheduledMessage = parse(&sent);
     assert!(sent.sent_message_id.is_some());
@@ -71,12 +95,26 @@ async fn scheduled_files_private_media_requires_scheduler_and_current_thread_acc
         Ok(())
     }).await.unwrap();
     for path in &paths {
-        assert_eq!(reader.send(get(path)).await.status, StatusCode::NOT_FOUND, "thread access cannot bypass scheduler ownership");
+        assert_eq!(
+            reader.send(get(path)).await.status,
+            StatusCode::NOT_FOUND,
+            "thread access cannot bypass scheduler ownership"
+        );
         assert_eq!(scheduler.send(get(path)).await.status, StatusCode::OK);
     }
-    a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                .remove_access_member(tx, KEVIN, KEVIN)
+        })
+        .await
+        .unwrap();
     for path in &paths {
-        assert_eq!(scheduler.send(get(path)).await.status, StatusCode::NOT_FOUND, "scheduler ownership cannot bypass revoked thread access");
+        assert_eq!(
+            scheduler.send(get(path)).await.status,
+            StatusCode::NOT_FOUND,
+            "scheduler ownership cannot bypass revoked thread access"
+        );
     }
     a.db().write(move |tx| {
         tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_remove(metadata,'$.scheduled_by') WHERE id=?", [original_id])?;
@@ -84,7 +122,10 @@ async fn scheduled_files_private_media_requires_scheduler_and_current_thread_acc
     }).await.unwrap();
     for path in &paths {
         assert_eq!(reader.send(get(path)).await.status, StatusCode::OK);
-        assert_eq!(scheduler.send(get(path)).await.status, StatusCode::NOT_FOUND);
+        assert_eq!(
+            scheduler.send(get(path)).await.status,
+            StatusCode::NOT_FOUND
+        );
     }
 }
 

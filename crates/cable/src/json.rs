@@ -36,8 +36,10 @@ mod tests {
 
     #[test]
     fn escapes_html_entities_but_not_separators_or_slashes() {
-        assert_eq!(encode(&json!({ "key": "<a href=\"/x\">&</a>\u{2028}" })),
-            "{\"key\":\"\\u003ca href=\\\"/x\\\"\\u003e\\u0026\\u003c/a\\u003e\u{2028}\"}");
+        assert_eq!(
+            encode(&json!({ "key": "<a href=\"/x\">&</a>\u{2028}" })),
+            "{\"key\":\"\\u003ca href=\\\"/x\\\"\\u003e\\u0026\\u003c/a\\u003e\u{2028}\"}"
+        );
     }
 
     #[test]

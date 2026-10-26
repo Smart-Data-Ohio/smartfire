@@ -22,24 +22,46 @@ fn hmac_sha256_hex(secret: &[u8], parts: &[&[u8]]) -> String {
 
 /// `"sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{payload}")}"`.
 pub fn smartfire_signature(secret: &str, timestamp: &str, body: &[u8]) -> String {
-    format!("{PREFIX}{}", hmac_sha256_hex(secret.as_bytes(), &[timestamp.as_bytes(), b".", body]))
+    format!(
+        "{PREFIX}{}",
+        hmac_sha256_hex(secret.as_bytes(), &[timestamp.as_bytes(), b".", body])
+    )
 }
 
 /// The headers `post_payload(payload, secret:)` sends at `now`, in order: `Content-Type`, the
 /// unix-seconds timestamp, and the signature when the secret is `present?` (not blank).
-pub fn smartfire_headers(secret: Option<&str>, body: &[u8], now: Timestamp) -> Vec<(&'static str, String)> {
+pub fn smartfire_headers(
+    secret: Option<&str>,
+    body: &[u8],
+    now: Timestamp,
+) -> Vec<(&'static str, String)> {
     let timestamp = now.as_second().to_string();
-    let mut headers = vec![("Content-Type", "application/json".to_string()), (TIMESTAMP_HEADER, timestamp.clone())];
+    let mut headers = vec![
+        ("Content-Type", "application/json".to_string()),
+        (TIMESTAMP_HEADER, timestamp.clone()),
+    ];
     if let Some(secret) = secret.filter(|secret| !secret.trim().is_empty()) {
-        headers.push((SIGNATURE_HEADER, smartfire_signature(secret, &timestamp, body)));
+        headers.push((
+            SIGNATURE_HEADER,
+            smartfire_signature(secret, &timestamp, body),
+        ));
     }
     headers
 }
 
 /// Checks an `X-Smartfire-Signature` the way a receiver should: exact, constant-time. (Smartfire
 /// itself only signs; this is for tests and for anything in the port that receives them.)
-pub fn verify_smartfire_signature(secret: &str, timestamp: &str, body: &[u8], signature: &str) -> bool {
-    bool::from(signature.as_bytes().ct_eq(smartfire_signature(secret, timestamp, body).as_bytes()))
+pub fn verify_smartfire_signature(
+    secret: &str,
+    timestamp: &str,
+    body: &[u8],
+    signature: &str,
+) -> bool {
+    bool::from(
+        signature
+            .as_bytes()
+            .ct_eq(smartfire_signature(secret, timestamp, body).as_bytes()),
+    )
 }
 
 /// `valid_signature?(secret)`: the `X-Hub-Signature-256` header (missing is `""`) starts with
@@ -47,7 +69,10 @@ pub fn verify_smartfire_signature(secret: &str, timestamp: &str, body: &[u8], si
 /// lowercase), compared in constant time.
 pub fn verify_github_signature(secret: &str, raw_body: &[u8], signature: Option<&str>) -> bool {
     let signature = signature.unwrap_or("");
-    let expected = format!("{PREFIX}{}", hmac_sha256_hex(secret.as_bytes(), &[raw_body]));
+    let expected = format!(
+        "{PREFIX}{}",
+        hmac_sha256_hex(secret.as_bytes(), &[raw_body])
+    );
     signature.starts_with(PREFIX) && bool::from(signature.as_bytes().ct_eq(expected.as_bytes()))
 }
 
@@ -58,11 +83,36 @@ mod tests {
     #[test]
     fn signatures_bind_the_secret_timestamp_and_body() {
         let signature = smartfire_signature("secret", "1767268800", b"{}");
-        assert!(verify_smartfire_signature("secret", "1767268800", b"{}", &signature));
-        assert!(!verify_smartfire_signature("other", "1767268800", b"{}", &signature));
-        assert!(!verify_smartfire_signature("secret", "1767268801", b"{}", &signature));
-        assert!(!verify_smartfire_signature("secret", "1767268800", b"{ }", &signature));
-        assert!(!verify_smartfire_signature("secret", "1767268800", b"{}", &signature.to_uppercase()));
+        assert!(verify_smartfire_signature(
+            "secret",
+            "1767268800",
+            b"{}",
+            &signature
+        ));
+        assert!(!verify_smartfire_signature(
+            "other",
+            "1767268800",
+            b"{}",
+            &signature
+        ));
+        assert!(!verify_smartfire_signature(
+            "secret",
+            "1767268801",
+            b"{}",
+            &signature
+        ));
+        assert!(!verify_smartfire_signature(
+            "secret",
+            "1767268800",
+            b"{ }",
+            &signature
+        ));
+        assert!(!verify_smartfire_signature(
+            "secret",
+            "1767268800",
+            b"{}",
+            &signature.to_uppercase()
+        ));
     }
 
     #[test]
@@ -78,7 +128,10 @@ mod tests {
             valid[..valid.len() - 1].to_string(),
             valid.replace("sha256=", "sha1="),
         ] {
-            assert!(!verify_github_signature("secret", body, Some(&invalid)), "{invalid:?}");
+            assert!(
+                !verify_github_signature("secret", body, Some(&invalid)),
+                "{invalid:?}"
+            );
         }
         assert!(!verify_github_signature("secret", body, None));
         assert!(!verify_github_signature("other", body, Some(&valid)));

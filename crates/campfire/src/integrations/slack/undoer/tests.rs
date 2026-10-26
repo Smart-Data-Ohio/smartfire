@@ -10,12 +10,12 @@ use campfire_db::ChannelThread;
 use campfire_db::Database;
 use campfire_db::Message;
 use campfire_db::Room;
+use campfire_db::Timestamp;
 use campfire_db::User;
 use campfire_db::models::slack_import::SlackImport;
 use rusqlite::params;
 use serde_json::Value;
 use serde_json::json;
-use campfire_db::Timestamp;
 
 pub(crate) async fn undo(db: &Database, id: i64) -> SlackImport {
     assert!(db.write(move |tx| SlackImport::undo(tx, id)).await.unwrap());

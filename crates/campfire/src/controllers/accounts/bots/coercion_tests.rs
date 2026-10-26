@@ -205,9 +205,8 @@ fn pr196_generated_floats_match_ruby_shortest_format() {
 
 fn extreme_inputs() -> Value {
     use std::io::Read;
-    let bytes = include_bytes!(
-        "../../../../../../test-support/agents_ui/extreme_cast_inputs.json.gz"
-    );
+    let bytes =
+        include_bytes!("../../../../../../test-support/agents_ui/extreme_cast_inputs.json.gz");
     let mut text = String::new();
     flate2::read::GzDecoder::new(&bytes[..])
         .read_to_string(&mut text)
@@ -493,7 +492,6 @@ async fn ws11ui_next_numeric_expiry_saves_match_rails_raw_writer() {
                 case["zone"], case["input"], response.status
             ));
         }
-
     }
     println!(
         "Raw credential expiry differential: 10 saves and model reads; {} mismatches",

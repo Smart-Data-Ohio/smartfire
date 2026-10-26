@@ -10,11 +10,7 @@ pub enum Reference {
     TwitterPost(i64),
     CalendarEvent(i64),
 }
-pub fn next(
-    conn: &Connection,
-    reference: Reference,
-    after: Option<i64>,
-) -> Result<Vec<Message>> {
+pub fn next(conn: &Connection, reference: Reference, after: Option<i64>) -> Result<Vec<Message>> {
     let (table, column, id) = match reference {
         Reference::LinkEmbed(id) => ("link_embed_references", "link_embed_id", id),
         Reference::GithubPullRequest(id) => (

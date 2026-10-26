@@ -44,12 +44,20 @@ pub fn verify(before: &Path, after: &Path) -> Result<String, Error> {
         if rows(conn, "PRAGMA quick_check")? == [vec![Value::Text("ok".into())]] {
             output.push_str(&format!("{label}: integrity MATCH\n"));
         } else {
-            mismatch(&mut output, &mut mismatches, label, "integrity check failed");
+            mismatch(
+                &mut output,
+                &mut mismatches,
+                label,
+                "integrity check failed",
+            );
         }
     }
     let before_tables = table_names(&before)?;
     let after_tables = table_names(&after)?;
-    for table in before_tables.iter().filter(|table| !after_tables.contains(table)) {
+    for table in before_tables
+        .iter()
+        .filter(|table| !after_tables.contains(table))
+    {
         mismatch(&mut output, &mut mismatches, table, "table is missing");
     }
     let mut additive_columns = 0;
@@ -72,9 +80,16 @@ pub fn verify(before: &Path, after: &Path) -> Result<String, Error> {
             .all(|(key, count)| after_foreign_keys.get(key).copied().unwrap_or(0) >= *count);
         let before_triggers = triggers(&before, table)?;
         let after_triggers = triggers(&after, table)?;
-        schema_matches &= before_triggers.iter().all(|row| after_triggers.contains(row));
+        schema_matches &= before_triggers
+            .iter()
+            .all(|row| after_triggers.contains(row));
         if !schema_matches {
-            mismatch(&mut output, &mut mismatches, table, "preexisting schema changed");
+            mismatch(
+                &mut output,
+                &mut mismatches,
+                table,
+                "preexisting schema changed",
+            );
         }
         let names = columns
             .iter()
@@ -89,7 +104,12 @@ pub fn verify(before: &Path, after: &Path) -> Result<String, Error> {
         let new_rows = fingerprints(&after, &sql);
         let data_matches = new_rows.as_ref().is_ok_and(|new| old_rows == *new);
         if !data_matches {
-            mismatch(&mut output, &mut mismatches, table, "preexisting row data changed");
+            mismatch(
+                &mut output,
+                &mut mismatches,
+                table,
+                "preexisting row data changed",
+            );
         }
         output.push_str(&format!(
             "{table}: rows {} -> {}, schema {}, data {}\n",
@@ -108,14 +128,18 @@ pub fn verify(before: &Path, after: &Path) -> Result<String, Error> {
         ));
         Ok(output)
     } else {
-        output.push_str(&format!("MISMATCH: {mismatches} preservation checks failed\n"));
+        output.push_str(&format!(
+            "MISMATCH: {mismatches} preservation checks failed\n"
+        ));
         Err(Error::Mismatch(output))
     }
 }
 
 pub fn readonly(path: &Path) -> Result<Connection, Error> {
     let conn = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    conn.busy_timeout(std::time::Duration::from_millis(crate::schema::BUSY_TIMEOUT_MS))?;
+    conn.busy_timeout(std::time::Duration::from_millis(
+        crate::schema::BUSY_TIMEOUT_MS,
+    ))?;
     conn.pragma_update(None, "query_only", true)?;
     Ok(conn)
 }
@@ -180,9 +204,11 @@ fn foreign_keys(conn: &Connection, table: &str) -> rusqlite::Result<BTreeMap<Str
 }
 
 fn triggers(conn: &Connection, table: &str) -> rusqlite::Result<Vec<(String, String)>> {
-    conn.prepare("SELECT name, sql FROM sqlite_schema WHERE type='trigger' AND tbl_name=? ORDER BY name")?
-        .query_map([table], |r| Ok((r.get(0)?, r.get(1)?)))?
-        .collect()
+    conn.prepare(
+        "SELECT name, sql FROM sqlite_schema WHERE type='trigger' AND tbl_name=? ORDER BY name",
+    )?
+    .query_map([table], |r| Ok((r.get(0)?, r.get(1)?)))?
+    .collect()
 }
 
 fn fingerprints(conn: &Connection, sql: &str) -> rusqlite::Result<Vec<[u8; 32]>> {
@@ -252,7 +278,10 @@ mod tests {
             "INSERT INTO ws18_data VALUES (2, 'extra', NULL, 0, 0.0);",
         ] {
             let (_dir, before, after) = databases();
-            Connection::open(&after).unwrap().execute_batch(sql).unwrap();
+            Connection::open(&after)
+                .unwrap()
+                .execute_batch(sql)
+                .unwrap();
             assert!(verify(&before, &after).is_err(), "failed to reject {sql}");
         }
     }

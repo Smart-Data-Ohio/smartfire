@@ -1,7 +1,7 @@
 //! One named port for every built-in DispatcherTest case, through the app adapter.
 //! Producer control: check_slash_count_mutant.py inserts a real message after
 //! rejected /remind while preserving the error; the total-count assertion rejects it.
-use super::quote_integration_tests::{insert_rows};
+use super::quote_integration_tests::insert_rows;
 use crate::controllers::presenters::{Presenter, test_support::*};
 use campfire_db::{
     Message, Timestamp,
@@ -91,7 +91,11 @@ async fn run(index: usize) {
             })
             .await
             .unwrap();
-        let count_before: i64 = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?)).await.unwrap();
+        let count_before: i64 = app
+            .db()
+            .read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?))
+            .await
+            .unwrap();
         let capture = app.db().capture_queries();
         let result = app
             .db()
@@ -134,7 +138,10 @@ async fn run(index: usize) {
    Ok(json!({"message_counts":[count_before,count_after],"result":result,"state":state,"message":message,"saved":saved,"legacy_jobs":jobs,"attachment_calls":attachment_calls}))
   }).await.unwrap();
 
-        assert_eq!(actual["message_counts"], row["message_counts"], "slash actual total-message counts differ from Rails: {name}");
+        assert_eq!(
+            actual["message_counts"], row["message_counts"],
+            "slash actual total-message counts differ from Rails: {name}"
+        );
         actual.as_object_mut().unwrap().remove("message_counts");
         let expected = json!({"result":row["result"],"state":row["state"],"message":row["message"],"saved":row["saved"],"legacy_jobs":row["legacy_jobs"],"attachment_calls":row["attachment_calls"]});
         assert_eq!(actual, expected, "{name}: {}", row["text"]);

@@ -70,7 +70,10 @@ pub async fn deliver(db: &Database, event: String, payload: Value) -> campfire_d
             );
             let id = subscription.id;
             // Rails commits each claim independently, even if a later claim or post fails.
-            if let Some(id) = db.write(move |tx| super::subscriptions::claim_notification(tx, id, &key)).await? {
+            if let Some(id) = db
+                .write(move |tx| super::subscriptions::claim_notification(tx, id, &key))
+                .await?
+            {
                 claims.push((
                     subscription.clone(),
                     id,

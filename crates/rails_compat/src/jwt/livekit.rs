@@ -17,12 +17,22 @@ pub const ADMIN_TOKEN_TTL: i64 = 60;
 /// `nbf` is backdated this far.
 pub const NOT_BEFORE_SKEW: i64 = 5;
 /// `Huddle::PUBLISH_SOURCES`, in the order the grant lists them.
-pub const PUBLISH_SOURCES: [&str; 4] = ["microphone", "screen_share", "screen_share_audio", "camera"];
+pub const PUBLISH_SOURCES: [&str; 4] =
+    ["microphone", "screen_share", "screen_share_audio", "camera"];
 
 const REQUIRED_CLAIMS: [&str; 5] = ["exp", "iss", "nbf", "sub", "video"];
 const REQUIRED_VIDEO_PERMISSIONS: [&str; 2] = ["roomJoin", "canSubscribe"];
 const FORBIDDEN_VIDEO_PERMISSIONS: [&str; 11] = [
-    "roomCreate", "roomList", "roomRecord", "roomAdmin", "canPublishData", "canUpdateOwnMetadata", "ingressAdmin", "hidden", "recorder", "agent",
+    "roomCreate",
+    "roomList",
+    "roomRecord",
+    "roomAdmin",
+    "canPublishData",
+    "canUpdateOwnMetadata",
+    "ingressAdmin",
+    "hidden",
+    "recorder",
+    "agent",
     "canPublishTranscription",
 ];
 const OTHER_VIDEO_CLAIMS: [&str; 3] = ["room", "canPublish", "canPublishSources"];
@@ -30,9 +40,13 @@ const OTHER_VIDEO_CLAIMS: [&str; 3] = ["room", "canPublish", "canPublishSources"
 /// `Huddle.opaque_identifier(kind, record_id)`: `campfire-<kind>-<hex HMAC-SHA256(api_secret,
 /// "campfire-huddle:<kind>:<id>")>`.
 pub fn opaque_identifier(api_secret: &str, kind: &str, record_id: i64) -> String {
-    let mut mac = Hmac::<Sha256>::new_from_slice(api_secret.as_bytes()).expect("HMAC takes a key of any length");
+    let mut mac = Hmac::<Sha256>::new_from_slice(api_secret.as_bytes())
+        .expect("HMAC takes a key of any length");
     mac.update(format!("campfire-huddle:{kind}:{record_id}").as_bytes());
-    format!("campfire-{kind}-{}", hex::encode(mac.finalize().into_bytes()))
+    format!(
+        "campfire-{kind}-{}",
+        hex::encode(mac.finalize().into_bytes())
+    )
 }
 
 /// `Huddle.room_name(room_id)`.
@@ -50,7 +64,11 @@ pub fn participant_video_grant(room_name: &str, publish: bool) -> Map<String, Va
     }
     grant.insert("canPublish".into(), publish.into());
     grant.insert("canPublishData".into(), false.into());
-    let sources = if publish { PUBLISH_SOURCES.iter().map(|s| Value::from(*s)).collect() } else { Vec::new() };
+    let sources = if publish {
+        PUBLISH_SOURCES.iter().map(|s| Value::from(*s)).collect()
+    } else {
+        Vec::new()
+    };
     grant.insert("canPublishSources".into(), Value::Array(sources));
     grant.insert("canSubscribe".into(), true.into());
     grant
@@ -75,11 +93,28 @@ pub struct Participant<'a> {
 }
 
 /// `Huddle#token` at `now` (unix seconds), with a fresh `jti` (`SecureRandom.uuid`).
-pub fn participant_token(api_key: &str, api_secret: &str, participant: &Participant<'_>, now: i64) -> String {
-    participant_token_with_jti(api_key, api_secret, participant, now, &uuid::Uuid::new_v4().to_string())
+pub fn participant_token(
+    api_key: &str,
+    api_secret: &str,
+    participant: &Participant<'_>,
+    now: i64,
+) -> String {
+    participant_token_with_jti(
+        api_key,
+        api_secret,
+        participant,
+        now,
+        &uuid::Uuid::new_v4().to_string(),
+    )
 }
 
-pub fn participant_token_with_jti(api_key: &str, api_secret: &str, participant: &Participant<'_>, now: i64, jti: &str) -> String {
+pub fn participant_token_with_jti(
+    api_key: &str,
+    api_secret: &str,
+    participant: &Participant<'_>,
+    now: i64,
+    jti: &str,
+) -> String {
     let mut claims = Map::new();
     claims.insert("exp".into(), (now + TOKEN_TTL).into());
     claims.insert("iat".into(), now.into());
@@ -88,16 +123,39 @@ pub fn participant_token_with_jti(api_key: &str, api_secret: &str, participant: 
     claims.insert("name".into(), participant.name.into());
     claims.insert("nbf".into(), (now - NOT_BEFORE_SKEW).into());
     claims.insert("sub".into(), participant.identity.into());
-    claims.insert("video".into(), Value::Object(participant_video_grant(participant.room_name, participant.can_publish)));
+    claims.insert(
+        "video".into(),
+        Value::Object(participant_video_grant(
+            participant.room_name,
+            participant.can_publish,
+        )),
+    );
     encode_hs256(&claims, api_secret.as_bytes())
 }
 
 /// `RoomService#admin_token(grant)` at `now`, with a fresh `jti`.
-pub fn admin_token(api_key: &str, api_secret: &str, grant: &Map<String, Value>, now: i64) -> String {
-    admin_token_with_jti(api_key, api_secret, grant, now, &uuid::Uuid::new_v4().to_string())
+pub fn admin_token(
+    api_key: &str,
+    api_secret: &str,
+    grant: &Map<String, Value>,
+    now: i64,
+) -> String {
+    admin_token_with_jti(
+        api_key,
+        api_secret,
+        grant,
+        now,
+        &uuid::Uuid::new_v4().to_string(),
+    )
 }
 
-pub fn admin_token_with_jti(api_key: &str, api_secret: &str, grant: &Map<String, Value>, now: i64, jti: &str) -> String {
+pub fn admin_token_with_jti(
+    api_key: &str,
+    api_secret: &str,
+    grant: &Map<String, Value>,
+    now: i64,
+    jti: &str,
+) -> String {
     let mut claims = Map::new();
     claims.insert("exp".into(), (now + ADMIN_TOKEN_TTL).into());
     claims.insert("iat".into(), now.into());
@@ -122,30 +180,62 @@ pub struct Invalid;
 
 /// `Huddle::TokenVerifier.new(token).coordinates` at `now`: a token we minted (or LiveKit
 /// refreshed), signed with our secret, current, with exactly a participant's grant shape.
-pub fn verify(token: &str, api_key: &str, api_secret: &str, now: i64) -> Result<Coordinates, Invalid> {
-    let validation = Validation { issuer: Some(api_key), required_claims: &REQUIRED_CLAIMS, ..Validation::default() };
-    let Decoded { payload, .. } = decode(token, Key::Hs256(api_secret.as_bytes()), &validation, now).map_err(|_| Invalid)?;
+pub fn verify(
+    token: &str,
+    api_key: &str,
+    api_secret: &str,
+    now: i64,
+) -> Result<Coordinates, Invalid> {
+    let validation = Validation {
+        issuer: Some(api_key),
+        required_claims: &REQUIRED_CLAIMS,
+        ..Validation::default()
+    };
+    let Decoded { payload, .. } =
+        decode(token, Key::Hs256(api_secret.as_bytes()), &validation, now).map_err(|_| Invalid)?;
     let claims = payload.as_object().ok_or(Invalid)?;
 
-    let is_integer = |key: &str| claims.get(key).is_some_and(|value| value.is_i64() || value.is_u64());
+    let is_integer = |key: &str| {
+        claims
+            .get(key)
+            .is_some_and(|value| value.is_i64() || value.is_u64())
+    };
     if !(is_integer("exp") && is_integer("nbf")) {
         return Err(Invalid);
     }
-    let video = claims.get("video").and_then(Value::as_object).ok_or(Invalid)?;
+    let video = claims
+        .get("video")
+        .and_then(Value::as_object)
+        .ok_or(Invalid)?;
     let room_name = video.get("room").ok_or(Invalid)?;
 
-    let present_string = |value: Option<&Value>| value.and_then(Value::as_str).filter(|s| !ruby::str_blank(s)).map(str::to_string);
+    let present_string = |value: Option<&Value>| {
+        value
+            .and_then(Value::as_str)
+            .filter(|s| !ruby::str_blank(s))
+            .map(str::to_string)
+    };
     let identity = present_string(claims.get("sub")).ok_or(Invalid)?;
     let room_name = present_string(Some(room_name)).ok_or(Invalid)?;
 
-    let allowed = |key: &str| REQUIRED_VIDEO_PERMISSIONS.contains(&key) || FORBIDDEN_VIDEO_PERMISSIONS.contains(&key) || OTHER_VIDEO_CLAIMS.contains(&key);
+    let allowed = |key: &str| {
+        REQUIRED_VIDEO_PERMISSIONS.contains(&key)
+            || FORBIDDEN_VIDEO_PERMISSIONS.contains(&key)
+            || OTHER_VIDEO_CLAIMS.contains(&key)
+    };
     if !video.keys().all(|key| allowed(key)) {
         return Err(Invalid);
     }
-    if !REQUIRED_VIDEO_PERMISSIONS.iter().all(|permission| video.get(*permission) == Some(&Value::Bool(true))) {
+    if !REQUIRED_VIDEO_PERMISSIONS
+        .iter()
+        .all(|permission| video.get(*permission) == Some(&Value::Bool(true)))
+    {
         return Err(Invalid);
     }
-    if FORBIDDEN_VIDEO_PERMISSIONS.iter().any(|permission| ruby::truthy(video.get(*permission))) {
+    if FORBIDDEN_VIDEO_PERMISSIONS
+        .iter()
+        .any(|permission| ruby::truthy(video.get(*permission)))
+    {
         return Err(Invalid);
     }
 
@@ -158,7 +248,12 @@ pub fn verify(token: &str, api_key: &str, api_secret: &str, now: i64) -> Result<
     };
     let sources = match video.get("canPublishSources") {
         None | Some(Value::Null) => None,
-        Some(Value::Array(sources)) => Some(sources.iter().map(|s| s.as_str().ok_or(Invalid)).collect::<Result<Vec<_>, _>>()?),
+        Some(Value::Array(sources)) => Some(
+            sources
+                .iter()
+                .map(|s| s.as_str().ok_or(Invalid))
+                .collect::<Result<Vec<_>, _>>()?,
+        ),
         Some(_) => return Err(Invalid),
     };
     if can_publish == Some(true) {
@@ -173,7 +268,10 @@ pub fn verify(token: &str, api_key: &str, api_secret: &str, now: i64) -> Result<
         return Err(Invalid);
     }
 
-    Ok(Coordinates { identity, room_name })
+    Ok(Coordinates {
+        identity,
+        room_name,
+    })
 }
 
 #[cfg(test)]
@@ -186,17 +284,42 @@ mod tests {
     const NOW: i64 = 1_767_268_800;
 
     fn token(can_publish: bool) -> String {
-        participant_token(KEY, SECRET, &Participant { name: "N", identity: "campfire-participant-x", room_name: "campfire-room-y", can_publish }, NOW)
+        participant_token(
+            KEY,
+            SECRET,
+            &Participant {
+                name: "N",
+                identity: "campfire-participant-x",
+                room_name: "campfire-room-y",
+                can_publish,
+            },
+            NOW,
+        )
     }
 
     #[test]
     fn minted_tokens_verify_until_they_expire() {
-        let expected = Coordinates { identity: "campfire-participant-x".into(), room_name: "campfire-room-y".into() };
+        let expected = Coordinates {
+            identity: "campfire-participant-x".into(),
+            room_name: "campfire-room-y".into(),
+        };
         for publish in [true, false] {
-            assert_eq!(verify(&token(publish), KEY, SECRET, NOW), Ok(expected.clone()));
-            assert_eq!(verify(&token(publish), KEY, SECRET, NOW + TOKEN_TTL - 1), Ok(expected.clone()));
-            assert_eq!(verify(&token(publish), KEY, SECRET, NOW + TOKEN_TTL), Err(Invalid));
-            assert_eq!(verify(&token(publish), KEY, SECRET, NOW - NOT_BEFORE_SKEW - 1), Err(Invalid));
+            assert_eq!(
+                verify(&token(publish), KEY, SECRET, NOW),
+                Ok(expected.clone())
+            );
+            assert_eq!(
+                verify(&token(publish), KEY, SECRET, NOW + TOKEN_TTL - 1),
+                Ok(expected.clone())
+            );
+            assert_eq!(
+                verify(&token(publish), KEY, SECRET, NOW + TOKEN_TTL),
+                Err(Invalid)
+            );
+            assert_eq!(
+                verify(&token(publish), KEY, SECRET, NOW - NOT_BEFORE_SKEW - 1),
+                Err(Invalid)
+            );
         }
     }
 
@@ -210,24 +333,50 @@ mod tests {
             tampered[index] = if tampered[index] == b'A' { b'B' } else { b'A' };
             let tampered = String::from_utf8(tampered).unwrap();
             if tampered != token && !tampered.contains('=') {
-                assert_eq!(verify(&tampered, KEY, SECRET, NOW), Err(Invalid), "byte {index}");
+                assert_eq!(
+                    verify(&tampered, KEY, SECRET, NOW),
+                    Err(Invalid),
+                    "byte {index}"
+                );
             }
         }
         let mut grant = Map::new();
         grant.insert("roomAdmin".into(), true.into());
         grant.insert("room".into(), "campfire-room-y".into());
-        assert_eq!(verify(&admin_token(KEY, SECRET, &grant, NOW), KEY, SECRET, NOW), Err(Invalid));
+        assert_eq!(
+            verify(&admin_token(KEY, SECRET, &grant, NOW), KEY, SECRET, NOW),
+            Err(Invalid)
+        );
     }
 
     #[test]
     fn a_signed_grant_with_more_power_is_refused() {
-        let mut claims: Map<String, Value> = serde_json::from_slice(&encoding::urlsafe_decode(token(true).split('.').nth(1).unwrap()).unwrap()).unwrap();
-        for (permission, value) in [("roomAdmin", Value::Bool(true)), ("canPublishData", Value::Bool(true)), ("hidden", Value::from(1)), ("unknown", Value::Bool(false))] {
+        let mut claims: Map<String, Value> = serde_json::from_slice(
+            &encoding::urlsafe_decode(token(true).split('.').nth(1).unwrap()).unwrap(),
+        )
+        .unwrap();
+        for (permission, value) in [
+            ("roomAdmin", Value::Bool(true)),
+            ("canPublishData", Value::Bool(true)),
+            ("hidden", Value::from(1)),
+            ("unknown", Value::Bool(false)),
+        ] {
             let mut claims = claims.clone();
-            claims["video"].as_object_mut().unwrap().insert(permission.into(), value);
-            assert_eq!(verify(&encode_hs256(&claims, SECRET.as_bytes()), KEY, SECRET, NOW), Err(Invalid), "{permission}");
+            claims["video"]
+                .as_object_mut()
+                .unwrap()
+                .insert(permission.into(), value);
+            assert_eq!(
+                verify(&encode_hs256(&claims, SECRET.as_bytes()), KEY, SECRET, NOW),
+                Err(Invalid),
+                "{permission}"
+            );
         }
         claims["video"]["canPublish"] = false.into();
-        assert_eq!(verify(&encode_hs256(&claims, SECRET.as_bytes()), KEY, SECRET, NOW), Err(Invalid), "sources without canPublish");
+        assert_eq!(
+            verify(&encode_hs256(&claims, SECRET.as_bytes()), KEY, SECRET, NOW),
+            Err(Invalid),
+            "sources without canPublish"
+        );
     }
 }

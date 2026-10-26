@@ -70,7 +70,14 @@ fn room_destroy_cascades_match_rails() {
     });
     tokio::runtime::Runtime::new()
         .unwrap()
-        .block_on(room_delete::perform_with_config(&t.db, rid, HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:false}))
+        .block_on(room_delete::perform_with_config(
+            &t.db,
+            rid,
+            HuddleConfig {
+                api_secret: Some("fixture-secret".into()),
+                admin_configured: false,
+            },
+        ))
         .unwrap();
     assert_checks(&t, &g["finished"]);
     let calendar: Vec<_> = t
@@ -131,12 +138,39 @@ fn room_workers_ignore_live_missing_and_already_destroyed_rooms() {
     let t = setup(&g["live"]);
     let rid = g["live"]["room_id"].as_i64().unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    runtime.block_on(room_delete::perform_with_config(&t.db, rid, HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:false})).unwrap();
+    runtime
+        .block_on(room_delete::perform_with_config(
+            &t.db,
+            rid,
+            HuddleConfig {
+                api_secret: Some("fixture-secret".into()),
+                admin_configured: false,
+            },
+        ))
+        .unwrap();
     runtime.block_on(room_delete::perform(&t.db, -1)).unwrap();
     assert_checks(&t, &g["live"]["checks"]);
     t.write(move |tx| Room::find(tx.conn(), rid)?.begin_destroy(tx));
-    runtime.block_on(room_delete::perform_with_config(&t.db, rid, HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:false})).unwrap();
-    runtime.block_on(room_delete::perform_with_config(&t.db, rid, HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:false})).unwrap();
+    runtime
+        .block_on(room_delete::perform_with_config(
+            &t.db,
+            rid,
+            HuddleConfig {
+                api_secret: Some("fixture-secret".into()),
+                admin_configured: false,
+            },
+        ))
+        .unwrap();
+    runtime
+        .block_on(room_delete::perform_with_config(
+            &t.db,
+            rid,
+            HuddleConfig {
+                api_secret: Some("fixture-secret".into()),
+                admin_configured: false,
+            },
+        ))
+        .unwrap();
     assert!(t.read(|c| Room::find_by_id(c, rid)).is_none());
 }
 #[test]
@@ -147,7 +181,18 @@ fn room_destroy_commits_progress_and_refreshes_claim_before_retry() {
     t.write(move |tx| { Room::find(tx.conn(),rid)?.begin_destroy(tx)?; tx.conn().execute_batch("CREATE TRIGGER fail_ws8_room BEFORE DELETE ON rooms BEGIN SELECT RAISE(ABORT,'retry'); END")?; Ok(()) });
     t.travel(17);
     let runtime = tokio::runtime::Runtime::new().unwrap();
-    assert!(runtime.block_on(room_delete::perform_with_config(&t.db, rid, HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:false})).is_err());
+    assert!(
+        runtime
+            .block_on(room_delete::perform_with_config(
+                &t.db,
+                rid,
+                HuddleConfig {
+                    api_secret: Some("fixture-secret".into()),
+                    admin_configured: false
+                }
+            ))
+            .is_err()
+    );
     let r = t.read(|c| Room::find(c, rid));
     assert_eq!(r.destroy_enqueued_at, Some(t.now()));
     // Rails oracle captures the same failure after child transactions and before final commit.
@@ -156,7 +201,16 @@ fn room_destroy_commits_progress_and_refreshes_claim_before_retry() {
         tx.conn().execute_batch("DROP TRIGGER fail_ws8_room")?;
         Ok(())
     });
-    runtime.block_on(room_delete::perform_with_config(&t.db, rid, HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:false})).unwrap();
+    runtime
+        .block_on(room_delete::perform_with_config(
+            &t.db,
+            rid,
+            HuddleConfig {
+                api_secret: Some("fixture-secret".into()),
+                admin_configured: false,
+            },
+        ))
+        .unwrap();
     assert_checks(&t, &g["finished"]);
 }
 

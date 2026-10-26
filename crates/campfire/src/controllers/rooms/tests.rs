@@ -13,8 +13,17 @@ async fn inaccessible_rooms_redirect_home_with_an_alert() {
     let mut david = app.david();
     let reply = david.get(&format!("/rooms/{DIRECT_KEVIN_BENDER}")).await;
     assert_eq!(reply.status, StatusCode::FOUND);
-    assert_eq!(reply.location(), Some(format!("http://campfire.test/app/r/{DIRECT_KEVIN_BENDER}").as_str()));
-    assert_eq!(david.get(&format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/messages")).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        reply.location(),
+        Some(format!("http://campfire.test/app/r/{DIRECT_KEVIN_BENDER}").as_str())
+    );
+    assert_eq!(
+        david
+            .get(&format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/messages"))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
     let reply = david.get("/rooms/nonsense").await;
     assert_eq!(reply.status, StatusCode::FOUND);
 }
@@ -34,7 +43,10 @@ async fn index_redirects_to_the_last_room() {
     );
     // Anonymous: off to sign in.
     let reply = app.anonymous().get("/rooms").await;
-    assert_eq!(reply.location(), Some("http://campfire.test/app/session/new"));
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/app/session/new")
+    );
 }
 
 #[tokio::test]
@@ -68,7 +80,6 @@ async fn open_rooms_are_created_edited_and_updated() {
     let mut david = app.david();
     let new = david.get("/rooms/opens/new").await;
     assert_eq!(new.status, StatusCode::FOUND);
-
 
     let created = david
         .write(Req::new(Method::POST, "/rooms/opens").form(&[("room[name]", "Watercooler")]))
@@ -152,7 +163,10 @@ async fn closed_rooms_are_created_with_the_selected_users() {
         return;
     };
     let mut david = app.david();
-    assert_eq!(david.get("/rooms/closeds/new").await.status, StatusCode::FOUND);
+    assert_eq!(
+        david.get("/rooms/closeds/new").await.status,
+        StatusCode::FOUND
+    );
     let created = david
         .write(Req::new(Method::POST, "/rooms/closeds").form(&[
             ("room[name]", "Secret"),
@@ -195,7 +209,10 @@ async fn direct_rooms_are_found_or_created() {
         return;
     };
     let mut david = app.david();
-    assert_eq!(david.get("/rooms/directs/new").await.status, StatusCode::FOUND);
+    assert_eq!(
+        david.get("/rooms/directs/new").await.status,
+        StatusCode::FOUND
+    );
     let existing = david
         .write(Req::new(Method::POST, "/rooms/directs").form(&[("user_ids[]", &JASON.to_string())]))
         .await;
@@ -244,8 +261,6 @@ async fn direct_rooms_are_found_or_created() {
         .unwrap();
     assert!(room.is_none_or(|room| room.deleted_at.is_some()));
 }
-
-
 
 #[tokio::test]
 async fn involvement_is_shown_and_changed() {
@@ -362,5 +377,7 @@ async fn the_last_room_cookie_is_set_only_when_it_changes() {
         !last_room(&david.get(&format!("/rooms/opens/{HQ}")).await),
         "the same room again"
     );
-    assert!(last_room(&david.get(&format!("/rooms/opens/{ALL_TALK}")).await));
+    assert!(last_room(
+        &david.get(&format!("/rooms/opens/{ALL_TALK}")).await
+    ));
 }

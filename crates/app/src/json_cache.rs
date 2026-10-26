@@ -219,13 +219,19 @@ impl JsonCache {
 }
 
 impl CacheSize for campfire_presentation::messages::json::UserJson {
-    fn cache_size(&self) -> usize { serialized_size(self) }
+    fn cache_size(&self) -> usize {
+        serialized_size(self)
+    }
 }
 impl CacheSize for campfire_presentation::messages::json::MessageJson {
-    fn cache_size(&self) -> usize { serialized_size(self) }
+    fn cache_size(&self) -> usize {
+        serialized_size(self)
+    }
 }
 impl CacheSize for campfire_presentation::messages::json::BoostJson {
-    fn cache_size(&self) -> usize { serialized_size(self) }
+    fn cache_size(&self) -> usize {
+        serialized_size(self)
+    }
 }
 
 #[cfg(test)]
@@ -310,11 +316,7 @@ mod tests {
         cache.fetch_value("e", || "x".repeat(100));
         assert_eq!(cache.len(), 3);
         assert!(cache.bytes() <= 3 * entry(100));
-        assert_eq!(
-            cache.get::<String>("b"),
-            None,
-            "b was least recently used"
-        );
+        assert_eq!(cache.get::<String>("b"), None, "b was least recently used");
         assert_eq!(cache.get::<String>("c"), None, "c went next");
         for key in ["a", "d", "e"] {
             assert!(
@@ -343,10 +345,7 @@ mod tests {
         assert_eq!(cache.len(), 3, "the big value isn't kept");
         assert_eq!(cache.get::<String>("big"), None);
         for key in ["a", "b", "c"] {
-            assert!(
-                cache.get::<String>(key).is_some(),
-                "{key} is still stored"
-            );
+            assert!(cache.get::<String>(key).is_some(), "{key} is still stored");
         }
         assert_eq!(cache.bytes(), 3 * entry(100));
     }

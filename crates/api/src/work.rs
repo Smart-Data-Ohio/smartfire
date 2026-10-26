@@ -17,8 +17,8 @@ use campfire_db::{
     WorkHandoff, WorkThreadEvent, WorkThreadLink,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
-use campfire_runtime::presenters::Presenter;
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::Presenter;
 use rails_compat::Secrets;
 
 use crate::agents::human;
@@ -348,9 +348,12 @@ fn result_html(
         .map_err(campfire_db::Error::Other)?;
     let presenter = Presenter::new(conn, app, None);
     let resolver = presenter.resolver();
-    let html =
-        campfire_runtime::rich_text::markdown_presentation(conn, &body, &resolver.render_context(None))
-            .map_err(campfire_db::Error::Other)?;
+    let html = campfire_runtime::rich_text::markdown_presentation(
+        conn,
+        &body,
+        &resolver.render_context(None),
+    )
+    .map_err(campfire_db::Error::Other)?;
     Ok(dto::inline_mentions(&html))
 }
 

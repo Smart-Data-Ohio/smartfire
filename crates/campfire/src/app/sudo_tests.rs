@@ -203,7 +203,11 @@ async fn sudo_gate_holds_the_write_until_confirmed_and_names_it_once() {
     );
     let again = b.confirm_sudo("secret123456").await;
     assert_eq!(again.status, StatusCode::OK);
-    assert_eq!(again.json()["retry"], Value::Null, "pending request is consumed");
+    assert_eq!(
+        again.json()["retry"],
+        Value::Null,
+        "pending request is consumed"
+    );
     assert_eq!(a.db().read(|conn| Ok(conn.query_row("SELECT count(*) FROM audit_logs WHERE action = 'sudo.confirm.success' AND details = '{\"verifier\":\"password\"}'", [], |row| row.get::<_, i64>(0))?)).await.unwrap(), 2);
 }
 
