@@ -35,6 +35,10 @@ something to work on if you'd like to do so.
    [development guide](docs/development.md); the required `Rust port` check
    runs them again on the PR, beside the browser correctness suites (see
    [`ci/README.md`](ci/README.md)).
+6. When the PR is ready to land, comment `@openmerge queue` on it instead of
+   clicking Merge. The OpenMerge merge queue tests it together with anything
+   queued ahead of it, then squash-merges passing PRs onto `main` in order.
+   The OpenMerge check on the PR shows why it is waiting.
 
 ### If you've found a bug...
 
