@@ -7,7 +7,8 @@ name: Frontend
 
 on:
   push:
-    branches: [ main ]
+    # OpenMerge tests queued batches on openmerge/queue/** before landing them.
+    branches: [ main, "openmerge/queue/**" ]
   pull_request:
     branches: [ main ]
 
