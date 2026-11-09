@@ -91,3 +91,4 @@ pub mod message_batches;
 #[cfg(any(test, feature = "test-support"))]
 pub use agent_streaming::run_trailing_fixture;
 
+pub mod mcp_events;

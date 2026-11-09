@@ -67,6 +67,8 @@ async fn personal(c: &Ctx, agent_id: i64) -> Result<bool> {
         .map_err(super::super::presenters::page::db_error)
 }
 
+mod events;
+
 const MODERN: &str = "2026-07-28";
 const VERSION_KEY: &str = "io.modelcontextprotocol/protocolVersion";
 
@@ -197,7 +199,7 @@ pub async fn create(c: &mut Ctx) -> Result {
             c,
             id,
             modern_result(
-                json!({"supportedVersions":METADATA["versions"],"capabilities":{"tools":{}},"_meta":{"io.modelcontextprotocol/serverInfo":{"name":METADATA["server_name"],"version":METADATA["server_version"]}},"instructions":METADATA["instructions"]}),
+                json!({"supportedVersions":METADATA["versions"],"capabilities":if modern {json!({"tools":{},"extensions":{"io.modelcontextprotocol/events":{}}})} else {json!({"tools":{}})},"_meta":{"io.modelcontextprotocol/serverInfo":{"name":METADATA["server_name"],"version":METADATA["server_version"]}},"instructions":METADATA["instructions"]}),
                 modern,
             ),
         )),
@@ -210,6 +212,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 modern_result(json!({"tools":tools}), modern),
             ))
         }
+        method if modern && method.starts_with("events/") => events::dispatch(c, id, method, &params, identity).await,
         "tools/call" => call_tool(c, id, &params, identity.agent_id, modern).await,
         "ping" => Ok(rpc_result(c, id, modern_result(json!({}), modern))),
         notification if notification.starts_with("notifications/") => {
@@ -329,7 +332,7 @@ fn header_mismatch(c: &Ctx, method: &str, params: &Value) -> Option<String> {
             inspect(&json!(method))
         ));
     }
-    if method != "tools/call" {
+    if !matches!(method, "tools/call" | "events/subscribe" | "events/unsubscribe") {
         return None;
     }
     let Some(name) = c

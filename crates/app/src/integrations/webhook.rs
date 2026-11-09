@@ -100,6 +100,10 @@ pub struct Posted {
 
 /// `post(payload)` over `Net::HTTP.new(uri.host, uri.port)`: the status, content type and body.
 pub async fn post_payload(net: &Network, url: &str, payload: String, headers: Vec<(&'static str, String)>) -> Result<Posted, WebhookError> {
+    post_payload_limited(net, url, payload, headers, usize::MAX).await
+}
+
+pub async fn post_payload_limited(net: &Network, url: &str, payload: String, headers: Vec<(&'static str, String)>, response_limit: usize) -> Result<Posted, WebhookError> {
     let uri = uri::parse(url).map_err(|_| WebhookError::InvalidUrl(format!("bad URI (is not URI?): {url:?}")))?;
     if !uri.is_http() {
         return Err(WebhookError::InvalidUrl("not an HTTP URI".into()));
@@ -120,9 +124,9 @@ pub async fn post_payload(net: &Network, url: &str, payload: String, headers: Ve
     let response = http::exchange(net, &endpoint, request, &timeouts).await.map_err(WebhookError::Http)?;
     let (status, content_type) = (response.status, response.content_type());
     let headers = response.headers.clone();
-    let body = match response.read_body(usize::MAX).await.map_err(WebhookError::Http)? {
+    let body = match response.read_body(response_limit).await.map_err(WebhookError::Http)? {
         Body::Complete(body) => body,
-        Body::TooLarge => unreachable!("a Vec cannot exceed usize::MAX"),
+        Body::TooLarge => return Err(WebhookError::Http(HttpError::Http("response body too large".into()))),
     };
     Ok(Posted { status, content_type, body, headers })
 }
