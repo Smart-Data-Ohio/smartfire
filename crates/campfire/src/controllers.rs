@@ -141,6 +141,8 @@ mod agent_event_stream_tests;
 #[cfg(test)]
 mod agent_mcp_tests;
 #[cfg(test)]
+mod mcp_event_tests;
+#[cfg(test)]
 mod oauth_data_tests;
 #[cfg(test)]
 mod personal_agent_tests;
