@@ -127,7 +127,7 @@ pub struct Grant {
     pub max_age_ms: i64,
 }
 pub enum GrantResult {
-    Granted(Subscription, bool),
+    Granted(Box<Subscription>, bool),
     Forbidden,
     Limit,
 }
@@ -189,7 +189,7 @@ pub fn subscribe(
         }
     }
     Ok(GrantResult::Granted(
-        Subscription::find(tx.conn(), &id)?.expect("saved subscription"),
+        Box::new(Subscription::find(tx.conn(), &id)?.expect("saved subscription")),
         truncated,
     ))
 }
@@ -290,18 +290,35 @@ impl Category {
         }
     }
 }
+#[derive(Debug, Clone, Copy)]
+pub enum Termination {
+    AccessRevoked,
+}
+
 pub enum DeliveryOutcome {
     Delivered,
     Retry(Category, Option<Duration>),
     Permanent(Category),
-    Terminate,
+    Terminate(Termination),
 }
 pub fn suppress(tx: &Tx<'_>, d: &Delivery) -> Result<()> {
     tx.conn().execute("UPDATE mcp_event_deliveries SET status='suppressed',updated_at=? WHERE id=? AND attempts=? AND status='pending'",params![tx.now(),d.id,d.attempts])?;
     advance(tx, &d.subscription_id)
 }
+pub fn delivery_cursor(
+    conn: &Connection,
+    subscription: &str,
+    settling: Option<i64>,
+) -> Result<i64> {
+    Ok(query_one(conn,
+        "SELECT MAX(watermark_event_id,COALESCE((SELECT MAX(agent_event_id) FROM mcp_event_deliveries WHERE subscription_id=?1 AND (status!='pending' OR id=?2) AND agent_event_id<COALESCE((SELECT MIN(agent_event_id) FROM mcp_event_deliveries WHERE subscription_id=?1 AND status='pending' AND id IS NOT ?2),9223372036854775807)),watermark_event_id)) FROM mcp_event_subscriptions WHERE id=?1",
+        params![subscription,settling],|r|r.get(0))?.unwrap_or(0))
+}
 fn advance(tx: &Tx<'_>, id: &str) -> Result<()> {
-    tx.conn().execute("UPDATE mcp_event_subscriptions SET watermark_event_id=MAX(watermark_event_id,COALESCE((SELECT MAX(agent_event_id) FROM mcp_event_deliveries WHERE subscription_id=?1 AND status!='pending' AND agent_event_id<COALESCE((SELECT MIN(agent_event_id) FROM mcp_event_deliveries WHERE subscription_id=?1 AND status='pending'),9223372036854775807)),watermark_event_id)) WHERE id=?1",[id])?;
+    tx.conn().execute(
+        "UPDATE mcp_event_subscriptions SET watermark_event_id=? WHERE id=?",
+        params![delivery_cursor(tx.conn(), id, None)?, id],
+    )?;
     Ok(())
 }
 pub fn finish(tx: &mut Tx<'_>, d: &Delivery, outcome: DeliveryOutcome) -> Result<()> {
@@ -316,7 +333,7 @@ pub fn finish(tx: &mut Tx<'_>, d: &Delivery, outcome: DeliveryOutcome) -> Result
                 .min(Duration::from_secs(480));
             ("pending", Some(c), Some(wait))
         }
-        DeliveryOutcome::Terminate => {
+        DeliveryOutcome::Terminate(_) => {
             tx.conn().execute(
                 "DELETE FROM mcp_event_subscriptions WHERE id=?",
                 [&d.subscription_id],
@@ -374,6 +391,7 @@ pub fn cleanup(tx: &Tx<'_>) -> Result<()> {
     )?;
     tx.conn().execute("UPDATE mcp_event_deliveries SET status='failed',last_error='timeout',updated_at=? WHERE status='pending' AND attempts>=5 AND next_attempt_at<?",params![tx.now(),cutoff])?;
     for id in ids {
+        tx.conn().execute("UPDATE mcp_event_subscriptions SET last_error='timeout',failed_since=COALESCE(failed_since,?),updated_at=? WHERE id=?",params![tx.now(),tx.now(),id])?;
         advance(tx, &id)?;
     }
     tx.conn().execute(

@@ -7,16 +7,26 @@ use campfire_db::models::mcp_events::{Category, DeliveryOutcome};
 use serde_json::json;
 use std::time::Duration;
 
+pub struct Signing<'a> {
+    pub secret: &'a str,
+    pub previous: Option<&'a str>,
+    pub id: &'a str,
+    pub subscription: Option<&'a str>,
+}
+
 pub async fn post(
     net: &Network,
     url: &str,
-    secret: &str,
-    previous: Option<&str>,
-    id: &str,
-    subscription: Option<&str>,
+    signing: Signing<'_>,
     body: String,
     now: jiff::Timestamp,
 ) -> Result<Posted, WebhookError> {
+    let Signing {
+        secret,
+        previous,
+        id,
+        subscription,
+    } = signing;
     let mut headers =
         rails_compat::webhook::standard_headers(secret, previous, id, body.as_bytes(), now)
             .ok_or_else(|| WebhookError::InvalidUrl("invalid signing secret".into()))?;
@@ -80,10 +90,12 @@ pub async fn verify(
     let result = post(
         net,
         url,
-        secret,
-        None,
-        &campfire_db::models::mcp_events::nonce("msg_verification_"),
-        None,
+        Signing {
+            secret,
+            previous: None,
+            id: &campfire_db::models::mcp_events::nonce("msg_verification_"),
+            subscription: None,
+        },
         body,
         now,
     )
@@ -101,6 +113,6 @@ pub async fn verify(
             }
         }
         DeliveryOutcome::Retry(c, _) | DeliveryOutcome::Permanent(c) => Err(c),
-        DeliveryOutcome::Terminate => Err(Category::ChallengeFailed),
+        DeliveryOutcome::Terminate(_) => Err(Category::ChallengeFailed),
     }
 }
