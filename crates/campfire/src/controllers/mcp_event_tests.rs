@@ -869,3 +869,23 @@ async fn mcp_events_oversized_payload_fails_without_post_or_retry() {
     assert!(jobs(&app).await.is_empty());
     assert_eq!(server.received().len(), 1);
 }
+
+#[tokio::test]
+async fn mcp_events_production_rejects_http_callbacks() {
+    let app = super::agent_http_tests::setup()
+        .await
+        .without_job_runner()
+        .await;
+    let result = rpc(&app, "events/subscribe", params("mention")).await;
+    assert_eq!(result["error"]["code"], -32602);
+    assert_eq!(
+        app.db()
+            .read(|c| Ok(
+                c.query_row("SELECT COUNT(*) FROM mcp_event_subscriptions", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        0
+    );
+}
