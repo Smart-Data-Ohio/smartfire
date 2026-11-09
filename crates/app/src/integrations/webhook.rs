@@ -80,7 +80,8 @@ pub async fn deliver(net: &Network, url: &str, payload: String) -> Result<Webhoo
 pub async fn deliver_signed<F: Fn() -> jiff::Timestamp + Send + Sync>(
     net: &Network, url: &str, payload: String, secret: Option<&str>, now: F, agent: bool,
 ) -> Result<WebhookDelivery, WebhookError> {
-    match post_payload(net, url, payload, secret, now).await {
+    let headers = rails_compat::webhook::smartfire_headers(secret, payload.as_bytes(), now());
+    match post_payload(net, url, payload, headers).await {
         Ok(response) => Ok(WebhookDelivery { status: Some(response.status), reply: reply(response.status, response.content_type, response.body)? }),
         Err(WebhookError::Http(HttpError::OpenTimeout | HttpError::ReadTimeout)) if !agent => {
             Ok(WebhookDelivery { status: None, reply: WebhookReply::Text(format!("Failed to respond within {} seconds", ENDPOINT_TIMEOUT.as_secs())) })
@@ -98,7 +99,7 @@ pub struct Posted {
 }
 
 /// `post(payload)` over `Net::HTTP.new(uri.host, uri.port)`: the status, content type and body.
-pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Network, url: &str, payload: String, secret: Option<&str>, now: F) -> Result<Posted, WebhookError> {
+pub async fn post_payload(net: &Network, url: &str, payload: String, headers: Vec<(&'static str, String)>) -> Result<Posted, WebhookError> {
     let uri = uri::parse(url).map_err(|_| WebhookError::InvalidUrl(format!("bad URI (is not URI?): {url:?}")))?;
     if !uri.is_http() {
         return Err(WebhookError::InvalidUrl("not an HTTP URI".into()));
@@ -111,9 +112,7 @@ pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Networ
 
     let hostname = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(&host);
     let uri_host = if port == if https { 443 } else { 80 } { hostname.to_string() } else { format!("{hostname}:{port}") };
-    let now = now();
-    let headers = rails_compat::webhook::smartfire_headers(secret, payload.as_bytes(), now)
-        .into_iter().map(|(name, value)| (name.to_string(), value)).collect();
+    let headers = headers.into_iter().map(|(name, value)| (name.to_string(), value)).collect();
     let mut request = http::Request::net_http(hyper::Method::POST, http::request_uri(&uri), Some(uri_host), headers).transport(false, &endpoint);
     request.body = payload.into_bytes();
 
@@ -374,7 +373,7 @@ mod tests {
         let dialer = Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) });
         let net = network(resolver, dialer);
         for case in vectors["signatures"].as_array().unwrap() {
-            post_payload(&net, "http://bots.example:8080/hook", case["body"].as_str().unwrap().into(), Some(case["secret"].as_str().unwrap()), || vectors["now"].as_str().unwrap().parse().unwrap()).await.unwrap();
+            post_payload(&net, "http://bots.example:8080/hook", case["body"].as_str().unwrap().into(), rails_compat::webhook::smartfire_headers(Some(case["secret"].as_str().unwrap()), case["body"].as_str().unwrap().as_bytes(), vectors["now"].as_str().unwrap().parse().unwrap())).await.unwrap();
             let request = server.received().pop().unwrap();
             assert_eq!(request.header("X-Smartfire-Timestamp"), case["timestamp"].as_str());
             assert_eq!(request.header("X-Smartfire-Signature"), case["signature"].as_str());
