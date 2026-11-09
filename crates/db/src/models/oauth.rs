@@ -84,6 +84,11 @@ pub struct OAuthConnection {
 }
 
 impl OAuthConnection {
+    pub fn live(&self, conn: &Connection, now: Timestamp, origin: &str) -> Result<bool> {
+        Ok(self.expires_at > now && self.resource == canonical_resource(origin) && self.scope == "agent"
+            && exists(conn, "SELECT 1 FROM oauth_clients WHERE id=? AND blocked_at IS NULL", [self.oauth_client_id])?)
+    }
+
     /// Store an owner-approved personal connection with a credential that cannot authenticate
     /// as a static token. Consent/access replacement is the caller's transaction.
     pub fn create(tx: &Tx<'_>, agent_id: i64, owner_id: i64, client_id: i64) -> Result<Self> {
@@ -225,17 +230,7 @@ impl OAuthToken {
         let Some(connection) = OAuthConnection::find(conn, token.oauth_connection_id)? else {
             return Ok(None);
         };
-        if connection.expires_at <= now
-            || connection.resource != canonical_resource(app_url)
-            || connection.scope != "agent"
-            || !exists(
-                conn,
-                "SELECT 1 FROM oauth_clients WHERE id=? AND blocked_at IS NULL",
-                [connection.oauth_client_id],
-            )?
-        {
-            return Ok(None);
-        }
+        if !connection.live(conn, now, app_url)? { return Ok(None); }
         Ok(AgentCredential::find(conn, connection.agent_credential_id)?
             .filter(|credential| credential.active(now)))
     }
