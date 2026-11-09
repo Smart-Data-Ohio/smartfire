@@ -212,6 +212,9 @@ async fn mcp_events_discovery_and_protocol_errors() {
         assert_eq!(v["error"]["code"], -32026);
         assert_eq!(v["error"]["data"]["value"], value);
     }
+    let unknown = rpc(&app, "events/unsubscribe", params("unknown")).await;
+    assert_eq!(unknown["error"]["code"], -32023);
+    assert_eq!(unknown["error"]["data"]["kind"], "subscription");
     let mismatch = rpc_token(
         &app,
         "events/subscribe",

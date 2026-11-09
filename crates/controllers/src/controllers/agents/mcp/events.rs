@@ -39,7 +39,9 @@ pub async fn dispatch(
     let Some(name) = p["name"].as_str() else {
         return error(c, id, -32602, "Invalid params", None);
     };
-    if !campfire_db::models::agent_delivery::MESSAGE_TYPES.contains(&name) {
+    if method == "events/subscribe"
+        && !campfire_db::models::agent_delivery::MESSAGE_TYPES.contains(&name)
+    {
         return error(c, id, -32023, "NotFound", Some(json!({"kind":"event"})));
     }
     if p.get("arguments").is_some_and(|v| v != &json!({})) {

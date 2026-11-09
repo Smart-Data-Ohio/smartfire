@@ -224,7 +224,8 @@ Agent tokens and OAuth connections can use it. `poll_events` remains the pull pa
 `events/list` returns `mention`, `reply`, and `direct_message`. Each descriptor
 accepts empty `arguments` and supports only webhook delivery. A reply that also
 mentions the agent produces one `reply` event. The occurrence's `data` is the
-same row object that REST event polling returns.
+same row object that REST event polling returns. Absolute payload links use
+the configured app origin.
 
 `events/subscribe` accepts the following params. Modern requests also require
 `Mcp-Method: events/subscribe` and `Mcp-Name: mention` to match the body.
