@@ -206,12 +206,11 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
     let (webhook, secret, payload, bot, sync) = prepared;
-    let headers = rails_compat::webhook::smartfire_headers(Some(&secret), payload.as_bytes(), app.clock.now());
     let response = match webhook::post_payload(
         net,
         webhook.url.as_deref().unwrap_or(""),
         payload,
-        headers,
+        |body| Ok(rails_compat::webhook::smartfire_headers(Some(&secret), body, app.clock.now())),
     )
     .await
     {

@@ -14,12 +14,12 @@ pub struct Signing<'a> {
     pub subscription: Option<&'a str>,
 }
 
-pub async fn post(
+pub async fn post<F: Fn() -> jiff::Timestamp + Send + Sync>(
     net: &Network,
     url: &str,
     signing: Signing<'_>,
     body: String,
-    now: jiff::Timestamp,
+    now: F,
 ) -> Result<Posted, WebhookError> {
     let Signing {
         secret,
@@ -27,15 +27,23 @@ pub async fn post(
         id,
         subscription,
     } = signing;
-    let mut headers =
-        rails_compat::webhook::standard_headers(secret, previous, id, body.as_bytes(), now)
-            .ok_or_else(|| WebhookError::InvalidUrl("invalid signing secret".into()))?;
-    if let Some(id) = subscription {
-        headers.push(("X-MCP-Subscription-Id", id.into()));
-    }
     tokio::time::timeout(
         Duration::from_secs(7),
-        webhook::post_payload_limited(net, url, body, headers, 256 * 1024),
+        webhook::post_payload_limited(
+            net,
+            url,
+            body,
+            |body| {
+                let mut headers =
+                    rails_compat::webhook::standard_headers(secret, previous, id, body, now())
+                        .ok_or_else(|| WebhookError::InvalidUrl("invalid signing secret".into()))?;
+                if let Some(id) = subscription {
+                    headers.push(("X-MCP-Subscription-Id", id.into()));
+                }
+                Ok(headers)
+            },
+            256 * 1024,
+        ),
     )
     .await
     .unwrap_or(Err(WebhookError::Http(HttpError::ReadTimeout)))
@@ -78,11 +86,11 @@ pub fn outcome(result: &Result<Posted, WebhookError>, now: jiff::Timestamp) -> D
         Err(_) => DeliveryOutcome::Retry(ConnectionRefused, None),
     }
 }
-pub async fn verify(
+pub async fn verify<F: Fn() -> jiff::Timestamp + Send + Sync>(
     net: &Network,
     url: &str,
     secret: &str,
-    now: jiff::Timestamp,
+    now: F,
 ) -> Result<(), Category> {
     use subtle::ConstantTimeEq;
     let challenge = campfire_db::models::mcp_events::nonce("");
@@ -97,10 +105,10 @@ pub async fn verify(
             subscription: None,
         },
         body,
-        now,
+        &now,
     )
     .await;
-    match outcome(&result, now) {
+    match outcome(&result, now()) {
         DeliveryOutcome::Delivered => {
             let echoed = result
                 .ok()

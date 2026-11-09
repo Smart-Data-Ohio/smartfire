@@ -112,7 +112,7 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
             subscription: Some(&subscription.id),
         },
         body,
-        app.clock.now(),
+        || app.clock.now(),
     )
     .await;
     if !terminated {

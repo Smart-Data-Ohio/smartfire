@@ -173,11 +173,12 @@ pub async fn dispatch(
                 Some(json!({"limit":"verification","max":10})),
             );
         }
+        let clock = c.app().clock.clone();
         if let Err(reason) = campfire_app::integrations::mcp_events::verify(
             &c.app().subscription_network,
             &url,
             secret,
-            c.app().clock.now(),
+            move || clock.now(),
         )
         .await
         {
