@@ -35,6 +35,7 @@ impl JobKind for EventWebhook {
     }
 }
 pub(super) fn register(r: &mut Registry) {
+    super::mcp_events::register(r);
     r.register(deliver);
     r.register(post);
 }

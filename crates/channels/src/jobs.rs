@@ -42,6 +42,7 @@ mod messaging;
 // The integrations' job handlers, which render messages.
 pub mod integrations;
 pub mod agent_jobs;
+pub mod mcp_events;
 pub mod attachment_processing;
 pub mod huddle;
 mod notifications;

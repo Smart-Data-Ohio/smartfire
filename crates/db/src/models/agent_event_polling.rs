@@ -41,6 +41,11 @@ pub fn poll(
     Ok(json!({"events":payloads,"next_since":next_since}))
 }
 
+pub fn event_payload(conn: &Connection, event: &AgentEvent, now: Timestamp, presenter: impl FnMut(&Message) -> Result<Value>) -> Result<Option<Value>> {
+    let access = RepositoryAccess::default();
+    PollContext::load(conn, event.agent_id, now, &access, std::slice::from_ref(event))?.payload(event, &mut { presenter })
+}
+
 fn blank(value: &Value) -> bool {
     match value {
         Value::Null | Value::Bool(false) => true,
