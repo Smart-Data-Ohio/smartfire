@@ -267,6 +267,10 @@ capped at those defaults.
 
 ### Webhooks
 
+MCP clients can also subscribe through [Events (webhooks)](agents-mcp.md#events-webhooks).
+These formats differ. Agent webhooks use `X-Smartfire-Signature`.
+MCP Events uses Standard Webhooks headers.
+
 The webhook payload gains an additive
 `agent: { id, name, owner, delivery_id }` key (`owner` is the owner's name
 or null) when posted through event delivery. The legacy bot webhook path
@@ -1187,7 +1191,10 @@ list.
 
 Active human members manage their own personal agents at `/api/v1/me/agents`.
 The list includes `enabled`, `limit`, grantable `capabilities` and `rooms`,
-`mcpUrl` from a validated `APP_URL`, and `oauthAvailable`, which is false.
+`mcpUrl` from a validated `APP_URL`, and `oauthAvailable`.
+`oauthAvailable` is true when MCP OAuth is enabled through `SMARTFIRE_MCP_OAUTH`
+and `APP_URL` is a valid HTTPS origin. OAuth is enabled unless explicitly disabled.
+Development also accepts an HTTP localhost origin.
 `mcpUrl` is null when that address is absent or invalid. Request Host and
 forwarded Host headers never supply it.
 The limit is null for administrators. Workspace settings default to enabled
@@ -1211,8 +1218,9 @@ Administrators retain their existing bot management routes.
 - `PUT /:id/access` replaces the `roomIds` and `capabilities` set in one
   transaction. Only non-direct rooms the owner currently belongs to are offered.
   An empty room set is allowed and leaves only the implicit owner DM available.
-- `GET /:id/credentials` lists credential metadata, including `kind: "token"`,
-  expiry, state and last use. `POST` accepts `name` and optional `expiresAt`.
+- `GET /:id/credentials` lists credential metadata, including `kind: "token"`
+  or `kind: "oauth"`, expiry, state, and last use. OAuth credentials include a
+  `connection` object with connection and client metadata. `POST` accepts `name` and optional `expiresAt`.
 - `POST /:id/credentials/:cid/rotate` accepts an optional `name` and `expiresAt`,
   creates a replacement and revokes the old credential in one transaction.
   An omitted name retains the previous name. An omitted or null expiry defaults

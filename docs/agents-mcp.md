@@ -213,3 +213,153 @@ like `POST /agents/fizzy/card_actions`. Completions arrive through
 `poll_events` with a `fizzy_action` payload. See
 [Fizzy reads](agents.md#fizzy-reads) and
 [Fizzy write actions](agents.md#fizzy-write-actions) for the gates.
+
+## Events (webhooks)
+
+Smartfire implements `io.modelcontextprotocol/events` for protocol version
+`2026-07-28`. It follows [SEP-3415, draft at b08e4f9, dated 2026-10-27](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/b08e4f9/seps/0000-events-extension.md).
+`server/discover` advertises the extension. Legacy versions do not expose it.
+Agent tokens and OAuth connections can use it. `poll_events` remains the pull path.
+
+`events/list` returns `mention`, `reply`, and `direct_message`. Each descriptor
+accepts empty `arguments` and supports only webhook delivery. A reply that also
+mentions the agent produces one `reply` event. The occurrence's `data` is the
+same row object that REST event polling returns.
+
+`events/subscribe` accepts the following params. Modern requests also require
+`Mcp-Method: events/subscribe` and `Mcp-Name: mention` to match the body.
+
+```json
+{
+  "name": "mention",
+  "arguments": {},
+  "delivery": {
+    "mode": "webhook",
+    "url": "https://receiver.example/events",
+    "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+  },
+  "cursor": null,
+  "ttlMs": 3600000
+}
+```
+
+The secret is `whsec_` followed by standard base64 for 24 to 64 random bytes.
+Smartfire encrypts it at rest. Callback URLs must be absolute HTTPS URLs.
+Development and test environments also accept HTTP. All environments reject
+private network destinations through the existing webhook guard. Smartfire pins
+the resolved public IP, verifies TLS against the hostname, and follows no redirects.
+
+Before storing the first subscription for a credential and callback URL, Smartfire
+POSTs `{"type":"verification","challenge":"<nonce>"}`. The request has a valid
+Standard Webhooks signature and a `msg_verification_` webhook ID. The receiver
+must return a 2xx JSON response with the same `challenge`. Failure returns
+`CallbackEndpointError` with code `-32027` and stores nothing. Verification is
+limited to ten attempts per destination hostname per minute.
+
+Subscription identity includes the credential, URL, event name, and canonical
+arguments. OAuth access token refresh retains that credential. Repeating the
+same subscription returns the same `id` and refreshes its TTL. The default TTL
+is one hour. Smartfire clamps it to one minute through 24 hours. `ttlMs: null`
+grants 24 hours. Refresh before the RFC 3339 `refreshBefore` timestamp. The result
+also includes `cursor`, `truncated`, and `deliveryStatus` with `active`,
+`lastDeliveryAt`, `lastError`, and `failedSince`.
+
+A null or absent cursor starts at the agent's current ledger position. A numeric
+string replays readable, delivered message events after that ID. `maxAgeMs` bounds
+replay age, with a maximum and default of 24 hours. `truncated` reports older
+matching events skipped by that bound. Pending live deliveries survive a refresh.
+
+`events/unsubscribe` accepts `name`, empty `arguments`, and `delivery.url`.
+It requires matching `Mcp-Method` and `Mcp-Name` headers. Only the owning credential
+can delete a subscription. A missing subscription returns `NotFound`, code
+`-32023`. `events/poll` and `events/stream` return `Unsupported`, code `-32026`,
+with delivery mode `poll` or `push`.
+
+### Delivery and signatures
+
+An event POST contains `eventId`, `name`, RFC 3339 `timestamp`, `data`, and
+`cursor`. Its JSON body is limited to 256 KiB. The headers are:
+
+- `Content-Type: application/json`.
+- `webhook-id`, a random `msg_` identifier for this delivery.
+- `webhook-timestamp`, Unix seconds regenerated for each attempt.
+- `webhook-signature`, `v1,<base64 HMAC-SHA256>`.
+- `X-MCP-Subscription-Id`, the subscription's ID.
+
+The HMAC key is the decoded secret after `whsec_`. The signed bytes are
+`webhook-id + "." + webhook-timestamp + "." + rawBody`. Verify the signature
+against the raw bytes before parsing JSON. Receivers must also check timestamp
+freshness and deduplicate on `webhook-id`. That ID stays the same across retries.
+It belongs to a delivery, so separate subscriptions can receive the same
+`eventId` under different webhook IDs.
+
+This Node example assumes `headers`, `rawBody`, and `secret` are supplied by the
+receiver. It accepts a five minute clock tolerance and either signature during
+secret rotation.
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const id = headers["webhook-id"];
+const timestamp = headers["webhook-timestamp"];
+if (!/^\d+$/.test(timestamp) || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) {
+	throw new Error("Stale timestamp");
+}
+const expected = createHmac("sha256", Buffer.from(secret.slice(6), "base64"))
+	.update(`${id}.${timestamp}.`).update(rawBody).digest();
+const valid = headers["webhook-signature"].split(" ").some((value) => {
+	if (!value.startsWith("v1,")) return false;
+	const supplied = Buffer.from(value.slice(3), "base64");
+	return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+});
+if (!valid) throw new Error("Invalid signature");
+```
+
+The equivalent Ruby verification uses `OpenSSL` and `Base64`.
+
+```ruby
+require "openssl"
+require "base64"
+
+timestamp = headers.fetch("webhook-timestamp")
+raise "Stale timestamp" unless timestamp.match?(/\A\d+\z/) && (Time.now.to_i - timestamp.to_i).abs <= 300
+key = Base64.strict_decode64(secret.delete_prefix("whsec_"))
+expected = OpenSSL::HMAC.digest("SHA256", key, "#{headers.fetch('webhook-id')}.#{timestamp}.".b + raw_body.b)
+valid = headers.fetch("webhook-signature").split(" ").any? do |value|
+	next false unless value.start_with?("v1,")
+	begin
+		supplied = Base64.strict_decode64(value.delete_prefix("v1,"))
+		supplied.bytesize == expected.bytesize && OpenSSL.fixed_length_secure_compare(supplied, expected)
+	rescue ArgumentError
+		false
+	end
+end
+raise "Invalid signature" unless valid
+```
+
+Refreshing with a different secret keeps the old secret for five minutes.
+Deliveries carry two space-separated `v1,` signatures during that grace period.
+
+### Retry and access policy
+
+A 2xx response completes delivery. HTTP 408, 429, 5xx, timeouts, and connection
+errors retry up to five total attempts. Backoff is 30 seconds, two minutes,
+five minutes, then eight minutes. `Retry-After` can replace a delay, capped at
+eight minutes. HTTP 410, 413, other non-retryable responses, and oversized
+payloads fail without retry. Each request has a seven second total timeout.
+A recovery sweep resumes stranded pending deliveries after two minutes.
+
+Failures expose only `connection_refused`, `timeout`, `tls_error`, `http_4xx`,
+`http_5xx`, or `challenge_failed`. Successful delivery clears failure status.
+The cursor advances past settled deliveries without skipping an earlier pending
+delivery. Polling acknowledgements do not cancel owed webhook deliveries.
+
+Subscribing requires `read_messages` in at least one accessible room. Every
+attempt checks the current room, message, grants, agent, credential, and OAuth
+connection and client. A removed room grant or deleted message suppresses that
+occurrence. A revoked or expired principal receives one best-effort signed
+`{"type":"terminated","error":{"code":-32024,"message":"Access revoked"}}`
+POST, then loses the subscription. Expired subscriptions stop delivery.
+
+Each credential can own at most 20 subscriptions. Subscriptions expired for more
+than one day are removed. Settled delivery rows older than seven days are removed.
