@@ -1,5 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentAccess } from "../../gen/PersonalAgentAccess.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
@@ -35,11 +42,11 @@ import {
 import { AgentWizard, WIZARD_DRAFT_KEY } from "./agent-wizard.tsx";
 import {
   type AgentCache,
+  agentCache,
   isUnconfirmed,
   nextSequence,
   withAgent,
   withCreated,
-  withList,
   withPauseSent,
   withPauseSettled,
   withRemoved,
@@ -85,10 +92,11 @@ import {
   useBusy,
 } from "./settings-parts.tsx";
 
+/** Whether this section's own first load is back; the list itself is `agentCache`'s. */
 type Load =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
-  | { readonly status: "ready"; readonly cache: AgentCache };
+  | { readonly status: "ready" };
 
 /** A token being issued or rotated: which agent, and the token it replaces. */
 interface TokenAsk {
@@ -983,17 +991,17 @@ export function AgentsSection() {
   const [ask, setAsk] = useState<Ask>(null);
   const { busy, track } = useBusy();
   const restoredOnce = useRef(false);
+  const held = useSyncExternalStore(agentCache.subscribe, agentCache.current);
+  const cache = load.status === "ready" ? held : null;
 
   // A load of the whole list, numbered when sent: it lands under what was written since.
   const loadList = useCallback((): Promise<void> => {
     const at = nextSequence();
 
-    return meAgents.list().then((fresh) =>
-      setLoad((current) => ({
-        status: "ready",
-        cache: withList(current.status === "ready" ? current.cache : null, fresh, at),
-      })),
-    );
+    return meAgents.list().then((fresh) => {
+      agentCache.list(fresh, at);
+      setLoad({ status: "ready" });
+    });
   }, []);
 
   // The first load, a retry, and the quiet reload after a write finds personal agents turned
@@ -1008,7 +1016,7 @@ export function AgentsSection() {
 
   useEffect(fetchList, [fetchList]);
 
-  const list = load.status === "ready" ? load.cache.list : null;
+  const list = cache === null ? null : cache.list;
 
   // A wizard left for a Google confirmation comes back where it stopped: on its last step.
   useEffect(() => {
@@ -1029,10 +1037,9 @@ export function AgentsSection() {
     fetchList();
   };
 
-  const replace = (change: (current: AgentCache) => AgentCache) =>
-    setLoad((current) =>
-      current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
-    );
+  // Into the cache that outlives the section, so an answer that comes back after the person left
+  // still lands in the section they come back to.
+  const replace = (change: (current: AgentCache) => AgentCache) => agentCache.change(change);
 
   // A failure that may have come after the save (no answer in time, a dropped connection, a
   // server error) marks the agent unconfirmed in the cache, so whichever opening of its dialog
@@ -1269,7 +1276,7 @@ export function AgentsSection() {
                     agent={agent}
                     list={list}
                     busy={busy}
-                    unconfirmed={load.status === "ready" && isUnconfirmed(load.cache, agent.id)}
+                    unconfirmed={cache !== null && isUnconfirmed(cache, agent.id)}
                     onReload={recheck}
                     onEdit={() => {
                       setEditing(agent.id);
@@ -1293,9 +1300,7 @@ export function AgentsSection() {
           <EditDialog
             key={opening}
             agent={editing === null ? null : (list.agents.find((a) => a.id === editing) ?? null)}
-            unconfirmed={
-              editing !== null && load.status === "ready" && isUnconfirmed(load.cache, editing)
-            }
+            unconfirmed={editing !== null && cache !== null && isUnconfirmed(cache, editing)}
             list={list}
             writes={writes}
             onClose={() => setEditing(null)}

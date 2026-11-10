@@ -17,6 +17,7 @@ import {
 } from "../bot-avatar/avatar-choice.ts";
 import { BotAvatarPicker } from "../bot-avatar/bot-avatar-picker.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
+import { nextSequence, speaksForPauseState } from "../settings/agents-cache.ts";
 import {
   FieldError,
   fieldsOf,
@@ -70,6 +71,13 @@ function restored(id: number, form: BotForm): BotForm | null {
     dailyBoardPostCap: field("dailyBoardPostCap"),
     dailyExternalActionCap: field("dailyExternalActionCap"),
   };
+}
+
+/** `bot`, but paused or not as `current` shows it. */
+function pausedAs(bot: Bot, current: Load): Bot {
+  if (current.status !== "ready" || current.bot.agent === null || bot.agent === null) return bot;
+
+  return { ...bot, agent: { ...bot.agent, paused: current.bot.agent.paused } };
 }
 
 /** A budget's input: a whole number, blank for unlimited. */
@@ -203,18 +211,26 @@ export function BotSection() {
   const { busy, track } = useBusy();
   // Whether the kept edit was taken: once, even when a load lands twice.
   const taken = useRef(false);
+  // How many pauses and resumes are out, and the number taken when the last one came back: any
+  // other answer says whether the agent is paused only if it was sent after (see agents-cache.ts).
+  const pauses = useRef({ out: 0, settled: 0 });
 
-  const show = useCallback((bot: Bot) => {
-    setLoad({ status: "ready", bot });
+  // The bot as the answer to request `at` (other than a pause or resume) gives it.
+  const show = useCallback((bot: Bot, at: number) => {
+    const speaks = speaksForPauseState(pauses.current.out, pauses.current.settled, at);
+
+    setLoad((current) => ({ status: "ready", bot: speaks ? bot : pausedAs(bot, current) }));
     setForm(botForm(bot));
     setChoice(startingChoice(bot));
     setUnconfirmed(false);
   }, []);
 
   const fetchBot = useCallback(() => {
+    const at = nextSequence();
+
     bots.get(id).then(
       (bot) => {
-        show(bot);
+        show(bot, at);
 
         if (taken.current) {
           return;
@@ -250,8 +266,8 @@ export function BotSection() {
 
   const { bot } = load;
 
-  const landed = ({ bot: next, notice }: BotChange) => {
-    show(next);
+  const landed = ({ bot: next, notice }: BotChange, at: number) => {
+    show(next, at);
 
     if (notice !== null) toast({ title: notice, tone: "success" });
   };
@@ -262,6 +278,8 @@ export function BotSection() {
   const save = (event: FormEvent) => {
     event.preventDefault();
     setFields({});
+
+    const at = nextSequence();
 
     const run = async () => {
       const current = renderedSpec({
@@ -280,7 +298,7 @@ export function BotSection() {
       run().then(
         (change) => {
           pictureUpload.settle(null);
-          landed(change);
+          landed(change, at);
           toast({ title: "Bot saved", tone: "success" });
         },
         (error: Error) => {
@@ -320,29 +338,48 @@ export function BotSection() {
     if (notice !== null) toast({ title: notice, tone: "success" });
   };
 
-  const setPaused = (paused: boolean) =>
+  const pauseSettled = () => {
+    pauses.current = { out: pauses.current.out - 1, settled: nextSequence() };
+  };
+
+  const setPaused = (paused: boolean) => {
+    pauses.current = { ...pauses.current, out: pauses.current.out + 1 };
+
     void track(
       "pause",
       bots.setPaused(id, paused).then(
-        (change) =>
-          pauseLanded({ ...change, notice: change.notice ?? (paused ? PAUSED : RESUMED) }),
-        (error: Error) => adminFailure("Couldn't change the bot", error),
+        (change) => {
+          pauseSettled();
+          pauseLanded({ ...change, notice: change.notice ?? (paused ? PAUSED : RESUMED) });
+        },
+        (error: Error) => {
+          pauseSettled();
+          adminFailure("Couldn't change the bot", error);
+        },
       ),
-    );
-
-  const write = (what: string, work: () => Promise<BotChange>) => {
-    void track(
-      what,
-      work().then(landed, (error: Error) => adminFailure("Couldn't change the bot", error)),
     );
   };
 
-  const connect = (token: string, failed: (named: Fields) => void) =>
-    track(
+  const write = (what: string, work: () => Promise<BotChange>) => {
+    const at = nextSequence();
+
+    void track(
+      what,
+      work().then(
+        (change) => landed(change, at),
+        (error: Error) => adminFailure("Couldn't change the bot", error),
+      ),
+    );
+  };
+
+  const connect = (token: string, failed: (named: Fields) => void) => {
+    const at = nextSequence();
+
+    return track(
       "github",
       bots.connectGithub(id, token).then(
         (change) => {
-          landed(change);
+          landed(change, at);
 
           return true;
         },
@@ -359,6 +396,7 @@ export function BotSection() {
         },
       ),
     );
+  };
 
   const first = (name: string) => fields[name]?.[0];
   const { agent } = bot;

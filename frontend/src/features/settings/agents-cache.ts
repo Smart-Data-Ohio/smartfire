@@ -62,9 +62,22 @@ function profileAt(cache: AgentCache, agentId: number): number {
   return Math.max(cache.applied.get(agentId) ?? 0, cache.listSequence);
 }
 
+/**
+ * Whether the answer to request `at`, other than a pause or resume, speaks for an agent's pause
+ * state: only if none of its pauses and resumes are out (`out`) and it was sent after the last one
+ * came back (`settled`, a number taken then). Admin → Bots holds its bot to the same rule.
+ */
+export function speaksForPauseState(out: number, settled: number, at: number): boolean {
+  return out === 0 && at > settled;
+}
+
 /** Whether the answer to request `at`, other than a pause or resume, speaks for the pause state. */
 function speaksForPause(cache: AgentCache, agentId: number, at: number): boolean {
-  return (cache.pausesOut.get(agentId) ?? 0) === 0 && at > (cache.pauseSettled.get(agentId) ?? 0);
+  return speaksForPauseState(
+    cache.pausesOut.get(agentId) ?? 0,
+    cache.pauseSettled.get(agentId) ?? 0,
+    at,
+  );
 }
 
 /** `agent` with `from`'s pause state. */
@@ -413,3 +426,41 @@ export function withTokens(
     tokensAt: tokens.tokensAt,
   };
 }
+
+let held: AgentCache | null = null;
+
+const listeners = new Set<() => void>();
+
+function hold(next: AgentCache): void {
+  held = next;
+
+  for (const listener of listeners) listener();
+}
+
+/**
+ * The cache Settings → Agents shows, kept here so it outlives the section: an answer that comes
+ * back after the person left lands in the section they came back to, and a pause or resume still
+ * out keeps that section's own load from speaking for the agent's pause state.
+ */
+export const agentCache = {
+  current: (): AgentCache | null => held,
+  subscribe(listener: () => void): () => void {
+    listeners.add(listener);
+
+    return () => {
+      listeners.delete(listener);
+    };
+  },
+  /** A whole-list load, sent as request `at`. */
+  list(fresh: PersonalAgentList, at: number): void {
+    hold(withList(held, fresh, at));
+  },
+  /** `held` changed by `change`, once there's a list. */
+  change(change: (current: AgentCache) => AgentCache): void {
+    if (held !== null) hold(change(held));
+  },
+  /** Back to no list: tests start each case from nothing. */
+  forget(): void {
+    held = null;
+  },
+};

@@ -4,7 +4,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
@@ -15,6 +15,7 @@ import { meAgents } from "../../sync/settings.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
 import { avatarUploads } from "../bot-avatar/avatar-choice.ts";
 import { SecretBlock } from "./agent-parts.tsx";
+import { agentCache } from "./agents-cache.ts";
 import { AgentsSection } from "./agents-section.tsx";
 
 beforeEach(() => {
@@ -38,6 +39,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   sessionStorage.clear();
+  agentCache.forget();
 });
 
 const SECRET = `sfa_${"ab".repeat(32)}`;
@@ -1290,4 +1292,79 @@ it("keeps an agent removed while its pause was out removed", async () => {
     pause.settle.resolve({ ...AGENT, pausedAt: "2026-11-09T12:00:00Z", pausedBy: "Riel" }),
   );
   expect(screen.queryByRole("article", { name: "Helper" })).toBeNull();
+});
+
+it("reconciles the card on a Reload after an edit and a pause overlapped", async () => {
+  await mount(list());
+  const pause = deferred<PersonalAgent>();
+  vi.spyOn(meAgents, "setPaused").mockReturnValue(pause.promise);
+  vi.spyOn(meAgents, "update").mockRejectedValue(new ActionError("SaveUnconfirmed", "Lost edit"));
+  fireEvent.click(await screen.findByRole("button", { name: "Pause Helper" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Helper" }));
+  rename("Renamed");
+  fireEvent.click(button("Save"));
+  await waitFor(() => expect(meAgents.list).toHaveBeenCalledTimes(2));
+  await act(async () => {});
+  fireEvent.click(button("Cancel"));
+  const paused = { ...AGENT, pausedAt: "2026-11-09T12:00:00Z", pausedBy: "Riel" };
+  await act(async () => pause.settle.resolve(paused));
+  expect(screen.getByRole("button", { name: "Resume Helper" })).toBeTruthy();
+  vi.mocked(meAgents.list).mockResolvedValue(list({ agents: [paused] }));
+  fireEvent.click(screen.getByRole("button", { name: "Reload Helper" }));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "Reload Helper" })).toBeNull());
+  expect(screen.getByRole("button", { name: "Resume Helper" })).toBeTruthy();
+});
+
+it("lets a Reload confirm a pause that timed out", async () => {
+  await mount(list());
+  const pauseButton = await screen.findByRole("button", { name: "Pause Helper" });
+  vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise<Response>(() => undefined));
+  vi.useFakeTimers();
+
+  try {
+    fireEvent.click(pauseButton);
+    await act(() => vi.advanceTimersByTimeAsync(16_000));
+  } finally {
+    vi.useRealTimers();
+  }
+
+  const reload = await screen.findByRole("button", { name: "Reload Helper" });
+  expect(pauseButton.hasAttribute("disabled")).toBe(false);
+  vi.mocked(meAgents.list).mockResolvedValue(
+    list({ agents: [{ ...AGENT, pausedAt: "2026-11-09T12:00:00Z", pausedBy: "Riel" }] }),
+  );
+  fireEvent.click(reload);
+  await screen.findByRole("button", { name: "Resume Helper" });
+  expect(screen.queryByRole("button", { name: "Reload Helper" })).toBeNull();
+});
+
+it("keeps a suspension loaded while a pause was out", async () => {
+  await mount(list());
+  const pause = deferred<PersonalAgent>();
+  vi.spyOn(meAgents, "setPaused").mockReturnValue(pause.promise);
+  vi.spyOn(meAgents, "update").mockRejectedValue(new ActionError("SaveUnconfirmed", "Lost edit"));
+  vi.mocked(meAgents.list).mockResolvedValue(list({ agents: [{ ...AGENT, suspended: true }] }));
+  fireEvent.click(await screen.findByRole("button", { name: "Pause Helper" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Helper" }));
+  rename("Renamed");
+  fireEvent.click(button("Save"));
+  await screen.findByText("Suspended");
+  await act(async () => pause.settle.resolve({ ...AGENT, pausedAt: "2026-11-09T12:00:00Z" }));
+  expect(screen.getByText("Suspended")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Resume Helper" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Pause Helper" })).toBeNull();
+});
+
+it("shows a pause that answers after the person left and came back", async () => {
+  await mount(list());
+  const pause = deferred<PersonalAgent>();
+  vi.spyOn(meAgents, "setPaused").mockReturnValue(pause.promise);
+  fireEvent.click(await screen.findByRole("button", { name: "Pause Helper" }));
+  cleanup();
+  await mount(list());
+  await screen.findByRole("button", { name: "Pause Helper" });
+  await act(async () =>
+    pause.settle.resolve({ ...AGENT, pausedAt: "2026-11-09T12:00:00Z", pausedBy: "Riel" }),
+  );
+  expect(screen.getByRole("button", { name: "Resume Helper" })).toBeTruthy();
 });
