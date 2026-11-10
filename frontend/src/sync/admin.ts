@@ -45,6 +45,7 @@ import {
   resetSigningSecret,
   revokeCredential,
   revokeGrant,
+  setBotPaused,
   suspendBot,
   updateBot,
 } from "../api/bot-endpoints.ts";
@@ -270,6 +271,10 @@ export const bots = {
   remove: (botId: number): Promise<BotRemoved> => runAction(removeBot(botId)),
 
   suspend: (botId: number): Promise<BotChange> => runAction(suspendBot(botId)),
+
+  /** Pause or resume the bot's agent. */
+  setPaused: (botId: number, paused: boolean): Promise<BotChange> =>
+    runAction(setBotPaused(botId, paused)),
 
   resetKey: (botId: number): Promise<BotKey> => runAction(resetBotKey(botId)),
 

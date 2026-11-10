@@ -16,6 +16,7 @@ fn agent() -> BotAgent {
         daily_external_action_cap: Some(5),
         usage: "2/50 messages · 0 board posts · 0/5 external actions".into(),
         suspended: false,
+        paused: false,
         ledger_url: "/agents/11/events".into(),
         approvals_url: "/agents/11/approvals".into(),
     }
@@ -65,6 +66,7 @@ fn the_list_and_a_bot() {
                 }),
                 bot_avatar: None,
                 ownership: "Workspace agent · Owned by Grace".into(),
+                paused: false,
                 supports_bot_key: true,
                 rooms: vec![BotRoom {
                     id: 3,
@@ -84,6 +86,7 @@ fn the_list_and_a_bot() {
             "icon": {"kind": "emoji", "title": "Robot", "character": "🤖"},
             "botAvatar": null,
             "ownership": "Workspace agent · Owned by Grace",
+            "paused": false,
             "supportsBotKey": true,
             "rooms": [{
                 "id": 3,
@@ -141,6 +144,7 @@ fn the_list_and_a_bot() {
                     "dailyExternalActionCap": 5,
                     "usage": "2/50 messages · 0 board posts · 0/5 external actions",
                     "suspended": false,
+                    "paused": false,
                     "ledgerUrl": "/agents/11/events",
                     "approvalsUrl": "/agents/11/approvals"
                 },

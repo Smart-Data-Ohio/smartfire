@@ -20,6 +20,7 @@ import {
   agentRecord,
   type BotRecord,
   PERSONAL_CAPABILITIES,
+  setPaused,
 } from "./bot-record.ts";
 import { type Route, route, type S2Context } from "./context.ts";
 import type { createMeAgents } from "./me-agents.ts";
@@ -205,6 +206,7 @@ export function createBots(
         : record.agent === null
           ? "no owner recorded"
           : `Workspace agent · Owned by ${viewerName()}`,
+    paused: record.agent !== null && !record.agent.suspended && record.agent.pausedAt !== null,
     supportsBotKey: record.kind === "workspace",
     rooms: record.kind === "personal" ? [] : rooms(record),
   });
@@ -223,6 +225,7 @@ export function createBots(
       dailyExternalActionCap: actions,
       usage: `0${of(messages)} messages · 0${of(posts)} board posts · 0${of(actions)} external actions`,
       suspended: agent.suspended,
+      paused: !agent.suspended && agent.pausedAt !== null,
       ledgerUrl: `/agents/${agent.id}/events`,
       approvalsUrl: `/agents/${agent.id}/approvals`,
     };
@@ -617,6 +620,20 @@ export function createBots(
         record.agent.suspended = true;
 
         return changed(record, "Agent suspended; 0 approvals cancelled.");
+      }),
+      route("POST", /^\/admin\/bots\/(\d+)\/(?:pause|resume)$/, (request) => {
+        const record = botOr404(ids(request)[0]);
+
+        if (record.agent === null) throw notFound();
+
+        setPaused(
+          record.agent,
+          request.path.endsWith("/pause"),
+          viewerName(),
+          timestamp(ctx.now()),
+        );
+
+        return changed(record);
       }),
       route("PUT", /^\/admin\/bots\/(\d+)\/key$/, (request) => {
         requireSudo();

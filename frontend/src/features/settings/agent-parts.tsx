@@ -1,5 +1,6 @@
 import { type ReactNode, useId, useRef } from "react";
 import type { PersonalAgentRoom } from "../../gen/PersonalAgentRoom.ts";
+import type { WakePolicy } from "../../gen/WakePolicy.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -16,9 +17,11 @@ import {
 import {
   abilityHint,
   abilityLabel,
+  assistantOf,
   EXPIRY_CHOICES,
   type Expiry,
   toggled,
+  WAKE_CHOICES,
 } from "./agents-format.ts";
 import { SettingsRadios } from "./settings-parts.tsx";
 
@@ -149,6 +152,42 @@ export function AccessFields({
   );
 }
 
+/** Who can wake the agent: only its owner, or anyone in the rooms it's in. */
+export function WakeField({
+  value,
+  onChange,
+}: {
+  readonly value: WakePolicy;
+  readonly onChange: (value: WakePolicy) => void;
+}) {
+  const group = useId();
+
+  return (
+    <fieldset className="agents-clients">
+      <legend className="settings-label">Who can wake it</legend>
+      {WAKE_CHOICES.map((choice) => (
+        <label key={choice.value} className="agents-client">
+          <input
+            type="radio"
+            name={group}
+            value={choice.value}
+            checked={value === choice.value}
+            onChange={() => onChange(choice.value)}
+          />
+          <span className="agents-client-text">
+            <span className="agents-client-label">{choice.label}</span>
+            <span className="text-faint">{choice.hint}</span>
+          </span>
+        </label>
+      ))}
+      <p className="settings-hint text-faint">
+        Either way it can read its rooms if it can read messages. This only decides whose messages
+        wake it.
+      </p>
+    </fieldset>
+  );
+}
+
 /** How long a new token lasts. */
 export function ExpiryField({
   value,
@@ -240,14 +279,7 @@ export function SecretBlock({
       </p>
       <CodeBlock label="Token" code={secret} what="Token" wrap />
       {mcpUrl === null ? <NoPublicUrl /> : null}
-      {snippet === null ? null : (
-        <>
-          {snippet.steps.map((step) => (
-            <CodeBlock key={step.label} label={step.label} code={step.code} what="Setup" />
-          ))}
-          <p className="settings-hint text-faint">{snippet.note}</p>
-        </>
-      )}
+      {snippet === null ? null : <SnippetSteps snippet={snippet} />}
     </div>
   );
 }
@@ -262,14 +294,21 @@ function NoSignInUrl() {
   );
 }
 
-/** A snippet's things to copy, then its note. */
+/** A snippet's things to copy, what to do with them in order, then its note. */
 function SnippetSteps({ snippet }: { readonly snippet: Snippet }) {
   return (
     <>
       {snippet.steps.map((step) => (
         <CodeBlock key={step.label} label={step.label} code={step.code} what="Setup" />
       ))}
-      <p className="settings-hint text-faint">{snippet.note}</p>
+      {snippet.instructions === undefined ? null : (
+        <ol className="agents-instructions">
+          {snippet.instructions.map((instruction) => (
+            <li key={instruction}>{instruction}</li>
+          ))}
+        </ol>
+      )}
+      {snippet.note === "" ? null : <p className="settings-hint text-faint">{snippet.note}</p>}
     </>
   );
 }
@@ -292,9 +331,18 @@ export function SignInSetup({
     ? signInSnippet(client, mcpUrl)
     : agentSnippet(client, { agentName: "", mcpUrl });
 
+  const assistant = assistantOf(client);
+
   return (
     <div className="agents-secret">
       <SnippetSteps snippet={snippet} />
+      {assistant === null ? null : (
+        <p className="settings-callout text-muted" role="note">
+          On the approval page, choose <strong>A new agent</strong>, name it {assistant}, and pick
+          only the rooms it should be in. At first only you can wake it; to let others, change{" "}
+          <strong>Who can wake it</strong> here in Settings → Agents.
+        </p>
+      )}
       <p className="settings-hint text-faint">
         There's no token to keep. On Smartfire's approval page you pick a new or existing agent, its
         rooms and abilities, and confirm your password. A connection lasts up to 180 days, then you

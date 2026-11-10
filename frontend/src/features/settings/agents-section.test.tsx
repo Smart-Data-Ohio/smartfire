@@ -12,6 +12,7 @@ import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import { ActionError } from "../../sync/run.ts";
 import { meAgents } from "../../sync/settings.ts";
+import { toastSnapshot } from "../../ui/toast-store.ts";
 import { avatarUploads } from "../bot-avatar/avatar-choice.ts";
 import { SecretBlock } from "./agent-parts.tsx";
 import { AgentsSection } from "./agents-section.tsx";
@@ -179,8 +180,8 @@ describe("the cards", () => {
     fireEvent.click(connect);
 
     expect(screen.getAllByRole("radio").map((radio) => radio.getAttribute("value"))).toEqual([
-      "claude-ai",
       "chatgpt",
+      "claude-ai",
       "grok",
       "claude-code",
       "codex",
@@ -337,7 +338,11 @@ describe("connections", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Reconnect ChatGPT" });
 
-    expect(within(dialog).getByText(/In ChatGPT, open Settings → Apps & Connectors/)).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        /In ChatGPT on the web, open Plugins and select \+ → Add custom MCP server/,
+      ),
+    ).toBeTruthy();
   });
 
   it("gives general steps for a client it doesn't know exactly, even on a known host", async () => {
@@ -355,7 +360,7 @@ describe("connections", () => {
     expect(
       within(dialog).getByText(/Sign in again from the app you connected \(Claude\)/),
     ).toBeTruthy();
-    expect(within(dialog).queryByText(/Settings → Connectors/)).toBeNull();
+    expect(within(dialog).queryByText(/Add custom connector/)).toBeNull();
     expect(within(dialog).getByText("https://chat.example.com/agents/mcp")).toBeTruthy();
   });
 
@@ -405,17 +410,23 @@ describe("connections", () => {
 });
 
 describe("the wizard, signing in", () => {
-  it("gives claude.ai its connector URL and steps, and makes nothing", async () => {
+  it("gives Claude (Duet) its connector URL and steps, and makes nothing", async () => {
     await mount(list({ agents: [], oauthAvailable: true }));
 
     const create = vi.spyOn(meAgents, "create");
 
     fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
-    fireEvent.click(screen.getByRole("radio", { name: /claude\.ai/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /Claude \(Duet\)/ }));
     next();
 
-    expect(await screen.findByRole("heading", { name: "Connect claude.ai" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Connect Claude (Duet)" })).toBeTruthy();
     expect(screen.getByText("https://chat.example.com/agents/mcp")).toBeTruthy();
+    expect(screen.getByText(/Customize → Connectors and select Add custom connector/)).toBeTruthy();
+    expect(screen.getByText(/choose Sign in now/)).toBeTruthy();
+    expect(screen.getByText(/name it Duet/)).toBeTruthy();
+    expect(
+      screen.getByText(/checks for mentions, replies and direct messages itself/),
+    ).toBeTruthy();
     expect(screen.getByText(/There's no token to keep/)).toBeTruthy();
     expect(
       screen.getAllByRole("listitem").some((item) => item.textContent?.includes("Identity")),
@@ -423,7 +434,7 @@ describe("the wizard, signing in", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
 
-    expect(screen.queryByRole("heading", { name: "Connect claude.ai" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Connect Claude (Duet)" })).toBeNull();
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -888,7 +899,10 @@ describe("the wizard", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
 
     expect(screen.getByRole("radio", { name: /Claude Code/ })).toBeTruthy();
-    expect(screen.queryByRole("radio", { name: /claude\.ai/ })).toBeNull();
+    expect(screen.queryByRole("radio", { name: /Claude \(Duet\)/ })).toBeNull();
+    expect(
+      screen.getByText(/ChatGPT \(dots\) and Claude \(Duet\) connect by signing in/),
+    ).toBeTruthy();
     expect(screen.queryByRole("radio", { name: /ChatGPT/ })).toBeNull();
     expect(screen.queryByRole("radio", { name: /Grok/ })).toBeNull();
   });
@@ -897,9 +911,11 @@ describe("the wizard", () => {
     await mount(list({ agents: [], oauthAvailable: true }));
     fireEvent.click(await screen.findByRole("button", { name: "Connect an agent" }));
 
-    expect(screen.getByRole("radio", { name: /claude\.ai/ })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: /ChatGPT/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Claude \(Duet\)/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /ChatGPT \(dots\)/ })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Grok/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Other MCP or API client/ })).toBeTruthy();
+    expect(screen.getByText("Personal assistants")).toBeTruthy();
   });
 
   it("walks client, identity, access and connect, then shows the token once", async () => {
@@ -1075,5 +1091,120 @@ describe("SecretBlock", () => {
     expect(screen.getByText(SECRET)).toBeTruthy();
     expect(screen.getByText(/public address isn't configured yet/)).toBeTruthy();
     expect(screen.queryByText(/mcp_servers/)).toBeNull();
+  });
+});
+
+describe("who can wake it, and pausing", () => {
+  const PAUSED: PersonalAgent = {
+    ...AGENT,
+    pausedAt: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+    pausedBy: "Riel",
+  };
+
+  it("shows who can wake it on the card, and saves only a changed choice", async () => {
+    await mount(list());
+
+    const card = await screen.findByRole("article", { name: "Helper" });
+
+    expect(within(card).getByText("Only you")).toBeTruthy();
+
+    const update = vi
+      .spyOn(meAgents, "update")
+      .mockResolvedValue({ ...AGENT, wakePolicy: "anyone" });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Edit Helper" }));
+    expect(within(editDialog()).getByRole("radio", { name: /Only me/ })).toHaveProperty(
+      "checked",
+      true,
+    );
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: /Anyone in its rooms/ }));
+    fireEvent.click(button("Save"));
+
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(7, { name: null, iconName: null, wakePolicy: "anyone" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(within(card).getByText("Anyone in its rooms")).toBeTruthy();
+  });
+
+  it("sends nothing when the choice goes back to what it was", async () => {
+    await mount(list());
+
+    const update = vi.spyOn(meAgents, "update");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit Helper" }));
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: /Anyone in its rooms/ }));
+    fireEvent.click(within(editDialog()).getByRole("radio", { name: /Only me/ }));
+    fireEvent.click(button("Save"));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("pauses an agent, then shows it paused with who did it and a Resume", async () => {
+    await mount(list());
+
+    const setPaused = vi.spyOn(meAgents, "setPaused").mockResolvedValue(PAUSED);
+    const card = await screen.findByRole("article", { name: "Helper" });
+
+    expect(within(card).queryByText("Paused")).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: "Pause Helper" }));
+
+    expect(await within(card).findByText("Paused")).toBeTruthy();
+    expect(setPaused).toHaveBeenCalledWith(7, true);
+    expect(within(card).getByRole("status").textContent).toMatch(
+      /^Paused by Riel 2 hours ago\. It keeps its rooms and connections/,
+    );
+    expect(within(card).getByRole("button", { name: "Resume Helper" })).toBeTruthy();
+    expect(toastSnapshot().some((shown) => shown.title === "Helper is paused")).toBe(true);
+  });
+
+  it("resumes a paused agent", async () => {
+    await mount(list({ agents: [PAUSED] }));
+
+    const setPaused = vi.spyOn(meAgents, "setPaused").mockResolvedValue(AGENT);
+    const card = await screen.findByRole("article", { name: /^Helper/ });
+
+    expect(within(card).getByText("Paused")).toBeTruthy();
+    fireEvent.click(within(card).getByRole("button", { name: "Resume Helper" }));
+
+    await waitFor(() => expect(within(card).queryByText("Paused")).toBeNull());
+    expect(setPaused).toHaveBeenCalledWith(7, false);
+    expect(within(card).getByRole("button", { name: "Pause Helper" })).toBeTruthy();
+  });
+
+  it("keeps the card as it was when a pause fails", async () => {
+    await mount(list());
+
+    vi.spyOn(meAgents, "setPaused").mockRejectedValue(new ActionError("NotFound", "Not found"));
+
+    const card = await screen.findByRole("article", { name: "Helper" });
+
+    fireEvent.click(within(card).getByRole("button", { name: "Pause Helper" }));
+
+    await waitFor(() =>
+      expect(toastSnapshot().some((shown) => shown.title === "Couldn't pause Helper")).toBe(true),
+    );
+    expect(within(card).queryByText("Paused")).toBeNull();
+    expect(within(card).getByRole("button", { name: "Pause Helper" })).toBeTruthy();
+  });
+
+  it("offers no pause for a suspended agent, and lets one be resumed while agents are off", async () => {
+    await mount(
+      list({
+        enabled: false,
+        agents: [PAUSED, { ...AGENT, id: 8, userId: 80, name: "Stopped", suspended: true }],
+      }),
+    );
+
+    const stopped = await screen.findByRole("article", { name: /^Stopped/ });
+
+    expect(within(stopped).queryByRole("button", { name: /Pause|Resume/ })).toBeNull();
+    expect(within(stopped).getByText("Suspended")).toBeTruthy();
+
+    const paused = screen.getByRole("article", { name: /^Helper/ });
+
+    expect(within(paused).getByRole("button", { name: "Resume Helper" })).toBeTruthy();
+    expect(within(paused).queryByText("Off")).toBeNull();
   });
 });

@@ -265,6 +265,7 @@ async fn index_bots(c: &mut Ctx) -> Result {
                 avatar_url: bot.user.avatar_path,
                 icon: bot.icon.map(icon),
                 ownership,
+                paused: bot.paused,
                 supports_bot_key: bot.supports_bot_key,
                 rooms: bot
                     .rooms
@@ -322,6 +323,7 @@ async fn load_bot(c: &Ctx, bot: &User) -> Result<api::Bot> {
             daily_external_action_cap: agent.daily_external_action_cap,
             usage: form.budget_usage_line.clone(),
             suspended: agent.suspended,
+            paused: agent.paused,
             ledger_url: campfire_routes::agent_events(agent.id),
             approvals_url: campfire_routes::agent_approvals(agent.id),
         }),

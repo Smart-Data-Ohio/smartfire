@@ -33,7 +33,9 @@ export interface SnippetStep {
 
 export interface Snippet {
   readonly steps: readonly SnippetStep[];
-  /** A line under the steps: where the setting lives, or what to do next. */
+  /** What to do in the client, in order, after copying the steps (a web connector's setup). */
+  readonly instructions?: readonly string[];
+  /** A line under the steps: where the setting lives, or what to do next; empty for none. */
   readonly note: string;
 }
 
@@ -165,16 +167,43 @@ function other(input: SnippetInput): Snippet {
   };
 }
 
-const CONNECTOR_SETTINGS: Readonly<Record<WebConnector, string>> = {
-  "claude-ai": "In claude.ai, open Settings → Connectors and add a custom connector",
-  chatgpt: "In ChatGPT, open Settings → Apps & Connectors and create a connector",
-  grok: "In Grok, open Settings → Connectors and add a custom connector",
+/**
+ * Each web app's custom connector setup, as docs/agents-mcp.md ("Connect by URL") has it, checked
+ * against the apps' own docs: ChatGPT's custom MCP server plugin (OAuth with CIMD), Claude's custom
+ * connector (Sign in now), and Grok's custom connector.
+ */
+const CONNECTOR_SETUP: Readonly<Record<WebConnector, readonly string[]>> = {
+  chatgpt: [
+    "In ChatGPT on the web, open Plugins and select + → Add custom MCP server.",
+    "Paste the connector URL as the Server URL. Choose OAuth and CIMD, then create and install the plugin.",
+    "Sign in to Smartfire when ChatGPT asks, and approve it.",
+  ],
+  "claude-ai": [
+    "In Claude, open Customize → Connectors and select Add custom connector.",
+    "Paste the connector URL and choose Sign in now. On a team plan, an owner may need to add the connector first.",
+    "Sign in to Smartfire when Claude asks, and approve it.",
+  ],
+  grok: [
+    "In Grok, open Connectors and choose New Connector → Custom.",
+    "Paste the connector URL and complete authentication.",
+    "Sign in to Smartfire when Grok asks, and approve it.",
+  ],
+};
+
+/** How each web app hears about new messages once it's connected; empty when there's no more to say. */
+const CONNECTOR_NOTE: Readonly<Record<WebConnector, string>> = {
+  chatgpt:
+    "Mentions, replies and direct messages reach it as events, so it can answer without being asked to check.",
+  "claude-ai":
+    "Claude doesn't take events yet, so it checks for mentions, replies and direct messages itself.",
+  grok: "",
 };
 
 function webConnector(client: WebConnector, input: SnippetInput): Snippet {
   return {
     steps: [{ label: "Connector URL", code: input.mcpUrl }],
-    note: `${CONNECTOR_SETTINGS[client]} with this URL, then sign in to Smartfire and approve it.`,
+    instructions: CONNECTOR_SETUP[client],
+    note: CONNECTOR_NOTE[client],
   };
 }
 

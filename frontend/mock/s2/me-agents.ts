@@ -9,7 +9,12 @@ import { field, isNumber, type Json, stringArrayField, stringField } from "../js
 import { timestamp, VIEWER_ID, type World } from "../seed.ts";
 import type { AdminModule } from "./admin.ts";
 import { applied, type BotAvatarChange, botAvatarChange } from "./bot-avatar.ts";
-import { agentRecord, PERSONAL_CAPABILITIES, type PersonalBotRecord } from "./bot-record.ts";
+import {
+  agentRecord,
+  PERSONAL_CAPABILITIES,
+  type PersonalBotRecord,
+  setPaused,
+} from "./bot-record.ts";
 import { route, type S2Context } from "./context.ts";
 import { lookupIcon } from "./emoji.ts";
 import type { Uploads } from "./uploads.ts";
@@ -185,9 +190,9 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule, uploads: Uplo
       runtime: agent.runtime,
       description: agent.description,
       dailyMessageCap: agent.caps[0],
-      wakePolicy: "owner",
-      pausedAt: null,
-      pausedBy: null,
+      wakePolicy: agent.wakePolicy,
+      pausedAt: agent.suspended ? null : agent.pausedAt,
+      pausedBy: agent.suspended ? null : agent.pausedBy,
       suspended: agent.suspended,
       lastUsedAt: record.lastUsedAt,
       createdAt: record.createdAt,
@@ -501,6 +506,14 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule, uploads: Uplo
 
         repicture(agent, pictureOf(body));
 
+        const wakePolicy = stringField(body, "wakePolicy");
+
+        if (wakePolicy !== null) {
+          if (wakePolicy !== "owner" && wakePolicy !== "anyone")
+            throw validation("wakePolicy", "must be owner or anyone");
+          agent.agent.wakePolicy = wakePolicy;
+        }
+
         for (const key of ["name", "iconName", "provider", "runtime", "description"] as const) {
           const value = stringField(body, key);
 
@@ -517,6 +530,14 @@ export function createMeAgents(ctx: S2Context, admin: AdminModule, uploads: Uplo
             throw validation("dailyMessageCap", "must be a positive integer or null");
           agent.agent.caps[0] = cap;
         }
+
+        return ok(present(agent));
+      }),
+      route("POST", /^\/me\/agents\/(\d+)\/(?:pause|resume)$/, ({ ids, path }) => {
+        const agent = find(ids[0]);
+        const viewer = ctx.world().users.get(VIEWER_ID)?.name ?? "You";
+
+        setPaused(agent.agent, path.endsWith("/pause"), viewer, timestamp(ctx.now()));
 
         return ok(present(agent));
       }),

@@ -868,6 +868,7 @@ async fn assistants_owner_controls_are_idempotent_audited_and_preserve_access() 
         )
         .await;
         assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+        assert_eq!(r.json()["bot"]["agent"]["paused"], action == "pause");
         let shown = owner.send(get(&path)).await.json();
         assert_eq!(shown["pausedAt"].is_string(), action == "pause");
     }

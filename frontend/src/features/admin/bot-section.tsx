@@ -25,7 +25,15 @@ import {
   useBusy,
 } from "../settings/settings-parts.tsx";
 import { adminFailure, Confirm, keepDraft, takeDraft, useAdmin } from "./admin-parts.tsx";
-import { type BotForm, botChange, botForm, CONFIRM, SUSPENDED } from "./bot-format.ts";
+import {
+  type BotForm,
+  botChange,
+  botForm,
+  CONFIRM,
+  PAUSED,
+  RESUMED,
+  SUSPENDED,
+} from "./bot-format.ts";
 import { BotPicture, CopyLine, KeyDialog, useBotId } from "./bot-parts.tsx";
 
 type Load =
@@ -479,12 +487,37 @@ export function BotSection() {
               Grants
             </Link>
           </div>
+          {!agent.suspended && agent.paused ? (
+            <p className="settings-callout agents-paused" role="status">
+              <strong>This agent is paused.</strong> It keeps its rooms, grants and credentials, but
+              gets no deliveries and its actions fail until it's resumed.
+            </p>
+          ) : null}
           {agent.suspended ? (
             <p className="settings-callout" role="status">
               This agent is suspended.
             </p>
           ) : (
             <div className="settings-actions">
+              {bot.canAdminister ? (
+                <Button
+                  variant={agent.paused ? "primary" : "secondary"}
+                  size="sm"
+                  icon={agent.paused ? "play" : "pause"}
+                  loading={busy("pause")}
+                  disabled={busy("pause")}
+                  onClick={() =>
+                    write("pause", () =>
+                      bots.setPaused(id, !agent.paused).then((change) => ({
+                        ...change,
+                        notice: change.notice ?? (agent.paused ? RESUMED : PAUSED),
+                      })),
+                    )
+                  }
+                >
+                  {agent.paused ? "Resume" : "Pause"}
+                </Button>
+              ) : null}
               <Button
                 variant="danger"
                 size="sm"

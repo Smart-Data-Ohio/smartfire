@@ -17,6 +17,10 @@ usage: string,
  */
 suspended: boolean,
 /**
+ * Paused by its owner or an administrator: it keeps its access but gets no deliveries.
+ */
+paused: boolean,
+/**
  * The classic activity ledger and approval requests pages.
  */
 ledgerUrl: string, approvalsUrl: string, };

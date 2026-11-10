@@ -20,6 +20,10 @@ botAvatar: BotAvatarSpec | null,
  */
 ownership: string,
 /**
+ * Its agent is paused: it keeps its access but gets no deliveries.
+ */
+paused: boolean,
+/**
  * Personal agents use bearer credentials and cannot issue bot keys.
  */
 supportsBotKey: boolean, rooms: Array<BotRoom>, };

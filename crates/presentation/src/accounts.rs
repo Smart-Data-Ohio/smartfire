@@ -14,6 +14,8 @@ pub struct Bot {
     pub kind: Option<String>,
     pub supports_bot_key: bool,
     pub owner_name: Option<String>,
+    /// Its agent is paused (and not suspended).
+    pub paused: bool,
     pub icon: Option<h::AvatarIcon>,
     /// `bot.rooms.without_directs.ordered`.
     pub rooms: Vec<BotRoom>,
@@ -57,6 +59,7 @@ pub struct BotAgentForm {
     pub daily_external_action_cap: Option<i64>,
     pub raw_caps: std::collections::BTreeMap<String, Option<String>>,
     pub suspended: bool,
+    pub paused: bool,
     pub errors: Option<String>,
     pub error_fields: Vec<String>,
 }

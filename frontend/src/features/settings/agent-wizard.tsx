@@ -16,6 +16,7 @@ import {
 import { canSignIn } from "./agent-snippets.ts";
 import {
   baseProblem,
+  type ClientChoice,
   canCreate,
   clientChoices,
   connectChoices,
@@ -73,7 +74,37 @@ const SIGN_IN_CHOICES = [
   { value: "token", label: "With a token" },
 ] as const;
 
-/** The first step: where the agent will run. */
+/** One client to pick, its name and what it is. */
+function ClientOption({
+  choice,
+  draft,
+  onPick,
+}: {
+  readonly choice: ClientChoice;
+  readonly draft: WizardDraft;
+  readonly onPick: (draft: WizardDraft) => void;
+}) {
+  return (
+    <label className="agents-client">
+      <input
+        type="radio"
+        name="agents-client"
+        value={choice.value}
+        checked={draft.client === choice.value}
+        onChange={() => onPick(withClient(draft, choice))}
+      />
+      <span className="agents-client-text">
+        <span className="agents-client-label">{choice.label}</span>
+        <span className="text-faint">{choice.hint}</span>
+      </span>
+    </label>
+  );
+}
+
+/**
+ * The first step: where the agent will run. The personal assistants (dots, Duet) come first, as
+ * their own group, while the server can sign them in; every other app and client follows.
+ */
 function ClientStep({
   list,
   draft,
@@ -83,23 +114,29 @@ function ClientStep({
   readonly draft: WizardDraft;
   readonly onPick: (draft: WizardDraft) => void;
 }) {
+  const choices = connectChoices(list);
+  const assistants = choices.filter((choice) => choice.assistant !== undefined);
+  const others = choices.filter((choice) => choice.assistant === undefined);
+
   return (
     <fieldset className="agents-clients">
       <legend className="settings-label">Where will you use it?</legend>
-      {connectChoices(list).map((choice) => (
-        <label key={choice.value} className="agents-client">
-          <input
-            type="radio"
-            name="agents-client"
-            value={choice.value}
-            checked={draft.client === choice.value}
-            onChange={() => onPick(withClient(draft, choice))}
-          />
-          <span className="agents-client-text">
-            <span className="agents-client-label">{choice.label}</span>
-            <span className="text-faint">{choice.hint}</span>
-          </span>
-        </label>
+      {assistants.length === 0 ? (
+        <p className="settings-hint text-faint">
+          ChatGPT (dots) and Claude (Duet) connect by signing in, which this server doesn't offer
+          yet. An administrator can turn it on.
+        </p>
+      ) : (
+        <>
+          <span className="agents-client-group text-faint">Personal assistants</span>
+          {assistants.map((choice) => (
+            <ClientOption key={choice.value} choice={choice} draft={draft} onPick={onPick} />
+          ))}
+          <span className="agents-client-group text-faint">Other apps and clients</span>
+        </>
+      )}
+      {others.map((choice) => (
+        <ClientOption key={choice.value} choice={choice} draft={draft} onPick={onPick} />
       ))}
       {canCreate(list) ? null : (
         <p className="settings-hint text-faint">
