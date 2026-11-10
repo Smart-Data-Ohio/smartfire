@@ -94,8 +94,30 @@ describe("agentSnippet", () => {
       expect(snippet.steps).toEqual([
         { label: "Connector URL", code: "https://chat.example.com/agents/mcp" },
       ]);
-      expect(snippet.note).toContain("sign in to Smartfire");
+      expect(snippet.instructions).toContainEqual(
+        expect.stringMatching(/^Sign in to Smartfire when .+ asks, and approve it\.$/),
+      );
     }
+  });
+
+  it("ends ChatGPT's setup by subscribing it to Smartfire events, with what to ask", () => {
+    const last = agentSnippet("chatgpt", INPUT).instructions?.at(-1);
+
+    expect(last).toMatch(/^Start a Work chat \(or open a dot\)/);
+    expect(last).toContain("Subscribe to my Smartfire mentions, replies and direct messages.");
+    expect(last).toContain("reply in the same room or thread");
+  });
+
+  it("gives ChatGPT and Claude the custom connector setup the docs describe", () => {
+    expect(agentSnippet("chatgpt", INPUT).instructions?.[1]).toBe(
+      "Paste the connector URL as the Server URL. Choose OAuth and CIMD, then create and install the plugin.",
+    );
+    expect(agentSnippet("chatgpt", INPUT).note).toContain("reach that chat as events");
+    expect(agentSnippet("claude-ai", INPUT).instructions?.[0]).toBe(
+      "In Claude, open Customize → Connectors and select Add custom connector.",
+    );
+    expect(agentSnippet("claude-ai", INPUT).note).toContain("ask it to check Smartfire");
+    expect(agentSnippet("grok", INPUT).note).toBe("");
   });
 
   it("quotes a URL the shell would split", () => {

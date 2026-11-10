@@ -34,7 +34,7 @@ async fn ledger(app: &App) -> Value {
     Ok(json!(rows))
 }).await.unwrap()
 }
-async fn case(deleted: bool) {
+async fn case(deleted: bool, paused: bool) {
     let (app, _dir) = TestApp::boot_with_clock(Arc::new(campfire_kit::FrozenClock::new(
         SEED_NOW.parse().unwrap(),
     )))
@@ -92,6 +92,18 @@ async fn case(deleted: bool) {
     } else {
         app.db
             .write(|tx| User::find(tx.conn(), BOT)?.deliver_webhook_later(tx, 935961918))
+            .await
+            .unwrap();
+    }
+    if paused {
+        app.db
+            .write(|tx| {
+                tx.conn().execute(
+                    "UPDATE agents SET paused_at=? WHERE user_id=?",
+                    rusqlite::params![tx.now(), BOT],
+                )?;
+                Ok(())
+            })
             .await
             .unwrap();
     }
@@ -156,6 +168,33 @@ async fn case(deleted: bool) {
     .await;
     runner.shutdown(Duration::from_secs(2)).await;
     let requests=server.received().into_iter().map(|r|json!({"body":String::from_utf8(r.body.clone()).unwrap(),"timestamp":r.header("X-Smartfire-Timestamp"),"signature":r.header("X-Smartfire-Signature"),"content_type":r.header("Content-Type")})).collect::<Vec<_>>();
+    if paused {
+        assert!(
+            requests.is_empty(),
+            "a legacy queued agent webhook must not send while paused"
+        );
+        app.db
+            .write(|tx| {
+                tx.conn()
+                    .execute("UPDATE agents SET paused_at=NULL WHERE user_id=?", [BOT])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            app.db
+                .read(|c| Ok(c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='Bot::WebhookJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?))
+                .await
+                .unwrap(),
+            0,
+            "the discarded job cannot restart after resume"
+        );
+        return;
+    }
     let actual = if deleted {
         json!({"exists":app.db.read(|conn|Ok(ChannelThread::find_by_id(conn,1901820001)?.is_some())).await.unwrap(),"jobs":jobs,"before":before,"after":ledger(&app).await,"requests":requests})
     } else {
@@ -176,9 +215,14 @@ async fn case(deleted: bool) {
 }
 #[tokio::test]
 async fn ws11_next2_bot_actual_queued_delivery() {
-    case(false).await;
+    case(false, false).await;
 }
 #[tokio::test]
 async fn ws11_next2_assignment_deleted_owner_snapshot_delivery() {
-    case(true).await;
+    case(true, false).await;
+}
+
+#[tokio::test]
+async fn pause_regression_legacy_queued_agent_webhook_does_not_send() {
+    case(false, true).await;
 }

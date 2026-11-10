@@ -52,6 +52,7 @@ pub struct CurrentAgent {
     pub agent_id: i64,
     pub credential_id: i64,
     pub oauth: bool,
+    pub paused: bool,
 }
 
 use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
@@ -255,6 +256,13 @@ pub async fn before_actions_with_authentication(
     }
     if before.deny_agent_tokens {
         deny_agent_tokens(c)?;
+    }
+    if c.request.path() != "/agents/mcp" && agent_api::action_paused(c).await? {
+        return halt(c.render(
+            StatusCode::FORBIDDEN,
+            &campfire_kit::format::JSON,
+            serde_json::json!({"error":"agent_paused"}).to_string(),
+        ));
     }
     let forgery_protection = before.forgery_protection;
     if forgery_protection && !authenticated_by(c).skips_forgery_protection() {
@@ -846,6 +854,7 @@ pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
         agent_id: identity.agent_id,
         credential_id: identity.credential_id,
         oauth: identity.oauth,
+        paused: identity.paused,
     });
     c.set_current(CurrentUser(identity.user));
     set_authenticated_by(c, AuthenticatedBy::AgentToken);

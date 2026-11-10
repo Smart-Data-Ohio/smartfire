@@ -185,3 +185,41 @@ test("an administrator turns personal agents off, and Settings → Agents explai
   await expect(card.getByText("None while personal agents are off")).toBeVisible();
   await expect(card.getByRole("button", { name: "Remove Helper" })).toBeVisible();
 });
+
+matrix(
+  "an owner chooses who can wake an agent, then pauses and resumes it",
+  async ({ page, theme }) => {
+    await connect(page.request, "Helper");
+    await openAgents(page, theme);
+
+    const card = page.getByRole("article", { name: /^Helper/ });
+
+    await expect(card.getByText("Only you", { exact: true })).toBeVisible();
+
+    await card.getByRole("button", { name: "Edit Helper" }).click();
+
+    const dialog = page.getByRole("dialog");
+
+    await expect(dialog.getByRole("radio", { name: /Only me/ })).toBeChecked();
+    await dialog.getByRole("radio", { name: /Anyone in its rooms/ }).check();
+    await expectNoHorizontalOverflow(page);
+    await shot(page, "settings-agents-wake", theme);
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(card.getByText("Anyone in its rooms", { exact: true })).toBeVisible();
+
+    await card.getByRole("button", { name: "Pause Helper" }).click();
+    await expect(card.getByText("Paused", { exact: true })).toBeVisible();
+    await expect(card.getByRole("status")).toContainText(/^Paused by .+\. It keeps its rooms/);
+    await expectNoHorizontalOverflow(page);
+    await shot(page, "settings-agents-paused", theme);
+
+    // The pause holds across a reload: it's the server's state, not the page's.
+    await page.reload();
+    await expect(card.getByText("Paused", { exact: true })).toBeVisible();
+
+    await card.getByRole("button", { name: "Resume Helper" }).click();
+    await expect(card.getByText("Paused", { exact: true })).toHaveCount(0);
+    await expect(card.getByRole("button", { name: "Pause Helper" })).toBeVisible();
+  },
+);

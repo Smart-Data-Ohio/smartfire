@@ -72,6 +72,17 @@ export const suspendBot = Effect.fn("api.suspendBot")(function* (botId: number) 
   return yield* call({ method: "POST", path: `/admin/bots/${botId}/kill_switch` }, changeReply);
 });
 
+/** `POST /admin/bots/:id/pause` or `/resume`: any bot's agent; it keeps its access. */
+export const setBotPaused = Effect.fn("api.setBotPaused")(function* (
+  botId: number,
+  paused: boolean,
+) {
+  return yield* call(
+    { method: "POST", path: `/admin/bots/${botId}/${paused ? "pause" : "resume"}` },
+    changeReply,
+  );
+});
+
 /** `PUT /admin/bots/:id/key`: a new key, shown once; the old one stops working. */
 export const resetBotKey = Effect.fn("api.resetBotKey")(function* (botId: number) {
   return yield* call({ method: "PUT", path: `/admin/bots/${botId}/key`, secret: true }, keyReply);

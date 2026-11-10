@@ -80,10 +80,28 @@ fn approval(tx: &Tx<'_>, id: i64) -> campfire_db::Result<Option<Approval>> {
     }
     Ok(approval)
 }
-fn claim(tx: &Tx<'_>, a: &Approval) -> campfire_db::Result<Option<i64>> {
-    let metadata = json!({"approval_id":a.id,"action":a.action,"status":"running"}).to_string();
-    let n=tx.conn().execute("INSERT INTO agent_events (agent_id,agent_approval_id,actor_id,event_type,outcome,webhook_status,metadata,created_at) SELECT ?1,?2,?3,'fizzy_action_completed','delivered','none',?4,?5 WHERE NOT EXISTS(SELECT 1 FROM agent_events WHERE agent_id=?1 AND event_type='fizzy_action_completed' AND (agent_approval_id=?2 OR CAST(json_extract(metadata,'$.approval_id') AS INTEGER)=?2))",params![a.agent,a.id,a.actor,metadata,tx.now()])?;
-    Ok((n == 1).then(|| tx.conn().last_insert_rowid()))
+fn claim(tx: &mut Tx<'_>, a: &Approval) -> campfire_db::Result<Option<i64>> {
+    use campfire_db::models::agent_delivery::{AgentEvent, NewEvent};
+    let exists: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM agent_events WHERE agent_id=?1 AND event_type='fizzy_action_completed' AND (agent_approval_id=?2 OR CAST(json_extract(metadata,'$.approval_id') AS INTEGER)=?2))",params![a.agent,a.id],|r|r.get(0))?;
+    if exists {
+        return Ok(None);
+    }
+    let event = AgentEvent::create(
+        tx,
+        NewEvent {
+            agent_id: a.agent,
+            agent_approval_id: Some(a.id),
+            actor_id: a.actor,
+            event_type: "fizzy_action_completed".into(),
+            outcome: Some("delivered".into()),
+            metadata: json!({"approval_id":a.id,"action":a.action,"status":"running"}),
+            ..Default::default()
+        },
+    )?;
+    if action_claims::suppress_paused_execution(tx, &event, FIZZY)? {
+        return Ok(None);
+    }
+    Ok(Some(event.id))
 }
 fn finish(
     tx: &mut Tx<'_>,

@@ -52,6 +52,9 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
     let state = app.clone();
     let prepared=app.db.write(move |tx| {
         let Some(s)=Subscription::find(tx.conn(),&d.subscription_id)? else {return Ok(None)};
+        let pending: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM mcp_event_deliveries WHERE id=? AND attempts=? AND status='pending')", rusqlite::params![d.id,d.attempts], |r| r.get(0))?;
+        if !pending { return Ok(None) }
+        if campfire_db::Agent::find(tx.conn(),s.agent_id)?.is_some_and(|a|a.paused()) {domain::suppress(tx,&d)?;return Ok(None)}
         if s.refresh_before<=tx.now() {domain::expire(tx,&d)?;return Ok(None)}
         if !domain::principal_live(tx.conn(),s.credential_id,tx.now(),&tx.env().default_url_origin)? {
             domain::finish(tx,&d,DeliveryOutcome::Terminate(domain::Termination::AccessRevoked))?;

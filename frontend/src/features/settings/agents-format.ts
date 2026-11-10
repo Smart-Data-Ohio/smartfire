@@ -3,6 +3,7 @@ import type { Icon } from "../../gen/Icon.ts";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
+import type { WakePolicy } from "../../gen/WakePolicy.ts";
 import { ActionError } from "../../sync/run.ts";
 import { keptSpec, randomSpec } from "../../ui/bot-avatar-spec.ts";
 import type { AvatarChoice } from "../bot-avatar/avatar-choice.ts";
@@ -19,6 +20,8 @@ export interface ClientChoice {
   readonly hint: string;
   /** Stored as the agent's `provider`, so its card names it. */
   readonly provider: string | null;
+  /** The personal assistant this preset sets up ("dots"), the name the setup suggests for it. */
+  readonly assistant?: string;
 }
 
 const TOKEN_CLIENTS: readonly ClientChoice[] = [
@@ -48,18 +51,24 @@ const TOKEN_CLIENTS: readonly ClientChoice[] = [
   },
 ];
 
+/**
+ * The web apps, the personal-assistant presets first: each signs in over OAuth, and the approval
+ * page makes its agent (owner-only wake to start with, as every new personal agent).
+ */
 const WEB_CONNECTORS: readonly (ClientChoice & { readonly value: WebConnector })[] = [
   {
-    value: "claude-ai",
-    label: "claude.ai",
-    hint: "Claude on the web, desktop and phone",
-    provider: "anthropic",
+    value: "chatgpt",
+    label: "ChatGPT (dots)",
+    hint: "OpenAI's assistant in ChatGPT. Signs in; subscribe it to events and it answers new messages",
+    provider: "openai",
+    assistant: "dots",
   },
   {
-    value: "chatgpt",
-    label: "ChatGPT",
-    hint: "ChatGPT on the web, desktop and phone",
-    provider: "openai",
+    value: "claude-ai",
+    label: "Claude (Duet)",
+    hint: "Anthropic's assistant in Claude. Signs in, and checks for new messages when you ask",
+    provider: "anthropic",
+    assistant: "Duet",
   },
   {
     value: "grok",
@@ -68,6 +77,11 @@ const WEB_CONNECTORS: readonly (ClientChoice & { readonly value: WebConnector })
     provider: "xai",
   },
 ];
+
+/** The personal assistant `client` is the preset for ("dots"), or `null`. */
+export function assistantOf(client: AgentClient | null): string | null {
+  return WEB_CONNECTORS.find((choice) => choice.value === client)?.assistant ?? null;
+}
 
 /** Whether `client` is a web app, which only ever connects by signing in. */
 export function isWebConnector(client: AgentClient | null): client is WebConnector {
@@ -161,6 +175,50 @@ export function abilityLabel(capability: string): string {
 export function abilityHint(capability: string): string | undefined {
   return ABILITIES.get(capability)?.hint;
 }
+
+export interface WakeChoice {
+  readonly value: WakePolicy;
+  readonly label: string;
+  readonly hint: string;
+}
+
+/** Who can wake a personal agent: its owner only (the default for new ones), or anyone. */
+export const WAKE_CHOICES: readonly WakeChoice[] = [
+  {
+    value: "owner",
+    label: "Only me",
+    hint: "Only your mentions, replies and direct messages reach it.",
+  },
+  {
+    value: "anyone",
+    label: "Anyone in its rooms",
+    hint: "Anyone's mentions and replies in its rooms reach it.",
+  },
+];
+
+/** The card's line for who can wake it: "Only you" or "Anyone in its rooms". */
+export function wakeText(policy: WakePolicy): string {
+  return policy === "owner" ? "Only you" : "Anyone in its rooms";
+}
+
+/** Whether it's paused (suspension wins, and the server clears the pause fields for it). */
+export function isPaused(agent: Pick<PersonalAgent, "pausedAt" | "suspended">): boolean {
+  return agent.pausedAt !== null && !agent.suspended;
+}
+
+/** "Paused by Riel 2 hours ago." or, with no name recorded, "Paused 2 hours ago." */
+export function pausedLine(
+  agent: Pick<PersonalAgent, "pausedAt" | "pausedBy">,
+  ago: (at: string) => string,
+): string {
+  const when = agent.pausedAt === null ? "" : ` ${ago(agent.pausedAt)}`;
+
+  return agent.pausedBy === null ? `Paused${when}.` : `Paused by ${agent.pausedBy}${when}.`;
+}
+
+/** What a pause keeps and stops, said on the card while it's paused. */
+export const PAUSED_EFFECT =
+  "It keeps its rooms and connections, but nothing wakes it and its actions fail until you resume it.";
 
 /** How long a new token lasts: the server's 90 days, or no expiry. */
 export type Expiry = "90d" | "never";

@@ -1,4 +1,5 @@
 //! AgentApiThrottle's minute buckets, shared by REST actions and MCP tools.
+use campfire_app::app::AppCtx;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
 use jiff::SignedDuration;
 use sha2::{Digest, Sha256};
@@ -19,6 +20,24 @@ pub async fn require_token(c: &mut Ctx, rescue_forgery: bool) -> Result<CurrentA
         return super::oauth::unauthorized(c);
     }
     result
+}
+
+/// The action guard shared by REST requests and MCP tools. Authentication stays valid.
+pub async fn action_paused(c: &Ctx) -> Result<bool> {
+    if let Some(identity) = c.current::<CurrentAgent>() {
+        return Ok(identity.paused);
+    }
+    let Some(user) = super::current_user(c).filter(|user| user.is_bot()) else {
+        return Ok(false);
+    };
+    let user_id = user.id;
+    c.app()
+        .db
+        .read(move |conn| {
+            Ok(campfire_db::Agent::for_user(conn, user_id)?.is_some_and(|agent| agent.paused()))
+        })
+        .await
+        .map_err(Error::internal)
 }
 
 pub fn token(c: &mut Ctx) -> Result<CurrentAgent> {

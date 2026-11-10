@@ -31,6 +31,7 @@ async fn app() -> Option<TestApp> {
     Some(app)
 }
 const ROOT: &str = "/api/v1/me/agents";
+const JZ: i64 = 773523953;
 const DISABLED_MESSAGE: &str = "Personal agents are turned off for this workspace.";
 async fn create(b: &mut Browser<'_>) -> Value {
     let r = write(b, Method::POST, ROOT, json!({"name":"Personal helper","roomIds":[ALL_TALK],"capabilities":["read_messages","post_messages"]})).await;
@@ -911,4 +912,116 @@ async fn personal_agent_access_gives_one_identical_error_for_any_room_the_owner_
     assert_eq!(bodies[0], bodies[1]);
     assert_eq!(bodies[0], bodies[2]);
     assert!(!bodies[0].contains("existing room"), "{}", bodies[0]);
+}
+
+#[tokio::test]
+async fn assistants_owner_controls_are_idempotent_audited_and_preserve_access() {
+    let a = app().await.expect("restored seed");
+    let mut owner = a.sign_in(KEVIN).await;
+    owner.grant_sudo().await;
+    let created = create(&mut owner).await;
+    assert_eq!(created["agent"]["wakePolicy"], "owner");
+    let id = created["agent"]["id"].as_i64().unwrap();
+    let user = created["agent"]["userId"].as_i64().unwrap();
+    let path = format!("{ROOT}/{id}");
+    let before = created["agent"].clone();
+    owner = a.sign_in(KEVIN).await;
+    let policy = write(
+        &mut owner,
+        Method::PATCH,
+        &path,
+        json!({"wakePolicy":"anyone"}),
+    )
+    .await;
+    assert_eq!(policy.status, StatusCode::OK);
+    assert_eq!(policy.json()["wakePolicy"], "anyone");
+    let mut other = a.sign_in(DAVID).await;
+    let mut non_owner = a.sign_in(JZ).await;
+    for action in ["pause", "resume"] {
+        let denied = write(
+            &mut non_owner,
+            Method::POST,
+            &format!("{path}/{action}"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(denied.status, StatusCode::NOT_FOUND);
+        // The owner routes also hide agents from administrators who do not own them.
+        let r = write(
+            &mut other,
+            Method::POST,
+            &format!("{path}/{action}"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::NOT_FOUND);
+    }
+    for _ in 0..2 {
+        let paused = write(
+            &mut owner,
+            Method::POST,
+            &format!("{path}/pause"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(paused.status, StatusCode::OK, "{}", paused.text());
+        assert!(paused.json()["pausedAt"].is_string());
+        assert!(paused.json()["pausedBy"].is_string());
+    }
+    assert_eq!(
+        mcp(&a, created["secret"].as_str().unwrap()).await,
+        StatusCode::OK
+    );
+    for _ in 0..2 {
+        let resumed = write(
+            &mut owner,
+            Method::POST,
+            &format!("{path}/resume"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(resumed.status, StatusCode::OK);
+        let after = resumed.json();
+        assert!(after["pausedAt"].is_null());
+        assert!(after["pausedBy"].is_null());
+        for key in ["roomIds", "capabilities"] {
+            assert_eq!(after[key], before[key]);
+        }
+        assert_eq!(
+            after["credentials"][0]["id"],
+            before["credentials"][0]["id"]
+        );
+        assert_eq!(after["credentials"][0]["state"], "active");
+    }
+    for action in ["pause", "resume"] {
+        let r = write(
+            &mut owner,
+            Method::POST,
+            &format!("/api/v1/admin/bots/{user}/{action}"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::FORBIDDEN);
+        let r = write(
+            &mut other,
+            Method::POST,
+            &format!("/api/v1/admin/bots/{user}/{action}"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+        assert_eq!(r.json()["bot"]["agent"]["paused"], action == "pause");
+        let shown = owner.send(get(&path)).await.json();
+        assert_eq!(shown["pausedAt"].is_string(), action == "pause");
+    }
+    a.db().read(move |conn| {
+        for action in ["agent.pause","agent.resume"] {
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action=? AND target_type='Agent' AND target_id=?",rusqlite::params![action,id],|r|r.get::<_,i64>(0))?,2);
+        }
+        let changes:String=conn.query_row("SELECT details FROM audit_logs WHERE action='agent.update' AND target_id=?",[id],|r|r.get(0))?;
+        let changes:Value=serde_json::from_str(&changes).unwrap();
+        assert!(changes["wake_policy"].to_string().contains("owner"));
+        assert!(changes["wake_policy"].to_string().contains("anyone"));
+        Ok(())
+    }).await.unwrap();
 }

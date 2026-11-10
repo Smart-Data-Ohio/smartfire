@@ -40,6 +40,7 @@ mod agent_work_payload_cases_test;
 mod agent_work_test;
 mod agent_working_presence_test;
 mod announcement_test;
+mod assistant_controls_test;
 mod audit_log_test;
 mod board_automations_test;
 mod board_catalog_test;

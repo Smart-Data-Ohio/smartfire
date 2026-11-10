@@ -774,3 +774,128 @@ async fn ws15e_review_invalid_owned_agent_blocks_deactivation_atomically() {
         }).await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn pause_regression_fizzy_claim_and_completion_stay_suppressed() {
+    let app = app().await;
+    let (id, agent) = setup(&app, "comment").await;
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE agents SET paused_at=? WHERE id=?",
+                params![tx.now(), agent],
+            )?;
+            tx.conn().execute(
+                "UPDATE agent_approvals SET status='denied' WHERE id=?",
+                [id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let server = FakeServer::start(vec![]).await;
+    let net = network(
+        Arc::new(FakeResolver::default()),
+        Arc::new(MappingDialer {
+            public: Default::default(),
+            to: server.addr,
+            dialed: Default::default(),
+        }),
+    );
+    execute(&app.booted.app, &net, "http://app.fizzy.do", id)
+        .await
+        .unwrap();
+    let saved = state(&app, id).await;
+    assert_eq!(saved["outcome"], "suppressed");
+    assert_eq!(saved["webhook"], "none");
+    assert_eq!(saved["jobs"], 0);
+    assert!(server.received().is_empty());
+}
+
+#[tokio::test]
+async fn approved_fizzy_action_paused_before_execution_is_terminal_after_resume() {
+    let app = app().await;
+    let (id, agent) = setup(&app, "comment").await;
+    app.db()
+        .write(move |tx| {
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT status FROM agent_approvals WHERE id=?",
+                    [id],
+                    |r| r.get::<_, String>(0)
+                )?,
+                "approved"
+            );
+            tx.conn().execute(
+                "UPDATE agents SET paused_at=? WHERE id=?",
+                params![tx.now(), agent],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let server = FakeServer::start_ws15e(vec![
+        Route::new(
+            "POST",
+            "app.fizzy.do",
+            "/897362094/cards/579/comments.json",
+            201,
+        )
+        .body("{}"),
+    ])
+    .await;
+    let resolver = Arc::new(FakeResolver::new([("app.fizzy.do", vec!["93.184.216.34"])]));
+    let net = network(
+        resolver.clone(),
+        Arc::new(MappingDialer {
+            public: ["93.184.216.34".parse().unwrap()].into(),
+            to: server.addr,
+            dialed: Default::default(),
+        }),
+    );
+    execute(&app.booted.app, &net, "http://app.fizzy.do", id)
+        .await
+        .unwrap();
+    assert!(
+        server.received().is_empty(),
+        "an approved action must not send while paused"
+    );
+    assert!(resolver.lookups().is_empty());
+    let saved = state(&app, id).await;
+    assert_eq!(saved["outcome"], "suppressed");
+    assert_eq!(saved["metadata"]["status"], "failed");
+    assert_eq!(saved["metadata"]["message"], "agent_paused");
+    assert_eq!(saved["webhook"], "none");
+    assert_eq!(saved["audits"], 1);
+    assert_eq!(saved["jobs"], 0);
+    app.db()
+        .write(move |tx| {
+            tx.conn()
+                .execute("UPDATE agents SET paused_at=NULL WHERE id=?", [agent])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    execute(&app.booted.app, &net, "http://app.fizzy.do", id)
+        .await
+        .unwrap();
+    assert!(
+        server.received().is_empty(),
+        "resume must not revive a suppressed approval"
+    );
+    assert!(resolver.lookups().is_empty());
+    assert_eq!(state(&app, id).await, saved);
+    let fresh = app.db().write(move |tx| {
+        tx.conn().execute("INSERT INTO agent_approvals (agent_id,action,summary,payload,status,expires_at,decided_by_id,fizzy_connected_account_id,fizzy_user_id,created_at,updated_at) SELECT agent_id,action,summary,payload,status,expires_at,decided_by_id,fizzy_connected_account_id,fizzy_user_id,created_at,updated_at FROM agent_approvals WHERE id=?", [id])?;
+        Ok(tx.conn().last_insert_rowid())
+    }).await.unwrap();
+    execute(&app.booted.app, &net, "http://app.fizzy.do", fresh)
+        .await
+        .unwrap();
+    assert_eq!(
+        server.received().len(),
+        1,
+        "a fresh approval works after resume"
+    );
+    assert_eq!(state(&app, fresh).await["metadata"]["status"], "completed");
+}

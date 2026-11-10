@@ -57,6 +57,8 @@ pub struct BotSummary {
     pub bot_avatar: Option<BotAvatarSpec>,
     /// "Workspace agent · Owned by Grace", "no owner recorded", as the classic list reads.
     pub ownership: String,
+    /// Its agent is paused: it keeps its access but gets no deliveries.
+    pub paused: bool,
     /// Personal agents use bearer credentials and cannot issue bot keys.
     pub supports_bot_key: bool,
     pub rooms: Vec<BotRoom>,
@@ -87,6 +89,8 @@ pub struct BotAgent {
     pub usage: String,
     /// The kill switch was used: it can't be undone from here.
     pub suspended: bool,
+    /// Paused by its owner or an administrator: it keeps its access but gets no deliveries.
+    pub paused: bool,
     /// The classic activity ledger and approval requests pages.
     pub ledger_url: String,
     pub approvals_url: String,

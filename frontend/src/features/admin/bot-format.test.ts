@@ -23,6 +23,7 @@ const bender: Bot = {
     dailyExternalActionCap: 5,
     usage: "0/50 messages",
     suspended: false,
+    paused: false,
     ledgerUrl: "/agents/11/events",
     approvalsUrl: "/agents/11/approvals",
   },

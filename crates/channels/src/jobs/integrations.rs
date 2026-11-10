@@ -96,9 +96,14 @@ pub async fn deliver_webhook_with_network(
     let db = app.db.clone();
     let storage = app.storage.clone();
     let base = app.config.mail.app_url.clone();
-    let (bot, room, url, payload, secret) = app
+    let prepared = app
         .db
-        .read(move |conn| {
+        .write(move |tx| {
+            let conn = tx.conn();
+            let paused: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM agents WHERE user_id=? AND paused_at IS NOT NULL AND suspended_at IS NULL)", [bot_id], |r| r.get(0))?;
+            if paused {
+                return Err(campfire_db::Error::Other("agent_paused".into()));
+            }
             if campfire_db::models::agent_access::is_personal_user(conn, bot_id)? {
                 return Ok(None);
             }
@@ -135,8 +140,15 @@ pub async fn deliver_webhook_with_network(
             )?;
             Ok(Some((bot, room, webhook.url, payload, secret)))
         })
-        .await?
-        .context("undefined method 'deliver' for nil (the bot has no webhook)")?;
+        .await;
+    let prepared = match prepared {
+        Err(campfire_db::Error::Other(reason)) if reason == "agent_paused" => {
+            return Ok(Outcome::Done);
+        }
+        result => result?,
+    };
+    let (bot, room, url, payload, secret) =
+        prepared.context("undefined method 'deliver' for nil (the bot has no webhook)")?;
 
     let delivery = webhook::deliver_signed(
         network,
@@ -156,6 +168,7 @@ pub async fn deliver_webhook_with_network(
                 &bot,
                 delivery.status.map(|_| trigger.clone()),
                 text,
+                None,
             )
             .await?
         }
@@ -176,6 +189,7 @@ pub(super) async fn create_text_reply(
     bot: &User,
     trigger: Option<Message>,
     text: String,
+    event_id: Option<i64>,
 ) -> anyhow::Result<Message> {
     let (room_id, creator_id) = (room.id, bot.id);
     let body = canonicalize_body(app, text, None)
@@ -184,8 +198,9 @@ pub(super) async fn create_text_reply(
     let message = app
         .db
         .write(move |tx| {
-            create_reply(
+            create_reply_for_event(
                 tx,
+                event_id,
                 trigger.as_ref(),
                 NewMessage {
                     room_id,
@@ -209,6 +224,16 @@ pub async fn create_attachment_reply(
     trigger: Message,
     attachment: webhook::Attachment,
 ) -> anyhow::Result<Message> {
+    create_attachment_reply_for_event(app, room, bot, trigger, attachment, None).await
+}
+pub(super) async fn create_attachment_reply_for_event(
+    app: &App,
+    room: &Room,
+    bot: &User,
+    trigger: Message,
+    attachment: webhook::Attachment,
+    event_id: Option<i64>,
+) -> anyhow::Result<Message> {
     let storage = app.storage.clone();
     let staged = tokio::task::spawn_blocking(move || attachment.stage_blob(&storage)).await??;
     let blob = app.db.write(move |tx| save_staged(tx, staged)).await?;
@@ -217,8 +242,9 @@ pub async fn create_attachment_reply(
     let message = app
         .db
         .write(move |tx| {
-            let message = create_reply(
+            let message = create_reply_for_event(
                 tx,
+                event_id,
                 Some(&trigger),
                 NewMessage {
                     room_id,
@@ -254,8 +280,26 @@ pub async fn create_attachment_reply(
 pub fn create_reply(
     tx: &mut campfire_db::Tx<'_>,
     trigger: Option<&Message>,
+    attributes: NewMessage,
+) -> campfire_db::Result<Message> {
+    create_reply_for_event(tx, None, trigger, attributes)
+}
+fn create_reply_for_event(
+    tx: &mut campfire_db::Tx<'_>,
+    event_id: Option<i64>,
+    trigger: Option<&Message>,
     mut attributes: NewMessage,
 ) -> campfire_db::Result<Message> {
+    if let Some(event_id) = event_id
+        && campfire_db::models::agent_delivery::AgentEvent::find(tx.conn(), event_id)?
+            .is_none_or(|event| event.outcome.as_deref() == Some("suppressed"))
+    {
+        return Err(campfire_db::Error::Other("agent_paused".into()));
+    }
+    let paused: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM agents WHERE user_id=? AND paused_at IS NOT NULL AND suspended_at IS NULL)", [attributes.creator_id], |r| r.get(0))?;
+    if paused {
+        return Err(campfire_db::Error::Other("agent_paused".into()));
+    }
     if campfire_db::Room::find_for_user(tx.conn(), attributes.creator_id, attributes.room_id)?
         .is_none()
         || campfire_db::models::agent_access::capability_for_user(

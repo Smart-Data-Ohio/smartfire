@@ -167,6 +167,14 @@ pub fn build(
     event: &AgentEvent,
     access: &RepositoryAccess,
 ) -> Result<Payload> {
+    if crate::Agent::find(conn, event.agent_id)?.is_some_and(|agent| agent.paused())
+        || AgentEvent::find(conn, event.id)?
+            .is_some_and(|event| event.outcome.as_deref() == Some("suppressed"))
+    {
+        return Ok(Payload::Unavailable(
+            "Agent paused or event suppressed".into(),
+        ));
+    }
     if !super::agent_event_access::delivery_authorized(conn, event.id)? {
         let missing_message = event
             .message_id

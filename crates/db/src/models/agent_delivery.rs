@@ -158,6 +158,7 @@ impl AgentEvent {
         Self::create_record(tx, a, true)
     }
     fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
+        suppress_new_event_if_paused(tx, &mut a)?;
         let thread_id = a.metadata.get("thread_id").and_then(Value::as_i64).or(a
             .message_id
             .map(|id| crate::Message::find_by_id(tx.conn(), id))
@@ -304,6 +305,40 @@ pub fn ruby_i64(v: &Value) -> i64 {
     }
 }
 
+/// All producers, including deferred deletion snapshots, record pause in the ledger.
+pub fn suppress_new_event_if_paused(tx: &Tx<'_>, event: &mut NewEvent) -> Result<()> {
+    if event.event_type != "posted"
+        && crate::Agent::find(tx.conn(), event.agent_id)?.is_some_and(|agent| agent.paused())
+    {
+        event.outcome = Some("suppressed".into());
+        event.detail = Some("Agent paused".into());
+    }
+    Ok(())
+}
+
+/// Re-read after external awaits. A suppressed occurrence can never be revived.
+pub fn suppress_if_paused(tx: &Tx<'_>, event_id: i64) -> Result<bool> {
+    let Some(event) = AgentEvent::find(tx.conn(), event_id)? else {
+        return Ok(false);
+    };
+    if event.outcome.as_deref() == Some("suppressed") {
+        return Ok(true);
+    }
+    if !crate::Agent::find(tx.conn(), event.agent_id)?.is_some_and(|agent| agent.paused()) {
+        return Ok(false);
+    }
+    tx.conn().execute("UPDATE agent_events SET outcome='suppressed',detail='Agent paused',webhook_status='none',webhook_next_attempt_at=NULL WHERE id=?", [event_id])?;
+    Ok(true)
+}
+
+/// Cancel live obligations at the pause boundary, including claimed HTTP attempts.
+/// Expired MCP occurrences remain replayable after resume.
+pub(crate) fn suppress_pending_for_agent(tx: &Tx<'_>, agent_id: i64) -> Result<()> {
+    tx.conn().execute("UPDATE agent_events SET outcome='suppressed',detail='Agent paused',webhook_status='none',webhook_next_attempt_at=NULL WHERE agent_id=? AND (outcome='pending' OR webhook_status='pending' OR (event_type IN ('github_action_completed','fizzy_action_completed') AND json_extract(metadata,'$.status')='running'))", [agent_id])?;
+    tx.conn().execute("UPDATE mcp_event_deliveries SET status='suppressed',last_error='agent_paused',updated_at=? WHERE status='pending' AND subscription_id IN (SELECT id FROM mcp_event_subscriptions WHERE agent_id=?)", params![tx.now(),agent_id])?;
+    Ok(())
+}
+
 fn has_webhook(tx: &Tx<'_>, agent_id: i64) -> Result<bool> {
     exists(
         tx.conn(),
@@ -433,15 +468,15 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
         }
     }
     for (agent_id, kind) in recipients {
-        if let Some(thread_id) = message.thread_id {
-            let user_id: i64 = tx.conn().query_row(
-                "SELECT user_id FROM agents WHERE id=?",
-                [agent_id],
-                |row| row.get(0),
-            )?;
-            if !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), user_id)? {
-                continue;
-            }
+        let agent = crate::Agent::find(tx.conn(), agent_id)?.expect("candidate agent");
+        if !agent.message_can_wake(message.creator_id) {
+            continue;
+        }
+        if let Some(thread_id) = message.thread_id
+            && !crate::ChannelThread::find(tx.conn(), thread_id)?
+                .readable_by(tx.conn(), agent.user_id)?
+        {
+            continue;
         }
         let (kind, outcome, detail) = if hop >= 3 {
             (
@@ -473,7 +508,7 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
                 ..Default::default()
             },
         )?;
-        if outcome == "pending" {
+        if e.outcome.as_deref() == Some("pending") {
             tx.emit_after_commit(Event::job(&DeliveryJob { event_id: e.id }));
         }
     }
@@ -494,6 +529,9 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
         return Ok(());
     };
     if !MESSAGE_TYPES.contains(&e.event_type.as_str()) {
+        return Ok(());
+    }
+    if suppress_if_paused(tx, e.id)? {
         return Ok(());
     }
     if e.outcome.as_deref() == Some("acknowledged") {
@@ -567,6 +605,9 @@ pub fn claim_webhook(tx: &Tx<'_>, job: &EventWebhookJob) -> Result<Option<AgentE
     let Some(e) = AgentEvent::find(tx.conn(), job.event_id)? else {
         return Ok(None);
     };
+    if suppress_if_paused(tx, e.id)? {
+        return Ok(None);
+    }
     if e.webhook_status == "delivered" {
         return Ok(None);
     }
@@ -587,6 +628,9 @@ pub enum AttemptOutcome {
     Retry(String, Option<Duration>),
 }
 pub fn finish_webhook(tx: &mut Tx<'_>, e: &AgentEvent, result: AttemptOutcome) -> Result<()> {
+    if suppress_if_paused(tx, e.id)? {
+        return Ok(());
+    }
     let (status, attempts, error, next, wait) = match result {
         AttemptOutcome::Delivered => (
             "delivered",
@@ -631,7 +675,7 @@ pub fn finish_webhook(tx: &mut Tx<'_>, e: &AgentEvent, result: AttemptOutcome) -
             s
         }
     });
-    tx.conn().execute("UPDATE agent_events SET webhook_status=?,webhook_attempts=?,webhook_last_error=?,webhook_next_attempt_at=? WHERE id=?",params![status,attempts,error,next,e.id])?;
+    if tx.conn().execute("UPDATE agent_events SET webhook_status=?,webhook_attempts=?,webhook_last_error=?,webhook_next_attempt_at=? WHERE id=? AND webhook_status='pending' AND webhook_attempts=?",params![status,attempts,error,next,e.id,e.webhook_attempts])? == 0 { return Ok(()) }
     if let Some(wait) = wait {
         enqueue_webhook(tx, e, wait);
     }

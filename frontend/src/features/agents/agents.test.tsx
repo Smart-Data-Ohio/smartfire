@@ -238,7 +238,8 @@ describe("steps on an agent message", () => {
 
 describe("the agent pages' words", () => {
   it("words the kind and owner as the classic row does", () => {
-    expect(kindDescription("personal", "Theo")).toBe("Personal agent of Theo");
+    expect(kindDescription("personal", "Theo")).toBe("Personal assistant of Theo");
+    expect(kindDescription("personal", null)).toBe("Personal assistant, no owner recorded");
     expect(kindDescription("workspace", "Riel")).toBe("Workspace agent, managed by Riel");
     expect(kindDescription("workspace", null)).toBe("Workspace agent, no owner recorded");
     expect(kindDescription("fleet", null)).toBe("Agent, no owner recorded");

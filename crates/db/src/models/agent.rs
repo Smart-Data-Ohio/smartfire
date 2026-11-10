@@ -26,12 +26,43 @@ impl AgentKind {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WakePolicy {
+    #[default]
+    Owner,
+    Anyone,
+}
+impl WakePolicy {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Owner => "owner",
+            Self::Anyone => "anyone",
+        }
+    }
+}
+impl rusqlite::types::FromSql for WakePolicy {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        match value.as_str()? {
+            "owner" => Ok(Self::Owner),
+            "anyone" => Ok(Self::Anyone),
+            _ => Err(rusqlite::types::FromSqlError::InvalidType),
+        }
+    }
+}
+impl rusqlite::ToSql for WakePolicy {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(self.name().into())
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Agent {
     pub id: i64,
     pub user_id: i64,
     pub owner_id: Option<i64>,
     pub kind: AgentKind,
+    pub wake_policy: WakePolicy,
     pub description: Option<String>,
     pub provider: Option<String>,
     pub runtime: Option<String>,
@@ -40,6 +71,8 @@ pub struct Agent {
     pub status_changed_at: Option<Timestamp>,
     pub last_seen_at: Option<Timestamp>,
     pub suspended_at: Option<Timestamp>,
+    pub paused_at: Option<Timestamp>,
+    pub paused_by_id: Option<i64>,
     pub daily_message_cap: Option<i64>,
     pub daily_board_post_cap: Option<i64>,
     pub daily_external_action_cap: Option<i64>,
@@ -53,12 +86,15 @@ pub struct NewAgent {
     pub user_id: i64,
     pub owner_id: Option<i64>,
     pub kind: AgentKind,
+    pub wake_policy: WakePolicy,
     pub description: Option<String>,
     pub provider: Option<String>,
     pub runtime: Option<String>,
     pub status: String,
     pub status_note: Option<String>,
     pub suspended_at: Option<Timestamp>,
+    pub paused_at: Option<Timestamp>,
+    pub paused_by_id: Option<i64>,
     pub daily_message_cap: Option<i64>,
     pub daily_board_post_cap: Option<i64>,
     pub daily_external_action_cap: Option<i64>,
@@ -71,12 +107,15 @@ impl Default for NewAgent {
             user_id: 0,
             owner_id: None,
             kind: AgentKind::Personal,
+            wake_policy: WakePolicy::Owner,
             description: None,
             provider: None,
             runtime: None,
             status: "idle".into(),
             status_note: None,
             suspended_at: None,
+            paused_at: None,
+            paused_by_id: None,
             daily_message_cap: None,
             daily_board_post_cap: None,
             daily_external_action_cap: None,
@@ -89,12 +128,15 @@ impl Default for NewAgent {
 pub struct AgentChanges {
     pub owner_id: Option<Option<i64>>,
     pub kind: Option<AgentKind>,
+    pub wake_policy: Option<WakePolicy>,
     pub description: Option<Option<String>>,
     pub provider: Option<Option<String>>,
     pub runtime: Option<Option<String>>,
     pub status: Option<String>,
     pub status_note: Option<Option<String>>,
     pub suspended_at: Option<Option<Timestamp>>,
+    pub paused_at: Option<Option<Timestamp>>,
+    pub paused_by_id: Option<Option<i64>>,
     pub daily_message_cap: Option<Option<i64>>,
     pub daily_board_post_cap: Option<Option<i64>>,
     pub daily_external_action_cap: Option<Option<i64>>,
@@ -175,6 +217,7 @@ impl Agent {
             user_id: r.get("user_id")?,
             owner_id: r.get("owner_id")?,
             kind,
+            wake_policy: r.get("wake_policy")?,
             description: r.get("description")?,
             provider: r.get("provider")?,
             runtime: r.get("runtime")?,
@@ -183,6 +226,8 @@ impl Agent {
             status_changed_at: r.get("status_changed_at")?,
             last_seen_at: r.get("last_seen_at")?,
             suspended_at: r.get("suspended_at")?,
+            paused_at: r.get("paused_at")?,
+            paused_by_id: r.get("paused_by_id")?,
             daily_message_cap: r.get("daily_message_cap")?,
             daily_board_post_cap: r.get("daily_board_post_cap")?,
             daily_external_action_cap: r.get("daily_external_action_cap")?,
@@ -300,9 +345,12 @@ impl Agent {
         }
         Ok(errors)
     }
-    pub fn create(tx: &Tx<'_>, a: NewAgent) -> Result<Self> {
+    pub fn create(tx: &Tx<'_>, mut a: NewAgent) -> Result<Self> {
+        if a.kind == AgentKind::Workspace {
+            a.wake_policy = WakePolicy::Anyone;
+        }
         Self::validate(tx.conn(), &a, None)?.into_result()?;
-        let id=tx.conn().query_row("INSERT INTO agents(user_id,owner_id,kind,description,provider,runtime,status,status_note,suspended_at,daily_message_cap,daily_board_post_cap,daily_external_action_cap,working_presence,working_presence_expires_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.user_id,a.owner_id,a.kind.name(),a.description,a.provider,a.runtime,a.status,a.status_note,a.suspended_at,a.daily_message_cap,a.daily_board_post_cap,a.daily_external_action_cap,a.working_presence,a.working_presence_expires_at,tx.now(),tx.now()],|r|r.get(0))?;
+        let id=tx.conn().query_row("INSERT INTO agents(user_id,owner_id,kind,wake_policy,paused_at,paused_by_id,description,provider,runtime,status,status_note,suspended_at,daily_message_cap,daily_board_post_cap,daily_external_action_cap,working_presence,working_presence_expires_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.user_id,a.owner_id,a.kind.name(),a.wake_policy,a.paused_at,a.paused_by_id,a.description,a.provider,a.runtime,a.status,a.status_note,a.suspended_at,a.daily_message_cap,a.daily_board_post_cap,a.daily_external_action_cap,a.working_presence,a.working_presence_expires_at,tx.now(),tx.now()],|r|r.get(0))?;
         if a.kind == AgentKind::Personal {
             tx.conn().execute(
                 "UPDATE users SET bot_token=NULL,bot_token_digest=NULL WHERE id=?",
@@ -316,12 +364,15 @@ impl Agent {
             user_id: self.user_id,
             owner_id: self.owner_id,
             kind: self.kind,
+            wake_policy: self.wake_policy,
             description: self.description.clone(),
             provider: self.provider.clone(),
             runtime: self.runtime.clone(),
             status: self.status.clone(),
             status_note: self.status_note.clone(),
             suspended_at: self.suspended_at,
+            paused_at: self.paused_at,
+            paused_by_id: self.paused_by_id,
             daily_message_cap: self.daily_message_cap,
             daily_board_post_cap: self.daily_board_post_cap,
             daily_external_action_cap: self.daily_external_action_cap,
@@ -358,6 +409,9 @@ impl Agent {
         assign!(
             owner_id,
             kind,
+            wake_policy,
+            paused_at,
+            paused_by_id,
             description,
             provider,
             runtime,
@@ -422,6 +476,9 @@ impl Agent {
         Ok(())
     }
     pub fn save(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        if self.kind == AgentKind::Workspace {
+            self.wake_policy = WakePolicy::Anyone;
+        }
         let before =
             Self::find(tx.conn(), self.id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
         Self::validate(tx.conn(), &self.attributes(), Some(self.id))?.into_result()?;
@@ -431,6 +488,9 @@ impl Agent {
             sets.push(("kind", Box::new(self.kind.name())));
         }
         changed!(
+            wake_policy,
+            paused_at,
+            paused_by_id,
             owner_id,
             description,
             provider,
@@ -473,7 +533,11 @@ impl Agent {
         drop(values);
         drop(sets);
         *self = Self::find(tx.conn(), self.id)?.expect("updated agent");
-        if self.status != before.status
+        if self.paused() && !before.paused() {
+            super::agent_delivery::suppress_pending_for_agent(tx, self.id)?;
+        }
+        if self.paused_at != before.paused_at
+            || self.status != before.status
             || self.status_note != before.status_note
             || self.suspended_at != before.suspended_at
             || self.working_presence != before.working_presence
@@ -524,8 +588,19 @@ impl Agent {
     /// The migration's one-shot data operation, not a schema migration or boot hook.
     /// Repeating it with existing Agent rows fails the same unique index as Rails.
     pub fn backfill_existing_bots(tx: &Tx<'_>) -> Result<usize> {
-        Ok(tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,created_at,updated_at) SELECT id,NULL,'workspace',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP FROM users WHERE role=2",[])?)
+        Ok(tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,wake_policy,created_at,updated_at) SELECT id,NULL,'workspace','anyone',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP FROM users WHERE role=2",[])?)
     }
+    /// Suspension takes precedence over a reversible pause.
+    pub fn paused(&self) -> bool {
+        self.suspended_at.is_none() && self.paused_at.is_some()
+    }
+
+    pub fn message_can_wake(&self, creator_id: i64) -> bool {
+        self.kind == AgentKind::Workspace
+            || self.wake_policy == WakePolicy::Anyone
+            || self.owner_id == Some(creator_id)
+    }
+
     pub fn active(&self, conn: &Connection) -> Result<bool> {
         exists(
             conn,

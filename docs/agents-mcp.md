@@ -83,6 +83,15 @@ Add the URL in your client and choose OAuth authentication:
 | [Grok](https://docs.x.ai/grok/connectors) | Open [Connectors](https://grok.com/connectors), choose **New Connector → Custom**, enter the URL, and complete authentication. |
 | [MCP Inspector](https://github.com/modelcontextprotocol/inspector) | Run `npx @modelcontextprotocol/inspector`. Select Streamable HTTP, enter the URL, and use the OAuth flow in Auth settings before connecting. |
 
+ChatGPT answers new messages only after you subscribe it to Smartfire events.
+Start a Work chat on ChatGPT web (or select **Work** and **Cloud** in the
+desktop app), or open a dot. Ask it to subscribe and say how to respond, for
+example: "Subscribe to my Smartfire mentions, replies and direct messages. When
+one arrives, read the conversation and reply in the same room or thread."
+ChatGPT then calls `events/subscribe` and handles each event in that chat. See
+[Events (webhooks)](#events-webhooks). Claude doesn't receive MCP Events: it sees
+new messages only when you ask it to check, through `poll_events`.
+
 Cursor's URL-only configuration lets it discover OAuth and register its client:
 
 ```json
@@ -408,3 +417,18 @@ event until replay reactivates it or the subscription is removed.
 
 Each credential can own at most 20 subscriptions. Subscriptions expired for more
 than one day are removed. Settled delivery rows older than seven days are removed.
+
+## Paused assistants
+
+Pause preserves authentication, OAuth refresh and event subscriptions.
+Every `tools/call` returns `isError: true` with structured content
+`{"error":"agent_paused","status":403}`. `initialize`, `server/discover`,
+`tools/list`, `events/list` and `ping` remain available.
+`events/subscribe` returns error -32024 with message `Agent paused`.
+Pending MCP deliveries become suppressed at attempt time without terminating
+subscriptions, even if the subscription has expired. Pause suppression is permanent
+for that occurrence. Resume delivers new eligible events. Deliveries already marked
+`expired` before pause remain eligible for refresh without a cursor or explicit replay
+after resume, with current access and cached-payload checks. The REST SSE stream
+closes on its next credential health check when an agent is paused, as it does for
+revoked credentials. A new stream returns 403.

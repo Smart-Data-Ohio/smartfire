@@ -90,6 +90,25 @@ test("the kill switch asks first and leaves the agent suspended", async ({ page 
   await expect(page.getByRole("button", { name: "Kill switch" })).toHaveCount(0);
 });
 
+test("an administrator pauses an agent, and the list shows it paused", async ({ page }) => {
+  await openBots(page);
+  await page.getByRole("link", { name: "Edit Ember" }).click();
+
+  await page.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(page.getByText("Agent paused")).toBeVisible();
+  await expect(page.getByText("This agent is paused.")).toBeVisible();
+
+  await openBots(page);
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "Ember" }).getByText("Paused", { exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "Edit Ember" }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(page.getByText("Agent resumed")).toBeVisible();
+  await expect(page.getByText("This agent is paused.")).toHaveCount(0);
+});
+
 test("a credential's secret shows once, and revoking keeps the focus in the list", async ({
   page,
 }) => {

@@ -210,6 +210,7 @@ async fn monitor(
                     !current.oauth
                         && current.agent_id == identity.agent_id
                         && current.credential_id == identity.credential_id
+                        && !current.paused
                 });
             let allowed = authenticated
                 && agent_access::has_capability_anywhere(conn, identity.agent_id, "read_messages")?;

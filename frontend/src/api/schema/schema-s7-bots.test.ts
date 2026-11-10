@@ -26,6 +26,7 @@ const agent = {
   dailyExternalActionCap: 5,
   usage: "2/50 messages · 0 board posts · 0/5 external actions",
   suspended: false,
+  paused: false,
   ledgerUrl: "/agents/11/events",
   approvalsUrl: "/agents/11/approvals",
 };
@@ -44,6 +45,7 @@ describe("S7 bot schemas", () => {
           icon: { kind: "emoji", title: "Robot", character: "🤖" },
           botAvatar: null,
           ownership: "Workspace agent · Owned by Grace",
+          paused: false,
           supportsBotKey: true,
           rooms: [
             {

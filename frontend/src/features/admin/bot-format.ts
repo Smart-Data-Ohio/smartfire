@@ -91,5 +91,11 @@ export const CREDENTIAL_STATE: Readonly<Record<CredentialState, string>> = {
 /** How to use a new credential's secret, as the classic page shows it. */
 export const CREDENTIAL_USAGE = "Authorization: Bearer <secret>";
 
+/** The notice after a pause, when the server sends none. */
+export const PAUSED = "Agent paused";
+
+/** The notice after a resume, when the server sends none. */
+export const RESUMED = "Agent resumed";
+
 /** The notice after the kill switch, when the server sends none. */
 export const SUSPENDED = "Agent suspended";

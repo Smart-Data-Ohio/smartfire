@@ -101,6 +101,7 @@ pub async fn post_with_network(
 }
 pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome {
     let id = e.agent_id;
+    let event_id = e.id;
     let e = e.clone();
     let encryption = app.ar_encryption.clone();
     let db = app.db.clone();
@@ -148,6 +149,9 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
     let prepared = app
         .db
         .write(move |tx| {
+            if domain::suppress_if_paused(tx, e.id)? {
+                return Ok(None);
+            }
             let user_id: i64 =
                 tx.conn()
                     .query_row("SELECT user_id FROM agents WHERE id=?", [id], |r| r.get(0))?;
@@ -235,7 +239,8 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
         && let Some((room, message)) = sync
     {
         // Rails suppresses every sync-reply extraction/storage/broadcast error after a successful Agent POST.
-        if let Err(error) = receive_sync_reply(app, &bot, &room, message, response).await {
+        if let Err(error) = receive_sync_reply(app, event_id, &bot, &room, message, response).await
+        {
             tracing::warn!(%error,"Agent webhook sync reply failed");
         }
     }
@@ -243,6 +248,7 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
 }
 async fn receive_sync_reply(
     app: &App,
+    event_id: i64,
     bot: &User,
     room: &Room,
     message: Message,
@@ -251,10 +257,18 @@ async fn receive_sync_reply(
     let reply = match webhook::reply(response.status, response.content_type, response.body)? {
         webhook::WebhookReply::None => return Ok(()),
         webhook::WebhookReply::Text(text) => {
-            jobs::create_text_reply(app, room, bot, Some(message), text).await?
+            jobs::create_text_reply(app, room, bot, Some(message), text, Some(event_id)).await?
         }
         webhook::WebhookReply::Attachment(attachment) => {
-            jobs::create_attachment_reply(app, room, bot, message, attachment).await?
+            jobs::create_attachment_reply_for_event(
+                app,
+                room,
+                bot,
+                message,
+                attachment,
+                Some(event_id),
+            )
+            .await?
         }
     };
     jobs::broadcast_create(app, room, &reply).await

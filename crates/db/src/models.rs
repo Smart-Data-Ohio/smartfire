@@ -175,7 +175,7 @@ pub mod drive_recipients;
 
 pub mod google_entry;
 pub mod google_meeting_cache;
-pub use agent::{Agent, AgentChanges, AgentKind, NewAgent};
+pub use agent::{Agent, AgentChanges, AgentKind, NewAgent, WakePolicy};
 pub use agent_approval::{AgentApproval, NewApproval};
 pub use agent_credential::{AgentCredential, CredentialChanges, NewCredential};
 pub use agent_grant::{AgentGrant, GrantChanges, NewGrant};

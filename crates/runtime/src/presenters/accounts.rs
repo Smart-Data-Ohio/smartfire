@@ -338,6 +338,7 @@ fn bot_with_associations(
         kind: agent.map(|agent| agent.kind.name().into()),
         supports_bot_key: agent.is_none_or(|agent| agent.kind != campfire_db::AgentKind::Personal),
         owner_name,
+        paused: agent.is_some_and(campfire_db::Agent::paused),
         icon,
         rooms: rooms
             .into_iter()
@@ -437,6 +438,7 @@ pub fn bot_form(
             .as_ref()
             .is_none_or(|agent| agent.kind != campfire_db::AgentKind::Personal),
         agent: profile.map(|agent| BotAgentForm {
+            paused: agent.paused(),
             id: agent.id,
             owner_id: agent.owner_id,
             provider: agent.provider,

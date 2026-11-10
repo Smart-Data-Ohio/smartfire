@@ -520,3 +520,172 @@ async fn github_agent_completion_index_is_scoped_to_agent_approval_and_event_typ
         Ok(())
     }).await.unwrap();
 }
+
+#[tokio::test]
+async fn pause_regression_github_failure_records_suppression() {
+    let case = vectors()["cases"][0].clone();
+    let fixture = database(&case).await;
+    fixture
+        .db
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE agents SET paused_at=? WHERE id=812", [tx.now()])?;
+            tx.conn().execute(
+                "UPDATE agent_approvals SET status='denied' WHERE id=813",
+                [],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let (server, network) = fake(vec![]).await;
+    let accounts = Accounts::with_network(
+        fixture.db.clone(),
+        crypto(),
+        AppClient::new(None, None),
+        network,
+    );
+    perform(&fixture.db, &accounts, 813).await.unwrap();
+    assert!(server.received().is_empty());
+    let state = snapshot(&fixture.db).await;
+    assert_eq!(state["events"][0]["outcome"], "suppressed");
+    assert_eq!(state["events"][0]["webhook_status"], "none");
+    assert!(state["jobs"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn approved_github_action_paused_before_execution_is_terminal_after_resume() {
+    let fixture = database(&vectors()["cases"][0]).await;
+    fixture
+        .db
+        .write(|tx| {
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT status FROM agent_approvals WHERE id=813",
+                    [],
+                    |r| r.get::<_, String>(0)
+                )?,
+                "approved"
+            );
+            tx.conn()
+                .execute("UPDATE agents SET paused_at=? WHERE id=812", [tx.now()])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let (server, network) = fake(vec![
+        Route::new(
+            "POST",
+            "api.github.com",
+            "/repos/rails/rails/issues/12/comments",
+            201,
+        )
+        .body("{}"),
+    ])
+    .await;
+    let accounts = Accounts::with_network(
+        fixture.db.clone(),
+        crypto(),
+        AppClient::new(None, None),
+        network,
+    );
+    perform(&fixture.db, &accounts, 813).await.unwrap();
+    assert!(
+        server.received().is_empty(),
+        "an approved action must not send while paused"
+    );
+    let saved = snapshot(&fixture.db).await;
+    assert_eq!(saved["events"].as_array().unwrap().len(), 1);
+    assert_eq!(saved["events"][0]["outcome"], "suppressed");
+    assert_eq!(saved["events"][0]["metadata"]["status"], "failed");
+    assert_eq!(saved["events"][0]["metadata"]["message"], "agent_paused");
+    assert_eq!(saved["events"][0]["webhook_status"], "none");
+    assert_eq!(saved["audits"].as_array().unwrap().len(), 1);
+    assert!(saved["jobs"].as_array().unwrap().is_empty());
+    fixture
+        .db
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE agents SET paused_at=NULL WHERE id=812", [])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    perform(&fixture.db, &accounts, 813).await.unwrap();
+    assert!(
+        server.received().is_empty(),
+        "resume must not revive a suppressed approval"
+    );
+    assert_eq!(snapshot(&fixture.db).await, saved);
+    fixture.db.write(|tx| {
+        tx.conn().execute("INSERT INTO agent_approvals (id,agent_id,room_id,action,summary,payload,status,github_account_id,github_login,decided_by_id,expires_at,created_at,updated_at) SELECT 814,agent_id,room_id,action,summary,payload,status,github_account_id,github_login,decided_by_id,expires_at,created_at,updated_at FROM agent_approvals WHERE id=813", [])?;
+        Ok(())
+    }).await.unwrap();
+    perform(&fixture.db, &accounts, 814).await.unwrap();
+    assert_eq!(
+        server.received().len(),
+        1,
+        "a fresh approval works after resume with the retained grant and credentials"
+    );
+    assert_eq!(
+        snapshot(&fixture.db).await["events"][1]["metadata"]["status"],
+        "completed"
+    );
+}
+
+#[tokio::test]
+async fn approved_github_action_rechecks_pause_after_token_refresh() {
+    use crate::integrations::test_support::ResponseGate;
+    let fixture = database(&vectors()["cases"][0]).await;
+    fixture.db.write(|tx| {
+        tx.conn().execute("UPDATE github_connected_accounts SET token_source='app',refresh_token=?,token_expires_at=? WHERE id=819", params![crypto().encrypt("fixture-refresh"), tx.now().ago(jiff::SignedDuration::from_hours(1))])?;
+        Ok(())
+    }).await.unwrap();
+    let gate = Arc::new(ResponseGate::default());
+    let mut refresh = Route::new("POST", "github.com", "/login/oauth/access_token", 200)
+        .body(json!({"access_token":"refreshed-fixture-token","expires_in":3600}).to_string());
+    refresh.response_gate = Some(gate.clone());
+    let (server, network) = fake(vec![
+        refresh,
+        Route::new(
+            "POST",
+            "api.github.com",
+            "/repos/rails/rails/issues/12/comments",
+            201,
+        )
+        .body("{}"),
+    ])
+    .await;
+    let accounts = Accounts::with_network(
+        fixture.db.clone(),
+        crypto(),
+        AppClient::with_network(None, None, network.clone()),
+        network,
+    );
+    let db = fixture.db.clone();
+    let worker = tokio::spawn(async move { perform(&db, &accounts, 813).await });
+    tokio::time::timeout(std::time::Duration::from_secs(5), gate.entered.notified())
+        .await
+        .unwrap();
+    fixture
+        .db
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE agents SET paused_at=? WHERE id=812", [tx.now()])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    gate.released.notify_one();
+    worker.await.unwrap().unwrap();
+    let requests = server.received();
+    assert_eq!(
+        requests.len(),
+        1,
+        "pause during token refresh must prevent the approved write"
+    );
+    assert_eq!(requests[0].target, "/login/oauth/access_token");
+    let saved = snapshot(&fixture.db).await;
+    assert_eq!(saved["events"][0]["outcome"], "suppressed");
+    assert_eq!(saved["events"][0]["metadata"]["message"], "agent_paused");
+}

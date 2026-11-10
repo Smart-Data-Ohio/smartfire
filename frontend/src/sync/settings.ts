@@ -14,6 +14,7 @@ import {
   removeMeAgent,
   revokeMeAgentToken,
   rotateMeAgentToken,
+  setMeAgentPaused,
   updateMeAgent,
   updateMeAgentAccess,
 } from "../api/me-agent-endpoints.ts";
@@ -490,6 +491,7 @@ export const meAgents = {
     runAction(
       bounded(
         updateMeAgent(agentId, {
+          wakePolicy: null,
           name: null,
           iconName: null,
           avatar: null,
@@ -504,6 +506,10 @@ export const meAgents = {
 
   setAccess: (agentId: number, access: PersonalAgentAccess): Promise<PersonalAgent> =>
     runAction(bounded(updateMeAgentAccess(agentId, access))),
+
+  /** Pause or resume it: bounded like `update`, since a lost answer may still have landed. */
+  setPaused: (agentId: number, paused: boolean): Promise<PersonalAgent> =>
+    runAction(bounded(setMeAgentPaused(agentId, paused))),
 
   /** Answers with the agent's bot user id (`BotRemoved.id`), not `agentId`. */
   remove: (agentId: number): Promise<BotRemoved> => runAction(removeMeAgent(agentId)),

@@ -1810,3 +1810,324 @@ async fn mcp_events_refresh_settles_ineligible_expired_deliveries() {
         assert_eq!(server.received().len(), 1);
     }
 }
+
+#[tokio::test]
+async fn assistants_owner_wake_policy_filters_mentions_replies_and_dms() {
+    use super::presenters::test_support::KEVIN;
+    let (app, server, _) = setup().await;
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agents SET kind='personal',owner_id=?,wake_policy='owner' WHERE id=?",
+                rusqlite::params![DAVID, AGENT],
+            )?;
+            Room::find(tx.conn(), ALL_TALK)?.grant_to(tx, &[KEVIN])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    for name in ["mention", "reply", "direct_message"] {
+        subscribe(&app, name).await;
+    }
+    let bot_message = post(&app, "Ready", None, BENDER).await;
+    let mention = post(&app, "@[Bender Bot] teammate", None, KEVIN).await;
+    let reply = post(&app, "teammate reply", Some(bot_message), KEVIN).await;
+    let dm = app
+        .db()
+        .write(|tx| {
+            let room = Room::find_or_create_direct_for(tx, &[BENDER, DAVID], DAVID)?;
+            Ok(Message::create(
+                tx,
+                NewMessage {
+                    room_id: room.id,
+                    creator_id: KEVIN,
+                    body: Some("Hello".into()),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    app.db()
+        .read(move |conn| {
+            for id in [mention, reply, dm] {
+                assert_eq!(
+                    conn.query_row(
+                        "SELECT COUNT(*) FROM agent_events WHERE agent_id=? AND message_id=?",
+                        rusqlite::params![AGENT, id],
+                        |r| r.get::<_, i64>(0)
+                    )?,
+                    0
+                );
+            }
+            assert!(
+                campfire_db::models::agent_event_access::readable_page(conn, AGENT, 0, None)?
+                    .is_empty()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(jobs(&app).await.is_empty());
+    let owner = post(&app, "@[Bender Bot] owner", None, DAVID).await;
+    publish(&app, owner).await;
+    let pending = jobs(&app).await;
+    assert_eq!(pending.len(), 1);
+    deliver(&app, pending[0].clone()).await;
+    app.db()
+        .read(|conn| {
+            assert_eq!(
+                campfire_db::models::agent_event_access::readable_page(conn, AGENT, 0, None)?.len(),
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE agents SET wake_policy='anyone' WHERE id=?", [AGENT])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let teammate = post(&app, "@[Bender Bot] now allowed", None, KEVIN).await;
+    publish(&app, teammate).await;
+    let pending = jobs(&app).await;
+    assert_eq!(pending.len(), 1);
+    deliver(&app, pending[0].clone()).await;
+    assert_eq!(server.received().len(), 3);
+}
+
+#[tokio::test]
+async fn assistants_pause_suppresses_queued_deliveries_and_preserves_subscriptions() {
+    let (app, server, _) = setup().await;
+    let subscription = subscribe(&app, "mention").await;
+    let first = post(&app, "@[Bender Bot] queued", None, DAVID).await;
+    publish(&app, first).await;
+    let queued = jobs(&app).await.pop().unwrap();
+    let pending = post(&app, "@[Bender Bot] pending", None, DAVID).await;
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agents SET paused_at=?,paused_by_id=? WHERE id=?",
+                rusqlite::params![tx.now(), DAVID, AGENT],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    deliver(&app, queued).await;
+    assert_eq!(status(&app).await[0], "suppressed");
+    let paused = post(&app, "@[Bender Bot] paused", None, DAVID).await;
+    publish(&app, pending).await;
+    publish(&app, paused).await;
+    app.db()
+        .read(move |conn| {
+            for message in [pending, paused] {
+                let row = conn.query_row(
+                    "SELECT outcome,detail FROM agent_events WHERE agent_id=? AND message_id=?",
+                    rusqlite::params![AGENT, message],
+                    |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)),
+                )?;
+                assert_eq!(row, ("suppressed".into(), "Agent paused".into()));
+            }
+            assert!(domain::Subscription::find(conn, &subscription)?.is_some());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(jobs(&app).await.is_empty());
+    assert_eq!(server.received().len(), 1);
+    let refusal = rpc(&app, "events/subscribe", params("mention")).await;
+    assert_eq!(refusal["error"]["code"], -32024);
+    assert_eq!(refusal["error"]["message"], "Agent paused");
+    for method in [
+        "initialize",
+        "server/discover",
+        "tools/list",
+        "events/list",
+        "ping",
+    ] {
+        let p = if method == "initialize" {
+            json!({"protocolVersion":"2026-07-28"})
+        } else {
+            json!({})
+        };
+        let reply = rpc(&app, method, p).await;
+        assert!(reply.get("error").is_none(), "{reply}");
+    }
+    let denied = rpc(
+        &app,
+        "tools/call",
+        json!({"name":"post_message","arguments":{"room_id":ALL_TALK,"body":"No"}}),
+    )
+    .await;
+    assert_eq!(denied["result"]["isError"], true);
+    assert_eq!(
+        denied["result"]["structuredContent"],
+        json!({"error":"agent_paused","status":403})
+    );
+    let denied = app
+        .anonymous()
+        .send(
+            Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/agents/messages"))
+                .header("authorization", &format!("Bearer {SECRET}"))
+                .json_body(&json!({"room_id":ALL_TALK,"body":"No"})),
+        )
+        .await;
+    assert_eq!(denied.status.as_u16(), 403);
+    assert_eq!(denied.json(), json!({"error":"agent_paused"}));
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agents SET paused_at=NULL,paused_by_id=NULL WHERE id=?",
+                [AGENT],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let resumed = post(&app, "@[Bender Bot] resumed", None, DAVID).await;
+    publish(&app, resumed).await;
+    let pending = jobs(&app).await;
+    assert_eq!(pending.len(), 1);
+    deliver(&app, pending[0].clone()).await;
+    assert_eq!(server.received().len(), 2);
+}
+
+#[tokio::test]
+async fn assistants_pause_discards_pending_but_expired_replay_rechecks_payload_after_resume() {
+    assert_pause_preserves_suppression_and_expiry(Some(json!("0"))).await;
+}
+
+#[tokio::test]
+async fn assistants_pause_refresh_preserves_suppression_and_rechecks_expired_deliveries() {
+    for cursor in [None, Some(Value::Null)] {
+        assert_pause_preserves_suppression_and_expiry(cursor).await;
+    }
+}
+
+async fn assert_pause_preserves_suppression_and_expiry(cursor: Option<Value>) {
+    for (cached, expired_before_pause, access_lost) in [
+        (false, false, false),
+        (true, false, false),
+        (false, true, false),
+        (true, true, false),
+        (false, true, true),
+    ] {
+        let (app, server, clock) = setup().await;
+        let subscription = subscribe(&app, "mention").await;
+        let message = post(&app, "@[Bender Bot] before pause", None, DAVID).await;
+        publish(&app, message).await;
+        let mut queued = jobs(&app).await.remove(0);
+        if cached {
+            server.replace_routes(vec![Route::new("POST", "*", "/hook", 503)]);
+            deliver(&app, queued.clone()).await;
+            queued = jobs(&app).await.remove(0);
+        }
+        let before_pause = server.received().len();
+        clock.advance(jiff::SignedDuration::from_hours(2));
+        if expired_before_pause {
+            deliver(&app, queued.clone()).await;
+            assert_eq!(status(&app).await[0], "expired");
+        }
+        app.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE agents SET paused_at=?,paused_by_id=? WHERE id=?",
+                    rusqlite::params![tx.now(), DAVID, AGENT],
+                )?;
+                if cached && expired_before_pause {
+                    tx.conn().execute(
+                        "UPDATE rooms SET name='Renamed during pause' WHERE id=?",
+                        [ALL_TALK],
+                    )?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        deliver(&app, queued).await;
+        assert_eq!(server.received().len(), before_pause);
+        assert_eq!(
+            status(&app).await[0],
+            if expired_before_pause {
+                "expired"
+            } else {
+                "suppressed"
+            }
+        );
+        let mut replay = params("mention");
+        if let Some(cursor) = &cursor {
+            replay["cursor"] = cursor.clone();
+        }
+        let paused_status = status(&app).await;
+        let denied = rpc(&app, "events/subscribe", replay.clone()).await;
+        assert_eq!(denied["error"]["message"], "Agent paused");
+        assert!(jobs(&app).await.is_empty());
+        assert_eq!(status(&app).await, paused_status);
+        assert_eq!(server.received().len(), before_pause);
+        app.db()
+            .write(|tx| {
+                tx.conn().execute(
+                    "UPDATE agents SET paused_at=NULL,paused_by_id=NULL WHERE id=?",
+                    [AGENT],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        server.replace_routes(vec![Route::new("POST", "*", "/hook", 200)]);
+        let result = rpc(&app, "events/subscribe", replay.clone()).await;
+        assert_eq!(result["result"]["id"], subscription);
+        let pending = jobs(&app).await;
+        if expired_before_pause {
+            assert_eq!(pending.len(), 1);
+            if access_lost {
+                app.db()
+                    .write(move |tx| {
+                        tx.conn().execute(
+                            "UPDATE agent_events SET message_id=NULL WHERE message_id=?",
+                            [message],
+                        )?;
+                        Ok(())
+                    })
+                    .await
+                    .unwrap();
+            }
+            deliver(&app, pending[0].clone()).await;
+            if access_lost {
+                assert_eq!(status(&app).await[0], "suppressed");
+                assert_eq!(server.received().len(), before_pause);
+            } else if cached {
+                // Replay after resume must still suppress a changed cached occurrence.
+                assert_eq!(
+                    status(&app).await,
+                    json!(["suppressed", 1, "access_changed"])
+                );
+                assert_eq!(server.received().len(), before_pause);
+            } else {
+                assert_eq!(status(&app).await[0], "delivered");
+                assert_eq!(server.received().len(), before_pause + 1);
+            }
+        } else {
+            // A pause discards pending work even when the same attempt also observes expiry.
+            assert!(pending.is_empty());
+            assert_eq!(status(&app).await[0], "suppressed");
+            assert_eq!(server.received().len(), before_pause);
+        }
+        let again = rpc(&app, "events/subscribe", replay).await;
+        assert!(again.get("error").is_none(), "{again}");
+        assert!(jobs(&app).await.is_empty());
+        let before_new = server.received().len();
+        let message = post(&app, "@[Bender Bot] after resume", None, DAVID).await;
+        publish(&app, message).await;
+        let pending = jobs(&app).await;
+        assert_eq!(pending.len(), 1);
+        deliver(&app, pending[0].clone()).await;
+        assert_eq!(server.received().len(), before_new + 1);
+    }
+}

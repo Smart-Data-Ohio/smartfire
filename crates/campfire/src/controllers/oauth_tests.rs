@@ -2524,3 +2524,41 @@ async fn oauth_dcr_requires_and_returns_the_fixed_grant_pair() {
 
 #[path = "oauth_assertion_tests.rs"]
 mod assertions;
+
+#[tokio::test]
+async fn assistants_oauth_defaults_to_owner_and_refresh_survives_pause() {
+    let f = fixture(metadata()).await;
+    let pair = tokens(&f).await;
+    f.app
+        .db()
+        .write(|tx| {
+            let agent = campfire_db::models::personal_agents::for_owner(tx.conn(), DAVID)?
+                .pop()
+                .unwrap();
+            assert_eq!(agent.wake_policy, campfire_db::WakePolicy::Owner);
+            tx.conn().execute(
+                "UPDATE agents SET paused_at=?,paused_by_id=? WHERE id=?",
+                rusqlite::params![tx.now(), DAVID, agent.id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let renewed = refresh(
+        &f.app,
+        pair["refresh_token"].as_str().unwrap(),
+        CLIENT,
+        RESOURCE,
+        false,
+    )
+    .await;
+    assert_eq!(renewed.status.as_u16(), 200, "{}", renewed.text());
+    assert!(renewed.json()["refresh_token"].is_string());
+    assert_eq!(
+        mcp(&f.app, renewed.json()["access_token"].as_str().unwrap())
+            .await
+            .status
+            .as_u16(),
+        200
+    );
+}

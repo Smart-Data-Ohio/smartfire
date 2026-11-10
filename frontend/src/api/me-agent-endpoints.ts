@@ -53,6 +53,20 @@ export const updateMeAgent = Effect.fn("api.updateMeAgent")(function* (
   return yield* call({ method: "PATCH", path: `${ROOT}/${agentId}`, body }, agentReply);
 });
 
+/**
+ * `POST /me/agents/:id/pause` or `/resume`: it keeps its rooms and connections but gets no
+ * deliveries and its actions fail while paused. Both are idempotent.
+ */
+export const setMeAgentPaused = Effect.fn("api.setMeAgentPaused")(function* (
+  agentId: number,
+  paused: boolean,
+) {
+  return yield* call(
+    { method: "POST", path: `${ROOT}/${agentId}/${paused ? "pause" : "resume"}` },
+    agentReply,
+  );
+});
+
 /** `DELETE /me/agents/:id`: deactivates the agent's bot; its tokens stop working. */
 export const removeMeAgent = Effect.fn("api.removeMeAgent")(function* (agentId: number) {
   return yield* call(
