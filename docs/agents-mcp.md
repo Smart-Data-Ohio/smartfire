@@ -384,7 +384,12 @@ delivery. Polling acknowledgements do not cancel owed webhook deliveries.
 Subscribing requires `read_messages` in at least one accessible room. Every
 attempt checks the current room, message, grants, agent, credential, and OAuth
 connection and client. A removed room grant or deleted message suppresses that
-occurrence. A revoked or expired principal loses the subscription and its pending
+occurrence. Each attempt also rebuilds the occurrence with current repository
+access. If the data differs from the cached occurrence, Smartfire permanently
+suppresses delivery with `access_changed` and sends nothing. Disconnecting GitHub
+therefore cannot resend previously visible private PR fields. Polling acknowledgement
+preserves the cached occurrence outcome and does not cancel an owed webhook.
+A revoked or expired principal loses the subscription and its pending
 deliveries without a POST. Refresh with a live credential but revoked grants
 returns `Forbidden`, code `-32024`. Revoked credentials fail bearer authentication.
 Smartfire never sends `terminated` or `gap` control notifications. Verification

@@ -400,6 +400,10 @@ pub fn suppress(tx: &Tx<'_>, d: &Delivery) -> Result<()> {
     tx.conn().execute("UPDATE mcp_event_deliveries SET status='suppressed',updated_at=? WHERE id=? AND attempts=? AND status='pending'",params![tx.now(),d.id,d.attempts])?;
     advance(tx, &d.subscription_id)
 }
+pub fn suppress_access_changed(tx: &Tx<'_>, d: &Delivery) -> Result<()> {
+    tx.conn().execute("UPDATE mcp_event_deliveries SET status='suppressed',last_error='access_changed',updated_at=? WHERE id=? AND attempts=? AND status='pending'",params![tx.now(),d.id,d.attempts])?;
+    advance(tx, &d.subscription_id)
+}
 pub fn delivery_cursor(
     conn: &Connection,
     subscription: &str,
