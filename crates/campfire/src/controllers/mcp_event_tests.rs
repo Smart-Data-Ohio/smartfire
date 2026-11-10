@@ -1996,9 +1996,24 @@ async fn assistants_pause_suppresses_queued_deliveries_and_preserves_subscriptio
 
 #[tokio::test]
 async fn assistants_pause_discards_pending_but_expired_replay_rechecks_payload_after_resume() {
-    for (cached, expired_before_pause) in
-        [(false, false), (true, false), (false, true), (true, true)]
-    {
+    assert_pause_preserves_suppression_and_expiry(Some(json!("0"))).await;
+}
+
+#[tokio::test]
+async fn assistants_pause_refresh_preserves_suppression_and_rechecks_expired_deliveries() {
+    for cursor in [None, Some(Value::Null)] {
+        assert_pause_preserves_suppression_and_expiry(cursor).await;
+    }
+}
+
+async fn assert_pause_preserves_suppression_and_expiry(cursor: Option<Value>) {
+    for (cached, expired_before_pause, access_lost) in [
+        (false, false, false),
+        (true, false, false),
+        (false, true, false),
+        (true, true, false),
+        (false, true, true),
+    ] {
         let (app, server, clock) = setup().await;
         let subscription = subscribe(&app, "mention").await;
         let message = post(&app, "@[Bender Bot] before pause", None, DAVID).await;
@@ -2042,10 +2057,15 @@ async fn assistants_pause_discards_pending_but_expired_replay_rechecks_payload_a
             }
         );
         let mut replay = params("mention");
-        replay["cursor"] = json!("0");
+        if let Some(cursor) = &cursor {
+            replay["cursor"] = cursor.clone();
+        }
+        let paused_status = status(&app).await;
         let denied = rpc(&app, "events/subscribe", replay.clone()).await;
         assert_eq!(denied["error"]["message"], "Agent paused");
         assert!(jobs(&app).await.is_empty());
+        assert_eq!(status(&app).await, paused_status);
+        assert_eq!(server.received().len(), before_pause);
         app.db()
             .write(|tx| {
                 tx.conn().execute(
@@ -2062,8 +2082,23 @@ async fn assistants_pause_discards_pending_but_expired_replay_rechecks_payload_a
         let pending = jobs(&app).await;
         if expired_before_pause {
             assert_eq!(pending.len(), 1);
+            if access_lost {
+                app.db()
+                    .write(move |tx| {
+                        tx.conn().execute(
+                            "UPDATE agent_events SET message_id=NULL WHERE message_id=?",
+                            [message],
+                        )?;
+                        Ok(())
+                    })
+                    .await
+                    .unwrap();
+            }
             deliver(&app, pending[0].clone()).await;
-            if cached {
+            if access_lost {
+                assert_eq!(status(&app).await[0], "suppressed");
+                assert_eq!(server.received().len(), before_pause);
+            } else if cached {
                 // Replay after resume must still suppress a changed cached occurrence.
                 assert_eq!(
                     status(&app).await,

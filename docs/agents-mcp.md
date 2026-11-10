@@ -419,7 +419,7 @@ Every `tools/call` returns `isError: true` with structured content
 Pending MCP deliveries become suppressed at attempt time without terminating
 subscriptions, even if the subscription has expired. Pause suppression is permanent
 for that occurrence. Resume delivers new eligible events. Deliveries already marked
-`expired` before pause remain eligible for explicit replay after resume, with current
-access and cached-payload checks. The REST SSE stream closes on its next credential
-health check when an agent is paused, as it does for revoked credentials. A new
-stream returns 403.
+`expired` before pause remain eligible for refresh without a cursor or explicit replay
+after resume, with current access and cached-payload checks. The REST SSE stream
+closes on its next credential health check when an agent is paused, as it does for
+revoked credentials. A new stream returns 403.
