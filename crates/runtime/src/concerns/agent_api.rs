@@ -20,6 +20,9 @@ pub async fn require_token(c: &mut Ctx, rescue_forgery: bool) -> Result<CurrentA
 
 /// The action guard shared by REST requests and MCP tools. Authentication stays valid.
 pub async fn action_paused(c: &Ctx) -> Result<bool> {
+    if let Some(identity) = c.current::<CurrentAgent>() {
+        return Ok(identity.paused);
+    }
     let Some(user) = super::current_user(c).filter(|user| user.is_bot()) else {
         return Ok(false);
     };

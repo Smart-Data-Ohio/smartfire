@@ -210,9 +210,9 @@ async fn monitor(
                     !current.oauth
                         && current.agent_id == identity.agent_id
                         && current.credential_id == identity.credential_id
+                        && !current.paused
                 });
-            let paused = campfire_db::Agent::find(conn, identity.agent_id)?.is_some_and(|a| a.paused());
-            let allowed = authenticated && !paused
+            let allowed = authenticated
                 && agent_access::has_capability_anywhere(conn, identity.agent_id, "read_messages")?;
             Ok((allowed, checked_at))
         });

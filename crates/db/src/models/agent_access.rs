@@ -176,6 +176,7 @@ pub struct AuthenticatedAgent {
     pub agent_id: i64,
     pub credential_id: i64,
     pub oauth: bool,
+    pub paused: bool,
 }
 
 pub fn authenticate(tx: &Tx<'_>, secret: &str, ip: &str) -> Result<Option<User>> {
@@ -245,13 +246,13 @@ fn identity_for_credential(
     let identity = query_one(
         conn,
         &format!(
-            "SELECT a.user_id FROM agents a WHERE a.id=?1 AND (?2=0 OR a.kind='personal') AND ({})",
+            "SELECT a.user_id,a.paused_at IS NOT NULL FROM agents a WHERE a.id=?1 AND (?2=0 OR a.kind='personal') AND ({})",
             agent_live("a")
         ),
         params![agent_id, oauth],
-        |r| r.get::<_, i64>(0),
+        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, bool>(1)?)),
     )?;
-    let Some(user_id) = identity else {
+    let Some((user_id, paused)) = identity else {
         return Ok(None);
     };
     let Some(user) = User::find_by_id(conn, user_id)?.filter(User::is_active) else {
@@ -262,6 +263,7 @@ fn identity_for_credential(
         agent_id,
         credential_id: credential.id,
         oauth,
+        paused,
     }))
 }
 

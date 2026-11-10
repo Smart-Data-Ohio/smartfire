@@ -52,6 +52,7 @@ pub struct CurrentAgent {
     pub agent_id: i64,
     pub credential_id: i64,
     pub oauth: bool,
+    pub paused: bool,
 }
 
 use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
@@ -778,7 +779,7 @@ pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
     if identity.oauth && c.request.path() != "/agents/mcp" {
         return halt(head(StatusCode::UNAUTHORIZED));
     }
-    c.set_current(CurrentAgent { agent_id: identity.agent_id, credential_id: identity.credential_id, oauth: identity.oauth });
+    c.set_current(CurrentAgent { agent_id: identity.agent_id, credential_id: identity.credential_id, oauth: identity.oauth, paused: identity.paused });
     c.set_current(CurrentUser(identity.user));
     set_authenticated_by(c, AuthenticatedBy::AgentToken);
     Ok(true)

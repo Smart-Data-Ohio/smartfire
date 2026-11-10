@@ -307,6 +307,7 @@ fn private_thread_review_stream_mentions_invite_at_finalize_before_notifications
                 crate::NewAgent {
                     user_id: receiver.id,
                     kind,
+                    wake_policy: crate::WakePolicy::Anyone,
                     owner_id: Some(id("david")),
                     ..Default::default()
                 },
