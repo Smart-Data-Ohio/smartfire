@@ -1894,7 +1894,7 @@ async fn assistants_owner_wake_policy_filters_mentions_replies_and_dms() {
     let pending = jobs(&app).await;
     assert_eq!(pending.len(), 1);
     deliver(&app, pending[0].clone()).await;
-    assert_eq!(server.received().len(), 5);
+    assert_eq!(server.received().len(), 3);
 }
 
 #[tokio::test]

@@ -1,5 +1,5 @@
 use super::admin_tests::{get, json_body, parse, write};
-use crate::controllers::presenters::test_support::{ALL_TALK, Browser, DAVID, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{ALL_TALK, Browser, DAVID, JASON, KEVIN, Req, TestApp};
 use axum::http::{Method, StatusCode};
 use serde_json::{Value, json};
 
@@ -799,8 +799,11 @@ async fn assistants_owner_controls_are_idempotent_audited_and_preserve_access() 
     assert_eq!(policy.status, StatusCode::OK);
     assert_eq!(policy.json()["wakePolicy"], "anyone");
     let mut other = a.sign_in(DAVID).await;
+    let mut non_owner = a.sign_in(JASON).await;
     for action in ["pause", "resume"] {
-        // The owner routes hide agents even from administrators who do not own them.
+        let denied = write(&mut non_owner, Method::POST, &format!("{path}/{action}"), json!({})).await;
+        assert_eq!(denied.status, StatusCode::NOT_FOUND);
+        // The owner routes also hide agents from administrators who do not own them.
         let r = write(
             &mut other,
             Method::POST,
