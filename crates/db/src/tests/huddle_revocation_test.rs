@@ -24,7 +24,6 @@ pub(crate) fn snapshot(conn: &Connection) -> crate::Result<Value> {
         let mut statement = conn.prepare(&format!("SELECT * FROM {table} ORDER BY id"))?;
         let columns = statement
             .column_names()
-            .iter()
             .map(|s| s.to_string())
             .collect::<Vec<_>>();
         let rows = statement

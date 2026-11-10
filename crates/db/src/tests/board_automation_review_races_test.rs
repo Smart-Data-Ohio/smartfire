@@ -107,8 +107,8 @@ fn review_pr206_deleted_board_races_keep_healthy_boards_running() {
         });
         let other = t.another_process();
         other
-            .read_blocking(|conn| {
-                conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace));
+            .read_with_connection_blocking(|conn| {
+                conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace))?;
                 Ok(())
             })
             .unwrap();

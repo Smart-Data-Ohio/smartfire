@@ -150,7 +150,7 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
             "SELECT {columns} FROM \"{table}\" ORDER BY {order}"
         ))
         .unwrap();
-    let names: Vec<String> = stmt.column_names().into_iter().map(String::from).collect();
+    let names: Vec<String> = stmt.column_names().map(String::from).collect();
     let mut rows = stmt.query([]).unwrap();
     let mut out = Vec::new();
     while let Some(row) = rows.next().unwrap() {

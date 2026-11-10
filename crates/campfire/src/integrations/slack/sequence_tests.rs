@@ -66,7 +66,7 @@ async fn snapshot(db: &Database, json_columns: Value) -> Value {
                 "*"
             };
             let mut stmt = c.prepare(&format!("SELECT {select} FROM {table}"))?;
-            let columns: Vec<_> = stmt.column_names().into_iter().map(str::to_owned).collect();
+            let columns: Vec<_> = stmt.column_names().map(str::to_owned).collect();
             let rows = stmt
                 .query_map([], |row| {
                     let mut value = json!({});

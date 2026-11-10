@@ -116,7 +116,6 @@ async fn old_embed_deleted_during_fetch_and_failed_writes_match_rails_durable_jo
                         c.prepare("SELECT * FROM link_embeds WHERE id IN (?,?) ORDER BY id")?;
                     let names = query
                         .column_names()
-                        .iter()
                         .map(|s| s.to_string())
                         .collect::<Vec<_>>();
                     let rows = query

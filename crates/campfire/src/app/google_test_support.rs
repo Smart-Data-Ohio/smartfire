@@ -15,13 +15,13 @@ impl QueueDrain {
     pub async fn install(a: &TestApp) -> Self {
         let (send, changed) = tokio::sync::mpsc::unbounded_channel();
         a.db()
-            .write(move |tx| {
-                tx.conn()
-                    .update_hook(Some(move |_, _: &str, table: &str, _| {
-                        if table == "background_jobs" {
-                            let _ = send.send(());
-                        }
-                    }));
+            .configure_writer(move |conn, _| {
+                conn.update_hook(Some(move |_, _: &str, table: &str, _| {
+                    if table == "background_jobs" {
+                        let _ = send.send(());
+                    }
+                }))?;
+
                 Ok(())
             })
             .await
@@ -44,9 +44,9 @@ impl QueueDrain {
             self.changed.recv().await.expect("queue observer closed");
         }
         a.db()
-            .write(|tx| {
-                tx.conn()
-                    .update_hook(None::<fn(rusqlite::hooks::Action, &str, &str, i64)>);
+            .configure_writer(move |conn, _| {
+                conn.update_hook(None::<fn(rusqlite::hooks::Action, &str, &str, i64)>)?;
+
                 Ok(())
             })
             .await

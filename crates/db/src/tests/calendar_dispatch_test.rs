@@ -43,9 +43,14 @@ fn setup(t: &TestDb, row: Value) {
    let at=match row.get("fetched_at"){Some(Value::Null)=>None,Some(Value::String(s))=>Some(stamp(s)),None=>Some(tx.now()),_=>panic!("bad timestamp")};
    tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,busy_intervals,ooo_intervals,fetched_at,in_meeting_broadcast,created_at,updated_at) VALUES (?,?,?,?,?,?,?)",params![id("david"),row.get("busy").unwrap_or(&json!([])).to_string(),row.get("ooo").unwrap_or(&json!([])).to_string(),at,row["claimed"].as_bool(),tx.now(),tx.now()])?;
   }
-  let conn=tx.conn();conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT,Some(trace));UPDATES.with(|n|n.set(0));
+
   Ok(())
  });
+    t.configure_writer(|conn, _| {
+        conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace))?;
+        UPDATES.with(|n| n.set(0));
+        Ok(())
+    });
 }
 
 #[test]

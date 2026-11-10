@@ -96,15 +96,15 @@ fn replay(name: &str) {
             now,
         };
         // The preloaded pure policy can neither reload the user nor query an allowance/cache.
-        t.read(|conn|{conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT,Some(trace));QUERIES.with(|n|n.set(0));let actual=json!({"inbox":policy.inbox_event_type(),"push":policy.push(),"sound":policy.sound()});assert_eq!(actual,call["expected"],"{name}: {call}");assert_eq!(QUERIES.with(Cell::get),0);Ok(())});
+        t.read_with_connection(|conn|{conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT,Some(trace))?;QUERIES.with(|n|n.set(0));let actual=json!({"inbox":policy.inbox_event_type(),"push":policy.push(),"sound":policy.sound()});assert_eq!(actual,call["expected"],"{name}: {call}");assert_eq!(QUERIES.with(Cell::get),0);Ok(())});
     }
 }
 #[test]
 fn ws17_named_policy_dnd_exceptions_load_for_batch_in_one_query() {
     let t = TestDb::new();
     t.write(|tx| DndAllowedUser::create(tx, id("david"), id("jason")));
-    t.read(|conn| {
-        conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace));
+    t.read_with_connection(|conn| {
+        conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace))?;
         QUERIES.with(|n| n.set(0));
         assert_eq!(
             dnd_exceptions_for(conn, &[id("david"), id("kevin")], Some(id("jason")))?,

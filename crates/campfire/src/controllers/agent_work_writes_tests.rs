@@ -23,12 +23,13 @@ async fn capture_writer(app: &TestApp) -> Arc<Mutex<Vec<String>>> {
     let log = Arc::new(Mutex::new(Vec::new()));
     let captured = log.clone();
     app.db()
-        .write(move |tx| {
-            WRITER_SELECTS.with(|slot| slot.replace(Some(captured)));
-            tx.conn().trace_v2(
+        .configure_writer(move |conn, _| {
+            conn.trace_v2(
                 rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
                 Some(writer_query),
-            );
+            )?;
+            WRITER_SELECTS.with(|slot| slot.replace(Some(captured)));
+
             Ok(())
         })
         .await
@@ -37,9 +38,12 @@ async fn capture_writer(app: &TestApp) -> Arc<Mutex<Vec<String>>> {
 }
 async fn stop_writer(app: &TestApp) {
     app.db()
-        .write(|tx| {
-            tx.conn()
-                .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+        .configure_writer(move |conn, _| {
+            conn.trace_v2(
+                rusqlite::trace::TraceEventCodes::empty(),
+                None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+            )?;
+
             WRITER_SELECTS.with(|slot| slot.replace(None));
             Ok(())
         })
@@ -386,7 +390,6 @@ async fn domain_snapshot(app: &TestApp) -> Value {
                 let mut statement = conn.prepare(&format!("SELECT * FROM {table} ORDER BY id"))?;
                 let names = statement
                     .column_names()
-                    .iter()
                     .map(|s| s.to_string())
                     .collect::<Vec<_>>();
                 let data = statement

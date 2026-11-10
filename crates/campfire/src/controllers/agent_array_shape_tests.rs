@@ -15,11 +15,7 @@ const HEADERS: [&str; 6] = [
 ];
 fn rows(conn: &campfire_db::Connection, table: &str) -> campfire_db::Result<Vec<Value>> {
     let mut q = conn.prepare(&format!("SELECT * FROM \"{table}\" ORDER BY id"))?;
-    let columns = q
-        .column_names()
-        .iter()
-        .map(|s| s.to_string())
-        .collect::<Vec<_>>();
+    let columns = q.column_names().map(|s| s.to_string()).collect::<Vec<_>>();
     let values = q
         .query_map([], |r| {
             let mut object = serde_json::Map::new();
