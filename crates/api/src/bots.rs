@@ -48,6 +48,8 @@ pub fn routes() -> Router<Kit> {
             "/api/v1/admin/bots/{id}/kill_switch",
             post(action(suspend_bot)),
         )
+        .route("/api/v1/admin/bots/{id}/pause", post(action(pause_bot)))
+        .route("/api/v1/admin/bots/{id}/resume", post(action(resume_bot)))
         .route("/api/v1/admin/bots/{id}/key", put(action(reset_bot_key)))
         .route(
             "/api/v1/admin/bots/{id}/webhook_secret",
@@ -139,6 +141,31 @@ endpoint!(
     /// `DELETE /api/v1/admin/bots/:id/grants/:grant_id`
     revoke_grant => delete_grant
 );
+
+endpoint!(pause_bot => pause);
+endpoint!(resume_bot => resume);
+async fn pause(c: &mut Ctx) -> Result {
+    change_pause(c, true).await
+}
+async fn resume(c: &mut Ctx) -> Result {
+    change_pause(c, false).await
+}
+async fn change_pause(c: &mut Ctx, paused: bool) -> Result {
+    let admin = administrator(c).await?;
+    let bot = active_bot(c).await?;
+    let context = campfire_people::controllers::two_factor::audit_context(c)?;
+    let user_id = bot.id;
+    c.app()
+        .db
+        .write(move |tx| {
+            let mut agent = campfire_db::Agent::for_user(tx.conn(), user_id)?
+                .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            crate::me_agents::set_paused(tx, &mut agent, admin.id, paused, &context)
+        })
+        .await
+        .map_err(Error::internal)?;
+    reply_bot(c, user_id, None).await
+}
 
 // --- Helpers -----------------------------------------------------------------------------------
 

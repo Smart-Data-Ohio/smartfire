@@ -13,11 +13,16 @@ import type { PersonalCredentialCreated as GeneratedPersonalCredentialCreated } 
 import type { PersonalCredentialList as GeneratedPersonalCredentialList } from "../../gen/PersonalCredentialList.ts";
 import type { RotatePersonalCredential as GeneratedRotatePersonalCredential } from "../../gen/RotatePersonalCredential.ts";
 import type { UpdatePersonalAgent as GeneratedUpdatePersonalAgent } from "../../gen/UpdatePersonalAgent.ts";
+import type { WakePolicy as GeneratedWakePolicy } from "../../gen/WakePolicy.ts";
 import { BotAvatarSpec } from "./bot-avatar.ts";
 import { CredentialState } from "./bots.ts";
 import { AgentId, CredentialId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
+
+export const WakePolicy = Schema.Literals(["owner", "anyone"]);
+
+export type WakePolicyPin = Assert<Pinned<typeof WakePolicy, GeneratedWakePolicy>>;
 
 /** Why the server revoked a connection: a used sign-in token was presented again. */
 export const ConnectionRevokedReason = Schema.Literals(["tokenReused"]);
@@ -77,6 +82,9 @@ export const PersonalAgent = Schema.Struct({
   description: Schema.NullOr(Schema.String),
   dailyMessageCap: Schema.NullOr(Schema.Number),
   suspended: Schema.Boolean,
+  wakePolicy: WakePolicy,
+  pausedAt: Schema.NullOr(Timestamp),
+  pausedBy: Schema.NullOr(Schema.String),
   roomIds: Schema.Array(RoomId),
   capabilities: Schema.Array(Schema.String),
   lastUsedAt: Schema.NullOr(Timestamp),
@@ -165,6 +173,7 @@ export type CreatePersonalAgentPin = Assert<
 
 /** `PATCH /me/agents/:id`: `null` leaves a field alone. */
 export const UpdatePersonalAgent = Schema.Struct({
+  wakePolicy: Schema.NullOr(WakePolicy),
   name: Schema.NullOr(Schema.String),
   iconName: Schema.NullOr(Schema.String),
   /** A signed upload id for a new picture; without `botAvatar` it clears the picked avatar. */

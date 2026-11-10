@@ -408,3 +408,15 @@ event until replay reactivates it or the subscription is removed.
 
 Each credential can own at most 20 subscriptions. Subscriptions expired for more
 than one day are removed. Settled delivery rows older than seven days are removed.
+
+## Paused assistants
+
+Pause preserves authentication, OAuth refresh and event subscriptions.
+Every `tools/call` returns `isError: true` with structured content
+`{"error":"agent_paused","status":403}`. `initialize`, `server/discover`,
+`tools/list`, `events/list` and `ping` remain available.
+`events/subscribe` returns error -32024 with message `Agent paused`.
+Pending MCP deliveries become suppressed at attempt time without terminating
+subscriptions. Resume delivers new eligible events and never replays suppressed
+rows. The REST SSE stream closes on its next credential health check when an
+agent is paused, as it does for revoked credentials. A new stream returns 403.
