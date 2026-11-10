@@ -96,6 +96,7 @@ pub async fn verify<F: Fn() -> jiff::Timestamp + Send + Sync>(
     net: &Network,
     url: &str,
     secret: &str,
+    subscription: &str,
     now: F,
 ) -> Result<(), Category> {
     use subtle::ConstantTimeEq;
@@ -108,7 +109,7 @@ pub async fn verify<F: Fn() -> jiff::Timestamp + Send + Sync>(
             secret,
             previous: None,
             id: &campfire_db::models::mcp_events::nonce("msg_verification_"),
-            subscription: None,
+            subscription: Some(subscription),
         },
         body,
         &now,

@@ -116,7 +116,8 @@ pub async fn dispatch(
     };
     let agent = identity.agent_id;
     let check_url = url.clone();
-    let check_name = name.clone();
+    let subscription = domain::subscription_id(credential, &url, &name, &arguments);
+    let check_subscription = subscription.clone();
     let check_arguments = arguments.clone();
     let (allowed, limit, verified) = c
         .app()
@@ -124,11 +125,7 @@ pub async fn dispatch(
         .read(move |conn| {
             Ok((
                 domain::can_subscribe(conn, agent, &check_arguments)?,
-                domain::at_limit(
-                    conn,
-                    credential,
-                    &domain::subscription_id(credential, &check_url, &check_name, &check_arguments),
-                )?,
+                domain::at_limit(conn, credential, &check_subscription)?,
                 domain::endpoint_verified(conn, credential, &check_url)?,
             ))
         })
@@ -169,6 +166,7 @@ pub async fn dispatch(
             &c.app().subscription_network,
             &url,
             secret,
+            &subscription,
             move || clock.now(),
         )
         .await
