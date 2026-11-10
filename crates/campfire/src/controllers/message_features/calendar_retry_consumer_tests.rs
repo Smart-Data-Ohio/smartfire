@@ -23,11 +23,14 @@ const TOKEN: &str = "fixture-calendar-access";
 /// Neither an expected counter nor a replacement consumer constructs these observations.
 async fn observe(app: &TestApp) -> tokio::sync::mpsc::UnboundedReceiver<()> {
     let (send, received) = tokio::sync::mpsc::unbounded_channel();
-    app.db().write(move |tx| {
+    app.db().configure_writer(move |conn, env| {
+conn.update_hook(Some(move |_, _: &str, table: &str, _| { if table=="ws8_retry_outcomes" { let _=send.send(()); } }))?;
+campfire_db::database::run_write(conn, env, move |tx| {
         tx.conn().execute_batch("CREATE TABLE ws8_retry_outcomes(id INTEGER PRIMARY KEY, status TEXT, attempts INTEGER, arguments TEXT, run_at TEXT, updated_at TEXT, last_error TEXT); CREATE TRIGGER ws8_retry_status AFTER UPDATE OF status ON background_jobs WHEN OLD.status='running' AND NEW.status IN ('ready','failed') BEGIN INSERT INTO ws8_retry_outcomes(status,attempts,arguments,run_at,updated_at,last_error) VALUES(NEW.status,NEW.attempts,NEW.arguments,NEW.run_at,NEW.updated_at,NEW.last_error); END; CREATE TRIGGER ws8_retry_done BEFORE DELETE ON background_jobs BEGIN INSERT INTO ws8_retry_outcomes(status,attempts,arguments,run_at,updated_at,last_error) VALUES('done',OLD.attempts,OLD.arguments,OLD.run_at,OLD.updated_at,OLD.last_error); END;")?;
-        tx.conn().update_hook(Some(move |_, _: &str, table: &str, _| { if table=="ws8_retry_outcomes" { let _=send.send(()); } }));
+
         Ok(())
-    }).await.unwrap();
+    })
+}).await.unwrap();
     received
 }
 async fn outcome(

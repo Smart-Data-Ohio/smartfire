@@ -195,11 +195,7 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
             "SELECT * FROM {table} WHERE {} ORDER BY id",
             selector.as_str().unwrap()
         ))?;
-        let columns = query
-            .column_names()
-            .into_iter()
-            .map(str::to_owned)
-            .collect::<Vec<_>>();
+        let columns = query.column_names().map(str::to_owned).collect::<Vec<_>>();
         let rows = query
             .query_map([], |row| {
                 let mut value = json!({});

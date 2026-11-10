@@ -13,9 +13,9 @@ use std::collections::HashSet;
 thread_local! {
     static PREVIEW_SELECTS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
 }
-struct PreviewTrace<'a>(&'a Connection);
+struct PreviewTrace<'a>(&'a mut Connection);
 impl<'a> PreviewTrace<'a> {
-    fn start(conn: &'a Connection) -> Self {
+    fn start(conn: &'a mut Connection) -> Result<Self> {
         fn record(event: rusqlite::trace::TraceEvent<'_>) {
             if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event
                 && sql.trim_start().to_ascii_uppercase().starts_with("SELECT ")
@@ -27,14 +27,18 @@ impl<'a> PreviewTrace<'a> {
         conn.trace_v2(
             rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
             Some(record),
-        );
-        Self(conn)
+        )?;
+        Ok(Self(conn))
     }
 }
 impl Drop for PreviewTrace<'_> {
     fn drop(&mut self) {
         self.0
-            .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+            .trace_v2(
+                rusqlite::trace::TraceEventCodes::empty(),
+                None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+            )
+            .expect("clear preview trace");
     }
 }
 async fn preview_read_count(size: usize) {
@@ -69,13 +73,15 @@ async fn preview_read_count(size: usize) {
         .unwrap();
     let members: Value = (0..size).map(|i| json!({"id":format!("UREVIEW{size}_{i}"),"profile":{"email":format!("preview-{size}-{i}@smartdata.net")}})).collect::<Vec<_>>().into();
     let (delta, queries) = db
-        .write(move |tx| {
-            let _trace = PreviewTrace::start(tx.conn());
-            let delta = map_page(tx, &run, &members, true, &HashSet::new())?;
-            Ok((
-                delta,
-                PREVIEW_SELECTS.with(|queries| queries.borrow().clone()),
-            ))
+        .configure_writer(move |conn, env| {
+            let trace = PreviewTrace::start(conn)?;
+            campfire_db::database::run_write(trace.0, env, |tx| {
+                let delta = map_page(tx, &run, &members, true, &HashSet::new())?;
+                Ok((
+                    delta,
+                    PREVIEW_SELECTS.with(|queries| queries.borrow().clone()),
+                ))
+            })
         })
         .await
         .unwrap();

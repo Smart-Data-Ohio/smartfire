@@ -179,7 +179,6 @@ pub(super) async fn dump(a: &TestApp) -> Value {
                 let mut statement = conn.prepare(&format!("SELECT * FROM \"{table}\""))?;
                 let names: Vec<String> = statement
                     .column_names()
-                    .into_iter()
                     .map(str::to_string)
                     .collect();
                 let mut rows: Vec<String> = statement

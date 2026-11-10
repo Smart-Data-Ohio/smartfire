@@ -157,37 +157,40 @@ async fn boundary(name: &'static str) {
     let fixture = expected.clone();
     let crypto = a.booted.app.ar_encryption.clone();
     a.db()
-        .write(move |tx| {
-            assert_eq!(
-                Session::for_user(tx.conn(), id)?.last().unwrap().id,
-                fixture["current_id"].as_i64().unwrap()
-            );
-            for device in ["other-1", "other-2"] {
-                let session = Session::start_with(
-                    tx,
-                    id,
-                    NewSession {
-                        device_id: Some(device),
-                        ..Default::default()
-                    },
-                )?;
-                TwoFactorSetupSecret::issue_for(tx, &crypto, session.id)?;
-            }
-            if let Some(trigger) = fixture["trigger"].as_str() {
-                tx.conn().execute_batch(
-                    &trigger
-                        .replace("{user}", &id.to_string())
-                        .replace("{current}", &fixture["current_id"].to_string()),
-                )?;
-            }
-            STATEMENTS.with(|rows| rows.borrow_mut().clear());
-            EXECUTING.with(|active| active.set(false));
-            tx.conn().trace_v2(
+        .configure_writer(move |conn, env| {
+            conn.trace_v2(
                 rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT
                     | rusqlite::trace::TraceEventCodes::SQLITE_TRACE_PROFILE,
                 Some(record),
-            );
-            Ok(())
+            )?;
+            campfire_db::database::run_write(conn, env, move |tx| {
+                assert_eq!(
+                    Session::for_user(tx.conn(), id)?.last().unwrap().id,
+                    fixture["current_id"].as_i64().unwrap()
+                );
+                for device in ["other-1", "other-2"] {
+                    let session = Session::start_with(
+                        tx,
+                        id,
+                        NewSession {
+                            device_id: Some(device),
+                            ..Default::default()
+                        },
+                    )?;
+                    TwoFactorSetupSecret::issue_for(tx, &crypto, session.id)?;
+                }
+                if let Some(trigger) = fixture["trigger"].as_str() {
+                    tx.conn().execute_batch(
+                        &trigger
+                            .replace("{user}", &id.to_string())
+                            .replace("{current}", &fixture["current_id"].to_string()),
+                    )?;
+                }
+                STATEMENTS.with(|rows| rows.borrow_mut().clear());
+                EXECUTING.with(|active| active.set(false));
+
+                Ok(())
+            })
         })
         .await
         .unwrap();
@@ -209,9 +212,12 @@ async fn boundary(name: &'static str) {
         .await;
     let statements = a
         .db()
-        .write(|tx| {
-            tx.conn()
-                .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+        .configure_writer(move |conn, _| {
+            conn.trace_v2(
+                rusqlite::trace::TraceEventCodes::empty(),
+                None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+            )?;
+
             Ok(STATEMENTS.with(|rows| rows.take()))
         })
         .await

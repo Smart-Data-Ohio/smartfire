@@ -81,29 +81,36 @@ async fn opening_fanout_read_growth_meets_rails_and_preserves_recorder_facts() {
         let app = fixture(row).await;
         let (thread, reads) = app
             .db()
-            .write(|tx| {
-                WRITER_READS.with(|log| log.borrow_mut().clear());
-                tx.conn().trace_v2(
+            .configure_writer(move |conn, env| {
+                conn.trace_v2(
                     rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
                     Some(record_read),
-                );
-                let result = ChannelThread::create_board_post(
-                    tx,
-                    NewChannelThread {
-                        room_id: ALL_TALK,
-                        creator_id: DAVID,
-                        name: Some("Opening query probe".into()),
-                        work_status: Some("planned".into()),
-                        ..Default::default()
-                    },
-                    Some("Opening message".into()),
-                );
-                tx.conn()
-                    .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
-                Ok((
-                    result?,
-                    WRITER_READS.with(|log| std::mem::take(&mut *log.borrow_mut())),
-                ))
+                )?;
+                let result = campfire_db::database::run_write(conn, env, move |tx| {
+                    WRITER_READS.with(|log| log.borrow_mut().clear());
+
+                    let result = ChannelThread::create_board_post(
+                        tx,
+                        NewChannelThread {
+                            room_id: ALL_TALK,
+                            creator_id: DAVID,
+                            name: Some("Opening query probe".into()),
+                            work_status: Some("planned".into()),
+                            ..Default::default()
+                        },
+                        Some("Opening message".into()),
+                    );
+
+                    Ok((
+                        result?,
+                        WRITER_READS.with(|log| std::mem::take(&mut *log.borrow_mut())),
+                    ))
+                });
+                conn.trace_v2(
+                    rusqlite::trace::TraceEventCodes::empty(),
+                    None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+                )?;
+                result
             })
             .await
             .unwrap();

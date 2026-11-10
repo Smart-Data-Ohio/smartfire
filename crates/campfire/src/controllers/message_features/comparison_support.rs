@@ -45,11 +45,7 @@ pub(super) fn row(
 ) -> campfire_db::Result<Value> {
     use rusqlite::OptionalExtension;
     let mut q = conn.prepare(&format!("SELECT * FROM {table} WHERE id=?"))?;
-    let names = q
-        .column_names()
-        .into_iter()
-        .map(str::to_owned)
-        .collect::<Vec<_>>();
+    let names = q.column_names().map(str::to_owned).collect::<Vec<_>>();
     Ok(q.query_row([id], |r| {
         let mut out = serde_json::Map::new();
         for (i, name) in names.iter().enumerate() {

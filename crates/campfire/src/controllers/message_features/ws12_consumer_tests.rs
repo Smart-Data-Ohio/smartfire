@@ -114,12 +114,13 @@ async fn ws12_populated_work_inbox_preloads_owner_events_in_constant_queries() {
         let writer = Arc::new(Mutex::new(Vec::new()));
         let captured = writer.clone();
         app.db()
-            .write(move |tx| {
-                WRITER_READS.with(|slot| slot.replace(Some(captured)));
-                tx.conn().trace_v2(
+            .configure_writer(move |conn, _| {
+                conn.trace_v2(
                     rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
                     Some(record_writer_read),
-                );
+                )?;
+                WRITER_READS.with(|slot| slot.replace(Some(captured)));
+
                 Ok(())
             })
             .await
@@ -132,9 +133,12 @@ async fn ws12_populated_work_inbox_preloads_owner_events_in_constant_queries() {
             .await;
         app.db().stop_capturing_read_queries();
         app.db()
-            .write(|tx| {
-                tx.conn()
-                    .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+            .configure_writer(move |conn, _| {
+                conn.trace_v2(
+                    rusqlite::trace::TraceEventCodes::empty(),
+                    None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+                )?;
+
                 WRITER_READS.with(|slot| slot.replace(None));
                 Ok(())
             })

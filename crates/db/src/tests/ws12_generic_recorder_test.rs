@@ -317,24 +317,29 @@ fn ws12_generic_recorder_batches_source_and_human_facts_at_two_sizes() {
     let vector = oracle();
     for size in [10, 100] {
         let t = prepare(&vector["setup"]);
-        t.write(move |tx| {
-            let ids = (0..size).map(|index|901850000+index).collect::<Vec<_>>();
-            for id in &ids {
-                tx.conn().execute("INSERT INTO users(id,name,role,status,created_at,updated_at) VALUES(?,'Recipient',0,0,?,?)",rusqlite::params![id,tx.now(),tx.now()])?;
-            }
-            SOURCE_READS.with(|reads|reads.borrow_mut().clear());
-            tx.conn().trace_v2(rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,Some(trace));
-            let recorded = ActivityItem::record_source_for_recipients(tx,&ids,&RoomSource(901840001),ActivityEventType::parse("work_update")?,SourceAuthorization::CallerAuthorized)?;
-            tx.conn().trace_v2(rusqlite::trace::TraceEventCodes::empty(),None);
-            assert_eq!(recorded.len(),size as usize);
-            SOURCE_READS.with(|reads| {
-                let reads = reads.borrow();
-                let users = reads.iter().filter(|sql|sql.starts_with("select * from users ")).count();
-                let sources = reads.iter().filter(|sql|sql.starts_with("select * from rooms ")).count();
-                println!("WS12_RECORDER_BATCH recipients={size} source_reads={sources} user_reads={users}");
-                assert_eq!((sources,users),(1,1));
+        t.configure_writer(move |conn, env| {
+            conn.trace_v2(rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,Some(trace))?;
+            let result = crate::database::run_write(conn, env, move |tx| {
+                let ids = (0..size).map(|index|901850000+index).collect::<Vec<_>>();
+                for id in &ids {
+                    tx.conn().execute("INSERT INTO users(id,name,role,status,created_at,updated_at) VALUES(?,'Recipient',0,0,?,?)",rusqlite::params![id,tx.now(),tx.now()])?;
+                }
+                SOURCE_READS.with(|reads|reads.borrow_mut().clear());
+
+                let recorded = ActivityItem::record_source_for_recipients(tx,&ids,&RoomSource(901840001),ActivityEventType::parse("work_update")?,SourceAuthorization::CallerAuthorized)?;
+
+                assert_eq!(recorded.len(),size as usize);
+                SOURCE_READS.with(|reads| {
+                    let reads = reads.borrow();
+                    let users = reads.iter().filter(|sql|sql.starts_with("select * from users ")).count();
+                    let sources = reads.iter().filter(|sql|sql.starts_with("select * from rooms ")).count();
+                    println!("WS12_RECORDER_BATCH recipients={size} source_reads={sources} user_reads={users}");
+                    assert_eq!((sources,users),(1,1));
+                });
+                Ok(())
             });
-            Ok(())
+            conn.trace_v2(rusqlite::trace::TraceEventCodes::empty(),None::<fn(rusqlite::trace::TraceEvent<'_>)>)?;
+            result
         });
         assert_eq!(t.read(items).as_array().unwrap().len(), size as usize);
     }
