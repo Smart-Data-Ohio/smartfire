@@ -266,11 +266,17 @@ the resolved public IP, verifies TLS against the hostname, and follows no redire
 
 Before storing the first subscription for a credential and callback URL, Smartfire
 POSTs `{"type":"verification","challenge":"<nonce>"}`. The request has a valid
-Standard Webhooks signature and a `msg_verification_` webhook ID. The receiver
+Standard Webhooks signature, a `msg_verification_` webhook ID, and the deterministic
+`X-MCP-Subscription-Id`. The receiver
 must return a 2xx JSON response with the same `challenge`. Failure returns
 `CallbackEndpointError` with code `-32015` and categorized `data.reason`, such as
 `challenge_failed` or `timeout`, and stores nothing. The SEP draft lists `-32027`.
-Verification is limited to ten attempts per destination hostname per minute.
+Verification is valid for 24 hours per credential and callback URL. A subscribe
+or refresh after that repeats the challenge. Only a successful challenge renews
+`verified_at`. Failure preserves the existing subscription and its `refreshBefore`
+without extending either. Deliveries continue until `refreshBefore`, even if
+verification expires between refreshes. Verification is limited to ten attempts
+per destination hostname per minute.
 
 Subscription identity includes the credential, URL, event name, and canonical
 arguments. OAuth access token refresh retains that credential. Repeating the

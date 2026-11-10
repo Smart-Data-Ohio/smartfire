@@ -162,11 +162,11 @@ pub fn can_subscribe(conn: &Connection, agent: i64, arguments: &Arguments) -> Re
     }
     Ok(true)
 }
-pub fn endpoint_verified(conn: &Connection, credential: i64, url: &str) -> Result<bool> {
+pub fn endpoint_verified(conn: &Connection, credential: i64, url: &str, now: Timestamp) -> Result<bool> {
     exists(
         conn,
-        "SELECT 1 FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=? AND verified_at IS NOT NULL",
-        params![credential, url],
+        "SELECT 1 FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=? AND verified_at>?",
+        params![credential, url, now.ago(SignedDuration::from_hours(24))],
     )
 }
 pub fn at_limit(conn: &Connection, credential: i64, id: &str) -> Result<bool> {
@@ -191,6 +191,7 @@ pub struct Grant {
     pub ttl_ms: i64,
     pub cursor: Option<i64>,
     pub max_age_ms: i64,
+    pub verified_at: Option<Timestamp>,
 }
 pub enum GrantResult {
     Granted(Box<Subscription>, bool),
@@ -216,6 +217,12 @@ pub fn subscribe(
     if at_limit(tx.conn(), grant.credential, &id)? {
         return Ok(GrantResult::Limit);
     }
+    if let Some(verified_at) = grant.verified_at {
+        tx.conn().execute(
+            "UPDATE mcp_event_subscriptions SET verified_at=? WHERE agent_credential_id=? AND url=?",
+            params![verified_at, grant.credential, grant.url],
+        )?;
+    }
     let old = Subscription::find(tx.conn(), &id)?;
     let encrypted = encryption.encrypt(&grant.secret);
     let current: i64 = tx.conn().query_row(
@@ -232,7 +239,7 @@ pub fn subscribe(
             != grant.secret;
         tx.conn().execute("UPDATE mcp_event_subscriptions SET secret=?,previous_secret=CASE WHEN ? THEN secret ELSE previous_secret END,previous_secret_expires_at=CASE WHEN ? THEN ? ELSE previous_secret_expires_at END,refresh_before=?,updated_at=? WHERE id=?",params![encrypted,changed,changed,tx.now().since(SignedDuration::from_mins(5)),refresh,tx.now(),id])?;
     } else {
-        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,json!(grant.arguments).to_string(),grant.url,encrypted,refresh,tx.now(),watermark,tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,json!(grant.arguments).to_string(),grant.url,encrypted,refresh,grant.verified_at.or(query_one(tx.conn(),"SELECT MAX(verified_at) FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=?",params![grant.credential,grant.url],|r|r.get::<_,Option<Timestamp>>(0))?.flatten()),watermark,tx.now(),tx.now()])?;
     }
     let mut truncated = false;
     if let Some(cursor) = grant.cursor {

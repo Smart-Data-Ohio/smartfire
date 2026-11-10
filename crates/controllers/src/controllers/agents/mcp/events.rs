@@ -119,6 +119,7 @@ pub async fn dispatch(
     let subscription = domain::subscription_id(credential, &url, &name, &arguments);
     let check_subscription = subscription.clone();
     let check_arguments = arguments.clone();
+    let now = campfire_db::Timestamp::from_jiff(c.app().clock.now());
     let (allowed, limit, verified) = c
         .app()
         .db
@@ -126,7 +127,7 @@ pub async fn dispatch(
             Ok((
                 domain::can_subscribe(conn, agent, &check_arguments)?,
                 domain::at_limit(conn, credential, &check_subscription)?,
-                domain::endpoint_verified(conn, credential, &check_url)?,
+                domain::endpoint_verified(conn, credential, &check_url, now)?,
             ))
         })
         .await
@@ -143,6 +144,7 @@ pub async fn dispatch(
             Some(json!({"limit":"subscriptions","max":20})),
         );
     }
+    let mut verified_at = None;
     if !verified {
         let key = format!(
             "mcp:verification:{}",
@@ -179,6 +181,7 @@ pub async fn dispatch(
                 Some(json!({"reason":reason.as_str()})),
             );
         }
+        verified_at = Some(campfire_db::Timestamp::from_jiff(c.app().clock.now()));
     }
     let grant = Grant {
         agent,
@@ -190,6 +193,7 @@ pub async fn dispatch(
         ttl_ms: ttl,
         cursor,
         max_age_ms: max_age,
+        verified_at,
     };
     let encryption = c.app().ar_encryption.clone();
     let result = c
