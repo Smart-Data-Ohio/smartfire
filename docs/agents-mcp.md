@@ -216,19 +216,33 @@ like `POST /agents/fizzy/card_actions`. Completions arrive through
 
 ## Events (webhooks)
 
-Smartfire implements `io.modelcontextprotocol/events` for protocol version
-`2026-07-28`. It follows [SEP-3415, draft at b08e4f9, dated 2026-10-27](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/b08e4f9/seps/0000-events-extension.md).
-`server/discover` advertises the extension. Legacy versions do not expose it.
-Agent tokens and OAuth connections can use it. `poll_events` remains the pull path.
+Smartfire supports MCP Events on every supported protocol version, including
+`2025-03-26` and `2025-11-25`. It follows the
+[ChatGPT MCP Events guide](https://developers.openai.com/plugins/build/mcp-events)
+and [SEP-3415 at b08e4f9](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/b08e4f9/seps/0000-events-extension.md)
+where compatible. `initialize` and `server/discover` advertise
+`capabilities.events: {}`. On `2026-07-28`, discovery also advertises
+`capabilities.extensions["io.modelcontextprotocol/events"]: {}`. Modern results
+include `resultType: "complete"`. Legacy results retain their existing envelope.
+Agent tokens and OAuth connections can subscribe. Claude clients do not support
+MCP Events yet and can call `poll_events`.
 
 `events/list` returns `mention`, `reply`, and `direct_message`. Each descriptor
-accepts empty `arguments` and supports only webhook delivery. A reply that also
-mentions the agent produces one `reply` event. The occurrence's `data` is the
-same row object that REST event polling returns. Absolute payload links use
+supports only webhook delivery. A reply that also mentions the agent produces
+one `reply` event. The occurrence's `data` is the same row object that REST event
+polling returns. `data.id` is the original ledger ID. Absolute payload links use
 the configured app origin.
 
-`events/subscribe` accepts the following params. Modern requests also require
-`Mcp-Method: events/subscribe` and `Mcp-Name: mention` to match the body.
+`arguments` accepts an optional `roomIds` array of 1 to 50 distinct positive
+integers. Every listed room requires current `read_messages` access and agent
+membership. Otherwise subscribe returns `Forbidden`, code `-32024`. Smartfire
+sorts the IDs before storing them. `[2, 1]` and `[1, 2]` identify the same
+subscription. Only occurrences in those rooms match, including during replay.
+Empty or omitted arguments match all readable rooms. Unknown properties are invalid.
+
+`events/subscribe` accepts the following params. Modern requests require
+`Mcp-Method: events/subscribe`. `Mcp-Name` is optional on every version. When
+present, it must match `params.name`, or the server returns HTTP 400 and `-32020`.
 
 ```json
 {
@@ -254,8 +268,9 @@ Before storing the first subscription for a credential and callback URL, Smartfi
 POSTs `{"type":"verification","challenge":"<nonce>"}`. The request has a valid
 Standard Webhooks signature and a `msg_verification_` webhook ID. The receiver
 must return a 2xx JSON response with the same `challenge`. Failure returns
-`CallbackEndpointError` with code `-32027` and stores nothing. Verification is
-limited to ten attempts per destination hostname per minute.
+`CallbackEndpointError` with code `-32015` and categorized `data.reason`, such as
+`challenge_failed` or `timeout`, and stores nothing. The SEP draft lists `-32027`.
+Verification is limited to ten attempts per destination hostname per minute.
 
 Subscription identity includes the credential, URL, event name, and canonical
 arguments. OAuth access token refresh retains that credential. Repeating the
@@ -270,19 +285,21 @@ string replays readable, delivered message events after that ID. `maxAgeMs` boun
 replay age, with a maximum and default of 24 hours. `truncated` reports older
 matching events skipped by that bound. Pending live deliveries survive a refresh.
 
-`events/unsubscribe` accepts `name`, empty `arguments`, and `delivery.url`.
-It requires matching `Mcp-Method` and `Mcp-Name` headers. Only the owning credential
-can delete a subscription. A missing subscription returns `NotFound`, code
-`-32023`. `events/poll` and `events/stream` return `Unsupported`, code `-32026`,
-with delivery mode `poll` or `push`.
+`events/unsubscribe` accepts the original `name`, canonical `arguments`, and
+`delivery` with `mode: "webhook"` and `url`. It is idempotent. Unknown names and
+missing subscriptions succeed with `{}`, plus `resultType: "complete"` on modern
+versions. Only the owning credential can delete a subscription. Header rules
+match subscribe. `events/poll` and `events/stream` return `Unsupported`, code
+`-32026`, with delivery mode `poll` or `push`.
 
 ### Delivery and signatures
 
 An event POST contains `eventId`, `name`, RFC 3339 `timestamp`, `data`, and
-`cursor`. Its JSON body is limited to 256 KiB. The headers are:
+`cursor`. Each request contains one event. The complete UTF-8 body can contain
+at most 262,144 bytes, inclusive. The headers are:
 
 - `Content-Type: application/json`.
-- `webhook-id`, a random `msg_` identifier for this delivery.
+- `webhook-id`, the same random `msg_` identifier as the body's `eventId`.
 - `webhook-timestamp`, Unix seconds regenerated for each attempt.
 - `webhook-signature`, `v1,<base64 HMAC-SHA256>`.
 - `X-MCP-Subscription-Id`, the subscription's ID.
@@ -290,9 +307,10 @@ An event POST contains `eventId`, `name`, RFC 3339 `timestamp`, `data`, and
 The HMAC key is the decoded secret after `whsec_`. The signed bytes are
 `webhook-id + "." + webhook-timestamp + "." + rawBody`. Verify the signature
 against the raw bytes before parsing JSON. Receivers must also check timestamp
-freshness and deduplicate on `webhook-id`. That ID stays the same across retries.
-It belongs to a delivery, so separate subscriptions can receive the same
-`eventId` under different webhook IDs.
+freshness and deduplicate on `eventId` or `webhook-id`, scoped to the subscription.
+These IDs are equal and stay the same across retries. Separate subscriptions
+receive different IDs for the same ledger occurrence. The IDs are random and
+not derived from the ledger ID in `data.id`.
 
 This Node example assumes `headers`, `rawBody`, and `secret` are supplied by the
 receiver. It accepts a five minute clock tolerance and either signature during
@@ -349,6 +367,8 @@ five minutes, then eight minutes. `Retry-After` can replace a delay, capped at
 eight minutes. HTTP 410, 413, other non-retryable responses, and oversized
 payloads fail without retry. Each request has a seven second total timeout.
 A recovery sweep resumes stranded pending deliveries after two minutes.
+The first attempt saves the complete body. Retries reuse those bytes, including
+after recovery, with a fresh signing timestamp and signature.
 
 Failures expose only `connection_refused`, `timeout`, `tls_error`, `http_4xx`,
 `http_5xx`, or `challenge_failed`. Successful delivery clears failure status.
@@ -358,9 +378,11 @@ delivery. Polling acknowledgements do not cancel owed webhook deliveries.
 Subscribing requires `read_messages` in at least one accessible room. Every
 attempt checks the current room, message, grants, agent, credential, and OAuth
 connection and client. A removed room grant or deleted message suppresses that
-occurrence. A revoked or expired principal receives one best-effort signed
-`{"type":"terminated","error":{"code":-32024,"message":"Access revoked"}}`
-POST, then loses the subscription. Expired subscriptions stop delivery.
+occurrence. A revoked or expired principal loses the subscription and its pending
+deliveries without a POST. Refresh with a live credential but revoked grants
+returns `Forbidden`, code `-32024`. Revoked credentials fail bearer authentication.
+Smartfire never sends `terminated` or `gap` control notifications. Verification
+envelopes remain supported. Expired subscriptions stop delivery.
 
 Each credential can own at most 20 subscriptions. Subscriptions expired for more
 than one day are removed. Settled delivery rows older than seven days are removed.
