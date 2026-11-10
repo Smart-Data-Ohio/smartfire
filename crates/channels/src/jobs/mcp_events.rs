@@ -52,12 +52,12 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
     let state = app.clone();
     let prepared=app.db.write(move |tx| {
         let Some(s)=Subscription::find(tx.conn(),&d.subscription_id)? else {return Ok(None)};
+        if campfire_db::Agent::find(tx.conn(),s.agent_id)?.is_some_and(|a|a.paused()) {domain::suppress(tx,&d)?;return Ok(None)}
         if s.refresh_before<=tx.now() {domain::expire(tx,&d)?;return Ok(None)}
         if !domain::principal_live(tx.conn(),s.credential_id,tx.now(),&tx.env().default_url_origin)? {
             domain::finish(tx,&d,DeliveryOutcome::Terminate(domain::Termination::AccessRevoked))?;
             return Ok(None);
         }
-        if campfire_db::Agent::find(tx.conn(),s.agent_id)?.is_some_and(|a|a.paused()) {domain::suppress(tx,&d)?;return Ok(None)}
         if !campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),d.event_id)? {domain::suppress(tx,&d)?;return Ok(None)}
         let Some(event)=AgentEvent::find(tx.conn(),d.event_id)? else {domain::suppress(tx,&d)?;return Ok(None)};
         let cached = d.body.as_ref().map(|body| serde_json::from_str::<serde_json::Value>(body)

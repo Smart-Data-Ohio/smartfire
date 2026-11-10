@@ -1813,3 +1813,102 @@ async fn assistants_pause_suppresses_queued_deliveries_and_preserves_subscriptio
     deliver(&app, pending[0].clone()).await;
     assert_eq!(server.received().len(), 2);
 }
+
+#[tokio::test]
+async fn assistants_pause_discards_pending_but_expired_replay_rechecks_payload_after_resume() {
+    for (cached, expired_before_pause) in
+        [(false, false), (true, false), (false, true), (true, true)]
+    {
+        let (app, server, clock) = setup().await;
+        let subscription = subscribe(&app, "mention").await;
+        let message = post(&app, "@[Bender Bot] before pause", None, DAVID).await;
+        publish(&app, message).await;
+        let mut queued = jobs(&app).await.remove(0);
+        if cached {
+            server.replace_routes(vec![Route::new("POST", "*", "/hook", 503)]);
+            deliver(&app, queued.clone()).await;
+            queued = jobs(&app).await.remove(0);
+        }
+        let before_pause = server.received().len();
+        clock.advance(jiff::SignedDuration::from_hours(2));
+        if expired_before_pause {
+            deliver(&app, queued.clone()).await;
+            assert_eq!(status(&app).await[0], "expired");
+        }
+        app.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE agents SET paused_at=?,paused_by_id=? WHERE id=?",
+                    rusqlite::params![tx.now(), DAVID, AGENT],
+                )?;
+                if cached && expired_before_pause {
+                    tx.conn().execute(
+                        "UPDATE rooms SET name='Renamed during pause' WHERE id=?",
+                        [ALL_TALK],
+                    )?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        deliver(&app, queued).await;
+        assert_eq!(server.received().len(), before_pause);
+        assert_eq!(
+            status(&app).await[0],
+            if expired_before_pause {
+                "expired"
+            } else {
+                "suppressed"
+            }
+        );
+        let mut replay = params("mention");
+        replay["cursor"] = json!("0");
+        let denied = rpc(&app, "events/subscribe", replay.clone()).await;
+        assert_eq!(denied["error"]["message"], "Agent paused");
+        assert!(jobs(&app).await.is_empty());
+        app.db()
+            .write(|tx| {
+                tx.conn().execute(
+                    "UPDATE agents SET paused_at=NULL,paused_by_id=NULL WHERE id=?",
+                    [AGENT],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        server.replace_routes(vec![Route::new("POST", "*", "/hook", 200)]);
+        let result = rpc(&app, "events/subscribe", replay.clone()).await;
+        assert_eq!(result["result"]["id"], subscription);
+        let pending = jobs(&app).await;
+        if expired_before_pause {
+            assert_eq!(pending.len(), 1);
+            deliver(&app, pending[0].clone()).await;
+            if cached {
+                // Replay after resume must still suppress a changed cached occurrence.
+                assert_eq!(
+                    status(&app).await,
+                    json!(["suppressed", 1, "access_changed"])
+                );
+                assert_eq!(server.received().len(), before_pause);
+            } else {
+                assert_eq!(status(&app).await[0], "delivered");
+                assert_eq!(server.received().len(), before_pause + 1);
+            }
+        } else {
+            // A pause discards pending work even when the same attempt also observes expiry.
+            assert!(pending.is_empty());
+            assert_eq!(status(&app).await[0], "suppressed");
+            assert_eq!(server.received().len(), before_pause);
+        }
+        let again = rpc(&app, "events/subscribe", replay).await;
+        assert!(again.get("error").is_none(), "{again}");
+        assert!(jobs(&app).await.is_empty());
+        let before_new = server.received().len();
+        let message = post(&app, "@[Bender Bot] after resume", None, DAVID).await;
+        publish(&app, message).await;
+        let pending = jobs(&app).await;
+        assert_eq!(pending.len(), 1);
+        deliver(&app, pending[0].clone()).await;
+        assert_eq!(server.received().len(), before_new + 1);
+    }
+}
