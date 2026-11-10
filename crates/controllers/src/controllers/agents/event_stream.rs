@@ -211,7 +211,8 @@ async fn monitor(
                         && current.agent_id == identity.agent_id
                         && current.credential_id == identity.credential_id
                 });
-            let allowed = authenticated
+            let paused = campfire_db::Agent::find(conn, identity.agent_id)?.is_some_and(|a| a.paused());
+            let allowed = authenticated && !paused
                 && agent_access::has_capability_anywhere(conn, identity.agent_id, "read_messages")?;
             Ok((allowed, checked_at))
         });

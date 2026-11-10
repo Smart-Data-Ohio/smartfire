@@ -378,6 +378,9 @@ fn decode_header(value: &str) -> Option<String> {
 }
 
 async fn call_tool(c: &mut Ctx, id: Value, params: &Value, agent_id: i64, modern: bool) -> Result {
+    if agent_api::action_paused(c).await? {
+        return Ok(rpc_result(c, id, modern_result(json!({"content":[{"type":"text","text":"agent_paused"}],"structuredContent":{"error":"agent_paused","status":403},"isError":true}), modern)));
+    }
     let name = params.get("name").unwrap_or(&Value::Null);
     let Some(tool) = METADATA["tools"]
         .as_array()
