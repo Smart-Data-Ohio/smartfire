@@ -33,7 +33,6 @@ async fn deliver(app: App, job: Job, _: Execution) -> JobResult {
 }
 enum Prepared {
     Skip,
-    Terminated(Subscription),
     Event(Subscription, String),
 }
 pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> anyhow::Result<()> {
@@ -59,9 +58,8 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
         let Some(s)=Subscription::find(tx.conn(),&d.subscription_id)? else {return Ok(Prepared::Skip)};
         if s.refresh_before<=tx.now() {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)}
         if !domain::principal_live(tx.conn(),s.credential_id,tx.now(),&tx.env().default_url_origin)? {
-            // Delete before sending so concurrent delivery jobs emit only one termination.
             domain::finish(tx,&d,DeliveryOutcome::Terminate(domain::Termination::AccessRevoked))?;
-            return Ok(Prepared::Terminated(s));
+            return Ok(Prepared::Skip);
         }
         if !campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),d.event_id)? {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)}
         let Some(event)=AgentEvent::find(tx.conn(),d.event_id)? else {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)};
@@ -71,19 +69,13 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
         presenter.use_viewer_zone(presenter.current_user_id.expect("agent viewer"))?;
         let Some(data)=campfire_db::models::agent_event_polling::event_payload(tx.conn(),&event,tx.now(),&access,|m|presenter.agent_message_payload(m))? else {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)};
         let cursor=domain::delivery_cursor(tx.conn(),&s.id,Some(d.id))?;
-        let body=json!({"eventId":event.id.to_string(),"name":event.event_type,"timestamp":event.created_at.jiff().to_string(),"data":data,"cursor":cursor.to_string()}).to_string();
-        if body.len()>256*1024 {domain::finish(tx,&d,DeliveryOutcome::Permanent(Category::Http4xx))?;return Ok(Prepared::Skip)}
+        let body=json!({"eventId":d.webhook_id,"name":event.event_type,"timestamp":event.created_at.jiff().to_string(),"data":data,"cursor":cursor.to_string()}).to_string();
+        if !campfire_app::integrations::mcp_events::body_fits(&body) {domain::finish(tx,&d,DeliveryOutcome::Permanent(Category::Http4xx))?;return Ok(Prepared::Skip)}
         Ok(Prepared::Event(s,body))
     }).await?;
-    let (subscription, body, terminated) = match prepared {
+    let (subscription, body) = match prepared {
         Prepared::Skip => return Ok(()),
-        Prepared::Terminated(s) => (
-            s,
-            json!({"type":"terminated","error":{"code":-32024,"message":"Access revoked"}})
-                .to_string(),
-            true,
-        ),
-        Prepared::Event(s, body) => (s, body, false),
+        Prepared::Event(s, body) => (s, body),
     };
     let secret = app.ar_encryption.decrypt(&subscription.secret)?;
     let now = Timestamp::from_jiff(app.clock.now());
@@ -97,29 +89,22 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
         })
         .map(|s| app.ar_encryption.decrypt(s))
         .transpose()?;
-    let webhook_id = if terminated {
-        domain::nonce("msg_terminated_")
-    } else {
-        delivery.webhook_id.clone()
-    };
     let result = campfire_app::integrations::mcp_events::post(
         net,
         &subscription.url,
         campfire_app::integrations::mcp_events::Signing {
             secret: &secret,
             previous: previous.as_deref(),
-            id: &webhook_id,
+            id: &delivery.webhook_id,
             subscription: Some(&subscription.id),
         },
         body,
         || app.clock.now(),
     )
     .await;
-    if !terminated {
-        let outcome = campfire_app::integrations::mcp_events::outcome(&result, app.clock.now());
-        app.db
-            .write(move |tx| domain::finish(tx, &delivery, outcome))
-            .await?;
-    }
+    let outcome = campfire_app::integrations::mcp_events::outcome(&result, app.clock.now());
+    app.db
+        .write(move |tx| domain::finish(tx, &delivery, outcome))
+        .await?;
     Ok(())
 }

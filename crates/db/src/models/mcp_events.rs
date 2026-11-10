@@ -52,7 +52,7 @@ impl Subscription {
         )
     }
     pub fn result(&self, now: Timestamp, truncated: bool) -> Value {
-        json!({"resultType":"complete","id":self.id,"refreshBefore":self.refresh_before.jiff().to_string(),"cursor":self.watermark.to_string(),"truncated":truncated,"deliveryStatus":{"active":self.refresh_before>now,"lastDeliveryAt":self.last_delivery_at.map(|t|t.jiff().to_string()),"lastError":self.last_error,"failedSince":self.failed_since.map(|t|t.jiff().to_string())}})
+        json!({"id":self.id,"refreshBefore":self.refresh_before.jiff().to_string(),"cursor":self.watermark.to_string(),"truncated":truncated,"deliveryStatus":{"active":self.refresh_before>now,"lastDeliveryAt":self.last_delivery_at.map(|t|t.jiff().to_string()),"lastError":self.last_error,"failedSince":self.failed_since.map(|t|t.jiff().to_string())}})
     }
 }
 

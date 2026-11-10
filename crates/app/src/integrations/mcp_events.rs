@@ -7,6 +7,12 @@ use campfire_db::models::mcp_events::{Category, DeliveryOutcome};
 use serde_json::json;
 use std::time::Duration;
 
+pub const MAX_BODY_BYTES: usize = 262_144;
+
+pub fn body_fits(body: &str) -> bool {
+    body.len() <= MAX_BODY_BYTES
+}
+
 pub struct Signing<'a> {
     pub secret: &'a str,
     pub previous: Option<&'a str>,
@@ -122,5 +128,18 @@ pub async fn verify<F: Fn() -> jiff::Timestamp + Send + Sync>(
         }
         DeliveryOutcome::Retry(c, _) | DeliveryOutcome::Permanent(c) => Err(c),
         DeliveryOutcome::Terminate(_) => Err(Category::ChallengeFailed),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mcp_events_complete_body_limit_counts_utf8_bytes_inclusively() {
+        let body = json!({"data": "é".repeat((MAX_BODY_BYTES - 12) / 2)}).to_string();
+        assert_eq!(body.len(), MAX_BODY_BYTES - 1);
+        assert!(body_fits(&(body.clone() + " ")));
+        assert!(!body_fits(&(body + "é")));
     }
 }

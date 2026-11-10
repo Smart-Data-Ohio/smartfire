@@ -86,7 +86,7 @@ async fn rpc_token(
     let reply = app.anonymous().send(req).await;
     (
         reply.status.as_u16(),
-        serde_json::from_slice(&reply.body).unwrap(),
+        if reply.body.is_empty() { Value::Null } else { serde_json::from_slice(&reply.body).unwrap() },
     )
 }
 async fn rpc(app: &TestApp, method: &str, p: Value) -> Value {
@@ -191,12 +191,25 @@ async fn mcp_events_discovery_and_protocol_errors() {
     .await
     .1;
     assert!(old["result"]["capabilities"].get("extensions").is_none());
-    assert_eq!(
-        rpc_token(&app, "events/list", json!({}), SECRET, "2025-03-26", None)
+    assert_eq!(modern["result"]["capabilities"]["events"], json!({}));
+    for version in ["2025-03-26", "2025-11-25"] {
+        let init = rpc_token(
+            &app,
+            "initialize",
+            json!({"protocolVersion":version}),
+            SECRET,
+            version,
+            None,
+        )
+        .await
+        .1;
+        assert_eq!(init["result"]["capabilities"]["events"], json!({}));
+        let list = rpc_token(&app, "events/list", json!({}), SECRET, version, None)
             .await
-            .1["error"]["code"],
-        -32601
-    );
+            .1;
+        assert_eq!(list["result"]["events"].as_array().unwrap().len(), 3);
+        assert!(list["result"].get("resultType").is_none());
+    }
     let list = rpc(&app, "events/list", json!({})).await;
     assert_eq!(
         list["result"]["events"]
@@ -213,8 +226,7 @@ async fn mcp_events_discovery_and_protocol_errors() {
         assert_eq!(v["error"]["data"]["value"], value);
     }
     let unknown = rpc(&app, "events/unsubscribe", params("unknown")).await;
-    assert_eq!(unknown["error"]["code"], -32023);
-    assert_eq!(unknown["error"]["data"]["kind"], "subscription");
+    assert_eq!(unknown["result"], json!({"resultType":"complete"}));
     let mismatch = rpc_token(
         &app,
         "events/subscribe",
@@ -273,8 +285,8 @@ async fn mcp_events_verification_refresh_rotation_and_unsubscribe() {
     let v = rpc(&app, "events/unsubscribe", params("mention")).await;
     assert_eq!(v["result"], json!({"resultType":"complete"}));
     assert_eq!(
-        rpc(&app, "events/unsubscribe", params("mention")).await["error"]["code"],
-        -32023
+        rpc(&app, "events/unsubscribe", params("mention")).await["result"],
+        json!({"resultType":"complete"})
     );
 }
 #[tokio::test]
@@ -282,7 +294,7 @@ async fn mcp_events_failed_echo_persists_nothing_and_invalid_params_do_not_post(
     let (app, server, _) = setup().await;
     server.replace_routes(vec![Route::new("POST", "*", "/hook", 200).body("{}")]);
     let v = rpc(&app, "events/subscribe", params("mention")).await;
-    assert_eq!(v["error"]["code"], -32027);
+    assert_eq!(v["error"]["code"], -32015);
     assert_eq!(v["error"]["data"]["reason"], "challenge_failed");
     assert_eq!(
         app.db()
@@ -364,7 +376,8 @@ async fn mcp_events_mention_matches_polling_and_ack_does_not_cancel_delivery() {
     let body: Value = serde_json::from_slice(&event.body).unwrap();
     assert_eq!(body["data"], expected);
     assert_eq!(body["name"], "mention");
-    assert_eq!(body["eventId"], eid.to_string());
+    assert_eq!(body["eventId"], event.header("webhook-id").unwrap());
+    assert!(body["eventId"].as_str().unwrap().starts_with("msg_"));
     assert_eq!(event.header("X-MCP-Subscription-Id"), Some(id.as_str()));
     assert_eq!(status(&app).await[0], "delivered");
     app.db()
@@ -456,7 +469,12 @@ async fn mcp_events_retries_keep_id_and_sweep_recovers_stranded_work() {
         r[1].header("webhook-timestamp"),
         r[2].header("webhook-timestamp")
     );
+    signed(&r[1], KEY);
     signed(&r[2], KEY);
+    assert_eq!(r[1].body, r[2].body);
+    let body: Value = serde_json::from_slice(&r[2].body).unwrap();
+    assert_eq!(body["eventId"], r[2].header("webhook-id").unwrap());
+    assert!(body["eventId"].as_str().unwrap().starts_with("msg_"));
     let v = rpc(&app, "events/subscribe", params("mention")).await;
     assert!(v["result"]["deliveryStatus"]["lastDeliveryAt"].is_string());
     assert!(v["result"]["deliveryStatus"]["lastError"].is_null());
@@ -480,7 +498,7 @@ async fn mcp_events_permanent_and_exhausted_failures() {
     }
 }
 #[tokio::test]
-async fn mcp_events_grant_revoked_suppresses_and_dead_credential_terminates_once() {
+async fn mcp_events_grant_revoked_suppresses_and_dead_credential_deletes_silently() {
     for credential in [false, true] {
         let (app, server, _) = setup().await;
         subscribe(&app, "mention").await;
@@ -507,15 +525,40 @@ async fn mcp_events_grant_revoked_suppresses_and_dead_credential_terminates_once
             deliver(&app, job).await;
         }
         let r = server.received();
-        assert_eq!(r.len(), if credential { 2 } else { 1 });
+        assert_eq!(r.len(), 1);
         if credential {
-            signed(&r[1], KEY);
             assert_eq!(
-                serde_json::from_slice::<Value>(&r[1].body).unwrap(),
-                json!({"type":"terminated","error":{"code":-32024,"message":"Access revoked"}})
+                app.db()
+                    .read(|c| Ok(c.query_row(
+                        "SELECT COUNT(*) FROM mcp_event_subscriptions",
+                        [],
+                        |r| r.get::<_, i64>(0)
+                    )?))
+                    .await
+                    .unwrap(),
+                0
+            );
+            assert!(jobs(&app).await.is_empty());
+            // A revoked bearer fails authentication before the Events dispatcher.
+            assert_eq!(
+                rpc_token(
+                    &app,
+                    "events/subscribe",
+                    params("mention"),
+                    SECRET,
+                    "2026-07-28",
+                    None
+                )
+                .await
+                .0,
+                401
             );
         } else {
             assert_eq!(status(&app).await[0], "suppressed");
+            assert_eq!(
+                rpc(&app, "events/subscribe", params("mention")).await["error"]["code"],
+                -32024
+            );
         }
     }
 }
@@ -543,7 +586,8 @@ async fn mcp_events_limit_access_and_credential_ownership() {
     )
     .await
     .1;
-    assert_eq!(v["error"]["code"], -32023);
+    assert_eq!(v["result"], json!({"resultType":"complete"}));
+    assert_eq!(subscribe(&app, "mention").await.len(), 32);
     for i in 1..20 {
         let mut p = params("mention");
         p["delivery"]["url"] = json!(format!("http://events.example:8080/hook?{i}"));
@@ -605,13 +649,14 @@ async fn mcp_events_replay_is_bounded_and_watermark_waits_for_earlier_deliveries
     let r = server.received();
     assert_eq!(r.len(), 3);
     let b: Value = serde_json::from_slice(&r[2].body).unwrap();
-    assert_eq!(b["eventId"], e1.to_string());
+    assert_eq!(b["data"]["id"], e1);
+    assert_eq!(b["eventId"], r[2].header("webhook-id").unwrap());
     assert_eq!(b["cursor"], e2.to_string());
-    assert_ne!(b["eventId"], old.to_string());
+    assert_ne!(b["data"]["id"], old);
 }
 
 #[tokio::test]
-async fn mcp_events_oauth_refresh_keeps_subscription_and_revocation_or_block_terminates() {
+async fn mcp_events_oauth_refresh_keeps_subscription_and_revocation_or_block_deletes_silently() {
     use campfire_db::models::oauth::{OAuthConnection, TokenKind};
     use sha2::{Digest, Sha256};
     for reason in ["revoked", "blocked", "expired"] {
@@ -709,12 +754,7 @@ async fn mcp_events_oauth_refresh_keeps_subscription_and_revocation_or_block_ter
         clock.advance(jiff::SignedDuration::from_secs(1));
         deliver(&app, pending[0].clone()).await;
         let r = server.received();
-        assert_eq!(r.len(), 2);
-        signed(&r[1], KEY);
-        assert_eq!(
-            serde_json::from_slice::<Value>(&r[1].body).unwrap()["type"],
-            "terminated"
-        );
+        assert_eq!(r.len(), 1);
         assert_eq!(
             app.db()
                 .read(|c| Ok(c.query_row(
@@ -778,7 +818,8 @@ async fn mcp_events_direct_message_and_expired_subscription() {
     assert_eq!(r.len(), 2);
     let body: Value = serde_json::from_slice(&r[1].body).unwrap();
     assert_eq!(body["name"], "direct_message");
-    assert_eq!(body["eventId"], e.to_string());
+    assert_eq!(body["data"]["id"], e);
+    assert_eq!(body["eventId"], r[1].header("webhook-id").unwrap());
     signed(&r[1], KEY);
     subscribe(&app, "mention").await;
     let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
@@ -809,13 +850,13 @@ async fn mcp_events_guard_blocks_private_hosts_and_never_follows_redirects() {
     let mut p = params("mention");
     p["delivery"]["url"] = json!("http://127.0.0.1/hook");
     let v = rpc(&app, "events/subscribe", p).await;
-    assert_eq!(v["error"]["code"], -32027);
+    assert_eq!(v["error"]["code"], -32015);
     assert!(server.received().is_empty());
     server.replace_routes(vec![
         Route::new("POST", "*", "/hook", 302).header("Location", "http://events.example/redirect"),
     ]);
     let v = rpc(&app, "events/subscribe", params("mention")).await;
-    assert_eq!(v["error"]["code"], -32027);
+    assert_eq!(v["error"]["code"], -32015);
     assert_eq!(server.received().len(), 1);
 }
 
@@ -888,4 +929,101 @@ async fn mcp_events_production_rejects_http_callbacks() {
             .unwrap(),
         0
     );
+}
+
+#[tokio::test]
+async fn mcp_events_legacy_client_subscribes_receives_and_unsubscribes_without_name_header() {
+    for version in ["2025-03-26", "2025-11-25", "2026-07-28"] {
+        let (app, server, _) = setup().await;
+        let mismatch = rpc_token(
+            &app,
+            "events/subscribe",
+            params("mention"),
+            SECRET,
+            version,
+            Some("reply"),
+        )
+        .await;
+        assert_eq!(mismatch.0, 400);
+        assert_eq!(mismatch.1["error"]["code"], -32020);
+        let result = rpc_token(
+            &app,
+            "events/subscribe",
+            params("mention"),
+            SECRET,
+            version,
+            None,
+        )
+        .await
+        .1;
+        assert!(result["result"]["id"].is_string(), "{result}");
+        assert_eq!(
+            result["result"].get("resultType").is_some(),
+            version == "2026-07-28"
+        );
+        let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+        publish(&app, m).await;
+        deliver(&app, jobs(&app).await.remove(0)).await;
+        let received = server.received();
+        assert_eq!(received.len(), 2);
+        signed(&received[0], KEY);
+        signed(&received[1], KEY);
+        let body: Value = serde_json::from_slice(&received[1].body).unwrap();
+        assert_eq!(body["name"], "mention");
+        for name in ["mention", "mention", "unknown"] {
+            let result = rpc_token(
+                &app,
+                "events/unsubscribe",
+                params(name),
+                SECRET,
+                version,
+                None,
+            )
+            .await
+            .1;
+            assert_eq!(
+                result["result"],
+                if version == "2026-07-28" {
+                    json!({"resultType":"complete"})
+                } else {
+                    json!({})
+                }
+            );
+        }
+        assert!(jobs(&app).await.is_empty());
+    }
+}
+
+#[tokio::test]
+async fn mcp_events_urls_have_distinct_event_ids_for_the_same_occurrence() {
+    let (app, server, _) = setup().await;
+    subscribe(&app, "mention").await;
+    let mut hook = Route::new("POST", "*", "/second", 200);
+    hook.echo_body = true;
+    server.replace_routes(vec![Route::new("POST", "*", "/hook", 200), hook]);
+    let mut second = params("mention");
+    second["delivery"]["url"] = json!("http://events.example:8080/second");
+    assert!(rpc(&app, "events/subscribe", second).await["result"]["id"].is_string());
+    let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    let eid = publish(&app, m).await;
+    let pending = jobs(&app).await;
+    assert_eq!(pending.len(), 2);
+    for job in pending {
+        deliver(&app, job).await;
+    }
+    let received = server.received();
+    assert_eq!(received.len(), 4);
+    let bodies: Vec<Value> = received[2..]
+        .iter()
+        .map(|r| {
+            signed(r, KEY);
+            let body: Value = serde_json::from_slice(&r.body).unwrap();
+            assert_eq!(body["eventId"], r.header("webhook-id").unwrap());
+            assert!(body["eventId"].as_str().unwrap().starts_with("msg_"));
+            assert_eq!(body["data"]["id"], eid);
+            body
+        })
+        .collect();
+    assert_ne!(bodies[0]["eventId"], bodies[1]["eventId"]);
+    assert_eq!(bodies[0]["data"], bodies[1]["data"]);
 }

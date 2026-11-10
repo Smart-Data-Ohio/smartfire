@@ -1,4 +1,4 @@
-use super::{rpc_error, rpc_result};
+use super::{modern_result, rpc_error, rpc_result};
 use crate::controllers::presenters::page::db_error;
 use crate::{app::AppCtx, concerns::CurrentAgent};
 use campfire_db::models::mcp_events::{self as domain, Grant, GrantResult};
@@ -10,7 +10,7 @@ fn error(c: &mut Ctx, id: Value, code: i64, message: &str, data: Option<Value>) 
 }
 pub fn descriptors() -> Value {
     let events=[("mention","A message mentions the agent."),("reply","A reply to the agent's message."),("direct_message","A direct message to the agent.")].into_iter().map(|(name,description)|json!({"name":name,"description":description,"delivery":["webhook"],"inputSchema":{"type":"object","properties":{},"additionalProperties":false},"payloadSchema":{"type":"object","required":["id","event_type","outcome","created_at","message"],"properties":{"id":{"type":"integer"},"event_type":{"type":"string","enum":["mention","reply","direct_message"]},"outcome":{"type":"string"},"created_at":{"type":"string","format":"date-time"},"room":{"type":"object"},"actor":{"type":"object"},"message":{"type":"object"}}}})).collect::<Vec<_>>();
-    json!({"resultType":"complete","events":events})
+    json!({"events":events})
 }
 pub async fn dispatch(
     c: &mut Ctx,
@@ -18,9 +18,10 @@ pub async fn dispatch(
     method: &str,
     p: &Value,
     identity: CurrentAgent,
+    modern: bool,
 ) -> Result {
     if method == "events/list" {
-        return Ok(rpc_result(c, id, descriptors()));
+        return Ok(rpc_result(c, id, modern_result(descriptors(), modern)));
     }
     if matches!(method, "events/poll" | "events/stream") {
         return error(
@@ -75,23 +76,12 @@ pub async fn dispatch(
     let url = url.to_owned();
     let credential = identity.credential_id;
     if method == "events/unsubscribe" {
-        let deleted = c
-            .app()
+        c.app()
             .db
             .write(move |tx| domain::unsubscribe(tx, credential, &url, &name))
             .await
             .map_err(db_error)?;
-        return if deleted {
-            Ok(rpc_result(c, id, json!({"resultType":"complete"})))
-        } else {
-            error(
-                c,
-                id,
-                -32023,
-                "NotFound",
-                Some(json!({"kind":"subscription"})),
-            )
-        };
+        return Ok(rpc_result(c, id, modern_result(json!({}), modern)));
     }
     let Some(secret) = p["delivery"]["secret"]
         .as_str()
@@ -185,7 +175,7 @@ pub async fn dispatch(
             return error(
                 c,
                 id,
-                -32027,
+                -32015,
                 "CallbackEndpointError",
                 Some(json!({"reason":reason.as_str()})),
             );
@@ -212,9 +202,12 @@ pub async fn dispatch(
         GrantResult::Granted(s, truncated) => Ok(rpc_result(
             c,
             id,
-            s.result(
-                campfire_db::Timestamp::from_jiff(c.app().clock.now()),
-                truncated,
+            modern_result(
+                s.result(
+                    campfire_db::Timestamp::from_jiff(c.app().clock.now()),
+                    truncated,
+                ),
+                modern,
             ),
         )),
         GrantResult::Forbidden => error(c, id, -32024, "Forbidden", None),
