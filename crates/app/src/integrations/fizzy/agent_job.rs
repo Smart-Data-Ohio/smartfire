@@ -80,7 +80,7 @@ fn approval(tx: &Tx<'_>, id: i64) -> campfire_db::Result<Option<Approval>> {
     }
     Ok(approval)
 }
-fn claim(tx: &Tx<'_>, a: &Approval) -> campfire_db::Result<Option<i64>> {
+fn claim(tx: &mut Tx<'_>, a: &Approval) -> campfire_db::Result<Option<i64>> {
     use campfire_db::models::agent_delivery::{AgentEvent, NewEvent};
     let exists: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM agent_events WHERE agent_id=?1 AND event_type='fizzy_action_completed' AND (agent_approval_id=?2 OR CAST(json_extract(metadata,'$.approval_id') AS INTEGER)=?2))",params![a.agent,a.id],|r|r.get(0))?;
     if exists {
@@ -98,6 +98,9 @@ fn claim(tx: &Tx<'_>, a: &Approval) -> campfire_db::Result<Option<i64>> {
             ..Default::default()
         },
     )?;
+    if action_claims::suppress_paused_execution(tx, &event, FIZZY)? {
+        return Ok(None);
+    }
     Ok(Some(event.id))
 }
 fn finish(

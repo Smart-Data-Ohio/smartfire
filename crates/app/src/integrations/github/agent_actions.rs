@@ -94,13 +94,19 @@ impl Approval {
 
 pub async fn perform(db: &Database, accounts: &Accounts, approval_id: i64) -> Result<()> {
     let state = db
-        .read(move |conn| {
-            let Some(approval) =
+        .write(move |tx| {
+            let conn = tx.conn();
+            let Some(mut approval) =
                 Approval::find(conn, approval_id)?.filter(|a| a.action.starts_with("github."))
             else {
                 return Ok(None);
             };
             if approval.already_executed(conn)? {
+                return Ok(None);
+            }
+            if campfire_db::Agent::find(conn, approval.agent_id)?.is_some_and(|a| a.paused()) {
+                approval.actor_id = approval.actor(conn)?.map(|actor| actor.id);
+                insert_event(tx, &approval, "running", None, None)?;
                 return Ok(None);
             }
             let reason = approval.premature_failure(conn)?;
@@ -266,6 +272,11 @@ fn insert_event(
         Err(error) if error.is_record_not_unique() => return Ok(None),
         Err(error) => return Err(error),
     };
+    if status == "running"
+        && action_claims::suppress_paused_execution(tx, &event, action_claims::GITHUB)?
+    {
+        return Ok(None);
+    }
     delivery::enqueue_delivered_webhook(tx, &event);
     let id = event.id;
     Ok(Some(id))

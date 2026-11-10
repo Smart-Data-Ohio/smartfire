@@ -34,6 +34,27 @@ impl campfire_db::Job for EventWebhookJob {
     const CLASS: &'static str = "Agent::EventWebhookJob";
 }
 
+/// A suppressed ledger row is terminal, never permission to perform an external write.
+/// Call in the writer transaction that creates the execution claim.
+pub fn suppress_paused_execution(
+    tx: &mut Tx<'_>,
+    event: &campfire_db::models::agent_delivery::AgentEvent,
+    integration: Integration,
+) -> campfire_db::Result<bool> {
+    if !campfire_db::models::agent_delivery::suppress_if_paused(tx, event.id)? {
+        return Ok(false);
+    }
+    let mut metadata = event.metadata.clone();
+    metadata["status"] = "failed".into();
+    metadata["message"] = "agent_paused".into();
+    if rewrite_running(tx, event.id, metadata, Some("agent_paused".into()))?
+        && let Err(error) = record_execution_audit(tx, event.id, integration)
+    {
+        tracing::error!(%error, event_id = event.id, "Paused integration execution audit failed");
+    }
+    Ok(true)
+}
+
 /// Rails' strict age cutoff and per-row recovery. A malformed/deleted row or a failed
 /// transaction cannot prevent the remaining claims from being recovered.
 pub async fn recover_stuck_claims(

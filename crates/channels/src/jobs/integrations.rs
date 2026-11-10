@@ -96,9 +96,14 @@ pub async fn deliver_webhook_with_network(
     let db = app.db.clone();
     let storage = app.storage.clone();
     let base = app.config.mail.app_url.clone();
-    let (bot, room, url, payload, secret) = app
+    let prepared = app
         .db
-        .read(move |conn| {
+        .write(move |tx| {
+            let conn = tx.conn();
+            let paused: bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM agents WHERE user_id=? AND paused_at IS NOT NULL AND suspended_at IS NULL)", [bot_id], |r| r.get(0))?;
+            if paused {
+                return Err(campfire_db::Error::Other("agent_paused".into()));
+            }
             if campfire_db::models::agent_access::is_personal_user(conn, bot_id)? {
                 return Ok(None);
             }
@@ -135,8 +140,15 @@ pub async fn deliver_webhook_with_network(
             )?;
             Ok(Some((bot, room, webhook.url, payload, secret)))
         })
-        .await?
-        .context("undefined method 'deliver' for nil (the bot has no webhook)")?;
+        .await;
+    let prepared = match prepared {
+        Err(campfire_db::Error::Other(reason)) if reason == "agent_paused" => {
+            return Ok(Outcome::Done);
+        }
+        result => result?,
+    };
+    let (bot, room, url, payload, secret) =
+        prepared.context("undefined method 'deliver' for nil (the bot has no webhook)")?;
 
     let delivery = webhook::deliver_signed(
         network,
