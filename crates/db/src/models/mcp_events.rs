@@ -9,6 +9,56 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::time::Duration;
 
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Arguments {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    room_ids: Option<Vec<i64>>,
+}
+impl Arguments {
+    pub fn parse(value: &Value) -> Option<Self> {
+        let object = value.as_object()?;
+        if object.keys().any(|key| key != "roomIds") {
+            return None;
+        }
+        let room_ids = match object.get("roomIds") {
+            None => None,
+            Some(value) => {
+                let values = value.as_array()?;
+                if !(1..=50).contains(&values.len()) {
+                    return None;
+                }
+                let mut ids = values
+                    .iter()
+                    .map(|v| v.as_i64().filter(|n| *n > 0))
+                    .collect::<Option<Vec<_>>>()?;
+                ids.sort_unstable();
+                if ids.windows(2).any(|pair| pair[0] == pair[1]) {
+                    return None;
+                }
+                Some(ids)
+            }
+        };
+        Some(Self { room_ids })
+    }
+    fn matches(&self, room: Option<i64>) -> bool {
+        self.room_ids
+            .as_ref()
+            .is_none_or(|ids| room.is_some_and(|id| ids.binary_search(&id).is_ok()))
+    }
+    fn from_row(r: &Row<'_>) -> rusqlite::Result<Self> {
+        let value: Value =
+            serde_json::from_str(&r.get::<_, String>("arguments")?).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })?;
+        Self::parse(&value).ok_or(rusqlite::Error::InvalidQuery)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Subscription {
     pub id: String,
@@ -56,8 +106,8 @@ impl Subscription {
     }
 }
 
-pub fn subscription_id(credential: i64, url: &str, name: &str) -> String {
-    let key = json!([credential, url, name, {}]).to_string();
+pub fn subscription_id(credential: i64, url: &str, name: &str, arguments: &Arguments) -> String {
+    let key = json!([credential, url, name, arguments]).to_string();
     hex::encode(&Sha256::digest(key.as_bytes())[..16])
 }
 pub fn nonce(prefix: &str) -> String {
@@ -94,8 +144,23 @@ pub fn principal_live(
         None => Ok(true),
     }
 }
-pub fn can_subscribe(conn: &Connection, agent: i64) -> Result<bool> {
-    super::agent_access::has_capability_anywhere(conn, agent, "read_messages")
+pub fn can_subscribe(conn: &Connection, agent: i64, arguments: &Arguments) -> Result<bool> {
+    let Some(rooms) = &arguments.room_ids else {
+        return super::agent_access::has_capability_anywhere(conn, agent, "read_messages");
+    };
+    let capability = super::agent_access::event_capability_sql("?1", "r.id", "'read_messages'");
+    for room in rooms {
+        if !exists(
+            conn,
+            &format!(
+                "SELECT 1 FROM rooms r JOIN memberships member ON member.room_id=r.id JOIN agents a ON a.user_id=member.user_id WHERE a.id=?1 AND r.id=?2 AND ({capability})"
+            ),
+            params![agent, room],
+        )? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 pub fn endpoint_verified(conn: &Connection, credential: i64, url: &str) -> Result<bool> {
     exists(
@@ -122,6 +187,7 @@ pub struct Grant {
     pub name: String,
     pub url: String,
     pub secret: String,
+    pub arguments: Arguments,
     pub ttl_ms: i64,
     pub cursor: Option<i64>,
     pub max_age_ms: i64,
@@ -136,8 +202,8 @@ pub fn subscribe(
     grant: Grant,
     encryption: &rails_compat::ar_encryption::ArEncryption,
 ) -> Result<GrantResult> {
-    let id = subscription_id(grant.credential, &grant.url, &grant.name);
-    if !can_subscribe(tx.conn(), grant.agent)?
+    let id = subscription_id(grant.credential, &grant.url, &grant.name, &grant.arguments);
+    if !can_subscribe(tx.conn(), grant.agent, &grant.arguments)?
         || !principal_live(
             tx.conn(),
             grant.credential,
@@ -166,7 +232,7 @@ pub fn subscribe(
             != grant.secret;
         tx.conn().execute("UPDATE mcp_event_subscriptions SET secret=?,previous_secret=CASE WHEN ? THEN secret ELSE previous_secret END,previous_secret_expires_at=CASE WHEN ? THEN ? ELSE previous_secret_expires_at END,refresh_before=?,updated_at=? WHERE id=?",params![encrypted,changed,changed,tx.now().since(SignedDuration::from_mins(5)),refresh,tx.now(),id])?;
     } else {
-        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,'{}',?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,grant.url,encrypted,refresh,tx.now(),watermark,tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,json!(grant.arguments).to_string(),grant.url,encrypted,refresh,tx.now(),watermark,tx.now(),tx.now()])?;
     }
     let mut truncated = false;
     if let Some(cursor) = grant.cursor {
@@ -175,12 +241,21 @@ pub fn subscribe(
         let events = query_all(
             tx.conn(),
             &format!(
-                "SELECT e.id,e.created_at FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id WHERE e.agent_id=? AND e.event_type=? AND e.id>? AND e.outcome IN ('delivered','acknowledged') AND ({auth}) ORDER BY e.id"
+                "SELECT e.id,e.created_at,e.room_id FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id WHERE e.agent_id=? AND e.event_type=? AND e.id>? AND e.outcome IN ('delivered','acknowledged') AND ({auth}) ORDER BY e.id"
             ),
             params![grant.agent, grant.name, cursor],
-            |r| Ok((r.get::<_, i64>(0)?, r.get::<_, Timestamp>(1)?)),
+            |r| {
+                Ok((
+                    r.get::<_, i64>(0)?,
+                    r.get::<_, Timestamp>(1)?,
+                    r.get::<_, Option<i64>>(2)?,
+                ))
+            },
         )?;
-        for (event, at) in events {
+        for (event, at, room) in events {
+            if !grant.arguments.matches(room) {
+                continue;
+            }
             if at < cutoff {
                 truncated = true;
             } else {
@@ -193,10 +268,19 @@ pub fn subscribe(
         truncated,
     ))
 }
-pub fn unsubscribe(tx: &Tx<'_>, credential: i64, url: &str, name: &str) -> Result<bool> {
+pub fn unsubscribe(
+    tx: &Tx<'_>,
+    credential: i64,
+    url: &str,
+    name: &str,
+    arguments: &Arguments,
+) -> Result<bool> {
     Ok(tx.conn().execute(
         "DELETE FROM mcp_event_subscriptions WHERE id=? AND agent_credential_id=?",
-        params![subscription_id(credential, url, name), credential],
+        params![
+            subscription_id(credential, url, name, arguments),
+            credential
+        ],
     )? == 1)
 }
 
@@ -252,12 +336,14 @@ fn enqueue(tx: &mut Tx<'_>, subscription: &str, event: i64) -> Result<()> {
 pub fn fan_out(tx: &mut Tx<'_>, event: &super::agent_delivery::AgentEvent) -> Result<()> {
     let ids = query_all(
         tx.conn(),
-        "SELECT id FROM mcp_event_subscriptions WHERE agent_id=? AND name=? AND refresh_before>? AND verified_at IS NOT NULL",
+        "SELECT id,arguments FROM mcp_event_subscriptions WHERE agent_id=? AND name=? AND refresh_before>? AND verified_at IS NOT NULL",
         params![event.agent_id, event.event_type, tx.now()],
-        |r| r.get::<_, String>(0),
+        |r| Ok((r.get::<_, String>(0)?, Arguments::from_row(r)?)),
     )?;
-    for id in ids {
-        enqueue(tx, &id, event.id)?;
+    for (id, arguments) in ids {
+        if arguments.matches(event.room_id) {
+            enqueue(tx, &id, event.id)?;
+        }
     }
     Ok(())
 }

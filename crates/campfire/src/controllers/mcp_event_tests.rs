@@ -86,7 +86,11 @@ async fn rpc_token(
     let reply = app.anonymous().send(req).await;
     (
         reply.status.as_u16(),
-        if reply.body.is_empty() { Value::Null } else { serde_json::from_slice(&reply.body).unwrap() },
+        if reply.body.is_empty() {
+            Value::Null
+        } else {
+            serde_json::from_slice(&reply.body).unwrap()
+        },
     )
 }
 async fn rpc(app: &TestApp, method: &str, p: Value) -> Value {
@@ -593,7 +597,7 @@ async fn mcp_events_limit_access_and_credential_ownership() {
         p["delivery"]["url"] = json!(format!("http://events.example:8080/hook?{i}"));
         app.db().write(move |tx| {
             let c:i64=tx.conn().query_row("SELECT id FROM agent_credentials WHERE name='HTTP contract'",[],|r|r.get(0))?;
-            let id=domain::subscription_id(c,p["delivery"]["url"].as_str().unwrap(),"mention");
+            let id=domain::subscription_id(c,p["delivery"]["url"].as_str().unwrap(),"mention", &domain::Arguments::default());
             tx.conn().execute("INSERT INTO mcp_event_subscriptions SELECT ?,agent_id,agent_credential_id,name,arguments,?,secret,previous_secret,previous_secret_expires_at,refresh_before,verified_at,watermark_event_id,last_delivery_at,last_error,failed_since,created_at,updated_at FROM mcp_event_subscriptions LIMIT 1",rusqlite::params![id,p["delivery"]["url"].as_str().unwrap()])?;Ok(())
         }).await.unwrap();
     }
@@ -1026,4 +1030,177 @@ async fn mcp_events_urls_have_distinct_event_ids_for_the_same_occurrence() {
         .collect();
     assert_ne!(bodies[0]["eventId"], bodies[1]["eventId"]);
     assert_eq!(bodies[0]["data"], bodies[1]["data"]);
+}
+
+#[tokio::test]
+async fn mcp_events_room_filters_validate_access_canonicalize_and_limit_live_and_replay() {
+    let (app, server, _) = setup().await;
+    let (inside, outside, denied, no_membership) = app
+        .db()
+        .write(|tx| {
+            let inside = Room::create_for(
+                tx,
+                campfire_db::RoomType::Closed,
+                Some("Inside"),
+                DAVID,
+                &[DAVID, BENDER],
+            )?
+            .id;
+            let outside = Room::create_for(
+                tx,
+                campfire_db::RoomType::Closed,
+                Some("Outside"),
+                DAVID,
+                &[DAVID, BENDER],
+            )?
+            .id;
+            let denied = Room::create_for(
+                tx,
+                campfire_db::RoomType::Closed,
+                Some("No grant"),
+                DAVID,
+                &[DAVID, BENDER],
+            )?
+            .id;
+            let no_membership = Room::create_for(
+                tx,
+                campfire_db::RoomType::Closed,
+                Some("No membership"),
+                DAVID,
+                &[DAVID],
+            )?
+            .id;
+            for room in [inside, outside, no_membership] {
+                campfire_db::AgentGrant::create(
+                    tx,
+                    campfire_db::NewGrant {
+                        agent_id: AGENT,
+                        room_id: Some(room),
+                        capability: "read_messages".into(),
+                        granted_by_id: DAVID,
+                        ..Default::default()
+                    },
+                )?;
+            }
+            Ok((inside, outside, denied, no_membership))
+        })
+        .await
+        .unwrap();
+    for room in [denied, no_membership, i64::MAX] {
+        let mut p = params("mention");
+        p["arguments"] = json!({"roomIds":[room]});
+        assert_eq!(
+            rpc(&app, "events/subscribe", p).await["error"]["code"],
+            -32024
+        );
+    }
+    for arguments in [
+        json!({"roomIds":[]}),
+        json!({"roomIds":[inside,inside]}),
+        json!({"roomIds":[0]}),
+        json!({"roomIds":[-1]}),
+        json!({"roomIds":[1.5]}),
+        json!({"roomIds":["1"]}),
+        json!({"roomIds":null}),
+        json!({"roomIds":"1"}),
+        json!({"roomIds":(1..=51).collect::<Vec<_>>()}),
+        json!({"roomIds":[inside],"unknown":true}),
+        json!([]),
+    ] {
+        let mut p = params("mention");
+        p["arguments"] = arguments;
+        assert_eq!(
+            rpc(&app, "events/subscribe", p).await["error"]["code"],
+            -32602
+        );
+    }
+    assert!(server.received().is_empty());
+    let list = rpc(&app, "events/list", json!({})).await;
+    for event in list["result"]["events"].as_array().unwrap() {
+        let schema = &event["inputSchema"];
+        assert_eq!(schema["additionalProperties"], false);
+        assert_eq!(
+            schema["properties"]["roomIds"]["items"],
+            json!({"type":"integer","minimum":1})
+        );
+        assert_eq!(schema["properties"]["roomIds"]["minItems"], 1);
+        assert_eq!(schema["properties"]["roomIds"]["maxItems"], 50);
+        assert_eq!(schema["properties"]["roomIds"]["uniqueItems"], true);
+    }
+    let mut p = params("mention");
+    p["arguments"] = json!({"roomIds":[inside,ALL_TALK]});
+    let first = rpc(&app, "events/subscribe", p.clone()).await;
+    assert!(first["result"]["id"].is_string(), "{first}");
+    p["arguments"] = json!({"roomIds":[ALL_TALK,inside]});
+    assert_eq!(
+        first["result"]["id"],
+        rpc(&app, "events/subscribe", p.clone()).await["result"]["id"]
+    );
+    let stored: Value = app
+        .db()
+        .read(|c| {
+            Ok(
+                c.query_row("SELECT arguments FROM mcp_event_subscriptions", [], |r| {
+                    r.get::<_, Value>(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    let mut sorted = vec![inside, ALL_TALK];
+    sorted.sort_unstable();
+    assert_eq!(stored, json!({"roomIds":sorted}));
+    let mut events = vec![];
+    for room in [outside, inside, ALL_TALK] {
+        let m = app
+            .db()
+            .write(move |tx| {
+                Ok(Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: room,
+                        creator_id: DAVID,
+                        markdown_source: Some("Hey @[Bender Bot]".into()),
+                        ..Default::default()
+                    },
+                )?
+                .id)
+            })
+            .await
+            .unwrap();
+        events.push(publish(&app, m).await);
+    }
+    let pending = jobs(&app).await;
+    assert_eq!(pending.len(), 2);
+    for job in pending {
+        deliver(&app, job).await;
+    }
+    let received = server.received();
+    assert_eq!(received.len(), 3);
+    for (r, eid) in received[1..].iter().zip(&events[1..]) {
+        signed(r, KEY);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&r.body).unwrap()["data"]["id"],
+            *eid
+        );
+    }
+    p["delivery"].as_object_mut().unwrap().remove("secret");
+    assert_eq!(
+        rpc(&app, "events/unsubscribe", p.clone()).await["result"],
+        json!({"resultType":"complete"})
+    );
+    assert_eq!(
+        app.db()
+            .read(|c| Ok(
+                c.query_row("SELECT COUNT(*) FROM mcp_event_subscriptions", [], |r| r
+                    .get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        0
+    );
+    p["delivery"]["secret"] = json!(KEY);
+    p["cursor"] = json!("0");
+    assert!(rpc(&app, "events/subscribe", p).await["result"]["id"].is_string());
+    assert_eq!(jobs(&app).await.len(), 2);
 }

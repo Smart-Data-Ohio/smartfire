@@ -1,7 +1,7 @@
 use super::{modern_result, rpc_error, rpc_result};
 use crate::controllers::presenters::page::db_error;
 use crate::{app::AppCtx, concerns::CurrentAgent};
-use campfire_db::models::mcp_events::{self as domain, Grant, GrantResult};
+use campfire_db::models::mcp_events::{self as domain, Arguments, Grant, GrantResult};
 use campfire_kit::{Ctx, Result, StatusCode};
 use serde_json::{Value, json};
 
@@ -9,7 +9,7 @@ fn error(c: &mut Ctx, id: Value, code: i64, message: &str, data: Option<Value>) 
     Ok(rpc_error(c, id, code, message, data, StatusCode::OK))
 }
 pub fn descriptors() -> Value {
-    let events=[("mention","A message mentions the agent."),("reply","A reply to the agent's message."),("direct_message","A direct message to the agent.")].into_iter().map(|(name,description)|json!({"name":name,"description":description,"delivery":["webhook"],"inputSchema":{"type":"object","properties":{},"additionalProperties":false},"payloadSchema":{"type":"object","required":["id","event_type","outcome","created_at","message"],"properties":{"id":{"type":"integer"},"event_type":{"type":"string","enum":["mention","reply","direct_message"]},"outcome":{"type":"string"},"created_at":{"type":"string","format":"date-time"},"room":{"type":"object"},"actor":{"type":"object"},"message":{"type":"object"}}}})).collect::<Vec<_>>();
+    let events=[("mention","A message mentions the agent."),("reply","A reply to the agent's message."),("direct_message","A direct message to the agent.")].into_iter().map(|(name,description)|json!({"name":name,"description":description,"delivery":["webhook"],"inputSchema":{"type":"object","properties":{"roomIds":{"type":"array","items":{"type":"integer","minimum":1},"minItems":1,"maxItems":50,"uniqueItems":true,"description":"Only events in these rooms. Requires read_messages access and membership in every listed room. Omit for all readable rooms."}},"additionalProperties":false},"payloadSchema":{"type":"object","required":["id","event_type","outcome","created_at","message"],"properties":{"id":{"type":"integer"},"event_type":{"type":"string","enum":["mention","reply","direct_message"]},"outcome":{"type":"string"},"created_at":{"type":"string","format":"date-time"},"room":{"type":"object"},"actor":{"type":"object"},"message":{"type":"object"}}}})).collect::<Vec<_>>();
     json!({"events":events})
 }
 pub async fn dispatch(
@@ -45,9 +45,9 @@ pub async fn dispatch(
     {
         return error(c, id, -32023, "NotFound", Some(json!({"kind":"event"})));
     }
-    if p.get("arguments").is_some_and(|v| v != &json!({})) {
-        return error(c, id, -32602, "Arguments must be an empty object", None);
-    }
+    let Some(arguments) = Arguments::parse(p.get("arguments").unwrap_or(&json!({}))) else {
+        return error(c, id, -32602, "Invalid event arguments", None);
+    };
     if method == "events/subscribe" && p["delivery"]["mode"] != "webhook" {
         return error(
             c,
@@ -78,7 +78,7 @@ pub async fn dispatch(
     if method == "events/unsubscribe" {
         c.app()
             .db
-            .write(move |tx| domain::unsubscribe(tx, credential, &url, &name))
+            .write(move |tx| domain::unsubscribe(tx, credential, &url, &name, &arguments))
             .await
             .map_err(db_error)?;
         return Ok(rpc_result(c, id, modern_result(json!({}), modern)));
@@ -117,16 +117,17 @@ pub async fn dispatch(
     let agent = identity.agent_id;
     let check_url = url.clone();
     let check_name = name.clone();
+    let check_arguments = arguments.clone();
     let (allowed, limit, verified) = c
         .app()
         .db
         .read(move |conn| {
             Ok((
-                domain::can_subscribe(conn, agent)?,
+                domain::can_subscribe(conn, agent, &check_arguments)?,
                 domain::at_limit(
                     conn,
                     credential,
-                    &domain::subscription_id(credential, &check_url, &check_name),
+                    &domain::subscription_id(credential, &check_url, &check_name, &check_arguments),
                 )?,
                 domain::endpoint_verified(conn, credential, &check_url)?,
             ))
@@ -187,6 +188,7 @@ pub async fn dispatch(
         name,
         url,
         secret: secret.into(),
+        arguments,
         ttl_ms: ttl,
         cursor,
         max_age_ms: max_age,
