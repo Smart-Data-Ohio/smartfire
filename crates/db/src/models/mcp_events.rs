@@ -237,7 +237,7 @@ pub fn subscribe(
             .decrypt(&old.secret)
             .map_err(|e| crate::Error::Other(e.to_string()))?
             != grant.secret;
-        tx.conn().execute("UPDATE mcp_event_subscriptions SET secret=?,previous_secret=CASE WHEN ? THEN secret ELSE previous_secret END,previous_secret_expires_at=CASE WHEN ? THEN ? ELSE previous_secret_expires_at END,refresh_before=?,updated_at=? WHERE id=?",params![encrypted,changed,changed,tx.now().since(SignedDuration::from_mins(5)),refresh,tx.now(),id])?;
+        tx.conn().execute("UPDATE mcp_event_subscriptions SET secret=?,previous_secret=CASE WHEN ? THEN secret ELSE previous_secret END,previous_secret_expires_at=CASE WHEN ? THEN ? ELSE previous_secret_expires_at END,refresh_before=?,watermark_event_id=MIN(watermark_event_id,?),updated_at=? WHERE id=?",params![encrypted,changed,changed,tx.now().since(SignedDuration::from_mins(5)),refresh,grant.cursor.unwrap_or(old.watermark),tx.now(),id])?;
     } else {
         tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,json!(grant.arguments).to_string(),grant.url,encrypted,refresh,grant.verified_at.or(query_one(tx.conn(),"SELECT MAX(verified_at) FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=?",params![grant.credential,grant.url],|r|r.get::<_,Option<Timestamp>>(0))?.flatten()),watermark,tx.now(),tx.now()])?;
     }

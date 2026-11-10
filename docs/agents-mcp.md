@@ -289,7 +289,8 @@ also includes `cursor`, `truncated`, and `deliveryStatus` with `active`,
 A null or absent cursor starts at the agent's current ledger position. A numeric
 string replays readable, delivered message events after that ID. `maxAgeMs` bounds
 replay age, with a maximum and default of 24 hours. `truncated` reports older
-matching events skipped by that bound. Pending live deliveries survive a refresh.
+matching events skipped by that bound. An explicit replay cursor below the stored
+watermark resets it to that replay start. Pending live deliveries survive a refresh.
 
 `events/unsubscribe` accepts the original `name`, canonical `arguments`, and
 `delivery` with `mode: "webhook"` and `url`. It is idempotent. Unknown names and
@@ -374,7 +375,10 @@ eight minutes. HTTP 410, 413, other non-retryable responses, and oversized
 payloads fail without retry. Each request has a seven second total timeout.
 A recovery sweep resumes stranded pending deliveries after two minutes.
 The first attempt saves the complete body. Retries reuse those bytes, including
-after recovery, with a fresh signing timestamp and signature.
+after recovery, with a fresh signing timestamp and signature. If replay adds
+earlier obligations, a retry lowers its cached `cursor` before signing the exact
+bytes sent. The event ID and data stay unchanged. Cursors never increase within
+a cached retry body, so an older body may advertise a conservative cursor.
 
 Failures expose only `connection_refused`, `timeout`, `tls_error`, `http_4xx`,
 `http_5xx`, or `challenge_failed`. Successful delivery clears failure status.

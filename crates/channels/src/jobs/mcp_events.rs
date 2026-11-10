@@ -78,7 +78,20 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
             return Ok(None);
         }
         let body = match d.body.clone() {
-            Some(body) => body,
+            Some(body) => {
+                let cursor = domain::delivery_cursor(tx.conn(), &s.id, Some(d.id))?;
+                let mut cached = cached.expect("parsed cached body");
+                let previous = cached["cursor"].as_str().and_then(|v| v.parse::<i64>().ok()).unwrap_or(0);
+                // Replay can add earlier obligations. Only lower the cursor; event data and ID stay immutable.
+                if cursor < previous {
+                    cached["cursor"] = json!(cursor.to_string());
+                    let body = cached.to_string();
+                    tx.conn().execute("UPDATE mcp_event_deliveries SET body=? WHERE id=? AND attempts=? AND status='pending'", rusqlite::params![body,d.id,d.attempts])?;
+                    body
+                } else {
+                    body
+                }
+            },
             None => {
                 let cursor=domain::delivery_cursor(tx.conn(),&s.id,Some(d.id))?;
                 let body=json!({"eventId":d.webhook_id,"name":event.event_type,"timestamp":event.created_at.jiff().to_string(),"data":data,"cursor":cursor.to_string()}).to_string();
