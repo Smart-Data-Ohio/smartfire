@@ -40,7 +40,8 @@ import {
   withAgent,
   withCreated,
   withList,
-  withPause,
+  withPauseSent,
+  withPauseSettled,
   withRemoved,
   withTokens,
   withUnconfirmed,
@@ -1033,27 +1034,53 @@ export function AgentsSection() {
       current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
     );
 
-  // An agent write, numbered when sent. Its answer lands in the cache (a pause or resume's only
-  // in the agent's pause state, so other writes overlapping it can't undo it); a failure that may have
-  // come after the save (no answer in time, a dropped connection, a server error) marks the agent
-  // unconfirmed there, so whichever opening of its dialog comes next knows.
-  const write = (
-    agentId: number,
-    send: () => Promise<PersonalAgent>,
-    land: typeof withAgent = withAgent,
-  ): Promise<PersonalAgent> => {
+  // A failure that may have come after the save (no answer in time, a dropped connection, a
+  // server error) marks the agent unconfirmed in the cache, so whichever opening of its dialog
+  // comes next knows.
+  const markUnconfirmed = (agentId: number, at: number, failure: Error) => {
+    if (writeMayHaveLanded(failure)) {
+      replace((current) => withUnconfirmed(current, agentId, at));
+    }
+  };
+
+  // A rename or access save, numbered when sent: its answer lands in the cache.
+  const write = (agentId: number, send: () => Promise<PersonalAgent>): Promise<PersonalAgent> => {
     const at = nextSequence();
 
     return send().then(
       (agent) => {
-        replace((current) => land(current, agent, at));
+        replace((current) => withAgent(current, agent, at));
 
         return agent;
       },
       (failure: Error) => {
-        if (writeMayHaveLanded(failure)) {
-          replace((current) => withUnconfirmed(current, agentId, at));
-        }
+        markUnconfirmed(agentId, at, failure);
+
+        throw failure;
+      },
+    );
+  };
+
+  // A pause or resume: while it's out, no other answer touches the agent's pause state, and once
+  // it's back only answers to requests sent after that do (see agents-cache.ts).
+  const writePause = (agentId: number, paused: boolean): Promise<PersonalAgent> => {
+    const at = nextSequence();
+
+    replace((current) => withPauseSent(current, agentId));
+
+    return meAgents.setPaused(agentId, paused).then(
+      (agent) => {
+        const settled = nextSequence();
+
+        replace((current) => withPauseSettled(current, agentId, agent, at, settled));
+
+        return agent;
+      },
+      (failure: Error) => {
+        const settled = nextSequence();
+
+        markUnconfirmed(agentId, at, failure);
+        replace((current) => withPauseSettled(current, agentId, null, at, settled));
 
         throw failure;
       },
@@ -1063,8 +1090,7 @@ export function AgentsSection() {
   const writes: AgentWrites = {
     rename: (agentId, change) => write(agentId, () => meAgents.update(agentId, change)),
     setAccess: (agentId, access) => write(agentId, () => meAgents.setAccess(agentId, access)),
-    setPaused: (agentId, paused) =>
-      write(agentId, () => meAgents.setPaused(agentId, paused), withPause),
+    setPaused: writePause,
     reload: loadList,
   };
 

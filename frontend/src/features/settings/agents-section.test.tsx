@@ -1230,3 +1230,64 @@ it("keeps a pause that answers after a later-sent edit", async () => {
   expect(toastSnapshot().some((shown) => shown.title === "Helper is paused")).toBe(true);
   expect(screen.getByRole("button", { name: "Resume Helper" })).toBeTruthy();
 });
+
+it("takes the pause state from an edit sent after a pause whose answer was lost", async () => {
+  await mount(list());
+  vi.spyOn(meAgents, "setPaused").mockRejectedValue(
+    new ActionError("NetworkError", "Lost pause response"),
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Pause Helper" }));
+  await screen.findByRole("button", { name: "Reload Helper" });
+  vi.spyOn(meAgents, "update").mockResolvedValue({
+    ...AGENT,
+    name: "Renamed",
+    pausedAt: "2026-11-09T12:00:00Z",
+    pausedBy: "Riel",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit Helper" }));
+  rename("Renamed");
+  fireEvent.click(button("Save"));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(screen.getByRole("button", { name: "Resume Renamed" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Reload Renamed" })).toBeNull();
+});
+
+it("keeps a pause that answers after a reload sent while it was out", async () => {
+  await mount(list());
+  const pause = deferred<PersonalAgent>();
+  vi.spyOn(meAgents, "setPaused").mockReturnValue(pause.promise);
+  vi.spyOn(meAgents, "update").mockRejectedValue(
+    new ActionError("SaveUnconfirmed", "Lost edit response"),
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Pause Helper" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Helper" }));
+  rename("Renamed");
+  fireEvent.click(button("Save"));
+  await waitFor(() => expect(meAgents.list).toHaveBeenCalledTimes(2));
+  await act(async () => {});
+  fireEvent.click(button("Cancel"));
+  await act(async () =>
+    pause.settle.resolve({ ...AGENT, pausedAt: "2026-11-09T12:00:00Z", pausedBy: "Riel" }),
+  );
+  expect(toastSnapshot().some((shown) => shown.title === "Helper is paused")).toBe(true);
+  expect(screen.getByRole("button", { name: "Resume Helper" })).toBeTruthy();
+  // That reload couldn't speak for the pause, so the edit it followed is still unconfirmed.
+  expect(screen.getByRole("button", { name: "Reload Helper" })).toBeTruthy();
+});
+
+it("keeps an agent removed while its pause was out removed", async () => {
+  await mount(list());
+  const pause = deferred<PersonalAgent>();
+  vi.spyOn(meAgents, "setPaused").mockReturnValue(pause.promise);
+  vi.spyOn(meAgents, "remove").mockResolvedValue({ id: AGENT.userId });
+  fireEvent.click(await screen.findByRole("button", { name: "Pause Helper" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove Helper" }));
+  fireEvent.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remove agent" }),
+  );
+  await waitFor(() => expect(screen.queryByRole("article", { name: "Helper" })).toBeNull());
+  await act(async () =>
+    pause.settle.resolve({ ...AGENT, pausedAt: "2026-11-09T12:00:00Z", pausedBy: "Riel" }),
+  );
+  expect(screen.queryByRole("article", { name: "Helper" })).toBeNull();
+});

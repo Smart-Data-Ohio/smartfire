@@ -10,7 +10,8 @@ import {
   withAgent,
   withCreated,
   withList,
-  withPause,
+  withPauseSent,
+  withPauseSettled,
   withRemoved,
   withTokens,
   withUnconfirmed,
@@ -64,6 +65,12 @@ function list(agents: readonly PersonalAgent[]): PersonalAgentList {
   };
 }
 
+const PAUSED_AT = "2026-11-09T12:00:00.000Z";
+
+/** The pause or resume sent as `at` back now, with `answer` (`null`: it failed). */
+const settle = (cache: AgentCache, answer: PersonalAgent | null, at: number) =>
+  withPauseSettled(cache, AGENT.id, answer, at, nextSequence());
+
 const names = (cache: AgentCache) => cache.list.agents.map((a) => a.name);
 
 /** The first agent's tokens as `id:state`, in id order. */
@@ -97,27 +104,28 @@ describe("the agents cache", () => {
   it("lands a pause answered after a rename sent later, without undoing the rename", () => {
     const first = withList(null, list([AGENT]), nextSequence());
     const pause = nextSequence();
+    const out = withPauseSent(first, AGENT.id);
     const rename = nextSequence();
-    const paused = { ...AGENT, pausedAt: "2026-11-09T12:00:00.000Z", pausedBy: "Riel" };
-    const renamed = withAgent(first, { ...AGENT, name: "Renamed" }, rename);
-    const after = withPause(renamed, { ...paused, name: "Helper" }, pause);
+    const paused = { ...AGENT, pausedAt: PAUSED_AT, pausedBy: "Riel" };
+    const renamed = withAgent(out, { ...AGENT, name: "Renamed" }, rename);
+    const after = settle(renamed, paused, pause);
 
     expect(names(after)).toEqual(["Renamed"]);
-    expect(after.list.agents[0]?.pausedAt).toBe(paused.pausedAt);
+    expect(after.list.agents[0]?.pausedAt).toBe(PAUSED_AT);
   });
 
-  it("keeps a pause when a rename sent before it answers last", () => {
+  it("keeps a pause when a rename sent before it answers last, and takes a later rename's", () => {
     const first = withList(null, list([AGENT]), nextSequence());
     const rename = nextSequence();
     const pause = nextSequence();
-    const paused = withPause(first, { ...AGENT, pausedAt: "2026-11-09T12:00:00.000Z" }, pause);
+    const paused = settle(withPauseSent(first, AGENT.id), { ...AGENT, pausedAt: PAUSED_AT }, pause);
     const after = withAgent(paused, { ...AGENT, name: "Renamed" }, rename);
 
     expect(names(after)).toEqual(["Renamed"]);
-    expect(after.list.agents[0]?.pausedAt).toBe("2026-11-09T12:00:00.000Z");
+    expect(after.list.agents[0]?.pausedAt).toBe(PAUSED_AT);
     expect(
       withAgent(paused, { ...AGENT, name: "Later" }, nextSequence()).list.agents[0]?.pausedAt,
-    ).toBe("2026-11-09T12:00:00.000Z");
+    ).toBeNull();
   });
 
   it("drops a resume answered after a newer pause, and an older reload's pause state", () => {
@@ -125,15 +133,60 @@ describe("the agents cache", () => {
     const resume = nextSequence();
     const reload = nextSequence();
     const pause = nextSequence();
-    const paused = withPause(first, { ...AGENT, pausedAt: "2026-11-09T12:00:00.000Z" }, pause);
+    const out = withPauseSent(withPauseSent(first, AGENT.id), AGENT.id);
+    const paused = settle(out, { ...AGENT, pausedAt: PAUSED_AT }, pause);
 
-    expect(withPause(paused, AGENT, resume).list.agents[0]?.pausedAt).toBe(
-      "2026-11-09T12:00:00.000Z",
-    );
-    expect(withList(paused, list([AGENT]), reload).list.agents[0]?.pausedAt).toBe(
-      "2026-11-09T12:00:00.000Z",
-    );
-    expect(withList(paused, list([AGENT]), nextSequence()).list.agents[0]?.pausedAt).toBeNull();
+    expect(settle(paused, AGENT, resume).list.agents[0]?.pausedAt).toBe(PAUSED_AT);
+
+    const back = settle(paused, AGENT, resume);
+
+    expect(withList(back, list([AGENT]), reload).list.agents[0]?.pausedAt).toBe(PAUSED_AT);
+    expect(withList(back, list([AGENT]), nextSequence()).list.agents[0]?.pausedAt).toBeNull();
+  });
+
+  it("keeps a pause whose answer comes after a reload sent while it was out", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const pause = nextSequence();
+    const out = withPauseSent(first, AGENT.id);
+    const reload = nextSequence();
+    const reloaded = withList(out, list([{ ...AGENT, name: "Server" }]), reload);
+    const after = settle(reloaded, { ...AGENT, pausedAt: PAUSED_AT }, pause);
+
+    expect(names(after)).toEqual(["Server"]);
+    expect(after.list.agents[0]?.pausedAt).toBe(PAUSED_AT);
+  });
+
+  it("keeps an unanswered pause unconfirmed until an answer sent after it came back", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const pause = nextSequence();
+    const out = withPauseSent(first, AGENT.id);
+    const sentWhileOut = nextSequence();
+    const lost = settle(withUnconfirmed(out, AGENT.id, pause), null, pause);
+    const paused = { ...AGENT, pausedAt: PAUSED_AT };
+
+    expect(isUnconfirmed(lost, AGENT.id)).toBe(true);
+    expect(isUnconfirmed(withAgent(lost, paused, sentWhileOut), AGENT.id)).toBe(true);
+    expect(withAgent(lost, paused, sentWhileOut).list.agents[0]?.pausedAt).toBeNull();
+    expect(isUnconfirmed(withList(lost, list([paused]), sentWhileOut), AGENT.id)).toBe(true);
+
+    const renamed = withAgent(lost, { ...paused, name: "Renamed" }, nextSequence());
+
+    expect(isUnconfirmed(renamed, AGENT.id)).toBe(false);
+    expect(renamed.list.agents[0]?.pausedAt).toBe(PAUSED_AT);
+  });
+
+  it("confirms nothing from a pause answer, and leaves a removed agent removed", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const unanswered = withUnconfirmed(first, AGENT.id, nextSequence());
+    const pause = nextSequence();
+    const paused = settle(withPauseSent(unanswered, AGENT.id), { ...AGENT, name: "X" }, pause);
+
+    expect(isUnconfirmed(paused, AGENT.id)).toBe(true);
+    expect(names(paused)).toEqual(["Helper"]);
+
+    const removed = withRemoved(withPauseSent(first, AGENT.id), AGENT.id, nextSequence());
+
+    expect(names(settle(removed, { ...AGENT, pausedAt: PAUSED_AT }, nextSequence()))).toEqual([]);
   });
 
   it("ignores a whole list older than the one it holds", () => {
