@@ -31,10 +31,6 @@ async fn deliver(app: App, job: Job, _: Execution) -> JobResult {
     post_with_network(&app, job.0, &app.subscription_network).await?;
     Ok(Outcome::Done)
 }
-enum Prepared {
-    Skip,
-    Event(Subscription, String),
-}
 pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> anyhow::Result<()> {
     let Some(delivery) = app.db.write(move |tx| domain::claim(tx, &job)).await? else {
         return Ok(());
@@ -55,14 +51,14 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
     let d = delivery.clone();
     let state = app.clone();
     let prepared=app.db.write(move |tx| {
-        let Some(s)=Subscription::find(tx.conn(),&d.subscription_id)? else {return Ok(Prepared::Skip)};
-        if s.refresh_before<=tx.now() {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)}
+        let Some(s)=Subscription::find(tx.conn(),&d.subscription_id)? else {return Ok(None)};
+        if s.refresh_before<=tx.now() {domain::suppress(tx,&d)?;return Ok(None)}
         if !domain::principal_live(tx.conn(),s.credential_id,tx.now(),&tx.env().default_url_origin)? {
             domain::finish(tx,&d,DeliveryOutcome::Terminate(domain::Termination::AccessRevoked))?;
-            return Ok(Prepared::Skip);
+            return Ok(None);
         }
-        if !campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),d.event_id)? {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)}
-        let Some(event)=AgentEvent::find(tx.conn(),d.event_id)? else {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)};
+        if !campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),d.event_id)? {domain::suppress(tx,&d)?;return Ok(None)}
+        let Some(event)=AgentEvent::find(tx.conn(),d.event_id)? else {domain::suppress(tx,&d)?;return Ok(None)};
         let body = match d.body.clone() {
             Some(body) => body,
             None => {
@@ -70,19 +66,18 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
                 presenter.cache_base_url=Some(tx.env().default_url_origin.clone());
                 presenter.current_user_id=Some(campfire_db::Agent::find(tx.conn(),s.agent_id)?.expect("live agent").user_id);
                 presenter.use_viewer_zone(presenter.current_user_id.expect("agent viewer"))?;
-                let Some(data)=campfire_db::models::agent_event_polling::event_payload(tx.conn(),&event,tx.now(),&access,|m|presenter.agent_message_payload(m))? else {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)};
+                let Some(data)=campfire_db::models::agent_event_polling::event_payload(tx.conn(),&event,tx.now(),&access,|m|presenter.agent_message_payload(m))? else {domain::suppress(tx,&d)?;return Ok(None)};
                 let cursor=domain::delivery_cursor(tx.conn(),&s.id,Some(d.id))?;
                 let body=json!({"eventId":d.webhook_id,"name":event.event_type,"timestamp":event.created_at.jiff().to_string(),"data":data,"cursor":cursor.to_string()}).to_string();
-                if !campfire_app::integrations::mcp_events::body_fits(&body) {domain::finish(tx,&d,DeliveryOutcome::Permanent(Category::Http4xx))?;return Ok(Prepared::Skip)}
-                if tx.conn().execute("UPDATE mcp_event_deliveries SET body=? WHERE id=? AND attempts=? AND status='pending'", rusqlite::params![body,d.id,d.attempts])? == 0 { return Ok(Prepared::Skip) }
+                if !campfire_app::integrations::mcp_events::body_fits(&body) {domain::finish(tx,&d,DeliveryOutcome::Permanent(Category::Http4xx))?;return Ok(None)}
+                if tx.conn().execute("UPDATE mcp_event_deliveries SET body=? WHERE id=? AND attempts=? AND status='pending'", rusqlite::params![body,d.id,d.attempts])? == 0 { return Ok(None) }
                 body
             }
         };
-        Ok(Prepared::Event(s,body))
+        Ok(Some((s,body)))
     }).await?;
-    let (subscription, body) = match prepared {
-        Prepared::Skip => return Ok(()),
-        Prepared::Event(s, body) => (s, body),
+    let Some((subscription, body)) = prepared else {
+        return Ok(());
     };
     let secret = app.ar_encryption.decrypt(&subscription.secret)?;
     let now = Timestamp::from_jiff(app.clock.now());
