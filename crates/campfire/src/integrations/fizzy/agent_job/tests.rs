@@ -567,3 +567,23 @@ async fn ws15e_review_invalid_owned_agent_blocks_deactivation_atomically() {
         }).await.unwrap();
     }
 }
+
+
+#[tokio::test]
+async fn pause_regression_fizzy_claim_and_completion_stay_suppressed() {
+    let app=app().await;
+    let (id,agent)=setup(&app,"comment").await;
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE agents SET paused_at=? WHERE id=?",params![tx.now(),agent])?;
+        tx.conn().execute("UPDATE agent_approvals SET status='denied' WHERE id=?",[id])?;
+        Ok(())
+    }).await.unwrap();
+    let server=FakeServer::start(vec![]).await;
+    let net=network(Arc::new(FakeResolver::default()),Arc::new(MappingDialer{public:Default::default(),to:server.addr,dialed:Default::default()}));
+    execute(&app.booted.app,&net,"http://app.fizzy.do",id).await.unwrap();
+    let saved=state(&app,id).await;
+    assert_eq!(saved["outcome"],"suppressed");
+    assert_eq!(saved["webhook"],"none");
+    assert_eq!(saved["jobs"],0);
+    assert!(server.received().is_empty());
+}

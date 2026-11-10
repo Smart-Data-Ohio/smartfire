@@ -522,3 +522,23 @@ async fn github_agent_completion_index_is_scoped_to_agent_approval_and_event_typ
         Ok(())
     }).await.unwrap();
 }
+
+
+#[tokio::test]
+async fn pause_regression_github_failure_records_suppression() {
+    let case = vectors()["cases"][0].clone();
+    let fixture = database(&case).await;
+    fixture.db.write(|tx| {
+        tx.conn().execute("UPDATE agents SET paused_at=? WHERE id=812",[tx.now()])?;
+        tx.conn().execute("UPDATE agent_approvals SET status='denied' WHERE id=813",[])?;
+        Ok(())
+    }).await.unwrap();
+    let (server, network)=fake(vec![]).await;
+    let accounts=Accounts::with_network(fixture.db.clone(),crypto(),AppClient::new(None,None),network);
+    perform(&fixture.db,&accounts,813).await.unwrap();
+    assert!(server.received().is_empty());
+    let state=snapshot(&fixture.db).await;
+    assert_eq!(state["events"][0]["outcome"],"suppressed");
+    assert_eq!(state["events"][0]["webhook_status"],"none");
+    assert!(state["jobs"].as_array().unwrap().is_empty());
+}
