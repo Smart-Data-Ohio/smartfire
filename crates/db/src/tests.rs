@@ -214,6 +214,17 @@ impl TestDb {
         self.db.read_blocking(f).unwrap()
     }
 
+    pub fn configure_writer<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&mut Connection, &Env) -> Result<T> + Send + 'static,
+    ) -> T {
+        self.db.configure_writer_blocking(f).unwrap()
+    }
+
+    pub fn read_with_connection<T>(&self, f: impl FnOnce(&mut Connection) -> Result<T>) -> T {
+        self.db.read_with_connection_blocking(f).unwrap()
+    }
+
     pub fn now(&self) -> crate::Timestamp {
         crate::Clock::now(&self.clock)
     }

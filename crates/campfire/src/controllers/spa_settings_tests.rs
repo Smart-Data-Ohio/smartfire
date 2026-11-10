@@ -441,7 +441,7 @@ async fn snapshot(a: &TestApp) -> Value {
     a.db()
         .read(|conn| {
             let mut statement = conn.prepare("SELECT * FROM users WHERE id = ?")?;
-            let names: Vec<String> = statement.column_names().into_iter().map(str::to_string).collect();
+            let names: Vec<String> = statement.column_names().map(str::to_string).collect();
             let user = statement.query_row([DAVID], |row| {
                 let mut columns = Map::new();
                 for (index, name) in names.iter().enumerate() {

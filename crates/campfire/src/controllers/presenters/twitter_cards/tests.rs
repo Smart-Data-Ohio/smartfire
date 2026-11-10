@@ -159,13 +159,7 @@ async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_resul
     }).await.unwrap();
     let app2 = app.booted.app.clone();
     app.db()
-        .read(move |c| {
-            let presenter =
-                super::super::Presenter::new(c, &app2, None).preload_payload(&messages)?;
-            let views = messages
-                .iter()
-                .map(|message| presenter.twitter_posts(message))
-                .collect::<campfire_db::Result<Vec<_>>>()?;
+        .read_with_connection(move |c| {
             let reads = Arc::new(AtomicUsize::new(0));
             let observed = reads.clone();
             c.authorizer(Some(move |context: rusqlite::hooks::AuthContext<'_>| {
@@ -179,7 +173,14 @@ async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_resul
                     observed.fetch_add(1, Ordering::SeqCst);
                 }
                 Authorization::Allow
-            }));
+            }))?;
+            let presenter =
+                super::super::Presenter::new(c, &app2, None).preload_payload(&messages)?;
+            let views = messages
+                .iter()
+                .map(|message| presenter.twitter_posts(message))
+                .collect::<campfire_db::Result<Vec<_>>>()?;
+            reads.store(0, Ordering::SeqCst);
             for message in &messages {
                 assert_eq!(
                     presenter
@@ -212,8 +213,10 @@ async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_resul
                 0,
                 "new resolvers reuse positive and negative request memo"
             );
-            c.authorizer(None::<fn(rusqlite::hooks::AuthContext<'_>) -> Authorization>);
             assert_eq!(views.len(), 3);
+            drop(views);
+            drop(presenter);
+            c.authorizer(None::<fn(rusqlite::hooks::AuthContext<'_>) -> Authorization>)?;
 
             Ok(())
         })

@@ -175,41 +175,56 @@ fn apply(
     planned: &[String],
     preserve_existing_foreign_keys: bool,
 ) -> Result<(), Error> {
-    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-    // Only the frozen-seed tool may retain the orphan rows its fixtures deliberately include.
-    let before = if preserve_existing_foreign_keys {
-        foreign_key_violations(&tx)?
-    } else {
-        BTreeSet::new()
-    };
-    // Plan again while holding the write lock: another runner may have got there first.
-    let migrations = pending(&tx, manifest, catalog)?;
-    if migrations.iter().map(|m| &m.version).ne(planned.iter()) {
-        return Err(Error::Concurrent);
-    }
-    for migration in migrations {
-        let failed = |source| Error::Migration {
-            version: migration.version.clone(),
-            source,
+    // Install before borrowing the connection for the transaction. Only migration SQL is
+    // restricted; the runner still needs to commit and update its version ledger.
+    let restricted = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let authorizing = restricted.clone();
+    conn.authorizer(Some(move |ctx: AuthContext<'_>| {
+        if authorizing.load(std::sync::atomic::Ordering::Relaxed) {
+            migration_authorizer(ctx)
+        } else {
+            Authorization::Allow
+        }
+    }))?;
+    let result = (|| {
+        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        // Only the frozen-seed tool may retain the orphan rows its fixtures deliberately include.
+        let before = if preserve_existing_foreign_keys {
+            foreign_key_violations(&tx)?
+        } else {
+            BTreeSet::new()
         };
-        tx.authorizer(Some(migration_authorizer));
-        let result = tx.execute_batch(&migration.sql);
-        tx.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
-        result.map_err(failed)?;
-        tx.execute(
-            r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#,
-            [&migration.version],
-        )
-        .map_err(failed)?;
-    }
-    let violation = foreign_key_violations(&tx)?
-        .into_iter()
-        .find(|violation| !before.contains(violation));
-    if let Some(violation) = violation {
-        return Err(Error::ForeignKeys(violation.table));
-    }
-    tx.commit()?;
-    Ok(())
+        // Plan again while holding the write lock: another runner may have got there first.
+        let migrations = pending(&tx, manifest, catalog)?;
+        if migrations.iter().map(|m| &m.version).ne(planned.iter()) {
+            return Err(Error::Concurrent);
+        }
+        for migration in migrations {
+            let failed = |source| Error::Migration {
+                version: migration.version.clone(),
+                source,
+            };
+            restricted.store(true, std::sync::atomic::Ordering::Relaxed);
+            let result = tx.execute_batch(&migration.sql);
+            restricted.store(false, std::sync::atomic::Ordering::Relaxed);
+            result.map_err(failed)?;
+            tx.execute(
+                r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#,
+                [&migration.version],
+            )
+            .map_err(failed)?;
+        }
+        let violation = foreign_key_violations(&tx)?
+            .into_iter()
+            .find(|violation| !before.contains(violation));
+        if let Some(violation) = violation {
+            return Err(Error::ForeignKeys(violation.table));
+        }
+        tx.commit()?;
+        Ok(())
+    })();
+    conn.authorizer(None::<fn(AuthContext<'_>) -> Authorization>)?;
+    result
 }
 
 /// A row that breaks a foreign key, told apart from every other: its table and primary key (the

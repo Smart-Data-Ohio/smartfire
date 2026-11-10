@@ -61,39 +61,45 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
             let queries = app.db().capture_read_queries();
             let writer = queries.clone();
             app.db()
-                .write(move |tx| {
-                    WRITER.with(|slot| *slot.borrow_mut() = Some(writer));
-                    tx.conn().trace_v2(
+                .configure_writer(move |conn, env| {
+                    conn.trace_v2(
                         rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
                         Some(record),
-                    );
-                    let result = if operation == "github" {
-                        let attrs = attrs
-                            .as_object()
-                            .unwrap()
-                            .iter()
-                            .map(|(key, value)| {
-                                let key = match key.as_str() {
-                                    "title" => "title",
-                                    "state" => "state",
-                                    "review_decision" => "review_decision",
-                                    "check_status" => "check_status",
-                                    _ => panic!("unknown GitHub input"),
-                                };
-                                (
-                                    key,
-                                    rusqlite::types::Value::Text(value.as_str().unwrap().into()),
-                                )
-                            })
-                            .collect::<Vec<_>>();
-                        crate::integrations::github::pull_requests::update(tx, id, &attrs)
-                            .map(|_| ())
-                    } else {
-                        let embed = crate::integrations::link_embed::Embed::find(tx.conn(), id)?;
-                        if operation == "negative" {
-                            embed.save_negative(tx, attrs["fetch_error"].as_str().unwrap())
-                        } else {
-                            embed.save_metadata(
+                    )?;
+                    let result = campfire_db::database::run_write(conn, env, move |tx| {
+                        WRITER.with(|slot| *slot.borrow_mut() = Some(writer));
+
+                        let result =
+                            if operation == "github" {
+                                let attrs = attrs
+                                    .as_object()
+                                    .unwrap()
+                                    .iter()
+                                    .map(|(key, value)| {
+                                        let key = match key.as_str() {
+                                            "title" => "title",
+                                            "state" => "state",
+                                            "review_decision" => "review_decision",
+                                            "check_status" => "check_status",
+                                            _ => panic!("unknown GitHub input"),
+                                        };
+                                        (
+                                            key,
+                                            rusqlite::types::Value::Text(
+                                                value.as_str().unwrap().into(),
+                                            ),
+                                        )
+                                    })
+                                    .collect::<Vec<_>>();
+                                crate::integrations::github::pull_requests::update(tx, id, &attrs)
+                                    .map(|_| ())
+                            } else {
+                                let embed =
+                                    crate::integrations::link_embed::Embed::find(tx.conn(), id)?;
+                                if operation == "negative" {
+                                    embed.save_negative(tx, attrs["fetch_error"].as_str().unwrap())
+                                } else {
+                                    embed.save_metadata(
                                 tx,
                                 &crate::integrations::link_embed::metadata_parser::Metadata {
                                     title: attrs["title"].as_str().map(str::to_owned),
@@ -102,11 +108,16 @@ async fn older_provider_updates_keep_rails_frames_and_constant_reader_and_writer
                                     image_url: attrs["image_url"].as_str().map(str::to_owned),
                                 },
                             )
-                        }
-                    };
-                    tx.conn()
-                        .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
-                    WRITER.with(|slot| *slot.borrow_mut() = None);
+                                }
+                            };
+
+                        WRITER.with(|slot| *slot.borrow_mut() = None);
+                        result
+                    });
+                    conn.trace_v2(
+                        rusqlite::trace::TraceEventCodes::empty(),
+                        None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+                    )?;
                     result
                 })
                 .await

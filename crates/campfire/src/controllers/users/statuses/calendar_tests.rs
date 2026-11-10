@@ -60,15 +60,17 @@ async fn replay(names: &[&str]) {
         setup(&app, row.clone()).await;
         for run in row["runs"].as_array().unwrap() {
             app.db()
-                .write(|tx| {
-                    tx.conn().execute(
-                        "DELETE FROM background_jobs WHERE job_class='Calendar::MeetingRefreshJob'",
-                        [],
-                    )?;
-                    UPDATE_STATEMENTS.with(|statements| statements.borrow_mut().clear());
-                    tx.conn()
-                        .trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(observe_updates));
-                    Ok(())
+                .configure_writer(move |conn, env| {
+                    conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(observe_updates))?;
+                    campfire_db::database::run_write(conn, env, move |tx| {
+                        tx.conn().execute(
+                            "DELETE FROM background_jobs WHERE job_class='Calendar::MeetingRefreshJob'",
+                            [],
+                        )?;
+                        UPDATE_STATEMENTS.with(|statements| statements.borrow_mut().clear());
+
+                        Ok(())
+                    })
                 })
                 .await
                 .unwrap();
@@ -92,8 +94,12 @@ async fn replay(names: &[&str]) {
             }
             let updates = app
                 .db()
-                .write(|tx| {
-                    tx.conn().trace_v2(TraceEventCodes::empty(), None);
+                .configure_writer(move |conn, _| {
+                    conn.trace_v2(
+                        TraceEventCodes::empty(),
+                        None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+                    )?;
+
                     Ok(UPDATE_STATEMENTS.with(|statements| statements.take()))
                 })
                 .await

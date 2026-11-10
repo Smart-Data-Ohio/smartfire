@@ -56,26 +56,32 @@ fn fanout(followers: usize) -> (usize, usize) {
         }
         Ok(thread)
     });
-    t.write(move |tx| {
-        QUERIES.with(|queries| queries.borrow_mut().clear());
-        tx.conn().trace_v2(
+    t.configure_writer(move |conn, env| {
+        conn.trace_v2(
             rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
             Some(trace),
-        );
-        let actor = User::find(tx.conn(), id("david"))?;
-        thread.update_work(
-            tx,
-            &actor,
-            WorkChanges {
-                status: Some(Some("done".into())),
-                ..Default::default()
-            },
-        )
+        )?;
+        crate::database::run_write(conn, env, move |tx| {
+            QUERIES.with(|queries| queries.borrow_mut().clear());
+
+            let actor = User::find(tx.conn(), id("david"))?;
+            thread.update_work(
+                tx,
+                &actor,
+                WorkChanges {
+                    status: Some(Some("done".into())),
+                    ..Default::default()
+                },
+            )
+        })
     });
     // Include after-commit fanout, which runs after the preceding write closure returns.
-    let counts = t.write(|tx| {
-        tx.conn()
-            .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
+    let counts = t.configure_writer(move |conn, _| {
+        conn.trace_v2(
+            rusqlite::trace::TraceEventCodes::empty(),
+            None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+        )?;
+
         Ok(QUERIES.with(|queries| {
             let queries = queries.borrow();
             let selects = queries

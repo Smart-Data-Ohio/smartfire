@@ -79,7 +79,7 @@ fn passwords_are_bcrypt_of_secret123456() {
 /// their cost prefix (`$2a$12$`) and whether they verify `secret123456`, the fixtures' password.
 fn dump(conn: &Connection, table: &str) -> Vec<String> {
     let mut stmt = conn.prepare(&format!("SELECT * FROM \"{table}\"")).unwrap();
-    let names: Vec<String> = stmt.column_names().into_iter().map(String::from).collect();
+    let names: Vec<String> = stmt.column_names().map(String::from).collect();
     let mut rows = stmt.query([]).unwrap();
     let mut out = Vec::new();
     while let Some(row) = rows.next().unwrap() {
