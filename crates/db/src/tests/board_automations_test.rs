@@ -236,15 +236,16 @@ fn trace(event: TraceEvent<'_>) {
 }
 // Trace every reader plus the real writer, not merely the preload helper.
 async fn writer_counts(t: &TestDb, reset: bool) -> (usize, usize) {
-    t.db.write(move |tx| {
-        tx.conn()
-            .trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace));
-        let counts = (READS.with(Cell::get), WRITES.with(Cell::get));
-        if reset {
-            READS.with(|n| n.set(0));
-            WRITES.with(|n| n.set(0));
-        }
-        Ok(counts)
+    t.db.configure_writer(move |conn, env| {
+        conn.trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(trace))?;
+        crate::database::run_write(conn, env, |_| {
+            let counts = (READS.with(Cell::get), WRITES.with(Cell::get));
+            if reset {
+                READS.with(|n| n.set(0));
+                WRITES.with(|n| n.set(0));
+            }
+            Ok(counts)
+        })
     })
     .await
     .unwrap()

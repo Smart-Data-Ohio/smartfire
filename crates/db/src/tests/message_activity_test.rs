@@ -246,27 +246,34 @@ fn trace(event: rusqlite::trace::TraceEvent<'_>) {
     }
 }
 fn record_queries(t: &TestDb, message: Message, needle: &'static str) -> usize {
-    t.write(move |tx| {
-        tx.conn().execute(
-            "DELETE FROM activity_items WHERE source_type='Message' AND source_id=?",
-            [message.id],
-        )?;
-        SQL.with(|queries| queries.borrow_mut().clear());
-        tx.conn().trace_v2(
+    t.configure_writer(move |conn, env| {
+        conn.trace_v2(
             rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
             Some(trace),
-        );
-        let result = ActivityItem::record_message(tx, &message);
-        tx.conn()
-            .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
-        result?;
-        Ok(SQL.with(|queries| {
-            queries
-                .borrow()
-                .iter()
-                .filter(|q| q.to_lowercase().contains(needle))
-                .count()
-        }))
+        )?;
+        let result = crate::database::run_write(conn, env, move |tx| {
+            tx.conn().execute(
+                "DELETE FROM activity_items WHERE source_type='Message' AND source_id=?",
+                [message.id],
+            )?;
+            SQL.with(|queries| queries.borrow_mut().clear());
+
+            let result = ActivityItem::record_message(tx, &message);
+
+            result?;
+            Ok(SQL.with(|queries| {
+                queries
+                    .borrow()
+                    .iter()
+                    .filter(|q| q.to_lowercase().contains(needle))
+                    .count()
+            }))
+        });
+        conn.trace_v2(
+            rusqlite::trace::TraceEventCodes::empty(),
+            None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+        )?;
+        result
     })
 }
 fn followers(t: &TestDb, thread: Option<i64>, count: i64, offset: i64) {

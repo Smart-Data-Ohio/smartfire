@@ -9,7 +9,6 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     let mut stmt = tx.conn().prepare("SELECT * FROM users WHERE id=?")?;
     let columns = stmt
         .column_names()
-        .iter()
         .map(|s| s.to_string())
         .collect::<Vec<_>>();
     let original = stmt.query_row([user], |row| {

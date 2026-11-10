@@ -131,16 +131,23 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
         let writer = queries.clone();
         let operation = kind.clone();
         app.db()
-            .write(move |tx| {
-                WRITER.with(|slot| *slot.borrow_mut() = Some(writer));
-                tx.conn().trace_v2(
+            .configure_writer(move |conn, env| {
+                conn.trace_v2(
                     rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
                     Some(record),
-                );
-                let result = update(tx, &operation, id, "Updated <&> text");
-                tx.conn()
-                    .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
-                WRITER.with(|slot| *slot.borrow_mut() = None);
+                )?;
+                let result = campfire_db::database::run_write(conn, env, move |tx| {
+                    WRITER.with(|slot| *slot.borrow_mut() = Some(writer));
+
+                    let result = update(tx, &operation, id, "Updated <&> text");
+
+                    WRITER.with(|slot| *slot.borrow_mut() = None);
+                    result
+                });
+                conn.trace_v2(
+                    rusqlite::trace::TraceEventCodes::empty(),
+                    None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+                )?;
                 result
             })
             .await

@@ -803,7 +803,7 @@ type Job = Box<dyn WriterJob>;
 // Keep the reply alive outside the operation's unwind boundary: even a panic
 // must finish rollback and generation bookkeeping before notifying the caller.
 trait WriterJob: Send {
-    fn run(&mut self, conn: &Connection, env: &Env);
+    fn run(&mut self, conn: &mut Connection, env: &Env);
     fn complete(self: Box<Self>);
 }
 
@@ -816,9 +816,9 @@ struct WriteJob<T, F> {
 impl<T, F> WriterJob for WriteJob<T, F>
 where
     T: Send,
-    F: FnOnce(&Connection, &Env) -> Result<T> + Send,
+    F: FnOnce(&mut Connection, &Env) -> Result<T> + Send,
 {
-    fn run(&mut self, conn: &Connection, env: &Env) {
+    fn run(&mut self, conn: &mut Connection, env: &Env) {
         let operation = self.operation.take().expect("writer runs each job once");
         self.result = Some(operation(conn, env));
     }
@@ -854,7 +854,7 @@ impl Database {
         }
         let mut checkpoints = Checkpoints::spawn(&config.path)?;
         // In place of the auto-checkpoint, which is itself a WAL hook (`sqlite3_wal_autocheckpoint`).
-        conn.wal_hook(Some(note_wal_size));
+        conn.wal_hook(Some(note_wal_size))?;
 
         let (sender, mut receiver) = mpsc::channel::<Job>(config.write_queue.max(1));
         let writer_env = env.clone();
@@ -869,15 +869,11 @@ impl Database {
             .spawn(move || {
                 while let Some(mut job) = receiver.blocking_recv() {
                     #[cfg(feature = "test-support")]
-                    let _trace = query_log
-                        .lock()
-                        .unwrap()
-                        .clone()
-                        .map(|log| QueryTrace::enter(&conn, log));
+                    let mut conn = QueryTrace::enter(&mut conn, query_log.lock().unwrap().clone());
                     generation.fetch_add(1, Ordering::SeqCst);
                     // A panicking write must not take the writer down with it.
                     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        job.run(&conn, &writer_env)
+                        job.run(&mut conn, &writer_env)
                     }));
                     if outcome.is_err() && !conn.is_autocommit() {
                         let _ = conn.execute_batch("ROLLBACK TRANSACTION");
@@ -959,7 +955,7 @@ impl Database {
         let (reply, response) = oneshot::channel();
         self.writer
             .send(Box::new(WriteJob {
-                operation: Some(move |conn: &Connection, env: &Env| {
+                operation: Some(move |conn: &mut Connection, env: &Env| {
                     let _scope = scope();
                     run_write(conn, env, f)
                 }),
@@ -980,12 +976,69 @@ impl Database {
         let (reply, response) = oneshot::channel();
         self.writer
             .blocking_send(Box::new(WriteJob {
-                operation: Some(move |conn: &Connection, env: &Env| run_write(conn, env, f)),
+                operation: Some(move |conn: &mut Connection, env: &Env| run_write(conn, env, f)),
                 result: None,
                 reply,
             }))
             .map_err(|_| Error::WriterGone)?;
         response.blocking_recv().map_err(|_| Error::WriterGone)?
+    }
+
+    /// Configure writer hooks outside a transaction, on the owning writer thread.
+    #[cfg(feature = "test-support")]
+    pub async fn configure_writer<T, F>(&self, f: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut Connection, &Env) -> Result<T> + Send + 'static,
+    {
+        let (reply, response) = oneshot::channel();
+        self.writer
+            .send(Box::new(WriteJob {
+                operation: Some(f),
+                result: None,
+                reply,
+            }))
+            .await
+            .map_err(|_| Error::WriterGone)?;
+        response.await.map_err(|_| Error::WriterGone)?
+    }
+
+    #[cfg(feature = "test-support")]
+    pub fn configure_writer_blocking<T, F>(&self, f: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut Connection, &Env) -> Result<T> + Send + 'static,
+    {
+        let (reply, response) = oneshot::channel();
+        self.writer
+            .blocking_send(Box::new(WriteJob {
+                operation: Some(f),
+                result: None,
+                reply,
+            }))
+            .map_err(|_| Error::WriterGone)?;
+        response.blocking_recv().map_err(|_| Error::WriterGone)?
+    }
+
+    /// Reader hook setup and observations on one exclusively checked-out connection.
+    #[cfg(feature = "test-support")]
+    pub async fn read_with_connection<T, F>(&self, f: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut Connection) -> Result<T> + Send + 'static,
+    {
+        let readers = self.readers.clone();
+        tokio::task::spawn_blocking(move || readers.with(f))
+            .await
+            .map_err(|e| Error::Other(e.to_string()))?
+    }
+
+    #[cfg(feature = "test-support")]
+    pub fn read_with_connection_blocking<T>(
+        &self,
+        f: impl FnOnce(&mut Connection) -> Result<T>,
+    ) -> Result<T> {
+        self.readers.with(f)
     }
 
     /// Runs `f` on a reader connection, on the blocking pool.
@@ -995,7 +1048,7 @@ impl Database {
         F: FnOnce(&Connection) -> Result<T> + Send + 'static,
     {
         let readers = self.readers.clone();
-        tokio::task::spawn_blocking(move || readers.with(f))
+        tokio::task::spawn_blocking(move || readers.with(|conn| f(conn)))
             .await
             .map_err(|e| Error::Other(e.to_string()))?
     }
@@ -1048,7 +1101,7 @@ impl Database {
 
     /// [`Database::read`] for synchronous callers.
     pub fn read_blocking<T>(&self, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
-        self.readers.with(f)
+        self.readers.with(|conn| f(conn))
     }
 
     /// [`Database::read`] inside one read transaction: everything `f` reads comes from one
@@ -1123,7 +1176,7 @@ thread_local! {
 }
 
 /// The writer connection's WAL hook: runs on the writer thread after each commit.
-fn note_wal_size(_: &rusqlite::hooks::Wal, pages: std::os::raw::c_int) -> rusqlite::Result<()> {
+fn note_wal_size(_: &mut rusqlite::hooks::Wal, pages: std::os::raw::c_int) -> rusqlite::Result<()> {
     WAL_PAGES.set(pages);
     Ok(())
 }
@@ -1231,7 +1284,7 @@ impl ReaderPool {
         }
     }
 
-    fn with<T>(&self, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
+    fn with<T>(&self, f: impl FnOnce(&mut Connection) -> Result<T>) -> Result<T> {
         let conn = {
             let mut idle = self
                 .idle
@@ -1247,18 +1300,13 @@ impl ReaderPool {
                     .unwrap_or_else(|poisoned| poisoned.into_inner());
             }
         };
-        let checkout = Checkout {
+        let mut checkout = Checkout {
             pool: self,
             conn: Some(conn),
         };
-        let conn = checkout.conn.as_ref().expect("checked out");
+        let conn = checkout.conn.as_mut().expect("checked out");
         #[cfg(feature = "test-support")]
-        let _trace = self
-            .query_log
-            .lock()
-            .unwrap()
-            .clone()
-            .map(|log| QueryTrace::enter(conn, log));
+        let conn = &mut *QueryTrace::enter(conn, self.query_log.lock().unwrap().clone());
         f(conn)
     }
 }
@@ -1269,11 +1317,15 @@ thread_local! {
 }
 
 #[cfg(feature = "test-support")]
-struct QueryTrace<'a>(&'a Connection, Option<QueryLog>);
+struct QueryTrace<'a> {
+    conn: &'a mut Connection,
+    previous: Option<QueryLog>,
+    enabled: bool,
+}
 
 #[cfg(feature = "test-support")]
 impl<'a> QueryTrace<'a> {
-    fn enter(conn: &'a Connection, log: Arc<Mutex<Vec<String>>>) -> Self {
+    fn enter(conn: &'a mut Connection, log: Option<QueryLog>) -> Self {
         fn record(event: rusqlite::trace::TraceEvent<'_>) {
             if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
                 READ_QUERIES.with(|log| {
@@ -1283,23 +1335,55 @@ impl<'a> QueryTrace<'a> {
                 });
             }
         }
-        let previous = READ_QUERIES.with(|slot| slot.replace(Some(log)));
-        conn.trace_v2(
-            rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
-            Some(record),
-        );
-        Self(conn, previous)
+        let enabled = log.is_some();
+        let previous = if let Some(log) = log {
+            conn.trace_v2(
+                rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
+                Some(record),
+            )
+            .expect("install query trace");
+            READ_QUERIES.with(|slot| slot.replace(Some(log)))
+        } else {
+            None
+        };
+        Self {
+            conn,
+            previous,
+            enabled,
+        }
     }
 }
 
 #[cfg(feature = "test-support")]
 impl Drop for QueryTrace<'_> {
     fn drop(&mut self) {
-        self.0
-            .trace_v2(rusqlite::trace::TraceEventCodes::empty(), None);
-        READ_QUERIES.with(|slot| {
-            slot.replace(self.1.take());
-        });
+        if self.enabled {
+            self.conn
+                .trace_v2(
+                    rusqlite::trace::TraceEventCodes::empty(),
+                    None::<fn(rusqlite::trace::TraceEvent<'_>)>,
+                )
+                .expect("clear query trace");
+            READ_QUERIES.with(|slot| {
+                slot.replace(self.previous.take());
+            });
+        }
+    }
+}
+
+#[cfg(feature = "test-support")]
+impl std::ops::Deref for QueryTrace<'_> {
+    type Target = Connection;
+
+    fn deref(&self) -> &Connection {
+        self.conn
+    }
+}
+
+#[cfg(feature = "test-support")]
+impl std::ops::DerefMut for QueryTrace<'_> {
+    fn deref_mut(&mut self) -> &mut Connection {
+        self.conn
     }
 }
 
