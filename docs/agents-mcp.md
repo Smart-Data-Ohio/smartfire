@@ -378,8 +378,10 @@ after recovery, with a fresh signing timestamp and signature.
 
 Failures expose only `connection_refused`, `timeout`, `tls_error`, `http_4xx`,
 `http_5xx`, or `challenge_failed`. Successful delivery clears failure status.
-The cursor advances past settled deliveries without skipping an earlier pending
-delivery. Polling acknowledgements do not cancel owed webhook deliveries.
+The cursor stays below the lowest matching unsettled obligation. This includes
+pending delivery rows and ledger events awaiting fan-out for the subscription's
+event name and `roomIds`. Otherwise it advances to the highest settled ID.
+Events skipped by the replay age bound count as settled for that subscription. Polling acknowledgements do not cancel owed webhook deliveries.
 
 Subscribing requires `read_messages` in at least one accessible room. Every
 attempt checks the current room, message, grants, agent, credential, and OAuth

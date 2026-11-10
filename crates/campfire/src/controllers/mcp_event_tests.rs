@@ -683,7 +683,7 @@ async fn mcp_events_replay_is_bounded_and_watermark_waits_for_earlier_deliveries
     deliver(&app, pending[1].clone()).await;
     assert_eq!(
         rpc(&app, "events/subscribe", params("mention")).await["result"]["cursor"],
-        "0"
+        (e1 - 1).to_string()
     );
     deliver(&app, pending[0].clone()).await;
     assert_eq!(
@@ -1531,4 +1531,29 @@ async fn mcp_events_mention_dispatches_through_real_job_runner() {
         Some(subscription.as_str())
     );
     assert_eq!(status(&app).await[0], "delivered");
+}
+#[tokio::test]
+async fn mcp_events_cursor_ignores_unmatched_and_suppressed_ledger_rows() {
+    let (app, server, _) = setup().await;
+    let mut p = params("mention");
+    p["arguments"] = json!({"roomIds":[ALL_TALK]});
+    let result = rpc(&app, "events/subscribe", p).await;
+    assert!(result.get("error").is_none(), "{result}");
+    for change in ["room", "type", "suppressed"] {
+        let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+        app.db().write(move |tx| {
+            tx.conn().execute(match change {
+                "room" => "UPDATE agent_events SET room_id=NULL WHERE message_id=?",
+                "type" => "UPDATE agent_events SET event_type='reply' WHERE message_id=?",
+                _ => "UPDATE agent_events SET outcome='suppressed' WHERE message_id=?",
+            }, [m])?;
+            Ok(())
+        }).await.unwrap();
+    }
+    let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    let event = publish(&app,m).await;
+    deliver(&app,jobs(&app).await.remove(0)).await;
+    let received=server.received();
+    let body:Value=serde_json::from_slice(&received[1].body).unwrap();
+    assert_eq!(body["cursor"],event.to_string());
 }

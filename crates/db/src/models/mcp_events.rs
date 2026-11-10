@@ -265,6 +265,10 @@ pub fn subscribe(
             }
             if at < cutoff {
                 truncated = true;
+                tx.conn().execute(
+                    "INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at) VALUES(?,?,?,'suppressed',?,?,?) ON CONFLICT(subscription_id,agent_event_id) DO NOTHING",
+                    params![id,event,nonce("msg_"),tx.now(),tx.now(),tx.now()],
+                )?;
             } else {
                 enqueue(tx, &id, event)?;
             }
@@ -410,7 +414,20 @@ pub fn delivery_cursor(
     settling: Option<i64>,
 ) -> Result<i64> {
     Ok(query_one(conn,
-        "SELECT MAX(watermark_event_id,COALESCE((SELECT MAX(agent_event_id) FROM mcp_event_deliveries WHERE subscription_id=?1 AND (status!='pending' OR id=?2) AND agent_event_id<COALESCE((SELECT MIN(agent_event_id) FROM mcp_event_deliveries WHERE subscription_id=?1 AND status='pending' AND id IS NOT ?2),9223372036854775807)),watermark_event_id)) FROM mcp_event_subscriptions WHERE id=?1",
+        "WITH unsettled_obligations AS (
+            SELECT agent_event_id AS event_id FROM mcp_event_deliveries
+            WHERE subscription_id=?1 AND status='pending' AND id IS NOT ?2
+            UNION ALL
+            SELECT e.id FROM agent_events e JOIN mcp_event_subscriptions s ON s.id=?1
+            WHERE e.agent_id=s.agent_id AND e.event_type=s.name AND e.id>s.watermark_event_id
+              AND e.outcome IN ('pending','delivered','acknowledged')
+              AND (json_type(s.arguments,'$.roomIds') IS NULL OR e.room_id IN (SELECT value FROM json_each(s.arguments,'$.roomIds')))
+              AND NOT EXISTS (SELECT 1 FROM mcp_event_deliveries d WHERE d.subscription_id=s.id AND d.agent_event_id=e.id)
+        )
+        SELECT COALESCE((SELECT MIN(event_id)-1 FROM unsettled_obligations),
+            MAX(watermark_event_id,COALESCE((SELECT MAX(agent_event_id) FROM mcp_event_deliveries
+                WHERE subscription_id=?1 AND (status!='pending' OR id=?2)),watermark_event_id)))
+        FROM mcp_event_subscriptions WHERE id=?1",
         params![subscription,settling],|r|r.get(0))?.unwrap_or(0))
 }
 fn advance(tx: &Tx<'_>, id: &str) -> Result<()> {
