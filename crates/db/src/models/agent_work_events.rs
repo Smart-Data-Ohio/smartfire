@@ -287,7 +287,7 @@ pub(crate) fn record_deleted(
             .unwrap_or(false);
         let mut metadata = json!({"thread_id":thread.id,"title":thread.name,"work_status":thread.work_status,"assigned_by":deleted.snapshot["assigned_by"],"hop":0,"work_snapshot":deleted.snapshot});
         if thread.visibility == crate::channel_thread::ThreadVisibility::Private { metadata["thread_visibility"] = json!("private"); }
-        let event = NewEvent {
+        let mut event = NewEvent {
             agent_id: deleted.agent_id,
             room_id: Some(thread.room_id),
             actor_id,
@@ -297,6 +297,8 @@ pub(crate) fn record_deleted(
             metadata,
             ..Default::default()
         };
+        super::agent_delivery::suppress_new_event_if_paused(tx, &mut event)?;
+        let deliverable = deliverable && event.outcome.as_deref() != Some("suppressed");
         // The durable job shares deletion's transaction; a rejected enqueue
         // still rolls back deletion. Only insertion publishes a polling ID.
         let job = DeletedWorkWebhookJob {

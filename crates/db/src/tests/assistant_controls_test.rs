@@ -186,7 +186,9 @@ fn pause_regression_work_assignment_stays_hidden_after_resume() {
         tx.conn().execute("DELETE FROM agent_events", [])?;
         tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?", [agent])?;
         tx.conn().execute("UPDATE agents SET kind='personal',owner_id=?,paused_at=? WHERE id=?", rusqlite::params![id("david"),tx.now(),agent])?;
-        AgentGrant::create(tx, NewGrant { agent_id: agent, room_id: Some(id("watercooler")), capability: "read_messages".into(), granted_by_id: id("david"), ..Default::default() })?;
+        for capability in ["read_messages", "post_messages"] {
+            AgentGrant::create(tx, NewGrant { agent_id: agent, room_id: Some(id("watercooler")), capability: capability.into(), granted_by_id: id("david"), ..Default::default() })?;
+        }
         ChannelThread::create_board_post(tx, NewChannelThread { room_id: id("watercooler"), creator_id: id("david"), name: Some("Paused assignment".into()), work_status: Some("planned".into()), work_owner_id: Some(id("bender")), ..Default::default() }, None)?;
         tx.conn().execute("UPDATE agents SET paused_at=NULL WHERE id=?", [agent])?;
         assert!(agent_event_access::readable_page(tx.conn(), agent, 0, None)?.is_empty(), "paused assignment leaked after resume");
@@ -287,4 +289,26 @@ fn pause_regression_deleted_work_never_queues_during_pause() {
         Ok(())
     });
     assert!(t.events().iter().all(|e| !matches!(e, Event::Job(job) if job.class == "Agent::EventWebhookJob")));
+}
+
+#[test]
+fn pause_regression_pending_mcp_is_discarded_but_expired_history_is_preserved() {
+    use crate::models::agent_delivery::{AgentEvent, NewEvent};
+    let t = super::channel_thread_test::frozen();
+    t.write(|tx| {
+        let agent_id = id("bender_agent");
+        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,created_at,updated_at) VALUES('pause-history',?,?,'mention','{}','https://events.example/hook','fixture',?,?,?)", rusqlite::params![agent_id,id("bender_main"),tx.now(),tx.now(),tx.now()])?;
+        for status in ["pending", "expired"] {
+            let event = AgentEvent::create(tx, NewEvent { agent_id, event_type: "mention".into(), outcome: Some("delivered".into()), ..Default::default() })?;
+            tx.conn().execute("INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at,body) VALUES('pause-history',?,?,?,?,?,?, 'cached occurrence')", rusqlite::params![event.id,status,status,tx.now(),tx.now(),tx.now()])?;
+        }
+        let mut agent = Agent::find(tx.conn(),agent_id)?.unwrap();
+        agent.update(tx,AgentChanges{paused_at:Some(Some(tx.now())),..Default::default()})?;
+        agent.update(tx,AgentChanges{paused_at:Some(None),..Default::default()})?;
+        for (webhook, expected) in [("pending","suppressed"),("expired","expired")] {
+            let saved = tx.conn().query_row("SELECT status,body FROM mcp_event_deliveries WHERE webhook_id=?", [webhook], |r| Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?)))?;
+            assert_eq!(saved,(expected.into(),"cached occurrence".into()));
+        }
+        Ok(())
+    });
 }

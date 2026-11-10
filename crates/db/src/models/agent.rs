@@ -533,6 +533,9 @@ impl Agent {
         drop(values);
         drop(sets);
         *self = Self::find(tx.conn(), self.id)?.expect("updated agent");
+        if self.paused() && !before.paused() {
+            super::agent_delivery::suppress_pending_for_agent(tx, self.id)?;
+        }
         if self.paused_at != before.paused_at
             || self.status != before.status
             || self.status_note != before.status_note

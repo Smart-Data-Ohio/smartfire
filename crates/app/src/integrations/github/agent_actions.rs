@@ -5,9 +5,9 @@ use super::{
     actions::Action,
     client::{ErrorKind, PullRequestKey, ruby_string, ruby_to_i},
 };
-use crate::integrations::action_claims::{self, EventWebhookJob};
+use crate::integrations::action_claims;
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
-use campfire_db::{Connection, Database, Event, Result, Tx, User};
+use campfire_db::{Connection, Database, Result, Tx, User};
 use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 
@@ -244,31 +244,30 @@ fn insert_event(
     message: Option<&str>,
     url: Option<Value>,
 ) -> Result<Option<i64>> {
-    let pending = status != "running"
-        && tx.conn().query_row(
-            "SELECT EXISTS(SELECT 1 FROM webhooks WHERE user_id=?)",
-            [approval.agent_user_id],
-            |r| r.get::<_, bool>(0),
-        )?;
-    let result=tx.conn().execute("INSERT INTO agent_events (agent_id,agent_approval_id,room_id,actor_id,event_type,outcome,detail,metadata,webhook_status,webhook_next_attempt_at,created_at) VALUES (?,?,?,?,'github_action_completed','delivered',?,?,?,?,?)",params![approval.agent_id,approval.id,approval.room_id,approval.actor_id,message,metadata(approval,status,message,url).to_string(),if pending {"pending"}else{"none"},pending.then(||tx.now()),tx.now()]);
-    if let Err(error) = result {
-        let error = campfire_db::Error::from(error);
-        if error.is_record_not_unique() {
-            return Ok(None);
-        }
-        return Err(error);
-    }
-    let id = tx.conn().last_insert_rowid();
-    let authorized=pending && campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),id)?;
-    if pending && !authorized {
-        tx.conn().execute("UPDATE agent_events SET webhook_status='none',webhook_next_attempt_at=NULL WHERE id=?",[id])?;
-    }
-    if authorized {
-        tx.emit_after_commit(Event::job(&EventWebhookJob {
-            event_id: id,
-            attempt: Some(0),
-        }));
-    }
+    use campfire_db::models::agent_delivery::{self as delivery, AgentEvent, NewEvent};
+    let attributes = NewEvent {
+        agent_id: approval.agent_id,
+        agent_approval_id: Some(approval.id),
+        room_id: approval.room_id,
+        actor_id: approval.actor_id,
+        event_type: "github_action_completed".into(),
+        outcome: Some("delivered".into()),
+        detail: message.map(str::to_owned),
+        metadata: metadata(approval, status, message, url),
+        ..Default::default()
+    };
+    let result = if status == "running" {
+        AgentEvent::create(tx, attributes)
+    } else {
+        delivery::create_delivered(tx, attributes)
+    };
+    let event = match result {
+        Ok(event) => event,
+        Err(error) if error.is_record_not_unique() => return Ok(None),
+        Err(error) => return Err(error),
+    };
+    delivery::enqueue_delivered_webhook(tx, &event);
+    let id = event.id;
     Ok(Some(id))
 }
 async fn record_failure(db: &Database, approval: Approval, message: &'static str) -> Result<()> {

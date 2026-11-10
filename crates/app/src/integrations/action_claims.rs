@@ -124,9 +124,10 @@ pub fn rewrite_running(
     let Some((attempt, pending_webhook)) = state else {
         return Ok(false);
     };
-    let pending_webhook=pending_webhook && campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),event_id)?;
+    let suppressed = campfire_db::models::agent_delivery::suppress_if_paused(tx, event_id)?;
+    let pending_webhook=!suppressed && pending_webhook && campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),event_id)?;
     let won = ConditionalUpdate::table("agent_events")
-        .set("detail", detail.map_or(SqlValue::Null, SqlValue::Text))
+        .set("detail", if suppressed { SqlValue::Text("Agent paused".into()) } else { detail.map_or(SqlValue::Null, SqlValue::Text) })
         .set("metadata", metadata.to_string())
         .set(
             "webhook_status",

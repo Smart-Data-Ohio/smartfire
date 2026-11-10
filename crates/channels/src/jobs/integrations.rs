@@ -98,7 +98,7 @@ pub async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &
     let delivery = webhook::deliver_signed(network, url.as_deref().unwrap_or(""), payload, secret.as_deref(), || app.clock.now(), false).await?;
     let message = match delivery.reply {
         WebhookReply::None => return Ok(Outcome::Done),
-        WebhookReply::Text(text) => create_text_reply(app, &room, &bot, delivery.status.map(|_| trigger.clone()), text).await?,
+        WebhookReply::Text(text) => create_text_reply(app, &room, &bot, delivery.status.map(|_| trigger.clone()), text, None).await?,
         WebhookReply::Attachment(attachment) => create_attachment_reply(app, &room, &bot, trigger, attachment).await?,
     };
     broadcast_create(app, &room, &message).await?;
@@ -108,12 +108,12 @@ pub async fn deliver_webhook_with_network(app: &App, job: WebhookJob, network: &
 /// `room.messages.create!(body: text, creator: user)`: the text is assigned to the rich text
 /// body, which stores it canonicalized (as `MessagesController` does; there's no request host
 /// in a job).
-pub(super) async fn create_text_reply(app: &App, room: &Room, bot: &User, trigger: Option<Message>, text: String) -> anyhow::Result<Message> {
+pub(super) async fn create_text_reply(app: &App, room: &Room, bot: &User, trigger: Option<Message>, text: String, event_id: Option<i64>) -> anyhow::Result<Message> {
     let (room_id, creator_id) = (room.id, bot.id);
     let body = canonicalize_body(app, text, None).await.map_err(|e| anyhow!("{e:?}"))?;
     let message = app
         .db
-        .write(move |tx| create_reply(tx, trigger.as_ref(), NewMessage { room_id, creator_id, body: Some(body), ..Default::default() }))
+        .write(move |tx| create_reply_for_event(tx, event_id, trigger.as_ref(), NewMessage { room_id, creator_id, body: Some(body), ..Default::default() }))
         .await?;
     Ok(message)
 }
@@ -122,6 +122,9 @@ pub(super) async fn create_text_reply(app: &App, room: &Room, bot: &User, trigge
 /// `room.messages.create_with_attachment!(attachment:, creator: user)`, which processes the
 /// attachment.
 pub async fn create_attachment_reply(app: &App, room: &Room, bot: &User, trigger: Message, attachment: webhook::Attachment) -> anyhow::Result<Message> {
+    create_attachment_reply_for_event(app, room, bot, trigger, attachment, None).await
+}
+pub(super) async fn create_attachment_reply_for_event(app: &App, room: &Room, bot: &User, trigger: Message, attachment: webhook::Attachment, event_id: Option<i64>) -> anyhow::Result<Message> {
     let storage = app.storage.clone();
     let staged = tokio::task::spawn_blocking(move || attachment.stage_blob(&storage)).await??;
     let blob = app.db.write(move |tx| save_staged(tx, staged)).await?;
@@ -130,7 +133,7 @@ pub async fn create_attachment_reply(app: &App, room: &Room, bot: &User, trigger
     let message = app
         .db
         .write(move |tx| {
-            let message = create_reply(tx, Some(&trigger), NewMessage { room_id, creator_id, attachment_blob_id: Some(blob_id), ..Default::default() })?;
+            let message = create_reply_for_event(tx, event_id, Some(&trigger), NewMessage { room_id, creator_id, attachment_blob_id: Some(blob_id), ..Default::default() })?;
             if message.thread_id.is_some() {
                 if let Some(blob) = campfire_storage::Blob::find(tx.conn(), blob_id).map_err(|e| campfire_db::Error::Other(e.to_string()))? {
                     crate::controllers::presenters::attachments::enqueue_analysis(tx, &blob);
@@ -149,7 +152,18 @@ pub async fn create_attachment_reply(app: &App, room: &Room, bot: &User, trigger
 
 /// `Webhook#create_sync_reply`: root replies reference the trigger; thread replies use
 /// ChannelThread#post_message! so membership, locking, reopening and counters stay shared.
-pub fn create_reply(tx: &mut campfire_db::Tx<'_>, trigger: Option<&Message>, mut attributes: NewMessage) -> campfire_db::Result<Message> {
+pub fn create_reply(tx: &mut campfire_db::Tx<'_>, trigger: Option<&Message>, attributes: NewMessage) -> campfire_db::Result<Message> {
+    create_reply_for_event(tx, None, trigger, attributes)
+}
+fn create_reply_for_event(tx: &mut campfire_db::Tx<'_>, event_id: Option<i64>, trigger: Option<&Message>, mut attributes: NewMessage) -> campfire_db::Result<Message> {
+    if let Some(event_id) = event_id
+        && campfire_db::models::agent_delivery::AgentEvent::find(tx.conn(), event_id)?
+            .is_none_or(|event| event.outcome.as_deref() == Some("suppressed"))
+    {
+        return Err(campfire_db::Error::Other("agent_paused".into()));
+    }
+    let paused: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM agents WHERE user_id=? AND paused_at IS NOT NULL AND suspended_at IS NULL)", [attributes.creator_id], |r| r.get(0))?;
+    if paused { return Err(campfire_db::Error::Other("agent_paused".into())) }
     if campfire_db::Room::find_for_user(tx.conn(),attributes.creator_id,attributes.room_id)?.is_none() || campfire_db::models::agent_access::capability_for_user(tx.conn(),attributes.creator_id,"post_messages",attributes.room_id)? == Some(false) {
         return Err(campfire_db::Error::RecordNotFound("Room"));
     }

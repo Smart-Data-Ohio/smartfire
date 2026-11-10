@@ -50,7 +50,7 @@ pub fn delivery_authorized(conn: &Connection, event_id: i64) -> Result<bool> {
     exists(
         conn,
         &format!(
-            "SELECT 1 FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id WHERE e.id=? AND ({})",
+            "SELECT 1 FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id WHERE e.id=? AND e.outcome IS NOT 'suppressed' AND ({})",
             authorized_sql("e", "m")
         ),
         [event_id],

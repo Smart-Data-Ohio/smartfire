@@ -487,10 +487,11 @@ async fn pause_regression_late_sync_reply_is_rejected_transactionally() {
 #[tokio::test]
 async fn pause_regression_http_response_after_pause_cannot_post_reply() {
     use crate::integrations::test_support::ResponseGate;
+    for (resume, attachment) in [(false,false),(true,false),(false,true),(true,true)] {
     let (app, _dir)=TestApp::boot().await.expect("default seed").stop_jobs().await;
     let event=pending(&app).await;
     let gate=Arc::new(ResponseGate::default());
-    let mut route=Route::new("POST","*","/hook",200).header("Content-Type","text/plain").body("Late reply");
+    let mut route=Route::new("POST","*","/hook",200).header("Content-Type",if attachment {"text/csv"} else {"text/plain"}).body("Late reply");
     route.response_gate=Some(gate.clone());
     let server=FakeServer::start(vec![route]).await;
     let net=network(Arc::new(FakeResolver::new([("bots.example",vec!["93.184.216.34"])])),Arc::new(MappingDialer{public:HashSet::from(["93.184.216.34".parse().unwrap()]),to:server.addr,dialed:Mutex::new(vec![])}));
@@ -500,6 +501,7 @@ async fn pause_regression_http_response_after_pause_cannot_post_reply() {
         app.db.write(move |tx| {
             let mut agent=campfire_db::Agent::find(tx.conn(),event.agent_id)?.unwrap();
             agent.update(tx,campfire_db::AgentChanges{paused_at:Some(Some(tx.now())),..Default::default()})?;
+            if resume { agent.update(tx,campfire_db::AgentChanges{paused_at:Some(None),..Default::default()})?; }
             Ok(())
         }).await.unwrap();
         gate.released.notify_one();
@@ -514,4 +516,5 @@ async fn pause_regression_http_response_after_pause_cannot_post_reply() {
         assert_eq!(saved.webhook_status,"none");
         Ok(())
     }).await.unwrap();
+}
 }
