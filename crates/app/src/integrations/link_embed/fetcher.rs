@@ -67,7 +67,11 @@ async fn fetch_metadata(net: &Network, url: &str) -> Result<Metadata, &'static s
     let html = location
         .read_html()
         .await
-        .filter(|html| !String::from_utf8_lossy(html).chars().all(char::is_whitespace))
+        .filter(|html| {
+            !String::from_utf8_lossy(html)
+                .chars()
+                .all(char::is_whitespace)
+        })
         .ok_or("Could not load this link")?;
     let base = url.to_string();
     let mut metadata = tokio::task::spawn_blocking(move || metadata_parser::parse(&html, &base))
@@ -76,15 +80,25 @@ async fn fetch_metadata(net: &Network, url: &str) -> Result<Metadata, &'static s
         .map_err(|_| "Could not load this link")?;
     metadata.image_url = match metadata.image_url.take() {
         Some(image)
-            if uri::parse(&image)
-                .ok()
-                .is_some_and(|url| url.scheme.as_deref().is_some_and(|scheme| scheme.eq_ignore_ascii_case("https")) && url.host.is_some()) =>
+            if uri::parse(&image).ok().is_some_and(|url| {
+                url.scheme
+                    .as_deref()
+                    .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https"))
+                    && url.host.is_some()
+            }) =>
         {
             let mut location = Location::new_with_options(net, Some(&image), OPTIONS);
             let content_type = location.fetch_content_type().await;
             content_type
                 .filter(|value| {
-                    ["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"].contains(&value.to_lowercase().as_str())
+                    [
+                        "image/jpeg",
+                        "image/png",
+                        "image/gif",
+                        "image/webp",
+                        "image/avif",
+                    ]
+                    .contains(&value.to_lowercase().as_str())
                 })
                 .map(|_| image)
         }
@@ -96,4 +110,3 @@ async fn fetch_metadata(net: &Network, url: &str) -> Result<Metadata, &'static s
         Ok(metadata)
     }
 }
-

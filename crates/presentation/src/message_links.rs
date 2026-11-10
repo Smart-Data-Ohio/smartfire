@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug, serde::Deserialize, PartialEq)]
 pub struct Card {
     pub author: String,

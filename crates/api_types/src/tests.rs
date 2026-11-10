@@ -334,7 +334,9 @@ fn api_errors_are_tagged_unions_under_error() {
         (
             ApiError::TwoFactorRequired {
                 message: "Set up two-factor".into(),
-                requirement: TwoFactorRequirement::Setup { location: "/two_factor_setup".into() },
+                requirement: TwoFactorRequirement::Setup {
+                    location: "/two_factor_setup".into(),
+                },
             },
             json!({"_tag": "TwoFactorRequired", "message": "Set up two-factor", "requirement":{"kind":"setup","location":"/two_factor_setup"}}),
             403,
@@ -354,12 +356,16 @@ fn api_errors_are_tagged_unions_under_error() {
             409,
         ),
         (
-            ApiError::StageAudienceFull { message: "This stage is full".into() },
+            ApiError::StageAudienceFull {
+                message: "This stage is full".into(),
+            },
             json!({"_tag": "StageAudienceFull", "message": "This stage is full"}),
             409,
         ),
         (
-            ApiError::HuddleRoomFull { message: "This voice room is full".into() },
+            ApiError::HuddleRoomFull {
+                message: "This voice room is full".into(),
+            },
             json!({"_tag": "HuddleRoomFull", "message": "This voice room is full"}),
             409,
         ),
@@ -724,7 +730,10 @@ fn sidebar_round_trips() {
         users: vec![user()],
         direct_placeholder_user_ids: vec![7],
         can_create_rooms: true,
-        workspace_layout: crate::WorkspaceLayout { categories: vec![], rooms: vec![] },
+        workspace_layout: crate::WorkspaceLayout {
+            categories: vec![],
+            rooms: vec![],
+        },
         note_to_self_room_id: None,
     };
     let wire = serde_json::to_value(&sidebar).unwrap();

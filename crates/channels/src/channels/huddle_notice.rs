@@ -25,7 +25,12 @@ impl Channel<CableUser> for HuddleNoticeChannel {
     }
 
     /// `subscribed` is public, so it's an action too.
-    async fn perform(&mut self, action: &str, _data: &Params, sub: &mut Subscription<CableUser>) -> ChannelResult<bool> {
+    async fn perform(
+        &mut self,
+        action: &str,
+        _data: &Params,
+        sub: &mut Subscription<CableUser>,
+    ) -> ChannelResult<bool> {
         match action {
             "subscribed" if !sub.rejected() => self.subscribed(sub).await.map(|()| true),
             _ => Ok(false),

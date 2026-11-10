@@ -1,15 +1,15 @@
 use super::super::accounts::{Input, UNREADABLE_TOKEN_REASON};
 use super::*;
-use jiff::SignedDuration;
+use crate::controllers::presenters::test_support::*;
 use campfire_app::integrations::fizzy::accounts::Account;
 use campfire_app::integrations::fizzy::agent_reads::ReadResult;
 use campfire_db::Timestamp;
+use jiff::SignedDuration;
 use jiff::tz::TimeZone;
 use rails_compat::ar_encryption::ArEncryption;
 use rusqlite::params;
 use serde_json::Value;
 use serde_json::json;
-use crate::controllers::presenters::test_support::*;
 async fn fixture(name: &str) -> (TestApp, i64, i64) {
     let mut app = TestApp::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
         SEED_NOW.parse().unwrap(),
@@ -184,7 +184,16 @@ fn ws15e_fizzy_agent_budget_uses_zone_day_and_dst() {
 async fn ws15e_fizzy_agent_requests_are_atomic_and_concurrent_replays_do_not_burn_budget() {
     let (app, agent, _) = fixture("comment").await;
     let crypto = ArEncryption::new(&app.booted.app.secrets);
-    app.db().write(move |tx| {tx.conn().execute("UPDATE agents SET daily_external_action_cap=1 WHERE id=?",[agent])?;Ok(())}).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE agents SET daily_external_action_cap=1 WHERE id=?",
+                [agent],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let tasks=(0..12).map(|_| {let db=app.db().clone();let crypto=ArEncryption::new(&app.booted.app.secrets);tokio::spawn(async move {db.write(move|tx|create(tx,&crypto,agent,json!({"kind":"comment","number":579,"body":"Nice work","external_id":" same "}),None,&TimeZone::UTC)).await.unwrap().body()["id"].as_i64().unwrap()})}).collect::<Vec<_>>();
     let mut ids = std::collections::BTreeSet::new();
     for task in tasks {

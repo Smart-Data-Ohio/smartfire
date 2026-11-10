@@ -14,11 +14,16 @@ pub struct Reference {
 }
 
 fn allowed_urn_trailer(text: &str) -> bool {
-    text.chars().next().is_none_or(|c| c.is_ascii_whitespace() || "/?#<>\"'()].,;:!?}".contains(c))
+    text.chars()
+        .next()
+        .is_none_or(|c| c.is_ascii_whitespace() || "/?#<>\"'()].,;:!?}".contains(c))
 }
 
 fn matches(text: &str) -> impl Iterator<Item = regex::Captures<'_>> {
-    PATTERN.captures_iter(text).filter(move |m| m.name("urn").is_none_or(|urn| allowed_urn_trailer(&text[urn.end()..])))
+    PATTERN.captures_iter(text).filter(move |m| {
+        m.name("urn")
+            .is_none_or(|urn| allowed_urn_trailer(&text[urn.end()..]))
+    })
 }
 
 fn clean_url(url: &str) -> &str {
@@ -46,7 +51,12 @@ pub fn extract(text: &str) -> Vec<Reference> {
 }
 
 pub fn embed_url_for(url: &str) -> Option<String> {
-    matches(clean_url(url)).next()?.name("urn").map(|urn| format!("https://www.linkedin.com/embed/feed/update/{}", urn.as_str()))
+    matches(clean_url(url)).next()?.name("urn").map(|urn| {
+        format!(
+            "https://www.linkedin.com/embed/feed/update/{}",
+            urn.as_str()
+        )
+    })
 }
 
 /// Text and hrefs outside code/pre, with block boundaries preserved (the Rails HTML5 DOM).
@@ -131,15 +141,32 @@ mod tests {
     use super::*;
     #[test]
     fn ws15e_linkedin_url_and_html_corpus_matches_rails() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws15e_urls.json")).unwrap();
+        let vectors: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../vectors/ws15e_urls.json")).unwrap();
         for case in vectors["linkedin"].as_array().unwrap() {
             let text = case["text"].as_str().unwrap();
-            assert_eq!(is_post_url(text), case["is_post"].as_bool().unwrap(), "{case}");
-            assert_eq!(embed_url_for(text).as_deref(), case["embed"].as_str(), "{case}");
-            assert_eq!(serde_json::to_value(extract(text)).unwrap(), case["extracted"], "{case}");
+            assert_eq!(
+                is_post_url(text),
+                case["is_post"].as_bool().unwrap(),
+                "{case}"
+            );
+            assert_eq!(
+                embed_url_for(text).as_deref(),
+                case["embed"].as_str(),
+                "{case}"
+            );
+            assert_eq!(
+                serde_json::to_value(extract(text)).unwrap(),
+                case["extracted"],
+                "{case}"
+            );
         }
         for case in vectors["non_code"].as_array().unwrap() {
-            assert_eq!(non_code_text(case["html"].as_str().unwrap()).unwrap(), case["text"].as_str().unwrap(), "{case}");
+            assert_eq!(
+                non_code_text(case["html"].as_str().unwrap()).unwrap(),
+                case["text"].as_str().unwrap(),
+                "{case}"
+            );
         }
     }
 

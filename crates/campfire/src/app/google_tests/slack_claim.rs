@@ -18,8 +18,8 @@ use std::net::SocketAddr;
 const INPUT: &str = include_str!("slack_claim.json");
 const ORACLE: &str = include_str!("../../../../../vectors/slack/google_claim_http.json");
 const NOW: &str = "2026-03-02T16:00:00Z";
-mod review;
 mod boundaries;
+mod review;
 fn grant() -> String {
     ["fixture", "claim", "grant"].join("-")
 }
@@ -258,7 +258,15 @@ async fn send_json(
     body: Value,
     bad_csrf: bool,
 ) -> Reply {
-    exchange(b, address, method, path, Encoding::Json(body.to_string()), bad_csrf).await
+    exchange(
+        b,
+        address,
+        method,
+        path,
+        Encoding::Json(body.to_string()),
+        bad_csrf,
+    )
+    .await
 }
 enum Encoding {
     Form(String),
@@ -539,11 +547,31 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
                     "{name}: retained page"
                 );
                 match name {
-                    "login" => send(&mut b, address, Method::GET, "/app/session/new", &[], false).await,
-                    "enrollment-setup" => {
-                        send_json(&mut b, address, Method::GET, "/api/v1/two_factor/setup", json!({}), false).await
+                    "login" => {
+                        send(&mut b, address, Method::GET, "/app/session/new", &[], false).await
                     }
-                    _ => send_json(&mut b, address, Method::GET, "/api/v1/sudo", json!({}), false).await,
+                    "enrollment-setup" => {
+                        send_json(
+                            &mut b,
+                            address,
+                            Method::GET,
+                            "/api/v1/two_factor/setup",
+                            json!({}),
+                            false,
+                        )
+                        .await
+                    }
+                    _ => {
+                        send_json(
+                            &mut b,
+                            address,
+                            Method::GET,
+                            "/api/v1/sudo",
+                            json!({}),
+                            false,
+                        )
+                        .await
+                    }
                 }
             }
             "enrollment-csrf" | "enrollment-confirm" => {
@@ -593,7 +621,11 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
         match name {
             "enrollment-confirm" => {
                 assert_eq!(reply.json()["kind"], "recoveryCodes", "{name}");
-                assert_eq!(reply.json()["codes"].as_array().unwrap().len(), 10, "{name}");
+                assert_eq!(
+                    reply.json()["codes"].as_array().unwrap().len(),
+                    10,
+                    "{name}"
+                );
             }
             "sudo-prompt" => assert!(
                 reply.json()["reauthentication"]["methods"]
@@ -605,12 +637,16 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
             ),
             _ => {}
         }
-        let application_page = method == Method::GET && path.starts_with("/slack/imports") && row["status"] == 200;
+        let application_page =
+            method == Method::GET && path.starts_with("/slack/imports") && row["status"] == 200;
         if application_page {
             assert_eq!(reply.status, StatusCode::FOUND, "{name}: classic alias");
             let location = reply.location().unwrap().to_owned();
             let expected_path = path.strip_prefix("/slack/imports").unwrap();
-            assert_eq!(location, format!("http://campfire.test/app/settings/slack{expected_path}"));
+            assert_eq!(
+                location,
+                format!("http://campfire.test/app/settings/slack{expected_path}")
+            );
             let path = url::Url::parse(&location).unwrap().path().to_owned();
             reply = send(&mut b, address, Method::GET, &path, &[], false).await;
         }
@@ -622,9 +658,13 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
         );
         let mut expected_location = if row["location"] == "http://campfire.test/" {
             json!("http://campfire.test/app/")
-        } else if path.starts_with("/slack/oauth/callback") && row["location"] == "http://campfire.test/slack/imports" {
+        } else if path.starts_with("/slack/oauth/callback")
+            && row["location"] == "http://campfire.test/slack/imports"
+        {
             json!("http://campfire.test/app/settings/slack")
-        } else { row["location"].clone() };
+        } else {
+            row["location"].clone()
+        };
         // SPA cutover: redirects to retained auth pages now go to the SPA's pages.
         spa_auth_locations(&mut expected_location);
         // SPA cutover: a JSON-started sudo confirmation returns to the SPA, which resumes the
@@ -632,7 +672,11 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
         if name == "google-sudo-confirm" {
             expected_location = json!("http://campfire.test/app/sudo/continue");
         }
-        assert_eq!(json!(reply.location()), expected_location, "{name}: redirect");
+        assert_eq!(
+            json!(reply.location()),
+            expected_location,
+            "{name}: redirect"
+        );
         let json_step = spa_step
             && reply
                 .content_type()
@@ -644,7 +688,10 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
                 "{name}: media type"
             );
         }
-        if !application_page && !spa_step && !crate::form_contracts::same_page(&reply.text(), row["body"].as_str().unwrap()) {
+        if !application_page
+            && !spa_step
+            && !crate::form_contracts::same_page(&reply.text(), row["body"].as_str().unwrap())
+        {
             let dir = std::env::temp_dir().join("claim-diff");
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join(format!("{name}.actual")), reply.body.clone()).unwrap();
@@ -673,11 +720,27 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
         );
         if name == "google-sudo-confirm" {
             // SPA cutover: the continue API names the request Rails redirected to, once.
-            let continued = send_json(&mut b, address, Method::GET, "/api/v1/sudo/continue", json!({}), false).await;
-            assert_eq!(continued.status, StatusCode::OK, "{name}: continue; {}", continued.text());
+            let continued = send_json(
+                &mut b,
+                address,
+                Method::GET,
+                "/api/v1/sudo/continue",
+                json!({}),
+                false,
+            )
+            .await;
+            assert_eq!(
+                continued.status,
+                StatusCode::OK,
+                "{name}: continue; {}",
+                continued.text()
+            );
             let retry = &continued.json()["retry"];
             assert_eq!(
-                (retry["method"].clone(), format!("http://campfire.test{}", retry["path"].as_str().unwrap())),
+                (
+                    retry["method"].clone(),
+                    format!("http://campfire.test{}", retry["path"].as_str().unwrap())
+                ),
                 (json!("GET"), row["location"].as_str().unwrap().to_owned()),
                 "{name}: continue; {}",
                 continued.text()

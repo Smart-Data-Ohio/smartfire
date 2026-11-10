@@ -1292,48 +1292,107 @@ async fn scheduled_messages_page_by_cursor() {
 #[tokio::test]
 async fn scheduled_private_drafts_keep_own_source_and_hide_current_parent_facts() {
     let Some(a) = app(true).await else { return };
-    let (thread_id, pending_id, sent_id) = a.db().write(|tx| {
-        if campfire_db::Membership::find_by_room_and_user(tx.conn(), DESIGNERS, KEVIN)?.is_none() {
-            campfire_db::Membership::create_default(tx, DESIGNERS, KEVIN)?;
-        }
-        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: DESIGNERS, creator_id: KEVIN,
-            name: Some("Private parent title".into()),
-            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
-            ..Default::default()
-        })?;
-        let target = thread.post_message(tx, KEVIN, campfire_db::NewMessage { markdown_source: Some("Private reply preview".into()), ..Default::default() })?;
-        let attrs = campfire_db::NewScheduledMessage {
-            user_id: KEVIN, room_id: DESIGNERS, thread_id: Some(thread.id),
-            reply_to_message_id: Some(target.id), markdown_source: "Own source".into(),
-            send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
-        };
-        let pending = campfire_db::ScheduledMessage::create(tx, attrs.clone())?;
-        let sent = campfire_db::ScheduledMessage::create(tx, attrs)?;
-        assert!(campfire_db::ScheduledMessage::dispatch(tx, sent.id, tx.now(), true)?);
-        Ok((thread.id, pending.id, sent.id))
-    }).await.unwrap();
+    let (thread_id, pending_id, sent_id) = a
+        .db()
+        .write(|tx| {
+            if campfire_db::Membership::find_by_room_and_user(tx.conn(), DESIGNERS, KEVIN)?
+                .is_none()
+            {
+                campfire_db::Membership::create_default(tx, DESIGNERS, KEVIN)?;
+            }
+            let mut thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: DESIGNERS,
+                    creator_id: KEVIN,
+                    name: Some("Private parent title".into()),
+                    visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            let target = thread.post_message(
+                tx,
+                KEVIN,
+                campfire_db::NewMessage {
+                    markdown_source: Some("Private reply preview".into()),
+                    ..Default::default()
+                },
+            )?;
+            let attrs = campfire_db::NewScheduledMessage {
+                user_id: KEVIN,
+                room_id: DESIGNERS,
+                thread_id: Some(thread.id),
+                reply_to_message_id: Some(target.id),
+                markdown_source: "Own source".into(),
+                send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
+            };
+            let pending = campfire_db::ScheduledMessage::create(tx, attrs.clone())?;
+            let sent = campfire_db::ScheduledMessage::create(tx, attrs)?;
+            assert!(campfire_db::ScheduledMessage::dispatch(
+                tx,
+                sent.id,
+                tx.now(),
+                true
+            )?);
+            Ok((thread.id, pending.id, sent.id))
+        })
+        .await
+        .unwrap();
     let mut browser = a.sign_in(KEVIN).await;
     let reply = browser.send(get("/api/v1/scheduled_messages")).await;
     let list: api::ScheduledMessageList = parse(&reply);
-    let pending = list.scheduled_messages.iter().find(|row| row.id == pending_id).unwrap();
+    let pending = list
+        .scheduled_messages
+        .iter()
+        .find(|row| row.id == pending_id)
+        .unwrap();
     assert!(pending.sendable && pending.reply_target.is_some());
-    a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)).await.unwrap();
-    for (path, id) in [("/api/v1/scheduled_messages", pending_id), ("/api/v1/scheduled_messages?status=past", sent_id)] {
+    a.db()
+        .write(move |tx| {
+            campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                .remove_access_member(tx, KEVIN, KEVIN)
+        })
+        .await
+        .unwrap();
+    for (path, id) in [
+        ("/api/v1/scheduled_messages", pending_id),
+        ("/api/v1/scheduled_messages?status=past", sent_id),
+    ] {
         let reply = browser.send(get(path)).await;
         assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
         assert!(!reply.text().contains("Private parent title"));
         assert!(!reply.text().contains("Private reply preview"));
         let list: api::ScheduledMessageList = parse(&reply);
-        let row = list.scheduled_messages.iter().find(|row| row.id == id).unwrap();
+        let row = list
+            .scheduled_messages
+            .iter()
+            .find(|row| row.id == id)
+            .unwrap();
         assert_eq!(row.markdown_source, "Own source");
         assert!(!row.sendable);
         assert!(row.reply_target.is_none());
         assert!(row.sent_message_id.is_none());
     }
-    let reply = browser.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{pending_id}/send_now"), &json!({}))).await;
-    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
-    assert!(a.db().read(move |conn| campfire_db::ScheduledMessage::find(conn, pending_id)).await.unwrap().dropped());
+    let reply = browser
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/scheduled_messages/{pending_id}/send_now"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert!(
+        a.db()
+            .read(move |conn| campfire_db::ScheduledMessage::find(conn, pending_id))
+            .await
+            .unwrap()
+            .dropped()
+    );
 }
 
 /// A forward of a Markdown message shows its snapshot as Markdown: the SPA's body keeps its table
@@ -1380,41 +1439,77 @@ async fn an_html_body_written_over_a_forwarded_markdown_snapshot_shows_as_html()
             .await
             .unwrap();
         let read = format!("/api/v1/messages/{id}");
-        let before = parse::<api::MessageRead>(&david.send(get(&read)).await).message.body_html;
-        assert!(before.contains("<table>") && before.contains("type=\"checkbox\""), "{path}: {before}");
+        let before = parse::<api::MessageRead>(&david.send(get(&read)).await)
+            .message
+            .body_html;
+        assert!(
+            before.contains("<table>") && before.contains("type=\"checkbox\""),
+            "{path}: {before}"
+        );
 
         let reply = match path {
             "human" => {
                 david
-                    .write(json_body(Method::PATCH, &format!("/rooms/{ALL_TALK}/messages/{id}.json"), &json!({"message": {"body": html}})))
+                    .write(json_body(
+                        Method::PATCH,
+                        &format!("/rooms/{ALL_TALK}/messages/{id}.json"),
+                        &json!({"message": {"body": html}}),
+                    ))
                     .await
             }
             "bot" => {
                 a.anonymous()
                     .send(
-                        Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}"))
-                            .header("content-type", "text/plain")
-                            .body(html.to_owned()),
+                        Req::new(
+                            Method::PATCH,
+                            &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}"),
+                        )
+                        .header("content-type", "text/plain")
+                        .body(html.to_owned()),
                     )
                     .await
             }
             _ => {
                 david
-                    .write(json_body(Method::PATCH, &read, &json!({"markdownSource": "| b |\n|---|\n| 2 |\n\n- [x] done"})))
+                    .write(json_body(
+                        Method::PATCH,
+                        &read,
+                        &json!({"markdownSource": "| b |\n|---|\n| 2 |\n\n- [x] done"}),
+                    ))
                     .await
             }
         };
-        assert!(reply.status.is_success(), "{path}: {} {}", reply.status, reply.text());
+        assert!(
+            reply.status.is_success(),
+            "{path}: {} {}",
+            reply.status,
+            reply.text()
+        );
 
-        let after = parse::<api::MessageRead>(&david.send(get(&read)).await).message.body_html;
-        let message = a.db().read(move |conn| Message::find(conn, id)).await.unwrap();
+        let after = parse::<api::MessageRead>(&david.send(get(&read)).await)
+            .message
+            .body_html;
+        let message = a
+            .db()
+            .read(move |conn| Message::find(conn, id))
+            .await
+            .unwrap();
         assert!(!message.forwarded_markdown, "{path}");
         if path == "spa" {
             assert!(message.markdown(), "{path}");
-            assert!(after.contains("<td>2</td>") && after.contains("checked"), "{path}: {after}");
+            assert!(
+                after.contains("<td>2</td>") && after.contains("checked"),
+                "{path}: {after}"
+            );
         } else {
-            assert!(!after.contains("<table") && !after.contains("<td") && !after.contains("<input"), "{path}: {after}");
-            assert!(after.contains("cell") && after.contains("task"), "{path}: {after}");
+            assert!(
+                !after.contains("<table") && !after.contains("<td") && !after.contains("<input"),
+                "{path}: {after}"
+            );
+            assert!(
+                after.contains("cell") && after.contains("task"),
+                "{path}: {after}"
+            );
         }
     }
 }
@@ -1437,7 +1532,12 @@ async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
         .write(move |tx| {
             let source = Message::create(
                 tx,
-                NewMessage { room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("| a |\n|---|\n| cell |".into()), ..Default::default() },
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("| a |\n|---|\n| cell |".into()),
+                    ..Default::default()
+                },
             )?;
             let mut ids = Vec::new();
             for _ in 0..2 {
@@ -1456,7 +1556,10 @@ async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
                 ids.push(forward.id);
             }
             // The row an HTML edit left on main: the flag still set, and the "(edited)" stamp.
-            tx.conn().execute("UPDATE messages SET edited_at = updated_at WHERE id = ?", [ids[0]])?;
+            tx.conn().execute(
+                "UPDATE messages SET edited_at = updated_at WHERE id = ?",
+                [ids[0]],
+            )?;
             Ok((ids[0], ids[1]))
         })
         .await
@@ -1464,10 +1567,25 @@ async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
 
     let shown = |reply: &Reply| parse::<api::MessageRead>(reply).message.body_html;
     let stale_html = shown(&david.send(get(&format!("/api/v1/messages/{stale}"))).await);
-    assert!(!stale_html.contains("<table") && !stale_html.contains("<td") && stale_html.contains("cell"), "{stale_html}");
-    let unedited_html = shown(&david.send(get(&format!("/api/v1/messages/{unedited}"))).await);
-    assert!(unedited_html.contains("<table><tbody><tr><td>cell</td>"), "{unedited_html}");
-    assert!(!unedited_html.contains("visually-hidden"), "{unedited_html}");
+    assert!(
+        !stale_html.contains("<table")
+            && !stale_html.contains("<td")
+            && stale_html.contains("cell"),
+        "{stale_html}"
+    );
+    let unedited_html = shown(
+        &david
+            .send(get(&format!("/api/v1/messages/{unedited}")))
+            .await,
+    );
+    assert!(
+        unedited_html.contains("<table><tbody><tr><td>cell</td>"),
+        "{unedited_html}"
+    );
+    assert!(
+        !unedited_html.contains("visually-hidden"),
+        "{unedited_html}"
+    );
 
     // Forwarding the edited forward again: the copy is an ordinary forward.
     let reply = david
@@ -1477,7 +1595,12 @@ async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
             &json!({"destinations": [{"room_id": QUIET_CORNER}]}),
         ))
         .await;
-    assert!(reply.status.is_success(), "{} {}", reply.status, reply.text());
+    assert!(
+        reply.status.is_success(),
+        "{} {}",
+        reply.status,
+        reply.text()
+    );
     let copy = a
         .db()
         .read(move |conn| {
@@ -1487,8 +1610,15 @@ async fn a_forward_edited_with_html_before_the_fix_shows_as_html() {
         .await
         .unwrap();
     assert!(!copy.forwarded_markdown);
-    let copy_html = shown(&david.send(get(&format!("/api/v1/messages/{}", copy.id))).await);
-    assert!(!copy_html.contains("<table") && copy_html.contains("cell"), "{copy_html}");
+    let copy_html = shown(
+        &david
+            .send(get(&format!("/api/v1/messages/{}", copy.id)))
+            .await,
+    );
+    assert!(
+        !copy_html.contains("<table") && copy_html.contains("cell"),
+        "{copy_html}"
+    );
 }
 
 /// A forward of an HTML-edited forward, made before the forwarder checked `edited_at`: the flag
@@ -1514,7 +1644,12 @@ async fn a_second_generation_forward_from_before_the_fix_keeps_only_renderer_mar
         .write(move |tx| {
             let source = Message::create(
                 tx,
-                NewMessage { room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("| a |\n|---|\n| cell |".into()), ..Default::default() },
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("| a |\n|---|\n| cell |".into()),
+                    ..Default::default()
+                },
             )?;
             let forward = |tx: &mut campfire_db::Tx<'_>, from: i64| {
                 Message::create(
@@ -1531,20 +1666,58 @@ async fn a_second_generation_forward_from_before_the_fix_keeps_only_renderer_mar
                 )
             };
             let first = forward(tx, source.id)?;
-            tx.conn().execute("UPDATE messages SET edited_at = updated_at WHERE id = ?", [first.id])?;
+            tx.conn().execute(
+                "UPDATE messages SET edited_at = updated_at WHERE id = ?",
+                [first.id],
+            )?;
             let second = forward(tx, first.id)?;
             Ok(second.id)
         })
         .await
         .unwrap();
 
-    let stored = a.db().read(move |conn| Message::find(conn, second)).await.unwrap();
+    let stored = a
+        .db()
+        .read(move |conn| Message::find(conn, second))
+        .await
+        .unwrap();
     assert!(stored.forwarded_markdown && stored.edited_at.is_none());
-    let shown = parse::<api::MessageRead>(&david.send(get(&format!("/api/v1/messages/{second}"))).await).message.body_html;
-    assert!(shown.contains("<table><tbody><tr><th>head</th></tr><tr><td>cell</td><td align=\"center\">other</td>"), "{shown}");
-    for hostile in ["width=", "height=", "visually-hidden", "style=", "onclick", "onmouseover", "onfocus", "justify", "type=\"text\"", "value=", "name=", "start=", "_top", "opener\""] {
+    let shown =
+        parse::<api::MessageRead>(&david.send(get(&format!("/api/v1/messages/{second}"))).await)
+            .message
+            .body_html;
+    assert!(
+        shown.contains(
+            "<table><tbody><tr><th>head</th></tr><tr><td>cell</td><td align=\"center\">other</td>"
+        ),
+        "{shown}"
+    );
+    for hostile in [
+        "width=",
+        "height=",
+        "visually-hidden",
+        "style=",
+        "onclick",
+        "onmouseover",
+        "onfocus",
+        "justify",
+        "type=\"text\"",
+        "value=",
+        "name=",
+        "start=",
+        "_top",
+        "opener\"",
+    ] {
         assert!(!shown.contains(hostile), "{hostile}: {shown}");
     }
-    assert!(shown.contains("<li><input type=\"checkbox\" disabled=\"disabled\"> item</li><li> text</li>"), "{shown}");
-    assert!(shown.contains("target=\"_blank\" rel=\"nofollow noopener noreferrer\""), "{shown}");
+    assert!(
+        shown.contains(
+            "<li><input type=\"checkbox\" disabled=\"disabled\"> item</li><li> text</li>"
+        ),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("target=\"_blank\" rel=\"nofollow noopener noreferrer\""),
+        "{shown}"
+    );
 }

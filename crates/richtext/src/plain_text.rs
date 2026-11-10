@@ -9,14 +9,23 @@ pub fn node_to_plain_text(dom: &Dom, node: NodeId) -> String {
 }
 
 fn plain_text_for(dom: &Dom, node: NodeId) -> String {
-    let child_values = || -> Vec<String> { dom.children(node).iter().map(|&c| plain_text_for(dom, c)).collect() };
+    let child_values = || -> Vec<String> {
+        dom.children(node)
+            .iter()
+            .map(|&c| plain_text_for(dom, c))
+            .collect()
+    };
     let name = dom.name(node);
     match name.as_ref() {
         "script" | "style" | "unsupported" => String::new(),
         "h1" | "p" => plain_text_for_block(&child_values()),
         "ul" | "ol" => {
             let text = plain_text_for_block(&child_values());
-            if list_depth(dom, node) > 0 { format!("\n{text}") } else { text }
+            if list_depth(dom, node) > 0 {
+                format!("\n{text}")
+            } else {
+                text
+            }
         }
         "br" => "\n".to_string(),
         // Same redaction as `markdown::plain_text`: a spoiler's words never enter a preview.
@@ -45,7 +54,11 @@ fn plain_text_for(dom: &Dom, node: NodeId) -> String {
             let bullet = bullet_for_li(dom, node);
             let text = chomp_newlines(&child_values().concat()).to_string();
             let depth = list_depth(dom, node);
-            let indentation = if depth > 1 { "  ".repeat(depth - 1) } else { String::new() };
+            let indentation = if depth > 1 {
+                "  ".repeat(depth - 1)
+            } else {
+                String::new()
+            };
             format!("{indentation}{bullet} {text}\n")
         }
         _ => child_values().concat(),
@@ -61,13 +74,28 @@ fn is_list(name: &str) -> bool {
 }
 
 fn list_depth(dom: &Dom, node: NodeId) -> usize {
-    dom.ancestors(node).into_iter().filter(|&a| is_list(&dom.name(a))).count()
+    dom.ancestors(node)
+        .into_iter()
+        .filter(|&a| is_list(&dom.name(a)))
+        .count()
 }
 
 fn bullet_for_li(dom: &Dom, node: NodeId) -> String {
-    let list = dom.ancestors(node).into_iter().map(|a| dom.name(a).into_owned()).find(|n| is_list(n));
+    let list = dom
+        .ancestors(node)
+        .into_iter()
+        .map(|a| dom.name(a).into_owned())
+        .find(|n| is_list(n));
     if list.as_deref() == Some("ol") {
-        let index = dom.parent(node).map(|p| dom.element_children(p).iter().position(|&c| c == node).unwrap_or(0)).unwrap_or(0);
+        let index = dom
+            .parent(node)
+            .map(|p| {
+                dom.element_children(p)
+                    .iter()
+                    .position(|&c| c == node)
+                    .unwrap_or(0)
+            })
+            .unwrap_or(0);
         format!("{}.", index + 1)
     } else {
         "•".to_string()

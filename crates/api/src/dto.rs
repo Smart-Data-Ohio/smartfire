@@ -59,9 +59,7 @@ impl UserExtras {
             .collect();
         let icon_users: Vec<_> = users
             .iter()
-            .filter(|user| {
-                user.is_bot() && !avatars.contains(&user.id) && user.icon_name.is_some()
-            })
+            .filter(|user| user.is_bot() && !avatars.contains(&user.id) && user.icon_name.is_some())
             .collect();
         let custom_titles: HashMap<String, String> = if icon_users.is_empty() {
             HashMap::new()
@@ -75,7 +73,10 @@ impl UserExtras {
             let name = user.icon_name.as_deref().unwrap();
             if let Some(mut icon) = avatar_icon(name, custom_titles.get(name).map(String::as_str)) {
                 if icon.kind == api::IconKind::Custom {
-                    icon.animated = campfire_db::models::workspace_icon::WorkspaceIcon::animated_by_name(conn, name)?;
+                    icon.animated =
+                        campfire_db::models::workspace_icon::WorkspaceIcon::animated_by_name(
+                            conn, name,
+                        )?;
                     if icon.animated {
                         icon.still_url = Some(format!("/icons/{name}?still=1"));
                     }
@@ -107,7 +108,11 @@ impl UserExtras {
     }
 
     /// The profile banner's image and first-frame paths, both `None` without one.
-    pub fn banner_paths(&self, secrets: &Secrets, user_id: i64) -> (Option<String>, Option<String>) {
+    pub fn banner_paths(
+        &self,
+        secrets: &Secrets,
+        user_id: i64,
+    ) -> (Option<String>, Option<String>) {
         banner_paths(secrets, user_id, self.banners.get(&user_id).copied())
     }
 }
@@ -366,7 +371,11 @@ pub fn conversation_names(
         };
         let thread_name = match thread_id {
             Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
-                Some(thread) if thread.room_id == room_id && thread.readable_by(conn, viewer.id)? => Some(thread.name),
+                Some(thread)
+                    if thread.room_id == room_id && thread.readable_by(conn, viewer.id)? =>
+                {
+                    Some(thread.name)
+                }
                 _ => continue,
             },
             None => None,
@@ -449,19 +458,30 @@ pub(crate) fn messages_and_fetches(
     messages_and_fetches_inner(conn, app, messages, false)
 }
 
-pub(crate) fn digest_messages(conn: &Connection, app: &AppState, messages: &[Message]) -> Result<Vec<api::MessageDTO>> {
+pub(crate) fn digest_messages(
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+) -> Result<Vec<api::MessageDTO>> {
     Ok(messages_and_fetches_inner(conn, app, messages, true)?.0)
 }
 
 fn messages_and_fetches_inner(
-    conn: &Connection, app: &AppState, messages: &[Message], preload: bool,
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+    preload: bool,
 ) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
     // When the read began: orders the polls and cards against `poll.updated` and
     // `message.cards` (`Poll::as_of`, `MessageDTO::cards_as_of`).
     let now = app.db.env().now();
     let as_of = time(now);
     let presenter = Presenter::new(conn, app, None);
-    let presenter = if preload { presenter.preload_payload(messages)? } else { presenter };
+    let presenter = if preload {
+        presenter.preload_payload(messages)?
+    } else {
+        presenter
+    };
     let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
     let mut polls = crate::cards::polls(conn, &ids, now, &*app.storage.verifier)?;
     let mut fetches = crate::cards::Fetches::default();
@@ -478,20 +498,41 @@ fn messages_and_fetches_inner(
         &ids,
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
     )?;
-    let pinned: BTreeSet<i64> = flags.iter().filter(|flag| flag.1).map(|flag| flag.0).collect();
-    let published: BTreeSet<i64> = flags.iter().filter(|flag| flag.2).map(|flag| flag.0).collect();
-    let copies: BTreeSet<i64> = flags.iter().filter(|flag| flag.3).map(|flag| flag.0).collect();
+    let pinned: BTreeSet<i64> = flags
+        .iter()
+        .filter(|flag| flag.1)
+        .map(|flag| flag.0)
+        .collect();
+    let published: BTreeSet<i64> = flags
+        .iter()
+        .filter(|flag| flag.2)
+        .map(|flag| flag.0)
+        .collect();
+    let copies: BTreeSet<i64> = flags
+        .iter()
+        .filter(|flag| flag.3)
+        .map(|flag| flag.0)
+        .collect();
     let file_rows: Vec<(i64, String, i64, bool)> = ids_query(
         conn,
         r#"SELECT record_id, name, blob_id, spoiler FROM active_storage_attachments WHERE record_type='Message' AND name IN ('attachment','attachments') AND record_id IN ({}) ORDER BY id"#,
         &ids,
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
     )?;
-    let blobs = campfire_storage::Blob::find_many(conn, &file_rows.iter().map(|(_, _, blob, _)| *blob).collect::<Vec<_>>())
-        .map_err(campfire_runtime::presenters::storage_error)?;
+    let blobs = campfire_storage::Blob::find_many(
+        conn,
+        &file_rows
+            .iter()
+            .map(|(_, _, blob, _)| *blob)
+            .collect::<Vec<_>>(),
+    )
+    .map_err(campfire_runtime::presenters::storage_error)?;
     let mut files = HashMap::<i64, Vec<(String, i64, bool)>>::new();
     for (message_id, name, blob_id, spoiler) in file_rows {
-        files.entry(message_id).or_default().push((name, blob_id, spoiler));
+        files
+            .entry(message_id)
+            .or_default()
+            .push((name, blob_id, spoiler));
     }
     let threads = thread_indicators(conn, messages)?;
     let mut steps = message_steps(conn, &ids)?;
@@ -503,11 +544,18 @@ fn messages_and_fetches_inner(
             let mut attachments = Vec::with_capacity(rows.len());
             for (_, blob_id, spoiler) in rows {
                 if let Some(blob) = blobs.get(blob_id) {
-                    attachments.push(attachment(presenter.attachment_blob(message, blob, *spoiler)?, blob.content_type.as_deref(), blob.byte_size));
+                    attachments.push(attachment(
+                        presenter.attachment_blob(message, blob, *spoiler)?,
+                        blob.content_type.as_deref(),
+                        blob.byte_size,
+                    ));
                 }
             }
             let attachment = attachments.first().cloned();
-            let attachments = rows.iter().any(|(name, _, _)| name == "attachments").then_some(attachments);
+            let attachments = rows
+                .iter()
+                .any(|(name, _, _)| name == "attachments")
+                .then_some(attachments);
             let (reactions, boosts) = reactions_and_boosts(conn, &presenter, message.id)?;
             let sound = if attachment.is_none() {
                 campfire_db::message::sound_in(&presenter.plain_text_body(message)?)
@@ -515,8 +563,11 @@ fn messages_and_fetches_inner(
             } else {
                 None
             };
-            let (embeds, webhook) = webhook_payloads.remove(&message.id)
-                .map_or((None, None), |payload| (Some(payload.embeds), Some(payload.attribution)));
+            let (embeds, webhook) = webhook_payloads
+                .remove(&message.id)
+                .map_or((None, None), |payload| {
+                    (Some(payload.embeds), Some(payload.attribution))
+                });
             Ok(api::MessageDTO {
                 id: message.id,
                 room_id: message.room_id,
@@ -696,7 +747,8 @@ fn reactions_and_boosts(
     use campfire_presentation::helpers::AvatarIcon;
     let (mut reactions, mut boosts) = (Vec::<api::Reaction>::new(), Vec::new());
     for boost in campfire_db::Boost::for_message_ordered(conn, message_id)? {
-        let Some(reaction) = campfire_presentation::messages::reactions::resolve(&boost.content, presenter)
+        let Some(reaction) =
+            campfire_presentation::messages::reactions::resolve(&boost.content, presenter)
         else {
             boosts.push(api::Boost {
                 id: boost.id,
@@ -706,7 +758,10 @@ fn reactions_and_boosts(
             });
             continue;
         };
-        match reactions.iter_mut().find(|group| group.content == boost.content) {
+        match reactions
+            .iter_mut()
+            .find(|group| group.content == boost.content)
+        {
             Some(group) => {
                 if !group.reactor_ids.contains(&boost.booster_id) {
                     group.reactor_ids.push(boost.booster_id);
@@ -783,7 +838,9 @@ fn matching_close(html: &str) -> Option<usize> {
                 return Some(at);
             }
             at += "</div>".len();
-        } else if tail.starts_with("<div") && tail[4..].starts_with(|c: char| c == '>' || c.is_whitespace()) {
+        } else if tail.starts_with("<div")
+            && tail[4..].starts_with(|c: char| c == '>' || c.is_whitespace())
+        {
             depth += 1;
             at += "<div".len();
         } else {
@@ -899,11 +956,25 @@ fn thread_indicators(
         .filter(|message| message.thread_id.is_none())
         .map(|message| message.id)
         .collect();
-    let threads: Vec<(i64, i64, i64, Timestamp, campfire_db::channel_thread::ThreadVisibility)> = ids_query(
+    let threads: Vec<(
+        i64,
+        i64,
+        i64,
+        Timestamp,
+        campfire_db::channel_thread::ThreadVisibility,
+    )> = ids_query(
         conn,
         r#"SELECT "channel_threads"."parent_message_id", "channel_threads"."id", "channel_threads"."messages_count", "channel_threads"."last_activity_at", "channel_threads"."visibility" FROM "channel_threads" WHERE "channel_threads"."parent_message_id" IN ({})"#,
         &roots,
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
+        |row| {
+            Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+                row.get(4)?,
+            ))
+        },
     )?;
     let mut repliers = conn.prepare_cached(
         r#"SELECT "messages"."creator_id" FROM "messages" WHERE "messages"."thread_id" = ? AND "messages"."system_note" = 0 AND "messages"."streaming" = 0 GROUP BY "messages"."creator_id" ORDER BY MAX("messages"."created_at") DESC, MAX("messages"."id") DESC LIMIT 3"#,
@@ -928,7 +999,11 @@ fn thread_indicators(
 }
 
 /// The viewer's `saved_items` among `messages`, in page order.
-pub fn saved(conn: &Connection, viewer_id: i64, messages: &[Message]) -> Result<Vec<api::SavedMark>> {
+pub fn saved(
+    conn: &Connection,
+    viewer_id: i64,
+    messages: &[Message],
+) -> Result<Vec<api::SavedMark>> {
     if messages.is_empty() {
         return Ok(Vec::new());
     }
@@ -936,15 +1011,24 @@ pub fn saved(conn: &Connection, viewer_id: i64, messages: &[Message]) -> Result<
         r#"SELECT "saved_items"."message_id", "saved_items"."id" FROM "saved_items" WHERE "saved_items"."user_id" = ? AND "saved_items"."message_id" IN ({})"#,
         vec!["?"; messages.len()].join(", ")
     );
-    let values: Vec<i64> = std::iter::once(viewer_id).chain(messages.iter().map(|message| message.id)).collect();
+    let values: Vec<i64> = std::iter::once(viewer_id)
+        .chain(messages.iter().map(|message| message.id))
+        .collect();
     let mut statement = conn.prepare(&sql)?;
     let mut marks: HashMap<i64, i64> = statement
-        .query_map(rusqlite::params_from_iter(&values), |row| Ok((row.get(0)?, row.get(1)?)))?
+        .query_map(rusqlite::params_from_iter(&values), |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?
         .collect::<rusqlite::Result<_>>()?;
     Ok(messages
         .iter()
         .filter_map(|message| {
-            marks.remove(&message.id).map(|saved_item_id| api::SavedMark { message_id: message.id, saved_item_id })
+            marks
+                .remove(&message.id)
+                .map(|saved_item_id| api::SavedMark {
+                    message_id: message.id,
+                    saved_item_id,
+                })
         })
         .collect())
 }
@@ -953,19 +1037,26 @@ pub fn message(conn: &Connection, app: &AppState, message: &Message) -> Result<a
     Ok(messages(conn, app, std::slice::from_ref(message))?.remove(0))
 }
 
-pub(crate) fn mark_ignored(conn: &Connection, viewer: i64, messages: &mut [api::MessageDTO]) -> Result<()> {
+pub(crate) fn mark_ignored(
+    conn: &Connection,
+    viewer: i64,
+    messages: &mut [api::MessageDTO],
+) -> Result<()> {
     let ignored = campfire_db::models::ignore_policy::ignored_authors(conn, viewer)?;
     for message in messages {
         message.ignored = ignored.contains(&message.creator_id).then_some(true);
         if let Some(indicator) = &message.thread
-            && !campfire_db::ChannelThread::find(conn, indicator.thread_id)?.readable_by(conn, viewer)? {
+            && !campfire_db::ChannelThread::find(conn, indicator.thread_id)?
+                .readable_by(conn, viewer)?
+        {
             message.thread = None;
         }
         for card in &mut message.cards {
             if let api::MessageCard::Quote(quote) = card
                 && let Some(preview) = &quote.preview
                 && let Some(source) = Message::find_by_id(conn, preview.message_id)?
-                && !campfire_db::message_quote::visible(conn, &source, viewer)? {
+                && !campfire_db::message_quote::visible(conn, &source, viewer)?
+            {
                 quote.preview = None;
             }
         }
@@ -973,7 +1064,12 @@ pub(crate) fn mark_ignored(conn: &Connection, viewer: i64, messages: &mut [api::
     Ok(())
 }
 
-pub(crate) fn messages_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<Vec<api::MessageDTO>> {
+pub(crate) fn messages_for_viewer(
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+    viewer: i64,
+) -> Result<Vec<api::MessageDTO>> {
     let messages = readable_messages(conn, messages, viewer)?;
     let mut dtos = self::messages(conn, app, &messages)?;
     mark_ignored(conn, viewer, &mut dtos)?;
@@ -981,7 +1077,12 @@ pub(crate) fn messages_for_viewer(conn: &Connection, app: &AppState, messages: &
     Ok(dtos)
 }
 
-pub(crate) fn messages_and_fetches_for_viewer(conn: &Connection, app: &AppState, messages: &[Message], viewer: i64) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
+pub(crate) fn messages_and_fetches_for_viewer(
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+    viewer: i64,
+) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
     let messages = readable_messages(conn, messages, viewer)?;
     let (mut dtos, fetches) = messages_and_fetches(conn, app, &messages)?;
     mark_ignored(conn, viewer, &mut dtos)?;
@@ -990,8 +1091,12 @@ pub(crate) fn messages_and_fetches_for_viewer(conn: &Connection, app: &AppState,
 }
 
 fn readable_message(conn: &Connection, message: &Message, viewer: i64) -> Result<bool> {
-    let Some(thread_id) = message.thread_id else { return Ok(true) };
-    let Some(thread) = campfire_db::ChannelThread::find_by_id(conn, thread_id)? else { return Ok(false) };
+    let Some(thread_id) = message.thread_id else {
+        return Ok(true);
+    };
+    let Some(thread) = campfire_db::ChannelThread::find_by_id(conn, thread_id)? else {
+        return Ok(false);
+    };
     Ok(thread.room_id == message.room_id && thread.readable_by(conn, viewer)?)
 }
 
@@ -1005,7 +1110,12 @@ fn readable_messages(conn: &Connection, messages: &[Message], viewer: i64) -> Re
     Ok(visible)
 }
 
-pub(crate) fn message_for_viewer(conn: &Connection, app: &AppState, message: &Message, viewer: i64) -> Result<api::MessageDTO> {
+pub(crate) fn message_for_viewer(
+    conn: &Connection,
+    app: &AppState,
+    message: &Message,
+    viewer: i64,
+) -> Result<api::MessageDTO> {
     if !readable_message(conn, message, viewer)? {
         return Err(campfire_db::Error::RecordNotFound("Message"));
     }
@@ -1128,7 +1238,10 @@ pub(crate) fn notification_counts(
 /// history by `room_id` to find them.
 fn notification_counts_sql(one_room: bool) -> String {
     let visible = campfire_db::models::ignore_policy::visible_sql("?1", "m.creator_id");
-    let visible = format!("({visible}) AND (m.thread_id IS NULL OR {})", campfire_db::channel_thread::readable_by_sql("m.thread_id", "?1"));
+    let visible = format!(
+        "({visible}) AND (m.thread_id IS NULL OR {})",
+        campfire_db::channel_thread::readable_by_sql("m.thread_id", "?1")
+    );
     let only = |column: &str| match one_room {
         true => format!(r#" AND {column} = ?3"#),
         false => String::new(),
@@ -1140,11 +1253,18 @@ fn notification_counts_sql(one_room: bool) -> String {
     );
     let preferences = "(SELECT inbox_preferences FROM users WHERE id=?1)";
     let effective = campfire_db::models::notification_policy::involvement_sql("ms", preferences);
-    let unmuted = campfire_db::models::notification_policy::unmuted_sql("ms.room_id", preferences, "?2");
-    sql.replace(r#""ms"."involvement", "ms"."unread_at""#, &format!(r#"({effective}) AS "involvement", "ms"."unread_at""#))
-        .replace(r#""ms"."involvement""#, &format!("({effective})"))
-        .replace(r#"WHERE "ms"."user_id" = ?1"#, &format!(r#"WHERE "ms"."user_id" = ?1 AND {unmuted}"#))
-        .replace(r#"WHERE ("#, &format!("WHERE {unmuted} AND ("))
+    let unmuted =
+        campfire_db::models::notification_policy::unmuted_sql("ms.room_id", preferences, "?2");
+    sql.replace(
+        r#""ms"."involvement", "ms"."unread_at""#,
+        &format!(r#"({effective}) AS "involvement", "ms"."unread_at""#),
+    )
+    .replace(r#""ms"."involvement""#, &format!("({effective})"))
+    .replace(
+        r#"WHERE "ms"."user_id" = ?1"#,
+        &format!(r#"WHERE "ms"."user_id" = ?1 AND {unmuted}"#),
+    )
+    .replace(r#"WHERE ("#, &format!("WHERE {unmuted} AND ("))
 }
 
 /// Each direct room's newest root message that isn't a system note, by room: one statement,
@@ -1276,10 +1396,18 @@ pub fn membership_row(
         members.as_deref(),
         counts,
         last_message,
-        (campfire_db::models::notification_policy::NotificationPreferences::load(conn, membership.user_id)?.settings_revision, now),
+        (
+            campfire_db::models::notification_policy::NotificationPreferences::load(
+                conn,
+                membership.user_id,
+            )?
+            .settings_revision,
+            now,
+        ),
     );
-    row.note_to_self = (room.direct() && Room::is_note_to_self_of(conn, room.id, membership.user_id)?)
-        .then_some(true);
+    row.note_to_self = (room.direct()
+        && Room::is_note_to_self_of(conn, room.id, membership.user_id)?)
+    .then_some(true);
     Ok(row)
 }
 
@@ -1297,7 +1425,9 @@ pub fn sidebar(
     #[cfg(feature = "test-support")]
     crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
     let counts = notification_counts(conn, viewer.id, None, now)?;
-    let revision = campfire_db::models::notification_policy::NotificationPreferences::load(conn, viewer.id)?.settings_revision;
+    let revision =
+        campfire_db::models::notification_policy::NotificationPreferences::load(conn, viewer.id)?
+            .settings_revision;
     let direct_ids: Vec<i64> = all
         .iter()
         .filter(|(_, room)| room.direct())
@@ -1430,7 +1560,8 @@ pub fn me(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let dnd = settings.manual_dnd_active(now);
-    let preferences = campfire_runtime::presenters::current::user_preferences(conn, viewer.id, now.jiff())?;
+    let preferences =
+        campfire_runtime::presenters::current::user_preferences(conn, viewer.id, now.jiff())?;
     let sounds = preferences.notification_sounds;
     let chat_sounds = api::ChatSounds {
         muted: sounds.muted,
@@ -1487,7 +1618,11 @@ pub fn me(
             },
             push_to_talk_key: present(push_to_talk_key.as_deref())
                 .unwrap_or_else(|| "`".to_string()),
-            appearance_preferences: campfire_db::models::user::profile_settings::appearance(conn, viewer.id)?.appearance_preferences.map(api::AppearancePreferences),
+            appearance_preferences: campfire_db::models::user::profile_settings::appearance(
+                conn, viewer.id,
+            )?
+            .appearance_preferences
+            .map(api::AppearancePreferences),
         },
         presence_setting: match settings.presence_setting.as_str() {
             "dnd" => api::PresenceSetting::Dnd,
@@ -1523,7 +1658,9 @@ fn minute(value: i64) -> u16 {
 pub use campfire_runtime::presenters::status_settings::presences;
 
 /// A thread's status as the wire names it.
-pub fn thread_status(status: campfire_db::models::channel_thread::ThreadStatus) -> api::ThreadStatus {
+pub fn thread_status(
+    status: campfire_db::models::channel_thread::ThreadStatus,
+) -> api::ThreadStatus {
     use campfire_db::models::channel_thread::ThreadStatus as Db;
     match status {
         Db::Active => api::ThreadStatus::Active,
@@ -1554,7 +1691,11 @@ pub fn forward_destinations(
     )?;
     let rows = statement.query_map([viewer.id], |row| {
         let user = User::from_row(row)?;
-        Ok((row.get::<_, i64>("member_room_id")?, user.id, user.display_name().to_owned()))
+        Ok((
+            row.get::<_, i64>("member_room_id")?,
+            user.id,
+            user.display_name().to_owned(),
+        ))
     })?;
     for row in rows {
         let (room, user, name) = row?;
@@ -1569,7 +1710,11 @@ pub fn forward_destinations(
             let name = if room.direct() {
                 let names = direct_names.get(&room.id).map_or(&[][..], Vec::as_slice);
                 let name = campfire_presentation::helpers::to_sentence(names, " and ");
-                if name.is_empty() { viewer.display_name().to_owned() } else { name }
+                if name.is_empty() {
+                    viewer.display_name().to_owned()
+                } else {
+                    name
+                }
             } else {
                 room.name.clone().unwrap_or_default()
             };
@@ -1586,13 +1731,20 @@ pub fn forward_destinations(
                     })
                     .collect()
             };
-            api::ForwardDestination { room_id: room.id, name, direct: room.direct(), threads }
+            api::ForwardDestination {
+                room_id: room.id,
+                name,
+                direct: room.direct(),
+                threads,
+            }
         })
         .collect();
     Ok(api::ForwardDestinationList { destinations })
 }
 
-fn thread_visibility(visibility: campfire_db::channel_thread::ThreadVisibility) -> api::ThreadVisibility {
+fn thread_visibility(
+    visibility: campfire_db::channel_thread::ThreadVisibility,
+) -> api::ThreadVisibility {
     use campfire_db::channel_thread::ThreadVisibility as Db;
     match visibility {
         Db::Public => api::ThreadVisibility::Public,
@@ -1640,7 +1792,10 @@ pub fn thread_membership(membership: &campfire_db::ThreadMembership) -> api::Thr
 }
 
 /// The reply indicator of the thread started from `parent`, if one was.
-pub fn thread_indicator(conn: &Connection, parent: &Message) -> Result<Option<api::ThreadIndicator>> {
+pub fn thread_indicator(
+    conn: &Connection,
+    parent: &Message,
+) -> Result<Option<api::ThreadIndicator>> {
     Ok(thread_indicators(conn, std::slice::from_ref(parent))?.remove(&parent.id))
 }
 
@@ -1700,7 +1855,8 @@ pub(crate) fn thread_detail(
         Some(id) => Message::find_by_id(conn, id)?,
         None => None,
     };
-    let (mut parents, mut fetches) = messages_and_fetches_for_viewer(conn, app, parent.as_slice(), viewer.id)?;
+    let (mut parents, mut fetches) =
+        messages_and_fetches_for_viewer(conn, app, parent.as_slice(), viewer.id)?;
     let parent_message = parents.pop();
     fetches.thread_header(conn, thread, now)?;
     let facts = crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
@@ -1739,7 +1895,9 @@ pub fn thread_list(
 ) -> Result<api::ThreadList> {
     use campfire_db::ChannelThread;
     let threads: Vec<ChannelThread> = match filter {
-        api::ThreadFilter::Closed => ChannelThread::effectively_closed_for_room(conn, room.id, now)?,
+        api::ThreadFilter::Closed => {
+            ChannelThread::effectively_closed_for_room(conn, room.id, now)?
+        }
         api::ThreadFilter::All => ChannelThread::for_room(conn, room.id)?,
         api::ThreadFilter::Locked => ChannelThread::for_room(conn, room.id)?
             .into_iter()
@@ -1754,9 +1912,24 @@ pub fn thread_list(
             })
             .collect(),
     };
-    let threads = threads.into_iter().map(|thread| thread.readable_by(conn, viewer_id).map(|readable| readable.then_some(thread))).collect::<Result<Vec<_>>>()?.into_iter().flatten().collect::<Vec<_>>();
+    let threads = threads
+        .into_iter()
+        .map(|thread| {
+            thread
+                .readable_by(conn, viewer_id)
+                .map(|readable| readable.then_some(thread))
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
     Ok(api::ThreadList {
-        users: users(conn, secrets, threads.iter().map(|thread| thread.creator_id), now)?,
+        users: users(
+            conn,
+            secrets,
+            threads.iter().map(|thread| thread.creator_id),
+            now,
+        )?,
         threads: thread_summaries(conn, secrets, viewer_id, room, &threads, now)?,
     })
 }
@@ -1817,7 +1990,9 @@ pub fn room_files(
         let (mut seen, mut window) = (end, size);
         loop {
             window += FILES_PAGE;
-            let rows = room_files::uploads_for_viewer(conn, room_id, viewer_id, file_type, filename, window)?;
+            let rows = room_files::uploads_for_viewer(
+                conn, room_id, viewer_id, file_type, filename, window,
+            )?;
             let upto = rows.len().min(window as usize);
             if seen < upto && !room_file_rows(conn, &presenter, &rows[seen..upto])?.is_empty() {
                 more = true;
@@ -1873,10 +2048,19 @@ fn room_file_rows(
     Ok(files)
 }
 
-pub(crate) fn announcement_sources(conn: &Connection, messages: &mut [api::MessageDTO], viewer: i64) -> Result<()> {
+pub(crate) fn announcement_sources(
+    conn: &Connection,
+    messages: &mut [api::MessageDTO],
+    viewer: i64,
+) -> Result<()> {
     for message in messages {
-        message.announcement_source = campfire_db::models::announcement::source_for_viewer(conn, message.id, viewer)?.map(|source| api::AnnouncementSource {
-            room_id: source.room_id, message_id: source.message_id, room_name: source.room_name,
+        message.announcement_source = campfire_db::models::announcement::source_for_viewer(
+            conn, message.id, viewer,
+        )?
+        .map(|source| api::AnnouncementSource {
+            room_id: source.room_id,
+            message_id: source.message_id,
+            room_name: source.room_name,
         });
     }
     Ok(())
@@ -1892,7 +2076,9 @@ pub(crate) fn device_class(class: api::DeviceClass) -> campfire_db::DeviceClass 
 
 #[cfg(test)]
 mod tests {
-    use super::{Timestamp, api, avatar_icon, inline_mentions, notification_counts_sql, row_version, time};
+    use super::{
+        Timestamp, api, avatar_icon, inline_mentions, notification_counts_sql, row_version, time,
+    };
 
     /// The counts read the unread range and the viewer's unread pings through their indexes,
     /// for every room and for one: never a room's whole history by `room_id`, nor every inbox
@@ -1905,29 +2091,48 @@ mod tests {
             let sql = format!("EXPLAIN QUERY PLAN {}", notification_counts_sql(one_room));
             let mut statement = conn.prepare(&sql).unwrap();
             let now = Timestamp::parse_db("2035-01-01T12:00:00Z").unwrap();
-            let mut params = vec![rusqlite::types::Value::Integer(1), rusqlite::types::Value::Text(now.to_db())];
+            let mut params = vec![
+                rusqlite::types::Value::Integer(1),
+                rusqlite::types::Value::Text(now.to_db()),
+            ];
             if one_room {
                 params.push(rusqlite::types::Value::Integer(2));
             }
             let plan: Vec<String> = statement
-                .query_map(rusqlite::params_from_iter(params), |row| row.get::<_, String>(3))
+                .query_map(rusqlite::params_from_iter(params), |row| {
+                    row.get::<_, String>(3)
+                })
                 .unwrap()
                 .collect::<rusqlite::Result<_>>()
                 .unwrap();
             let text = plan.join("\n");
-            assert!(!text.contains("index_messages_on_room_id "), "one_room={one_room}:\n{text}");
-            assert!(!text.contains("SCAN m"), "one_room={one_room}:\n{text}");
-            assert!(!text.contains("SCAN activity_items"), "one_room={one_room}:\n{text}");
             assert!(
-                text.contains("SEARCH activity_items USING INDEX index_activity_items_on_unread_message_pings"),
+                !text.contains("index_messages_on_room_id "),
+                "one_room={one_room}:\n{text}"
+            );
+            assert!(!text.contains("SCAN m"), "one_room={one_room}:\n{text}");
+            assert!(
+                !text.contains("SCAN activity_items"),
+                "one_room={one_room}:\n{text}"
+            );
+            assert!(
+                text.contains(
+                    "SEARCH activity_items USING INDEX index_activity_items_on_unread_message_pings"
+                ),
                 "one_room={one_room}:\n{text}"
             );
             assert!(
                 text.contains("SEARCH m USING INDEX index_messages_on_room_thread_created")
-                    || text.contains("SEARCH m USING COVERING INDEX index_messages_on_room_thread_created"),
+                    || text.contains(
+                        "SEARCH m USING COVERING INDEX index_messages_on_room_thread_created"
+                    ),
                 "one_room={one_room}:\n{text}"
             );
-            assert!(super::notification_counts(&conn, 1, one_room.then_some(2), now).unwrap().is_empty());
+            assert!(
+                super::notification_counts(&conn, 1, one_room.then_some(2), now)
+                    .unwrap()
+                    .is_empty()
+            );
         }
     }
 

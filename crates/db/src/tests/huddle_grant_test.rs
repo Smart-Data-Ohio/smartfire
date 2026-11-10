@@ -595,10 +595,17 @@ fn review_direct_setup(db: &TestDb) -> (i64, i64, i64) {
 }
 
 fn review_invitation_insert_failure(operation: &str) {
-    let oracle: serde_json::Value = serde_json::from_str(include_str!("ws13b_review_fixes.json")).unwrap();
-    for case in oracle["failures"].as_array().unwrap().iter().filter(|case| case["operation"] == operation) {
+    let oracle: serde_json::Value =
+        serde_json::from_str(include_str!("ws13b_review_fixes.json")).unwrap();
+    for case in oracle["failures"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["operation"] == operation)
+    {
         let db = TestDb::new();
-        db.clock.travel_to(Timestamp::parse_db("2026-01-01 12:00:00").unwrap());
+        db.clock
+            .travel_to(Timestamp::parse_db("2026-01-01 12:00:00").unwrap());
         let (room, membership, session) = review_direct_setup(&db);
         let group_recipient = crate::fixtures::identify("kevin");
         if operation == "group" {
@@ -609,26 +616,63 @@ fn review_invitation_insert_failure(operation: &str) {
         }
         if case["operation"] == "reuse" {
             db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
-            db.write(|tx| Ok(tx.conn().execute("DELETE FROM activity_items WHERE source_type='HuddleGrant'", [])?));
+            db.write(|tx| {
+                Ok(tx.conn().execute(
+                    "DELETE FROM activity_items WHERE source_type='HuddleGrant'",
+                    [],
+                )?)
+            });
             db.travel(180);
         }
         db.sink.take();
         let trigger = if operation == "group" {
-            format!("CREATE TRIGGER reject_huddle_item BEFORE INSERT ON activity_items WHEN NEW.event_type='huddle_started' AND NEW.user_id={group_recipient} BEGIN SELECT RAISE(ABORT,'review invitation failure'); END")
+            format!(
+                "CREATE TRIGGER reject_huddle_item BEFORE INSERT ON activity_items WHEN NEW.event_type='huddle_started' AND NEW.user_id={group_recipient} BEGIN SELECT RAISE(ABORT,'review invitation failure'); END"
+            )
         } else {
             "CREATE TRIGGER reject_huddle_item BEFORE INSERT ON activity_items WHEN NEW.event_type='huddle_started' BEGIN SELECT RAISE(ABORT,'review invitation failure'); END".to_string()
         };
         db.write(move |tx| Ok(tx.conn().execute_batch(&trigger)?));
-        assert!(db.try_write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config())).is_err());
-        let pushes = db.sink.take().iter().filter(|event| event.as_job::<crate::models::huddle_notices::PushInvitationJob>().is_some()).count();
+        assert!(
+            db.try_write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()))
+                .is_err()
+        );
+        let pushes = db
+            .sink
+            .take()
+            .iter()
+            .filter(|event| {
+                event
+                    .as_job::<crate::models::huddle_notices::PushInvitationJob>()
+                    .is_some()
+            })
+            .count();
         assert_eq!(serde_json::json!(pushes), case["push_jobs"]);
         db.read(move |conn| {
-            let count: i64 = conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?", [session], |r| r.get(0))?;
-            assert_eq!(serde_json::json!(count), case["grants"], "{}: Rails commits issuance before invitation failure", case["operation"]);
-            let issued: Timestamp = conn.query_row("SELECT last_issued_at FROM huddle_grants WHERE session_id=?", [session], |r| r.get(0))?;
-            let expected: jiff::Timestamp = case["last_issued_at"].as_str().unwrap().parse().unwrap();
+            let count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM huddle_grants WHERE session_id=?",
+                [session],
+                |r| r.get(0),
+            )?;
+            assert_eq!(
+                serde_json::json!(count),
+                case["grants"],
+                "{}: Rails commits issuance before invitation failure",
+                case["operation"]
+            );
+            let issued: Timestamp = conn.query_row(
+                "SELECT last_issued_at FROM huddle_grants WHERE session_id=?",
+                [session],
+                |r| r.get(0),
+            )?;
+            let expected: jiff::Timestamp =
+                case["last_issued_at"].as_str().unwrap().parse().unwrap();
             assert_eq!(issued, Timestamp::from_jiff(expected));
-            let count: i64 = conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'", [], |r| r.get(0))?;
+            let count: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'",
+                [],
+                |r| r.get(0),
+            )?;
             assert_eq!(serde_json::json!(count), case["items"]);
             Ok(())
         });
@@ -656,25 +700,58 @@ fn reviewer_delayed_handled_job_must_not_become_a_second_retry_ring() {
     let (room, membership, session) = review_direct_setup(&db);
     let recipient = crate::fixtures::identify("jason");
     let grant = db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
-    let first = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()).find(|r| r.recipient_id == recipient).unwrap();
+    let first = db
+        .sink
+        .take()
+        .iter()
+        .filter_map(|e| e.as_job::<RingRequest>())
+        .find(|r| r.recipient_id == recipient)
+        .unwrap();
     let item = first.invitation["activityItemId"].as_i64().unwrap();
     db.write(move |tx| publish_ring_with_policy(tx, &first, None));
     db.sink.take();
     db.write(move |tx| crate::ActivityItem::find(tx.conn(), item)?.mark_handled(tx));
-    let mut backlog: Vec<_> = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()).collect();
+    let mut backlog: Vec<_> = db
+        .sink
+        .take()
+        .iter()
+        .filter_map(|e| e.as_job::<RingRequest>())
+        .collect();
     assert_eq!(backlog.len(), 1);
     assert_eq!(backlog[0].invitation["state"], "handled");
     db.travel(181);
     let retry = db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
     assert_eq!(retry.id, grant.id);
-    backlog.extend(db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()));
+    backlog.extend(
+        db.sink
+            .take()
+            .iter()
+            .filter_map(|e| e.as_job::<RingRequest>()),
+    );
     assert_eq!(backlog.len(), 2, "one handled update and one retry job");
-    for request in backlog { db.write(move |tx| publish_ring_with_policy(tx, &request, None)); }
-    let frames: Vec<_> = db.sink.take().iter().filter_map(|e| e.as_broadcast()).filter_map(|b| match b {
-        crate::broadcasts::Broadcast::Cable{payload,..} => Some(payload["huddleInvitation"].clone()), _ => None
-    }).collect();
-    let rings = frames.iter().filter(|p| p["eventType"]=="huddle_started" && p["state"]=="unread").count();
-    assert_eq!(rings, 1, "a queued handled update was promoted into a fresh retry ring: {frames:?}");
+    for request in backlog {
+        db.write(move |tx| publish_ring_with_policy(tx, &request, None));
+    }
+    let frames: Vec<_> = db
+        .sink
+        .take()
+        .iter()
+        .filter_map(|e| e.as_broadcast())
+        .filter_map(|b| match b {
+            crate::broadcasts::Broadcast::Cable { payload, .. } => {
+                Some(payload["huddleInvitation"].clone())
+            }
+            _ => None,
+        })
+        .collect();
+    let rings = frames
+        .iter()
+        .filter(|p| p["eventType"] == "huddle_started" && p["state"] == "unread")
+        .count();
+    assert_eq!(
+        rings, 1,
+        "a queued handled update was promoted into a fresh retry ring: {frames:?}"
+    );
 }
 
 #[test]
@@ -691,10 +768,22 @@ fn reviewer_issuance_and_ring_publication_stay_after_commit() {
     });
     assert!(result.is_err());
     assert!(db.sink.take().is_empty());
-    let count: i64 = db.read(move |conn| Ok(conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?", [session], |r|r.get(0))?));
+    let count: i64 = db.read(move |conn| {
+        Ok(conn.query_row(
+            "SELECT COUNT(*) FROM huddle_grants WHERE session_id=?",
+            [session],
+            |r| r.get(0),
+        )?)
+    });
     assert_eq!(count, 0);
     db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
-    let request = db.sink.take().iter().filter_map(|e|e.as_job::<RingRequest>()).next().unwrap();
+    let request = db
+        .sink
+        .take()
+        .iter()
+        .filter_map(|e| e.as_job::<RingRequest>())
+        .next()
+        .unwrap();
     let sink = db.sink.clone();
     let result: crate::Result<()> = db.try_write(move |tx| {
         publish_ring_with_policy(tx, &request, None)?;

@@ -647,7 +647,11 @@ impl TestApp {
 
     /// Boots a new app on this one's database and files, as a restart does: nothing the old
     /// process held in memory carries over.
-    pub async fn restart(self, clock: campfire_kit::SharedClock, extra: &[(&str, &str)]) -> TestApp {
+    pub async fn restart(
+        self,
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> TestApp {
         self.restart_with_network(clock, crate::net::Network::system(), extra)
             .await
     }
@@ -870,11 +874,20 @@ pub const SPA_AUTH_PAGES: [(&str, &str); 5] = [
 pub fn spa_auth_location(location: &str) -> String {
     let path_start = location
         .find("://")
-        .map(|scheme| location[scheme + 3..].find('/').map_or(location.len(), |p| scheme + 3 + p))
+        .map(|scheme| {
+            location[scheme + 3..]
+                .find('/')
+                .map_or(location.len(), |p| scheme + 3 + p)
+        })
         .unwrap_or(0);
     let (origin, rest) = location.split_at(path_start);
-    let (path, query) = rest.split_once('?').map_or((rest, None), |(p, q)| (p, Some(q)));
-    match SPA_AUTH_PAGES.iter().find(|(retained, _)| *retained == path) {
+    let (path, query) = rest
+        .split_once('?')
+        .map_or((rest, None), |(p, q)| (p, Some(q)));
+    match SPA_AUTH_PAGES
+        .iter()
+        .find(|(retained, _)| *retained == path)
+    {
         Some((_, spa)) => match query {
             Some(query) if spa.contains('?') => format!("{origin}{spa}&{query}"),
             Some(query) => format!("{origin}{spa}?{query}"),
@@ -928,8 +941,13 @@ impl Browser<'_> {
     pub async fn boot_flash(&mut self) -> serde_json::Value {
         let page = self.get("/app/").await;
         assert_eq!(page.status, StatusCode::OK, "{}", page.text());
-        let pattern = regex::Regex::new(r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#).unwrap();
-        let boot: serde_json::Value = serde_json::from_str(&pattern.captures(&page.text()).expect("SPA boot JSON")[1]).unwrap();
+        let pattern = regex::Regex::new(
+            r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#,
+        )
+        .unwrap();
+        let boot: serde_json::Value =
+            serde_json::from_str(&pattern.captures(&page.text()).expect("SPA boot JSON")[1])
+                .unwrap();
         boot["flash"].clone()
     }
 
@@ -1032,7 +1050,12 @@ impl Browser<'_> {
 
     /// Exercise the compatibility alias's authorization gate as a fragment request.
     pub async fn classic_page(&mut self, path: &str) -> Reply {
-        self.send(Req::new(Method::GET, path).header("accept", "*/*").header("x-requested-with", "XMLHttpRequest")).await
+        self.send(
+            Req::new(Method::GET, path)
+                .header("accept", "*/*")
+                .header("x-requested-with", "XMLHttpRequest"),
+        )
+        .await
     }
 
     /// A write as the app's own pages make it: with the session's authenticity token in
@@ -1046,20 +1069,23 @@ impl Browser<'_> {
     /// Signs in with a password as the SPA's sign-in page does (`POST /api/v1/session`).
     pub async fn password_sign_in(&mut self, email_address: &str, password: &str) -> Reply {
         let body = serde_json::json!({"emailAddress": email_address, "password": password});
-        self.write(Req::new(Method::POST, "/api/v1/session").json_body(&body)).await
+        self.write(Req::new(Method::POST, "/api/v1/session").json_body(&body))
+            .await
     }
 
     /// Answers a pending second factor as the SPA's challenge page does
     /// (`POST /api/v1/two_factor/challenge`).
     pub async fn answer_challenge(&mut self, code: &str, remember_device: bool) -> Reply {
         let body = serde_json::json!({"code": code, "rememberDevice": remember_device});
-        self.write(Req::new(Method::POST, "/api/v1/two_factor/challenge").json_body(&body)).await
+        self.write(Req::new(Method::POST, "/api/v1/two_factor/challenge").json_body(&body))
+            .await
     }
 
     /// Confirms it's you with a password as the SPA's sudo page does (`POST /api/v1/sudo`).
     pub async fn confirm_sudo(&mut self, password: &str) -> Reply {
         let body = serde_json::json!({"kind": "password", "password": password});
-        self.write(Req::new(Method::POST, "/api/v1/sudo").json_body(&body)).await
+        self.write(Req::new(Method::POST, "/api/v1/sudo").json_body(&body))
+            .await
     }
 
     /// A masked global token for this browser's session, as `csrf_meta_tags` renders it. A

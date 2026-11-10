@@ -9,7 +9,11 @@ pub const BINARY: &str = "application/octet-stream";
 /// calls it on upload.
 pub fn identify(data: &[u8], name: Option<&str>, declared_type: Option<&str>) -> String {
     let filename_type = name.and_then(by_path);
-    most_specific_type(&[by_magic(data), for_declared_type(declared_type), filename_type.map(str::to_string)])
+    most_specific_type(&[
+        by_magic(data),
+        for_declared_type(declared_type),
+        filename_type.map(str::to_string),
+    ])
 }
 
 /// `Marcel::MimeType.for(extension:)`.
@@ -21,7 +25,10 @@ pub fn for_extension(extension: &str) -> String {
 pub fn by_extension(extension: &str) -> Option<&'static str> {
     let ext = extension.to_lowercase();
     let ext = ext.strip_prefix('.').unwrap_or(&ext);
-    tables::EXTENSIONS.binary_search_by(|(e, _)| (*e).cmp(ext)).ok().map(|i| tables::EXTENSIONS[i].1)
+    tables::EXTENSIONS
+        .binary_search_by(|(e, _)| (*e).cmp(ext))
+        .ok()
+        .map(|i| tables::EXTENSIONS[i].1)
 }
 
 /// `Marcel::Magic.by_path`: the extension per Ruby's `File.extname`.
@@ -66,7 +73,13 @@ pub fn magic_prefix_len() -> usize {
             .max()
             .unwrap_or(0)
     }
-    static LEN: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| tables::MAGIC.iter().map(|(_, m)| reach(m)).max().unwrap_or(0));
+    static LEN: std::sync::LazyLock<usize> = std::sync::LazyLock::new(|| {
+        tables::MAGIC
+            .iter()
+            .map(|(_, m)| reach(m))
+            .max()
+            .unwrap_or(0)
+    });
     *LEN
 }
 
@@ -83,8 +96,9 @@ fn matches_any(data: &[u8], matches: &[Match]) -> bool {
         let Some(value) = m.value else { return false };
         let hit = match m.range_end {
             // `io.read(offset.begin); io.read(offset.end - offset.begin + value.bytesize).include?(value)`
-            Some(end) => read(data, m.offset, end - m.offset + value.len())
-                .is_some_and(|window| value.is_empty() || window.windows(value.len()).any(|w| w == value)),
+            Some(end) => read(data, m.offset, end - m.offset + value.len()).is_some_and(|window| {
+                value.is_empty() || window.windows(value.len()).any(|w| w == value)
+            }),
             None => read(data, m.offset, value.len()).is_some_and(|bytes| bytes == value),
         };
         hit && (m.children.is_empty() || matches_any(data, m.children))
@@ -105,7 +119,9 @@ fn read(data: &[u8], offset: usize, length: usize) -> Option<&[u8]> {
 /// Declared types are downcased, stripped of parameters, and ignored when binary.
 fn for_declared_type(declared_type: Option<&str>) -> Option<String> {
     let declared = declared_type?.to_lowercase();
-    let media_type = declared.split([';', ',', ' ', '\t', '\n', '\r', '\u{b}', '\u{c}']).next()?;
+    let media_type = declared
+        .split([';', ',', ' ', '\t', '\n', '\r', '\u{b}', '\u{c}'])
+        .next()?;
     (media_type.contains('/') && media_type != BINARY).then(|| media_type.to_string())
 }
 
@@ -113,7 +129,12 @@ fn for_declared_type(declared_type: Option<&str>) -> Option<String> {
 /// of the current pick.
 fn most_specific_type(candidates: &[Option<String>]) -> String {
     let mut unique: Vec<String> = Vec::new();
-    for candidate in candidates.iter().flatten().cloned().chain([BINARY.to_string()]) {
+    for candidate in candidates
+        .iter()
+        .flatten()
+        .cloned()
+        .chain([BINARY.to_string()])
+    {
         if !unique.contains(&candidate) {
             unique.push(candidate);
         }

@@ -5,7 +5,7 @@
 use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::error::OptionalExt;
 use crate::models::active_storage::{Attachment, Blob};
 use crate::models::message::{ATTACHMENTS_PER_MESSAGE, SOURCE_LIMIT};
@@ -212,7 +212,10 @@ impl ScheduledMessage {
             errors.add("markdown_source", "can't be blank");
         }
         if file_count > ATTACHMENTS_PER_MESSAGE {
-            errors.add("attachments", format!("are limited to {ATTACHMENTS_PER_MESSAGE} per message"));
+            errors.add(
+                "attachments",
+                format!("are limited to {ATTACHMENTS_PER_MESSAGE} per message"),
+            );
         }
         if attrs.markdown_source.chars().count() > SOURCE_LIMIT {
             errors.add(
@@ -237,7 +240,11 @@ impl ScheduledMessage {
                 None => errors.add("reply_to_message_id", "must be in the same conversation"),
                 Some(source)
                     if !Self::reply_visible(
-                        conn, &source, attrs.user_id, attrs.room_id, attrs.thread_id,
+                        conn,
+                        &source,
+                        attrs.user_id,
+                        attrs.room_id,
+                        attrs.thread_id,
                     )? =>
                 {
                     errors.add("reply_to_message", "must be in the same conversation");
@@ -252,15 +259,21 @@ impl ScheduledMessage {
         Self::create_with_attachments(tx, attrs, &[])
     }
 
-    pub fn create_with_attachments(tx: &mut Tx<'_>, attrs: NewScheduledMessage, blob_ids: &[i64]) -> Result<Self> {
+    pub fn create_with_attachments(
+        tx: &mut Tx<'_>,
+        attrs: NewScheduledMessage,
+        blob_ids: &[i64],
+    ) -> Result<Self> {
         if let Some(thread_id) = attrs.thread_id {
             let thread = ChannelThread::find(tx.conn(), thread_id)?;
             if thread.visibility == super::channel_thread::ThreadVisibility::Private
-                && !thread.readable_by(tx.conn(), attrs.user_id)? {
+                && !thread.readable_by(tx.conn(), attrs.user_id)?
+            {
                 return Err(crate::Error::RecordNotFound("ChannelThread"));
             }
         }
-        Self::validate_with_attachments(tx.conn(), &attrs, tx.now(), true, blob_ids.len())?.into_result()?;
+        Self::validate_with_attachments(tx.conn(), &attrs, tx.now(), true, blob_ids.len())?
+            .into_result()?;
         let id = tx.conn().query_row_cached(
             "INSERT INTO scheduled_messages (user_id, room_id, thread_id, reply_to_message_id, markdown_source, send_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             params![attrs.user_id, attrs.room_id, attrs.thread_id, attrs.reply_to_message_id, attrs.markdown_source, attrs.send_at, tx.now(), tx.now()], |r| r.get(0))?;
@@ -280,7 +293,10 @@ impl ScheduledMessage {
     }
 
     pub fn touch(&self, tx: &mut Tx<'_>) -> Result<()> {
-        tx.conn().execute_cached("UPDATE scheduled_messages SET updated_at=? WHERE id=?", params![tx.now(), self.id])?;
+        tx.conn().execute_cached(
+            "UPDATE scheduled_messages SET updated_at=? WHERE id=?",
+            params![tx.now(), self.id],
+        )?;
         self.emit_change(tx, false);
         Ok(())
     }
@@ -348,9 +364,20 @@ impl ScheduledMessage {
             markdown_source: source.to_string(),
             send_at,
         };
-        let current = self.attachment_slots(tx.conn())?.into_iter().map(|attachment| attachment.blob_id).collect::<Vec<_>>();
+        let current = self
+            .attachment_slots(tx.conn())?
+            .into_iter()
+            .map(|attachment| attachment.blob_id)
+            .collect::<Vec<_>>();
         let files = blob_ids.unwrap_or(&current);
-        Self::validate_with_attachments(tx.conn(), &attrs, tx.now(), send_at != self.send_at, files.len())?.into_result()?;
+        Self::validate_with_attachments(
+            tx.conn(),
+            &attrs,
+            tx.now(),
+            send_at != self.send_at,
+            files.len(),
+        )?
+        .into_result()?;
         if source != self.markdown_source
             || send_at != self.send_at
             || reply_to_message_id != self.reply_to_message_id
@@ -369,29 +396,41 @@ impl ScheduledMessage {
 
     pub fn attachments(&self, conn: &Connection) -> Result<Vec<(Attachment, Blob)>> {
         self.attachment_slots(conn)?
-            .into_iter().filter_map(|attachment| {
-                match attachment.blob(conn) {
-                    Ok(blob) => Some(Ok((attachment, blob))),
-                    Err(crate::Error::RecordNotFound("ActiveStorage::Blob")) => None,
-                    Err(error) => Some(Err(error)),
-                }
-            }).collect()
+            .into_iter()
+            .filter_map(|attachment| match attachment.blob(conn) {
+                Ok(blob) => Some(Ok((attachment, blob))),
+                Err(crate::Error::RecordNotFound("ActiveStorage::Blob")) => None,
+                Err(error) => Some(Err(error)),
+            })
+            .collect()
     }
 
     fn attachment_slots(&self, conn: &Connection) -> Result<Vec<Attachment>> {
-        query_all(conn,
+        query_all(
+            conn,
             "SELECT * FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND name='attachments' ORDER BY id",
-            [self.id], Attachment::from_row)
+            [self.id],
+            Attachment::from_row,
+        )
     }
 
     /// Flags follow the validated dispatch ids, including a reordered or filtered selection.
-    pub(crate) fn attachment_spoilers_for(&self, conn: &Connection, blob_ids: &[i64]) -> Result<Vec<bool>> {
+    pub(crate) fn attachment_spoilers_for(
+        &self,
+        conn: &Connection,
+        blob_ids: &[i64],
+    ) -> Result<Vec<bool>> {
         let slots = self.attachment_slots(conn)?;
-        blob_ids.iter().map(|blob_id| {
-            slots.iter().find(|attachment| attachment.blob_id == *blob_id)
-                .map(|attachment| attachment.spoiler)
-                .or_not_found("ActiveStorage::Attachment")
-        }).collect()
+        blob_ids
+            .iter()
+            .map(|blob_id| {
+                slots
+                    .iter()
+                    .find(|attachment| attachment.blob_id == *blob_id)
+                    .map(|attachment| attachment.spoiler)
+                    .or_not_found("ActiveStorage::Attachment")
+            })
+            .collect()
     }
 
     pub(crate) fn replace_attachments(&self, tx: &mut Tx<'_>, blob_ids: &[i64]) -> Result<()> {
@@ -399,7 +438,9 @@ impl ScheduledMessage {
         for attachment in &current {
             attachment.delete(tx)?;
             if !blob_ids.contains(&attachment.blob_id) {
-                tx.emit_after_commit(Event::PurgeBlob { blob_id: attachment.blob_id });
+                tx.emit_after_commit(Event::PurgeBlob {
+                    blob_id: attachment.blob_id,
+                });
             }
         }
         for &blob_id in blob_ids {
@@ -407,8 +448,18 @@ impl ScheduledMessage {
                 "UPDATE active_storage_blobs SET metadata=json_set(COALESCE(metadata, '{}'), '$.scheduled_by', ?) WHERE id=?",
                 params![self.user_id, blob_id],
             )?;
-            let spoiler = current.iter().find(|attachment| attachment.blob_id == blob_id).is_some_and(|attachment| attachment.spoiler);
-            Attachment::create_with_spoiler(tx, "ScheduledMessage", self.id, "attachments", blob_id, spoiler)?;
+            let spoiler = current
+                .iter()
+                .find(|attachment| attachment.blob_id == blob_id)
+                .is_some_and(|attachment| attachment.spoiler);
+            Attachment::create_with_spoiler(
+                tx,
+                "ScheduledMessage",
+                self.id,
+                "attachments",
+                blob_id,
+                spoiler,
+            )?;
         }
         Ok(())
     }
@@ -423,12 +474,18 @@ impl ScheduledMessage {
         let mut changed = false;
         for (attachment, &spoiler) in files.iter().zip(flags) {
             if attachment.spoiler != spoiler {
-                tx.conn().execute_cached("UPDATE active_storage_attachments SET spoiler=? WHERE id=?", params![spoiler, attachment.id])?;
+                tx.conn().execute_cached(
+                    "UPDATE active_storage_attachments SET spoiler=? WHERE id=?",
+                    params![spoiler, attachment.id],
+                )?;
                 changed = true;
             }
         }
         if changed {
-            tx.conn().execute_cached("UPDATE scheduled_messages SET updated_at=? WHERE id=?", params![tx.now(), self.id])?;
+            tx.conn().execute_cached(
+                "UPDATE scheduled_messages SET updated_at=? WHERE id=?",
+                params![tx.now(), self.id],
+            )?;
             *self = Self::find(tx.conn(), self.id)?;
             self.emit_change(tx, false);
         }
@@ -443,18 +500,26 @@ impl ScheduledMessage {
         let Some(service) = &tx.env().attachment_service else {
             return Ok(Err("attachment storage is unavailable".into()));
         };
-        let limit = crate::Account::first(tx.conn())?.map_or(
-            super::account::DEFAULT_UPLOAD_LIMIT_BYTES,
-            |account| account.settings().upload_limit_bytes(),
-        );
+        let limit = crate::Account::first(tx.conn())?
+            .map_or(super::account::DEFAULT_UPLOAD_LIMIT_BYTES, |account| {
+                account.settings().upload_limit_bytes()
+            });
         let mut ids = Vec::with_capacity(slots.len());
         for attachment in slots {
             let Some(blob) = campfire_storage::Blob::find(tx.conn(), attachment.blob_id)
-                .map_err(|error| crate::Error::Other(error.to_string()))? else {
+                .map_err(|error| crate::Error::Other(error.to_string()))?
+            else {
                 return Ok(Err("an attachment no longer exists".into()));
             };
-            if blob.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64) != Some(self.user_id) {
-                return Ok(Err("an attachment is no longer owned by its scheduler".into()));
+            if blob
+                .metadata
+                .get("uploader_id")
+                .and_then(campfire_storage::Json::as_i64)
+                != Some(self.user_id)
+            {
+                return Ok(Err(
+                    "an attachment is no longer owned by its scheduler".into()
+                ));
             }
             let path = service.path_for(&blob.key);
             let received = match std::fs::metadata(&path) {
@@ -469,7 +534,9 @@ impl ScheduledMessage {
                 return Ok(Err("an attachment exceeds the current upload limit".into()));
             }
             if received != blob.byte_size as u64 {
-                return Ok(Err("an attachment's size no longer matches its upload".into()));
+                return Ok(Err(
+                    "an attachment's size no longer matches its upload".into()
+                ));
             }
             if let Some(checksum) = &blob.checksum {
                 let received_checksum = match campfire_storage::key::checksum_file(&path) {
@@ -480,7 +547,9 @@ impl ScheduledMessage {
                     Err(error) => return Err(crate::Error::Other(error.to_string())),
                 };
                 if &received_checksum != checksum {
-                    return Ok(Err("an attachment's checksum no longer matches its upload".into()));
+                    return Ok(Err(
+                        "an attachment's checksum no longer matches its upload".into()
+                    ));
                 }
             }
             ids.push(blob.id);
@@ -508,8 +577,10 @@ impl ScheduledMessage {
         let Some(source) = Message::find_by_id(conn, id)? else {
             return Ok(None);
         };
-        Ok(Self::reply_visible(conn, &source, self.user_id, self.room_id, self.thread_id)?
-            .then_some(source))
+        Ok(
+            Self::reply_visible(conn, &source, self.user_id, self.room_id, self.thread_id)?
+                .then_some(source),
+        )
     }
 
     pub fn sendable(&self, conn: &Connection) -> Result<bool> {
@@ -527,7 +598,9 @@ impl ScheduledMessage {
             return Ok(false);
         }
         if let Some(id) = self.thread_id {
-            let Some(thread) = ChannelThread::find_by_id(conn, id)? else { return Ok(false); };
+            let Some(thread) = ChannelThread::find_by_id(conn, id)? else {
+                return Ok(false);
+            };
             if thread.room_id != self.room_id || !thread.readable_by(conn, self.user_id)? {
                 return Ok(false);
             }
@@ -548,14 +621,16 @@ impl ScheduledMessage {
         let ids = rows.iter().map(|row| row.id).collect::<Vec<_>>();
         Ok(query_all(
             conn,
-            &format!("SELECT DISTINCT s.id FROM scheduled_messages s
+            &format!(
+                "SELECT DISTINCT s.id FROM scheduled_messages s
              JOIN users u ON u.id=s.user_id JOIN rooms r ON r.id=s.room_id
              JOIN memberships m ON m.room_id=s.room_id AND m.user_id=s.user_id
              LEFT JOIN channel_threads t ON t.id=s.thread_id
              WHERE s.id IN (SELECT value FROM json_each(?))
              AND u.status=? AND u.role<>? AND r.deleted_at IS NULL
              AND (s.thread_id IS NULL OR (t.room_id=s.room_id AND {}))",
-                crate::models::channel_thread::readable_by_sql("s.thread_id", "s.user_id")),
+                crate::models::channel_thread::readable_by_sql("s.thread_id", "s.user_id")
+            ),
             params![
                 serde_json::json!(ids).to_string(),
                 crate::models::user::Status::Active as i64,
@@ -670,7 +745,10 @@ impl ScheduledMessage {
         // Rails rechecks after the SQL claim. SQLite's textual <= can select
         // wide future years, as well as a time moved after candidate selection.
         if !immediate && scheduled.send_at > now {
-            tx.conn().execute_cached("UPDATE scheduled_messages SET claimed_at = NULL WHERE id = ?", [id])?;
+            tx.conn().execute_cached(
+                "UPDATE scheduled_messages SET claimed_at = NULL WHERE id = ?",
+                [id],
+            )?;
             return Ok(false);
         }
 
@@ -699,11 +777,17 @@ impl ScheduledMessage {
             .flatten();
         if let Some(source) = &reply_source
             && !Self::reply_visible(
-                tx.conn(), source, scheduled.user_id, scheduled.room_id, scheduled.thread_id,
+                tx.conn(),
+                source,
+                scheduled.user_id,
+                scheduled.room_id,
+                scheduled.thread_id,
             )?
         {
             scheduled.drop(
-                tx, Some("reply target is no longer visible in the same conversation"), now,
+                tx,
+                Some("reply target is no longer visible in the same conversation"),
+                now,
             )?;
             return Ok(false);
         }
@@ -715,14 +799,16 @@ impl ScheduledMessage {
                 return Ok(false);
             }
         };
-        let attachment_spoilers = scheduled.attachment_spoilers_for(tx.conn(), &attachment_blob_ids)?;
+        let attachment_spoilers =
+            scheduled.attachment_spoilers_for(tx.conn(), &attachment_blob_ids)?;
         let attrs = NewMessage {
             attachment_spoilers,
             room_id: scheduled.room_id,
             creator_id: scheduled.user_id,
             thread_id: scheduled.thread_id,
             reply_to_message_id: reply_id,
-            markdown_source: Some(scheduled.markdown_source.clone()).filter(|source| !source.trim().is_empty()),
+            markdown_source: Some(scheduled.markdown_source.clone())
+                .filter(|source| !source.trim().is_empty()),
             attachment_blob_ids,
             ..Default::default()
         };
@@ -749,18 +835,28 @@ impl ScheduledMessage {
         tx.conn().execute_cached("UPDATE scheduled_messages SET sent_at = ?, sent_message_id = ?, updated_at = ? WHERE id = ?",
             params![now, message.id, tx.now(), id])?;
         scheduled.emit_change(tx, false);
-        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: message.id }));
+        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated {
+            message_id: message.id,
+        }));
         if message.thread_id.is_none() {
             let mentioned_ids: Vec<_> = message
                 .mentionees(tx.conn(), tx.rich_text())?
                 .iter()
                 .map(|user| user.id)
                 .collect();
-            let user_ids = Membership::for_room(tx.conn(), message.room_id)?.into_iter()
-                .filter(|member| member.involvement != Some(crate::Involvement::Muted) || mentioned_ids.contains(&member.user_id))
-                .map(|member| member.user_id).collect();
+            let user_ids = Membership::for_room(tx.conn(), message.room_id)?
+                .into_iter()
+                .filter(|member| {
+                    member.involvement != Some(crate::Involvement::Muted)
+                        || mentioned_ids.contains(&member.user_id)
+                })
+                .map(|member| member.user_id)
+                .collect();
             tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
-                user_ids, room_id: message.room_id, message_id: Some(message.id), author_id: message.creator_id,
+                user_ids,
+                room_id: message.room_id,
+                message_id: Some(message.id),
+                author_id: message.creator_id,
             }));
         }
         // Human root posts fan out to legacy bots; thread posts never do.

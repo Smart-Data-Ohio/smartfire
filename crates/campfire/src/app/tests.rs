@@ -14,16 +14,17 @@ use campfire_kit::{Ctx, Kit, KitConfig, RailsCrypto, Result};
 use tower::ServiceExt;
 
 use super::*;
+use crate::concerns::{Before, before_actions, current_user};
+use crate::server::*;
 use campfire_app::config::Config;
 use std::sync::Arc;
-use crate::server::*;
-use crate::concerns::{Before, before_actions, current_user};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
 fn parity_env(name: &str) -> Option<String> {
     let env = std::fs::read_to_string(Path::new(ROOT).join("parity/.env.reference")).ok()?;
-    env.lines().find_map(|line| line.strip_prefix(&format!("{name}=")).map(str::to_string))
+    env.lines()
+        .find_map(|line| line.strip_prefix(&format!("{name}=")).map(str::to_string))
 }
 
 #[derive(serde::Deserialize)]
@@ -51,7 +52,11 @@ struct CookieVector {
 }
 
 fn vectors() -> Vectors {
-    serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/campfire_sessions.json"))).unwrap()
+    serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../vectors/campfire_sessions.json"
+    )))
+    .unwrap()
 }
 
 /// A booted app over a private copy of the seed.
@@ -64,7 +69,11 @@ async fn boot_seeded() -> Option<Test> {
     let seed = crate::controllers::presenters::test_support::seed_dir("default")?;
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("db")).unwrap();
-    std::fs::copy(seed.join("db/production.sqlite3"), dir.path().join("db/production.sqlite3")).unwrap();
+    std::fs::copy(
+        seed.join("db/production.sqlite3"),
+        dir.path().join("db/production.sqlite3"),
+    )
+    .unwrap();
     copy_dir(&seed.join("storage"), &dir.path().join("files"));
     let root = dir.path().to_string_lossy().into_owned();
     let secret = parity_env("SECRET_KEY_BASE").unwrap();
@@ -77,7 +86,15 @@ async fn boot_seeded() -> Option<Test> {
     })
     .unwrap();
     // The classic pages, until they're deleted.
-    Some(Test { booted: boot_with_clock(config, crate::controllers::presenters::test_support::seed_clock()).await.unwrap(), _dir: dir })
+    Some(Test {
+        booted: boot_with_clock(
+            config,
+            crate::controllers::presenters::test_support::seed_clock(),
+        )
+        .await
+        .unwrap(),
+        _dir: dir,
+    })
 }
 
 fn copy_dir(from: &Path, to: &Path) {
@@ -112,24 +129,43 @@ async fn send(router: &axum::Router, request: Request<Body>) -> Reply {
     let response = router.clone().oneshot(request).await.unwrap();
     let status = response.status();
     let headers = response.headers().clone();
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().to_vec();
-    Reply { status, headers, body }
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap()
+        .to_vec();
+    Reply {
+        status,
+        headers,
+        body,
+    }
 }
 
 fn get(path: &str) -> Request<Body> {
-    Request::get(path).header(header::HOST, "campfire.test").body(Body::empty()).unwrap()
+    Request::get(path)
+        .header(header::HOST, "campfire.test")
+        .body(Body::empty())
+        .unwrap()
 }
 
 fn get_with_cookie(path: &str, cookie: &str) -> Request<Body> {
-    Request::get(path).header(header::HOST, "campfire.test").header(header::COOKIE, cookie).body(Body::empty()).unwrap()
+    Request::get(path)
+        .header(header::HOST, "campfire.test")
+        .header(header::COOKIE, cookie)
+        .body(Body::empty())
+        .unwrap()
 }
 
 #[tokio::test]
 async fn health_check() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let up = send(&test.booted.router, get("/up")).await;
     assert_eq!(up.status, StatusCode::OK);
-    assert_eq!(up.text(), r#"<!DOCTYPE html><html><body style="background-color: green"></body></html>"#);
+    assert_eq!(
+        up.text(),
+        r#"<!DOCTYPE html><html><body style="background-color: green"></body></html>"#
+    );
     assert_eq!(up.header("content-type"), Some("text/html; charset=utf-8"));
 
     let json = send(&test.booted.router, get("/up.json")).await;
@@ -140,55 +176,104 @@ async fn health_check() {
 
 #[tokio::test]
 async fn public_files_are_served_before_routing() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let svg = campfire_static_assets::image_path("default-bot-avatar.svg");
     let reply = send(&test.booted.router, get(&svg)).await;
     assert_eq!(reply.status, StatusCode::OK, "{svg}");
     // Our Rails marks fingerprinted assets immutable (RailsExt::ImmutableAssetHeaders) and serves
     // other public files briefly cached (config.public_file_server.headers); vectors/kit_security.json.
-    assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
+    assert_eq!(
+        reply.header("cache-control"),
+        Some("public, immutable, max-age=31556952")
+    );
 
     let manifest = send(&test.booted.router, get("/assets/.manifest.json")).await;
-    assert_eq!(manifest.body, campfire_static_assets::manifest_json().as_bytes());
+    assert_eq!(
+        manifest.body,
+        campfire_static_assets::manifest_json().as_bytes()
+    );
 
     let robots = send(&test.booted.router, get("/robots.txt")).await;
     assert_eq!(robots.status, StatusCode::OK);
-    assert_eq!(robots.header("cache-control"), Some("public, max-age=60, stale-while-revalidate=300"));
-    assert_eq!(robots.body, include_bytes!("../../../static_assets/public/robots.txt"));
+    assert_eq!(
+        robots.header("cache-control"),
+        Some("public, max-age=60, stale-while-revalidate=300")
+    );
+    assert_eq!(
+        robots.body,
+        include_bytes!("../../../static_assets/public/robots.txt")
+    );
 
     for logical in ["default-bot-avatar.svg", "56k.mp3"] {
         let path = campfire_static_assets::asset_path(logical);
         let reply = send(&test.booted.router, get(&path)).await;
         assert_eq!(reply.status, StatusCode::OK, "{logical}");
-        assert_eq!(reply.body, campfire_static_assets::asset_bytes(logical).unwrap());
-        assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
-        let head = Request::builder().method("HEAD").uri(&path).body(Body::empty()).unwrap();
+        assert_eq!(
+            reply.body,
+            campfire_static_assets::asset_bytes(logical).unwrap()
+        );
+        assert_eq!(
+            reply.header("cache-control"),
+            Some("public, immutable, max-age=31556952")
+        );
+        let head = Request::builder()
+            .method("HEAD")
+            .uri(&path)
+            .body(Body::empty())
+            .unwrap();
         let head = send(&test.booted.router, head).await;
         assert!(head.body.is_empty());
-        assert_eq!(head.header("content-length"), reply.header("content-length"));
-        let conditional = Request::builder().uri(&path).header("if-modified-since", reply.header("last-modified").unwrap()).body(Body::empty()).unwrap();
+        assert_eq!(
+            head.header("content-length"),
+            reply.header("content-length")
+        );
+        let conditional = Request::builder()
+            .uri(&path)
+            .header("if-modified-since", reply.header("last-modified").unwrap())
+            .body(Body::empty())
+            .unwrap();
         let conditional = send(&test.booted.router, conditional).await;
         assert_eq!(conditional.status, StatusCode::NOT_MODIFIED);
-        assert_eq!(conditional.header("cache-control"), reply.header("cache-control"));
+        assert_eq!(
+            conditional.header("cache-control"),
+            reply.header("cache-control")
+        );
     }
     let legacy = "/assets/56k-67359aa6.mp3";
     let sound = send(&test.booted.router, get(legacy)).await;
     assert_eq!(sound.status, StatusCode::OK);
-    assert_eq!(sound.body, campfire_static_assets::asset_bytes("56k.mp3").unwrap());
-    let range = Request::builder().uri(legacy).header("range", "bytes=0-9").body(Body::empty()).unwrap();
+    assert_eq!(
+        sound.body,
+        campfire_static_assets::asset_bytes("56k.mp3").unwrap()
+    );
+    let range = Request::builder()
+        .uri(legacy)
+        .header("range", "bytes=0-9")
+        .body(Body::empty())
+        .unwrap();
     let range = send(&test.booted.router, range).await;
     assert_eq!(range.status, StatusCode::PARTIAL_CONTENT);
     assert_eq!(range.header("content-type"), Some("audio/mpeg"));
     assert_eq!(range.body, &sound.body[..10]);
     for status in [404, 422, 500, 502] {
         let reply = send(&test.booted.router, get(&format!("/{status}.html"))).await;
-        assert_eq!(reply.body, std::fs::read(campfire_db::fixtures::reference_path(&format!("public/{status}.html"))).unwrap());
+        assert_eq!(
+            reply.body,
+            std::fs::read(campfire_db::fixtures::reference_path(&format!(
+                "public/{status}.html"
+            )))
+            .unwrap()
+        );
     }
 }
 
 #[tokio::test]
 async fn unknown_routes_and_room_settings_alias() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let missing = send(&test.booted.router, get("/nope")).await;
     assert_eq!(missing.status, StatusCode::NOT_FOUND);
     assert!(!missing.body.is_empty(), "renders public/404.html");
@@ -196,62 +281,114 @@ async fn unknown_routes_and_room_settings_alias() {
     // The settings alias redirects by room type now (#365), not the 500 of the missing controller.
     let settings = send(&test.booted.router, get("/rooms/1/settings")).await;
     assert_eq!(settings.status, StatusCode::FOUND);
-    assert_eq!(settings.header("location"), Some("http://campfire.test/app/session/new"));
+    assert_eq!(
+        settings.header("location"),
+        Some("http://campfire.test/app/session/new")
+    );
 }
 
 /// An action behind `ApplicationController`'s chain that answers with `Current.user`.
 async fn whoami(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let name = current_user(c).map(|user| user.name.clone()).unwrap_or_default();
+    let name = current_user(c)
+        .map(|user| user.name.clone())
+        .unwrap_or_default();
     Ok(c.html(name))
 }
 
 fn whoami_router(app: &App) -> axum::Router {
-    let kit = Kit::new(KitConfig::production(true), Arc::new(RailsCrypto::new(app.secrets.clone())), app.clock.clone(), app.clone());
-    campfire_kit::app(axum::Router::new().route("/whoami", campfire_kit::get(whoami).post(campfire_kit::action(whoami))), kit)
+    let kit = Kit::new(
+        KitConfig::production(true),
+        Arc::new(RailsCrypto::new(app.secrets.clone())),
+        app.clock.clone(),
+        app.clone(),
+    );
+    campfire_kit::app(
+        axum::Router::new().route(
+            "/whoami",
+            campfire_kit::get(whoami).post(campfire_kit::action(whoami)),
+        ),
+        kit,
+    )
 }
 
 #[tokio::test]
 async fn a_rails_issued_session_cookie_authenticates() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let vectors = vectors();
     let router = whoami_router(&test.booted.app);
     let session = &vectors.sessions[0];
     // WS19's seed starts fresh. Arrange the stale-session resume this test exercises.
     let session_id = session.session_id;
-    test.booted.app.db.write(move |tx| {
-        tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![tx.now().ago(jiff::SignedDuration::from_hours(2)), session_id])?;
-        Ok(())
-    }).await.unwrap();
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE sessions SET last_active_at = ? WHERE id = ?",
+                rusqlite::params![
+                    tx.now().ago(jiff::SignedDuration::from_hours(2)),
+                    session_id
+                ],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
 
     let signed_in = send(&router, get_with_cookie("/whoami", &session.cookie_header)).await;
     assert_eq!(signed_in.status, StatusCode::OK);
     assert_eq!(signed_in.text(), session.user_name);
     assert_eq!(signed_in.header("x-version"), Some("parity"));
     assert_eq!(signed_in.header("x-rev"), Some("parity"));
-    let cookies: Vec<&str> = signed_in.headers.get_all(header::SET_COOKIE).iter().map(|v| v.to_str().unwrap()).collect();
-    assert!(cookies.iter().any(|c| c.starts_with("session_token=") && c.contains("httponly") && c.contains("samesite=lax")), "{cookies:?}");
+    let cookies: Vec<&str> = signed_in
+        .headers
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .map(|v| v.to_str().unwrap())
+        .collect();
+    assert!(
+        cookies.iter().any(|c| c.starts_with("session_token=")
+            && c.contains("httponly")
+            && c.contains("samesite=lax")),
+        "{cookies:?}"
+    );
 
     // That request refreshed the seed's stale session; for the next hour it isn't touched again,
     // so the cookie isn't re-sent (Rails re-signs it on every request).
     let again = send(&router, get_with_cookie("/whoami", &session.cookie_header)).await;
     assert_eq!(again.text(), session.user_name);
-    assert!(again.headers.get(header::SET_COOKIE).is_none(), "{:?}", again.headers);
+    assert!(
+        again.headers.get(header::SET_COOKIE).is_none(),
+        "{:?}",
+        again.headers
+    );
 
-    for cookie in [None, Some(vectors.forged.cookie_header.as_str()), Some("session_token=tampered--0000")] {
+    for cookie in [
+        None,
+        Some(vectors.forged.cookie_header.as_str()),
+        Some("session_token=tampered--0000"),
+    ] {
         let request = match cookie {
             Some(cookie) => get_with_cookie("/whoami", cookie),
             None => get("/whoami"),
         };
         let anonymous = send(&router, request).await;
         assert_eq!(anonymous.status, StatusCode::FOUND, "{cookie:?}");
-        assert_eq!(anonymous.header("location"), Some("http://campfire.test/app/session/new"));
+        assert_eq!(
+            anonymous.header("location"),
+            Some("http://campfire.test/app/session/new")
+        );
     }
 }
 
 #[tokio::test]
 async fn the_application_chain_blocks_banned_ips_forgeries_and_old_browsers() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let vectors = vectors();
     let router = whoami_router(&test.booted.app);
     let cookie = &vectors.sessions[0].cookie_header;
@@ -274,39 +411,89 @@ async fn the_application_chain_blocks_banned_ips_forgeries_and_old_browsers() {
     assert_eq!(forged.status, StatusCode::UNPROCESSABLE_ENTITY);
 
     let outdated = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.0.0 Safari/537.36";
-    let request = Request::get("/whoami").header(header::HOST, "campfire.test").header(header::COOKIE, cookie).header(header::USER_AGENT, outdated);
+    let request = Request::get("/whoami")
+        .header(header::HOST, "campfire.test")
+        .header(header::COOKIE, cookie)
+        .header(header::USER_AGENT, outdated);
     let old_browser = send(&router, request.body(Body::empty()).unwrap()).await;
     assert_eq!(old_browser.status, StatusCode::OK);
     assert_ne!(old_browser.text(), vectors.sessions[0].user_name);
 
     // The incompatible-browser page is an explicit `render template:`: HTML whatever the format.
-    for (path, accept) in [("/webmanifest.json", "*/*"), ("/service-worker.js", "*/*"), ("/session/new", "application/json")] {
-        let request = Request::get(path).header(header::HOST, "campfire.test").header(header::USER_AGENT, outdated).header(header::ACCEPT, accept);
+    for (path, accept) in [
+        ("/webmanifest.json", "*/*"),
+        ("/service-worker.js", "*/*"),
+        ("/session/new", "application/json"),
+    ] {
+        let request = Request::get(path)
+            .header(header::HOST, "campfire.test")
+            .header(header::USER_AGENT, outdated)
+            .header(header::ACCEPT, accept);
         let blocked = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;
-        assert_eq!((blocked.status, blocked.header("content-type")), (StatusCode::OK, Some("text/html; charset=utf-8")), "{path} {accept}");
+        assert_eq!(
+            (blocked.status, blocked.header("content-type")),
+            (StatusCode::OK, Some("text/html; charset=utf-8")),
+            "{path} {accept}"
+        );
     }
     // A self-contained page: no script, its one style carries the request's nonce, and it lists
     // the supported browsers with their minimum versions.
-    let request = Request::get("/session/new").header(header::HOST, "campfire.test").header(header::USER_AGENT, outdated);
+    let request = Request::get("/session/new")
+        .header(header::HOST, "campfire.test")
+        .header(header::USER_AGENT, outdated);
     let blocked = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;
     let page = blocked.text();
     assert!(!page.contains("<script"), "{page}");
-    let nonce = regex::Regex::new(r#"<style nonce="([^"]+)">"#).unwrap().captures(&page).expect("a nonce'd style")[1].to_string();
-    assert!(blocked.header("content-security-policy").is_some_and(|policy| policy.contains(&format!("'nonce-{nonce}'"))), "{:?}", blocked.header("content-security-policy"));
-    assert!(page.contains("<title>Unsupported browser</title>") && page.contains("Upgrade to a supported web browser"), "{page}");
-    for (browser, name, version) in [("safari", "Safari", "17.2"), ("chrome", "Chrome", "120"), ("firefox", "Firefox", "121"), ("opera", "Opera", "104")] {
-        assert!(page.contains(&format!("/browsers/{browser}")) && page.contains(name) && page.contains(&format!("{version}+")), "{browser}: {page}");
+    let nonce = regex::Regex::new(r#"<style nonce="([^"]+)">"#)
+        .unwrap()
+        .captures(&page)
+        .expect("a nonce'd style")[1]
+        .to_string();
+    assert!(
+        blocked
+            .header("content-security-policy")
+            .is_some_and(|policy| policy.contains(&format!("'nonce-{nonce}'"))),
+        "{:?}",
+        blocked.header("content-security-policy")
+    );
+    assert!(
+        page.contains("<title>Unsupported browser</title>")
+            && page.contains("Upgrade to a supported web browser"),
+        "{page}"
+    );
+    for (browser, name, version) in [
+        ("safari", "Safari", "17.2"),
+        ("chrome", "Chrome", "120"),
+        ("firefox", "Firefox", "121"),
+        ("opera", "Opera", "104"),
+    ] {
+        assert!(
+            page.contains(&format!("/browsers/{browser}"))
+                && page.contains(name)
+                && page.contains(&format!("{version}+")),
+            "{browser}: {page}"
+        );
     }
-    assert!(!page.contains("unsupported"), "no retained unsupported.js: {page}");
+    assert!(
+        !page.contains("unsupported"),
+        "no retained unsupported.js: {page}"
+    );
     // Pages link the logo as their icon: an image in its place is never shown.
-    let request = Request::get("/account/logo").header(header::HOST, "campfire.test").header(header::USER_AGENT, outdated);
+    let request = Request::get("/account/logo")
+        .header(header::HOST, "campfire.test")
+        .header(header::USER_AGENT, outdated);
     let logo = send(&test.booted.router, request.body(Body::empty()).unwrap()).await;
-    assert_eq!((logo.status, logo.header("content-type")), (StatusCode::OK, Some("image/png")));
+    assert_eq!(
+        (logo.status, logo.header("content-type")),
+        (StatusCode::OK, Some("image/png"))
+    );
 }
 
 #[tokio::test]
 async fn blob_redirects_to_a_signed_disk_url() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let vectors = vectors();
     let router = &test.booted.router;
     let redirect_path = &vectors.blobs[0].redirect_path;
@@ -314,9 +501,15 @@ async fn blob_redirects_to_a_signed_disk_url() {
 
     let redirect = send(router, get(redirect_path)).await;
     assert_eq!(redirect.status, StatusCode::FOUND);
-    assert_eq!(redirect.header("cache-control"), Some("max-age=300, private"));
+    assert_eq!(
+        redirect.header("cache-control"),
+        Some("max-age=300, private")
+    );
     let location = redirect.header("location").unwrap().to_string();
-    assert!(location.starts_with("http://campfire.test/rails/active_storage/disk/"), "{location}");
+    assert!(
+        location.starts_with("http://campfire.test/rails/active_storage/disk/"),
+        "{location}"
+    );
     assert!(location.ends_with(&format!("/{filename}")), "{location}");
 
     let disk_path = location.strip_prefix("http://campfire.test").unwrap();
@@ -324,7 +517,11 @@ async fn blob_redirects_to_a_signed_disk_url() {
     assert_eq!(file.status, StatusCode::OK);
     assert_eq!(file.header("cache-control"), Some("max-age=3600, public"));
     assert_eq!(file.header("content-type"), Some("image/jpeg"));
-    assert_eq!(file.header("content-disposition").map(|d| d.starts_with("inline;")), Some(true));
+    assert_eq!(
+        file.header("content-disposition")
+            .map(|d| d.starts_with("inline;")),
+        Some(true)
+    );
     assert!(!file.body.is_empty());
 
     let tampered = redirect_path.replacen("--", "--0", 1);
@@ -337,8 +534,13 @@ async fn blob_redirects_to_a_signed_disk_url() {
 
 #[tokio::test]
 async fn disk_uploads_require_a_session() {
-    let Some(test) = boot_seeded().await else { return };
-    let put = Request::put("/rails/active_storage/disk/anything").header(header::HOST, "campfire.test").body(Body::from("x")).unwrap();
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
+    let put = Request::put("/rails/active_storage/disk/anything")
+        .header(header::HOST, "campfire.test")
+        .body(Body::from("x"))
+        .unwrap();
     let reply = send(&test.booted.router, put).await;
     assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
 }
@@ -348,21 +550,38 @@ async fn cable_handshake_with_a_rails_session_cookie() {
     use futures_util::StreamExt;
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let vectors = vectors();
     let listener = crate::channels::tests::support::bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = test.booted.router.clone();
     let service = campfire_kit::front::app_service(router);
     let shutdown = campfire_kit::front::Shutdown::when(std::future::pending());
-    tokio::spawn(campfire_kit::front::serve_plain(listener, service, campfire_kit::front::Protocol::Http1, Default::default(), shutdown));
+    tokio::spawn(campfire_kit::front::serve_plain(
+        listener,
+        service,
+        campfire_kit::front::Protocol::Http1,
+        Default::default(),
+        shutdown,
+    ));
 
     let connect = |cookie: Option<String>| async move {
-        let mut request = format!("ws://{address}/cable").into_client_request().unwrap();
-        request.headers_mut().insert("origin", format!("http://{address}").parse().unwrap());
-        request.headers_mut().insert("sec-websocket-protocol", "actioncable-v1-json".parse().unwrap());
+        let mut request = format!("ws://{address}/cable")
+            .into_client_request()
+            .unwrap();
+        request
+            .headers_mut()
+            .insert("origin", format!("http://{address}").parse().unwrap());
+        request.headers_mut().insert(
+            "sec-websocket-protocol",
+            "actioncable-v1-json".parse().unwrap(),
+        );
         if let Some(cookie) = cookie {
-            request.headers_mut().insert("cookie", cookie.parse().unwrap());
+            request
+                .headers_mut()
+                .insert("cookie", cookie.parse().unwrap());
         }
         let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
         let first = socket.next().await.unwrap().unwrap();
@@ -372,35 +591,67 @@ async fn cable_handshake_with_a_rails_session_cookie() {
     // WS19's seed is verified. Explicitly arrange an unverified session, then complete its
     // second factor to cover rejection and acceptance with the same Rails-issued cookie.
     let session_id = vectors.sessions[0].session_id;
-    test.booted.app.db.write(move |tx| {
-        tx.conn().execute("UPDATE sessions SET two_factor_verified_at = NULL WHERE id = ?", [session_id])?;
-        Ok(())
-    }).await.unwrap();
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE sessions SET two_factor_verified_at = NULL WHERE id = ?",
+                [session_id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let cookie = vectors.sessions[0].cookie_header.clone();
-    assert_eq!(connect(Some(cookie.clone())).await, r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#);
-    test.booted.app.db.write(move |tx| {
-        tx.conn().execute("UPDATE sessions SET two_factor_verified_at = ? WHERE id = ?", rusqlite::params![tx.now(), session_id])?;
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(
+        connect(Some(cookie.clone())).await,
+        r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#
+    );
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE sessions SET two_factor_verified_at = ? WHERE id = ?",
+                rusqlite::params![tx.now(), session_id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     assert_eq!(connect(Some(cookie)).await, r#"{"type":"welcome"}"#);
-    assert_eq!(connect(None).await, r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#);
+    assert_eq!(
+        connect(None).await,
+        r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#
+    );
 }
 
 #[tokio::test]
 async fn backup_snapshots_the_live_database() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let config = &test.booted.app.config;
     backup(config).unwrap();
     let snapshot = rusqlite::Connection::open(config.storage.backup_file()).unwrap();
-    let users: i64 = snapshot.query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0)).unwrap();
+    let users: i64 = snapshot
+        .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))
+        .unwrap();
     assert!(users > 0);
-    let leftovers: Vec<_> = std::fs::read_dir(&config.storage.backups).unwrap().flatten().filter(|entry| entry.file_name().to_string_lossy().starts_with(".backup-")).collect();
+    let leftovers: Vec<_> = std::fs::read_dir(&config.storage.backups)
+        .unwrap()
+        .flatten()
+        .filter(|entry| entry.file_name().to_string_lossy().starts_with(".backup-"))
+        .collect();
     assert!(leftovers.is_empty(), "{leftovers:?}");
 }
 
 #[tokio::test]
 async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let app = test.booted.app.clone();
 
     let (done, finished) = tokio::sync::oneshot::channel();
@@ -416,7 +667,13 @@ async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
         .db
         .write(move |tx| {
             storage
-                .create_and_upload(tx.conn(), b"hello", campfire_storage::Filename::new("hello.txt"), None, now)
+                .create_and_upload(
+                    tx.conn(),
+                    b"hello",
+                    campfire_storage::Filename::new("hello.txt"),
+                    None,
+                    now,
+                )
                 .map_err(|e| campfire_db::Error::Other(e.to_string()))
         })
         .await
@@ -435,11 +692,24 @@ async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
         .await
         .unwrap();
     eventually("unattached blob row and file to be purged", || async {
-        let gone = app.db.read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_none())).await.unwrap();
+        let gone = app
+            .db
+            .read(move |conn| {
+                Ok(campfire_storage::Blob::find(conn, blob_id)
+                    .unwrap()
+                    .is_none())
+            })
+            .await
+            .unwrap();
         gone && !path.exists()
-    }).await;
+    })
+    .await;
     assert!(!path.exists());
-    let attached = app.db.read(|conn| Ok(campfire_storage::Blob::find(conn, 5).unwrap().is_some())).await.unwrap();
+    let attached = app
+        .db
+        .read(|conn| Ok(campfire_storage::Blob::find(conn, 5).unwrap().is_some()))
+        .await
+        .unwrap();
     assert!(attached);
 
     let Booted { jobs, .. } = test.booted;
@@ -452,7 +722,9 @@ async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
 /// on the writer, and the server stopped answering for good.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn concurrent_message_posts_all_complete() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let router = test.booted.router.clone();
     let session = &vectors().sessions[0];
     let user_name = session.user_name.clone();
@@ -479,12 +751,26 @@ async fn concurrent_message_posts_all_complete() {
         .headers
         .get_all(header::SET_COOKIE)
         .iter()
-        .filter_map(|value| value.to_str().ok()?.split(';').next()?.strip_prefix("_campfire_session="))
+        .filter_map(|value| {
+            value
+                .to_str()
+                .ok()?
+                .split(';')
+                .next()?
+                .strip_prefix("_campfire_session=")
+        })
         .next()
         .expect("the page sets the session cookie")
         .to_string();
-    let token = crate::controllers::presenters::test_support::masked_session_token(&test.booted.app.secrets, &session_cookie).unwrap();
-    let cookie = format!("{}; _campfire_session={session_cookie}", session.cookie_header);
+    let token = crate::controllers::presenters::test_support::masked_session_token(
+        &test.booted.app.secrets,
+        &session_cookie,
+    )
+    .unwrap();
+    let cookie = format!(
+        "{}; _campfire_session={session_cookie}",
+        session.cookie_header
+    );
 
     let posts = (0..32).map(|n| {
         let router = router.clone();
@@ -498,9 +784,12 @@ async fn concurrent_message_posts_all_complete() {
             .unwrap();
         tokio::spawn(async move { send(&router, request).await.status })
     });
-    let statuses = tokio::time::timeout(std::time::Duration::from_secs(60), futures_util::future::join_all(posts))
-        .await
-        .expect("concurrent message posts deadlocked");
+    let statuses = tokio::time::timeout(
+        std::time::Duration::from_secs(60),
+        futures_util::future::join_all(posts),
+    )
+    .await
+    .expect("concurrent message posts deadlocked");
     for status in statuses {
         assert_eq!(status.unwrap(), StatusCode::CREATED);
     }
@@ -510,9 +799,18 @@ async fn concurrent_message_posts_all_complete() {
     }).await.unwrap();
     assert_eq!(persisted, 32);
 
-    let after = tokio::time::timeout(WAIT, send(&router, get_with_cookie(&format!("/api/v1/rooms/{room_id}/messages"), &session.cookie_header)))
-        .await
-        .expect("the server stopped answering");
+    let after = tokio::time::timeout(
+        WAIT,
+        send(
+            &router,
+            get_with_cookie(
+                &format!("/api/v1/rooms/{room_id}/messages"),
+                &session.cookie_header,
+            ),
+        ),
+    )
+    .await
+    .expect("the server stopped answering");
     assert_eq!(after.status, StatusCode::OK);
 }
 
@@ -521,62 +819,126 @@ async fn concurrent_message_posts_all_complete() {
 async fn writes_proceed_while_a_variant_is_transformed() {
     use campfire_storage::{Blob, Variation};
 
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let app = test.booted.app.clone();
-    let blob = app.db.read(|conn| Ok(Blob::find(conn, 5).unwrap().unwrap())).await.unwrap();
-    let variation = app.storage.variation_for(&blob, &Variation::resize_to_limit(37, 37, None)).unwrap();
+    let blob = app
+        .db
+        .read(|conn| Ok(Blob::find(conn, 5).unwrap().unwrap()))
+        .await
+        .unwrap();
+    let variation = app
+        .storage
+        .variation_for(&blob, &Variation::resize_to_limit(37, 37, None))
+        .unwrap();
 
     let (entered, transforming) = tokio::sync::oneshot::channel();
     let (release, released) = std::sync::mpsc::channel::<()>();
     let processing = tokio::spawn({
         let (app, blob, variation) = (app.clone(), blob.clone(), variation.clone());
         async move {
-            crate::active_storage::processed_variant_with(&app, blob, variation, move |storage, blob, variation| {
-                let _ = entered.send(());
-                released.recv_timeout(WAIT).expect("the test to release the transform");
-                storage.transform_variant(blob, variation)
-            })
+            crate::active_storage::processed_variant_with(
+                &app,
+                blob,
+                variation,
+                move |storage, blob, variation| {
+                    let _ = entered.send(());
+                    released
+                        .recv_timeout(WAIT)
+                        .expect("the test to release the transform");
+                    storage.transform_variant(blob, variation)
+                },
+            )
             .await
         }
     });
-    wait("variant transform to start", transforming).await.unwrap();
+    wait("variant transform to start", transforming)
+        .await
+        .unwrap();
 
-    let write = app.db.write(|tx| Ok(tx.conn().execute("UPDATE accounts SET name = name", [])?));
-    wait("a database write while the transform is blocked", write).await.unwrap();
+    let write = app
+        .db
+        .write(|tx| Ok(tx.conn().execute("UPDATE accounts SET name = name", [])?));
+    wait("a database write while the transform is blocked", write)
+        .await
+        .unwrap();
 
     release.send(()).unwrap();
-    let image = wait("released variant processing", processing).await.unwrap().unwrap();
+    let image = wait("released variant processing", processing)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(app.storage.path_for(&image).exists());
     let storage = app.storage.clone();
-    let recorded = app.db.read(move |conn| Ok(storage.existing_variant(conn, &blob, &variation).unwrap())).await.unwrap();
+    let recorded = app
+        .db
+        .read(move |conn| Ok(storage.existing_variant(conn, &blob, &variation).unwrap()))
+        .await
+        .unwrap();
     assert_eq!(recorded.map(|b| b.id), Some(image.id));
 }
 
 #[tokio::test]
 async fn blob_byte_ranges_are_served_from_the_file() {
-    let Some(test) = boot_seeded().await else { return };
+    let Some(test) = boot_seeded().await else {
+        return;
+    };
     let router = &test.booted.router;
-    let proxy_path = vectors().blobs[0].redirect_path.replacen("/redirect/", "/proxy/", 1);
-    let blob = test.booted.app.db.read(|conn| Ok(campfire_storage::Blob::find(conn, 5).unwrap().unwrap())).await.unwrap();
+    let proxy_path = vectors().blobs[0]
+        .redirect_path
+        .replacen("/redirect/", "/proxy/", 1);
+    let blob = test
+        .booted
+        .app
+        .db
+        .read(|conn| Ok(campfire_storage::Blob::find(conn, 5).unwrap().unwrap()))
+        .await
+        .unwrap();
     let file = std::fs::read(test.booted.app.storage.path_for(&blob)).unwrap();
-    let ranged = |range: &str| Request::get(&proxy_path).header(header::HOST, "campfire.test").header("range", range).body(Body::empty()).unwrap();
+    let ranged = |range: &str| {
+        Request::get(&proxy_path)
+            .header(header::HOST, "campfire.test")
+            .header("range", range)
+            .body(Body::empty())
+            .unwrap()
+    };
 
     let single = send(router, ranged("bytes=100-")).await;
     assert_eq!(single.status, StatusCode::PARTIAL_CONTENT);
-    assert_eq!(single.header("content-range"), Some(format!("bytes 100-{}/{}", file.len() - 1, file.len()).as_str()));
-    assert_eq!(single.header("content-length"), Some((file.len() - 100).to_string().as_str()));
+    assert_eq!(
+        single.header("content-range"),
+        Some(format!("bytes 100-{}/{}", file.len() - 1, file.len()).as_str())
+    );
+    assert_eq!(
+        single.header("content-length"),
+        Some((file.len() - 100).to_string().as_str())
+    );
     assert_eq!(single.body, &file[100..]);
 
     let multiple = send(router, ranged("bytes=0-9,20-29")).await;
     assert_eq!(multiple.status, StatusCode::PARTIAL_CONTENT);
-    let boundary = multiple.header("content-type").unwrap().strip_prefix("multipart/byteranges; boundary=").unwrap().to_string();
+    let boundary = multiple
+        .header("content-type")
+        .unwrap()
+        .strip_prefix("multipart/byteranges; boundary=")
+        .unwrap()
+        .to_string();
     let part = |start: usize, end: usize| {
         let mut part = format!("\r\n--{boundary}\r\nContent-Type: image/jpeg\r\nContent-Range: bytes {start}-{end}/{}\r\n\r\n", file.len()).into_bytes();
         part.extend_from_slice(&file[start..=end]);
         part
     };
-    let expected = [part(0, 9), part(20, 29), format!("\r\n--{boundary}--\r\n").into_bytes()].concat();
-    assert_eq!(multiple.header("content-length"), Some(expected.len().to_string().as_str()));
+    let expected = [
+        part(0, 9),
+        part(20, 29),
+        format!("\r\n--{boundary}--\r\n").into_bytes(),
+    ]
+    .concat();
+    assert_eq!(
+        multiple.header("content-length"),
+        Some(expected.len().to_string().as_str())
+    );
     assert_eq!(multiple.body, expected);
 
     let unsatisfiable = send(router, ranged(&format!("bytes={}-", file.len() + 10))).await;

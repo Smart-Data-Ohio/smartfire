@@ -55,7 +55,9 @@ async fn check(case: &Value) {
     )
     .header("accept", "application/json")
     .header("content-type", "application/json");
-    if case["setup"]["bot"].as_bool()!=Some(true) {req=req.header("authorization", &["Bearer", SECRET].join(" "));}
+    if case["setup"]["bot"].as_bool() != Some(true) {
+        req = req.header("authorization", &["Bearer", SECRET].join(" "));
+    }
     if let Some(body) = case["body"].as_str() {
         req = req.body(body);
     }
@@ -132,17 +134,43 @@ async fn agent_conversation_stream_bytes() {
 }
 
 async fn stream_http_enqueue_failure(mcp: bool) {
-        let app=setup().await;
-        let id=app.db().write(|tx| {
+    let app = setup().await;
+    let id=app.db().write(|tx| {
             let campfire_db::models::agent_posting::PostResult::Posted(message)=campfire_db::models::agent_streaming::start(tx,AGENT,NewMessage{room_id:486777696,markdown_source:Some("Before".into()),client_message_id:Some("atomic-stream".into()),..Default::default()})? else {panic!("stream start");};
             tx.conn().execute("UPDATE messages SET stream_broadcast_at=? WHERE id=?",rusqlite::params![tx.now(),message.id])?;
             tx.conn().execute_batch("CREATE TRIGGER ws11api_reject_trailing BEFORE INSERT ON background_jobs WHEN NEW.job_class='Message::StreamTrailingBroadcastJob' BEGIN SELECT RAISE(ABORT,'WS11-api rejected trailing job'); END;")?;
             Ok(message.id)
         }).await.unwrap();
-        let (method,path,body)=if mcp {(Method::POST,"/agents/mcp".to_owned(),json!({"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"append_stream","arguments":{"message_id":id,"append":"After"}}}))} else {(Method::PATCH,format!("/agents/streaming_messages/{id}"),json!({"append":"After"}))};
-        let reply=app.anonymous().send(Req::new(method,&path).header("accept","application/json").header("content-type","application/json").header("authorization",&["Bearer",SECRET].join(" ")).body(body.to_string())).await;
-        if mcp {assert_eq!(reply.status.as_u16(),200);assert_eq!(reply.json()["error"]["code"],-32603);} else {assert_eq!(reply.status.as_u16(),500);}
-        app.db().read(move|conn|{
+    let (method, path, body) = if mcp {
+        (
+            Method::POST,
+            "/agents/mcp".to_owned(),
+            json!({"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"append_stream","arguments":{"message_id":id,"append":"After"}}}),
+        )
+    } else {
+        (
+            Method::PATCH,
+            format!("/agents/streaming_messages/{id}"),
+            json!({"append":"After"}),
+        )
+    };
+    let reply = app
+        .anonymous()
+        .send(
+            Req::new(method, &path)
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .header("authorization", &["Bearer", SECRET].join(" "))
+                .body(body.to_string()),
+        )
+        .await;
+    if mcp {
+        assert_eq!(reply.status.as_u16(), 200);
+        assert_eq!(reply.json()["error"]["code"], -32603);
+    } else {
+        assert_eq!(reply.status.as_u16(), 500);
+    }
+    app.db().read(move|conn|{
             let message=Message::find(conn,id)?;
             assert_eq!(message.markdown_source.as_deref(),Some("Before"));
             assert!(message.streaming);
@@ -152,8 +180,20 @@ async fn stream_http_enqueue_failure(mcp: bool) {
         }).await.unwrap();
 }
 
-#[tokio::test] async fn agent_stream_http_enqueue_failure_rest() {stream_http_enqueue_failure(false).await;}
-#[tokio::test] async fn agent_stream_http_enqueue_failure_mcp() {stream_http_enqueue_failure(true).await;}
+#[tokio::test]
+async fn agent_stream_http_enqueue_failure_rest() {
+    stream_http_enqueue_failure(false).await;
+}
+#[tokio::test]
+async fn agent_stream_http_enqueue_failure_mcp() {
+    stream_http_enqueue_failure(true).await;
+}
 
-#[tokio::test] async fn agent_owner_lifecycle_credentials() {group("security_owner_token_").await;}
-#[tokio::test] async fn agent_owner_lifecycle_bot_keys() {group("security_owner_bot_").await;}
+#[tokio::test]
+async fn agent_owner_lifecycle_credentials() {
+    group("security_owner_token_").await;
+}
+#[tokio::test]
+async fn agent_owner_lifecycle_bot_keys() {
+    group("security_owner_bot_").await;
+}

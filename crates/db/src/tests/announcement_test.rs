@@ -112,11 +112,16 @@ fn announcement_edits_and_deletes_enqueue_and_propagate_once() {
 fn announcement_bodyless_publications_still_propagate_after_room_flag_is_disabled() {
     for mutation in ["update_body", "edit", "destroy"] {
         let (t, source, _, _, _) = setup();
-        let message = t.write(move |tx| Message::create(tx, NewMessage {
-            room_id: source,
-            creator_id: id("david"),
-            ..Default::default()
-        }));
+        let message = t.write(move |tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: source,
+                    creator_id: id("david"),
+                    ..Default::default()
+                },
+            )
+        });
         let source_id = message.id;
         let publication = t.write(move |tx| announcement::publish(tx, &message, id("david")));
         t.write(move |tx| announcement::deliver(tx, publication));
@@ -131,28 +136,38 @@ fn announcement_bodyless_publications_still_propagate_after_room_flag_is_disable
             let mut message = Message::find(tx.conn(), source_id)?;
             match mutation {
                 "update_body" => message.update_body(tx, "<p>Updated</p>"),
-                "edit" => message.edit(tx, MessageChanges {
-                    body: Some("<p>Updated</p>".into()),
-                    ..Default::default()
-                }),
+                "edit" => message.edit(
+                    tx,
+                    MessageChanges {
+                        body: Some("<p>Updated</p>".into()),
+                        ..Default::default()
+                    },
+                ),
                 "destroy" => message.destroy(tx),
                 _ => unreachable!(),
             }
         });
         let events = t.events();
         if mutation == "destroy" {
-            let jobs = events.iter()
+            let jobs = events
+                .iter()
                 .filter_map(|event| event.as_job::<announcement::DeleteCopiesJob>())
                 .collect::<Vec<_>>();
             assert_eq!(jobs.len(), 1);
             let job = jobs.into_iter().next().unwrap();
             assert_eq!(job.message_ids.len(), 2);
-            t.write(move |tx| announcement::delete_copies(tx, job.publication_id, &job.message_ids));
+            t.write(move |tx| {
+                announcement::delete_copies(tx, job.publication_id, &job.message_ids)
+            });
             for copy in copies {
-                assert!(t.read(move |conn| Message::find_by_id(conn, copy.id)).is_none());
+                assert!(
+                    t.read(move |conn| Message::find_by_id(conn, copy.id))
+                        .is_none()
+                );
             }
         } else {
-            let jobs = events.iter()
+            let jobs = events
+                .iter()
                 .filter_map(|event| event.as_job::<SyncJob>())
                 .collect::<Vec<_>>();
             assert_eq!(jobs.len(), 1);
@@ -160,7 +175,10 @@ fn announcement_bodyless_publications_still_propagate_after_room_flag_is_disable
             assert_eq!(job.publication_id, publication);
             t.write(move |tx| announcement::deliver(tx, job.publication_id));
             for copy in copies {
-                assert_eq!(t.read(move |conn| copy.body_html(conn)), Some("<p>Updated</p>".into()));
+                assert_eq!(
+                    t.read(move |conn| copy.body_html(conn)),
+                    Some("<p>Updated</p>".into())
+                );
             }
         }
     }

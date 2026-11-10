@@ -4,29 +4,32 @@ use campfire_jobs::inspect::{self, JobRow};
 use tokio::sync::Notify;
 
 use super::*;
-use campfire_db::Job;
-use campfire_jobs::Execution;
-use campfire_jobs::JobKind;
-use campfire_jobs::JobResult;
-use campfire_jobs::Outcome;
-use campfire_jobs::RunnerConfig;
 use crate::app::App;
+use crate::cable::Cable;
+use crate::config::Config;
 use crate::queue::PurgeJob;
 use crate::queue::Registry;
 use crate::queue::discard_missing;
+use crate::queue::{
+    Jobs, PUSH_QUEUE, PushMessageJob, WEBHOOK_HOLD, WEBHOOKS_QUEUE, WebhookJob, request_for,
+    runner_config,
+};
+use crate::server::{Booted, boot_with_services};
+use crate::test_support::{WAIT, eventually, wait};
+use campfire_db::Job;
+use campfire_db::{Event, EventSink as _, JobRequest, Tx};
+use campfire_jobs::Execution;
+use campfire_jobs::JobKind;
+use campfire_jobs::JobQueue;
+use campfire_jobs::JobResult;
+use campfire_jobs::Outcome;
+use campfire_jobs::RunnerConfig;
+use futures_util::future::BoxFuture;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
-use campfire_db::{Event, EventSink as _, JobRequest, Tx};
-use campfire_jobs::JobQueue;
-use futures_util::future::BoxFuture;
-use crate::cable::Cable;
-use crate::config::Config;
-use crate::queue::{Jobs, PUSH_QUEUE, PushMessageJob, WEBHOOK_HOLD, WEBHOOKS_QUEUE, WebhookJob, request_for, runner_config};
-use crate::server::{Booted, boot_with_services};
-use crate::test_support::{WAIT, eventually, wait};
 
 /// An app booted over an empty storage directory.
 async fn app_in(dir: &std::path::Path) -> Booted {
@@ -44,8 +47,13 @@ async fn app_in(dir: &std::path::Path) -> Booted {
         config,
         campfire_kit::clock::from_env().unwrap(),
         crate::net::Network::system(),
-        periodic::Intervals { periodic: None, huddle: None },
-    ).await.unwrap()
+        periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        },
+    )
+    .await
+    .unwrap()
 }
 
 async fn app() -> (Booted, tempfile::TempDir) {
@@ -56,11 +64,22 @@ async fn app() -> (Booted, tempfile::TempDir) {
 #[tokio::test]
 async fn huddle_presence_worker_discards_missing_grants_successfully() {
     let (booted, _dir) = app().await;
-    booted.app.db.write(|tx| {
-        tx.emit_after_commit(Event::job(&campfire_db::models::huddle_grant::PresenceJob { grant_id: -1 }));
-        Ok(())
-    }).await.unwrap();
-    wait_for(&booted.app, "the presence worker", |rows| rows.iter().all(|job| job.class != "Huddle::BroadcastPresenceJob")).await;
+    booted
+        .app
+        .db
+        .write(|tx| {
+            tx.emit_after_commit(Event::job(
+                &campfire_db::models::huddle_grant::PresenceJob { grant_id: -1 },
+            ));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    wait_for(&booted.app, "the presence worker", |rows| {
+        rows.iter()
+            .all(|job| job.class != "Huddle::BroadcastPresenceJob")
+    })
+    .await;
     booted.jobs.shutdown(Duration::from_secs(2)).await;
 }
 
@@ -83,8 +102,12 @@ async fn huddle_presence_worker_retries_publication_lookup_failures() {
             gateway_secret: Some("retry-fixture-gateway".into()),
         };
         // A single reader prevents another worker from bypassing the lookup fault.
-        let test = TestApp::boot_with_settings(config, clock.clone(), &[("RAILS_MAX_THREADS", "1")])
-            .await.expect("frozen seeds required").without_job_runner().await;
+        let test =
+            TestApp::boot_with_settings(config, clock.clone(), &[("RAILS_MAX_THREADS", "1")])
+                .await
+                .expect("frozen seeds required")
+                .without_job_runner()
+                .await;
         let app = test.booted.app.clone();
         let room_id = app.db.write(|tx| {
             tx.conn().execute("DELETE FROM background_jobs", [])?;
@@ -103,7 +126,8 @@ async fn huddle_presence_worker_retries_publication_lookup_failures() {
         }).await.unwrap();
         let (addr, server) = serve(&test).await;
         let browser = test.sign_in(JASON).await;
-        let mut socket = Sync::connect(addr, &browser.cookie_header(), &[format!("room:{room_id}")]).await;
+        let mut socket =
+            Sync::connect(addr, &browser.cookie_header(), &[format!("room:{room_id}")]).await;
         socket.welcome().await;
 
         let lookups = Arc::new(AtomicUsize::new(0));
@@ -129,20 +153,42 @@ async fn huddle_presence_worker_retries_publication_lookup_failures() {
             Ok(())
         }).await.unwrap();
 
-        let failure = app.db.read(move |conn| Room::find_by_id(conn, room_id)).await.unwrap_err();
-        assert!(matches!(&failure, campfire_db::Error::Sqlite(rusqlite::Error::SqliteFailure(error, _))
-            if error.extended_code == code), "wrong injected SQLite error: {failure:?}");
+        let failure = app
+            .db
+            .read(move |conn| Room::find_by_id(conn, room_id))
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(&failure, campfire_db::Error::Sqlite(rusqlite::Error::SqliteFailure(error, _))
+            if error.extended_code == code),
+            "wrong injected SQLite error: {failure:?}"
+        );
 
         let config = RunnerConfig::new(vec![campfire_jobs::QueueConfig::new("default", 1)]);
         let producer = campfire_jobs::start(
-            app.db.clone(), app.jobs.queue.clone(), huddle::source_registry(), app.clone(), config.clone(),
+            app.db.clone(),
+            app.jobs.queue.clone(),
+            huddle::source_registry(),
+            app.clone(),
+            config.clone(),
         );
         let rows = wait_for(&app, "the failed presence publication", |rows| {
-            rows.is_empty() || rows.iter().all(|job| job.attempts == 1 && job.status != "running")
-        }).await;
+            rows.is_empty()
+                || rows
+                    .iter()
+                    .all(|job| job.attempts == 1 && job.status != "running")
+        })
+        .await;
         producer.shutdown(WAIT).await;
-        assert!(lookups.load(Ordering::SeqCst) >= 2, "publication did not run the failing lookup");
-        assert_eq!(rows.len(), 1, "presence publication failure was marked done for SQLite code {code}");
+        assert!(
+            lookups.load(Ordering::SeqCst) >= 2,
+            "publication did not run the failing lookup"
+        );
+        assert_eq!(
+            rows.len(),
+            1,
+            "presence publication failure was marked done for SQLite code {code}"
+        );
         let retry = &rows[0];
         assert_eq!(retry.class, "Huddle::BroadcastPresenceJob");
         assert_eq!(retry.status, "ready", "{retry:#?}");
@@ -150,19 +196,31 @@ async fn huddle_presence_worker_retries_publication_lookup_failures() {
         assert!(retry.run_at > app.db.env().now());
         assert!(retry.last_error.as_deref().unwrap().contains("locked"));
 
-        app.db.read(|conn| {
-            conn.execute_batch("PRAGMA query_only=OFF; DROP VIEW temp.rooms; PRAGMA query_only=ON;")?;
-            Ok(())
-        }).await.unwrap();
+        app.db
+            .read(|conn| {
+                conn.execute_batch(
+                    "PRAGMA query_only=OFF; DROP VIEW temp.rooms; PRAGMA query_only=ON;",
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
         clock.advance(jiff::SignedDuration::from_secs(4));
         let producer = campfire_jobs::start(
-            app.db.clone(), app.jobs.queue.clone(), huddle::source_registry(), app.clone(), config,
+            app.db.clone(),
+            app.jobs.queue.clone(),
+            huddle::source_registry(),
+            app.clone(),
+            config,
         );
         socket.until(|event| matches!(&event.payload, api::SyncPayload::HuddlePresence(presence)
             if presence.room_id == room_id && presence.live && presence.participants.iter().any(|p| p.user_id == DAVID)), |_| false).await;
         socket.until(|event| matches!(&event.payload, api::SyncPayload::StageUpdated(stage)
             if stage.room_id == room_id && stage.live.as_ref().is_some_and(|live| live.quality == api::StreamQuality::P1080Fps60)), |_| false).await;
-        wait_for(&app, "the successful presence retry", |rows| rows.is_empty()).await;
+        wait_for(&app, "the successful presence retry", |rows| {
+            rows.is_empty()
+        })
+        .await;
         producer.shutdown(WAIT).await;
         server.abort();
     }
@@ -171,26 +229,54 @@ async fn huddle_presence_worker_retries_publication_lookup_failures() {
 #[tokio::test]
 async fn huddle_join_and_invitation_workers_discard_missing_sources_successfully() {
     let (booted, _dir) = app().await;
-    booted.app.db.write(|tx| {
-        for (class, arguments) in [("Huddle::JoinNoticeJob", serde_json::json!({"grant_id":-1})), ("Huddle::PushInvitationJob", serde_json::json!({"activity_item_id":-1}))] {
-            tx.emit_after_commit(Event::Job(JobRequest { class, arguments, wait: None }));
-        }
-        Ok(())
-    }).await.unwrap();
-    wait_for(&booted.app, "the join and invitation workers", |rows| rows.iter().all(|job| !["Huddle::JoinNoticeJob", "Huddle::PushInvitationJob"].contains(&job.class.as_str()))).await;
+    booted
+        .app
+        .db
+        .write(|tx| {
+            for (class, arguments) in [
+                ("Huddle::JoinNoticeJob", serde_json::json!({"grant_id":-1})),
+                (
+                    "Huddle::PushInvitationJob",
+                    serde_json::json!({"activity_item_id":-1}),
+                ),
+            ] {
+                tx.emit_after_commit(Event::Job(JobRequest {
+                    class,
+                    arguments,
+                    wait: None,
+                }));
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    wait_for(&booted.app, "the join and invitation workers", |rows| {
+        rows.iter().all(|job| {
+            !["Huddle::JoinNoticeJob", "Huddle::PushInvitationJob"].contains(&job.class.as_str())
+        })
+    })
+    .await;
     booted.jobs.shutdown(Duration::from_secs(2)).await;
 }
 
 #[tokio::test]
 async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
-    use crate::controllers::presenters::test_support::{TestApp, DAVID, JASON, DIRECT_DAVID_JASON};
+    use crate::controllers::presenters::test_support::{DAVID, DIRECT_DAVID_JASON, JASON, TestApp};
     use campfire_db::models::huddle_grant::HuddleGrant;
     use campfire_db::models::huddle_notices::{PushInvitationJob, PushRequest};
-    let Some(test) = TestApp::boot().await else { return; };
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app = test.booted.app.clone();
     let registry = huddle::source_registry();
-    let producer = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), runner_config(&app.config));
+    let producer = campfire_jobs::start(
+        app.db.clone(),
+        app.jobs.queue.clone(),
+        registry,
+        app.clone(),
+        runner_config(&app.config),
+    );
     let grant = app.db.write(|tx| {
         let session = campfire_db::Session::start(tx, DAVID, None, None)?;
         let membership = campfire_db::Membership::find_by_room_and_user(tx.conn(), DIRECT_DAVID_JASON, DAVID)?.unwrap();
@@ -201,20 +287,51 @@ async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
         grant.record_seen(tx)?;
         Ok(grant)
     }).await.unwrap();
-    let rows = wait_for(&app, "the durable join push request", |rows| rows.iter().any(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle_join")).await;
-    let request = rows.iter().find(|job| job.class == PushRequest::CLASS).unwrap();
-    assert_eq!(request.arguments["recipient_id"],JASON);
-    assert_eq!(request.arguments["sender_id"],DAVID);
-    assert_eq!(request.arguments["payload"],serde_json::json!({"title":"David joined your huddle", "body":"Join from the conversation", "path":format!("/rooms/{DIRECT_DAVID_JASON}"), "tag":format!("huddle-{DIRECT_DAVID_JASON}")}));
-    app.db.write(move |tx| {
-        let item = campfire_db::ActivityItem::refresh_unread(tx,JASON,"HuddleGrant",grant.id,"huddle_started")?;
-        tx.emit_after_commit(Event::job(&PushInvitationJob {activity_item_id:item.id}));
-        Ok(())
-    }).await.unwrap();
-    let rows = wait_for(&app, "the durable invitation push request", |rows| rows.iter().any(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle")).await;
-    let request = rows.iter().find(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle").unwrap();
-    assert_eq!(request.arguments["recipient_id"],JASON);
-    assert_eq!(request.arguments["payload"]["title"],"David started a huddle");
+    let rows = wait_for(&app, "the durable join push request", |rows| {
+        rows.iter()
+            .any(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle_join")
+    })
+    .await;
+    let request = rows
+        .iter()
+        .find(|job| job.class == PushRequest::CLASS)
+        .unwrap();
+    assert_eq!(request.arguments["recipient_id"], JASON);
+    assert_eq!(request.arguments["sender_id"], DAVID);
+    assert_eq!(
+        request.arguments["payload"],
+        serde_json::json!({"title":"David joined your huddle", "body":"Join from the conversation", "path":format!("/rooms/{DIRECT_DAVID_JASON}"), "tag":format!("huddle-{DIRECT_DAVID_JASON}")})
+    );
+    app.db
+        .write(move |tx| {
+            let item = campfire_db::ActivityItem::refresh_unread(
+                tx,
+                JASON,
+                "HuddleGrant",
+                grant.id,
+                "huddle_started",
+            )?;
+            tx.emit_after_commit(Event::job(&PushInvitationJob {
+                activity_item_id: item.id,
+            }));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let rows = wait_for(&app, "the durable invitation push request", |rows| {
+        rows.iter()
+            .any(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle")
+    })
+    .await;
+    let request = rows
+        .iter()
+        .find(|job| job.class == PushRequest::CLASS && job.arguments["kind"] == "huddle")
+        .unwrap();
+    assert_eq!(request.arguments["recipient_id"], JASON);
+    assert_eq!(
+        request.arguments["payload"]["title"],
+        "David started a huddle"
+    );
     assert!(request.arguments["room_membership_id"].as_i64().is_some());
     // This producer-only registry retains the wire intents for inspection. The full
     // registered WS17 policy/delivery path is exercised by the transport integration tests.
@@ -223,45 +340,133 @@ async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
 
 #[tokio::test]
 async fn huddle_issuance_rings_and_pushes_once_and_suppresses_the_join_notice() {
-    use crate::controllers::presenters::test_support::{TestApp,DAVID,JASON,DIRECT_DAVID_JASON};
-    use campfire_db::models::{huddle_grant::HuddleGrant,huddle_invitations::RingRequest,huddle_notices::PushRequest};
-    let Some(test)=TestApp::boot().await else { return; };
+    use crate::controllers::presenters::test_support::{DAVID, DIRECT_DAVID_JASON, JASON, TestApp};
+    use campfire_db::models::{
+        huddle_grant::HuddleGrant, huddle_invitations::RingRequest, huddle_notices::PushRequest,
+    };
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let app=test.booted.app.clone();
+    let app = test.booted.app.clone();
     let registry = huddle::source_registry();
-    let producer = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), runner_config(&app.config));
-    let grant=app.db.write(|tx| {
-        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
-        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        let mut grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
-        grant.record_seen(tx)?;
-        Ok(grant)
-    }).await.unwrap();
-    let rows=wait_for(&app,"issuance invitation and ring requests",|rows| rows.iter().any(|j|j.class==PushRequest::CLASS && j.arguments["kind"]=="huddle") && rows.iter().any(|j|j.class==RingRequest::CLASS) && rows.iter().all(|j|j.class!="Huddle::JoinNoticeJob")).await;
-    assert_eq!(rows.iter().filter(|j|j.class==RingRequest::CLASS).count(),1);
-    let ring=rows.iter().find(|j|j.class==RingRequest::CLASS).unwrap();
-    assert_eq!(ring.arguments["recipient_id"],JASON);
-    assert_eq!(ring.arguments["sender_id"],DAVID);
-    assert_eq!(ring.arguments["invitation"]["roomId"],DIRECT_DAVID_JASON);
-    assert!(ring.arguments["invitation"].get("silent").is_none(),"a ring request invented a WS17 policy decision");
-    assert!(!rows.iter().any(|j|j.class==PushRequest::CLASS && j.arguments["kind"]=="huddle_join"));
-    app.db.write(move |tx|HuddleGrant::issue(tx,grant.session_id,grant.membership_id,grant.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false}).map(drop)).await.unwrap();
-    assert_eq!(jobs(&app).iter().filter(|j|j.class==RingRequest::CLASS).count(),1,"a reuse inside the dedupe window rang again");
+    let producer = campfire_jobs::start(
+        app.db.clone(),
+        app.jobs.queue.clone(),
+        registry,
+        app.clone(),
+        runner_config(&app.config),
+    );
+    let grant = app
+        .db
+        .write(|tx| {
+            let session = campfire_db::Session::start(tx, DAVID, None, None)?;
+            let member = campfire_db::Membership::find_by_room_and_user(
+                tx.conn(),
+                DIRECT_DAVID_JASON,
+                DAVID,
+            )?
+            .unwrap();
+            let mut grant = HuddleGrant::issue(
+                tx,
+                session.id,
+                member.id,
+                member.room_id,
+                &campfire_db::models::room_delete::HuddleConfig {
+                    api_secret: Some("ws13-fixture-value".into()),
+                    admin_configured: false,
+                },
+            )?;
+            grant.record_seen(tx)?;
+            Ok(grant)
+        })
+        .await
+        .unwrap();
+    let rows = wait_for(&app, "issuance invitation and ring requests", |rows| {
+        rows.iter()
+            .any(|j| j.class == PushRequest::CLASS && j.arguments["kind"] == "huddle")
+            && rows.iter().any(|j| j.class == RingRequest::CLASS)
+            && rows.iter().all(|j| j.class != "Huddle::JoinNoticeJob")
+    })
+    .await;
+    assert_eq!(
+        rows.iter()
+            .filter(|j| j.class == RingRequest::CLASS)
+            .count(),
+        1
+    );
+    let ring = rows.iter().find(|j| j.class == RingRequest::CLASS).unwrap();
+    assert_eq!(ring.arguments["recipient_id"], JASON);
+    assert_eq!(ring.arguments["sender_id"], DAVID);
+    assert_eq!(ring.arguments["invitation"]["roomId"], DIRECT_DAVID_JASON);
+    assert!(
+        ring.arguments["invitation"].get("silent").is_none(),
+        "a ring request invented a WS17 policy decision"
+    );
+    assert!(
+        !rows
+            .iter()
+            .any(|j| j.class == PushRequest::CLASS && j.arguments["kind"] == "huddle_join")
+    );
+    app.db
+        .write(move |tx| {
+            HuddleGrant::issue(
+                tx,
+                grant.session_id,
+                grant.membership_id,
+                grant.room_id,
+                &campfire_db::models::room_delete::HuddleConfig {
+                    api_secret: Some("ws13-fixture-value".into()),
+                    admin_configured: false,
+                },
+            )
+            .map(drop)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        jobs(&app)
+            .iter()
+            .filter(|j| j.class == RingRequest::CLASS)
+            .count(),
+        1,
+        "a reuse inside the dedupe window rang again"
+    );
     producer.shutdown(Duration::from_secs(2)).await;
 }
 
 #[tokio::test]
 async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_configuration() {
-    use crate::controllers::presenters::test_support::{TestApp,DAVID,DIRECT_DAVID_JASON};
+    use crate::controllers::presenters::test_support::{DAVID, DIRECT_DAVID_JASON, TestApp};
     use campfire_db::models::huddle_grant::HuddleGrant;
-    let Some(test)=TestApp::boot().await else{return;};
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let app=test.booted.app.clone();
-    let grant=app.db.write(|tx| {
-        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
-        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})
-    }).await.unwrap();
+    let app = test.booted.app.clone();
+    let grant = app
+        .db
+        .write(|tx| {
+            let session = campfire_db::Session::start(tx, DAVID, None, None)?;
+            let member = campfire_db::Membership::find_by_room_and_user(
+                tx.conn(),
+                DIRECT_DAVID_JASON,
+                DAVID,
+            )?
+            .unwrap();
+            HuddleGrant::issue(
+                tx,
+                session.id,
+                member.id,
+                member.room_id,
+                &campfire_db::models::room_delete::HuddleConfig {
+                    api_secret: Some("ws13-fixture-value".into()),
+                    admin_configured: false,
+                },
+            )
+        })
+        .await
+        .unwrap();
     let (item,stream)=app.db.write(move |tx| {
         let item=tx.conn().query_row("SELECT id FROM activity_items WHERE source_type='HuddleGrant' AND source_id=?",[grant.id],|r|r.get::<_,i64>(0))?;
         tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(46)),item])?;
@@ -270,15 +475,36 @@ async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_confi
         let stream=tx.conn().query_row("INSERT INTO streams(room_id,membership_id,user_id,quality,started_at,created_at,updated_at) VALUES(?,?,?,'1080p15',?,?,?) RETURNING id",rusqlite::params![stage.id,presenter.id,DAVID,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?;
         Ok((item,stream))
     }).await.unwrap();
-    let config=runner_config(&app.config);
-    let (_,ad_hoc)=Jobs::new(&registry(),&config).unwrap();
-    let loops=periodic::Loops {periodic:None,huddle:Some(periodic::huddle_reconciler(Duration::from_millis(20)))};
-    let runner=start(app.clone(),registry(),ad_hoc,config,loops);
-    let deadline=tokio::time::Instant::now()+Duration::from_secs(5);
+    let config = runner_config(&app.config);
+    let (_, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
+    let loops = periodic::Loops {
+        periodic: None,
+        huddle: Some(periodic::huddle_reconciler(Duration::from_millis(20))),
+    };
+    let runner = start(app.clone(), registry(), ad_hoc, config, loops);
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
     loop {
-        let done=app.db.read(move |conn|Ok(campfire_db::ActivityItem::find(conn,item)?.event_type=="huddle_missed" && conn.query_row("SELECT ended_at IS NOT NULL FROM streams WHERE id=?",[stream],|r|r.get::<_,bool>(0))?)).await.unwrap();
-        if done {break;}
-        assert!(tokio::time::Instant::now()<deadline,"the actual in-process huddle task did not resolve the invitation");
+        let done = app
+            .db
+            .read(move |conn| {
+                Ok(
+                    campfire_db::ActivityItem::find(conn, item)?.event_type == "huddle_missed"
+                        && conn.query_row(
+                            "SELECT ended_at IS NOT NULL FROM streams WHERE id=?",
+                            [stream],
+                            |r| r.get::<_, bool>(0),
+                        )?,
+                )
+            })
+            .await
+            .unwrap();
+        if done {
+            break;
+        }
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "the actual in-process huddle task did not resolve the invitation"
+        );
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     runner.shutdown(Duration::from_secs(2)).await;
@@ -286,32 +512,77 @@ async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_confi
 
 #[tokio::test]
 async fn huddle_invitation_enqueue_failure_keeps_grant_and_rolls_back_invitation() {
-    use crate::controllers::presenters::test_support::{TestApp,DAVID,DIRECT_DAVID_JASON};
+    use crate::controllers::presenters::test_support::{DAVID, DIRECT_DAVID_JASON, TestApp};
     use campfire_db::models::huddle_grant::HuddleGrant;
     for class in ["Notifications::HuddleRingJob", "Huddle::PushInvitationJob"] {
-        let Some(test)=TestApp::boot().await else {return;};
+        let Some(test) = TestApp::boot().await else {
+            return;
+        };
         test.booted.jobs.shutdown(Duration::from_secs(2)).await;
-        let app=test.booted.app;
+        let app = test.booted.app;
         let (session,member)=app.db.write(move |tx| {
             let session=campfire_db::Session::start(tx,DAVID,None,None)?;
             let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
             tx.conn().execute_batch(&format!("CREATE TRIGGER ws13_reject_invitation_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='{class}' BEGIN SELECT RAISE(ABORT,'ws13 reject invitation job'); END"))?;
             Ok((session.id,member.id))
         }).await.unwrap();
-        let failed=app.db.write(move |tx|HuddleGrant::issue(tx,session,member,DIRECT_DAVID_JASON,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})).await;
+        let failed = app
+            .db
+            .write(move |tx| {
+                HuddleGrant::issue(
+                    tx,
+                    session,
+                    member,
+                    DIRECT_DAVID_JASON,
+                    &campfire_db::models::room_delete::HuddleConfig {
+                        api_secret: Some("ws13-fixture-value".into()),
+                        admin_configured: false,
+                    },
+                )
+            })
+            .await;
         assert!(failed.is_err());
-        assert_eq!(app.db.read(move |conn|Ok(conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?",[session],|r|r.get::<_,i64>(0))?)).await.unwrap(),1);
-        assert_eq!(app.db.read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'",[],|r|r.get::<_,i64>(0))?)).await.unwrap(),0);
-        assert!(!jobs(&app).iter().any(|j|j.class=="Notifications::HuddleRingJob" || j.class=="Huddle::PushInvitationJob"));
+        assert_eq!(
+            app.db
+                .read(move |conn| Ok(conn.query_row(
+                    "SELECT COUNT(*) FROM huddle_grants WHERE session_id=?",
+                    [session],
+                    |r| r.get::<_, i64>(0)
+                )?))
+                .await
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            app.db
+                .read(|conn| Ok(conn.query_row(
+                    "SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?))
+                .await
+                .unwrap(),
+            0
+        );
+        assert!(
+            !jobs(&app)
+                .iter()
+                .any(|j| j.class == "Notifications::HuddleRingJob"
+                    || j.class == "Huddle::PushInvitationJob")
+        );
     }
 }
 
 #[tokio::test]
 async fn huddle_push_enqueue_failure_rolls_back_the_notice_transaction() {
-    use crate::controllers::presenters::test_support::{TestApp, DAVID, JASON, DIRECT_DAVID_JASON};
+    use crate::controllers::presenters::test_support::{DAVID, DIRECT_DAVID_JASON, JASON, TestApp};
     use campfire_db::models::huddle_grant::HuddleGrant;
-    use campfire_db::models::huddle_notices::{PushKind, PushPayload, PushRequest, enqueue_huddle_push, prepare_push};
-    let Some(test) = TestApp::boot().await else { return; };
+    use campfire_db::models::huddle_notices::{
+        PushKind, PushPayload, PushRequest, enqueue_huddle_push, prepare_push,
+    };
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app = test.booted.app;
     let (id, membership_id) = app.db.write(|tx| {
@@ -324,45 +595,117 @@ async fn huddle_push_enqueue_failure_rolls_back_the_notice_transaction() {
         tx.conn().execute("UPDATE memberships SET connected_at=NULL,last_huddle_join_push_at=NULL WHERE id=?",[recipient.id])?;
         Ok((item.id, recipient.id))
     }).await.unwrap();
-    let failed = app.db.write(move |tx| {
-        // WS17 must enqueue the actual delivery in the transaction that owns this claim.
-        tx.conn().execute("UPDATE activity_items SET read_at='2026-03-02 16:00:01' WHERE id=?",[id])?;
-        let request = PushRequest {
-            kind: PushKind::HuddleJoin, recipient_id:JASON, sender_id:DAVID,
-            room_id:DIRECT_DAVID_JASON, room_membership_id:Some(membership_id),
-            payload:PushPayload { title:"David joined a huddle".into(),body:"Join the call".into(),path:format!("/rooms/{DIRECT_DAVID_JASON}"),tag:format!("huddle-room-{DIRECT_DAVID_JASON}") },
-        };
-        assert!(prepare_push(tx,&request,true)?.is_some(),"the subscription and throttle claim did not run");
-        enqueue_huddle_push(tx,&request);
-        Ok(())
-    }).await;
-    assert!(failed.is_err(),"the failed durable enqueue did not fail the triggering write");
-    assert!(app.db.read(move |conn|Ok(campfire_db::ActivityItem::find(conn,id)?.read_at.is_none())).await.unwrap());
-    assert!(app.db.read(move |conn|Ok(campfire_db::Membership::find(conn,membership_id)?.last_huddle_join_push_at.is_none())).await.unwrap());
-    assert!(!jobs(&app).iter().any(|job|job.class=="Notifications::HuddlePushJob"));
+    let failed = app
+        .db
+        .write(move |tx| {
+            // WS17 must enqueue the actual delivery in the transaction that owns this claim.
+            tx.conn().execute(
+                "UPDATE activity_items SET read_at='2026-03-02 16:00:01' WHERE id=?",
+                [id],
+            )?;
+            let request = PushRequest {
+                kind: PushKind::HuddleJoin,
+                recipient_id: JASON,
+                sender_id: DAVID,
+                room_id: DIRECT_DAVID_JASON,
+                room_membership_id: Some(membership_id),
+                payload: PushPayload {
+                    title: "David joined a huddle".into(),
+                    body: "Join the call".into(),
+                    path: format!("/rooms/{DIRECT_DAVID_JASON}"),
+                    tag: format!("huddle-room-{DIRECT_DAVID_JASON}"),
+                },
+            };
+            assert!(
+                prepare_push(tx, &request, true)?.is_some(),
+                "the subscription and throttle claim did not run"
+            );
+            enqueue_huddle_push(tx, &request);
+            Ok(())
+        })
+        .await;
+    assert!(
+        failed.is_err(),
+        "the failed durable enqueue did not fail the triggering write"
+    );
+    assert!(
+        app.db
+            .read(move |conn| Ok(campfire_db::ActivityItem::find(conn, id)?.read_at.is_none()))
+            .await
+            .unwrap()
+    );
+    assert!(
+        app.db
+            .read(
+                move |conn| Ok(campfire_db::Membership::find(conn, membership_id)?
+                    .last_huddle_join_push_at
+                    .is_none())
+            )
+            .await
+            .unwrap()
+    );
+    assert!(
+        !jobs(&app)
+            .iter()
+            .any(|job| job.class == "Notifications::HuddlePushJob")
+    );
 }
 
 #[tokio::test]
 async fn huddle_presence_recovers_only_the_previous_unknown_class_failures() {
     let (booted, _dir) = app().await;
     booted.jobs.shutdown(Duration::from_secs(2)).await;
-    booted.app.db.write(|tx| {
-        for (class, error) in [("Huddle::BroadcastPresenceJob", "no handler is registered for Huddle::BroadcastPresenceJob"), ("Huddle::JoinNoticeJob", "no handler is registered for Huddle::JoinNoticeJob"), ("Huddle::PushInvitationJob", "no handler is registered for Huddle::PushInvitationJob"), ("Huddle::BroadcastPresenceJob", "real rendering failure"), ("WS13OtherJob", "no handler is registered for WS13OtherJob")] {
-            let id = boot_insert_failed_job(tx, class, error)?;
-            assert!(id > 0);
-        }
-        Ok(())
-    }).await.unwrap();
-    assert_eq!(super::huddle::recover_unregistered(&booted.app.db).await.unwrap(), 3);
+    booted
+        .app
+        .db
+        .write(|tx| {
+            for (class, error) in [
+                (
+                    "Huddle::BroadcastPresenceJob",
+                    "no handler is registered for Huddle::BroadcastPresenceJob",
+                ),
+                (
+                    "Huddle::JoinNoticeJob",
+                    "no handler is registered for Huddle::JoinNoticeJob",
+                ),
+                (
+                    "Huddle::PushInvitationJob",
+                    "no handler is registered for Huddle::PushInvitationJob",
+                ),
+                ("Huddle::BroadcastPresenceJob", "real rendering failure"),
+                ("WS13OtherJob", "no handler is registered for WS13OtherJob"),
+            ] {
+                let id = boot_insert_failed_job(tx, class, error)?;
+                assert!(id > 0);
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        super::huddle::recover_unregistered(&booted.app.db)
+            .await
+            .unwrap(),
+        3
+    );
     let rows = jobs(&booted.app);
     assert_eq!(rows.iter().filter(|row| row.status == "ready").count(), 3);
     assert_eq!(rows.iter().filter(|row| row.status == "failed").count(), 2);
-    assert_eq!(super::huddle::recover_unregistered(&booted.app.db).await.unwrap(), 0);
+    assert_eq!(
+        super::huddle::recover_unregistered(&booted.app.db)
+            .await
+            .unwrap(),
+        0
+    );
 }
 
 fn boot_insert_failed_job(tx: &Tx<'_>, class: &str, error: &str) -> campfire_db::Result<i64> {
     use campfire_db::CachedStatements;
-    let arguments = if class=="Huddle::PushInvitationJob" {"{\"activity_item_id\":-1}"} else {"{\"grant_id\":-1}"};
+    let arguments = if class == "Huddle::PushInvitationJob" {
+        "{\"activity_item_id\":-1}"
+    } else {
+        "{\"grant_id\":-1}"
+    };
     Ok(tx.conn().query_row_cached("INSERT INTO background_jobs(job_class,queue_name,arguments,payload_version,status,attempts,run_at,last_error,failed_at,created_at,updated_at) VALUES(?1,'default',?4,1,'failed',1,?3,?2,?3,?3,?3) RETURNING id", rusqlite::params![class, error, tx.now(), arguments], |row| row.get(0))?)
 }
 
@@ -380,8 +723,12 @@ async fn wait_for(app: &App, what: &str, condition: impl Fn(&[JobRow]) -> bool) 
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
-    }).await;
-    assert!(result.is_ok(), "timed out after {WAIT:?} waiting for {what}: {rows:#?}");
+    })
+    .await;
+    assert!(
+        result.is_ok(),
+        "timed out after {WAIT:?} waiting for {what}: {rows:#?}"
+    );
     rows
 }
 
@@ -392,7 +739,10 @@ impl Logs {
     fn capture() -> (Self, tracing::subscriber::DefaultGuard) {
         let buffer = Arc::new(StdMutex::new(Vec::new()));
         let writer = buffer.clone();
-        let subscriber = tracing_subscriber::fmt().with_ansi(false).with_writer(move || LogWriter(writer.clone())).finish();
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .with_writer(move || LogWriter(writer.clone()))
+            .finish();
         (Self(buffer), tracing::subscriber::set_default(subscriber))
     }
 
@@ -419,11 +769,41 @@ impl std::io::Write for LogWriter {
 #[test]
 fn job_events_ask_for_their_rails_job_classes() {
     let request = |event| request_for(&event).map(|request| (request.class, request.arguments));
-    assert_eq!(request(Event::PushMessage { room_id: 1, message_id: 2 }), Some(("Room::PushMessageJob", serde_json::json!({"room_id": 1, "message_id": 2}))));
-    assert_eq!(request(Event::DeliverWebhook { bot_id: 3, message_id: 4 }), Some(("Bot::WebhookJob", serde_json::json!({"bot_id": 3, "message_id": 4}))));
-    assert_eq!(request(Event::RemoveBannedContent { user_id: 5 }), Some(("RemoveBannedContentJob", serde_json::json!({"user_id": 5}))));
-    assert_eq!(request(Event::PurgeBlob { blob_id: 6 }), Some(("ActiveStorage::PurgeJob", serde_json::json!({"blob_id": 6}))));
-    assert_eq!(request(Event::DisconnectUser { user_id: 7, reconnect: false }), None);
+    assert_eq!(
+        request(Event::PushMessage {
+            room_id: 1,
+            message_id: 2
+        }),
+        Some((
+            "Room::PushMessageJob",
+            serde_json::json!({"room_id": 1, "message_id": 2})
+        ))
+    );
+    assert_eq!(
+        request(Event::DeliverWebhook {
+            bot_id: 3,
+            message_id: 4
+        }),
+        Some((
+            "Bot::WebhookJob",
+            serde_json::json!({"bot_id": 3, "message_id": 4})
+        ))
+    );
+    assert_eq!(
+        request(Event::RemoveBannedContent { user_id: 5 }),
+        Some(("RemoveBannedContentJob", serde_json::json!({"user_id": 5})))
+    );
+    assert_eq!(
+        request(Event::PurgeBlob { blob_id: 6 }),
+        Some(("ActiveStorage::PurgeJob", serde_json::json!({"blob_id": 6})))
+    );
+    assert_eq!(
+        request(Event::DisconnectUser {
+            user_id: 7,
+            reconnect: false
+        }),
+        None
+    );
 }
 
 /// A job event is a row written in its write's transaction, on its class's queue: it commits,
@@ -437,7 +817,10 @@ async fn job_events_are_enqueued_with_their_write() {
     let rolled_back = app
         .db
         .write(|tx| {
-            tx.emit_after_commit(Event::DeliverWebhook { bot_id: 1, message_id: 2 });
+            tx.emit_after_commit(Event::DeliverWebhook {
+                bot_id: 1,
+                message_id: 2,
+            });
             Err::<(), _>(campfire_db::Error::Other("validation failed".into()))
         })
         .await;
@@ -446,40 +829,76 @@ async fn job_events_are_enqueued_with_their_write() {
 
     app.db
         .write(|tx| {
-            tx.emit_after_commit(Event::DeliverWebhook { bot_id: 1, message_id: 2 });
-            tx.emit_after_commit(Event::PushMessage { room_id: 3, message_id: 2 });
-            tx.emit_now(Event::DisconnectUser { user_id: 1, reconnect: true });
+            tx.emit_after_commit(Event::DeliverWebhook {
+                bot_id: 1,
+                message_id: 2,
+            });
+            tx.emit_after_commit(Event::PushMessage {
+                room_id: 3,
+                message_id: 2,
+            });
+            tx.emit_now(Event::DisconnectUser {
+                user_id: 1,
+                reconnect: true,
+            });
             Ok(())
         })
         .await
         .unwrap();
-    let rows: Vec<_> = jobs(&app).into_iter().map(|job| (job.queue, job.class, job.arguments, job.status)).collect();
+    let rows: Vec<_> = jobs(&app)
+        .into_iter()
+        .map(|job| (job.queue, job.class, job.arguments, job.status))
+        .collect();
     assert_eq!(
         rows,
         [
-            (WEBHOOKS_QUEUE.to_string(), "Bot::WebhookJob".to_string(), serde_json::json!({"bot_id": 1, "message_id": 2}), "ready".to_string()),
-            (PUSH_QUEUE.to_string(), "Room::PushMessageJob".to_string(), serde_json::json!({"room_id": 3, "message_id": 2}), "ready".to_string()),
+            (
+                WEBHOOKS_QUEUE.to_string(),
+                "Bot::WebhookJob".to_string(),
+                serde_json::json!({"bot_id": 1, "message_id": 2}),
+                "ready".to_string()
+            ),
+            (
+                PUSH_QUEUE.to_string(),
+                "Room::PushMessageJob".to_string(),
+                serde_json::json!({"room_id": 3, "message_id": 2}),
+                "ready".to_string()
+            ),
         ]
     );
 }
 
 /// Runs `f` in a write while a trigger rejects every new `background_jobs` row.
-async fn rejecting_jobs<T: Send + 'static>(app: &App, f: impl FnOnce(&mut Tx<'_>) -> campfire_db::Result<T> + Send + 'static) -> campfire_db::Result<T> {
+async fn rejecting_jobs<T: Send + 'static>(
+    app: &App,
+    f: impl FnOnce(&mut Tx<'_>) -> campfire_db::Result<T> + Send + 'static,
+) -> campfire_db::Result<T> {
     const TRIGGER: &str = "CREATE TRIGGER ws3_reject_jobs BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT, 'jobs rejected'); END";
-    app.db.write(|tx| Ok(tx.conn().execute_batch(TRIGGER)?)).await.unwrap();
+    app.db
+        .write(|tx| Ok(tx.conn().execute_batch(TRIGGER)?))
+        .await
+        .unwrap();
     let result = app.db.write(f).await;
-    app.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_jobs")?)).await.unwrap();
+    app.db
+        .write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_jobs")?))
+        .await
+        .unwrap();
     result
 }
 
 fn count(app: &App, sql: &'static str) -> i64 {
-    app.db.read_blocking(move |conn| Ok(conn.query_row(sql, [], |row| row.get(0))?)).unwrap()
+    app.db
+        .read_blocking(move |conn| Ok(conn.query_row(sql, [], |row| row.get(0))?))
+        .unwrap()
 }
 
 /// The classes of the queued jobs, which are then cleared.
 async fn take_jobs(app: &App) -> Vec<String> {
     let classes = jobs(app).into_iter().map(|job| job.class).collect();
-    app.db.write(|tx| Ok(tx.conn().execute_batch("DELETE FROM background_jobs")?)).await.unwrap();
+    app.db
+        .write(|tx| Ok(tx.conn().execute_batch("DELETE FROM background_jobs")?))
+        .await
+        .unwrap();
     classes
 }
 
@@ -497,37 +916,74 @@ async fn a_job_that_cant_be_enqueued_fails_the_write_that_asks_for_it() {
     let (author, bot, room, blob) = app
         .db
         .write(move |tx| {
-            let author = User::create(tx, NewUser { name: "Author".into(), ..Default::default() })?;
+            let author = User::create(
+                tx,
+                NewUser {
+                    name: "Author".into(),
+                    ..Default::default()
+                },
+            )?;
             let bot = User::create_bot(tx, "Bender", Some("https://example.com/hook"))?;
-            let room = Room::create_for(tx, RoomType::Closed, Some("Jobs"), author.id, &[author.id, bot.id])?;
+            let room = Room::create_for(
+                tx,
+                RoomType::Closed,
+                Some("Jobs"),
+                author.id,
+                &[author.id, bot.id],
+            )?;
             let blob = storage
-                .create_and_upload(tx.conn(), b"hello", campfire_storage::Filename::new("hello.txt"), None, now)
+                .create_and_upload(
+                    tx.conn(),
+                    b"hello",
+                    campfire_storage::Filename::new("hello.txt"),
+                    None,
+                    now,
+                )
                 .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             Ok((author.id, bot.id, room.id, blob.id))
         })
         .await
         .unwrap();
     take_jobs(&app).await;
-    let post = move |attachment_blob_id| move |tx: &mut Tx<'_>| {
-        Message::create(tx, NewMessage { room_id: room, creator_id: author, body: Some("<div>Hi</div>".into()), attachment_blob_id, ..Default::default() }).map(|message| message.id)
+    let post = move |attachment_blob_id| {
+        move |tx: &mut Tx<'_>| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: room,
+                    creator_id: author,
+                    body: Some("<div>Hi</div>".into()),
+                    attachment_blob_id,
+                    ..Default::default()
+                },
+            )
+            .map(|message| message.id)
+        }
     };
 
     // Message#receive_in_conversation → Room#push_later
-    assert!(rejecting_jobs(&app, post(None)).await.is_err(), "posting a message");
+    assert!(
+        rejecting_jobs(&app, post(None)).await.is_err(),
+        "posting a message"
+    );
     assert_eq!(count(&app, "SELECT count(*) FROM messages"), 0);
     let message = app.db.write(post(Some(blob))).await.unwrap();
     assert_eq!(count(&app, "SELECT count(*) FROM messages"), 1);
     assert_eq!(take_jobs(&app).await, ["Room::PushMessageJob"]);
 
     // User::Bot#deliver_webhook_later
-    let webhook = move |tx: &mut Tx<'_>| User::find(tx.conn(), bot)?.deliver_webhook_later(tx, message);
+    let webhook =
+        move |tx: &mut Tx<'_>| User::find(tx.conn(), bot)?.deliver_webhook_later(tx, message);
     assert!(rejecting_jobs(&app, webhook).await.is_err(), "a webhook");
     app.db.write(webhook).await.unwrap();
     assert_eq!(take_jobs(&app).await, ["Bot::WebhookJob"]);
 
     // Message#destroy → the attachment's `dependent: :purge_later`
     let destroy = move |tx: &mut Tx<'_>| Message::find(tx.conn(), message)?.destroy(tx);
-    assert!(rejecting_jobs(&app, destroy).await.is_err(), "destroying a message");
+    assert!(
+        rejecting_jobs(&app, destroy).await.is_err(),
+        "destroying a message"
+    );
     assert_eq!(count(&app, "SELECT count(*) FROM messages"), 1);
     app.db.write(destroy).await.unwrap();
     assert_eq!(count(&app, "SELECT count(*) FROM messages"), 0);
@@ -536,7 +992,11 @@ async fn a_job_that_cant_be_enqueued_fails_the_write_that_asks_for_it() {
     // User::Bannable#ban → apply_ban
     let ban = move |tx: &mut Tx<'_>| User::find(tx.conn(), author)?.ban(tx);
     assert!(rejecting_jobs(&app, ban).await.is_err(), "a ban");
-    assert_eq!(count(&app, "SELECT count(*) FROM users WHERE status = 0"), 2, "nobody banned");
+    assert_eq!(
+        count(&app, "SELECT count(*) FROM users WHERE status = 0"),
+        2,
+        "nobody banned"
+    );
     app.db.write(ban).await.unwrap();
     assert_eq!(take_jobs(&app).await, ["RemoveBannedContentJob"]);
 }
@@ -550,17 +1010,47 @@ struct Browser {
 
 impl Browser {
     fn new(router: &axum::Router, secrets: Arc<rails_compat::Secrets>) -> Self {
-        Self { router: router.clone(), cookies: Default::default(), secrets }
+        Self {
+            router: router.clone(),
+            cookies: Default::default(),
+            secrets,
+        }
     }
 
     async fn get(&mut self, path: &str) -> (axum::http::StatusCode, String) {
-        self.send(axum::http::Request::get(path).header("accept", "text/html"), String::new()).await
+        self.send(
+            axum::http::Request::get(path).header("accept", "text/html"),
+            String::new(),
+        )
+        .await
     }
 
-    async fn post(&mut self, path: &str, accept: &str, fields: &[(&str, &str)]) -> (axum::http::StatusCode, String) {
-        let body = fields.iter().map(|(k, v)| format!("{}={}", campfire_presentation::helpers::url::cgi_escape(k), campfire_presentation::helpers::url::cgi_escape(v))).collect::<Vec<_>>().join("&");
-        let session = self.cookies.get(campfire_kit::session::SESSION_KEY).expect("a page established the browser's session");
-        let token = crate::controllers::presenters::test_support::masked_session_token(&self.secrets, session).expect("the page gave the session a CSRF token");
+    async fn post(
+        &mut self,
+        path: &str,
+        accept: &str,
+        fields: &[(&str, &str)],
+    ) -> (axum::http::StatusCode, String) {
+        let body = fields
+            .iter()
+            .map(|(k, v)| {
+                format!(
+                    "{}={}",
+                    campfire_presentation::helpers::url::cgi_escape(k),
+                    campfire_presentation::helpers::url::cgi_escape(v)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("&");
+        let session = self
+            .cookies
+            .get(campfire_kit::session::SESSION_KEY)
+            .expect("a page established the browser's session");
+        let token = crate::controllers::presenters::test_support::masked_session_token(
+            &self.secrets,
+            session,
+        )
+        .expect("the page gave the session a CSRF token");
         let request = axum::http::Request::post(path)
             .header(campfire_kit::csrf::HEADER, token)
             .header("accept", accept)
@@ -569,9 +1059,20 @@ impl Browser {
     }
 
     /// A JSON call as the SPA makes it, with the session's token in `X-CSRF-Token`.
-    async fn post_json(&mut self, path: &str, body: serde_json::Value) -> (axum::http::StatusCode, String) {
-        let session = self.cookies.get(campfire_kit::session::SESSION_KEY).expect("a page established the browser's session");
-        let token = crate::controllers::presenters::test_support::masked_session_token(&self.secrets, session).expect("the page gave the session a CSRF token");
+    async fn post_json(
+        &mut self,
+        path: &str,
+        body: serde_json::Value,
+    ) -> (axum::http::StatusCode, String) {
+        let session = self
+            .cookies
+            .get(campfire_kit::session::SESSION_KEY)
+            .expect("a page established the browser's session");
+        let token = crate::controllers::presenters::test_support::masked_session_token(
+            &self.secrets,
+            session,
+        )
+        .expect("the page gave the session a CSRF token");
         let request = axum::http::Request::post(path)
             .header(campfire_kit::csrf::HEADER, token)
             .header("accept", "application/json")
@@ -579,9 +1080,18 @@ impl Browser {
         self.send(request, body.to_string()).await
     }
 
-    async fn send(&mut self, request: axum::http::request::Builder, body: String) -> (axum::http::StatusCode, String) {
+    async fn send(
+        &mut self,
+        request: axum::http::request::Builder,
+        body: String,
+    ) -> (axum::http::StatusCode, String) {
         use tower::ServiceExt as _;
-        let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
+        let cookie = self
+            .cookies
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("; ");
         let request = request
             .header("host", "campfire.test")
             .header("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
@@ -590,11 +1100,20 @@ impl Browser {
             .unwrap();
         let response = self.router.clone().oneshot(request).await.unwrap();
         for cookie in response.headers().get_all("set-cookie") {
-            let (name, value) = cookie.to_str().unwrap().split(';').next().unwrap().split_once('=').unwrap();
+            let (name, value) = cookie
+                .to_str()
+                .unwrap()
+                .split(';')
+                .next()
+                .unwrap()
+                .split_once('=')
+                .unwrap();
             self.cookies.insert(name.to_string(), value.to_string());
         }
         let status = response.status();
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         (status, String::from_utf8_lossy(&body).into_owned())
     }
 }
@@ -625,48 +1144,121 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
     let mut browser = Browser::new(&router, app.secrets.clone());
     let (status, body) = browser.get("/app/session/new").await;
     assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
-    let (status, body) = browser.post_json("/api/v1/session", serde_json::json!({"emailAddress": "person@example.com", "password": "secret123456"})).await;
+    let (status, body) = browser
+        .post_json(
+            "/api/v1/session",
+            serde_json::json!({"emailAddress": "person@example.com", "password": "secret123456"}),
+        )
+        .await;
     assert_eq!(status, axum::http::StatusCode::OK, "signed in: {body}");
     assert!(body.contains(r#""kind":"signedIn""#), "signed in: {body}");
-    let (status, body) = browser.send(axum::http::Request::get("/api/v1/two_factor/setup").header("accept", "application/json"), String::new()).await;
+    let (status, body) = browser
+        .send(
+            axum::http::Request::get("/api/v1/two_factor/setup")
+                .header("accept", "application/json"),
+            String::new(),
+        )
+        .await;
     assert_eq!(status, axum::http::StatusCode::OK, "{body}");
     let encryption = rails_compat::ar_encryption::ArEncryption::new(&app.secrets);
     let enrollment_now = campfire_db::Timestamp::from_jiff(app.clock.now());
-    let secret = app.db.read(move |conn| {
-        let session_id = conn.query_row("SELECT session_id FROM two_factor_setup_secrets", [], |r| r.get(0))?;
-        campfire_db::TwoFactorSetupSecret::valid_for(conn, session_id, enrollment_now)?.expect("live enrollment").secret(&encryption)
-    }).await.unwrap();
+    let secret = app
+        .db
+        .read(move |conn| {
+            let session_id =
+                conn.query_row("SELECT session_id FROM two_factor_setup_secrets", [], |r| {
+                    r.get(0)
+                })?;
+            campfire_db::TwoFactorSetupSecret::valid_for(conn, session_id, enrollment_now)?
+                .expect("live enrollment")
+                .secret(&encryption)
+        })
+        .await
+        .unwrap();
     let code = rails_compat::totp::at(&secret, app.clock.now().as_second()).unwrap();
-    let (status, body) = browser.post_json("/api/v1/two_factor/setup", serde_json::json!({"code": code})).await;
-    assert_eq!(status, axum::http::StatusCode::OK, "completed enrollment: {body}");
+    let (status, body) = browser
+        .post_json(
+            "/api/v1/two_factor/setup",
+            serde_json::json!({"code": code}),
+        )
+        .await;
+    assert_eq!(
+        status,
+        axum::http::StatusCode::OK,
+        "completed enrollment: {body}"
+    );
     let path = format!("/rooms/{room}/messages");
-    let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];
+    let post = |n: &'static str| {
+        [
+            ("message[body]", "<p>Hello bot</p>"),
+            ("message[client_message_id]", n),
+        ]
+    };
     let messages = || count(&app, "SELECT count(*) FROM messages");
 
     const REJECT: &str = "CREATE TRIGGER ws3_reject_webhooks BEFORE INSERT ON background_jobs WHEN NEW.job_class = 'Bot::WebhookJob' BEGIN SELECT RAISE(ABORT, 'webhooks rejected'); END";
-    app.db.write(|tx| Ok(tx.conn().execute_batch(REJECT)?)).await.unwrap();
-    let (status, _) = browser.post(&path, "text/vnd.turbo-stream.html", &post("rejected")).await;
+    app.db
+        .write(|tx| Ok(tx.conn().execute_batch(REJECT)?))
+        .await
+        .unwrap();
+    let (status, _) = browser
+        .post(&path, "text/vnd.turbo-stream.html", &post("rejected"))
+        .await;
     assert!(status.is_server_error(), "{status}");
-    assert_eq!((messages(), jobs(&app).len()), (0, 0), "the message rolled back with its webhook");
-    app.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_webhooks")?)).await.unwrap();
+    assert_eq!(
+        (messages(), jobs(&app).len()),
+        (0, 0),
+        "the message rolled back with its webhook"
+    );
+    app.db
+        .write(|tx| {
+            Ok(tx
+                .conn()
+                .execute_batch("DROP TRIGGER ws3_reject_webhooks")?)
+        })
+        .await
+        .unwrap();
 
-    let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("posted")).await;
+    let (status, body) = browser
+        .post(&path, "text/vnd.turbo-stream.html", &post("posted"))
+        .await;
     assert_eq!(status, axum::http::StatusCode::CREATED, "{body}");
     assert_eq!(messages(), 1);
     let now = app.db.env().now();
-    let mut queued: Vec<_> = jobs(&app).into_iter().map(|job| (job.class, job.run_at <= now)).collect();
+    let mut queued: Vec<_> = jobs(&app)
+        .into_iter()
+        .map(|job| (job.class, job.run_at <= now))
+        .collect();
     queued.sort();
-    assert_eq!(queued, [("Bot::WebhookJob".to_string(), true), ("Room::PushMessageJob".to_string(), true)], "released once broadcast");
+    assert_eq!(
+        queued,
+        [
+            ("Bot::WebhookJob".to_string(), true),
+            ("Room::PushMessageJob".to_string(), true)
+        ],
+        "released once broadcast"
+    );
     take_jobs(&app).await;
 
     const KEEP_HELD: &str = "CREATE TRIGGER ws3_keep_webhooks_held BEFORE UPDATE OF run_at ON background_jobs WHEN NEW.job_class = 'Bot::WebhookJob' BEGIN SELECT RAISE(ABORT, 'release rejected'); END";
-    app.db.write(|tx| Ok(tx.conn().execute_batch(KEEP_HELD)?)).await.unwrap();
-    let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("held")).await;
+    app.db
+        .write(|tx| Ok(tx.conn().execute_batch(KEEP_HELD)?))
+        .await
+        .unwrap();
+    let (status, body) = browser
+        .post(&path, "text/vnd.turbo-stream.html", &post("held"))
+        .await;
     assert_eq!(status, axum::http::StatusCode::CREATED, "{body}");
     assert_eq!(messages(), 2);
-    let webhook = jobs(&app).into_iter().find(|job| job.class == "Bot::WebhookJob").expect("the webhook is queued");
+    let webhook = jobs(&app)
+        .into_iter()
+        .find(|job| job.class == "Bot::WebhookJob")
+        .expect("the webhook is queued");
     let held = webhook.run_at.as_microsecond() - app.db.env().now().as_microsecond();
-    assert!(held > 60_000_000 && held <= WEBHOOK_HOLD.as_micros() as i64, "held for {held} µs");
+    assert!(
+        held > 60_000_000 && held <= WEBHOOK_HOLD.as_micros() as i64,
+        "held for {held} µs"
+    );
 }
 
 // --- The handlers --------------------------------------------------------------------------------------
@@ -680,7 +1272,10 @@ async fn jobs_whose_records_are_gone_are_discarded() {
     let app = booted.app.clone();
     app.db
         .write(|tx| {
-            tx.emit_after_commit(Event::DeliverWebhook { bot_id: 404, message_id: 404 });
+            tx.emit_after_commit(Event::DeliverWebhook {
+                bot_id: 404,
+                message_id: 404,
+            });
             tx.emit_after_commit(Event::RemoveBannedContent { user_id: 404 });
             Ok(())
         })
@@ -689,8 +1284,14 @@ async fn jobs_whose_records_are_gone_are_discarded() {
     wait_for(&app, "the jobs to go", |jobs| jobs.is_empty()).await;
     booted.jobs.shutdown(WAIT).await;
     let logs = logs.text();
-    assert!(logs.contains(r#"discarded job="Bot::WebhookJob""#), "{logs}");
-    assert!(logs.contains(r#"discarded job="RemoveBannedContentJob""#), "{logs}");
+    assert!(
+        logs.contains(r#"discarded job="Bot::WebhookJob""#),
+        "{logs}"
+    );
+    assert!(
+        logs.contains(r#"discarded job="RemoveBannedContentJob""#),
+        "{logs}"
+    );
 }
 
 #[tokio::test]
@@ -702,7 +1303,13 @@ async fn purging_a_blob_later_deletes_it_and_its_file() {
         .db
         .write(move |tx| {
             let blob = storage
-                .create_and_upload(tx.conn(), b"hello", campfire_storage::Filename::new("hello.txt"), None, now)
+                .create_and_upload(
+                    tx.conn(),
+                    b"hello",
+                    campfire_storage::Filename::new("hello.txt"),
+                    None,
+                    now,
+                )
                 .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             tx.emit_after_commit(Event::PurgeBlob { blob_id: blob.id });
             Ok(blob)
@@ -713,7 +1320,17 @@ async fn purging_a_blob_later_deletes_it_and_its_file() {
     wait_for(&app, "the purge", |jobs| jobs.is_empty()).await;
     eventually("purged blob file to disappear", || async { !path.exists() }).await;
     let id = blob.id;
-    let found = app.db.read(move |conn| Ok(conn.query_row("SELECT count(*) FROM active_storage_blobs WHERE id = ?", [id], |row| row.get::<_, i64>(0))?)).await.unwrap();
+    let found = app
+        .db
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT count(*) FROM active_storage_blobs WHERE id = ?",
+                [id],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
     assert_eq!(found, 0);
     booted.jobs.shutdown(WAIT).await;
 }
@@ -721,21 +1338,32 @@ async fn purging_a_blob_later_deletes_it_and_its_file() {
 // --- Queues ---------------------------------------------------------------------------------------------
 
 /// A handler that reports each job it performs, after `gate` lets it through (when given).
-fn reporting<J: Send + 'static>(performed: mpsc::UnboundedSender<String>, gate: Option<Arc<Notify>>) -> impl Fn(App, J, Execution) -> BoxFuture<'static, JobResult> + Send + Sync + 'static {
+fn reporting<J: Send + 'static>(
+    performed: mpsc::UnboundedSender<String>,
+    gate: Option<Arc<Notify>>,
+) -> impl Fn(App, J, Execution) -> BoxFuture<'static, JobResult> + Send + Sync + 'static {
     move |_app: App, _job: J, _: Execution| {
         let (performed, gate) = (performed.clone(), gate.clone());
         Box::pin(async move {
             if let Some(gate) = gate {
                 gate.notified().await;
             }
-            let _ = performed.send(std::any::type_name::<J>().rsplit("::").next().unwrap().to_string());
+            let _ = performed.send(
+                std::any::type_name::<J>()
+                    .rsplit("::")
+                    .next()
+                    .unwrap()
+                    .to_string(),
+            );
             Ok(Outcome::Done)
         })
     }
 }
 
 async fn next_performed(performed: &mut mpsc::UnboundedReceiver<String>) -> String {
-    wait("a job to report execution", performed.recv()).await.unwrap()
+    wait("a job to report execution", performed.recv())
+        .await
+        .unwrap()
 }
 
 /// Webhooks to a slow bot fill their own queue's workers, not the ones notifications and the
@@ -749,7 +1377,10 @@ async fn a_busy_queue_doesnt_hold_up_the_others() {
     let (performed, mut performed_rx) = mpsc::unbounded_channel();
     let slow_bot = Arc::new(Notify::new());
     let mut registry = Registry::new();
-    registry.register(reporting::<WebhookJob>(performed.clone(), Some(slow_bot.clone())));
+    registry.register(reporting::<WebhookJob>(
+        performed.clone(),
+        Some(slow_bot.clone()),
+    ));
     registry.register(reporting::<PushMessageJob>(performed.clone(), None));
     registry.register(reporting::<PurgeJob>(performed, None));
     let config = runner_config(&app.config);
@@ -757,13 +1388,40 @@ async fn a_busy_queue_doesnt_hold_up_the_others() {
     let runner = campfire_jobs::start(app.db.clone(), queue.clone(), registry, app.clone(), config);
 
     for message_id in 1..=10 {
-        queue.perform_later(&app.db, JobRequest::new(&WebhookJob { bot_id: 1, message_id })).await.unwrap();
+        queue
+            .perform_later(
+                &app.db,
+                JobRequest::new(&WebhookJob {
+                    bot_id: 1,
+                    message_id,
+                }),
+            )
+            .await
+            .unwrap();
     }
     let workers = app.config.job_concurrency;
-    wait_for(&app, "the webhooks queue to fill", |jobs| jobs.iter().filter(|job| job.status == "running").count() == workers).await;
-    queue.perform_later(&app.db, JobRequest::new(&PushMessageJob { room_id: 1, message_id: 1 })).await.unwrap();
-    queue.perform_later(&app.db, JobRequest::new(&PurgeJob { blob_id: 1 })).await.unwrap();
-    let mut others = [next_performed(&mut performed_rx).await, next_performed(&mut performed_rx).await];
+    wait_for(&app, "the webhooks queue to fill", |jobs| {
+        jobs.iter().filter(|job| job.status == "running").count() == workers
+    })
+    .await;
+    queue
+        .perform_later(
+            &app.db,
+            JobRequest::new(&PushMessageJob {
+                room_id: 1,
+                message_id: 1,
+            }),
+        )
+        .await
+        .unwrap();
+    queue
+        .perform_later(&app.db, JobRequest::new(&PurgeJob { blob_id: 1 }))
+        .await
+        .unwrap();
+    let mut others = [
+        next_performed(&mut performed_rx).await,
+        next_performed(&mut performed_rx).await,
+    ];
     others.sort();
     assert_eq!(others, ["PurgeJob", "PushMessageJob"]);
 
@@ -774,7 +1432,11 @@ async fn a_busy_queue_doesnt_hold_up_the_others() {
     runner.shutdown(Duration::from_millis(100)).await;
     let waiting = jobs(&app);
     assert_eq!(waiting.len(), 7, "the rest wait for the next process");
-    assert!(waiting.iter().all(|job| job.status == "ready" && job.class == "Bot::WebhookJob"));
+    assert!(
+        waiting
+            .iter()
+            .all(|job| job.status == "ready" && job.class == "Bot::WebhookJob")
+    );
 }
 
 // --- Ad hoc jobs ----------------------------------------------------------------------------------------
@@ -786,16 +1448,22 @@ async fn a_panicking_ad_hoc_job_is_logged_and_its_worker_carries_on() {
     let app = booted.app.clone();
 
     let (done, finished) = tokio::sync::oneshot::channel();
-    app.jobs.perform_later("Exploding", async { panic!("kaboom") });
+    app.jobs
+        .perform_later("Exploding", async { panic!("kaboom") });
     app.jobs.perform_later("After", async move {
         let _ = done.send(());
         Ok(())
     });
-    wait("the ad hoc job after the panic", finished).await.unwrap();
+    wait("the ad hoc job after the panic", finished)
+        .await
+        .unwrap();
     booted.jobs.shutdown(WAIT).await;
 
     let logs = logs.text();
-    assert!(logs.contains("job panicked job=\"Exploding\" panic=\"kaboom\""), "{logs}");
+    assert!(
+        logs.contains("job panicked job=\"Exploding\" panic=\"kaboom\""),
+        "{logs}"
+    );
 }
 
 #[tokio::test]
@@ -838,8 +1506,15 @@ impl Drop for DropFlag {
 
 impl Fate {
     /// Reports readiness, then waits for an explicit release instead of racing a fixed sleep.
-    fn work(&self, started: mpsc::UnboundedSender<()>) -> impl Future<Output = anyhow::Result<()>> + Send + use<> {
-        let (finished, guard, release) = (self.finished.clone(), DropFlag(self.dropped.clone()), self.release.clone());
+    fn work(
+        &self,
+        started: mpsc::UnboundedSender<()>,
+    ) -> impl Future<Output = anyhow::Result<()>> + Send + use<> {
+        let (finished, guard, release) = (
+            self.finished.clone(),
+            DropFlag(self.dropped.clone()),
+            self.release.clone(),
+        );
         async move {
             let _guard = guard;
             let released = release.notified();
@@ -853,7 +1528,10 @@ impl Fate {
     }
 
     fn get(&self) -> (bool, bool) {
-        (self.finished.load(std::sync::atomic::Ordering::SeqCst), self.dropped.load(std::sync::atomic::Ordering::SeqCst))
+        (
+            self.finished.load(std::sync::atomic::Ordering::SeqCst),
+            self.dropped.load(std::sync::atomic::Ordering::SeqCst),
+        )
     }
 }
 
@@ -869,18 +1547,36 @@ async fn shutdown_aborts_what_outlasts_the_grace_period() {
     let (started, mut starts) = mpsc::unbounded_channel();
     let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
     let (fate, started_by_task) = (periodic_fate.clone(), started.clone());
-    loops.periodic.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("slow", Duration::from_secs(60), move |_: App| fate.work(started_by_task.clone())));
+    loops
+        .periodic
+        .as_mut()
+        .unwrap()
+        .task(campfire_jobs::periodic::Task::new(
+            "slow",
+            Duration::from_secs(60),
+            move |_: App| fate.work(started_by_task.clone()),
+        ));
     let config = runner_config(&app.config);
     let (jobs, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
     let runner = start(app.clone(), registry(), ad_hoc, config, loops);
     jobs.perform_later("Slow", ad_hoc_fate.work(started));
     for _ in 0..2 {
-        wait("slow shutdown task to start", starts.recv()).await.unwrap();
+        wait("slow shutdown task to start", starts.recv())
+            .await
+            .unwrap();
     }
 
     runner.shutdown(Duration::from_millis(20)).await;
-    assert_eq!(periodic_fate.get(), (false, true), "the periodic task was aborted");
-    assert_eq!(ad_hoc_fate.get(), (false, true), "the ad hoc job was aborted");
+    assert_eq!(
+        periodic_fate.get(),
+        (false, true),
+        "the periodic task was aborted"
+    );
+    assert_eq!(
+        ad_hoc_fate.get(),
+        (false, true),
+        "the ad hoc job was aborted"
+    );
     // The futures have been dropped by shutdown, so releasing them cannot resume work.
     periodic_fate.release.notify_waiters();
     ad_hoc_fate.release.notify_waiters();
@@ -891,7 +1587,12 @@ async fn shutdown_aborts_what_outlasts_the_grace_period() {
 // --- Periodic -------------------------------------------------------------------------------------------
 
 async fn insert_user(app: &App, name: &str, bot_token: Option<&str>, digest: Option<&str>) -> i64 {
-    let (name, bot_token, digest, now) = (name.to_string(), bot_token.map(str::to_string), digest.map(str::to_string), app.db.env().now());
+    let (name, bot_token, digest, now) = (
+        name.to_string(),
+        bot_token.map(str::to_string),
+        digest.map(str::to_string),
+        app.db.env().now(),
+    );
     app.db
         .write(move |tx| {
             Ok(tx.conn().query_row(
@@ -905,7 +1606,16 @@ async fn insert_user(app: &App, name: &str, bot_token: Option<&str>, digest: Opt
 }
 
 async fn tokens(app: &App, id: i64) -> (Option<String>, Option<String>) {
-    app.db.read(move |conn| Ok(conn.query_row("SELECT bot_token, bot_token_digest FROM users WHERE id = ?", [id], |row| Ok((row.get(0)?, row.get(1)?)))?)).await.unwrap()
+    app.db
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT bot_token, bot_token_digest FROM users WHERE id = ?",
+                [id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )?)
+        })
+        .await
+        .unwrap()
 }
 
 /// `Bots::ClearPlaintextTokens.run!`: the digest recomputed from the plaintext, which is nulled;
@@ -918,10 +1628,26 @@ async fn clearing_plaintext_bot_tokens_heals_their_digests() {
     let stale = insert_user(&app, "Stale", Some("BenderToken1"), Some("stale digest")).await;
     let current = insert_user(&app, "Current", None, Some("kept digest")).await;
 
-    assert_eq!(periodic::clear_plaintext_bot_tokens(&app.db).await.unwrap(), 1);
-    assert_eq!(tokens(&app, stale).await, (None, Some(campfire_db::user::digest_bot_token("BenderToken1"))));
-    assert_eq!(tokens(&app, current).await, (None, Some("kept digest".into())));
-    assert_eq!(periodic::clear_plaintext_bot_tokens(&app.db).await.unwrap(), 0, "idempotent");
+    assert_eq!(
+        periodic::clear_plaintext_bot_tokens(&app.db).await.unwrap(),
+        1
+    );
+    assert_eq!(
+        tokens(&app, stale).await,
+        (
+            None,
+            Some(campfire_db::user::digest_bot_token("BenderToken1"))
+        )
+    );
+    assert_eq!(
+        tokens(&app, current).await,
+        (None, Some("kept digest".into()))
+    );
+    assert_eq!(
+        periodic::clear_plaintext_bot_tokens(&app.db).await.unwrap(),
+        0,
+        "idempotent"
+    );
 }
 
 /// The periodic loops run beside the job runner, until it shuts down; the plaintext token task
@@ -935,36 +1661,57 @@ async fn the_periodic_loops_run_with_the_jobs() {
 
     let (ticked, mut ticks) = mpsc::unbounded_channel();
     let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
-    loops.huddle.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
-        let ticked = ticked.clone();
-        async move {
-            let _ = ticked.send(());
-            Ok(())
-        }
-    }));
+    loops
+        .huddle
+        .as_mut()
+        .unwrap()
+        .task(campfire_jobs::periodic::Task::new(
+            "reconcile",
+            Duration::from_millis(20),
+            move |_: App| {
+                let ticked = ticked.clone();
+                async move {
+                    let _ = ticked.send(());
+                    Ok(())
+                }
+            },
+        ));
     let config = runner_config(&app.config);
     let (_, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
     let runner = start(app.clone(), registry(), ad_hoc, config, loops);
     for _ in 0..3 {
         wait("the huddle loop to tick", ticks.recv()).await.unwrap();
     }
-    eventually("periodic plaintext-token cleanup", || async { tokens(&app, stale).await.0.is_none() }).await;
+    eventually("periodic plaintext-token cleanup", || async {
+        tokens(&app, stale).await.0.is_none()
+    })
+    .await;
     runner.shutdown(WAIT).await;
     while ticks.try_recv().is_ok() {}
-    assert_eq!(wait("huddle sender to close with the runner", ticks.recv()).await, None);
+    assert_eq!(
+        wait("huddle sender to close with the runner", ticks.recv()).await,
+        None
+    );
 }
 
 #[test]
 fn periodic_intervals_come_from_the_environment() {
-    let intervals = periodic::Intervals::from_lookup(|name| (name == "EVENT_REMINDERS_INTERVAL").then(|| "10".into()));
+    let intervals = periodic::Intervals::from_lookup(|name| {
+        (name == "EVENT_REMINDERS_INTERVAL").then(|| "10".into())
+    });
     assert_eq!(
         intervals,
         periodic::Intervals {
-            periodic: Some(periodic::PeriodicIntervals { reminders: Duration::from_secs(10), retention: Duration::from_secs(86_400) }),
+            periodic: Some(periodic::PeriodicIntervals {
+                reminders: Duration::from_secs(10),
+                retention: Duration::from_secs(86_400)
+            }),
             huddle: Some(Duration::from_secs(5)),
         }
     );
-    let intervals = periodic::Intervals::from_lookup(|name| (name == "HUDDLE_RECONCILE_INTERVAL").then(|| "0.5".into()));
+    let intervals = periodic::Intervals::from_lookup(|name| {
+        (name == "HUDDLE_RECONCILE_INTERVAL").then(|| "0.5".into())
+    });
     assert_eq!(intervals.huddle, Some(Duration::from_millis(500)));
 }
 
@@ -977,30 +1724,51 @@ async fn an_invalid_interval_disables_only_its_loop() {
     booted.jobs.shutdown(WAIT).await;
     let (logs, _guard) = Logs::capture();
 
-    for (name, value) in [("EVENT_REMINDERS_INTERVAL", "0"), ("RETENTION_PRUNE_INTERVAL", "daily"), ("RETENTION_PRUNE_INTERVAL", "inf")] {
-        let intervals = periodic::Intervals::from_lookup(|wanted| (wanted == name).then(|| value.into()));
+    for (name, value) in [
+        ("EVENT_REMINDERS_INTERVAL", "0"),
+        ("RETENTION_PRUNE_INTERVAL", "daily"),
+        ("RETENTION_PRUNE_INTERVAL", "inf"),
+    ] {
+        let intervals =
+            periodic::Intervals::from_lookup(|wanted| (wanted == name).then(|| value.into()));
         assert_eq!(intervals.periodic, None, "{name}={value}");
-        assert_eq!(intervals.huddle, Some(Duration::from_secs(5)), "{name}={value}");
+        assert_eq!(
+            intervals.huddle,
+            Some(Duration::from_secs(5)),
+            "{name}={value}"
+        );
         let text = logs.text();
         assert!(text.contains(&format!("ERROR campfire::jobs::periodic: Periodic disabled error={name} must be a positive finite number")), "{text}");
     }
-    let intervals = periodic::Intervals::from_lookup(|name| (name == "HUDDLE_RECONCILE_INTERVAL").then(|| "-5".into()));
+    let intervals = periodic::Intervals::from_lookup(|name| {
+        (name == "HUDDLE_RECONCILE_INTERVAL").then(|| "-5".into())
+    });
     assert_eq!(intervals.huddle, None);
     assert!(intervals.periodic.is_some());
     let text = logs.text();
     assert!(text.contains("Huddle reconciliation disabled error=HUDDLE_RECONCILE_INTERVAL must be a positive finite number"), "{text}");
 
     // The huddle loop and the jobs run beside the disabled periodic loop.
-    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|name| (name == "RETENTION_PRUNE_INTERVAL").then(|| "0".into())));
+    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|name| {
+        (name == "RETENTION_PRUNE_INTERVAL").then(|| "0".into())
+    }));
     assert!(loops.periodic.is_none());
     let (ticked, mut ticks) = mpsc::unbounded_channel();
-    loops.huddle.as_mut().expect("the huddle loop runs").task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
-        let ticked = ticked.clone();
-        async move {
-            let _ = ticked.send(());
-            Ok(())
-        }
-    }));
+    loops
+        .huddle
+        .as_mut()
+        .expect("the huddle loop runs")
+        .task(campfire_jobs::periodic::Task::new(
+            "reconcile",
+            Duration::from_millis(20),
+            move |_: App| {
+                let ticked = ticked.clone();
+                async move {
+                    let _ = ticked.send(());
+                    Ok(())
+                }
+            },
+        ));
     let config = runner_config(&app.config);
     let (_, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
     let runner = start(app.clone(), registry(), ad_hoc, config, loops);
@@ -1015,27 +1783,43 @@ async fn an_invalid_interval_disables_only_its_loop() {
     wait_for(&app, "the job to run", |jobs| jobs.is_empty()).await;
     runner.shutdown(WAIT).await;
     let logs = logs.text();
-    assert!(logs.contains(r#"discarded job="RemoveBannedContentJob""#), "{logs}");
+    assert!(
+        logs.contains(r#"discarded job="RemoveBannedContentJob""#),
+        "{logs}"
+    );
 }
 
 // --- Latency ------------------------------------------------------------------------------------------
 
 #[test]
 fn ws8_periodic_tasks_match_rails_names_and_intervals() {
-    let golden: serde_json::Value =
-        serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
+    let golden: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../runtime/src/ws8_runtime_vectors.json"
+    ))
+    .unwrap();
     let periodic = periodic::periodic(periodic::PeriodicIntervals {
         reminders: Duration::from_secs(17),
         retention: Duration::from_secs(123),
     });
     let tasks: Vec<_> = periodic
         .tasks()
-        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks", "streaming messages"].contains(&t.name()))
+        .filter(|t| {
+            ![
+                "clear plaintext bot tokens",
+                "stranded agent webhooks",
+                "streaming messages",
+            ]
+            .contains(&t.name())
+        })
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
+    let ws17: serde_json::Value =
+        serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
     let mut expected = golden["tasks"].as_array().unwrap().clone();
-    expected.insert(0, serde_json::json!({"name":"event reminders","seconds":17}));
+    expected.insert(
+        0,
+        serde_json::json!({"name":"event reminders","seconds":17}),
+    );
     expected.insert(0, serde_json::json!({"name":"OAuth sweep","seconds":3600}));
     // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
     let retention = expected.pop().unwrap();
@@ -1044,20 +1828,56 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     expected.push(serde_json::json!({"name":"slack imports","seconds":30}));
     expected.push(retention);
     expected.push(ws17["presence_task"].clone());
-    let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
-    expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
-    let board:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/board_automations.json")).unwrap();
+    let calendar: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../vectors/ws17_calendar_dispatch.json"
+    ))
+    .unwrap();
+    expected.extend(
+        calendar["tasks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|task| {
+                matches!(
+                    task["name"].as_str(),
+                    Some("meeting status" | "out of office")
+                )
+            })
+            .cloned(),
+    );
+    let board: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../vectors/board_automations.json")).unwrap();
     expected.extend(board["cadence"].as_array().unwrap().iter().cloned());
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
-    let events = periodic.tasks().find(|task| task.name() == "event reminders").unwrap();
+    let events = periodic
+        .tasks()
+        .find(|task| task.name() == "event reminders")
+        .unwrap();
     assert_eq!(events.interval(), Duration::from_secs(17));
-    let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
+    let recovery = periodic
+        .tasks()
+        .find(|t| t.name() == "stranded agent webhooks")
+        .expect("WS11 Rails recovery task");
     assert_eq!(recovery.interval(), Duration::from_secs(30));
     // WS11 tasks have their own fresh, pinned Rails roster, rather than the WS8 subset.
-    let ws11:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_streaming_contract.json")).unwrap();
-    let mut tasks:Vec<_>=periodic.tasks().filter(|t|["clear plaintext bot tokens","stranded agent webhooks","streaming messages"].contains(&t.name())).map(|t|serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()})).collect();
-    tasks.sort_by_key(|t|t["name"].as_str().unwrap().to_owned());
-    assert_eq!(serde_json::json!(tasks),ws11["results"]["tasks"]);
+    let ws11: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agents_streaming_contract.json"
+    ))
+    .unwrap();
+    let mut tasks: Vec<_> = periodic
+        .tasks()
+        .filter(|t| {
+            [
+                "clear plaintext bot tokens",
+                "stranded agent webhooks",
+                "streaming messages",
+            ]
+            .contains(&t.name())
+        })
+        .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
+        .collect();
+    tasks.sort_by_key(|t| t["name"].as_str().unwrap().to_owned());
+    assert_eq!(serde_json::json!(tasks), ws11["results"]["tasks"]);
 }
 
 #[tokio::test]
@@ -1066,9 +1886,12 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let app = booted.app.clone();
     app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
     // Wait for the whole queue asserted below, including callbacks from the quote refresh.
-    let rows = wait_for(&app, "quote refresh and boot-time maintenance execution", |rows| {
-        rows.is_empty() || rows.iter().any(|row| row.status == "failed")
-    }).await;
+    let rows = wait_for(
+        &app,
+        "quote refresh and boot-time maintenance execution",
+        |rows| rows.is_empty() || rows.iter().any(|row| row.status == "failed"),
+    )
+    .await;
     assert!(rows.is_empty(), "{rows:?}");
     booted.jobs.shutdown(WAIT).await;
 }
@@ -1087,50 +1910,103 @@ async fn ws8_quote_refresh_does_not_wait_for_future_maintenance() {
     let rows = wait_for(&app, "quote refresh execution", |rows| {
         // Future retention work remains queued by design. Only the quote job
         // must finish; the assertions below also verify the future job survives.
-        rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob")
+        rows.iter()
+            .all(|row| row.class != "Message::QuoteCardsRefreshJob")
             || rows
                 .iter()
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
     })
     .await;
-    assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
-    assert!(rows.iter().any(|row| row.class == "Retention::PruneJob" && row.run_at > campfire_db::Timestamp::from_jiff(app.clock.now())), "{rows:?}");
+    assert!(
+        rows.iter()
+            .all(|row| row.class != "Message::QuoteCardsRefreshJob"),
+        "{rows:?}"
+    );
+    assert!(
+        rows.iter().any(|row| row.class == "Retention::PruneJob"
+            && row.run_at > campfire_db::Timestamp::from_jiff(app.clock.now())),
+        "{rows:?}"
+    );
     booted.jobs.shutdown(WAIT).await;
-
 }
-
-
 
 #[test]
 fn ws8_thread_unread_broadcasts_match_real_rails_callbacks() {
-    use campfire_db::{ChannelThread, Config, Database, Env, Message, NewChannelThread, NewMessage, RecordingSink, ThreadMembership, fixtures};
-    let golden: serde_json::Value = serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
+    use campfire_db::{
+        ChannelThread, Config, Database, Env, Message, NewChannelThread, NewMessage, RecordingSink,
+        ThreadMembership, fixtures,
+    };
+    let golden: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../runtime/src/ws8_runtime_vectors.json"
+    ))
+    .unwrap();
     let setup = golden["thread_broadcast"].clone();
     let sink = RecordingSink::new();
     let dir = tempfile::tempdir().unwrap();
     let now = campfire_db::Timestamp::parse_db("2026-03-10 12:00:00").unwrap();
-    let db = Database::open(Config::new(dir.path().join("thread.sqlite3")), Env { sink: std::sync::Arc::new(sink.clone()), ..Env::default() }).unwrap();
+    let db = Database::open(
+        Config::new(dir.path().join("thread.sqlite3")),
+        Env {
+            sink: std::sync::Arc::new(sink.clone()),
+            ..Env::default()
+        },
+    )
+    .unwrap();
     db.write_blocking(move |tx| {
-        fixtures::load(tx.conn(), &fixtures::reference_dir(), &fixtures::Options { now, bcrypt_cost: 4 })?;
-        let thread = ChannelThread::create(tx, NewChannelThread {
-            room_id: setup["room_id"].as_i64().unwrap(), creator_id: setup["creator_id"].as_i64().unwrap(),
-            name: Some(setup["name"].as_str().unwrap().into()), ..Default::default()
-        })?;
+        fixtures::load(
+            tx.conn(),
+            &fixtures::reference_dir(),
+            &fixtures::Options {
+                now,
+                bcrypt_cost: 4,
+            },
+        )?;
+        let thread = ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id: setup["room_id"].as_i64().unwrap(),
+                creator_id: setup["creator_id"].as_i64().unwrap(),
+                name: Some(setup["name"].as_str().unwrap().into()),
+                ..Default::default()
+            },
+        )?;
         ThreadMembership::join(tx, thread.id, setup["recipient_id"].as_i64().unwrap())?;
-        Message::create(tx, NewMessage {
-            room_id: thread.room_id, creator_id: thread.creator_id, thread_id: Some(thread.id),
-            markdown_source: Some(setup["source"].as_str().unwrap().into()), ..Default::default()
-        })?;
+        Message::create(
+            tx,
+            NewMessage {
+                room_id: thread.room_id,
+                creator_id: thread.creator_id,
+                thread_id: Some(thread.id),
+                markdown_source: Some(setup["source"].as_str().unwrap().into()),
+                ..Default::default()
+            },
+        )?;
         Ok(())
-    }).unwrap();
-    let actual: Vec<_> = sink.events().iter().filter_map(|event| match event.as_broadcast()? {
-        event @ campfire_db::broadcasts::Broadcast::Cable { .. } if event.channel_frames().into_iter().any(|(stream, _)| stream.ends_with("_unread_threads")) => {
-            let (stream, payload) = event.channel_frames().into_iter().next().unwrap();
-            Some(serde_json::json!({"kind":"cable", "stream":stream, "payload":payload}))
-        }
-        _ => None,
-    }).collect();
-    let expected: Vec<_> = golden["broadcasts"].as_array().unwrap().iter().filter(|row| row["kind"] == "cable").cloned().collect();
+    })
+    .unwrap();
+    let actual: Vec<_> = sink
+        .events()
+        .iter()
+        .filter_map(|event| match event.as_broadcast()? {
+            event @ campfire_db::broadcasts::Broadcast::Cable { .. }
+                if event
+                    .channel_frames()
+                    .into_iter()
+                    .any(|(stream, _)| stream.ends_with("_unread_threads")) =>
+            {
+                let (stream, payload) = event.channel_frames().into_iter().next().unwrap();
+                Some(serde_json::json!({"kind":"cable", "stream":stream, "payload":payload}))
+            }
+            _ => None,
+        })
+        .collect();
+    let expected: Vec<_> = golden["broadcasts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| row["kind"] == "cable")
+        .cloned()
+        .collect();
     assert_eq!(actual, expected);
 }
 
@@ -1159,8 +2035,10 @@ async fn ws8_storage_copies_match_rails_and_rollback_on_durable_enqueue_failure(
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
     booted.jobs.shutdown(WAIT).await;
-    let g: serde_json::Value =
-        serde_json::from_str(include_str!("../../../runtime/src/ws8_runtime_vectors.json")).unwrap();
+    let g: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../runtime/src/ws8_runtime_vectors.json"
+    ))
+    .unwrap();
     let storage = app.storage.clone();
     let staged = storage
         .stage_bytes(
@@ -1382,5 +2260,8 @@ fn event_sink_does_not_keep_a_stopped_cable_server_alive() {
         "the event sink retained Cable and its database-owning authenticator"
     );
     // A database may finish teardown after the server; publishing then is a no-op.
-    sink.emit(Event::DisconnectUser { user_id: -1, reconnect: false });
+    sink.emit(Event::DisconnectUser {
+        user_id: -1,
+        reconnect: false,
+    });
 }

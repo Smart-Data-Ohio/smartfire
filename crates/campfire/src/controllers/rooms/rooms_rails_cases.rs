@@ -36,14 +36,11 @@ fn root(reply: &Reply) {
 }
 #[tokio::test]
 async fn destroy_removes_the_room_from_everyone_and_enqueues_its_deletion() {
-
-
     let app = setup().await.without_job_runner().await;
     let id = closed(&app).await;
     let mut david = app.david();
     root(&david.write(destroy(id)).await);
     pending_destroy(&app, id).await;
-
 }
 #[tokio::test]
 async fn destroy_stamps_the_sweep_claim() {
@@ -163,7 +160,10 @@ async fn leave_removes_only_your_membership_and_the_room_keeps_working() {
     );
     root(&jz.classic_page(&format!("/rooms/{id}")).await);
     assert_eq!(
-        app.david().classic_page(&format!("/rooms/{id}")).await.status,
+        app.david()
+            .classic_page(&format!("/rooms/{id}"))
+            .await
+            .status,
         StatusCode::FOUND
     );
 }

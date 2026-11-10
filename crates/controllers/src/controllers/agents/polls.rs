@@ -24,9 +24,12 @@ pub(super) async fn operation(
             .db
             .read_snapshot(move |conn| {
                 let poll = Poll::find_in_room(conn, room_id, poll_id)?;
-                let agent = Agent::find(conn, agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+                let agent = Agent::find(conn, agent_id)?
+                    .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
                 let message = Message::find_reachable(conn, agent.user_id, poll.message_id)?;
-                if message.room_id != room_id { return Err(campfire_db::Error::RecordNotFound("Poll")); }
+                if message.room_id != room_id {
+                    return Err(campfire_db::Error::RecordNotFound("Poll"));
+                }
                 Ok(poll)
             })
             .await
@@ -37,7 +40,9 @@ pub(super) async fn operation(
             let zone = features::user_zone(c).await?;
             // Polls uses Time.zone.parse (Date._parse), shared with Calendar forms.
             match campfire_db::slash_commands::time_parser::parse_calendar_time(
-                &text(Some(raw)).unwrap_or_default(), zone.name(), zone.name(),
+                &text(Some(raw)).unwrap_or_default(),
+                zone.name(),
+                zone.name(),
                 campfire_db::Timestamp::from_jiff(c.now()),
             ) {
                 Some(time) => Some(time),
@@ -111,8 +116,22 @@ pub(super) async fn operation(
             .app()
             .db
             .write(move |tx| {
-                let result=campfire_db::models::agent_polls::create(tx,agent_id,room_id,question,NewPoll{labels,multiple,anonymous,closes_at})?;
-                let (poll,room,message)=match result {Ok(created)=>created,Err(denial)=>return Ok(Err(denial))};
+                let result = campfire_db::models::agent_polls::create(
+                    tx,
+                    agent_id,
+                    room_id,
+                    question,
+                    NewPoll {
+                        labels,
+                        multiple,
+                        anonymous,
+                        closes_at,
+                    },
+                )?;
+                let (poll, room, message) = match result {
+                    Ok(created) => created,
+                    Err(denial) => return Ok(Err(denial)),
+                };
                 messages::deliver_webhooks_to_bots(tx, &room, &message)?;
                 Ok(Ok((poll, room, message)))
             })

@@ -15,4 +15,6 @@ pub mod socket;
 pub mod sync;
 
 pub use channel::{Channel, ChannelError, ChannelResult, EmptyChannel, Params, Subscription};
-pub use server::{Authenticate, Config, ConnectRequest, Identified, Server, ServerBuilder, WeakServer};
+pub use server::{
+    Authenticate, Config, ConnectRequest, Identified, Server, ServerBuilder, WeakServer,
+};

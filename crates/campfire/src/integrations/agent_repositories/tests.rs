@@ -1,13 +1,13 @@
 use super::*;
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use campfire_app::net::BoxFuture;
-use campfire_db::Result;
 use campfire_db::Agent;
 use campfire_db::Database;
+use campfire_db::Result;
 use campfire_db::models::agent_payloads::RepositoryAccess;
+use campfire_db::{ChannelThread, NewChannelThread};
 use rusqlite::params;
 use std::sync::Arc;
-use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
-use campfire_db::{ChannelThread, NewChannelThread};
 use std::sync::Mutex;
 #[tokio::test]
 async fn ws11_live_repository_reader_is_installed_at_boot() {

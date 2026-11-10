@@ -163,7 +163,9 @@ pub fn attempt_retry(c: &mut Ctx, attempt: &str) -> Result<Option<Option<SudoRet
     if !names(c, &record, attempt) || record["user_id"].as_i64() != Some(user_id) {
         return Ok(None);
     }
-    Ok(Some(serde_json::from_value(record["retry"].clone()).unwrap_or(None)))
+    Ok(Some(
+        serde_json::from_value(record["retry"].clone()).unwrap_or(None),
+    ))
 }
 
 /// Whether `record` is `attempt`'s, finished in the signed-in session.

@@ -45,9 +45,21 @@ macro_rules! mime {
 
 // `action_dispatch/http/mime_types.rb`, in registration order (the order matters for `text/*`
 // expansion).
-mime!(HTML, "html", "text/html", ["application/xhtml+xml"], ["xhtml"]);
+mime!(
+    HTML,
+    "html",
+    "text/html",
+    ["application/xhtml+xml"],
+    ["xhtml"]
+);
 mime!(TEXT, "text", "text/plain", [], ["txt"]);
-mime!(JS, "js", "text/javascript", ["application/javascript", "application/x-javascript"], []);
+mime!(
+    JS,
+    "js",
+    "text/javascript",
+    ["application/javascript", "application/x-javascript"],
+    []
+);
 mime!(CSS, "css", "text/css", [], []);
 mime!(ICS, "ics", "text/calendar", [], []);
 mime!(CSV, "csv", "text/csv", [], []);
@@ -55,7 +67,13 @@ mime!(VCF, "vcf", "text/vcard", [], []);
 mime!(VTT, "vtt", "text/vtt", [], ["vtt"]);
 mime!(MD, "md", "text/markdown", [], ["md", "markdown"]);
 mime!(PNG, "png", "image/png", [], ["png"]);
-mime!(JPEG, "jpeg", "image/jpeg", [], ["jpg", "jpeg", "jpe", "pjpeg"]);
+mime!(
+    JPEG,
+    "jpeg",
+    "image/jpeg",
+    [],
+    ["jpg", "jpeg", "jpe", "pjpeg"]
+);
 mime!(GIF, "gif", "image/gif", [], ["gif"]);
 mime!(BMP, "bmp", "image/bmp", [], ["bmp"]);
 mime!(TIFF, "tiff", "image/tiff", [], ["tif", "tiff"]);
@@ -64,35 +82,122 @@ mime!(WEBP, "webp", "image/webp", [], ["webp"]);
 mime!(MPEG, "mpeg", "video/mpeg", [], ["mpg", "mpeg", "mpe"]);
 mime!(MP3, "mp3", "audio/mpeg", [], ["mp1", "mp2", "mp3"]);
 mime!(OGG, "ogg", "audio/ogg", [], ["oga", "ogg", "spx", "opus"]);
-mime!(M4A, "m4a", "audio/aac", ["audio/mp4"], ["m4a", "mpg4", "aac"]);
+mime!(
+    M4A,
+    "m4a",
+    "audio/aac",
+    ["audio/mp4"],
+    ["m4a", "mpg4", "aac"]
+);
 mime!(WEBM, "webm", "video/webm", [], ["webm"]);
 mime!(MP4, "mp4", "video/mp4", [], ["mp4", "m4v"]);
 mime!(OTF, "otf", "font/otf", [], ["otf"]);
 mime!(TTF, "ttf", "font/ttf", [], ["ttf"]);
 mime!(WOFF, "woff", "font/woff", [], ["woff"]);
 mime!(WOFF2, "woff2", "font/woff2", [], ["woff2"]);
-mime!(XML, "xml", "application/xml", ["text/xml", "application/x-xml"], []);
+mime!(
+    XML,
+    "xml",
+    "application/xml",
+    ["text/xml", "application/x-xml"],
+    []
+);
 mime!(RSS, "rss", "application/rss+xml", [], []);
 mime!(ATOM, "atom", "application/atom+xml", [], []);
-mime!(YAML, "yaml", "application/x-yaml", ["text/yaml"], ["yml", "yaml"]);
-mime!(MULTIPART_FORM, "multipart_form", "multipart/form-data", [], []);
-mime!(URL_ENCODED_FORM, "url_encoded_form", "application/x-www-form-urlencoded", [], []);
-mime!(JSON, "json", "application/json", ["text/x-json", "application/jsonrequest", "application/problem+json"], []);
+mime!(
+    YAML,
+    "yaml",
+    "application/x-yaml",
+    ["text/yaml"],
+    ["yml", "yaml"]
+);
+mime!(
+    MULTIPART_FORM,
+    "multipart_form",
+    "multipart/form-data",
+    [],
+    []
+);
+mime!(
+    URL_ENCODED_FORM,
+    "url_encoded_form",
+    "application/x-www-form-urlencoded",
+    [],
+    []
+);
+mime!(
+    JSON,
+    "json",
+    "application/json",
+    [
+        "text/x-json",
+        "application/jsonrequest",
+        "application/problem+json"
+    ],
+    []
+);
 mime!(PDF, "pdf", "application/pdf", [], ["pdf"]);
 mime!(ZIP, "zip", "application/zip", [], ["zip"]);
-mime!(GZIP, "gzip", "application/gzip", ["application/x-gzip"], ["gz"]);
+mime!(
+    GZIP,
+    "gzip",
+    "application/gzip",
+    ["application/x-gzip"],
+    ["gz"]
+);
 /// `Mime::ALL`: the `*/*` wildcard, only meaningful in negotiation.
-pub static ALL: Mime = Mime { symbol: "*/*", string: "*/*", synonyms: &[], extensions: &[] };
+pub static ALL: Mime = Mime {
+    symbol: "*/*",
+    string: "*/*",
+    synonyms: &[],
+    extensions: &[],
+};
 
 pub static REGISTERED: [&Mime; 36] = [
-    &HTML, &TEXT, &JS, &CSS, &ICS, &CSV, &VCF, &VTT, &MD, &PNG, &JPEG, &GIF, &BMP, &TIFF, &SVG, &WEBP, &MPEG, &MP3,
-    &OGG, &M4A, &WEBM, &MP4, &OTF, &TTF, &WOFF, &WOFF2, &XML, &RSS, &ATOM, &YAML, &MULTIPART_FORM, &URL_ENCODED_FORM,
-    &JSON, &PDF, &ZIP, &GZIP,
+    &HTML,
+    &TEXT,
+    &JS,
+    &CSS,
+    &ICS,
+    &CSV,
+    &VCF,
+    &VTT,
+    &MD,
+    &PNG,
+    &JPEG,
+    &GIF,
+    &BMP,
+    &TIFF,
+    &SVG,
+    &WEBP,
+    &MPEG,
+    &MP3,
+    &OGG,
+    &M4A,
+    &WEBM,
+    &MP4,
+    &OTF,
+    &TTF,
+    &WOFF,
+    &WOFF2,
+    &XML,
+    &RSS,
+    &ATOM,
+    &YAML,
+    &MULTIPART_FORM,
+    &URL_ENCODED_FORM,
+    &JSON,
+    &PDF,
+    &ZIP,
+    &GZIP,
 ];
 
 /// `Mime[ext]` / `Mime::Type.lookup_by_extension`.
 pub fn lookup_by_extension(extension: &str) -> Option<Format> {
-    REGISTERED.iter().copied().find(|m| m.symbol == extension || m.extensions.contains(&extension))
+    REGISTERED
+        .iter()
+        .copied()
+        .find(|m| m.symbol == extension || m.extensions.contains(&extension))
 }
 
 /// `Mime::Type.lookup`: exact type string or synonym, else the part before `;`.
@@ -108,11 +213,18 @@ pub fn lookup(string: &str) -> Result<Option<Format>, InvalidMimeType> {
     if base == "*/*" {
         return Ok(Some(&ALL));
     }
-    if valid_mime_type(string) { Ok(None) } else { Err(InvalidMimeType(string.to_string())) }
+    if valid_mime_type(string) {
+        Ok(None)
+    } else {
+        Err(InvalidMimeType(string.to_string()))
+    }
 }
 
 fn lookup_exact(string: &str) -> Option<Format> {
-    REGISTERED.iter().copied().find(|m| m.string == string || m.synonyms.contains(&string))
+    REGISTERED
+        .iter()
+        .copied()
+        .find(|m| m.string == string || m.synonyms.contains(&string))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -129,7 +241,8 @@ fn valid_mime_type(string: &str) -> bool {
         !s.is_empty()
             && s.len() <= 127
             && s.as_bytes()[0].is_ascii_alphanumeric()
-            && s.bytes().all(|b| b.is_ascii_alphanumeric() || b"!#$&-^_.+".contains(&b))
+            && s.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"!#$&-^_.+".contains(&b))
     };
     match base.split_once('/') {
         Some((kind, sub)) => name_ok(kind) && (sub == "*" || name_ok(sub)),
@@ -187,7 +300,11 @@ pub fn parse_accept(header: &str) -> Result<Vec<Format>, InvalidMimeType> {
                 None if name == "*/*" => 0.0,
                 None => 1.0,
             };
-            list.push(AcceptItem { index, name, q: (q * 100.0) as i64 });
+            list.push(AcceptItem {
+                index,
+                name,
+                q: (q * 100.0) as i64,
+            });
             index += 1;
         }
     }
@@ -196,9 +313,10 @@ pub fn parse_accept(header: &str) -> Result<Vec<Format>, InvalidMimeType> {
 
     for item in &list {
         if let Some(mime) = lookup(&item.name)?
-            && !formats.contains(&mime) {
-                formats.push(mime);
-            }
+            && !formats.contains(&mime)
+        {
+            formats.push(mime);
+        }
     }
     Ok(formats)
 }
@@ -283,9 +401,17 @@ fn scan_accept_items(header: &str) -> Vec<&str> {
 /// `TRAILING_STAR_REGEXP = /^(text|application)\/\*/`: every registered type matching `text/`
 /// or `application/`, in registration order.
 fn trailing_star(accept: &str) -> Option<Vec<Format>> {
-    let kind = ["text/*", "application/*"].into_iter().find(|p| accept.starts_with(p))?;
+    let kind = ["text/*", "application/*"]
+        .into_iter()
+        .find(|p| accept.starts_with(p))?;
     let prefix = &kind[..kind.len() - 1];
-    Some(REGISTERED.iter().copied().filter(|m| m.matches(prefix)).collect())
+    Some(
+        REGISTERED
+            .iter()
+            .copied()
+            .filter(|m| m.matches(prefix))
+            .collect(),
+    )
 }
 
 /// Ruby's `String#to_f`: the longest numeric prefix, 0.0 when there is none.
@@ -293,7 +419,9 @@ fn ruby_to_f(s: &str) -> f64 {
     let s = s.trim_start();
     let end = s
         .char_indices()
-        .take_while(|(i, c)| c.is_ascii_digit() || *c == '.' || (*i == 0 && (*c == '-' || *c == '+')))
+        .take_while(|(i, c)| {
+            c.is_ascii_digit() || *c == '.' || (*i == 0 && (*c == '-' || *c == '+'))
+        })
         .map(|(i, c)| i + c.len_utf8())
         .last()
         .unwrap_or(0);
@@ -334,8 +462,17 @@ pub fn formats(input: &NegotiationInput) -> Result<Vec<Format>, InvalidMimeType>
 pub fn content_mime_type(content_type: Option<&str>) -> Result<Option<Format>, InvalidMimeType> {
     match content_type {
         Some(ct) => {
-            let base = ct.split([',', ';']).next().unwrap_or("").trim().to_ascii_lowercase();
-            if base.is_empty() { Ok(None) } else { lookup(&base) }
+            let base = ct
+                .split([',', ';'])
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_ascii_lowercase();
+            if base.is_empty() {
+                Ok(None)
+            } else {
+                lookup(&base)
+            }
         }
         None => Ok(None),
     }
@@ -377,7 +514,11 @@ pub fn negotiate(formats: &[Format], order: &[Format]) -> Option<Format> {
             return Some(priority);
         }
     }
-    if order.contains(&&ALL) { formats.first().copied() } else { None }
+    if order.contains(&&ALL) {
+        formats.first().copied()
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -389,12 +530,21 @@ mod tests {
     }
 
     fn fmts(accept: Option<&str>, path: &str, xhr: bool) -> Vec<&'static str> {
-        symbols(&formats(&NegotiationInput { accept, path, xhr, ..Default::default() }).unwrap())
+        symbols(
+            &formats(&NegotiationInput {
+                accept,
+                path,
+                xhr,
+                ..Default::default()
+            })
+            .unwrap(),
+        )
     }
 
     #[test]
     fn browser_accept_falls_back_to_html() {
-        let chrome = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8";
+        let chrome =
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8";
         assert_eq!(fmts(Some(chrome), "/rooms/1", false), vec!["html"]);
         assert_eq!(fmts(None, "/rooms/1", false), vec!["html"]);
         assert_eq!(fmts(Some("*/*"), "/rooms/1", false), vec!["*/*"]);
@@ -404,36 +554,84 @@ mod tests {
     fn turbo_stream_is_an_unregistered_type() {
         let turbo = "text/vnd.turbo-stream.html, text/html, application/xhtml+xml";
         assert_eq!(fmts(Some(turbo), "/rooms/1/messages", false), vec!["html"]);
-        assert_eq!(fmts(Some("text/vnd.turbo-stream.html"), "/rooms/1/messages", false), Vec::<&str>::new());
+        assert_eq!(
+            fmts(
+                Some("text/vnd.turbo-stream.html"),
+                "/rooms/1/messages",
+                false
+            ),
+            Vec::<&str>::new()
+        );
     }
 
     #[test]
     fn quality_ordering() {
-        assert_eq!(fmts(Some("text/html;q=0.5, application/json"), "/", false), vec!["json", "html"]);
-        assert_eq!(fmts(Some("application/json, */*"), "/", false), vec!["html"]);
-        assert_eq!(fmts(Some("*/*, application/json;q=0.1"), "/", false), vec!["html"]);
-        assert_eq!(fmts(Some("application/json;q=0.1,text/html;q=0.1"), "/", false), vec!["json", "html"]);
+        assert_eq!(
+            fmts(Some("text/html;q=0.5, application/json"), "/", false),
+            vec!["json", "html"]
+        );
+        assert_eq!(
+            fmts(Some("application/json, */*"), "/", false),
+            vec!["html"]
+        );
+        assert_eq!(
+            fmts(Some("*/*, application/json;q=0.1"), "/", false),
+            vec!["html"]
+        );
+        assert_eq!(
+            fmts(Some("application/json;q=0.1,text/html;q=0.1"), "/", false),
+            vec!["json", "html"]
+        );
     }
 
     #[test]
     fn single_types() {
         assert_eq!(fmts(Some("application/json"), "/", false), vec!["json"]);
-        assert_eq!(fmts(Some("application/json; charset=utf-8"), "/", false), vec!["json"]);
+        assert_eq!(
+            fmts(Some("application/json; charset=utf-8"), "/", false),
+            vec!["json"]
+        );
         assert_eq!(fmts(Some("image/svg+xml"), "/", false), vec!["svg"]);
-        assert_eq!(fmts(Some("application/x-unknown"), "/", false), Vec::<&str>::new());
-        assert!(formats(&NegotiationInput { accept: Some("garbage"), path: "/", ..Default::default() }).is_err());
+        assert_eq!(
+            fmts(Some("application/x-unknown"), "/", false),
+            Vec::<&str>::new()
+        );
+        assert!(
+            formats(&NegotiationInput {
+                accept: Some("garbage"),
+                path: "/",
+                ..Default::default()
+            })
+            .is_err()
+        );
     }
 
     #[test]
     fn wildcards_expand_in_registration_order() {
-        assert_eq!(&fmts(Some("text/*"), "/", false)[..3], &["html", "text", "js"]);
+        assert_eq!(
+            &fmts(Some("text/*"), "/", false)[..3],
+            &["html", "text", "js"]
+        );
     }
 
     #[test]
     fn xml_folding() {
-        assert_eq!(fmts(Some("text/xml, application/rss+xml"), "/", false), vec!["xml", "rss"]);
-        assert_eq!(fmts(Some("application/xml, application/rss+xml"), "/", false), vec!["rss", "xml"]);
-        assert_eq!(fmts(Some("text/xml;q=0.9, application/xml;q=0.5, text/html"), "/", false), vec!["html", "xml"]);
+        assert_eq!(
+            fmts(Some("text/xml, application/rss+xml"), "/", false),
+            vec!["xml", "rss"]
+        );
+        assert_eq!(
+            fmts(Some("application/xml, application/rss+xml"), "/", false),
+            vec!["rss", "xml"]
+        );
+        assert_eq!(
+            fmts(
+                Some("text/xml;q=0.9, application/xml;q=0.5, text/html"),
+                "/",
+                false
+            ),
+            vec!["html", "xml"]
+        );
     }
 
     #[test]
@@ -441,16 +639,30 @@ mod tests {
         assert_eq!(fmts(None, "/users/1/avatar.svg", false), vec!["svg"]);
         assert_eq!(fmts(None, "/messages.json", false), vec!["json"]);
         assert_eq!(fmts(None, "/x.unknownext", false), vec!["html"]);
-        let input = NegotiationInput { format_param: Some("json"), accept: Some("text/html"), path: "/", ..Default::default() };
+        let input = NegotiationInput {
+            format_param: Some("json"),
+            accept: Some("text/html"),
+            path: "/",
+            ..Default::default()
+        };
         assert_eq!(symbols(&formats(&input).unwrap()), vec!["json"]);
-        let input = NegotiationInput { format_param: Some("nope"), path: "/", ..Default::default() };
+        let input = NegotiationInput {
+            format_param: Some("nope"),
+            path: "/",
+            ..Default::default()
+        };
         assert!(formats(&input).unwrap().is_empty());
     }
 
     #[test]
     fn xhr_defaults_to_js() {
         assert_eq!(fmts(None, "/", true), vec!["js"]);
-        let input = NegotiationInput { xhr: true, content_type: Some("application/json"), path: "/", ..Default::default() };
+        let input = NegotiationInput {
+            xhr: true,
+            content_type: Some("application/json"),
+            path: "/",
+            ..Default::default()
+        };
         assert_eq!(symbols(&formats(&input).unwrap()), vec!["json"]);
     }
 

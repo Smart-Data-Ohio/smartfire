@@ -13,9 +13,8 @@ pub struct Recipient {
 // this constant; release code must not depend on the parity fixture directory.
 const EMAIL_PATTERN: &str = r"\A[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\z";
 pub fn eligible_email(email: &str) -> bool {
-    static PATTERN: LazyLock<regex::Regex> = LazyLock::new(|| {
-        regex::Regex::new(EMAIL_PATTERN).expect("URI::MailTo::EMAIL_REGEXP")
-    });
+    static PATTERN: LazyLock<regex::Regex> =
+        LazyLock::new(|| regex::Regex::new(EMAIL_PATTERN).expect("URI::MailTo::EMAIL_REGEXP"));
     PATTERN.is_match(email)
 }
 pub fn eligible(conn: &Connection, room_id: i64, requester_id: i64) -> Result<Vec<Recipient>> {
@@ -48,7 +47,10 @@ mod tests {
         let v: Value =
             serde_json::from_str(include_str!("../../../../vectors/google_drive_policy.json"))
                 .unwrap();
-        assert_eq!(EMAIL_PATTERN, v["email_pattern"].as_str().unwrap().replace("\\#", "#"));
+        assert_eq!(
+            EMAIL_PATTERN,
+            v["email_pattern"].as_str().unwrap().replace("\\#", "#")
+        );
         for case in v["emails"].as_array().unwrap() {
             assert_eq!(
                 eligible_email(case["input"].as_str().unwrap()),

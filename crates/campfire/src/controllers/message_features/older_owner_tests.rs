@@ -1,5 +1,5 @@
 //! Fizzy and X owner callbacks/jobs on real root and thread streams beyond both windows.
-use super::quote_integration_tests::{app_rows};
+use super::quote_integration_tests::app_rows;
 use crate::controllers::presenters::test_support::*;
 use crate::integrations::{fizzy, twitter};
 use campfire_db::Event;
@@ -30,21 +30,22 @@ fn oracle() -> Value {
     .unwrap()
 }
 
-
-
 async fn windows(app: &TestApp, group: &Value) {
     for path in [
         format!("/api/v1/rooms/{QUIET_CORNER}/messages"),
-        format!(
-            "/api/v1/threads/{}/messages",
-            group["thread_id"]
-        ),
+        format!("/api/v1/threads/{}/messages", group["thread_id"]),
     ] {
         let response = app.david().get(&path).await;
         assert_eq!(response.status, axum::http::StatusCode::OK);
         for id in group["old_ids"].as_array().unwrap() {
-                assert!(!response.json()["messages"].as_array().unwrap().iter().any(|message| message["id"] == *id));
-            }
+            assert!(
+                !response.json()["messages"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|message| message["id"] == *id)
+            );
+        }
     }
 }
 fn update(
@@ -167,7 +168,6 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
             differences.push(format!("{kind}: {previous} -> {reads}"));
         }
         windows(&app, group).await;
-
     }
     assert!(
         differences.is_empty(),
@@ -304,7 +304,8 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
 
             // Wait until capture closes before the completion poll reads this same database.
             tokio::time::timeout(std::time::Duration::from_secs(10), completed.notified())
-                .await.expect("owner fetch completed");
+                .await
+                .expect("owner fetch completed");
             super::comparison_support::settle_jobs(&app).await;
             runner.shutdown(std::time::Duration::from_secs(1)).await;
             let key = format!("{} {}", group["kind"], route["status"]);
@@ -342,7 +343,6 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
             assert_eq!(json!(error), job["fetch_error"]);
         }
         windows(&app, group).await;
-
     }
     assert!(
         differences.is_empty(),

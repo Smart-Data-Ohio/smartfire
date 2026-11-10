@@ -40,7 +40,10 @@ impl Variation {
     pub fn resize_and_pad(width: i64, height: i64) -> Self {
         Self {
             transformations: vec![
-                ("resize_and_pad".to_string(), Value::Array(vec![Value::Int(width), Value::Int(height)])),
+                (
+                    "resize_and_pad".to_string(),
+                    Value::Array(vec![Value::Int(width), Value::Int(height)]),
+                ),
                 ("format".to_string(), Value::Symbol("png".to_string())),
             ],
         }
@@ -48,7 +51,9 @@ impl Variation {
 
     /// `preview(format: :webp)` and friends.
     pub fn format_only(format: &str) -> Self {
-        Self { transformations: vec![("format".to_string(), Value::Symbol(format.to_string()))] }
+        Self {
+            transformations: vec![("format".to_string(), Value::Symbol(format.to_string()))],
+        }
     }
 
     pub fn transformations(&self) -> &[(String, Value)] {
@@ -56,7 +61,10 @@ impl Variation {
     }
 
     pub fn get(&self, name: &str) -> Option<&Value> {
-        self.transformations.iter().find(|(k, _)| k == name).map(|(_, v)| v)
+        self.transformations
+            .iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -73,7 +81,9 @@ impl Variation {
                 None => merged.push((key.clone(), value.clone())),
             }
         }
-        Variation { transformations: merged }
+        Variation {
+            transformations: merged,
+        }
     }
 
     pub fn marshal(&self) -> Vec<u8> {
@@ -90,10 +100,14 @@ impl Variation {
         let format = match self.get("format") {
             None => "png".to_string(),
             Some(Value::Symbol(s)) | Some(Value::Str(s)) => s.clone(),
-            Some(other) => return Err(Error::InvalidVariation(format!("invalid format {other:?}"))),
+            Some(other) => {
+                return Err(Error::InvalidVariation(format!("invalid format {other:?}")));
+            }
         };
         if marcel::by_extension(&format).is_none() {
-            return Err(Error::InvalidVariation(format!("invalid variant format ({format:?})")));
+            return Err(Error::InvalidVariation(format!(
+                "invalid variant format ({format:?})"
+            )));
         }
         Ok(format)
     }
@@ -112,7 +126,9 @@ impl Variation {
     pub fn from_json(json: &Json) -> Result<Variation> {
         match from_json(json)? {
             Value::Hash(transformations) => Ok(Variation { transformations }),
-            _ => Err(Error::InvalidVariation("transformations must be a hash".into())),
+            _ => Err(Error::InvalidVariation(
+                "transformations must be a hash".into(),
+            )),
         }
     }
 
@@ -122,7 +138,9 @@ impl Variation {
     }
 
     pub fn decode(verifier: &dyn Verifier, key: &str, now: jiff::Timestamp) -> Result<Variation> {
-        let data = verifier.verified(key, "variation", now).ok_or(Error::InvalidSignature)?;
+        let data = verifier
+            .verified(key, "variation", now)
+            .ok_or(Error::InvalidSignature)?;
         Variation::from_json(&Json::parse(&data).map_err(|_| Error::InvalidSignature)?)
     }
 }
@@ -134,7 +152,12 @@ fn to_json(value: &Value) -> Json {
         Value::Int(i) => Json::Int(*i),
         Value::Symbol(s) | Value::Str(s) => Json::String(s.clone()),
         Value::Array(items) => Json::Array(items.iter().map(to_json).collect()),
-        Value::Hash(entries) => Json::Object(entries.iter().map(|(k, v)| (k.clone(), to_json(v))).collect()),
+        Value::Hash(entries) => Json::Object(
+            entries
+                .iter()
+                .map(|(k, v)| (k.clone(), to_json(v)))
+                .collect(),
+        ),
     }
 }
 
@@ -143,11 +166,18 @@ fn from_json(json: &Json) -> Result<Value> {
         Json::Null => Value::Nil,
         Json::Bool(b) => Value::Bool(*b),
         Json::Int(i) => Value::Int(*i),
-        Json::Float(_) => return Err(Error::InvalidVariation("float transformation arguments are unsupported".into())),
+        Json::Float(_) => {
+            return Err(Error::InvalidVariation(
+                "float transformation arguments are unsupported".into(),
+            ));
+        }
         Json::String(s) => Value::Str(s.clone()),
         Json::Array(items) => Value::Array(items.iter().map(from_json).collect::<Result<_>>()?),
-        Json::Object(entries) => {
-            Value::Hash(entries.iter().map(|(k, v)| Ok((k.clone(), from_json(v)?))).collect::<Result<_>>()?)
-        }
+        Json::Object(entries) => Value::Hash(
+            entries
+                .iter()
+                .map(|(k, v)| Ok((k.clone(), from_json(v)?)))
+                .collect::<Result<_>>()?,
+        ),
     })
 }

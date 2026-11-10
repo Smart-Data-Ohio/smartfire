@@ -57,8 +57,12 @@ fn quiet(c: &Connection, mid: i64) -> Result<()> {
     Ok(())
 }
 fn replacements(t: &TestDb, mid: i64) -> usize {
-    use crate::broadcasts::{Broadcast};
-    t.events().iter().filter_map(|e|e.as_broadcast()).filter(|b|matches!(b,Broadcast::MessageUpdated{message_id} if *message_id==mid)).count()
+    use crate::broadcasts::Broadcast;
+    t.events()
+        .iter()
+        .filter_map(|e| e.as_broadcast())
+        .filter(|b| matches!(b,Broadcast::MessageUpdated{message_id} if *message_id==mid))
+        .count()
 }
 #[test]
 fn ws11_stream_case_create_fires_no_side_effects() {
@@ -106,10 +110,10 @@ fn ws11_stream_case_thread_finalize_sends_no_unread_room_broadcast() {
     t.sink.take();
     t.write(move |tx| Message::find(tx.conn(), mid)?.finalize_stream(tx));
     assert!(
-        !t.events()
-            .iter()
-            .filter_map(|e| e.as_broadcast())
-            .any(|b| b.channel_frames().into_iter().any(|(stream, _)| stream.ends_with("_unreads")))
+        !t.events().iter().filter_map(|e| e.as_broadcast()).any(|b| b
+            .channel_frames()
+            .into_iter()
+            .any(|(stream, _)| stream.ends_with("_unreads")))
     );
     t.read(move |c| {
         assert!(!Message::find(c, mid)?.streaming);

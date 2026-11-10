@@ -7,8 +7,8 @@ use super::{agent_posting, agent_service::ServiceResult, audit_log};
 use crate::models::channel_thread::{AgentWorkChanges, normalize_owner_id, tag_names_from_value};
 use crate::sql::{query_all, query_one};
 use crate::{
-    Agent, ChannelThread, Error, HandoffPackage, NewChannelThread, Result, Room, Tx,
-    User, WorkHandoff,
+    Agent, ChannelThread, Error, HandoffPackage, NewChannelThread, Result, Room, Tx, User,
+    WorkHandoff,
 };
 use campfire_richtext::ruby::{is_blank, strip};
 use rusqlite::{Connection, params};
@@ -67,7 +67,10 @@ pub fn list_board_posts(
         return Ok(Outcome::fail("Owner must be a user id, me, or agents", 422));
     }
     use rusqlite::types::Value as Bind;
-    let mut sql = format!("SELECT * FROM channel_threads WHERE room_id=? AND {}", super::channel_thread::readable_by_sql("channel_threads.id", &agent.user_id.to_string()));
+    let mut sql = format!(
+        "SELECT * FROM channel_threads WHERE room_id=? AND {}",
+        super::channel_thread::readable_by_sql("channel_threads.id", &agent.user_id.to_string())
+    );
     let mut binds = vec![Bind::Integer(room.id)];
     match status {
         "all" => (),
@@ -166,7 +169,9 @@ pub fn list_work(conn: &Connection, agent: &Agent) -> Result<Outcome<Vec<Channel
     )?;
     let mut visible = Vec::new();
     for thread in threads {
-        if thread.readable_by(conn, agent.user_id)? && agent.can(conn, "read_messages", Some(thread.room_id))? {
+        if thread.readable_by(conn, agent.user_id)?
+            && agent.can(conn, "read_messages", Some(thread.room_id))?
+        {
             visible.push(thread);
         }
         if visible.len() == LIST_MAX_LIMIT {
@@ -185,7 +190,9 @@ fn find_owned(conn: &Connection, agent: &Agent, id: i64) -> Result<Option<Channe
     let Some(thread) = thread else {
         return Ok(None);
     };
-    if !thread.readable_by(conn, agent.user_id)? { return Ok(None); }
+    if !thread.readable_by(conn, agent.user_id)? {
+        return Ok(None);
+    }
     if !current_capability(conn, agent, "read_messages", thread.room_id)? {
         return Ok(None);
     }
@@ -253,8 +260,10 @@ pub fn handoff_work(
     package: HandoffPackage,
     context: &audit_log::Context,
 ) -> Result<Outcome<HandedOffWork>> {
-    if Agent::find(tx.conn(),agent.id)?.is_some_and(|agent| agent.kind == crate::AgentKind::Personal) {
-        return Ok(Outcome::fail("Not available to personal agents",403));
+    if Agent::find(tx.conn(), agent.id)?
+        .is_some_and(|agent| agent.kind == crate::AgentKind::Personal)
+    {
+        return Ok(Outcome::fail("Not available to personal agents", 403));
     }
     let mut thread = match writable(tx.conn(), agent, id)? {
         Outcome::Success { payload, .. } => payload,
@@ -276,13 +285,7 @@ pub fn handoff_work(
         package.open_questions = Value::Null;
     }
     match thread.hand_off(tx, &sender, &receiver, package, context) {
-        Ok(handoff) => Ok(Outcome::ok(
-            HandedOffWork {
-                thread,
-                handoff,
-            },
-            201,
-        )),
+        Ok(handoff) => Ok(Outcome::ok(HandedOffWork { thread, handoff }, 201)),
         Err(Error::RecordNotFound(_)) => Ok(Outcome::fail("Work not found", 404)),
         Err(Error::RecordInvalid(errors)) => Ok(invalid(errors)),
         Err(error) => Err(error),
@@ -297,7 +300,16 @@ fn invalid<T>(errors: crate::Errors) -> Outcome<T> {
 
 // The public batch reader checks live agent/user/grant/room state in one SELECT.
 // No capability fact is carried across a request or a writer-lock boundary.
-fn current_capability(conn: &Connection, agent: &Agent, capability: &str, room: i64) -> Result<bool> {
-    Ok(Agent::capabilities_for_rooms(conn, capability, &[(agent.id, Some(room))])?
-        .get(&(agent.id, Some(room))).copied().unwrap_or(false))
+fn current_capability(
+    conn: &Connection,
+    agent: &Agent,
+    capability: &str,
+    room: i64,
+) -> Result<bool> {
+    Ok(
+        Agent::capabilities_for_rooms(conn, capability, &[(agent.id, Some(room))])?
+            .get(&(agent.id, Some(room)))
+            .copied()
+            .unwrap_or(false),
+    )
 }

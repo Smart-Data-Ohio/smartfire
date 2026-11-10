@@ -29,13 +29,23 @@ impl ParameterFilter {
     /// `ParameterFilter.new(filters)`: `precompile_filters` turns each string into
     /// `/#{Regexp.escape(filter)}/i` and joins them, keeping those with a dot apart.
     pub fn new<S: AsRef<str>>(filters: &[S]) -> Self {
-        let (deep, keys): (Vec<&str>, Vec<&str>) = filters.iter().map(AsRef::as_ref).partition(|filter| filter.contains('.'));
-        Self { keys: alternation(&keys), deep: alternation(&deep) }
+        let (deep, keys): (Vec<&str>, Vec<&str>) = filters
+            .iter()
+            .map(AsRef::as_ref)
+            .partition(|filter| filter.contains('.'));
+        Self {
+            keys: alternation(&keys),
+            deep: alternation(&deep),
+        }
     }
 
     /// The regexps' sources, as Rails reports them (`Regexp#source`).
     pub fn sources(&self) -> Vec<String> {
-        [&self.keys, &self.deep].into_iter().flatten().map(|regex| regex.as_str().to_string()).collect()
+        [&self.keys, &self.deep]
+            .into_iter()
+            .flatten()
+            .map(|regex| regex.as_str().to_string())
+            .collect()
     }
 
     /// `filter(params)` for params as JSON (hashes, arrays and strings).
@@ -47,7 +57,10 @@ impl ParameterFilter {
     }
 
     fn filter_hash(&self, params: &Map<String, Value>, parent: Option<&str>) -> Map<String, Value> {
-        params.iter().map(|(key, value)| (key.clone(), self.value_for_key(key, value, parent))).collect()
+        params
+            .iter()
+            .map(|(key, value)| (key.clone(), self.value_for_key(key, value, parent)))
+            .collect()
     }
 
     /// `value_for_key`: a matching key masks the value; hashes recurse under the full key, and an
@@ -57,12 +70,22 @@ impl ParameterFilter {
             Some(parent) => format!("{parent}.{key}"),
             None => key.to_string(),
         };
-        if self.keys.as_ref().is_some_and(|regex| regex.is_match(key)) || self.deep.as_ref().is_some_and(|regex| regex.is_match(&full_key)) {
+        if self.keys.as_ref().is_some_and(|regex| regex.is_match(key))
+            || self
+                .deep
+                .as_ref()
+                .is_some_and(|regex| regex.is_match(&full_key))
+        {
             return Value::String(MASK.into());
         }
         match value {
             Value::Object(map) => Value::Object(self.filter_hash(map, Some(&full_key))),
-            Value::Array(values) => Value::Array(values.iter().map(|value| self.value_for_key(key, value, parent)).collect()),
+            Value::Array(values) => Value::Array(
+                values
+                    .iter()
+                    .map(|value| self.value_for_key(key, value, parent))
+                    .collect(),
+            ),
             other => other.clone(),
         }
     }
@@ -112,7 +135,11 @@ fn alternation(filters: &[&str]) -> Option<Regex> {
     if filters.is_empty() {
         return None;
     }
-    let source = filters.iter().map(|filter| format!("(?i:{})", regex::escape(filter))).collect::<Vec<_>>().join("|");
+    let source = filters
+        .iter()
+        .map(|filter| format!("(?i:{})", regex::escape(filter)))
+        .collect::<Vec<_>>()
+        .join("|");
     Some(Regex::new(&source).expect("escaped filters make a valid regex"))
 }
 
@@ -161,12 +188,21 @@ mod tests {
         let filter = filter();
         assert_eq!(filter.filtered_path("/x", None), "/x");
         assert_eq!(filter.filtered_path("/x", Some("")), "/x");
-        assert_eq!(filter.filtered_path("/x", Some("token=a&b=1;code=2&flag&=v")), "/x?token=[FILTERED]&b=1;code=[FILTERED]&flag&=v");
-        assert_eq!(filter.filtered_path("/x", Some("%70assword=raw&message[body]=m")), "/x?%70assword=raw&message[body]=m");
+        assert_eq!(
+            filter.filtered_path("/x", Some("token=a&b=1;code=2&flag&=v")),
+            "/x?token=[FILTERED]&b=1;code=[FILTERED]&flag&=v"
+        );
+        assert_eq!(
+            filter.filtered_path("/x", Some("%70assword=raw&message[body]=m")),
+            "/x?%70assword=raw&message[body]=m"
+        );
     }
 
     #[test]
     fn keeps_rails_regexp_sources() {
-        assert_eq!(filter().sources(), ["(?i:passw)|(?i:token)|(?i:code)", "(?i:message\\.body)"]);
+        assert_eq!(
+            filter().sources(),
+            ["(?i:passw)|(?i:token)|(?i:code)", "(?i:message\\.body)"]
+        );
     }
 }

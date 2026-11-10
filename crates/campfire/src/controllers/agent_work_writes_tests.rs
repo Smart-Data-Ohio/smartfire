@@ -215,11 +215,16 @@ fn rows(conn: &campfire_db::Connection, sql: &str) -> campfire_db::Result<Vec<Va
         .collect())
 }
 pub(super) async fn assert_state(app: &TestApp, expected: &Value, name: &str) {
-    assert_state_with_job_facts(app,expected,name,false).await;
+    assert_state_with_job_facts(app, expected, name, false).await;
 }
 /// Rails' test adapter and the atomic durable queue are compared as full logical
 /// job facts where a named declaration does not specify job execution ordering.
-pub(super) async fn assert_state_with_job_facts(app:&TestApp, expected:&Value, name:&str, unordered:bool) {
+pub(super) async fn assert_state_with_job_facts(
+    app: &TestApp,
+    expected: &Value,
+    name: &str,
+    unordered: bool,
+) {
     let mut actual=app.db().read(|conn| {
         let id=if campfire_db::ChannelThread::find_by_id(conn,1901300001)?.is_some(){1901300001}else{1900700020};
         let thread=campfire_db::ChannelThread::find(conn,id)?;
@@ -236,11 +241,16 @@ pub(super) async fn assert_state_with_job_facts(app:&TestApp, expected:&Value, n
     }).await.unwrap();
     let mut expected = expected.clone();
     if unordered {
-        for value in [&mut actual,&mut expected] {
-            value["jobs"].as_array_mut().unwrap().sort_by_key(Value::to_string);
+        for value in [&mut actual, &mut expected] {
+            value["jobs"]
+                .as_array_mut()
+                .unwrap()
+                .sort_by_key(Value::to_string);
         }
     }
-    if actual != expected {println!("WS11_STATE_ACTUAL {name} {actual}");}
+    if actual != expected {
+        println!("WS11_STATE_ACTUAL {name} {actual}");
+    }
     assert_eq!(actual, expected, "{name}: committed state");
     app.db().read(|conn| {
         let chains=rows(conn,"SELECT json_object('chain',chain_id,'hop',hop,'thread',json_extract(metadata,'$.thread_id'),'kind',event_type) FROM agent_events WHERE id>1901303000 AND event_type IN ('work_assigned','work_unassigned','work_handed_off') ORDER BY id")?;

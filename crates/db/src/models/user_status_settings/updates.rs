@@ -78,8 +78,6 @@ impl UserStatusSettings {
         Ok(())
     }
 
-
-
     pub fn save_status(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         let attributes = self.attributes();
         let changed = |key: &str| {

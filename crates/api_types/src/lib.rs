@@ -15,7 +15,7 @@
 //! - an absent value is `null`, never an omitted key;
 //! - enums are lowercase string literals.
 
-pub use campfire_slash_schema::{CommandSchema, CommandValues, CommandOption, OptionValue};
+pub use campfire_slash_schema::{CommandOption, CommandSchema, CommandValues, OptionValue};
 
 mod actions;
 mod announcements;
@@ -50,8 +50,8 @@ pub use soundboard::{
     CreateSoundboardSound, HuddleSoundboardPlayed, PlaySoundboardSound, SoundboardCatalog,
     SoundboardSound, UpdateSoundboardSound,
 };
-mod join;
 mod invites;
+mod join;
 mod me;
 mod message;
 mod organize;
@@ -79,13 +79,19 @@ mod user;
 mod webhooks;
 mod work;
 
-pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
-pub use auth::{AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart, PasswordSignIn, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, SudoMethod, SudoResponse, SudoRetry, SudoState, SudoSubmission, TransferSignIn};
-pub use auth::{TwoFactorRequirement, TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
-pub use auth::{FlashMessage, FlashMessageKind, SignInHelpContact};
-pub use auth::{FirstRunState, FirstRunSubmission};
 pub use auth::SudoGoogleStart;
+pub use auth::{
+    AuthResponse, ChallengeMethod, ChallengeState, ChallengeSubmission, GoogleSignInStart,
+    PasswordSignIn, SignInMethods, SignInWorkspace, SignOut, SignedOut, SignedOutBoot, SudoMethod,
+    SudoResponse, SudoRetry, SudoState, SudoSubmission, TransferSignIn,
+};
+pub use auth::{FirstRunState, FirstRunSubmission};
+pub use auth::{FlashMessage, FlashMessageKind, SignInHelpContact};
 pub use auth::{InviteRefusal, JoinPage, WorkspaceJoin};
+pub use auth::{
+    TwoFactorRequirement, TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission,
+};
+pub use public_pages::{PublicPage, PublicPageName, PublicPagePolicy};
 
 pub use actions::{
     CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,
@@ -98,15 +104,16 @@ pub use activity::{
     ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
 };
 pub use admin::{
-    AfkPolicy, AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
-    EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
+    AfkPolicy, AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles,
+    DeliveryHealth, EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
-    PushChannelExpiry, UpdateBanner, UpdateInviteSplash, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
-    WorkspaceIconList,
+    PushChannelExpiry, UpdateBanner, UpdateInviteSplash, UpdateLogo, UpdatePerson, UpdateWorkspace,
+    Workspace, WorkspaceIcon, WorkspaceIconList,
 };
 pub use admin::{
-    GuideEntry, GuideResource, GuideResourceEdit, GuideRoom, WelcomeAdmin, WelcomeRoom, WelcomeRoomCard,
-    WelcomeRoomChoice, WelcomeRoomEdit, WelcomeSettings, WelcomeUpdate, WorkspaceWelcome,
+    GuideEntry, GuideResource, GuideResourceEdit, GuideRoom, WelcomeAdmin, WelcomeRoom,
+    WelcomeRoomCard, WelcomeRoomChoice, WelcomeRoomEdit, WelcomeSettings, WelcomeUpdate,
+    WorkspaceWelcome,
 };
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
@@ -119,35 +126,35 @@ pub use agents::{
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use board::{
     BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTag,
-    BoardTagCatalog, BoardTagCount, CreateBoardPost, ReorderBoardTags, SaveBoardTag, UpdateBoardTagPolicy,
+    BoardTagCatalog, BoardTagCount, CreateBoardPost, ReorderBoardTags, SaveBoardTag,
+    UpdateBoardTagPolicy,
 };
 pub use board_automations::{
-    BoardAutomations, BoardAutomationsChanged, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule, CreateBoardTagRule,
-    UpdateBoardSlaTimers,
+    BoardAutomations, BoardAutomationsChanged, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule,
+    CreateBoardTagRule, UpdateBoardSlaTimers,
 };
 pub use bots::{
-    Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
-    BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
-    CredentialCreated, CredentialList, CredentialState, Grant, GrantList, GrantRoom, GrantStatus,
-    UpdateBot, UpdateBotAgent,
+    Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom, BotSummary,
+    ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential, CredentialCreated,
+    CredentialList, CredentialState, Grant, GrantList, GrantRoom, GrantStatus, UpdateBot,
+    UpdateBotAgent,
 };
 pub use cards::{
     AttendanceResponse, CardFetch, CreateGithubComment, CreateGithubDiscussion, CreateGithubReview,
     CreateGithubReviewRequest, CreatePoll, DriveFileCard, EventAttendance, EventCard,
-    FizzyAssignee, FizzyCard,
-    FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubAccountLink, GithubCardRef,
-    GithubChangedFile, GithubChangedFiles, GithubChecks, GithubDiscussion, GithubPullRequest,
-    GithubPullRequestActions, GithubPullRequestCard, GithubPullRequestStatus, GithubReview,
-    GithubReviewKind, GithubWriteResult, LinkCard, LinkedinCard, MessageCard, MessageCards, Poll,
-    PollBallot, PollOption, PollResults, PollUpdated, QuoteCard, QuotePreview, QuotePreviewResult,
-    RespondToEvent, VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
+    FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubAccountLink,
+    GithubCardRef, GithubChangedFile, GithubChangedFiles, GithubChecks, GithubDiscussion,
+    GithubPullRequest, GithubPullRequestActions, GithubPullRequestCard, GithubPullRequestStatus,
+    GithubReview, GithubReviewKind, GithubWriteResult, LinkCard, LinkedinCard, MessageCard,
+    MessageCards, Poll, PollBallot, PollOption, PollResults, PollUpdated, QuoteCard, QuotePreview,
+    QuotePreviewResult, RespondToEvent, VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
 };
 pub use composer::{
-    ScheduledAttachment,
     CreateScheduledMessage, Icon, IconKind, IconList, MessagePreview, PreviewMessage,
-    RunSlashCommand, ScheduledMessage, ScheduledMessageFilter, ScheduledMessageList,
-    ScheduledMessageRemoved, ScheduledMessageState, SlashCommand, SlashCommandList,
-    SlashCommandResult, UpdateScheduledMessage, UserSuggestion, UserSuggestionList,
+    RunSlashCommand, ScheduledAttachment, ScheduledMessage, ScheduledMessageFilter,
+    ScheduledMessageList, ScheduledMessageRemoved, ScheduledMessageState, SlashCommand,
+    SlashCommandList, SlashCommandResult, UpdateScheduledMessage, UserSuggestion,
+    UserSuggestionList,
 };
 pub use conversation::ConversationName;
 pub use direct::{
@@ -157,20 +164,23 @@ pub use drive::{
     DriveApprovedRecipient, DriveFile, DriveFileList, DrivePickerConfig, DriveRecipient,
     DriveRecipientList, DriveShare, DriveShareResult, ShareDriveFile, ValidateDriveRecipients,
 };
-pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use error::{ApiError, ApiErrorResponse, ThreadAccessRefusal};
 pub use events::{
     CancelEvent, ChannelEvent, CreateEvent, EventAttendee, EventCounts, EventDetail, EventForm,
     EventLimits, EventList, EventRecurrenceRule, EventRepeatOption, EventScope, EventValues,
     EventVenue, EventVenueOption, EventsChanged, UpdateEvent,
 };
+pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use huddle::{
-    HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
-    HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
-    HuddleRoleChanged, HuddleActivity, HuddleAfkMoved, ModerateHuddle,
+    HuddleActivity, HuddleAfkMoved, HuddleCredentials, HuddleDetail, HuddleModeration,
+    HuddleNotice, HuddleParticipant, HuddlePresence, HuddlePresenceList, HuddleRing,
+    HuddleRingEvent, HuddleRingState, HuddleRoleChanged, ModerateHuddle,
+};
+pub use invites::{
+    CreateWorkspaceInvite, WorkspaceInvite, WorkspaceInviteCreated, WorkspaceInviteCreator,
+    WorkspaceInviteExpiry, WorkspaceInviteList, WorkspaceInviteState,
 };
 pub use join::{ChannelDirectory, DirectoryChannel, OpenRoomPreview, RoomJoin};
-pub use invites::{CreateWorkspaceInvite, WorkspaceInvite, WorkspaceInviteCreated, WorkspaceInviteCreator, WorkspaceInviteExpiry, WorkspaceInviteList, WorkspaceInviteState};
 pub use me::{
     ChatSounds, DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize,
     Theme, VoiceMode,
@@ -181,12 +191,15 @@ pub use message::{
 };
 pub use organize::{
     AssignRoomCategory, CreateRoomCategory, FavoriteList, InvolvementChange, MoveFavorite,
-    ReorderRoomCategories, RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
-    MoveWorkspaceRoom, ReorderWorkspaceCategories, WorkspaceCategory, WorkspaceLayout,
+    MoveWorkspaceRoom, ReorderRoomCategories, ReorderWorkspaceCategories, RoomCategoryList,
+    RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory, WorkspaceCategory, WorkspaceLayout,
     WorkspaceRoomPosition, WriteWorkspaceCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, RoomFilesChanged, StarState};
-pub use people::{BlockList, BlockedPerson, BlockState, DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
+pub use people::{
+    BlockList, BlockState, BlockedPerson, DirectoryPerson, PeopleDirectory, PersonProfile,
+    PersonStatus,
+};
 pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};
@@ -195,22 +208,27 @@ pub use room_integrations::{
     GithubEventChoice, GithubSubscription, GithubSubscriptionList, InboundEmail,
     SubscribeGithubRepository, UpdateGithubSubscription,
 };
-pub use room_management::{CreateRoom, RoomForm, RoomFormStageRole, RoomLeft, RoomMutation, RoomRemoved, UpdateRoom};
+pub use room_management::{
+    CreateRoom, RoomForm, RoomFormStageRole, RoomLeft, RoomMutation, RoomRemoved, UpdateRoom,
+};
 pub use saved::{SavedFilter, SavedItemList, UpdateSavedItem};
 pub use search::{
-    RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchFilters, SearchMedia, SearchOperator,
-    SearchResults, SearchSort,
-    SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
+    RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchFilters, SearchMedia,
+    SearchOperator, SearchResults, SearchSection, SearchSectionKind, SearchSectionRow, SearchSort,
+    WorkStatus,
 };
 pub use settings::{
-    AccountSettings, AppearancePreferences, AppearanceSettings, BackupCodes, CallSettings, Connection, CreatePushSubscription, DeviceClass, DndAllowedPerson,
-    GoogleIntegration, InboxSwitch,
-    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, NotificationLevel, RoomNotificationUpdate, RoomMuteDuration, RoomMuteUpdate, OooPreset,
-    ProfileSettings, PushPublicKey, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
-    RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
-    TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls, UpdateProfileBanner,
-    UpdateNotifications, UpdateProfile, UpdateStatus,
+    AccountSettings, AppearancePreferences, AppearanceSettings, BackupCodes, CallSettings,
+    Connection, CreatePushSubscription, DeviceClass, DndAllowedPerson, GoogleIntegration,
+    InboxSwitch, IntegrationChange, IntegrationSettings, IntegrationToken, NotificationLevel,
+    NotificationSettings, OooPreset, ProfileSettings, PushPublicKey, PushSubscriptionInfo,
+    PushSubscriptionList, Reauthentication, RememberedDevice, RoomMembershipRow, RoomMuteDuration,
+    RoomMuteUpdate, RoomNotificationUpdate, SessionInfo, SessionList, Settings, StatusExpiry,
+    StatusSettings, TimeZoneChoice, TwoFactorChange, TwoFactorSettings, UpdateAppearance,
+    UpdateAvatar, UpdateCalls, UpdateNotifications, UpdateProfile, UpdateProfileBanner,
+    UpdateStatus,
 };
+pub use sidebar::{RoomCategory, Sidebar, SidebarLastMessage, SidebarRow, SidebarRowRemoved};
 pub use slack::{
     SaveSlackCredentials, SlackConnectionState, SlackConversation, SlackCounts, SlackDisconnected,
     SlackIssue, SlackPeople, SlackPersonal, SlackPlan, SlackPlanConversation, SlackPreset,
@@ -218,18 +236,21 @@ pub use slack::{
     SlackRunPage, SlackRunRow, SlackRunStatus, SlackRunSummary, SlackSample, SlackSetup,
     SlackSetupChange, StartPersonalSlackImport, StartSlackDryRun, StartSlackImport,
 };
-pub use sidebar::{RoomCategory, Sidebar, SidebarLastMessage, SidebarRow, SidebarRowRemoved};
 pub use stage::{
-    ChangeStageRole, LowerHand, StageAudienceAvailability, StageDetail, StageMember, StageState, StageStream,
-    StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
+    ChangeStageRole, LowerHand, StageAudienceAvailability, StageDetail, StageMember, StageState,
+    StageStream, StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
 };
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
-pub use sync::{ClientFrame, MessageNotified, ResumePoint, ServerFrame, SyncEvent, SyncPayload, ThreadGithubUpdated, Typing, WorkspaceBranding};
+pub use sync::{
+    ClientFrame, MessageNotified, ResumePoint, ServerFrame, SyncEvent, SyncPayload,
+    ThreadGithubUpdated, Typing, WorkspaceBranding,
+};
 pub use thread::{
-    CreateThread, JoinThread, Thread, ThreadCreated, ThreadDetail, ThreadFilter, ThreadIndicator,
+    AddThreadAccessMember, CreateThread, JoinThread, Thread, ThreadAccessMember,
+    ThreadAccessMembers, ThreadCreated, ThreadDetail, ThreadFilter, ThreadIndicator,
     ThreadIndicatorChanged, ThreadInvolvement, ThreadList, ThreadMembership, ThreadMembershipState,
     ThreadPermissions, ThreadRead, ThreadRemoved, ThreadStatus, ThreadSummary, ThreadUnread,
-    UpdateThread, ThreadVisibility, ThreadAccessMember, ThreadAccessMembers, AddThreadAccessMember,
+    ThreadVisibility, UpdateThread,
 };
 pub use user::{
     BotAvatarAccessory, BotAvatarFace, BotAvatarSpec, BotAvatarType, CustomStatus, User, UserList,
@@ -254,8 +275,6 @@ pub type Timestamp = String;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
-mod tests_sticker;
-#[cfg(test)]
 mod tests_gif;
 #[cfg(test)]
 mod tests_s2;
@@ -275,8 +294,10 @@ mod tests_s7_admin;
 mod tests_s7_bots;
 #[cfg(test)]
 mod tests_s7_slack;
+#[cfg(test)]
+mod tests_sticker;
 
 #[cfg(test)]
-mod tests_s7_people;
-#[cfg(test)]
 mod tests_s6;
+#[cfg(test)]
+mod tests_s7_people;

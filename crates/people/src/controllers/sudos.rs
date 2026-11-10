@@ -352,7 +352,11 @@ pub async fn google(c: &mut Ctx) -> Result {
             .expect("Google authorization redirect")
             .to_owned();
         let session = sudo::session_id(c);
-        return auth::json(c, StatusCode::OK, &SudoResponse::Navigate { location, session });
+        return auth::json(
+            c,
+            StatusCode::OK,
+            &SudoResponse::Navigate { location, session },
+        );
     }
     if json_mode {
         return reject(
@@ -392,22 +396,13 @@ pub async fn finish_google(
         return redirect_alert(c, &path, "Confirmation expired. Try again.");
     };
     // The SPA's flow belongs to the session that started it: a sign-in since ends it.
-    if c
-        .current::<GoogleJson>()
+    if c.current::<GoogleJson>()
         .is_some_and(|json| json.session_id.is_none() || json.session_id != sudo::session_id(c))
     {
-        return redirect_alert(
-            c,
-            SPA_SUDO,
-            "Confirmation expired. Try again.",
-        );
+        return redirect_alert(c, SPA_SUDO, "Confirmation expired. Try again.");
     }
     if !auth_time.is_some_and(|time| time > (c.now().as_second() - 330) as f64) {
-        return redirect_alert(
-            c,
-            SPA_SUDO,
-            "Google confirmation failed. Try again.",
-        );
+        return redirect_alert(c, SPA_SUDO, "Google confirmation failed. Try again.");
     }
     let matches = !verified_subject.trim().is_empty()
         && linked_subject(c, user_id).await?.as_deref() == Some(verified_subject);
@@ -423,7 +418,10 @@ pub async fn finish_google(
         .map_err(Error::internal)?;
     if matches {
         if let Some(path) = google_return_path(c) {
-            if let Some(attempt) = c.current::<GoogleJson>().and_then(|json| json.attempt.clone()) {
+            if let Some(attempt) = c
+                .current::<GoogleJson>()
+                .and_then(|json| json.attempt.clone())
+            {
                 sudo::record_attempt(c, &attempt)?;
             }
             c.redirect_to(&c.url_for(path))

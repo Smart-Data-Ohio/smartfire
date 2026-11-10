@@ -7,10 +7,10 @@ use std::time::Duration;
 use axum::http::{HeaderName, HeaderValue};
 
 use crate::clock::SharedClock;
-use crate::csp::ContentSecurityPolicy;
 use crate::crypto::SharedCrypto;
-use crate::rate_limit::RateLimitStore;
+use crate::csp::ContentSecurityPolicy;
 use crate::exceptions::ErrorPages;
+use crate::rate_limit::RateLimitStore;
 use crate::request::ProxyConfig;
 use crate::session::SessionConfig;
 
@@ -102,15 +102,30 @@ pub(crate) struct KitInner {
 
 impl std::fmt::Debug for Kit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Kit").field("config", &self.inner.config).finish()
+        f.debug_struct("Kit")
+            .field("config", &self.inner.config)
+            .finish()
     }
 }
 
 impl Kit {
     /// `state` is the application's own state (database handles etc.), reachable from actions
     /// with [`crate::Ctx::state`].
-    pub fn new<S: Send + Sync + 'static>(config: KitConfig, crypto: SharedCrypto, clock: SharedClock, state: S) -> Self {
-        Self { inner: Arc::new(KitInner { config, crypto, clock, state: Arc::new(state), rate_limits: Default::default() }) }
+    pub fn new<S: Send + Sync + 'static>(
+        config: KitConfig,
+        crypto: SharedCrypto,
+        clock: SharedClock,
+        state: S,
+    ) -> Self {
+        Self {
+            inner: Arc::new(KitInner {
+                config,
+                crypto,
+                clock,
+                state: Arc::new(state),
+                rate_limits: Default::default(),
+            }),
+        }
     }
 
     pub fn config(&self) -> &KitConfig {
@@ -135,6 +150,9 @@ impl Kit {
     }
 
     pub fn state<S: Send + Sync + 'static>(&self) -> &S {
-        self.inner.state.downcast_ref::<S>().expect("Kit state has a different type")
+        self.inner
+            .state
+            .downcast_ref::<S>()
+            .expect("Kit state has a different type")
     }
 }

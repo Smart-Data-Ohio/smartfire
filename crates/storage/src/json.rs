@@ -180,12 +180,22 @@ pub fn encode_float(f: f64) -> String {
         } else if point as usize >= digits.len() {
             format!("{}{}.0", digits, "0".repeat(point as usize - digits.len()))
         } else {
-            format!("{}.{}", &digits[..point as usize], &digits[point as usize..])
+            format!(
+                "{}.{}",
+                &digits[..point as usize],
+                &digits[point as usize..]
+            )
         };
         format!("{sign}{body}")
     } else {
         let fraction = if digits.len() > 1 { &digits[1..] } else { "0" };
-        format!("{sign}{}.{}e{}{:02}", &digits[..1], fraction, if exponent < 0 { '-' } else { '+' }, exponent.abs())
+        format!(
+            "{sign}{}.{}e{}{:02}",
+            &digits[..1],
+            fraction,
+            if exponent < 0 { '-' } else { '+' },
+            exponent.abs()
+        )
     }
 }
 
@@ -213,7 +223,9 @@ impl<'de> Deserialize<'de> for Json {
             }
 
             fn visit_u64<E: serde::de::Error>(self, u: u64) -> Result<Json, E> {
-                i64::try_from(u).map(Json::Int).map_err(|_| E::custom("integer out of range"))
+                i64::try_from(u)
+                    .map(Json::Int)
+                    .map_err(|_| E::custom("integer out of range"))
             }
 
             fn visit_f64<E>(self, f: f64) -> Result<Json, E> {
@@ -272,6 +284,9 @@ mod tests {
     #[test]
     fn preserves_order_and_escapes_like_active_support() {
         let json = Json::parse(r#"{"z":1,"a":[true,null,2.0],"s":"<a & b>"}"#).unwrap();
-        assert_eq!(json.encode(), r#"{"z":1,"a":[true,null,2.0],"s":"\u003ca \u0026 b\u003e"}"#);
+        assert_eq!(
+            json.encode(),
+            r#"{"z":1,"a":[true,null,2.0],"s":"\u003ca \u0026 b\u003e"}"#
+        );
     }
 }

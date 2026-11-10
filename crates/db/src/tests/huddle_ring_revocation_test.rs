@@ -4,7 +4,10 @@ use crate::models::room_delete::HuddleConfig;
 use crate::tests::TestDb;
 use crate::{Membership, Session};
 fn config() -> HuddleConfig {
-    HuddleConfig { api_secret:Some("ws13b-review-fixture-value".into()), admin_configured:false }
+    HuddleConfig {
+        api_secret: Some("ws13b-review-fixture-value".into()),
+        admin_configured: false,
+    }
 }
 fn review_direct_setup(db: &TestDb) -> (i64, i64, i64) {
     db.write(|tx| {
@@ -18,16 +21,21 @@ fn review_direct_setup(db: &TestDb) -> (i64, i64, i64) {
 
 fn inherit_nothing(db: &TestDb, room: i64, recipient: i64, inbox: bool) {
     db.write(move |tx| {
-        Membership::find_by_room_and_user(tx.conn(), room, recipient)?.unwrap()
+        Membership::find_by_room_and_user(tx.conn(), room, recipient)?
+            .unwrap()
             .update_involvement(tx, Some(crate::Involvement::Everything))?;
-        crate::models::user::profile_settings::update(tx, recipient, crate::models::user::profile_settings::Changes {
-            inbox_preferences: Some(serde_json::json!({
-                "huddle_invitations": inbox,
-                "default_notification_level": "nothing",
-                "room_notification_levels": {room.to_string(): null}
-            })),
-            ..Default::default()
-        })
+        crate::models::user::profile_settings::update(
+            tx,
+            recipient,
+            crate::models::user::profile_settings::Changes {
+                inbox_preferences: Some(serde_json::json!({
+                    "huddle_invitations": inbox,
+                    "default_notification_level": "nothing",
+                    "room_notification_levels": {room.to_string(): null}
+                })),
+                ..Default::default()
+            },
+        )
     });
 }
 
@@ -41,12 +49,22 @@ fn a9_inherited_nothing_suppresses_huddle_items_and_banners() {
         inherit_nothing(&db, room, recipient, inbox);
         db.sink.take();
         db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
-        assert_eq!(db.read(move |c| Ok(c.query_row(
+        assert_eq!(
+            db.read(move |c| {
+                Ok(c.query_row(
             "SELECT count(*) FROM activity_items WHERE user_id=? AND event_type='huddle_started'",
             [recipient], |r| r.get::<_, i64>(0)
-        )?)), 0);
+        )?)
+            }),
+            0
+        );
         let events = db.sink.take();
-        assert!(!events.iter().filter_map(|e| e.as_job::<RingRequest>()).any(|r| r.recipient_id == recipient));
+        assert!(
+            !events
+                .iter()
+                .filter_map(|e| e.as_job::<RingRequest>())
+                .any(|r| r.recipient_id == recipient)
+        );
         assert!(!events.iter().any(|e| matches!(e.as_broadcast(), Some(crate::broadcasts::Broadcast::Cable { payload, .. }) if payload.get("huddleInvitation").is_some())));
     }
 }
@@ -59,15 +77,22 @@ fn a9_inherited_nothing_suppresses_already_queued_huddle_rings() {
         let (room, membership, session) = review_direct_setup(&db);
         let recipient = crate::fixtures::identify("jason");
         if !inbox {
-            db.write(move |tx| Ok(tx.conn().execute(
-                "UPDATE users SET inbox_preferences=? WHERE id=?",
-                rusqlite::params![r#"{"huddle_invitations":false}"#, recipient]
-            )?));
+            db.write(move |tx| {
+                Ok(tx.conn().execute(
+                    "UPDATE users SET inbox_preferences=? WHERE id=?",
+                    rusqlite::params![r#"{"huddle_invitations":false}"#, recipient],
+                )?)
+            });
         }
         db.sink.take();
         db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
-        let request = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>())
-            .find(|r| r.recipient_id == recipient).unwrap();
+        let request = db
+            .sink
+            .take()
+            .iter()
+            .filter_map(|e| e.as_job::<RingRequest>())
+            .find(|r| r.recipient_id == recipient)
+            .unwrap();
         inherit_nothing(&db, room, recipient, inbox);
         db.sink.take();
         db.write(move |tx| {
@@ -86,28 +111,62 @@ fn ws13b_review_queued_ring_does_not_leak_after_recipient_removal() {
     db.sink.take();
     db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
     let recipient = crate::fixtures::identify("jason");
-    let request = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()).find(|r| r.recipient_id == recipient).unwrap();
-    db.write(move |tx| Membership::find_by_room_and_user(tx.conn(), room, recipient)?.unwrap().destroy(tx));
+    let request = db
+        .sink
+        .take()
+        .iter()
+        .filter_map(|e| e.as_job::<RingRequest>())
+        .find(|r| r.recipient_id == recipient)
+        .unwrap();
+    db.write(move |tx| {
+        Membership::find_by_room_and_user(tx.conn(), room, recipient)?
+            .unwrap()
+            .destroy(tx)
+    });
     db.sink.take();
     db.write(move |tx| publish_ring_with_policy(tx, &request, None));
-    assert!(!db.sink.take().iter().any(|event| event.as_broadcast().is_some()), "delayed ring disclosed the removed room/caller");
+    assert!(
+        !db.sink
+            .take()
+            .iter()
+            .any(|event| event.as_broadcast().is_some()),
+        "delayed ring disclosed the removed room/caller"
+    );
 }
 
 #[test]
 fn ws13b_review_queued_ring_does_not_restart_ended_calls() {
     use crate::models::huddle_invitations::{RingRequest, publish_ring_with_policy};
-    for (operation, suppressed) in [("revoke", false), ("remove_caller", false), ("sign_out", false), ("revoke", true)] {
+    for (operation, suppressed) in [
+        ("revoke", false),
+        ("remove_caller", false),
+        ("sign_out", false),
+        ("revoke", true),
+    ] {
         let db = TestDb::new();
         let (room, membership, session) = review_direct_setup(&db);
         let recipient = crate::fixtures::identify("jason");
-        if suppressed { db.write(move |tx| Ok(tx.conn().execute(r#"UPDATE users SET inbox_preferences='{"huddle_invitations":false}' WHERE id=?"#, [recipient])?)); }
+        if suppressed {
+            db.write(move |tx| Ok(tx.conn().execute(r#"UPDATE users SET inbox_preferences='{"huddle_invitations":false}' WHERE id=?"#, [recipient])?));
+        }
         db.sink.take();
-        let grant = db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
-        let request = db.sink.take().iter().filter_map(|e| e.as_job::<RingRequest>()).find(|r| r.recipient_id == recipient).unwrap();
+        let grant =
+            db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+        let request = db
+            .sink
+            .take()
+            .iter()
+            .filter_map(|e| e.as_job::<RingRequest>())
+            .find(|r| r.recipient_id == recipient)
+            .unwrap();
         db.write(move |tx| {
-            HuddleGrant::find_by_id(tx.conn(), grant.id)?.unwrap().record_seen(tx)?;
+            HuddleGrant::find_by_id(tx.conn(), grant.id)?
+                .unwrap()
+                .record_seen(tx)?;
             match operation {
-                "revoke" => HuddleGrant::find_by_id(tx.conn(), grant.id)?.unwrap().revoke(tx, false, &config()),
+                "revoke" => HuddleGrant::find_by_id(tx.conn(), grant.id)?
+                    .unwrap()
+                    .revoke(tx, false, &config()),
                 "remove_caller" => Membership::find(tx.conn(), membership)?.destroy(tx),
                 "sign_out" => Session::find(tx.conn(), session)?.destroy(tx),
                 _ => unreachable!(),
@@ -115,7 +174,13 @@ fn ws13b_review_queued_ring_does_not_restart_ended_calls() {
         });
         assert!(db.sink.take().iter().any(|event| matches!(event.as_broadcast(), Some(crate::broadcasts::Broadcast::Cable { payload, .. }) if payload["huddleInvitation"]["eventType"] == "huddle_ended")));
         db.write(move |tx| publish_ring_with_policy(tx, &request, None));
-        assert!(!db.sink.take().iter().any(|event| event.as_broadcast().is_some()), "{operation} suppressed={suppressed}: ring restarted after ended frame");
+        assert!(
+            !db.sink
+                .take()
+                .iter()
+                .any(|event| event.as_broadcast().is_some()),
+            "{operation} suppressed={suppressed}: ring restarted after ended frame"
+        );
     }
 }
 
@@ -127,17 +192,40 @@ fn ignore_huddle_rings_keep_the_publication_and_suppress_the_viewers_ring() {
     for ignored in [false, true] {
         let db = TestDb::new();
         let (room, membership, session) = review_direct_setup(&db);
-        db.write(move |tx| crate::models::user_block::UserBlock::set(tx, recipient, sender, ignored));
+        db.write(move |tx| {
+            crate::models::user_block::UserBlock::set(tx, recipient, sender, ignored)
+        });
         db.sink.take();
         db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
         let events = db.sink.take();
-        let frames = events.iter().filter_map(|event| match event.as_broadcast()? {
-            crate::broadcasts::Broadcast::Cable { payload, stream } if stream == format!("user_{recipient}_activity") && payload.get("huddleInvitation").is_some() => Some(payload),
-            _ => None,
-        }).collect::<Vec<_>>();
-        assert_eq!(frames.len(), 1, "the same ring publication exists with or without a block");
-        assert_eq!(frames[0]["huddleInvitation"]["unchanged"].as_bool().unwrap_or(false), ignored);
-        let request = events.iter().filter_map(|event| event.as_job::<RingRequest>()).find(|r| r.recipient_id == recipient).unwrap();
+        let frames = events
+            .iter()
+            .filter_map(|event| match event.as_broadcast()? {
+                crate::broadcasts::Broadcast::Cable { payload, stream }
+                    if stream == format!("user_{recipient}_activity")
+                        && payload.get("huddleInvitation").is_some() =>
+                {
+                    Some(payload)
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            frames.len(),
+            1,
+            "the same ring publication exists with or without a block"
+        );
+        assert_eq!(
+            frames[0]["huddleInvitation"]["unchanged"]
+                .as_bool()
+                .unwrap_or(false),
+            ignored
+        );
+        let request = events
+            .iter()
+            .filter_map(|event| event.as_job::<RingRequest>())
+            .find(|r| r.recipient_id == recipient)
+            .unwrap();
         db.write(move |tx| publish_ring_with_policy(tx, &request, None));
         assert!(db.sink.take().iter().any(|event| matches!(event.as_broadcast(), Some(crate::broadcasts::Broadcast::Cable { payload, .. }) if payload.get("huddleInvitation").is_some())));
     }

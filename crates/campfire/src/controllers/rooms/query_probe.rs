@@ -23,9 +23,11 @@ unsafe extern "C" fn trace(_: u32, data: *mut c_void, stmt: *mut c_void, _: *mut
     let sql = unsafe { CStr::from_ptr(sql) }
         .to_string_lossy()
         .into_owned();
-    state.statements.lock().unwrap().push(Statement {
-        sql: sql.clone(),
-    });
+    state
+        .statements
+        .lock()
+        .unwrap()
+        .push(Statement { sql: sql.clone() });
     0
 }
 fn install(conn: &Connection, data: usize) {
@@ -122,12 +124,33 @@ impl Drop for SqlProbe {
     }
 }
 
-pub(crate) async fn request(router: &axum::Router,path:&str)->crate::controllers::presenters::test_support::Reply {
-    use axum::{body::Body,http::Request};
+pub(crate) async fn request(
+    router: &axum::Router,
+    path: &str,
+) -> crate::controllers::presenters::test_support::Reply {
+    use axum::{body::Body, http::Request};
     use tower::ServiceExt;
-    let response=router.clone().oneshot(Request::builder().uri(path).header("host","campfire.test")
-        .header("cookie",crate::controllers::presenters::test_support::david_cookie())
-        .body(Body::empty()).unwrap()).await.unwrap();
-    crate::controllers::presenters::test_support::Reply {status:response.status(),headers:response.headers().clone(),
-        body:axum::body::to_bytes(response.into_body(),usize::MAX).await.unwrap().to_vec()}
+    let response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(path)
+                .header("host", "campfire.test")
+                .header(
+                    "cookie",
+                    crate::controllers::presenters::test_support::david_cookie(),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    crate::controllers::presenters::test_support::Reply {
+        status: response.status(),
+        headers: response.headers().clone(),
+        body: axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .to_vec(),
+    }
 }

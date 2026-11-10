@@ -26,15 +26,26 @@ pub struct Snapshot {
 
 /// `DisconnectCleanupJob.credentials_encryptor`.
 pub fn encryptor(secrets: &Secrets) -> MessageEncryptor {
-    MessageEncryptor::new(&secrets.key_generator.generate_key(PURPOSE, 32), Serializer::JsonWithFallback { allow_marshal: true })
+    MessageEncryptor::new(
+        &secrets.key_generator.generate_key(PURPOSE, 32),
+        Serializer::JsonWithFallback {
+            allow_marshal: true,
+        },
+    )
 }
 
 /// `DisconnectCleanupJob.encrypt_credentials(snapshot)` at `now`.
 pub fn encrypt(secrets: &Secrets, snapshot: &Snapshot, now: Timestamp) -> String {
     let mut hash = Map::new();
     hash.insert("access_token".into(), snapshot.access_token.clone().into());
-    hash.insert("refresh_token".into(), snapshot.refresh_token.clone().into());
-    hash.insert("access_token_expires_at".into(), snapshot.access_token_expires_at.map(iso8601_millis).into());
+    hash.insert(
+        "refresh_token".into(),
+        snapshot.refresh_token.clone().into(),
+    );
+    hash.insert(
+        "access_token_expires_at".into(),
+        snapshot.access_token_expires_at.map(iso8601_millis).into(),
+    );
     encryptor(secrets).encrypt_and_sign(&Value::Object(hash), Some(PURPOSE), Some(now + EXPIRES_IN))
 }
 
@@ -42,7 +53,9 @@ pub fn encrypt(secrets: &Secrets, snapshot: &Snapshot, now: Timestamp) -> String
 /// purpose, was tampered with, or was encrypted under another key. Otherwise the decrypted value,
 /// which for anything the app wrote is the snapshot hash.
 pub fn decrypt(secrets: &Secrets, blob: &str, now: Timestamp) -> Option<Value> {
-    encryptor(secrets).decrypt_and_verify(blob, Some(PURPOSE), now).ok()
+    encryptor(secrets)
+        .decrypt_and_verify(blob, Some(PURPOSE), now)
+        .ok()
 }
 
 /// [`decrypt`], read back into a [`Snapshot`]. `None` also when the hash isn't snapshot-shaped.
@@ -73,7 +86,11 @@ mod tests {
     }
 
     fn snapshot() -> Snapshot {
-        Snapshot { access_token: Some("FAKE-access-token".into()), refresh_token: None, access_token_expires_at: Some("2026-01-01T13:00:00.123Z".parse().unwrap()) }
+        Snapshot {
+            access_token: Some("FAKE-access-token".into()),
+            refresh_token: None,
+            access_token_expires_at: Some("2026-01-01T13:00:00.123Z".parse().unwrap()),
+        }
     }
 
     #[test]
@@ -81,7 +98,14 @@ mod tests {
         let (secrets, now): (_, Timestamp) = (secrets(), "2026-01-01T12:00:00Z".parse().unwrap());
         let blob = encrypt(&secrets, &snapshot(), now);
         assert_eq!(decrypt_snapshot(&secrets, &blob, now), Some(snapshot()));
-        assert_eq!(decrypt_snapshot(&secrets, &blob, now + EXPIRES_IN - SignedDuration::from_secs(1)), Some(snapshot()));
+        assert_eq!(
+            decrypt_snapshot(
+                &secrets,
+                &blob,
+                now + EXPIRES_IN - SignedDuration::from_secs(1)
+            ),
+            Some(snapshot())
+        );
         assert_eq!(decrypt(&secrets, &blob, now + EXPIRES_IN), None);
     }
 
@@ -91,7 +115,8 @@ mod tests {
         let blob = encrypt(&secrets, &snapshot(), now);
         assert_eq!(decrypt(&Secrets::new(&"b".repeat(128)), &blob, now), None);
 
-        let other_purpose = encryptor(&secrets).encrypt_and_sign(&Value::from("x"), Some("calendar/other"), None);
+        let other_purpose =
+            encryptor(&secrets).encrypt_and_sign(&Value::from("x"), Some("calendar/other"), None);
         assert_eq!(decrypt(&secrets, &other_purpose, now), None);
         let no_purpose = encryptor(&secrets).encrypt_and_sign(&Value::from("x"), None, None);
         assert_eq!(decrypt(&secrets, &no_purpose, now), None);

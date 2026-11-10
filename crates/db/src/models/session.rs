@@ -225,7 +225,9 @@ impl Session {
             [self.id],
         )?;
         if leases > 0 {
-            tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::UserStatus { user_id: self.user_id });
+            tx.broadcast_after_commit_once(&crate::broadcasts::Broadcast::UserStatus {
+                user_id: self.user_id,
+            });
         }
         tx.conn().execute_cached(
             r#"DELETE FROM "two_factor_setup_secrets" WHERE "two_factor_setup_secrets"."session_id" = ?"#,

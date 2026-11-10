@@ -308,16 +308,24 @@ async fn run_script(target: &Target, expected: Option<&[Exchange]>) -> Vec<Excha
                 if let Some(cookie) = cookie {
                     headers.insert("cookie", target.fixtures.cookies[cookie].parse().unwrap());
                 }
-                let (ws, _) = crate::test_support::wait("golden replay WebSocket upgrade", tokio_tungstenite::connect_async(request))
-                    .await
-                    .expect("upgrade");
+                let (ws, _) = crate::test_support::wait(
+                    "golden replay WebSocket upgrade",
+                    tokio_tungstenite::connect_async(request),
+                )
+                .await
+                .expect("upgrade");
                 sockets.insert(socket.to_string(), ws);
             }
             Step::Send(socket, text) => {
                 crate::test_support::wait(
                     "golden replay command send",
-                    sockets.get_mut(socket).unwrap().send(WsMessage::Text(text.into())),
-                ).await.unwrap();
+                    sockets
+                        .get_mut(socket)
+                        .unwrap()
+                        .send(WsMessage::Text(text.into())),
+                )
+                .await
+                .unwrap();
             }
             Step::Trigger(event, args) => {
                 let args: Vec<String> = args
@@ -572,11 +580,40 @@ async fn replays_reference_frames() {
         serde_json::from_str(&std::fs::read_to_string(repo_root().join(GOLDEN)).unwrap()).unwrap();
     let dir = tempfile::tempdir().unwrap();
     let target = start_rust(&golden.fixtures, dir.path()).await;
-    let retired = ["A room messages", "A thread messages", "A room threads", "A stock thread messages rejected", "A stock room threads rejected", "A turbo status", "A turbo ooo notice", "A room messages for a room A isn't in", "A room messages without a name", "A room messages with a forged name", "A room messages with the rooms name", "A turbo rooms", "A turbo own rooms", "A turbo guarded room messages", "A turbo forged", "A2 room messages", "A2 turbo guarded room messages", "A2 turbo rooms"];
-    golden.steps.retain(|exchange| !retired.contains(&exchange.step.as_str()));
+    let retired = [
+        "A room messages",
+        "A thread messages",
+        "A room threads",
+        "A stock thread messages rejected",
+        "A stock room threads rejected",
+        "A turbo status",
+        "A turbo ooo notice",
+        "A room messages for a room A isn't in",
+        "A room messages without a name",
+        "A room messages with a forged name",
+        "A room messages with the rooms name",
+        "A turbo rooms",
+        "A turbo own rooms",
+        "A turbo guarded room messages",
+        "A turbo forged",
+        "A2 room messages",
+        "A2 turbo guarded room messages",
+        "A2 turbo rooms",
+    ];
+    golden
+        .steps
+        .retain(|exchange| !retired.contains(&exchange.step.as_str()));
     for exchange in &mut golden.steps {
         for frames in exchange.frames.values_mut() {
-            frames.retain(|frame| !serde_json::from_str::<Value>(frame).ok().is_some_and(|value| value["message"].as_str().is_some_and(|html| html.starts_with("<turbo-stream"))));
+            frames.retain(|frame| {
+                !serde_json::from_str::<Value>(frame)
+                    .ok()
+                    .is_some_and(|value| {
+                        value["message"]
+                            .as_str()
+                            .is_some_and(|html| html.starts_with("<turbo-stream"))
+                    })
+            });
         }
         exchange.frames.retain(|_, frames| !frames.is_empty());
     }

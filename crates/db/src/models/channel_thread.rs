@@ -15,7 +15,7 @@ use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 use serde::{Deserialize, Serialize};
 
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::database::Tx;
 use crate::error::{Error, Errors, OptionalExt, Result};
 use crate::events::{Event, Job};
@@ -33,7 +33,10 @@ mod board;
 mod tag_assignment;
 mod work;
 mod work_listing;
-pub use access::{ThreadAccessChange, ThreadAccessError, ThreadAccessMembership, ThreadVisibility, readable_by_sql};
+pub use access::{
+    ThreadAccessChange, ThreadAccessError, ThreadAccessMembership, ThreadVisibility,
+    readable_by_sql,
+};
 pub use agent_work::{AgentWorkChanges, tag_names_from_value};
 pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_page_number};
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
@@ -292,13 +295,20 @@ impl ChannelThread {
     }
 
     /// Resolve the forward picker's access in the same query as its thread records.
-    pub fn readable_for_rooms(conn: &Connection, room_ids: &[i64], viewer: i64) -> Result<Vec<Self>> {
+    pub fn readable_for_rooms(
+        conn: &Connection,
+        room_ids: &[i64],
+        viewer: i64,
+    ) -> Result<Vec<Self>> {
         if room_ids.is_empty() {
             return Ok(Vec::new());
         }
         query_all(
             conn,
-            &format!("SELECT * FROM channel_threads WHERE room_id IN (SELECT value FROM json_each(?1)) AND {} ORDER BY last_activity_at DESC, id DESC", readable_by_sql("channel_threads.id", "?2")),
+            &format!(
+                "SELECT * FROM channel_threads WHERE room_id IN (SELECT value FROM json_each(?1)) AND {} ORDER BY last_activity_at DESC, id DESC",
+                readable_by_sql("channel_threads.id", "?2")
+            ),
             params![serde_json::json!(room_ids).to_string(), viewer],
             Self::from_row,
         )
@@ -338,7 +348,9 @@ impl ChannelThread {
         )?;
         let mut visible = Vec::new();
         for thread in threads {
-            if thread.readable_by(conn, user_id)? { visible.push(thread); }
+            if thread.readable_by(conn, user_id)? {
+                visible.push(thread);
+            }
         }
         Ok(visible)
     }
@@ -362,7 +374,8 @@ impl ChannelThread {
         let room = Room::find(tx.conn(), attributes.room_id)?;
         if let Some(parent_id) = attributes.parent_message_id
             && let Some(existing) = Self::find_by_parent_message(tx.conn(), parent_id)?
-            && !existing.readable_by(tx.conn(), attributes.creator_id)? {
+            && !existing.readable_by(tx.conn(), attributes.creator_id)?
+        {
             return Err(Error::RecordNotFound("ChannelThread"));
         }
         let name = match attributes.name.filter(|name| !name.trim().is_empty()) {
@@ -375,9 +388,15 @@ impl ChannelThread {
             )?),
         };
         let tag_names = if room.board() {
-            Some(crate::BoardTagPolicy::post_tags(tx.conn(), room.id, attributes.tag_names.as_deref().unwrap_or_default())?)
+            Some(crate::BoardTagPolicy::post_tags(
+                tx.conn(),
+                room.id,
+                attributes.tag_names.as_deref().unwrap_or_default(),
+            )?)
         } else {
-            attributes.tag_names.map(|names| normalize_tag_names(&names))
+            attributes
+                .tag_names
+                .map(|names| normalize_tag_names(&names))
         };
         let work_status = attributes.work_status.filter(|status| !status.is_empty());
         let mut thread = ChannelThread {
@@ -551,7 +570,10 @@ impl ChannelThread {
                     format!("must be at most {} characters", thread_tag::TAG_NAME_LIMIT),
                 );
             } else if !thread_tag::valid_tag_name(name)
-                && !(room.board() && crate::BoardTag::canonical_name(conn, room.id, name)?.as_deref() == Some(name.as_str())) {
+                && !(room.board()
+                    && crate::BoardTag::canonical_name(conn, room.id, name)?.as_deref()
+                        == Some(name.as_str()))
+            {
                 errors.add("tags", "use lowercase letters, digits, and hyphens");
             }
         }
@@ -941,7 +963,15 @@ impl ChannelThread {
             .into_iter()
             .map(|membership| membership.user_id)
             .collect::<HashSet<_>>();
-        let memberships = query_all(tx.conn(), &format!("SELECT thread_memberships.* FROM thread_memberships WHERE thread_id=? AND {} ORDER BY id", readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id")), [thread.id], ThreadMembership::from_row)?;
+        let memberships = query_all(
+            tx.conn(),
+            &format!(
+                "SELECT thread_memberships.* FROM thread_memberships WHERE thread_id=? AND {} ORDER BY id",
+                readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id")
+            ),
+            [thread.id],
+            ThreadMembership::from_row,
+        )?;
         for membership in memberships {
             if membership.user_id == message.creator_id
                 || !room_members.contains(&membership.user_id)
@@ -958,8 +988,11 @@ impl ChannelThread {
         }
         let mut seen = HashSet::new();
         for user_id in unread_user_ids.into_iter().filter(|id| seen.insert(*id)) {
-            let mut payload = serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id });
-            if blockers.contains(&user_id) { payload["refreshOnly"] = serde_json::json!(true); }
+            let mut payload =
+                serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id });
+            if blockers.contains(&user_id) {
+                payload["refreshOnly"] = serde_json::json!(true);
+            }
             tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
                 stream: format!("user_{user_id}_unread_threads"),
                 payload,
@@ -1070,8 +1103,16 @@ impl ChannelThread {
         if !importing && fresh.visibility == ThreadVisibility::Private {
             for membership in Membership::for_room(tx.conn(), fresh.room_id)? {
                 if fresh.readable_by(tx.conn(), membership.user_id)? {
-                    tx.broadcast_after_commit_once(&ThreadAccessChange { thread_id: fresh.id, room_id: fresh.room_id, user_id: membership.user_id, added: false });
-                    tx.emit_after_commit(Event::DisconnectUser { user_id: membership.user_id, reconnect: true });
+                    tx.broadcast_after_commit_once(&ThreadAccessChange {
+                        thread_id: fresh.id,
+                        room_id: fresh.room_id,
+                        user_id: membership.user_id,
+                        added: false,
+                    });
+                    tx.emit_after_commit(Event::DisconnectUser {
+                        user_id: membership.user_id,
+                        reconnect: true,
+                    });
                 }
             }
         }
@@ -1211,7 +1252,10 @@ impl ChannelThread {
     ) -> Result<Vec<ThreadPushCandidate>> {
         let memberships: Vec<ThreadMembership> = query_all(
             conn,
-            &format!(r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."thread_id" = ? AND "thread_memberships"."user_id" != ? AND {} ORDER BY "thread_memberships"."id" ASC"#, readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id")),
+            &format!(
+                r#"SELECT "thread_memberships".* FROM "thread_memberships" WHERE "thread_memberships"."thread_id" = ? AND "thread_memberships"."user_id" != ? AND {} ORDER BY "thread_memberships"."id" ASC"#,
+                readable_by_sql("thread_memberships.thread_id", "thread_memberships.user_id")
+            ),
             [thread.id, message.creator_id],
             ThreadMembership::from_row,
         )?;
@@ -1349,12 +1393,19 @@ impl ChannelThread {
             return Ok(Vec::new());
         };
         let policy = ThreadPolicy::load(conn, thread_id, &message, now)?;
-        let mut pushes = Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
-            policy.push(candidate)
-        })?;
-        let subscriptions = pushes.iter().flat_map(|push| push.subscriptions.iter().cloned()).collect();
-        let allowed: std::collections::HashSet<i64> = PushSubscription::route_message(conn, subscriptions, now)?
-            .into_iter().map(|s| s.id).collect();
+        let mut pushes =
+            Self::push_recipients(conn, rich_text, thread_id, message_id, &|candidate| {
+                policy.push(candidate)
+            })?;
+        let subscriptions = pushes
+            .iter()
+            .flat_map(|push| push.subscriptions.iter().cloned())
+            .collect();
+        let allowed: std::collections::HashSet<i64> =
+            PushSubscription::route_message(conn, subscriptions, now)?
+                .into_iter()
+                .map(|s| s.id)
+                .collect();
         for push in &mut pushes {
             push.subscriptions.retain(|s| allowed.contains(&s.id));
         }
@@ -1370,14 +1421,23 @@ impl ChannelThread {
         message: &Message,
         now: Timestamp,
     ) -> Result<Vec<i64>> {
-        let Some(thread) = message.thread_id.map(|id| Self::find_by_id(conn, id)).transpose()?.flatten() else {
+        let Some(thread) = message
+            .thread_id
+            .map(|id| Self::find_by_id(conn, id))
+            .transpose()?
+            .flatten()
+        else {
             return Ok(Vec::new());
         };
         let policy = ThreadPolicy::load(conn, thread.id, message, now)?;
-        Ok(Self::notified(conn, rich_text, &thread, message, &|candidate| policy.push(candidate))?
+        Ok(
+            Self::notified(conn, rich_text, &thread, message, &|candidate| {
+                policy.push(candidate)
+            })?
             .into_iter()
             .map(|candidate| candidate.recipient.id)
-            .collect())
+            .collect(),
+        )
     }
 }
 
@@ -1399,7 +1459,11 @@ impl ThreadPolicy {
         Ok(Self {
             room_id: message.room_id,
             users: crate::UserStatusSettings::for_ids(conn, &ids)?,
-            exceptions: super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?,
+            exceptions: super::notification_policy::dnd_exceptions_for(
+                conn,
+                &ids,
+                Some(message.creator_id),
+            )?,
             now,
         })
     }
@@ -1449,8 +1513,10 @@ pub fn thread_base_push(candidate: &ThreadPushCandidate) -> bool {
 
 /// The indicator replace (`messages/_thread_indicator`) for a thread's parent message.
 pub fn thread_indicator_broadcast(_room: &Room, parent: &Message, reply_count: i64) -> Broadcast {
-    Broadcast::ThreadIndicator { message_id: parent.id,
-            reply_count }
+    Broadcast::ThreadIndicator {
+        message_id: parent.id,
+        reply_count,
+    }
 }
 
 /// `set_default_name`: the parent message's first line, truncated to 100 with "…", else

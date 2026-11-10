@@ -45,17 +45,72 @@ pub(crate) const KNOWN_ENCODINGS: &[&str] = &["UTF-8", "US-ASCII", "ASCII-8BIT",
 /// plaintext has, which is what Rails records in the `e` header. Pass it to
 /// [`ArEncryption::encrypt_with_encoding`] to write what Rails writes.
 pub const ENCRYPTED_COLUMNS: &[EncryptedColumn] = &[
-    EncryptedColumn { model: "Agent", table: "agents", column: "webhook_signing_secret", encoding: "US-ASCII" },
-    EncryptedColumn { model: "FizzyConnectedAccount", table: "fizzy_connected_accounts", column: "access_token", encoding: "UTF-8" },
-    EncryptedColumn { model: "GithubConnectedAccount", table: "github_connected_accounts", column: "access_token", encoding: "UTF-8" },
-    EncryptedColumn { model: "GithubConnectedAccount", table: "github_connected_accounts", column: "refresh_token", encoding: "UTF-8" },
-    EncryptedColumn { model: "GoogleAccount", table: "google_accounts", column: "access_token", encoding: "UTF-8" },
-    EncryptedColumn { model: "GoogleAccount", table: "google_accounts", column: "refresh_token", encoding: "UTF-8" },
-    EncryptedColumn { model: "SlackConnection", table: "slack_connections", column: "access_token", encoding: "UTF-8" },
-    EncryptedColumn { model: "SlackWorkspace", table: "slack_workspaces", column: "client_secret", encoding: "UTF-8" },
-    EncryptedColumn { model: "TwoFactorCredential", table: "two_factor_credentials", column: "secret", encoding: "ASCII-8BIT" },
-    EncryptedColumn { model: "TwoFactorSetupSecret", table: "two_factor_setup_secrets", column: "secret", encoding: "ASCII-8BIT" },
-    EncryptedColumn { model: "Webhook", table: "webhooks", column: "signing_secret", encoding: "US-ASCII" },
+    EncryptedColumn {
+        model: "Agent",
+        table: "agents",
+        column: "webhook_signing_secret",
+        encoding: "US-ASCII",
+    },
+    EncryptedColumn {
+        model: "FizzyConnectedAccount",
+        table: "fizzy_connected_accounts",
+        column: "access_token",
+        encoding: "UTF-8",
+    },
+    EncryptedColumn {
+        model: "GithubConnectedAccount",
+        table: "github_connected_accounts",
+        column: "access_token",
+        encoding: "UTF-8",
+    },
+    EncryptedColumn {
+        model: "GithubConnectedAccount",
+        table: "github_connected_accounts",
+        column: "refresh_token",
+        encoding: "UTF-8",
+    },
+    EncryptedColumn {
+        model: "GoogleAccount",
+        table: "google_accounts",
+        column: "access_token",
+        encoding: "UTF-8",
+    },
+    EncryptedColumn {
+        model: "GoogleAccount",
+        table: "google_accounts",
+        column: "refresh_token",
+        encoding: "UTF-8",
+    },
+    EncryptedColumn {
+        model: "SlackConnection",
+        table: "slack_connections",
+        column: "access_token",
+        encoding: "UTF-8",
+    },
+    EncryptedColumn {
+        model: "SlackWorkspace",
+        table: "slack_workspaces",
+        column: "client_secret",
+        encoding: "UTF-8",
+    },
+    EncryptedColumn {
+        model: "TwoFactorCredential",
+        table: "two_factor_credentials",
+        column: "secret",
+        encoding: "ASCII-8BIT",
+    },
+    EncryptedColumn {
+        model: "TwoFactorSetupSecret",
+        table: "two_factor_setup_secrets",
+        column: "secret",
+        encoding: "ASCII-8BIT",
+    },
+    EncryptedColumn {
+        model: "Webhook",
+        table: "webhooks",
+        column: "signing_secret",
+        encoding: "US-ASCII",
+    },
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -104,8 +159,12 @@ impl ArEncryption {
         // Rails keeps its DerivedSecretKeyProvider (and its derived keys) for the
         // application lifetime. Cache with these Secrets, including concurrent callers.
         let key = secrets.ar_encryption_key.get_or_init(|| {
-            let primary_key = secrets.key_generator.generate_key(PRIMARY_KEY_SALT, KEY_LENGTH);
-            let salt = secrets.key_generator.generate_key(KEY_DERIVATION_SALT, KEY_LENGTH);
+            let primary_key = secrets
+                .key_generator
+                .generate_key(PRIMARY_KEY_SALT, KEY_LENGTH);
+            let salt = secrets
+                .key_generator
+                .generate_key(KEY_DERIVATION_SALT, KEY_LENGTH);
             derive_key(&primary_key, &salt)
         });
         Self::from_key(key)
@@ -137,12 +196,27 @@ impl ArEncryption {
         self.encrypt_with_iv(plaintext, encoding, &iv)
     }
 
-    pub(crate) fn encrypt_with_iv(&self, plaintext: &[u8], encoding: &str, iv: &[u8; IV_LENGTH]) -> String {
+    pub(crate) fn encrypt_with_iv(
+        &self,
+        plaintext: &[u8],
+        encoding: &str,
+        iv: &[u8; IV_LENGTH],
+    ) -> String {
         let compressed = plaintext.len() > COMPRESSION_THRESHOLD;
-        let data = if compressed { deflate(plaintext) } else { plaintext.to_vec() };
+        let data = if compressed {
+            deflate(plaintext)
+        } else {
+            plaintext.to_vec()
+        };
         let sealed = self
             .cipher
-            .encrypt(Nonce::from_slice(iv), Payload { msg: &data, aad: b"" })
+            .encrypt(
+                Nonce::from_slice(iv),
+                Payload {
+                    msg: &data,
+                    aad: b"",
+                },
+            )
             .expect("aes-gcm encryption doesn't fail for in-range lengths");
         let (ciphertext, tag) = sealed.split_at(sealed.len() - AUTH_TAG_LENGTH);
 
@@ -150,7 +224,10 @@ impl ArEncryption {
         headers.insert("iv".into(), encoding::strict_encode(iv).into());
         headers.insert("at".into(), encoding::strict_encode(tag).into());
         if encoding != DEFAULT_ENCODING {
-            headers.insert("e".into(), encoding::strict_encode(encoding.as_bytes()).into());
+            headers.insert(
+                "e".into(),
+                encoding::strict_encode(encoding.as_bytes()).into(),
+            );
         }
         if compressed {
             headers.insert("c".into(), true.into());
@@ -160,13 +237,15 @@ impl ArEncryption {
 
     /// Decrypts a column value to a string. Values Smartfire writes are all UTF-8 compatible.
     pub fn decrypt(&self, ciphertext: &str) -> Result<String, DecryptionError> {
-        String::from_utf8(self.decrypt_bytes(ciphertext)?.bytes).map_err(|_| DecryptionError::NotUtf8)
+        String::from_utf8(self.decrypt_bytes(ciphertext)?.bytes)
+            .map_err(|_| DecryptionError::NotUtf8)
     }
 
     /// `Encryptor#decrypt`, following `MessageSerializer#load`, `KeyProvider#decryption_keys`,
     /// `Cipher::Aes256Gcm#decrypt` and `Encryptor#uncompress_if_needed`.
     pub fn decrypt_bytes(&self, ciphertext: &str) -> Result<Decrypted, DecryptionError> {
-        let data: Value = serde_json::from_str(ciphertext).map_err(|_| DecryptionError::Decryption)?;
+        let data: Value =
+            serde_json::from_str(ciphertext).map_err(|_| DecryptionError::Decryption)?;
         let message = parse_message(&data, 1)?;
 
         // An `i` header names the key (store_key_references); a truthy one must be ours.
@@ -177,18 +256,33 @@ impl ArEncryption {
         }
 
         let payload = message.payload.ok_or(DecryptionError::Decryption)?;
-        let iv = message.headers.bytes("iv").filter(|iv| iv.len() == IV_LENGTH).ok_or(DecryptionError::Decryption)?;
-        let tag = message.headers.bytes("at").filter(|tag| tag.len() == AUTH_TAG_LENGTH).ok_or(DecryptionError::Decryption)?;
+        let iv = message
+            .headers
+            .bytes("iv")
+            .filter(|iv| iv.len() == IV_LENGTH)
+            .ok_or(DecryptionError::Decryption)?;
+        let tag = message
+            .headers
+            .bytes("at")
+            .filter(|tag| tag.len() == AUTH_TAG_LENGTH)
+            .ok_or(DecryptionError::Decryption)?;
         let sealed = [payload.as_slice(), tag].concat();
         let decrypted = self
             .cipher
-            .decrypt(Nonce::from_slice(iv), Payload { msg: &sealed, aad: b"" })
+            .decrypt(
+                Nonce::from_slice(iv),
+                Payload {
+                    msg: &sealed,
+                    aad: b"",
+                },
+            )
             .map_err(|_| DecryptionError::Decryption)?;
 
         let encoding = match message.headers.get("e") {
             None | Some(Header::Scalar(Value::Null)) => DEFAULT_ENCODING.to_string(),
             Some(Header::Bytes(name)) => {
-                let name = String::from_utf8(name.clone()).map_err(|_| DecryptionError::UnknownEncoding)?;
+                let name = String::from_utf8(name.clone())
+                    .map_err(|_| DecryptionError::UnknownEncoding)?;
                 if !KNOWN_ENCODINGS.contains(&name.as_str()) {
                     return Err(DecryptionError::UnknownEncoding);
                 }
@@ -198,7 +292,11 @@ impl ArEncryption {
         };
 
         let compressed = message.headers.get("c").is_some_and(Header::truthy);
-        let bytes = if compressed { inflate(&decrypted).ok_or(DecryptionError::Decompression)? } else { decrypted };
+        let bytes = if compressed {
+            inflate(&decrypted).ok_or(DecryptionError::Decompression)?
+        } else {
+            decrypted
+        };
         Ok(Decrypted { bytes, encoding })
     }
 }
@@ -227,7 +325,9 @@ fn deflate(data: &[u8]) -> Vec<u8> {
 fn inflate(data: &[u8]) -> Option<Vec<u8>> {
     use std::io::Read;
     let mut out = Vec::new();
-    flate2::read::ZlibDecoder::new(data).read_to_end(&mut out).ok()?;
+    flate2::read::ZlibDecoder::new(data)
+        .read_to_end(&mut out)
+        .ok()?;
     Some(out)
 }
 
@@ -271,10 +371,15 @@ fn parse_message(data: &Value, level: usize) -> Result<Message, DecryptionError>
     if level > 2 {
         return Err(DecryptionError::Decryption);
     }
-    let data = data.as_object().filter(|data| data.contains_key("p")).ok_or(DecryptionError::Decryption)?;
+    let data = data
+        .as_object()
+        .filter(|data| data.contains_key("p"))
+        .ok_or(DecryptionError::Decryption)?;
     let payload = match &data["p"] {
         Value::Null => None,
-        Value::String(encoded) => Some(encoding::strict_decode(encoded).ok_or(DecryptionError::Decryption)?),
+        Value::String(encoded) => {
+            Some(encoding::strict_decode(encoded).ok_or(DecryptionError::Decryption)?)
+        }
         // Message#validate_payload_type: only strings (or nil).
         _ => return Err(DecryptionError::Decryption),
     };
@@ -296,7 +401,9 @@ fn parse_message(data: &Value, level: usize) -> Result<Message, DecryptionError>
 fn parse_header(value: &Value, level: usize) -> Result<Header, DecryptionError> {
     match value {
         Value::Object(_) => Ok(Header::Message(Box::new(parse_message(value, level + 1)?))),
-        Value::String(encoded) => Ok(Header::Bytes(encoding::strict_decode(encoded).ok_or(DecryptionError::Decryption)?)),
+        Value::String(encoded) => Ok(Header::Bytes(
+            encoding::strict_decode(encoded).ok_or(DecryptionError::Decryption)?,
+        )),
         // Properties::ALLOWED_VALUE_CLASSES has no Array.
         Value::Array(_) => Err(DecryptionError::Decryption),
         scalar => Ok(Header::Scalar(scalar.clone())),
@@ -314,11 +421,21 @@ mod tests {
     #[test]
     fn round_trips_short_long_and_empty_values() {
         let encryption = encryption();
-        for value in ["", "a", &"x".repeat(140), &"x".repeat(141), &"é".repeat(500)] {
+        for value in [
+            "",
+            "a",
+            &"x".repeat(140),
+            &"x".repeat(141),
+            &"é".repeat(500),
+        ] {
             let ciphertext = encryption.encrypt(value);
             assert_eq!(encryption.decrypt(&ciphertext).unwrap(), value);
             let headers = serde_json::from_str::<Value>(&ciphertext).unwrap()["h"].clone();
-            assert_eq!(headers.get("c").is_some(), value.len() > COMPRESSION_THRESHOLD, "{value:?}");
+            assert_eq!(
+                headers.get("c").is_some(),
+                value.len() > COMPRESSION_THRESHOLD,
+                "{value:?}"
+            );
         }
     }
 
@@ -327,13 +444,19 @@ mod tests {
         let encryption = encryption();
         let ciphertext = encryption.encrypt_with_encoding(b"JBSWY3DPEHPK3PXP", "ASCII-8BIT");
         let decrypted = encryption.decrypt_bytes(&ciphertext).unwrap();
-        assert_eq!((decrypted.bytes.as_slice(), decrypted.encoding.as_str()), (b"JBSWY3DPEHPK3PXP".as_slice(), "ASCII-8BIT"));
+        assert_eq!(
+            (decrypted.bytes.as_slice(), decrypted.encoding.as_str()),
+            (b"JBSWY3DPEHPK3PXP".as_slice(), "ASCII-8BIT")
+        );
     }
 
     #[test]
     fn the_wrong_key_is_a_decryption_error() {
         let ciphertext = encryption().encrypt("secret");
-        assert_eq!(ArEncryption::from_key(&[8u8; 32]).decrypt(&ciphertext), Err(DecryptionError::Decryption));
+        assert_eq!(
+            ArEncryption::from_key(&[8u8; 32]).decrypt(&ciphertext),
+            Err(DecryptionError::Decryption)
+        );
     }
 
     #[test]
@@ -343,15 +466,27 @@ mod tests {
             let ciphertext = encryption.encrypt(value);
             let message: Value = serde_json::from_str(&ciphertext).unwrap();
             for field in ["p", "iv", "at"] {
-                let encoded = if field == "p" { &message["p"] } else { &message["h"][field] };
+                let encoded = if field == "p" {
+                    &message["p"]
+                } else {
+                    &message["h"][field]
+                };
                 let bytes = encoding::strict_decode(encoded.as_str().unwrap()).unwrap();
                 for index in 0..bytes.len() {
                     let mut tampered_bytes = bytes.clone();
                     tampered_bytes[index] ^= 0x01;
                     let mut tampered = message.clone();
-                    let target = if field == "p" { &mut tampered["p"] } else { &mut tampered["h"][field] };
+                    let target = if field == "p" {
+                        &mut tampered["p"]
+                    } else {
+                        &mut tampered["h"][field]
+                    };
                     *target = encoding::strict_encode(&tampered_bytes).into();
-                    assert_eq!(encryption.decrypt(&tampered.to_string()), Err(DecryptionError::Decryption), "{field}[{index}]");
+                    assert_eq!(
+                        encryption.decrypt(&tampered.to_string()),
+                        Err(DecryptionError::Decryption),
+                        "{field}[{index}]"
+                    );
                 }
             }
         }
@@ -360,7 +495,17 @@ mod tests {
     #[test]
     fn garbage_never_panics() {
         let encryption = encryption();
-        for input in ["", "null", "[]", "{}", "{\"p\":null}", "{\"p\":1}", "{\"p\":\"\",\"h\":{\"iv\":5,\"at\":[]}}", "\u{0}", "{\"p\":\"AA==\",\"h\":\"x\"}"] {
+        for input in [
+            "",
+            "null",
+            "[]",
+            "{}",
+            "{\"p\":null}",
+            "{\"p\":1}",
+            "{\"p\":\"\",\"h\":{\"iv\":5,\"at\":[]}}",
+            "\u{0}",
+            "{\"p\":\"AA==\",\"h\":\"x\"}",
+        ] {
             assert!(encryption.decrypt(input).is_err(), "{input:?}");
         }
     }
@@ -372,18 +517,31 @@ fn provider_derives_once_across_concurrent_instances_like_rails() {
     use std::sync::{Arc, Barrier};
     let secrets = Arc::new(Secrets::new("FAKE-cached-provider"));
     let barrier = Arc::new(Barrier::new(4));
-    let workers: Vec<_> = (0..4).map(|_| {
-        let secrets = secrets.clone(); let barrier = barrier.clone();
-        std::thread::spawn(move || {
-            barrier.wait();
-            let first = ArEncryption::new(&secrets);
-            let encrypted = first.encrypt("provider fixture");
-            let second = ArEncryption::new(&secrets);
-            assert_eq!(second.decrypt(&encrypted).unwrap(), "provider fixture");
-            DERIVATIONS.with(std::cell::Cell::get)
+    let workers: Vec<_> = (0..4)
+        .map(|_| {
+            let secrets = secrets.clone();
+            let barrier = barrier.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                let first = ArEncryption::new(&secrets);
+                let encrypted = first.encrypt("provider fixture");
+                let second = ArEncryption::new(&secrets);
+                assert_eq!(second.decrypt(&encrypted).unwrap(), "provider fixture");
+                DERIVATIONS.with(std::cell::Cell::get)
+            })
         })
-    }).collect();
-    assert_eq!(workers.into_iter().map(|w| w.join().unwrap()).sum::<usize>(),1);
+        .collect();
+    assert_eq!(
+        workers
+            .into_iter()
+            .map(|w| w.join().unwrap())
+            .sum::<usize>(),
+        1
+    );
     let other = ArEncryption::new(&Secrets::new("FAKE-another-provider"));
-    assert!(other.decrypt(&ArEncryption::new(&secrets).encrypt("separate keys")).is_err());
+    assert!(
+        other
+            .decrypt(&ArEncryption::new(&secrets).encrypt("separate keys"))
+            .is_err()
+    );
 }

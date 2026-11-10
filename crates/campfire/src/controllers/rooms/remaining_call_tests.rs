@@ -53,7 +53,6 @@ async fn grant(test: &TestApp, room: i64, user: i64, member: i64) -> HuddleGrant
         .unwrap()
 }
 
-
 #[tokio::test]
 async fn remaining_call_security_keeps_stage_actions_private_and_type_scoped() {
     let Some(test) = TestApp::boot_with_huddle(configured()).await else {

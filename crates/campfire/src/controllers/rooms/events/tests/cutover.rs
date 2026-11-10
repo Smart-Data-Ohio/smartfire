@@ -45,8 +45,6 @@ mod support;
 
 mod attendances;
 
-
 mod interactions;
-
 
 mod d_cards;

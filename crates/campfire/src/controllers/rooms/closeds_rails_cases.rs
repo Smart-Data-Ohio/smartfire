@@ -56,7 +56,9 @@ async fn show_redirects_to_get_general_show() {
     let app = setup().await;
     // The Rails case intentionally uses the open namespace for a closed room.
     redirect(
-        &app.david().classic_page(&format!("/rooms/opens/{DESIGNERS}")).await,
+        &app.david()
+            .classic_page(&format!("/rooms/opens/{DESIGNERS}"))
+            .await,
         DESIGNERS,
     );
 }
@@ -64,7 +66,6 @@ async fn show_redirects_to_get_general_show() {
 async fn create_case() {
     let app = setup().await;
     let members = [DAVID, KEVIN, JASON];
-
 
     let reply = app
         .david()
@@ -89,7 +90,6 @@ async fn create_case() {
     expected.sort();
     assert_eq!(ids(&app, id).await, expected);
     assert_eq!(room(&app, id).await.room_type, RoomType::Closed);
-
 }
 #[tokio::test]
 async fn create_forbidden_by_non_admin_when_account_restricts_creation_to_admins() {
@@ -166,14 +166,12 @@ async fn only_admins_or_creators_can_update() {
     );
     assert_eq!(room(&app, DESIGNERS).await, before);
     assert_eq!(ids(&app, DESIGNERS).await, people);
-
 }
 #[tokio::test]
 async fn updating_the_icon_replaces_sidebar_rows_and_headers_for_members_only() {
     let app = setup().await;
     let people = ids(&app, DESIGNERS).await;
     assert!(!people.contains(&BENDER));
-
 
     redirect(
         &app.david()
@@ -185,7 +183,6 @@ async fn updating_the_icon_replaces_sidebar_rows_and_headers_for_members_only() 
         room(&app, DESIGNERS).await.icon_name.as_deref(),
         Some("openai")
     );
-
 }
 #[tokio::test]
 async fn create_with_an_unknown_icon_re_renders_the_new_form() {

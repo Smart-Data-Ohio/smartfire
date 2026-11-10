@@ -542,10 +542,10 @@ impl Agent {
     pub fn legacy_capabilities(&self, conn: &Connection) -> Result<bool> {
         Ok(self.kind != AgentKind::Personal
             && !exists(
-            conn,
-            "SELECT 1 FROM agent_grants WHERE agent_id=?",
-            [self.id],
-        )?)
+                conn,
+                "SELECT 1 FROM agent_grants WHERE agent_id=?",
+                [self.id],
+            )?)
     }
     pub fn can(&self, conn: &Connection, capability: &str, room_id: Option<i64>) -> Result<bool> {
         super::agent_access::capability_for_agent(conn, self.id, capability, room_id)
@@ -627,7 +627,10 @@ impl Agent {
         for capability in capabilities {
             let rooms = query_all(
                 conn,
-                &format!("SELECT g.room_id FROM agent_grants g WHERE g.agent_id=? AND g.capability=? AND ({})", super::agent_grant::effective_active_sql("g")),
+                &format!(
+                    "SELECT g.room_id FROM agent_grants g WHERE g.agent_id=? AND g.capability=? AND ({})",
+                    super::agent_grant::effective_active_sql("g")
+                ),
                 params![self.id, capability],
                 |r| r.get::<_, Option<i64>>(0),
             )?;

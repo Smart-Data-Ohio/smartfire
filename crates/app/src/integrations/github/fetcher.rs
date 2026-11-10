@@ -44,10 +44,8 @@ pub async fn fetch(db: &Database, client: &ReadClient, id: i64) -> campfire_db::
             ]
         }
     };
-    db.write(move |tx| {
-        super::pull_requests::update(tx, id, &attributes).map(|_| ())
-    })
-    .await
+    db.write(move |tx| super::pull_requests::update(tx, id, &attributes).map(|_| ()))
+        .await
 }
 
 async fn collect(

@@ -1,5 +1,5 @@
 //! Our `MessageReference`, `Message::ReferenceSync` and quote-card refresh job.
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::sql::{exists, query_all};
 use crate::{CachedStatements, Connection, Errors, Event, Message, Result, Tx};
 use campfire_richtext::dom::{Dom, NodeId};
@@ -137,7 +137,11 @@ pub fn create(tx: &Tx<'_>, message_id: i64, referenced_message_id: i64) -> Resul
 }
 
 pub fn sync(tx: &Tx<'_>, message: &Message) -> Result<()> {
-    sync_from_body(tx, message, &message.body_html(tx.conn())?.unwrap_or_default())
+    sync_from_body(
+        tx,
+        message,
+        &message.body_html(tx.conn())?.unwrap_or_default(),
+    )
 }
 pub(crate) fn sync_from_body(tx: &Tx<'_>, message: &Message, body: &str) -> Result<()> {
     let mut text = non_code_text(body)?;
@@ -184,7 +188,9 @@ pub fn incoming_ids(conn: &Connection, source: i64) -> Result<Vec<i64>> {
     )
 }
 pub fn broadcast_cards(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-    tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCards { message_id: message.id }));
+    tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCards {
+        message_id: message.id,
+    }));
     Ok(())
 }
 pub fn refresh_quote_cards(

@@ -6,14 +6,14 @@ use super::api_tests::{Sync, app, json_body, parse, serve};
 use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN};
 
 fn notified(message_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
-    move |event| {
-        matches!(&event.payload, api::SyncPayload::MessageNotified(notified) if notified.message_id == message_id)
-    }
+    move |event| matches!(&event.payload, api::SyncPayload::MessageNotified(notified) if notified.message_id == message_id)
 }
 
 #[tokio::test]
 async fn a_group_message_notifies_its_recipient_on_the_user_topic_and_not_its_author() {
-    let Some(a) = app(true).await else { panic!("restored default seed required") };
+    let Some(a) = app(true).await else {
+        panic!("restored default seed required")
+    };
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
     let mut kevin = a.sign_in(KEVIN).await;
@@ -23,14 +23,20 @@ async fn a_group_message_notifies_its_recipient_on_the_user_topic_and_not_its_au
     kevins_sync.welcome().await;
 
     let reply = david
-        .write(json_body(Method::POST, "/api/v1/directs", &json!({"userIds": [KEVIN, JASON]})))
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
         .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let room = parse::<api::SidebarRow>(&reply).room.id;
     let post = |text: &str| json!({"clientMessageId": text, "markdownSource": text});
     let path = format!("/api/v1/rooms/{room}/messages");
 
-    let reply = david.write(json_body(Method::POST, &path, &post("Got a minute?"))).await;
+    let reply = david
+        .write(json_body(Method::POST, &path, &post("Got a minute?")))
+        .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let davids = parse::<api::MessageDTO>(&reply).id;
     let event = kevins_sync.until(notified(davids), |_| false).await;
@@ -45,7 +51,9 @@ async fn a_group_message_notifies_its_recipient_on_the_user_topic_and_not_its_au
         })
     );
 
-    let reply = kevin.write(json_body(Method::POST, &path, &post("Sure"))).await;
+    let reply = kevin
+        .write(json_body(Method::POST, &path, &post("Sure")))
+        .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let kevins = parse::<api::MessageDTO>(&reply).id;
     davids_sync.until(notified(kevins), notified(davids)).await;
@@ -97,7 +105,9 @@ async fn private_thread_notification_after_revocation(replay_only: bool) {
         let path = format!("/api/v1/threads/{thread}/messages");
         let post = |text: &str| json!({"clientMessageId": text, "markdownSource": text});
 
-        let reply = david.write(json_body(Method::POST, &path, &post("Before"))).await;
+        let reply = david
+            .write(json_body(Method::POST, &path, &post("Before")))
+            .await;
         assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
         let before = parse::<api::MessageDTO>(&reply).id;
         let event = sync.until(notified(before), |_| false).await;
@@ -106,10 +116,13 @@ async fn private_thread_notification_after_revocation(replay_only: bool) {
             "{event:?}"
         );
 
-        let hold = campfire_api::test_hooks::hold_before_sync_delivery(a.db().path(), KEVIN, |payload| {
-            matches!(payload, api::SyncPayload::MessageNotified(_))
-        });
-        let reply = david.write(json_body(Method::POST, &path, &post("After"))).await;
+        let hold =
+            campfire_api::test_hooks::hold_before_sync_delivery(a.db().path(), KEVIN, |payload| {
+                matches!(payload, api::SyncPayload::MessageNotified(_))
+            });
+        let reply = david
+            .write(json_body(Method::POST, &path, &post("After")))
+            .await;
         assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
         let after = parse::<api::MessageDTO>(&reply).id;
         tokio::time::timeout(std::time::Duration::from_secs(10), hold.reached.wait())
@@ -120,40 +133,56 @@ async fn private_thread_notification_after_revocation(replay_only: bool) {
                 if revoke_room {
                     campfire_db::Room::find(tx.conn(), DESIGNERS)?.revoke_from(tx, &[KEVIN])
                 } else {
-                    campfire_db::ChannelThread::find(tx.conn(), thread)?.remove_access_member(tx, DAVID, KEVIN)
+                    campfire_db::ChannelThread::find(tx.conn(), thread)?
+                        .remove_access_member(tx, DAVID, KEVIN)
                 }
             })
             .await
             .unwrap();
         hold.release.wait().await;
         a.booted.app.broadcasts.settle_sync().await;
-        let marker = |event: &api::SyncEvent| {
-            matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("delivery-marker"))
-        };
-        a.booted.app.cable.sync_publish(campfire_cable::sync::SyncPublication::new(
-            campfire_cable::sync::Audience::User(KEVIN),
-            serde_json::to_string(&api::SyncPayload::WorkspaceStylesUpdated(api::CustomStyles {
-                css: Some("delivery-marker".into()),
-            }))
-            .unwrap(),
-        ));
+        let marker = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("delivery-marker"));
+        a.booted
+            .app
+            .cable
+            .sync_publish(campfire_cable::sync::SyncPublication::new(
+                campfire_cable::sync::Audience::User(KEVIN),
+                serde_json::to_string(&api::SyncPayload::WorkspaceStylesUpdated(
+                    api::CustomStyles {
+                        css: Some("delivery-marker".into()),
+                    },
+                ))
+                .unwrap(),
+            ));
         if !replay_only {
             loop {
                 match sync.next().await {
                     Some(api::ServerFrame::Batch { events }) => {
-                        assert!(!events.iter().any(notified(after)), "revoked notification: {events:?}");
+                        assert!(
+                            !events.iter().any(notified(after)),
+                            "revoked notification: {events:?}"
+                        );
                         if events.iter().any(marker) {
                             break;
                         }
-                    },
+                    }
                     Some(api::ServerFrame::Bye { .. }) => break,
-                    Some(api::ServerFrame::Ping) => {},
+                    Some(api::ServerFrame::Ping) => {}
                     other => panic!("expected marker or revocation, got {other:?}"),
                 }
             }
         }
-        let mut replay = Sync::open(addr, &kevin.cookie_header(), &[], json!({"epoch": epoch, "seq": seq})).await;
-        assert!(matches!(replay.next().await, Some(api::ServerFrame::Welcome { resumed: true, .. })));
+        let mut replay = Sync::open(
+            addr,
+            &kevin.cookie_header(),
+            &[],
+            json!({"epoch": epoch, "seq": seq}),
+        )
+        .await;
+        assert!(matches!(
+            replay.next().await,
+            Some(api::ServerFrame::Welcome { resumed: true, .. })
+        ));
         replay.until(marker, notified(after)).await;
         server.abort();
     }
@@ -161,13 +190,19 @@ async fn private_thread_notification_after_revocation(replay_only: bool) {
 
 #[tokio::test]
 async fn a_recipient_who_ignores_the_author_still_gets_the_notification_marked_ignored() {
-    let Some(a) = app(true).await else { panic!("restored default seed required") };
+    let Some(a) = app(true).await else {
+        panic!("restored default seed required")
+    };
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
     let kevin = a.sign_in(KEVIN).await;
     let jason = a.sign_in(JASON).await;
     let reply = david
-        .write(json_body(Method::POST, "/api/v1/directs", &json!({"userIds": [KEVIN, JASON]})))
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
         .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let room = parse::<api::SidebarRow>(&reply).room.id;
@@ -191,23 +226,30 @@ async fn a_recipient_who_ignores_the_author_still_gets_the_notification_marked_i
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let message = parse::<api::MessageDTO>(&reply).id;
     a.booted.app.broadcasts.settle_sync().await;
-    let marker = |event: &api::SyncEvent| {
-        matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("after-notified"))
-    };
+    let marker = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::WorkspaceStylesUpdated(styles) if styles.css.as_deref() == Some("after-notified"));
     for user in [KEVIN, JASON] {
-        a.booted.app.cable.sync_publish(campfire_cable::sync::SyncPublication::new(
-            campfire_cable::sync::Audience::User(user),
-            serde_json::to_string(&api::SyncPayload::WorkspaceStylesUpdated(api::CustomStyles {
-                css: Some("after-notified".into()),
-            }))
-            .unwrap(),
-        ));
+        a.booted
+            .app
+            .cable
+            .sync_publish(campfire_cable::sync::SyncPublication::new(
+                campfire_cable::sync::Audience::User(user),
+                serde_json::to_string(&api::SyncPayload::WorkspaceStylesUpdated(
+                    api::CustomStyles {
+                        css: Some("after-notified".into()),
+                    },
+                ))
+                .unwrap(),
+            ));
     }
     let data = |event: api::SyncEvent| serde_json::to_value(event.payload).unwrap()["data"].clone();
 
     let jasons = data(jasons_sync.until(notified(message), marker).await);
     assert_eq!(jasons["messageId"], json!(message), "{jasons}");
-    assert_eq!(jasons["ignored"], serde_json::Value::Null, "a recipient who doesn't ignore David: {jasons}");
+    assert_eq!(
+        jasons["ignored"],
+        serde_json::Value::Null,
+        "a recipient who doesn't ignore David: {jasons}"
+    );
     let kevins = data(kevins_sync.until(notified(message), marker).await);
     assert_eq!(kevins["ignored"], json!(true), "{kevins}");
     server.abort();

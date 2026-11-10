@@ -25,11 +25,22 @@ pub async fn create(c: &mut Ctx) -> Result {
     if is_blank(&content) {
         return halt(concerns::head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    let (message_id,user_id)=(message.id,require_current_user(c)?.id);
-    let boost = match c.app().db.write(move|tx|Boost::create(tx,message_id,user_id,&content)).await {
-        Ok(boost)=>boost,
-        Err(campfire_db::Error::RecordInvalid(errors))=>return Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY,&format::JSON,serde_json::json!({"errors":errors.full_messages()}).to_string())),
-        Err(error)=>return Err(db_error(error)),
+    let (message_id, user_id) = (message.id, require_current_user(c)?.id);
+    let boost = match c
+        .app()
+        .db
+        .write(move |tx| Boost::create(tx, message_id, user_id, &content))
+        .await
+    {
+        Ok(boost) => boost,
+        Err(campfire_db::Error::RecordInvalid(errors)) => {
+            return Ok(c.render(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                &format::JSON,
+                serde_json::json!({"errors":errors.full_messages()}).to_string(),
+            ));
+        }
+        Err(error) => return Err(db_error(error)),
     };
     broadcast_reactions(c, &message).await?;
 
@@ -37,10 +48,16 @@ pub async fn create(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::JSON])?;
     let base_url = c.url_for("");
     let body = present(c, move |presenter| {
-        let mut payload=serde_json::to_value(presenter.boost_json(&boost,&message,&base_url)?).map_err(|e|campfire_db::Error::Other(e.to_string()))?;
-        payload["booster"]=crate::controllers::presenters::message_payload::user(presenter, &presenter.user(boost.booster_id)?, &base_url)?;
+        let mut payload = serde_json::to_value(presenter.boost_json(&boost, &message, &base_url)?)
+            .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+        payload["booster"] = crate::controllers::presenters::message_payload::user(
+            presenter,
+            &presenter.user(boost.booster_id)?,
+            &base_url,
+        )?;
         Ok(campfire_presentation::helpers::to_rails_json(&payload))
-    }).await?;
+    })
+    .await?;
     Ok(c.render(StatusCode::CREATED, &format::JSON, body))
 }
 
@@ -68,11 +85,17 @@ async fn set_message(c: &mut Ctx) -> Result<Message> {
         .app()
         .db
         .read(move |conn| {
-            let Some(room) = room_id.map(|id| Room::find_for_user(conn, user_id, id)).transpose()?.flatten() else {
+            let Some(room) = room_id
+                .map(|id| Room::find_for_user(conn, user_id, id))
+                .transpose()?
+                .flatten()
+            else {
                 return Ok(None);
             };
             match message_id {
-                Some(id) => Ok(Message::find_by_id(conn, id)?.filter(|message| message.room_id == room.id)),
+                Some(id) => {
+                    Ok(Message::find_by_id(conn, id)?.filter(|message| message.room_id == room.id))
+                }
                 None => Ok(None),
             }
         })

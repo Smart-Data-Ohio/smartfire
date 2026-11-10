@@ -21,11 +21,20 @@ pub enum ApiError {
     /// 403: signed in, but not allowed.
     Forbidden { message: String },
     /// 403 or 422: a private-thread access operation was refused.
-    ThreadAccess { message: String, reason: ThreadAccessRefusal },
+    ThreadAccess {
+        message: String,
+        reason: ThreadAccessRefusal,
+    },
     /// 403: confirm an available credential, then retry the pending write.
-    SudoRequired { message: String, reauthentication: crate::SudoState },
+    SudoRequired {
+        message: String,
+        reauthentication: crate::SudoState,
+    },
     /// 403: two-factor setup or verification is required first.
-    TwoFactorRequired { message: String, requirement: crate::TwoFactorRequirement },
+    TwoFactorRequired {
+        message: String,
+        requirement: crate::TwoFactorRequirement,
+    },
     /// 404.
     NotFound { message: String },
     /// 409: the record changed underneath the request.

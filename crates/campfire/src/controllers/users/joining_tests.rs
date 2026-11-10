@@ -15,13 +15,20 @@ async fn join_page_preserves_rails_access_checks() {
     // The retained page goes to the SPA's, which answers with Rails' statuses; the code is only
     // checked there.
     let path = format!("/join/{}", v["join"].as_str().unwrap());
-    for (retained, status) in [(path.as_str(), &v["valid_get"]), ("/join/wrong-code", &v["wrong_get"])] {
+    for (retained, status) in [
+        (path.as_str(), &v["valid_get"]),
+        ("/join/wrong-code", &v["wrong_get"]),
+    ] {
         let reply = app.anonymous().get(retained).await;
         assert_eq!(reply.status, StatusCode::FOUND, "{retained}");
         let spa = format!("http://campfire.test/app{retained}");
         assert_eq!(reply.location(), Some(spa.as_str()), "{retained}");
         assert_eq!(
-            app.anonymous().get(&format!("/app{retained}")).await.status.as_u16(),
+            app.anonymous()
+                .get(&format!("/app{retained}"))
+                .await
+                .status
+                .as_u16(),
             status["status"].as_u64().unwrap() as u16,
             "{retained}"
         );
@@ -58,11 +65,14 @@ async fn join_writes_match_rails_duplicate_scope_open_rooms_and_sessions() {
         );
         // Rails' writes, through the SPA's JSON contract.
         let duplicate = browser
-            .write(join_json(code, json!({
-                "name": "Another David",
-                "emailAddress": "david@37signals.com",
-                "password": "secret123456",
-            })))
+            .write(join_json(
+                code,
+                json!({
+                    "name": "Another David",
+                    "emailAddress": "david@37signals.com",
+                    "password": "secret123456",
+                }),
+            ))
             .await;
         assert_eq!(duplicate.status, StatusCode::OK, "{}", duplicate.text());
         assert_eq!(
@@ -74,13 +84,19 @@ async fn join_writes_match_rails_duplicate_scope_open_rooms_and_sessions() {
             count
         );
         let wrong = browser
-            .write(join_json("wrong-code", json!({
-                "name": "Must not save",
-                "emailAddress": "nobody@example.com",
-                "password": "secret123456",
-            })))
+            .write(join_json(
+                "wrong-code",
+                json!({
+                    "name": "Must not save",
+                    "emailAddress": "nobody@example.com",
+                    "password": "secret123456",
+                }),
+            ))
             .await;
-        assert_eq!(wrong.status.as_u16(), v["wrong_post"]["status"].as_u64().unwrap() as u16);
+        assert_eq!(
+            wrong.status.as_u16(),
+            v["wrong_post"]["status"].as_u64().unwrap() as u16
+        );
         assert_eq!(
             app.db().read(campfire_db::User::count).await.unwrap(),
             count
@@ -132,7 +148,8 @@ async fn join_writes_match_rails_duplicate_scope_open_rooms_and_sessions() {
             .await
             .unwrap();
         assert_eq!(
-            crate::controllers::spa::signed_out_contracts_tests::inline_boot(&enrolled_page)["user"]["id"],
+            crate::controllers::spa::signed_out_contracts_tests::inline_boot(&enrolled_page)["user"]
+                ["id"],
             id,
             "the issued cookie authenticates the newly created user"
         );

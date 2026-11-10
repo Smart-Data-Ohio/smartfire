@@ -66,7 +66,10 @@ pub async fn update(c: &mut Ctx) -> Result {
 }
 
 pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
-    if update { c.app().broadcasts.open_room_update(room); }
-    else { c.app().broadcasts.open_room_create(room); }
+    if update {
+        c.app().broadcasts.open_room_update(room);
+    } else {
+        c.app().broadcasts.open_room_create(room);
+    }
     Ok(())
 }

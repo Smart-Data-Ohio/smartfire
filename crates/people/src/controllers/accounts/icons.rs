@@ -78,7 +78,9 @@ pub async fn create(c: &mut Ctx) -> Result {
                 },
             )
         }
-        Err(campfire_db::Error::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
+        Err(campfire_db::Error::RecordInvalid(_errors)) => {
+            Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
+        }
         Err(error) => Err(Error::internal(error)),
     }
 }

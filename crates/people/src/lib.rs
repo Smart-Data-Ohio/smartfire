@@ -5,8 +5,8 @@
 //! `controllers::users` lives at `campfire_people::controllers::users`.
 
 pub mod controllers {
-    pub mod auth;
     pub mod accounts;
+    pub mod auth;
     pub mod qr_code;
     pub mod sessions;
     pub mod sudos;

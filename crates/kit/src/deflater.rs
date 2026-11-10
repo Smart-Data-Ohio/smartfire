@@ -31,24 +31,47 @@ pub struct AppContentLength;
 
 /// The `Rack::Deflater` middleware.
 pub async fn deflater(request: Request, next: Next) -> Response {
-    let accept_encoding = request.headers().get(header::ACCEPT_ENCODING).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-    let path = request.uri().path_and_query().map(|p| p.as_str().to_string()).unwrap_or_default();
+    let accept_encoding = request
+        .headers()
+        .get(header::ACCEPT_ENCODING)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    let path = request
+        .uri()
+        .path_and_query()
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_default();
     let mut response = next.run(request).await;
     if !should_deflate(&response) {
         return response;
     }
 
-    let encoding = select_best_encoding(&["gzip", "identity"], &parse_accept_encoding(&accept_encoding));
+    let encoding = select_best_encoding(
+        &["gzip", "identity"],
+        &parse_accept_encoding(&accept_encoding),
+    );
 
     let vary: Vec<String> = response
         .headers()
         .get_all(header::VARY)
         .iter()
         .filter_map(|v| v.to_str().ok())
-        .flat_map(|v| v.split(',').map(|t| t.trim().to_string()).collect::<Vec<_>>())
+        .flat_map(|v| {
+            v.split(',')
+                .map(|t| t.trim().to_string())
+                .collect::<Vec<_>>()
+        })
         .collect();
-    if !vary.iter().any(|v| v == "*" || v.eq_ignore_ascii_case("accept-encoding")) {
-        let mut vary: Vec<String> = if response.headers().contains_key(header::VARY) { vary } else { Vec::new() };
+    if !vary
+        .iter()
+        .any(|v| v == "*" || v.eq_ignore_ascii_case("accept-encoding"))
+    {
+        let mut vary: Vec<String> = if response.headers().contains_key(header::VARY) {
+            vary
+        } else {
+            Vec::new()
+        };
         vary.push("Accept-Encoding".into());
         if let Ok(value) = HeaderValue::from_str(&vary.join(",")) {
             response.headers_mut().insert(header::VARY, value);
@@ -68,18 +91,29 @@ pub async fn deflater(request: Request, next: Next) -> Response {
             headers.insert(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
             headers.remove(header::CONTENT_LENGTH);
             let (mut parts, body) = response.into_parts();
-            match parts.extensions.remove::<std::sync::Arc<splice::PageParts>>() {
-                Some(page_parts) => Response::from_parts(parts, gzip_page_parts(body, &page_parts, mtime).await),
+            match parts
+                .extensions
+                .remove::<std::sync::Arc<splice::PageParts>>()
+            {
+                Some(page_parts) => {
+                    Response::from_parts(parts, gzip_page_parts(body, &page_parts, mtime).await)
+                }
                 None => Response::from_parts(parts, gzip_stream(body, mtime)),
             }
         }
         Some(_) => response,
         None => {
-            let message = format!("An acceptable encoding for the requested resource {path} could not be found.");
+            let message = format!(
+                "An acceptable encoding for the requested resource {path} could not be found."
+            );
             let mut response = Response::new(Body::from(message.clone()));
             *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
-            response.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"));
-            response.headers_mut().insert(header::CONTENT_LENGTH, HeaderValue::from(message.len()));
+            response
+                .headers_mut()
+                .insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain"));
+            response
+                .headers_mut()
+                .insert(header::CONTENT_LENGTH, HeaderValue::from(message.len()));
             response
         }
     }
@@ -95,7 +129,11 @@ fn should_deflate(response: &Response) -> bool {
         return false;
     }
     let headers = response.headers();
-    let get = |name| headers.get(name).and_then(|v: &HeaderValue| v.to_str().ok());
+    let get = |name| {
+        headers
+            .get(name)
+            .and_then(|v: &HeaderValue| v.to_str().ok())
+    };
     if get(header::CACHE_CONTROL).is_some_and(|cc| has_word(cc, "no-transform")) {
         return false;
     }
@@ -103,7 +141,8 @@ fn should_deflate(response: &Response) -> bool {
         return false;
     }
     let extensions = response.extensions();
-    let app_set_length = extensions.get::<StaticFile>().is_some() || extensions.get::<AppContentLength>().is_some();
+    let app_set_length =
+        extensions.get::<StaticFile>().is_some() || extensions.get::<AppContentLength>().is_some();
     !(app_set_length && get(header::CONTENT_LENGTH) == Some("0"))
 }
 
@@ -131,7 +170,10 @@ fn parse_accept_encoding(header: &str) -> Vec<(String, f64)> {
             let quality = parameters
                 .and_then(|p| p.strip_prefix("q="))
                 .map(|q| {
-                    let digits: String = q.chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect();
+                    let digits: String = q
+                        .chars()
+                        .take_while(|c| c.is_ascii_digit() || *c == '.')
+                        .collect();
                     ruby_to_f(&digits)
                 })
                 .unwrap_or(1.0);
@@ -157,15 +199,24 @@ fn ruby_to_f(s: &str) -> f64 {
 }
 
 /// `Rack::Utils.select_best_encoding`
-fn select_best_encoding(available: &[&'static str], accept: &[(String, f64)]) -> Option<&'static str> {
+fn select_best_encoding(
+    available: &[&'static str],
+    accept: &[(String, f64)],
+) -> Option<&'static str> {
     let accept = &accept[..accept.len().min(16)];
     let mut expanded: Vec<(String, f64, usize)> = Vec::new();
     let mut wildcard_seen = false;
     for (m, q) in accept {
-        let preference = available.iter().position(|a| a == m).unwrap_or(available.len());
+        let preference = available
+            .iter()
+            .position(|a| a == m)
+            .unwrap_or(available.len());
         if m == "*" {
             if !wildcard_seen {
-                for m2 in available.iter().filter(|a| !accept.iter().any(|(m, _)| m == *a)) {
+                for m2 in available
+                    .iter()
+                    .filter(|a| !accept.iter().any(|(m, _)| m == *a))
+                {
                     expanded.push((m2.to_string(), *q, preference));
                 }
                 wildcard_seen = true;
@@ -175,7 +226,11 @@ fn select_best_encoding(available: &[&'static str], accept: &[(String, f64)]) ->
         }
     }
     let mut sorted = expanded.clone();
-    sorted.sort_by(|(_, q1, p1), (_, q2, p2)| q2.partial_cmp(q1).unwrap_or(std::cmp::Ordering::Equal).then(p1.cmp(p2)));
+    sorted.sort_by(|(_, q1, p1), (_, q2, p2)| {
+        q2.partial_cmp(q1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(p1.cmp(p2))
+    });
     let mut candidates: Vec<String> = sorted.into_iter().map(|(m, _, _)| m).collect();
     if !candidates.iter().any(|c| c == "identity") {
         candidates.push("identity".into());
@@ -185,13 +240,18 @@ fn select_best_encoding(available: &[&'static str], accept: &[(String, f64)]) ->
             candidates.retain(|c| c != m);
         }
     }
-    candidates.iter().find_map(|c| available.iter().copied().find(|a| a == c))
+    candidates
+        .iter()
+        .find_map(|c| available.iter().copied().find(|a| a == c))
 }
 
 /// `GzipStream` with `sync: true`: each body chunk is compressed and flushed as it arrives.
 /// `Zlib::GzipWriter` writes the header with the given mtime and the Unix OS code.
 fn gzip_stream(body: Body, mtime: u32) -> Body {
-    let encoder = GzBuilder::new().mtime(mtime).operating_system(3).write(Vec::new(), Compression::default());
+    let encoder = GzBuilder::new()
+        .mtime(mtime)
+        .operating_system(3)
+        .write(Vec::new(), Compression::default());
     let chunks = body.into_data_stream();
     let stream = futures_util::stream::unfold(Some((chunks, encoder)), |state| async move {
         let (mut chunks, mut encoder) = state?;
@@ -217,14 +277,20 @@ fn gzip_stream(body: Body, mtime: u32) -> Body {
 async fn gzip_page_parts(body: Body, page_parts: &splice::PageParts, mtime: u32) -> Body {
     let bytes = match body.collect().await {
         Ok(collected) => collected.to_bytes(),
-        Err(error) => return Body::from_stream(futures_util::stream::once(async move { Err::<Bytes, _>(std::io::Error::other(error)) })),
+        Err(error) => {
+            return Body::from_stream(futures_util::stream::once(async move {
+                Err::<Bytes, _>(std::io::Error::other(error))
+            }));
+        }
     };
     if !page_parts.fits(&bytes) {
         return gzip_stream(Body::from(bytes), mtime);
     }
     let gzipped = page_parts.gzip(&bytes, mtime);
     // Streamed like `gzip_stream`'s output, so no `Content-Length` goes with it.
-    Body::from_stream(futures_util::stream::once(async move { Ok::<_, std::io::Error>(Bytes::from(gzipped)) }))
+    Body::from_stream(futures_util::stream::once(async move {
+        Ok::<_, std::io::Error>(Bytes::from(gzipped))
+    }))
 }
 
 fn compress(encoder: &mut GzEncoder<Vec<u8>>, chunk: &[u8]) -> std::io::Result<Bytes> {
@@ -269,7 +335,9 @@ mod tests {
             let bytes = body.collect().await.unwrap().to_bytes();
             assert!(bytes.len() >= 20);
             let mut out = Vec::new();
-            flate2::read::GzDecoder::new(&bytes[..]).read_to_end(&mut out).unwrap();
+            flate2::read::GzDecoder::new(&bytes[..])
+                .read_to_end(&mut out)
+                .unwrap();
             assert_eq!(out, input);
         }
     }

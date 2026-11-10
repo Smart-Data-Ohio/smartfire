@@ -31,9 +31,20 @@ impl<'n> Location<'n> {
         Self::new_with_options(net, url, fetch::FetchOptions::default())
     }
 
-    pub fn new_with_options(net: &'n Network, url: Option<&str>, options: fetch::FetchOptions) -> Self {
+    pub fn new_with_options(
+        net: &'n Network,
+        url: Option<&str>,
+        options: fetch::FetchOptions,
+    ) -> Self {
         let parsed_url = url.and_then(|url| uri::parse(url).ok());
-        Self { net, url: url.map(str::to_string), parsed_url, resolved_ip: None, options, errors: Default::default() }
+        Self {
+            net,
+            url: url.map(str::to_string),
+            parsed_url,
+            resolved_ip: None,
+            options,
+            errors: Default::default(),
+        }
     }
 
     /// `valid?`: both validations run, so the host is resolved even for a non-http URL.
@@ -68,12 +79,15 @@ impl<'n> Location<'n> {
 
     /// `read_html`: nothing for invalid URLs or ones that look like files and media.
     pub async fn read_html(&mut self) -> Option<Vec<u8>> {
-        if !self.is_valid().await || FILES_AND_MEDIA_URL.is_match(self.url.as_deref().unwrap_or("")) {
+        if !self.is_valid().await || FILES_AND_MEDIA_URL.is_match(self.url.as_deref().unwrap_or(""))
+        {
             return None;
         }
         let url = self.parsed_url.clone()?;
         let ip = self.resolved_ip().await?;
-        let fetched = if self.options.deadline.is_none() && self.options.max_redirects == fetch::MAX_REDIRECTS {
+        let fetched = if self.options.deadline.is_none()
+            && self.options.max_redirects == fetch::MAX_REDIRECTS
+        {
             fetch::fetch_document(self.net, &url, ip).await
         } else {
             fetch::fetch_document_with(self.net, &url, ip, self.options).await
@@ -94,7 +108,9 @@ impl<'n> Location<'n> {
         }
         let url = self.parsed_url.clone()?;
         let ip = self.resolved_ip().await?;
-        let fetched = if self.options.deadline.is_none() && self.options.max_redirects == fetch::MAX_REDIRECTS {
+        let fetched = if self.options.deadline.is_none()
+            && self.options.max_redirects == fetch::MAX_REDIRECTS
+        {
             fetch::fetch_content_type(self.net, &url, ip).await
         } else {
             fetch::fetch_content_type_with(self.net, &url, ip, self.options).await

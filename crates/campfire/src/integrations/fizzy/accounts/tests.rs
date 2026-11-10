@@ -1,7 +1,7 @@
 //! Four one-to-one assertions from the pinned FizzyConnectedAccountTest.
 use super::*;
-use rails_compat::ar_encryption::ArEncryption;
 use crate::controllers::presenters::test_support::{DAVID, TestApp};
+use rails_compat::ar_encryption::ArEncryption;
 use std::time::Duration;
 
 const FIXTURE_TOKEN: &str = "fizzy-model-fixture-token";
@@ -60,10 +60,7 @@ async fn rails_one_account_per_user() {
             let Err(campfire_db::Error::RecordInvalid(errors)) = result else {
                 panic!("duplicate must fail model validation")
             };
-            assert_eq!(
-                errors.0,
-                vec![("user_id", "has already been taken".into())]
-            );
+            assert_eq!(errors.0, vec![("user_id", "has already been taken".into())]);
             assert_eq!(Account::for_user(tx.conn(), DAVID)?.unwrap().id, first.id);
             assert_eq!(
                 first.usable_token(tx, &crypto)?.as_deref(),

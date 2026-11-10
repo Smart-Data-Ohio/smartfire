@@ -97,7 +97,12 @@ async fn review_role_room_http_matrix_matches_rails() {
             .await
             .unwrap();
         let mut browser = app.david();
-        for request in case["requests"].as_array().unwrap().iter().filter(|request| request["method"] != "get") {
+        for request in case["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|request| request["method"] != "get")
+        {
             let path = request["path"].as_str().unwrap();
             let method = request["method"].as_str().unwrap();
             let response = browser

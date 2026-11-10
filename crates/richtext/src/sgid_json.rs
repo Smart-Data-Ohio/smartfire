@@ -15,7 +15,11 @@ pub(crate) enum Value {
 impl Value {
     pub(crate) fn field(&self, key: &[u8]) -> Option<&Self> {
         match self {
-            Self::Object(fields) => fields.iter().rev().find(|(name, _)| name == key).map(|(_, value)| value),
+            Self::Object(fields) => fields
+                .iter()
+                .rev()
+                .find(|(name, _)| name == key)
+                .map(|(_, value)| value),
             _ => None,
         }
     }
@@ -38,7 +42,11 @@ impl ParseError {
 }
 
 pub(crate) fn parse(bytes: &[u8]) -> Result<Value, ParseError> {
-    let mut parser = Parser { bytes, cursor: 0, nesting: 0 };
+    let mut parser = Parser {
+        bytes,
+        cursor: 0,
+        nesting: 0,
+    };
     let value = parser.value()?;
     parser.whitespace()?;
     if parser.cursor != bytes.len() {
@@ -68,7 +76,11 @@ impl Parser<'_> {
             if rest.is_empty() {
                 message.extend_from_slice(b"EOF");
             } else {
-                let mut len = rest.iter().take(32).position(|b| b"\0\n \t\r".contains(b)).unwrap_or(rest.len().min(32));
+                let mut len = rest
+                    .iter()
+                    .take(32)
+                    .position(|b| b"\0\n \t\r".contains(b))
+                    .unwrap_or(rest.len().min(32));
                 if len == 0 {
                     let end = rest.iter().position(|b| *b == 0).unwrap_or(rest.len());
                     message.extend_from_slice(&rest[..end]);
@@ -91,9 +103,15 @@ impl Parser<'_> {
         // cursor_position includes a newline at the cursor, giving column zero.
         let prefix = &self.bytes[..(cursor + 1).min(self.bytes.len())];
         let line = prefix.iter().filter(|b| **b == b'\n').count() + 1;
-        let column = prefix.iter().rposition(|b| *b == b'\n').map_or(cursor + 1, |last| cursor - last);
+        let column = prefix
+            .iter()
+            .rposition(|b| *b == b'\n')
+            .map_or(cursor + 1, |last| cursor - last);
         message.extend_from_slice(format!(" at line {line} column {column}").as_bytes());
-        ParseError { class: "JSON::ParserError", message }
+        ParseError {
+            class: "JSON::ParserError",
+            message,
+        }
     }
 
     fn whitespace(&mut self) -> Result<(), ParseError> {
@@ -113,10 +131,14 @@ impl Parser<'_> {
                         }
                         b'*' => {
                             self.cursor += 1;
-                            if let Some(offset) = self.bytes[self.cursor..].windows(2).position(|pair| pair == b"*/") {
+                            if let Some(offset) = self.bytes[self.cursor..]
+                                .windows(2)
+                                .position(|pair| pair == b"*/")
+                            {
                                 self.cursor += offset + 2;
                             } else {
-                                return Err(self.error("unterminated comment, expected closing '*/'", start));
+                                return Err(self
+                                    .error("unterminated comment, expected closing '*/'", start));
                             }
                         }
                         _ => return Err(self.error("unexpected token %s", start)),
@@ -146,7 +168,9 @@ impl Parser<'_> {
             b'-' | b'0'..=b'9' => self.number(),
             b'"' => self.string().map(Value::String),
             b'[' | b'{' => self.container(),
-            0 if self.cursor == self.bytes.len() => Err(self.error("unexpected end of input", self.cursor)),
+            0 if self.cursor == self.bytes.len() => {
+                Err(self.error("unexpected end of input", self.cursor))
+            }
             0 => Err(self.error("unexpected NULL byte: %s", self.cursor)),
             _ => Err(self.error("unexpected character: %s", self.cursor)),
         }
@@ -209,7 +233,11 @@ impl Parser<'_> {
         // Empty containers don't increment the gem's nesting count.
         if self.peek() == close {
             self.cursor += 1;
-            return Ok(if object { Value::Object(fields) } else { Value::Other });
+            return Ok(if object {
+                Value::Object(fields)
+            } else {
+                Value::Other
+            });
         }
         self.nesting += 1;
         if self.nesting > 100 {
@@ -223,7 +251,11 @@ impl Parser<'_> {
                 self.whitespace()?;
                 if self.peek() != b'"' {
                     return Err(self.error(
-                        if fields.is_empty() { "expected object key, got %s" } else { "expected object key, got: %s" },
+                        if fields.is_empty() {
+                            "expected object key, got %s"
+                        } else {
+                            "expected object key, got: %s"
+                        },
                         self.cursor,
                     ));
                 }
@@ -231,7 +263,11 @@ impl Parser<'_> {
                 self.whitespace()?;
                 if self.peek() != b':' {
                     return Err(self.error(
-                        if fields.is_empty() { "expected ':' after object key" } else { "expected ':' after object key, got: %s" },
+                        if fields.is_empty() {
+                            "expected ':' after object key"
+                        } else {
+                            "expected ':' after object key, got: %s"
+                        },
                         self.cursor,
                     ));
                 }
@@ -244,11 +280,19 @@ impl Parser<'_> {
             if self.peek() == close {
                 self.cursor += 1;
                 self.nesting -= 1;
-                return Ok(if object { Value::Object(fields) } else { Value::Other });
+                return Ok(if object {
+                    Value::Object(fields)
+                } else {
+                    Value::Other
+                });
             }
             if self.peek() != b',' {
                 return Err(self.error(
-                    if object { "expected ',' or '}' after object value, got: %s" } else { "expected ',' or ']' after array value" },
+                    if object {
+                        "expected ',' or '}' after object value, got: %s"
+                    } else {
+                        "expected ',' or ']' after array value"
+                    },
                     self.cursor,
                 ));
             }
@@ -274,7 +318,11 @@ impl Parser<'_> {
                     escapes.push(self.cursor);
                     self.cursor = (self.cursor + 2).min(self.bytes.len());
                 }
-                0..=0x1f => return Err(self.error("invalid ASCII control character in string: %s", self.cursor)),
+                0..=0x1f => {
+                    return Err(
+                        self.error("invalid ASCII control character in string: %s", self.cursor)
+                    );
+                }
                 _ => self.cursor += 1,
             }
         }
@@ -288,12 +336,18 @@ impl Parser<'_> {
                 if let Some(digit) = (byte as char).to_digit(16) {
                     result = result * 16 + digit;
                 } else {
-                    return Err(self.error("incomplete unicode character escape sequence at %s", start - 2));
+                    return Err(self.error(
+                        "incomplete unicode character escape sequence at %s",
+                        start - 2,
+                    ));
                 }
             }
             return Ok(result);
         }
-        Err(self.error("incomplete unicode character escape sequence at %s", start - 2))
+        Err(self.error(
+            "incomplete unicode character escape sequence at %s",
+            start - 2,
+        ))
     }
 
     fn unescape(&self, start: usize, end: usize, escapes: &[usize]) -> Result<Vec<u8>, ParseError> {
@@ -336,7 +390,10 @@ impl Parser<'_> {
                     if codepoint <= 0x7f {
                         out.push(codepoint as u8);
                     } else if codepoint <= 0x7ff {
-                        out.extend_from_slice(&[(0xc0 | codepoint >> 6) as u8, (0x80 | codepoint & 63) as u8]);
+                        out.extend_from_slice(&[
+                            (0xc0 | codepoint >> 6) as u8,
+                            (0x80 | codepoint & 63) as u8,
+                        ]);
                     } else if codepoint <= 0xffff {
                         out.extend_from_slice(&[
                             (0xe0 | codepoint >> 12) as u8,
@@ -353,9 +410,18 @@ impl Parser<'_> {
                     }
                     chunk = next;
                 }
-                0 => return Err(self.error("unexpected end of input, expected closing \"", end + 1)),
-                b'\n' => return Err(self.error("Invalid unescaped newline character (\\n) in string: %s", slash)),
-                1..=0x1f => return Err(self.error("invalid ASCII control character in string: %s", slash)),
+                0 => {
+                    return Err(self.error("unexpected end of input, expected closing \"", end + 1));
+                }
+                b'\n' => {
+                    return Err(self.error(
+                        "Invalid unescaped newline character (\\n) in string: %s",
+                        slash,
+                    ));
+                }
+                1..=0x1f => {
+                    return Err(self.error("invalid ASCII control character in string: %s", slash));
+                }
                 _ => return Err(self.error("invalid escape character in string: %s", slash)),
             }
         }
@@ -371,27 +437,42 @@ mod tests {
 
     #[test]
     fn malformed_json_error_encoding_matches_the_ruby_gem() {
-        let cases: serde_json::Value = serde_json::from_str(include_str!("../tests/corpus/json-errors.json")).unwrap();
+        let cases: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/corpus/json-errors.json")).unwrap();
         for case in cases.as_array().unwrap() {
-            let decoded = base64::engine::general_purpose::STANDARD.decode(case["payload"].as_str().unwrap()).unwrap();
+            let decoded = base64::engine::general_purpose::STANDARD
+                .decode(case["payload"].as_str().unwrap())
+                .unwrap();
             let error = parse(&decoded).unwrap_err();
-            assert_eq!(error.unloggable(), case["unloggable"].as_bool().unwrap(), "{}", case["name"]);
+            assert_eq!(
+                error.unloggable(),
+                case["unloggable"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
         }
     }
 
     #[test]
     fn json_error_bytes_match_the_helper_corpus() {
-        let corpus: serde_json::Value = serde_json::from_str(include_str!("../tests/corpus/sgid-json.json")).unwrap();
+        let corpus: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/corpus/sgid-json.json")).unwrap();
         let mut failures = Vec::new();
         for case in corpus["cases"].as_array().unwrap() {
-            let payload = base64::engine::general_purpose::STANDARD.decode(case["payload"].as_str().unwrap()).unwrap();
+            let payload = base64::engine::general_purpose::STANDARD
+                .decode(case["payload"].as_str().unwrap())
+                .unwrap();
             let actual = parse(&payload);
             let expected = &case["parser"];
             match actual {
                 Ok(_) if expected["status"] == "valid" => {}
                 Err(error) if expected["status"] == "error" => {
-                    let message = base64::engine::general_purpose::STANDARD.decode(expected["message"].as_str().unwrap()).unwrap();
-                    if error.class != expected["class"].as_str().unwrap() || error.message != message {
+                    let message = base64::engine::general_purpose::STANDARD
+                        .decode(expected["message"].as_str().unwrap())
+                        .unwrap();
+                    if error.class != expected["class"].as_str().unwrap()
+                        || error.message != message
+                    {
                         failures.push(format!(
                             "{}: {} {:?} != {} {:?}",
                             case["name"],
@@ -410,6 +491,15 @@ mod tests {
             corpus["cases"].as_array().unwrap().len(),
             failures.len()
         );
-        assert!(failures.is_empty(), "{}", failures.iter().take(30).cloned().collect::<Vec<_>>().join("\n"));
+        assert!(
+            failures.is_empty(),
+            "{}",
+            failures
+                .iter()
+                .take(30)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("\n")
+        );
     }
 }

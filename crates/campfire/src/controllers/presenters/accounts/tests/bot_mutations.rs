@@ -9,30 +9,84 @@ async fn members_and_bot_owners_cannot_reset_keys_even_with_sudo() {
     let bot_id: i64 = test.label("users.bender").parse().unwrap();
     let owner_id: i64 = test.label("users.kevin").parse().unwrap();
     let old_key = test.label("bot_keys.bender");
-    let before = test.booted.app.db.read(move |conn| {
-        Ok((
-            conn.query_row("SELECT bot_token_digest FROM users WHERE id=?", [bot_id], |r| r.get::<_, String>(0))?,
-            conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'", [], |r| r.get::<_, i64>(0))?,
-        ))
-    }).await.unwrap();
+    let before = test
+        .booted
+        .app
+        .db
+        .read(move |conn| {
+            Ok((
+                conn.query_row(
+                    "SELECT bot_token_digest FROM users WHERE id=?",
+                    [bot_id],
+                    |r| r.get::<_, String>(0),
+                )?,
+                conn.query_row(
+                    "SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'",
+                    [],
+                    |r| r.get::<_, i64>(0),
+                )?,
+            ))
+        })
+        .await
+        .unwrap();
     let mut member = test.browser("198.51.100.163");
     member.sign_in(&test.label("emails.kevin")).await;
     let path = format!("/account/bots/{bot_id}/key");
     let denied = member.form("put", &path, &[]).await;
-    assert_eq!(denied.status, StatusCode::FORBIDDEN, "member key reset: {}", denied.text());
-    test.booted.app.db.write(move |tx| {
-        tx.conn().execute("UPDATE agents SET owner_id=? WHERE user_id=?", [owner_id, bot_id])?;
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(
+        denied.status,
+        StatusCode::FORBIDDEN,
+        "member key reset: {}",
+        denied.text()
+    );
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE agents SET owner_id=? WHERE user_id=?",
+                [owner_id, bot_id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     member.grant_sudo_access();
     let denied = member.form("put", &path, &[]).await;
-    assert_eq!(denied.status, StatusCode::FORBIDDEN, "owner with sudo key reset: {}", denied.text());
-    test.booted.app.db.read(move |conn| {
-        assert_eq!(conn.query_row("SELECT bot_token_digest FROM users WHERE id=?", [bot_id], |r| r.get::<_, String>(0))?, before.0);
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'", [], |r| r.get::<_, i64>(0))?, before.1);
-        assert_eq!(campfire_db::User::authenticate_bot(conn, &old_key)?.map(|user| user.id), Some(bot_id));
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(
+        denied.status,
+        StatusCode::FORBIDDEN,
+        "owner with sudo key reset: {}",
+        denied.text()
+    );
+    test.booted
+        .app
+        .db
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT bot_token_digest FROM users WHERE id=?",
+                    [bot_id],
+                    |r| r.get::<_, String>(0)
+                )?,
+                before.0
+            );
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM audit_logs WHERE action='agent.credential.reset'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                before.1
+            );
+            assert_eq!(
+                campfire_db::User::authenticate_bot(conn, &old_key)?.map(|user| user.id),
+                Some(bot_id)
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -465,7 +519,6 @@ async fn invalid_agent_form_renders_422_without_saving_bot() {
         )
         .await;
     assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
-
 
     test.booted
         .app

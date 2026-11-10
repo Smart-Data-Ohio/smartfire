@@ -58,7 +58,11 @@ pub(crate) async fn delete_delivered(
                     runtime.broadcasts.message_remove(&room, &message);
                     if let Some(thread_id) = parent_thread {
                         for membership in campfire_db::Membership::for_room(conn, room.id)? {
-                            runtime.broadcasts.thread_refresh(membership.user_id, room.id, thread_id);
+                            runtime.broadcasts.thread_refresh(
+                                membership.user_id,
+                                room.id,
+                                thread_id,
+                            );
                         }
                     }
                 }

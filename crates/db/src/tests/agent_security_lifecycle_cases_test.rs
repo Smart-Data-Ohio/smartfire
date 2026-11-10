@@ -282,7 +282,14 @@ fn quiet(kind: &'static str) {
         .filter_map(|e| e.as_broadcast())
         .collect::<Vec<_>>();
     let message_broadcasts=broadcasts.iter().filter(|b|matches!(b,crate::broadcasts::Broadcast::MessageUpdated {message_id} if *message_id==mid)).count();
-    let unread_broadcasts=broadcasts.iter().filter(|b|b.channel_frames().into_iter().any(|(stream,_)|stream.ends_with("_unreads"))).count();
+    let unread_broadcasts = broadcasts
+        .iter()
+        .filter(|b| {
+            b.channel_frames()
+                .into_iter()
+                .any(|(stream, _)| stream.ends_with("_unreads"))
+        })
+        .count();
     t.read(move|conn| {
         let count=|table:&str,where_clause:&str|->Result<i64>{Ok(conn.query_row(&format!("SELECT COUNT(*) FROM {table} WHERE {where_clause}"),[mid],|r|r.get(0))?)};
         let search=Message::search_in_room(conn,id("watercooler"),"hovercraft")?.into_iter().map(|m|m.id).collect::<Vec<_>>();

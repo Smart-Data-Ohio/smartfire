@@ -51,7 +51,10 @@ async fn room_icon_writes_require_a_human_with_create_or_administer_permission()
                 &serde_json::json!("smile"),
             ))
             .await;
-        assert_eq!(denied.location(), Some("http://campfire.test/app/session/new"));
+        assert_eq!(
+            denied.location(),
+            Some("http://campfire.test/app/session/new")
+        );
     }
     assert_eq!(counts(&app).await, before);
 }
@@ -148,7 +151,6 @@ async fn room_icon_update_errors_preserve_type_memberships_name_timestamp_and_au
         if reply.status == StatusCode::UNPROCESSABLE_ENTITY {
             assert_eq!(after, before);
             assert_eq!(counts(&app).await, count);
-
         }
     }
     app.db()

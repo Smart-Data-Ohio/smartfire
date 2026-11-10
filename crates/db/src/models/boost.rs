@@ -82,7 +82,10 @@ impl Boost {
         booster_id: i64,
         content: &str,
     ) -> Result<Self> {
-        let content=tx.rich_text().resolve_boost_content(tx.conn(),content).map_err(crate::Error::Other)?;
+        let content = tx
+            .rich_text()
+            .resolve_boost_content(tx.conn(), content)
+            .map_err(crate::Error::Other)?;
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "boosts" ("booster_id", "content", "created_at", "message_id", "updated_at") VALUES (?, ?, ?, ?, ?) RETURNING "id""#,
@@ -103,12 +106,29 @@ impl Boost {
     /// `Messages::BoostsController#create` under the message lock. The HTTP/icon adapter
     /// supplies the canonical content and reaction predicate; every old duplicate from this
     /// booster is removed in the same transaction before the next toggle can create one row.
-    pub fn toggle_reaction(tx: &mut Tx<'_>, message_id: i64, booster_id: i64, content: &str, reaction: bool) -> Result<()> {
+    pub fn toggle_reaction(
+        tx: &mut Tx<'_>,
+        message_id: i64,
+        booster_id: i64,
+        content: &str,
+        reaction: bool,
+    ) -> Result<()> {
         Message::find(tx.conn(), message_id)?;
-        let existing = if reaction {Self::for_message(tx.conn(), message_id)?.into_iter()
-            .filter(|boost| boost.booster_id == booster_id && boost.content == content).collect::<Vec<_>>()} else {Vec::new()};
-        if existing.is_empty() {Self::create(tx, message_id, booster_id, content)?;}
-        else {for boost in existing {boost.destroy(tx)?;}}
+        let existing = if reaction {
+            Self::for_message(tx.conn(), message_id)?
+                .into_iter()
+                .filter(|boost| boost.booster_id == booster_id && boost.content == content)
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
+        if existing.is_empty() {
+            Self::create(tx, message_id, booster_id, content)?;
+        } else {
+            for boost in existing {
+                boost.destroy(tx)?;
+            }
+        }
         Ok(())
     }
 

@@ -1,14 +1,18 @@
 //! `app/controllers/searches_controller.rb`.
-pub use crate::controllers::presenters::params::display_query;
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::presenters::page::db_error;
-use campfire_presentation::searches::search_path;
+pub use crate::controllers::presenters::params::display_query;
 use campfire_db::{Search, search_query::SearchQuery};
 use campfire_kit::{Ctx, Result};
+use campfire_presentation::searches::search_path;
 
 fn parsed(c: &Ctx) -> SearchQuery {
-    SearchQuery::parse(&c.param("q").map(super::message_features::param_string).unwrap_or_default())
+    SearchQuery::parse(
+        &c.param("q")
+            .map(super::message_features::param_string)
+            .unwrap_or_default(),
+    )
 }
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;

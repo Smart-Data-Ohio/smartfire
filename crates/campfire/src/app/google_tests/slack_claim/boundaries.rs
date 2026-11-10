@@ -146,7 +146,10 @@ async fn boundary(name: &'static str) {
     // SPA cutover: the SPA's setup screen reads (and issues) the setup secret through JSON.
     assert_eq!(
         browser
-            .send(Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"))
+            .send(
+                Req::new(Method::GET, "/api/v1/two_factor/setup")
+                    .header("accept", "application/json")
+            )
             .await
             .status,
         StatusCode::OK
@@ -200,7 +203,9 @@ async fn boundary(name: &'static str) {
     // SPA cutover: the SPA's setup screen enrolls with JSON; the retained form now goes to the
     // SPA without enrolling.
     let reply = browser
-        .write(Req::new(Method::POST, "/api/v1/two_factor/setup").json_body(&json!({ "code": code })))
+        .write(
+            Req::new(Method::POST, "/api/v1/two_factor/setup").json_body(&json!({ "code": code })),
+        )
         .await;
     let statements = a
         .db()

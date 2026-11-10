@@ -6,13 +6,13 @@ use campfire_app::app::AppCtx;
 use campfire_db::models::audit_log::{AuditLog, Context, NewAuditLog};
 use campfire_db::{Account, CachedStatements, Membership, Room, RoomType, User};
 use campfire_kit::{Ctx, Error, Param, Result, StatusCode};
+use campfire_presentation::helpers::IconSource;
 use campfire_rooms::controllers::rooms::{
     self, boards, call_channels, closeds, directs, opens, operations,
 };
-use campfire_presentation::helpers::IconSource;
 use campfire_runtime::concerns::require_current_user;
-use campfire_runtime::presenters::{Presenter, accounts};
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::{Presenter, accounts};
 
 use crate::{
     dto,
@@ -500,7 +500,13 @@ async fn create_room(c: &mut Ctx) -> Result {
                     .collect()
             };
             let room = create_in_transaction(
-                tx, &app, room_type(kind), name.as_deref(), icon.as_deref(), creator, &grantees,
+                tx,
+                &app,
+                room_type(kind),
+                name.as_deref(),
+                icon.as_deref(),
+                creator,
+                &grantees,
             )?;
             tx.conn().execute_cached(
                 "UPDATE rooms SET client_room_id=? WHERE id=?",

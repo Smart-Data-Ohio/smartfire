@@ -1,22 +1,36 @@
-use std::sync::Arc;
+use crate::controllers::presenters::test_support::*;
 use axum::http::StatusCode;
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage, ThreadMembership};
 use campfire_kit::clock::FrozenClock;
 use serde_json::Value;
-use crate::controllers::presenters::test_support::*;
+use std::sync::Arc;
 
-fn oracle() -> Value { serde_json::from_str(include_str!("../../../../../vectors/messaging/thread-pages.json")).unwrap() }
+fn oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/thread-pages.json"
+    ))
+    .unwrap()
+}
 
 #[tokio::test]
 async fn pull_request_thread_without_starter_refreshes_once_and_survives_queue_failure() {
-    let app = TestApp::boot_frozen().await.expect("default seed required").without_job_runner().await;
+    let app = TestApp::boot_frozen()
+        .await
+        .expect("default seed required")
+        .without_job_runner()
+        .await;
     app.db().write(|tx| {
         tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE channel_threads SET parent_message_id=NULL WHERE id=8; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL WHERE id IN (SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=8)")?;
         Ok(())
     }).await.unwrap();
     let mut browser = app.david();
     for _ in 0..2 {
-        let response = browser.send(Req::new(axum::http::Method::GET, "/api/v1/threads/8").header("accept", "application/json")).await;
+        let response = browser
+            .send(
+                Req::new(axum::http::Method::GET, "/api/v1/threads/8")
+                    .header("accept", "application/json"),
+            )
+            .await;
         assert_eq!(response.status, StatusCode::OK);
         let jobs = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'", [], |r| r.get::<_, i64>(0))?)).await.unwrap();
         assert_eq!(jobs, 1);
@@ -25,7 +39,12 @@ async fn pull_request_thread_without_starter_refreshes_once_and_survives_queue_f
         tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL; CREATE TRIGGER reject_thread_pr_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;
         Ok(())
     }).await.unwrap();
-    let response = browser.send(Req::new(axum::http::Method::GET, "/api/v1/threads/8").header("accept", "application/json")).await;
+    let response = browser
+        .send(
+            Req::new(axum::http::Method::GET, "/api/v1/threads/8")
+                .header("accept", "application/json"),
+        )
+        .await;
     assert_eq!(response.status, StatusCode::OK);
     app.db().read(|conn| {
         let claim: Option<campfire_db::Timestamp> = conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id IN (SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=8)", [], |r| r.get(0))?;
@@ -36,7 +55,9 @@ async fn pull_request_thread_without_starter_refreshes_once_and_survives_queue_f
 }
 
 async fn fixture() -> (TestApp, i64, Vec<i64>) {
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap())))
+        .await
+        .unwrap();
     let (parent, threads) = app.db().write(|tx| {
         let parent = Message::create(tx, NewMessage { room_id: ALL_TALK, creator_id: DAVID,
             markdown_source: Some("Page starter".into()), client_message_id: Some("pages-parent".into()), ..Default::default() })?;
@@ -70,7 +91,20 @@ async fn stale_listing_reads_do_not_persist_closure() {
     let (app, _, threads) = fixture().await;
     let mut browser = app.david();
     for state in ["active", "closed", "all"] {
-        assert_eq!(browser.get(&format!("/rooms/{ALL_TALK}/threads.json?state={state}")).await.status, StatusCode::OK);
+        assert_eq!(
+            browser
+                .get(&format!("/rooms/{ALL_TALK}/threads.json?state={state}"))
+                .await
+                .status,
+            StatusCode::OK
+        );
     }
-    assert!(app.db().read(move |conn| ChannelThread::find(conn, threads[2])).await.unwrap().closed_at.is_none());
+    assert!(
+        app.db()
+            .read(move |conn| ChannelThread::find(conn, threads[2]))
+            .await
+            .unwrap()
+            .closed_at
+            .is_none()
+    );
 }

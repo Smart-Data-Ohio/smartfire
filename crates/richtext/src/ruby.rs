@@ -55,7 +55,10 @@ pub fn chomp_newlines(s: &str) -> &str {
 
 /// `String#chomp` with no argument: removes one trailing `\r\n`, `\n` or `\r`.
 pub fn chomp(s: &str) -> &str {
-    s.strip_suffix("\r\n").or_else(|| s.strip_suffix('\n')).or_else(|| s.strip_suffix('\r')).unwrap_or(s)
+    s.strip_suffix("\r\n")
+        .or_else(|| s.strip_suffix('\n'))
+        .or_else(|| s.strip_suffix('\r'))
+        .unwrap_or(s)
 }
 
 /// Action View's `truncate(text, length:, omission:)` with the default separator, before escaping.
@@ -184,14 +187,24 @@ pub fn json_value_inspect(v: &Value) -> String {
             }
         }
         Value::String(s) => string_inspect(s),
-        Value::Array(items) => format!("[{}]", items.iter().map(json_value_inspect).collect::<Vec<_>>().join(", ")),
+        Value::Array(items) => format!(
+            "[{}]",
+            items
+                .iter()
+                .map(json_value_inspect)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
         Value::Object(map) => {
             if map.is_empty() {
                 "{}".into()
             } else {
                 format!(
                     "{{{}}}",
-                    map.iter().map(|(k, v)| format!("{} => {}", string_inspect(k), json_value_inspect(v))).collect::<Vec<_>>().join(", ")
+                    map.iter()
+                        .map(|(k, v)| format!("{} => {}", string_inspect(k), json_value_inspect(v)))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 )
             }
         }
@@ -214,8 +227,15 @@ fn string_inspect(s: &str) -> String {
             '\u{07}' => out.push_str("\\a"),
             '\u{1b}' => out.push_str("\\e"),
             // What would start an interpolation in a double-quoted literal: `#{`, `#$`, `#@`
-            '#' if chars.peek().is_some_and(|next| matches!(next, '{' | '$' | '@')) => out.push_str("\\#"),
-            c if (c as u32) < 0x20 || c == '\u{7f}' => out.push_str(&format!("\\x{:02X}", c as u32)),
+            '#' if chars
+                .peek()
+                .is_some_and(|next| matches!(next, '{' | '$' | '@')) =>
+            {
+                out.push_str("\\#")
+            }
+            c if (c as u32) < 0x20 || c == '\u{7f}' => {
+                out.push_str(&format!("\\x{:02X}", c as u32))
+            }
             c => out.push(c),
         }
     }
@@ -229,10 +249,18 @@ pub fn ruby_float_to_s(f: f64) -> String {
         return "NaN".into();
     }
     if f.is_infinite() {
-        return if f > 0.0 { "Infinity".into() } else { "-Infinity".into() };
+        return if f > 0.0 {
+            "Infinity".into()
+        } else {
+            "-Infinity".into()
+        };
     }
     if f == 0.0 {
-        return if f.is_sign_negative() { "-0.0".into() } else { "0.0".into() };
+        return if f.is_sign_negative() {
+            "-0.0".into()
+        } else {
+            "0.0".into()
+        };
     }
     let sci = format!("{:e}", f.abs());
     let (mantissa, exp) = sci.split_once('e').unwrap();
@@ -244,11 +272,19 @@ pub fn ruby_float_to_s(f: f64) -> String {
         let (first, rest) = digits.split_at(1);
         let rest = if rest.is_empty() { "0" } else { rest };
         let e = decpt - 1;
-        format!("{sign}{first}.{rest}e{}{:02}", if e < 0 { '-' } else { '+' }, e.abs())
+        format!(
+            "{sign}{first}.{rest}e{}{:02}",
+            if e < 0 { '-' } else { '+' },
+            e.abs()
+        )
     } else if decpt <= 0 {
         format!("{sign}0.{}{}", "0".repeat((-decpt) as usize), digits)
     } else if decpt as usize >= digits.len() {
-        format!("{sign}{}{}.0", digits, "0".repeat(decpt as usize - digits.len()))
+        format!(
+            "{sign}{}{}.0",
+            digits,
+            "0".repeat(decpt as usize - digits.len())
+        )
     } else {
         let (int, frac) = digits.split_at(decpt as usize);
         format!("{sign}{int}.{frac}")
@@ -275,7 +311,10 @@ mod tests {
             to_json_string("<a href=\"x\">&'\u{2028}é\n\t\u{1}\u{7f}/</a>"),
             "\"\\u003ca href=\\\"x\\\"\\u003e\\u0026'\u{2028}é\\n\\t\\u0001\u{7f}/\\u003c/a\\u003e\""
         );
-        assert_eq!(string_inspect("#{a} #$b #@c # #"), r##""\#{a} \#$b \#@c # #""##);
+        assert_eq!(
+            string_inspect("#{a} #$b #@c # #"),
+            r##""\#{a} \#$b \#@c # #""##
+        );
         assert_eq!(json_parse("{\"a\":1/*c*/}").unwrap()["a"], 1);
         assert!(json_parse("{\"a\":1,}").is_none());
         assert_eq!(truncate(&"a".repeat(300), 280, "…").chars().count(), 280);

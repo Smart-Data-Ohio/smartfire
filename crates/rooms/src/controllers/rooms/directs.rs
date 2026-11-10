@@ -100,7 +100,9 @@ pub async fn update(c: &mut Ctx) -> Result {
             None,
             Some("Only group direct messages can be renamed.".into()),
         ),
-        Err(campfire_db::Error::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
+        Err(campfire_db::Error::RecordInvalid(_errors)) => {
+            Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
+        }
         Err(error) => Err(db_error(error)),
     }
 }
@@ -188,10 +190,17 @@ fn selected_user_ids(c: &Ctx, actor: Option<i64>) -> Vec<i64> {
 }
 fn active_user_ids(conn: &campfire_db::Connection, ids: &[i64]) -> campfire_db::Result<Vec<i64>> {
     let users = User::where_ids(conn, ids)?;
-    if ids.iter().any(|id| !users.iter().any(|user| user.id == *id)) {
+    if ids
+        .iter()
+        .any(|id| !users.iter().any(|user| user.id == *id))
+    {
         return Err(campfire_db::Error::RecordNotFound("User"));
     }
-    Ok(users.into_iter().filter(User::is_active).map(|user| user.id).collect())
+    Ok(users
+        .into_iter()
+        .filter(User::is_active)
+        .map(|user| user.id)
+        .collect())
 }
 fn capacity_alert() -> String {
     format!(

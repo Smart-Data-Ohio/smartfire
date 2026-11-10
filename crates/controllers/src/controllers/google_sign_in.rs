@@ -4,15 +4,13 @@ use crate::{
     concerns::{self, Before},
     integrations::google::sign_in::{self, Error as GoogleError},
 };
-use campfire_db::{
-    models::{
-        audit_log::{AuditLog, NewAuditLog, Target},
-        google_identity,
-    },
+use campfire_db::models::{
+    audit_log::{AuditLog, NewAuditLog, Target},
+    google_identity,
 };
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
-use serde_json::{Map, Value, json};
 use campfire_people::controllers::auth::{self, ResponseMode};
+use serde_json::{Map, Value, json};
 
 fn configured(c: &mut Ctx) -> Result<()> {
     if c.app().google.sign_in().config.configured() {
@@ -103,7 +101,9 @@ pub async fn callback(c: &mut Ctx) -> Result {
     if valid && matches!(purpose, "link" | "reauth" | "sudo") {
         return step_up(c, &flow, purpose).await;
     }
-    if purpose == "sudo" && let Some(path) = super::sudos::google_return_path(c) {
+    if purpose == "sudo"
+        && let Some(path) = super::sudos::google_return_path(c)
+    {
         return redirect(c, path, "Confirmation expired. Try again.", false);
     }
     if concerns::signed_in(c) {
@@ -250,11 +250,17 @@ async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
     }
 }
 async fn step_up_profile(c: &Ctx, purpose: &str) -> campfire_kit::Result<&'static str> {
-    if purpose == "sudo" { return Ok("/users/me/profile"); }
+    if purpose == "sudo" {
+        return Ok("/users/me/profile");
+    }
     if let Some(user) = concerns::current_user(c)
         && concerns::next_ui(c, user).await?
     {
-        return Ok(if purpose == "reauth" { "/app/settings/security" } else { "/app/settings/integrations" });
+        return Ok(if purpose == "reauth" {
+            "/app/settings/security"
+        } else {
+            "/app/settings/integrations"
+        });
     }
     Ok("/users/me/profile")
 }
@@ -265,7 +271,11 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
         .is_none_or(|u| Some(u.id) != flow["user_id"].as_i64())
     {
         let path = if user.is_some() {
-            if purpose == "sudo" { super::sudos::google_return_path(c).unwrap_or("/users/me/profile") } else { step_up_profile(c, purpose).await? }
+            if purpose == "sudo" {
+                super::sudos::google_return_path(c).unwrap_or("/users/me/profile")
+            } else {
+                step_up_profile(c, purpose).await?
+            }
         } else {
             "/app/session/new"
         };
@@ -380,12 +390,7 @@ pub async fn link(c: &mut Ctx) -> Result {
         .is_some();
     if linked {
         let path = step_up_profile(c, "link").await?;
-        redirect(
-            c,
-            path,
-            "Google sign-in is already linked.",
-            true,
-        )
+        redirect(c, path, "Google sign-in is already linked.", true)
     } else {
         c.app().google.clone().start(c, "link", Some(id))
     }
@@ -404,9 +409,15 @@ async fn admin(c: &mut Ctx, allow: bool) -> Result {
         .and_then(concerns::cast_integer)
         .ok_or(Error::Status(StatusCode::NOT_FOUND))?;
     let context = super::two_factor::audit_context(c)?;
-    let user=c.app().db.write(move |tx| {
-        google_identity::GoogleIdentity::admin_set_link(tx,id,allow,&context)
-    }).await.map_err(|e|match e {campfire_db::Error::RecordNotFound(_)=>Error::Status(StatusCode::NOT_FOUND),_=>Error::internal(e)})?;
+    let user = c
+        .app()
+        .db
+        .write(move |tx| google_identity::GoogleIdentity::admin_set_link(tx, id, allow, &context))
+        .await
+        .map_err(|e| match e {
+            campfire_db::Error::RecordNotFound(_) => Error::Status(StatusCode::NOT_FOUND),
+            _ => Error::internal(e),
+        })?;
     let message = if allow {
         format!(
             "{} can now link Google sign-in for {}.",

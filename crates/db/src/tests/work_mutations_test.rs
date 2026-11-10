@@ -980,8 +980,10 @@ fn message_controller_separate_stale_work_changes_match_rails_history() {
     let second = t.read(|conn| ChannelThread::find(conn, thread.id));
     // channel_threads_controller_test.rb:404 counts every thread's events.
     let count_before: i64 = t.read(|conn| {
-        conn.query_row("SELECT COUNT(*) FROM work_thread_events", [], |row| row.get(0))
-            .map_err(Error::from)
+        conn.query_row("SELECT COUNT(*) FROM work_thread_events", [], |row| {
+            row.get(0)
+        })
+        .map_err(Error::from)
     });
     for (stale, status) in [(&first, "in_progress"), (&second, "blocked")] {
         work(
@@ -997,13 +999,23 @@ fn message_controller_separate_stale_work_changes_match_rails_history() {
     }
     let actual = t.read(|conn| {
         let count_after: i64 =
-            conn.query_row("SELECT COUNT(*) FROM work_thread_events", [], |row| row.get(0))?;
+            conn.query_row("SELECT COUNT(*) FROM work_thread_events", [], |row| {
+                row.get(0)
+            })?;
         assert_eq!(count_after - count_before, 2, "global work event delta");
         let saved = ChannelThread::find(conn, thread.id)?;
         let history = WorkThreadEvent::for_thread(conn, thread.id)?;
-        let events = history.iter().map(|event| json!([
-            event.actor_id, event.event_type, event.from_status, event.to_status
-        ])).collect::<Vec<_>>();
+        let events = history
+            .iter()
+            .map(|event| {
+                json!([
+                    event.actor_id,
+                    event.event_type,
+                    event.from_status,
+                    event.to_status
+                ])
+            })
+            .collect::<Vec<_>>();
         Ok(json!({"status": saved.work_status, "owner": saved.work_owner_id, "events": events}))
     });
     assert_eq!(actual, messaging_work_oracle()["stale"]);

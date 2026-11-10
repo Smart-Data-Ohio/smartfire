@@ -32,7 +32,10 @@ pub async fn update(c: &mut Ctx) -> Result {
 }
 
 fn spa_path(c: &Ctx) -> String {
-    format!("/app/session/transfers/{}", campfire_routes::escape(c.param_str("id").unwrap_or_default(), false))
+    format!(
+        "/app/session/transfers/{}",
+        campfire_routes::escape(c.param_str("id").unwrap_or_default(), false)
+    )
 }
 
 pub async fn update_json(c: &mut Ctx) -> Result {

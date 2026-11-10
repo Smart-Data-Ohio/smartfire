@@ -16,8 +16,9 @@ impl PublicPolicy {
             Regex::new(r"\A[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+\z")
                 .unwrap()
         });
-        static DATE: LazyLock<Regex> =
-            LazyLock::new(|| Regex::new(r"\A[\p{Alphabetic}\p{Decimal_Number} ,.\-]{1,40}\z").unwrap());
+        static DATE: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"\A[\p{Alphabetic}\p{Decimal_Number} ,.\-]{1,40}\z").unwrap()
+        });
         let value = |name| {
             get(name)
                 .unwrap_or_default()

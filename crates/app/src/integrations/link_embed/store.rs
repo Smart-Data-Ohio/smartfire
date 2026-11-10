@@ -41,9 +41,13 @@ impl Embed {
     }
 
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
-        conn.query_row("SELECT * FROM link_embeds WHERE id = ?", [id], Self::from_row)
-            .optional()?
-            .ok_or(campfire_db::Error::RecordNotFound("LinkEmbed"))
+        conn.query_row(
+            "SELECT * FROM link_embeds WHERE id = ?",
+            [id],
+            Self::from_row,
+        )
+        .optional()?
+        .ok_or(campfire_db::Error::RecordNotFound("LinkEmbed"))
     }
 
     pub fn for_reference(tx: &Tx<'_>, key: &str) -> Result<Self> {
@@ -54,7 +58,11 @@ impl Embed {
         errors.into_result()?;
         if let Some(embed) = tx
             .conn()
-            .query_row("SELECT * FROM link_embeds WHERE normalized_url = ?", [key], Self::from_row)
+            .query_row(
+                "SELECT * FROM link_embeds WHERE normalized_url = ?",
+                [key],
+                Self::from_row,
+            )
             .optional()?
         {
             return Ok(embed);
@@ -63,16 +71,19 @@ impl Embed {
             "INSERT INTO link_embeds (normalized_url, created_at, updated_at) VALUES (?1, ?2, ?2) ON CONFLICT(normalized_url) DO NOTHING",
             params![key, tx.now()],
         )?;
-        Ok(tx
-            .conn()
-            .query_row("SELECT * FROM link_embeds WHERE normalized_url = ?", [key], Self::from_row)?)
+        Ok(tx.conn().query_row(
+            "SELECT * FROM link_embeds WHERE normalized_url = ?",
+            [key],
+            Self::from_row,
+        )?)
     }
 
     pub fn needs_fetch(&self, now: Timestamp) -> bool {
         self.expires_at.is_none_or(|expires| expires <= now)
     }
     pub fn usable(&self) -> bool {
-        self.title.as_deref().is_some_and(present) || self.description.as_deref().is_some_and(present)
+        self.title.as_deref().is_some_and(present)
+            || self.description.as_deref().is_some_and(present)
     }
     pub fn linkedin(&self) -> bool {
         crate::integrations::linkedin::is_post_url(&self.normalized_url)
@@ -161,17 +172,26 @@ fn present(text: &str) -> bool {
 #[derive(Debug, Clone)]
 pub struct Reference {
     pub id: i64,
-    #[allow(dead_code, reason = "Persisted reference attributes exposed at the WS8a model seam")]
+    #[allow(
+        dead_code,
+        reason = "Persisted reference attributes exposed at the WS8a model seam"
+    )]
     pub message_id: i64,
     pub url: Option<String>,
-    #[allow(dead_code, reason = "SQL orders by this persisted attribute; consumers may inspect the reference order")]
+    #[allow(
+        dead_code,
+        reason = "SQL orders by this persisted attribute; consumers may inspect the reference order"
+    )]
     pub position: i64,
     pub embed: Embed,
 }
 
 impl Reference {
     pub fn display_url(&self) -> &str {
-        self.url.as_deref().filter(|s| present(s)).unwrap_or(&self.embed.normalized_url)
+        self.url
+            .as_deref()
+            .filter(|s| present(s))
+            .unwrap_or(&self.embed.normalized_url)
     }
     pub fn for_message(conn: &Connection, message: &Message) -> Result<Vec<Self>> {
         let mut query = conn.prepare("SELECT r.id AS reference_id, r.message_id, r.url AS reference_url, r.position, e.* FROM link_embed_references r JOIN link_embeds e ON e.id = r.link_embed_id WHERE r.message_id=? ORDER BY r.position, r.id")?;
@@ -188,19 +208,33 @@ impl Reference {
             .collect::<std::result::Result<Vec<_>, _>>()?)
     }
     /// Read-only page preload seam; reference order and display URL remain owner facts.
-    pub fn for_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
-        let mut result: std::collections::HashMap<i64, Vec<Self>> = ids.iter().map(|id| (*id, Vec::new())).collect();
-        if ids.is_empty() { return Ok(result); }
+    pub fn for_messages(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, Vec<Self>>> {
+        let mut result: std::collections::HashMap<i64, Vec<Self>> =
+            ids.iter().map(|id| (*id, Vec::new())).collect();
+        if ids.is_empty() {
+            return Ok(result);
+        }
         let mut query = conn.prepare("SELECT r.id AS reference_id, r.message_id, r.url AS reference_url, r.position, e.* FROM link_embed_references r JOIN link_embeds e ON e.id = r.link_embed_id WHERE r.message_id IN (SELECT value FROM json_each(?)) ORDER BY r.message_id,r.position,r.id")?;
-        for reference in query.query_map([serde_json::json!(ids).to_string()], |row| Ok(Self {
-            id: row.get("reference_id")?, message_id: row.get("message_id")?,
-            url: row.get("reference_url")?, position: row.get("position")?, embed: Embed::from_row(row)?,
-        }))? {
-            let reference = reference?; result.entry(reference.message_id).or_default().push(reference);
+        for reference in query.query_map([serde_json::json!(ids).to_string()], |row| {
+            Ok(Self {
+                id: row.get("reference_id")?,
+                message_id: row.get("message_id")?,
+                url: row.get("reference_url")?,
+                position: row.get("position")?,
+                embed: Embed::from_row(row)?,
+            })
+        })? {
+            let reference = reference?;
+            result
+                .entry(reference.message_id)
+                .or_default()
+                .push(reference);
         }
         Ok(result)
     }
-
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -225,8 +259,10 @@ pub fn request_fetch(tx: &mut Tx<'_>, embed: &Embed) -> Result<bool> {
 /// The caller owns streaming/import gates. Legacy messages clear references.
 pub fn sync_message(tx: &mut Tx<'_>, message: &Message, enqueue: bool) -> Result<()> {
     if message.markdown_source.is_none() && !message.forwarded_markdown {
-        tx.conn()
-            .execute("DELETE FROM link_embed_references WHERE message_id=?", [message.id])?;
+        tx.conn().execute(
+            "DELETE FROM link_embed_references WHERE message_id=?",
+            [message.id],
+        )?;
         return Ok(());
     }
     let html = message.body_html(tx.conn())?.unwrap_or_default();
@@ -265,9 +301,11 @@ pub fn sync_message(tx: &mut Tx<'_>, message: &Message, enqueue: bool) -> Result
     }
     for reference in Reference::for_message(tx.conn(), message)? {
         if !retained.contains(&reference.embed.id) {
-            tx.conn().execute("DELETE FROM link_embed_references WHERE id=?", [reference.id])?;
+            tx.conn().execute(
+                "DELETE FROM link_embed_references WHERE id=?",
+                [reference.id],
+            )?;
         }
     }
     Ok(())
 }
-

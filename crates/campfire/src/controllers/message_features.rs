@@ -5,61 +5,61 @@
 pub(crate) use campfire_messages::controllers::message_features::*;
 
 #[cfg(test)]
-mod review_229_tests;
+mod bounded_provider_tests;
+#[cfg(test)]
+mod calendar_retry_consumer_tests;
+#[cfg(test)]
+mod coercion_tests;
+#[cfg(test)]
+mod comparison_support;
+#[cfg(test)]
+mod date_tests;
+#[cfg(test)]
+mod exceptional_input_tests;
 #[cfg(test)]
 #[cfg(test)]
 mod extreme_range_tests;
 #[cfg(test)]
-#[cfg(test)]
-#[cfg(test)]
-mod ws12_consumer_tests;
-#[cfg(test)]
-mod saved_tests;
-#[cfg(test)]
-mod coercion_tests;
-#[cfg(test)]
-mod scheduled_tests;
-#[cfg(test)]
-mod tests;
-#[cfg(test)]
-mod review_tests;
-#[cfg(test)]
-mod rescue_format_tests;
-#[cfg(test)]
-mod slash_tests;
+mod final_state_sibling_tests;
 #[cfg(test)]
 mod links_files_tests;
 #[cfg(test)]
-mod reminder_tests;
-#[cfg(test)]
-mod quote_integration_tests;
-#[cfg(test)]
-mod exceptional_input_tests;
-#[cfg(test)]
-mod slash_named_tests;
-#[cfg(test)]
-mod date_tests;
-#[cfg(test)]
-mod older_provider_tests;
-#[cfg(test)]
-mod bounded_provider_tests;
-#[cfg(test)]
-mod older_owner_tests;
+mod older_calendar_execution_tests;
 #[cfg(test)]
 mod older_calendar_tests;
-#[cfg(test)]
-mod older_embed_job_tests;
-#[cfg(test)]
-mod older_calendar_execution_tests;
 #[cfg(test)]
 mod older_embed_children_tests;
 #[cfg(test)]
 mod older_embed_failure_tests;
 #[cfg(test)]
-mod comparison_support;
+mod older_embed_job_tests;
 #[cfg(test)]
-mod final_state_sibling_tests;
+mod older_owner_tests;
 #[cfg(test)]
-mod calendar_retry_consumer_tests;
+mod older_provider_tests;
 #[cfg(test)]
 mod periodic_delivery_tests;
+#[cfg(test)]
+mod quote_integration_tests;
+#[cfg(test)]
+mod reminder_tests;
+#[cfg(test)]
+mod rescue_format_tests;
+#[cfg(test)]
+mod review_229_tests;
+#[cfg(test)]
+mod review_tests;
+#[cfg(test)]
+mod saved_tests;
+#[cfg(test)]
+mod scheduled_tests;
+#[cfg(test)]
+mod slash_named_tests;
+#[cfg(test)]
+mod slash_tests;
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+#[cfg(test)]
+#[cfg(test)]
+mod ws12_consumer_tests;

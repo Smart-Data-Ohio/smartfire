@@ -1,5 +1,3 @@
-
-
 #[derive(Clone, Default)]
 pub struct ProfileData {
     pub confirmed_at: Option<jiff::Timestamp>,

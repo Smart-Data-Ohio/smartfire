@@ -20,7 +20,6 @@ mod retained_redirect_tests;
 #[path = "spa_tests.rs"]
 mod tests;
 
-
 #[cfg(test)]
 #[path = "url_contract_tests.rs"]
 mod url_contract_tests;
@@ -34,86 +33,86 @@ mod url_contract_fixtures;
 pub(crate) mod api_tests;
 
 #[cfg(test)]
-#[path = "spa_api_s2_tests.rs"]
-mod api_s2_tests;
-#[cfg(test)]
-#[path = "spa_api_threads_tests.rs"]
-mod api_threads_tests;
-#[cfg(test)]
-#[path = "spa_private_media_tests.rs"]
-mod private_media_tests;
-#[cfg(test)]
-#[path = "spa_api_composer_tests.rs"]
-mod api_composer_tests;
-#[cfg(test)]
-#[path = "spa_upload_size_tests.rs"]
-mod upload_size_tests;
-#[cfg(test)]
-#[path = "spa_api_directory_tests.rs"]
-mod api_directory_tests;
-#[cfg(test)]
 #[path = "spa_api_activity_tests.rs"]
 mod api_activity_tests;
 #[cfg(test)]
 #[path = "spa_api_agents_tests.rs"]
 mod api_agents_tests;
 #[cfg(test)]
+#[path = "spa_api_composer_tests.rs"]
+mod api_composer_tests;
+#[cfg(test)]
+#[path = "spa_api_directory_tests.rs"]
+mod api_directory_tests;
+#[cfg(test)]
+#[path = "spa_api_s2_tests.rs"]
+mod api_s2_tests;
+#[cfg(test)]
+#[path = "spa_api_threads_tests.rs"]
+mod api_threads_tests;
+#[cfg(test)]
 #[path = "spa_api_work_tests.rs"]
 mod api_work_tests;
 #[cfg(test)]
-#[path = "spa_api_work_links_tests.rs"]
-mod spa_api_work_links_tests;
+#[path = "spa_message_notified_tests.rs"]
+mod message_notified_tests;
 #[cfg(test)]
-#[path = "spa_api_board_tests.rs"]
-mod spa_api_board_tests;
-#[cfg(test)]
-#[path = "spa_api_board_automations_tests.rs"]
-mod spa_api_board_automations_tests;
+#[path = "spa_private_media_tests.rs"]
+mod private_media_tests;
 #[cfg(test)]
 #[path = "spa_settings_tests.rs"]
 mod settings_tests;
 #[cfg(test)]
-#[path = "spa_message_notified_tests.rs"]
-mod message_notified_tests;
+#[path = "spa_api_board_automations_tests.rs"]
+mod spa_api_board_automations_tests;
+#[cfg(test)]
+#[path = "spa_api_board_tests.rs"]
+mod spa_api_board_tests;
+#[cfg(test)]
+#[path = "spa_api_work_links_tests.rs"]
+mod spa_api_work_links_tests;
+#[cfg(test)]
+#[path = "spa_upload_size_tests.rs"]
+mod upload_size_tests;
 
 #[cfg(test)]
 #[path = "spa_push_enrollment_tests.rs"]
 mod push_enrollment_tests;
 
 #[cfg(test)]
+#[path = "spa_api_cards_tests.rs"]
+mod api_cards_tests;
+#[cfg(test)]
+#[path = "spa_api_organize_tests.rs"]
+mod api_organize_tests;
+#[cfg(test)]
+#[path = "spa_api_search_tests.rs"]
+mod api_search_tests;
+#[cfg(test)]
 #[path = "spa_coexistence_tests.rs"]
 mod coexistence_tests;
 #[cfg(test)]
 #[path = "spa_huddle_tests.rs"]
 mod huddle_tests;
-#[cfg(test)]
-#[path = "spa_api_search_tests.rs"]
-mod api_search_tests;
-#[cfg(test)]
-#[path = "spa_api_organize_tests.rs"]
-mod api_organize_tests;
-#[cfg(test)]
-#[path = "spa_api_cards_tests.rs"]
-mod api_cards_tests;
 
 #[cfg(test)]
 #[path = "spa_admin_tests.rs"]
 mod admin_tests;
 #[cfg(test)]
+#[path = "spa_bot_avatar_tests.rs"]
+mod bot_avatar_tests;
+#[cfg(test)]
 #[path = "spa_bots_tests.rs"]
 mod bots_tests;
 #[cfg(test)]
-#[path = "spa_bot_avatar_tests.rs"]
-mod bot_avatar_tests;
+#[path = "spa_profile_banner_tests.rs"]
+mod profile_banner_tests;
 #[cfg(test)]
 #[path = "spa_slack_tests.rs"]
 mod slack_tests;
 #[cfg(test)]
 #[path = "spa_workspace_branding_tests.rs"]
 mod workspace_branding_tests;
-#[cfg(test)]
-#[path = "spa_profile_banner_tests.rs"]
-mod profile_banner_tests;
 
 #[cfg(test)]
 #[path = "spa_animated_emoji_tests.rs"]

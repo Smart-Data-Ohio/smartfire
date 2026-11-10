@@ -118,7 +118,11 @@ pub struct DeleteOptions {
 
 impl Default for DeleteOptions {
     fn default() -> Self {
-        Self { path: "/".into(), domain: None, same_site: Some(SameSite::Lax) }
+        Self {
+            path: "/".into(),
+            domain: None,
+            same_site: Some(SameSite::Lax),
+        }
     }
 }
 
@@ -158,12 +162,21 @@ impl CookieJar {
                 }
             }
         }
-        Self { cookies, set_cookies: vec![], delete_cookies: vec![], crypto, clock }
+        Self {
+            cookies,
+            set_cookies: vec![],
+            delete_cookies: vec![],
+            crypto,
+            clock,
+        }
     }
 
     /// `cookies[name]`.
     pub fn get(&self, name: &str) -> Option<&str> {
-        self.cookies.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str())
+        self.cookies
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, v)| v.as_str())
     }
 
     pub fn contains(&self, name: &str) -> bool {
@@ -173,7 +186,8 @@ impl CookieJar {
     /// `cookies.signed[name]`.
     pub fn signed(&self, name: &str) -> Option<String> {
         let raw = self.get(name)?;
-        self.crypto.verify_signed_cookie(name, raw, self.clock.now())
+        self.crypto
+            .verify_signed_cookie(name, raw, self.clock.now())
     }
 
     /// `cookies.encrypted[name]`.
@@ -198,7 +212,12 @@ impl CookieJar {
     }
 
     /// `cookies.encrypted[name] = value`; `cookie.value` is ignored in favor of `value`.
-    pub fn set_encrypted(&mut self, name: &str, value: &Value, cookie: impl Into<Cookie>) -> Result<()> {
+    pub fn set_encrypted(
+        &mut self,
+        name: &str,
+        value: &Value,
+        cookie: impl Into<Cookie>,
+    ) -> Result<()> {
         let mut cookie = self.resolve_expiry(cookie.into());
         cookie.value = self.crypto.encrypt_cookie(name, value, cookie.expires);
         check_for_overflow(name, &cookie.value)?;
@@ -212,7 +231,9 @@ impl CookieJar {
     }
 
     pub fn delete_with(&mut self, name: &str, options: DeleteOptions) {
-        let Some(index) = self.cookies.iter().position(|(n, _)| n == name) else { return };
+        let Some(index) = self.cookies.iter().position(|(n, _)| n == name) else {
+            return;
+        };
         self.cookies.remove(index);
         upsert(&mut self.delete_cookies, name, options);
     }
@@ -262,7 +283,9 @@ fn upsert<T>(list: &mut Vec<(String, T)>, name: &str, value: T) {
 fn check_for_overflow(name: &str, value: &str) -> Result<()> {
     let total = name.len() + value.len();
     if total > MAX_COOKIE_SIZE {
-        return Err(Error::CookieOverflow(format!("{name} cookie overflowed with size {total} bytes")));
+        return Err(Error::CookieOverflow(format!(
+            "{name} cookie overflowed with size {total} bytes"
+        )));
     }
     Ok(())
 }
@@ -274,7 +297,11 @@ pub fn parse_cookie_header(header: &str) -> Vec<(String, String)> {
     // Seen names in a set: a header of tens of thousands of cookies stays linear.
     let mut seen = std::collections::HashSet::new();
     for (i, part) in header.split(';').enumerate() {
-        let part = if i == 0 { part } else { part.trim_start_matches(' ') };
+        let part = if i == 0 {
+            part
+        } else {
+            part.trim_start_matches(' ')
+        };
         if part.is_empty() {
             continue;
         }
@@ -329,7 +356,11 @@ pub fn delete_cookie_header(name: &str, options: &DeleteOptions) -> String {
     if let Some(domain) = &options.domain {
         header.push_str(&format!("; domain={domain}"));
     }
-    header.push_str(&format!("; path={}; max-age=0; expires={}", options.path, clock::httpdate(Timestamp::UNIX_EPOCH)));
+    header.push_str(&format!(
+        "; path={}; max-age=0; expires={}",
+        options.path,
+        clock::httpdate(Timestamp::UNIX_EPOCH)
+    ));
     header.push_str(same_site_attribute(options.same_site));
     header
 }
@@ -357,7 +388,10 @@ mod tests {
     fn sets_plain_cookies_with_rails_defaults() {
         let mut jar = jar("");
         jar.set("last_room", "42");
-        assert_eq!(jar.set_cookie_headers(false, "example.com"), vec!["last_room=42; path=/; samesite=lax"]);
+        assert_eq!(
+            jar.set_cookie_headers(false, "example.com"),
+            vec!["last_room=42; path=/; samesite=lax"]
+        );
     }
 
     #[test]
@@ -376,17 +410,25 @@ mod tests {
     fn escapes_values() {
         let mut jar = jar("");
         jar.set("x", "a b+c/=");
-        assert_eq!(jar.set_cookie_headers(false, "h"), vec!["x=a+b%2Bc%2F%3D; path=/; samesite=lax"]);
+        assert_eq!(
+            jar.set_cookie_headers(false, "h"),
+            vec!["x=a+b%2Bc%2F%3D; path=/; samesite=lax"]
+        );
     }
 
     #[test]
     fn signed_permanent_httponly_round_trip() {
         let mut jar = jar("");
-        jar.set_signed("session_token", Cookie::new("tok").permanent().httponly()).unwrap();
+        jar.set_signed("session_token", Cookie::new("tok").permanent().httponly())
+            .unwrap();
         let headers = jar.set_cookie_headers(true, "h");
         assert_eq!(headers.len(), 1);
         assert!(headers[0].starts_with("session_token="));
-        assert!(headers[0].ends_with("; path=/; expires=Wed, 01 Jun 2044 12:00:00 GMT; httponly; samesite=lax"));
+        assert!(
+            headers[0].ends_with(
+                "; path=/; expires=Wed, 01 Jun 2044 12:00:00 GMT; httponly; samesite=lax"
+            )
+        );
         assert_eq!(jar.signed("session_token").as_deref(), Some("tok"));
 
         let raw = jar.get("session_token").unwrap().to_string();
@@ -408,7 +450,8 @@ mod tests {
     #[test]
     fn encrypted_round_trip() {
         let mut jar = jar("");
-        jar.set_encrypted("secret", &serde_json::json!({"a": 1}), Cookie::new("")).unwrap();
+        jar.set_encrypted("secret", &serde_json::json!({"a": 1}), Cookie::new(""))
+            .unwrap();
         assert_eq!(jar.encrypted("secret"), Some(serde_json::json!({"a": 1})));
     }
 
@@ -416,7 +459,10 @@ mod tests {
     fn overflow() {
         let mut jar = jar("");
         let big = "x".repeat(MAX_COOKIE_SIZE);
-        assert!(matches!(jar.set_signed("big", big.as_str()), Err(Error::CookieOverflow(_))));
+        assert!(matches!(
+            jar.set_signed("big", big.as_str()),
+            Err(Error::CookieOverflow(_))
+        ));
     }
 
     #[test]
@@ -428,7 +474,9 @@ mod tests {
         assert_eq!(jar.get("session_token"), None);
         assert_eq!(
             jar.set_cookie_headers(false, "h"),
-            vec!["session_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax"]
+            vec![
+                "session_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax"
+            ]
         );
     }
 
@@ -438,14 +486,24 @@ mod tests {
         jar.set("s", Cookie::new("1").secure());
         assert!(jar.set_cookie_headers(false, "example.com").is_empty());
         assert_eq!(jar.set_cookie_headers(false, "x.onion").len(), 1);
-        assert_eq!(jar.set_cookie_headers(true, "example.com"), vec!["s=1; path=/; secure; samesite=lax"]);
+        assert_eq!(
+            jar.set_cookie_headers(true, "example.com"),
+            vec!["s=1; path=/; secure; samesite=lax"]
+        );
     }
 
     #[test]
     fn many_cookies_parse_in_linear_time() {
-        let header: String = (0..100_000).map(|n| format!("c{n}=1")).collect::<Vec<_>>().join("; ");
+        let header: String = (0..100_000)
+            .map(|n| format!("c{n}=1"))
+            .collect::<Vec<_>>()
+            .join("; ");
         let started = std::time::Instant::now();
         assert_eq!(parse_cookie_header(&header).len(), 100_000);
-        assert!(started.elapsed() < std::time::Duration::from_secs(1), "{:?}", started.elapsed());
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(1),
+            "{:?}",
+            started.elapsed()
+        );
     }
 }

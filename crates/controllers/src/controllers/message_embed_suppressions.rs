@@ -10,7 +10,10 @@ use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let user_id = require_current_user(c)?.id;
-    let id = c.param_str("message_id").and_then(cast_integer).ok_or(Error::NotFound)?;
+    let id = c
+        .param_str("message_id")
+        .and_then(cast_integer)
+        .ok_or(Error::NotFound)?;
     let room = if c.param_str("room_id").is_some() {
         Some(concerns::set_room(c).await?.1)
     } else {
@@ -22,17 +25,34 @@ pub async fn create(c: &mut Ctx) -> Result {
         .transpose()?;
     let app = c.app().clone();
     let app2 = app.clone();
-    let message=app.db.write(move |tx| {
-        let mut message=Message::find_reachable(tx.conn(),user_id,id)?;
-        if let Some(room)=room
-            && (message.room_id!=room.id || message.thread_id!=thread) {
-            return Err(campfire_db::Error::RecordNotFound("Message"));
-        }
-        let locked=message.thread_id.map(|thread| tx.conn().query_row("SELECT locked_at IS NOT NULL FROM channel_threads WHERE id=?",[thread],|row| row.get::<_,bool>(0))).transpose()?.unwrap_or(false);
-        if message.creator_id!=user_id || message.system_note || locked { return Ok(None); }
-        message.suppress_embeds(tx)?;
-        Ok(Some(message))
-    }).await.map_err(db_error)?;
+    let message = app
+        .db
+        .write(move |tx| {
+            let mut message = Message::find_reachable(tx.conn(), user_id, id)?;
+            if let Some(room) = room
+                && (message.room_id != room.id || message.thread_id != thread)
+            {
+                return Err(campfire_db::Error::RecordNotFound("Message"));
+            }
+            let locked = message
+                .thread_id
+                .map(|thread| {
+                    tx.conn().query_row(
+                        "SELECT locked_at IS NOT NULL FROM channel_threads WHERE id=?",
+                        [thread],
+                        |row| row.get::<_, bool>(0),
+                    )
+                })
+                .transpose()?
+                .unwrap_or(false);
+            if message.creator_id != user_id || message.system_note || locked {
+                return Ok(None);
+            }
+            message.suppress_embeds(tx)?;
+            Ok(Some(message))
+        })
+        .await
+        .map_err(db_error)?;
     let Some(message) = message else {
         return Ok(c.head(StatusCode::FORBIDDEN));
     };
@@ -40,18 +60,26 @@ pub async fn create(c: &mut Ctx) -> Result {
         campfire_routes::ROOM.path_with(
             &[&message.room_id],
             None,
-            &[("thread", Some(&thread.to_string())), ("message_id", Some(&message.id.to_string()))],
+            &[
+                ("thread", Some(&thread.to_string())),
+                ("message_id", Some(&message.id.to_string())),
+            ],
         )
     } else {
         campfire_routes::room_at_message(message.room_id, message.id)
     };
-    app.db.read(move |conn| {
-        link_embeds::broadcast_message(&app2, conn, &message, false)
-    }).await.map_err(db_error)?;
+    app.db
+        .read(move |conn| link_embeds::broadcast_message(&app2, conn, &message, false))
+        .await
+        .map_err(db_error)?;
     c.no_store();
     let accepted = c.respond_to(&[&format::JSON, &format::HTML])?;
     if accepted == &format::JSON {
-        Ok(c.render_as(StatusCode::OK, campfire_kit::response::JSON_UTF8, "{\"embeds_suppressed\":true}"))
+        Ok(c.render_as(
+            StatusCode::OK,
+            campfire_kit::response::JSON_UTF8,
+            "{\"embeds_suppressed\":true}",
+        ))
     } else {
         c.redirect_to(&c.url_for(&permalink))
     }

@@ -13,7 +13,10 @@ pub fn count(conn: &Connection, room: Option<i64>, query: Option<&str>) -> Resul
     let (mut sql, mut values) = scope(room);
     if let Some(query) = query {
         sql.push_str(" AND (u.name LIKE ? OR u.nickname LIKE ?)");
-        values.extend([Value::Text(format!("%{query}%")), Value::Text(format!("%{query}%"))]);
+        values.extend([
+            Value::Text(format!("%{query}%")),
+            Value::Text(format!("%{query}%")),
+        ]);
     }
     Ok(conn.query_row(
         &format!("SELECT COUNT(*) {sql}"),
@@ -31,7 +34,10 @@ pub fn page(
     let (mut sql, mut values) = scope(room);
     if let Some(query) = query {
         sql.push_str(" AND (u.name LIKE ? OR u.nickname LIKE ?)");
-        values.extend([Value::Text(format!("%{query}%")), Value::Text(format!("%{query}%"))]);
+        values.extend([
+            Value::Text(format!("%{query}%")),
+            Value::Text(format!("%{query}%")),
+        ]);
     }
     values.extend([Value::Integer(limit), Value::Integer(offset)]);
     let users = conn

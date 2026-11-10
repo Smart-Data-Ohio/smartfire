@@ -4,7 +4,7 @@
 use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 
-use crate::broadcasts::{Broadcast};
+use crate::broadcasts::Broadcast;
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
 use crate::events::Event;
@@ -41,7 +41,10 @@ impl std::fmt::Display for CapReached {
 /// thread message `room_path(room, thread:, message_id:)` (`to_query` sorts the keys).
 pub fn message_path(message: &Message) -> String {
     match message.thread_id {
-        Some(thread_id) => format!("/rooms/{}?message_id={}&thread={thread_id}", message.room_id, message.id),
+        Some(thread_id) => format!(
+            "/rooms/{}?message_id={}&thread={thread_id}",
+            message.room_id, message.id
+        ),
         None => format!("/rooms/{}/@{}", message.room_id, message.id),
     }
 }
@@ -59,8 +62,13 @@ impl MessagePin {
     }
 
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
-        query_one(conn, r#"SELECT "message_pins".* FROM "message_pins" WHERE "message_pins"."id" = ? LIMIT 1"#, [id], Self::from_row)?
-            .or_not_found("MessagePin")
+        query_one(
+            conn,
+            r#"SELECT "message_pins".* FROM "message_pins" WHERE "message_pins"."id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("MessagePin")
     }
 
     pub fn find_by_message(conn: &Connection, message_id: i64) -> Result<Option<Self>> {
@@ -74,7 +82,11 @@ impl MessagePin {
 
     /// `MessagePin.pinned?(message)`
     pub fn pinned(conn: &Connection, message_id: i64) -> Result<bool> {
-        sql::exists(conn, r#"SELECT 1 AS one FROM "message_pins" WHERE "message_pins"."message_id" = ? LIMIT 1"#, [message_id])
+        sql::exists(
+            conn,
+            r#"SELECT 1 AS one FROM "message_pins" WHERE "message_pins"."message_id" = ? LIMIT 1"#,
+            [message_id],
+        )
     }
 
     /// `room.message_pins.ordered`: newest first.
@@ -89,11 +101,22 @@ impl MessagePin {
 
     /// `room.message_pins.count`
     pub fn count_for_room(conn: &Connection, room_id: i64) -> Result<i64> {
-        sql::count(conn, r#"SELECT COUNT(*) FROM "message_pins" WHERE "message_pins"."room_id" = ?"#, [room_id])
+        sql::count(
+            conn,
+            r#"SELECT COUNT(*) FROM "message_pins" WHERE "message_pins"."room_id" = ?"#,
+            [room_id],
+        )
     }
 
     pub fn count_for_viewer(conn: &Connection, room_id: i64, viewer: i64) -> Result<i64> {
-        sql::count(conn, &format!("SELECT COUNT(*) FROM message_pins p JOIN messages m ON m.id=p.message_id WHERE p.room_id=? AND (m.thread_id IS NULL OR {})", crate::channel_thread::readable_by_sql("m.thread_id", &viewer.to_string())), [room_id])
+        sql::count(
+            conn,
+            &format!(
+                "SELECT COUNT(*) FROM message_pins p JOIN messages m ON m.id=p.message_id WHERE p.room_id=? AND (m.thread_id IS NULL OR {})",
+                crate::channel_thread::readable_by_sql("m.thread_id", &viewer.to_string())
+            ),
+            [room_id],
+        )
     }
 
     /// `MessagePin.pin!(message:, pinner:)`: the existing pin when the message is already pinned
@@ -101,25 +124,41 @@ impl MessagePin {
     /// [`CapReached`] at [`MAX_PER_ROOM`], or the new pin and its note. The count runs inside the
     /// write transaction, which SQLite serializes. Only pins readable by the pinner consume the cap. The note's
     /// append goes out after commit, like `note&.broadcast_create`.
-    pub fn pin(tx: &mut Tx<'_>, message: &Message, pinner_id: i64) -> Result<std::result::Result<Self, CapReached>> {
-        if let Some(thread_id) = message.thread_id && !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), pinner_id)? {
+    pub fn pin(
+        tx: &mut Tx<'_>,
+        message: &Message,
+        pinner_id: i64,
+    ) -> Result<std::result::Result<Self, CapReached>> {
+        if let Some(thread_id) = message.thread_id
+            && !crate::ChannelThread::find(tx.conn(), thread_id)?
+                .readable_by(tx.conn(), pinner_id)?
+        {
             return Err(crate::Error::RecordNotFound("Message"));
         }
         if let Some(pin) = Self::find_by_message(tx.conn(), message.id)? {
             return Ok(Ok(pin));
         }
         if Self::count_for_viewer(tx.conn(), message.room_id, pinner_id)? >= MAX_PER_ROOM {
-            return Ok(Err(CapReached(format!("This channel already has {MAX_PER_ROOM} pinned messages"))));
+            return Ok(Err(CapReached(format!(
+                "This channel already has {MAX_PER_ROOM} pinned messages"
+            ))));
         }
         let pin = Self::create(tx, message, message.room_id, pinner_id)?;
         if let Some(note) = pin.post_pin_note(tx, message)? {
-            tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated { message_id: note.id }));
+            tx.emit_after_commit(Event::broadcast(&Broadcast::MessageCreated {
+                message_id: note.id,
+            }));
         }
         Ok(Ok(pin))
     }
 
     /// `MessagePin.create!(message:, room:, pinner:)`
-    pub fn create(tx: &mut Tx<'_>, message: &Message, room_id: i64, pinner_id: i64) -> Result<Self> {
+    pub fn create(
+        tx: &mut Tx<'_>,
+        message: &Message,
+        room_id: i64,
+        pinner_id: i64,
+    ) -> Result<Self> {
         Self::validate(tx.conn(), message.id, room_id, pinner_id)?.into_result()?;
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
@@ -134,7 +173,12 @@ impl MessagePin {
 
     /// `belongs_to` presence, `validates :message_id, uniqueness: true` and
     /// `message_must_belong_to_room`.
-    pub fn validate(conn: &Connection, message_id: i64, room_id: i64, pinner_id: i64) -> Result<Errors> {
+    pub fn validate(
+        conn: &Connection,
+        message_id: i64,
+        room_id: i64,
+        pinner_id: i64,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
         let message = Message::find_by_id(conn, message_id)?;
         if message.is_none() {
@@ -165,7 +209,10 @@ impl MessagePin {
 
     /// `destroy`, with the message it pins (which may be on its way out).
     fn destroy(&self, tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-        tx.conn().execute_cached(r#"DELETE FROM "message_pins" WHERE "message_pins"."id" = ?"#, [self.id])?;
+        tx.conn().execute_cached(
+            r#"DELETE FROM "message_pins" WHERE "message_pins"."id" = ?"#,
+            [self.id],
+        )?;
         self.after_change_commit(tx, message)
     }
 
@@ -180,7 +227,9 @@ impl MessagePin {
     /// `after_commit on: [create, destroy]`, in declaration order: `broadcast_pin_change`, then
     /// `stamp_room_pins_changed`.
     fn after_change_commit(&self, tx: &mut Tx<'_>, message: &Message) -> Result<()> {
-        tx.emit_after_commit(Event::broadcast(&Broadcast::MessagePinned { message_id: message.id }));
+        tx.emit_after_commit(Event::broadcast(&Broadcast::MessagePinned {
+            message_id: message.id,
+        }));
         let (room_id, message_id) = (self.room_id, self.message_id);
         tx.after_commit(move |tx| Self::stamp_room_pins_changed(tx, room_id, message_id));
         Ok(())
@@ -190,18 +239,31 @@ impl MessagePin {
     /// sidebar doesn't reorder) and `update_all` on the message, neither running callbacks.
     fn stamp_room_pins_changed(tx: &mut Tx<'_>, room_id: i64, message_id: i64) -> Result<()> {
         let now = tx.now();
-        tx.conn().execute_cached(r#"UPDATE "rooms" SET "pins_changed_at" = ? WHERE "rooms"."id" = ?"#, params![now, room_id])?;
-        tx.conn().execute_cached(r#"UPDATE "messages" SET "updated_at" = ? WHERE "messages"."id" = ?"#, params![now, message_id])?;
+        tx.conn().execute_cached(
+            r#"UPDATE "rooms" SET "pins_changed_at" = ? WHERE "rooms"."id" = ?"#,
+            params![now, room_id],
+        )?;
+        tx.conn().execute_cached(
+            r#"UPDATE "messages" SET "updated_at" = ? WHERE "messages"."id" = ?"#,
+            params![now, message_id],
+        )?;
         Ok(())
     }
 
     /// `post_pin_note!`: a quiet system note by the pinner. Private-message notes stay in
     /// their thread; public-message notes remain in the room. Deduplicated per conversation.
     fn post_pin_note(&self, tx: &mut Tx<'_>, message: &Message) -> Result<Option<Message>> {
-        let source = format!("pinned a message: [jump to message]({})", message_path(message));
+        let source = format!(
+            "pinned a message: [jump to message]({})",
+            message_path(message)
+        );
         let note_thread_id = match message.thread_id {
-            Some(id) if crate::ChannelThread::find(tx.conn(), id)?.visibility
-                == crate::channel_thread::ThreadVisibility::Private => Some(id),
+            Some(id)
+                if crate::ChannelThread::find(tx.conn(), id)?.visibility
+                    == crate::channel_thread::ThreadVisibility::Private =>
+            {
+                Some(id)
+            }
             _ => None,
         };
         let since = tx.now().ago(PIN_NOTE_WINDOW);

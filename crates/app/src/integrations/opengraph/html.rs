@@ -21,7 +21,10 @@ pub struct Element {
 
 impl Element {
     pub fn attr(&self, name: &str) -> Option<&str> {
-        self.attributes.iter().find(|(n, _)| n == name).map(|(_, v)| v.as_str())
+        self.attributes
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, v)| v.as_str())
     }
 
     pub fn has_attr(&self, name: &str) -> bool {
@@ -58,7 +61,10 @@ const MAX_ATTRIBUTES: usize = 256;
 pub fn meta_elements(html: &str) -> Vec<Element> {
     // A NUL ends libxml2's input
     let html = &html[..html.find('\0').unwrap_or(html.len())];
-    let mut scanner = Scanner { bytes: html.as_bytes(), pos: 0 };
+    let mut scanner = Scanner {
+        bytes: html.as_bytes(),
+        pos: 0,
+    };
     let mut metas = Vec::new();
     while let Some(c) = scanner.peek(0) {
         if c != b'<' {
@@ -98,7 +104,9 @@ impl Scanner<'_> {
     }
 
     fn starts_with_ignore_case(&self, text: &str) -> bool {
-        self.bytes.get(self.pos..self.pos + text.len()).is_some_and(|b| b.eq_ignore_ascii_case(text.as_bytes()))
+        self.bytes
+            .get(self.pos..self.pos + text.len())
+            .is_some_and(|b| b.eq_ignore_ascii_case(text.as_bytes()))
     }
 
     /// The text from `start` to here, which begins and ends at ASCII bytes.
@@ -129,7 +137,10 @@ impl Scanner<'_> {
             return None;
         }
         let start = self.pos;
-        while self.peek(0).is_some_and(|c| c.is_ascii_alphanumeric() || matches!(c, b':' | b'-' | b'_' | b'.')) {
+        while self
+            .peek(0)
+            .is_some_and(|c| c.is_ascii_alphanumeric() || matches!(c, b':' | b'-' | b'_' | b'.'))
+        {
             self.pos += 1;
         }
         Some(self.text_from(start).to_ascii_lowercase())
@@ -194,7 +205,9 @@ impl Scanner<'_> {
                     } else {
                         String::new()
                     };
-                    if attributes.len() < MAX_ATTRIBUTES && !attributes.iter().any(|(n, _)| *n == attribute) {
+                    if attributes.len() < MAX_ATTRIBUTES
+                        && !attributes.iter().any(|(n, _)| *n == attribute)
+                    {
                         attributes.push((attribute, value));
                     }
                 }
@@ -236,7 +249,8 @@ impl Scanner<'_> {
 
     /// `htmlParseHTMLAttribute`: up to the quote, or (unquoted) a blank or `>`.
     fn attribute_text(&mut self, stop: Option<u8>) -> String {
-        let ends_text = |c: u8| c == b'&' || Some(c) == stop || (stop.is_none() && (c == b'>' || is_blank(c)));
+        let ends_text =
+            |c: u8| c == b'&' || Some(c) == stop || (stop.is_none() && (c == b'>' || is_blank(c)));
         let mut out = String::new();
         let mut truncated = false;
         loop {
@@ -253,7 +267,7 @@ impl Scanner<'_> {
             if self.peek(1) == Some(b'#') {
                 match self.char_ref() {
                     Some(ch) if !truncated => out.push(ch),
-                    Some(_) => {},
+                    Some(_) => {}
                     None => truncated = true,
                 }
             } else {
@@ -274,13 +288,16 @@ impl Scanner<'_> {
                 self.pos += 1;
                 break;
             }
-            let Some(digit) = char::from(c).to_digit(radix) else { break };
+            let Some(digit) = char::from(c).to_digit(radix) else {
+                break;
+            };
             if value < 0x110000 {
                 value = value * radix + digit;
             }
             self.pos += 1;
         }
-        let is_char = matches!(value, 0x9 | 0xA | 0xD | 0x20..=0xD7FF | 0xE000..=0xFFFD | 0x10000..=0x10FFFF);
+        let is_char =
+            matches!(value, 0x9 | 0xA | 0xD | 0x20..=0xD7FF | 0xE000..=0xFFFD | 0x10000..=0x10FFFF);
         if is_char { char::from_u32(value) } else { None }
     }
 
@@ -288,8 +305,13 @@ impl Scanner<'_> {
     fn entity_ref(&mut self, out: &mut String, append: bool) {
         self.pos += 1;
         let start = self.pos;
-        if self.peek(0).is_some_and(|c| c.is_ascii_alphabetic() || matches!(c, b'_' | b':')) {
-            while self.peek(0).is_some_and(|c| c.is_ascii_alphanumeric() || matches!(c, b'_' | b':' | b'.' | b'-')) {
+        if self
+            .peek(0)
+            .is_some_and(|c| c.is_ascii_alphabetic() || matches!(c, b'_' | b':'))
+        {
+            while self.peek(0).is_some_and(|c| {
+                c.is_ascii_alphanumeric() || matches!(c, b'_' | b':' | b'.' | b'-')
+            }) {
                 self.pos += 1;
             }
         }
@@ -325,16 +347,20 @@ pub fn meta_encoding(metas: &[Element]) -> Option<String> {
     if let Some(meta) = metas.iter().find(|m| m.has_attr("charset")) {
         return meta.attr("charset").map(str::to_string);
     }
-    let meta = metas
-        .iter()
-        .find(|m| m.has_attr("content") && m.attr("http-equiv").is_some_and(|v| v.eq_ignore_ascii_case("content-type")))?;
+    let meta = metas.iter().find(|m| {
+        m.has_attr("content")
+            && m.attr("http-equiv")
+                .is_some_and(|v| v.eq_ignore_ascii_case("content-type"))
+    })?;
     charset_in(meta.attr("content")?)
 }
 
 /// `content[/charset\s*=\s*([\w-]+)/i, 1]`
 fn charset_in(content: &str) -> Option<String> {
-    static CHARSET: std::sync::LazyLock<regex::Regex> =
-        std::sync::LazyLock::new(|| regex::Regex::new(r"(?i-u)charset[ \t\n\x0B\x0C\r]*=[ \t\n\x0B\x0C\r]*([A-Za-z0-9_-]+)").unwrap());
+    static CHARSET: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"(?i-u)charset[ \t\n\x0B\x0C\r]*=[ \t\n\x0B\x0C\r]*([A-Za-z0-9_-]+)")
+            .unwrap()
+    });
     CHARSET.captures(content).map(|c| c[1].to_string())
 }
 
@@ -346,11 +372,17 @@ mod tests {
         meta_elements(&format!("<meta charset=utf-8>{html}"))
             .into_iter()
             .rfind(|m| m.attr("property") == Some("og:title"))
-            .and_then(|m| m.attr("content").filter(|c| !c.is_empty()).map(str::to_string))
+            .and_then(|m| {
+                m.attr("content")
+                    .filter(|c| !c.is_empty())
+                    .map(str::to_string)
+            })
     }
 
     fn title_of(content: &str) -> Option<String> {
-        title(&format!("<meta property=\"og:title\" content=\"a{content}b\">"))
+        title(&format!(
+            "<meta property=\"og:title\" content=\"a{content}b\">"
+        ))
     }
 
     /// Probed against the reference's Nokogiri 1.19.4.
@@ -380,41 +412,114 @@ mod tests {
             ("&#;", "a"),
             ("&#x;", "a"),
         ] {
-            assert_eq!(title_of(reference).as_deref(), Some(expected), "{reference}");
+            assert_eq!(
+                title_of(reference).as_deref(),
+                Some(expected),
+                "{reference}"
+            );
         }
     }
 
     #[test]
     fn tokenizes_like_libxml2() {
         let cases: &[(&str, Option<&str>)] = &[
-            ("<script><meta property=\"og:title\" content=\"in script\"></script><meta property=\"og:title\" content=\"after\">", Some("after")),
-            ("<style><meta property=\"og:title\" content=\"in style\"></style>", None),
-            ("<textarea><meta property=\"og:title\" content=\"in textarea\"></textarea>", Some("in textarea")),
-            ("<title><meta property=\"og:title\" content=\"in title\"></title>", Some("in title")),
-            ("<noscript><meta property=\"og:title\" content=\"in noscript\"></noscript>", Some("in noscript")),
-            ("<template><meta property=\"og:title\" content=\"in template\"></template>", Some("in template")),
-            ("<svg><meta property=\"og:title\" content=\"in svg\"></svg>", Some("in svg")),
-            ("<!-- <meta property=\"og:title\" content=\"comment\"> --><p>", None),
-            ("<meta property=og:title content=unquoted>", Some("unquoted")),
-            ("<meta property=\"og:title\" content=\"line1\r\nline2\">", Some("line1\r\nline2")),
-            ("<meta property='og:title' content='single'>", Some("single")),
-            ("<meta property = \"og:title\" content = \"spaced\">", Some("spaced")),
-            ("<META PROPERTY=\"og:title\" CONTENT=\"upper\">", Some("upper")),
-            ("<meta property=\"og:title\"content=\"nospace\">", Some("nospace")),
+            (
+                "<script><meta property=\"og:title\" content=\"in script\"></script><meta property=\"og:title\" content=\"after\">",
+                Some("after"),
+            ),
+            (
+                "<style><meta property=\"og:title\" content=\"in style\"></style>",
+                None,
+            ),
+            (
+                "<textarea><meta property=\"og:title\" content=\"in textarea\"></textarea>",
+                Some("in textarea"),
+            ),
+            (
+                "<title><meta property=\"og:title\" content=\"in title\"></title>",
+                Some("in title"),
+            ),
+            (
+                "<noscript><meta property=\"og:title\" content=\"in noscript\"></noscript>",
+                Some("in noscript"),
+            ),
+            (
+                "<template><meta property=\"og:title\" content=\"in template\"></template>",
+                Some("in template"),
+            ),
+            (
+                "<svg><meta property=\"og:title\" content=\"in svg\"></svg>",
+                Some("in svg"),
+            ),
+            (
+                "<!-- <meta property=\"og:title\" content=\"comment\"> --><p>",
+                None,
+            ),
+            (
+                "<meta property=og:title content=unquoted>",
+                Some("unquoted"),
+            ),
+            (
+                "<meta property=\"og:title\" content=\"line1\r\nline2\">",
+                Some("line1\r\nline2"),
+            ),
+            (
+                "<meta property='og:title' content='single'>",
+                Some("single"),
+            ),
+            (
+                "<meta property = \"og:title\" content = \"spaced\">",
+                Some("spaced"),
+            ),
+            (
+                "<META PROPERTY=\"og:title\" CONTENT=\"upper\">",
+                Some("upper"),
+            ),
+            (
+                "<meta property=\"og:title\"content=\"nospace\">",
+                Some("nospace"),
+            ),
             ("<meta/property=\"og:title\"/content=\"slashes\">", None),
-            ("<meta property=\"og:title\" content=\"<b>tag</b>\">", Some("<b>tag</b>")),
+            (
+                "<meta property=\"og:title\" content=\"<b>tag</b>\">",
+                Some("<b>tag</b>"),
+            ),
             ("<meta property=\"og:title\" content=\"a\">b\">", Some("a")),
-            ("<meta property=\"og:title\" content=\"unterminated>", Some("unterminated>")),
-            ("<meta property=\"og:title\" content=unq\"uoted>", Some("unq\"uoted")),
+            (
+                "<meta property=\"og:title\" content=\"unterminated>",
+                Some("unterminated>"),
+            ),
+            (
+                "<meta property=\"og:title\" content=unq\"uoted>",
+                Some("unq\"uoted"),
+            ),
             ("<meta property=\"og:title\" content=a&amp;b>", Some("a&b")),
-            ("<!--> <meta property=\"og:title\" content=\"after empty comment\"> -->", Some("after empty comment")),
-            ("<!---> <meta property=\"og:title\" content=\"after dash comment\"> -->", Some("after dash comment")),
-            ("<!DOCTYPE html><meta property=\"og:title\" content=\"doctype\">", Some("doctype")),
-            ("<?xml version=\"1.0\"?><meta property=\"og:title\" content=\"pi\">", Some("pi")),
-            ("<![CDATA[ <meta property=\"og:title\" content=\"cdata\"> ]]>", None),
+            (
+                "<!--> <meta property=\"og:title\" content=\"after empty comment\"> -->",
+                Some("after empty comment"),
+            ),
+            (
+                "<!---> <meta property=\"og:title\" content=\"after dash comment\"> -->",
+                Some("after dash comment"),
+            ),
+            (
+                "<!DOCTYPE html><meta property=\"og:title\" content=\"doctype\">",
+                Some("doctype"),
+            ),
+            (
+                "<?xml version=\"1.0\"?><meta property=\"og:title\" content=\"pi\">",
+                Some("pi"),
+            ),
+            (
+                "<![CDATA[ <meta property=\"og:title\" content=\"cdata\"> ]]>",
+                None,
+            ),
             ("<p <meta property=\"og:title\" content=\"broken\">", None),
             ("< meta property=\"og:title\" content=\"space\">", None),
-            ("<meta property=\"og:title\" content=\"tab\there\">", Some("tab\there")),
+            (
+                "<meta property=\"og:title\" content=\"tab\there\">",
+                Some("tab\there"),
+            ),
             ("<meta property=\"og:title\" content=\"\x00nul\">", None),
         ];
         for (html, expected) in cases {
@@ -433,11 +538,27 @@ mod tests {
     #[test]
     fn finds_the_meta_encoding_like_nokogiri() {
         let encoding = |html: &str| meta_encoding(&meta_elements(html));
-        assert_eq!(encoding("<meta charset=\"iso-8859-1\">"), Some("iso-8859-1".into()));
+        assert_eq!(
+            encoding("<meta charset=\"iso-8859-1\">"),
+            Some("iso-8859-1".into())
+        );
         assert_eq!(encoding("<meta charset=\"\">"), Some("".into()));
-        assert_eq!(encoding("<meta http-equiv=\"content-type\" content=\"text/html; charset=iso-8859-1\">"), Some("iso-8859-1".into()));
-        assert_eq!(encoding("<meta http-equiv=\"Content-Type\" content=\"text/html\"><meta http-equiv=\"Content-Type\" content=\"charset=utf-8\">"), None);
-        assert_eq!(encoding("<meta http-equiv=\"refresh\" content=\"charset=utf-8\">"), None);
+        assert_eq!(
+            encoding(
+                "<meta http-equiv=\"content-type\" content=\"text/html; charset=iso-8859-1\">"
+            ),
+            Some("iso-8859-1".into())
+        );
+        assert_eq!(
+            encoding(
+                "<meta http-equiv=\"Content-Type\" content=\"text/html\"><meta http-equiv=\"Content-Type\" content=\"charset=utf-8\">"
+            ),
+            None
+        );
+        assert_eq!(
+            encoding("<meta http-equiv=\"refresh\" content=\"charset=utf-8\">"),
+            None
+        );
         assert_eq!(encoding("<meta property=\"og:title\" content=\"x\">"), None);
     }
 }

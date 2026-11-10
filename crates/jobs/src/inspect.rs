@@ -32,7 +32,9 @@ fn from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<JobRow> {
         id: row.get(0)?,
         queue: row.get(1)?,
         class: row.get(2)?,
-        arguments: crate::retry::arguments(serde_json::from_str(&arguments).unwrap_or(serde_json::Value::String(arguments))),
+        arguments: crate::retry::arguments(
+            serde_json::from_str(&arguments).unwrap_or(serde_json::Value::String(arguments)),
+        ),
         payload_version: row.get(4)?,
         status: row.get(5)?,
         attempts: row.get(6)?,
@@ -48,33 +50,51 @@ fn from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<JobRow> {
 
 pub fn find(conn: &Connection, id: i64) -> Result<Option<JobRow>> {
     use rusqlite::OptionalExtension;
-    Ok(conn.query_row_cached(&format!(r#"SELECT {COLUMNS} FROM "background_jobs" WHERE "id" = ?1"#), [id], from_row).optional()?)
+    Ok(conn
+        .query_row_cached(
+            &format!(r#"SELECT {COLUMNS} FROM "background_jobs" WHERE "id" = ?1"#),
+            [id],
+            from_row,
+        )
+        .optional()?)
 }
 
 /// Every job with `status` ([`crate::READY`], [`crate::RUNNING`] or [`crate::FAILED`]), oldest
 /// first.
 pub fn with_status(conn: &Connection, status: &str) -> Result<Vec<JobRow>> {
-    let mut statement = conn.prepare_cached(&format!(r#"SELECT {COLUMNS} FROM "background_jobs" WHERE "status" = ?1 ORDER BY "id""#))?;
-    Ok(statement.query_map([status], from_row)?.collect::<rusqlite::Result<Vec<_>>>()?)
+    let mut statement = conn.prepare_cached(&format!(
+        r#"SELECT {COLUMNS} FROM "background_jobs" WHERE "status" = ?1 ORDER BY "id""#
+    ))?;
+    Ok(statement
+        .query_map([status], from_row)?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
 /// Every job, oldest first.
 pub fn all(conn: &Connection) -> Result<Vec<JobRow>> {
-    let mut statement = conn.prepare_cached(&format!(r#"SELECT {COLUMNS} FROM "background_jobs" ORDER BY "id""#))?;
-    Ok(statement.query_map([], from_row)?.collect::<rusqlite::Result<Vec<_>>>()?)
+    let mut statement = conn.prepare_cached(&format!(
+        r#"SELECT {COLUMNS} FROM "background_jobs" ORDER BY "id""#
+    ))?;
+    Ok(statement
+        .query_map([], from_row)?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
 /// How many jobs each queue has in each status: `(queue, status, count)`.
 pub fn counts(conn: &Connection) -> Result<Vec<(String, String, i64)>> {
     let mut statement = conn.prepare_cached(r#"SELECT "queue_name", "status", count(*) FROM "background_jobs" GROUP BY 1, 2 ORDER BY 1, 2"#)?;
-    Ok(statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?.collect::<rusqlite::Result<Vec<_>>>()?)
+    Ok(statement
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
 /// Puts a failed job back in its queue, due now, with all its attempts. Returns whether it was
 /// failed.
 pub fn retry_failed(tx: &Tx<'_>, id: i64) -> Result<bool> {
     let now = tx.now();
-    let Some(job) = find(tx.conn(), id)?.filter(|job| job.status == crate::FAILED) else { return Ok(false) };
+    let Some(job) = find(tx.conn(), id)?.filter(|job| job.status == crate::FAILED) else {
+        return Ok(false);
+    };
     Ok(tx.conn().execute_cached(
         r#"UPDATE "background_jobs" SET "status" = 'ready', "attempts" = 0, "run_at" = ?2, "failed_at" = NULL, "updated_at" = ?2, "arguments" = ?3
             WHERE "id" = ?1 AND "status" = 'failed'"#,
@@ -84,5 +104,8 @@ pub fn retry_failed(tx: &Tx<'_>, id: i64) -> Result<bool> {
 
 /// Deletes a failed job. Returns whether it was failed.
 pub fn delete_failed(tx: &Tx<'_>, id: i64) -> Result<bool> {
-    Ok(tx.conn().execute_cached(r#"DELETE FROM "background_jobs" WHERE "id" = ?1 AND "status" = 'failed'"#, [id])? == 1)
+    Ok(tx.conn().execute_cached(
+        r#"DELETE FROM "background_jobs" WHERE "id" = ?1 AND "status" = 'failed'"#,
+        [id],
+    )? == 1)
 }

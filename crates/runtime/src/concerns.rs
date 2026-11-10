@@ -39,13 +39,13 @@
 
 // The frame later controller ports build on; parts are unused until they land.
 
+pub mod agent_api;
+mod oauth;
 pub mod platform;
 pub mod session_keys;
 pub mod sudo;
 pub mod two_factor;
 pub mod user_agent;
-pub mod agent_api;
-mod oauth;
 
 #[derive(Clone, Copy)]
 pub struct CurrentAgent {
@@ -241,7 +241,9 @@ pub async fn before_actions_with_authentication(
         }
     }
     if before.authentication == Authentication::JsonUnauthorized
-        && !(restore_authentication(c).await? || bot_authentication(c).await? || agent_authentication(c).await?)
+        && !(restore_authentication(c).await?
+            || bot_authentication(c).await?
+            || agent_authentication(c).await?)
     {
         if c.format()?.is_some_and(|format| format.is("json")) {
             return halt(head(StatusCode::UNAUTHORIZED));
@@ -305,8 +307,10 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
 }
 
 /// Resolve a durable alias, retaining only room-query records the viewer may open.
-pub async fn alias_location(c:&Ctx)->Result<Option<String>> {
-    let Some(endpoint)=c.current::<MatchedRoute>().map(|route|route.endpoint) else {return Ok(None)};
+pub async fn alias_location(c: &Ctx) -> Result<Option<String>> {
+    let Some(endpoint) = c.current::<MatchedRoute>().map(|route| route.endpoint) else {
+        return Ok(None);
+    };
     let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
     let path = crate::navigation::normalize_path(c.request.path());
     let screen_path = screen_path(&path);
@@ -314,7 +318,12 @@ pub async fn alias_location(c:&Ctx)->Result<Option<String>> {
         let confirmed = confirmed_room_query(c, screen_path, query).await?;
         campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
     } else {
-        campfire_spa::screens::profile_url(endpoint, screen_path, query, require_current_user(c)?.id)
+        campfire_spa::screens::profile_url(
+            endpoint,
+            screen_path,
+            query,
+            require_current_user(c)?.id,
+        )
     };
     Ok(location)
 }
@@ -341,7 +350,11 @@ pub fn keep_waiting_flash(c: &mut Ctx) {
 /// 303, so the browser follows with a `GET`. Callers send a form here before acting on it: nothing
 /// is signed in, consumed or changed. A request that wants JSON is the caller's to answer first.
 pub fn redirect_to_signed_out_spa(c: &mut Ctx, path: &str, status: StatusCode) -> Result {
-    let status = if c.request.is_get() || c.request.is_head() { status } else { StatusCode::SEE_OTHER };
+    let status = if c.request.is_get() || c.request.is_head() {
+        status
+    } else {
+        StatusCode::SEE_OTHER
+    };
     let query = c.request.query_string();
     let location = match query {
         "" => path.to_owned(),
@@ -350,14 +363,23 @@ pub fn redirect_to_signed_out_spa(c: &mut Ctx, path: &str, status: StatusCode) -
     };
     keep_waiting_flash(c);
     let location = c.url_for(&location);
-    c.redirect_to_with(&location, campfire_kit::Redirect { status: Some(status), ..Default::default() })
+    c.redirect_to_with(
+        &location,
+        campfire_kit::Redirect {
+            status: Some(status),
+            ..Default::default()
+        },
+    )
 }
 
 /// Whether this request is a page navigation: it asks for HTML (a Turbo Stream's types include
 /// it) and isn't a JSON request. A request whose format can't be read counts as neither.
 pub fn html_navigation(c: &mut Ctx) -> bool {
     !sudo::json_request(c).unwrap_or(true)
-        && c.format().ok().flatten().is_some_and(|f| f.symbol == "html" || f.string.contains("html"))
+        && c.format()
+            .ok()
+            .flatten()
+            .is_some_and(|f| f.symbol == "html" || f.string.contains("html"))
 }
 
 /// Where a gate sends this request: a page navigation to the SPA's page `spa`, anything else to
@@ -382,7 +404,9 @@ pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
     if c.request.is_xhr() {
         return Ok(false);
     }
-    if !matches!(c.format()?, Some(kind) if kind == &format::HTML || kind == &format::ALL) || !navigates(c) {
+    if !matches!(c.format()?, Some(kind) if kind == &format::HTML || kind == &format::ALL)
+        || !navigates(c)
+    {
         return Ok(false);
     }
     keep_waiting_flash(c);
@@ -397,7 +421,10 @@ pub(crate) async fn confirmed_room_query(
     path: &str,
     query: Option<&str>,
 ) -> Result<campfire_spa::screens::ConfirmedRoomQuery> {
-    let none = campfire_spa::screens::ConfirmedRoomQuery { thread: None, message: None };
+    let none = campfire_spa::screens::ConfirmedRoomQuery {
+        thread: None,
+        message: None,
+    };
     let Some(room_id) = campfire_spa::screens::room_show_id(path) else {
         return Ok(none);
     };
@@ -410,34 +437,44 @@ pub(crate) async fn confirmed_room_query(
     };
     let thread_id = ids.thread.map(|id| id as i64);
     let message_id = ids.message.map(|id| id as i64);
-    c.app().db.read(move |conn| {
-        if Room::find_for_user(conn, user_id, room_id)?.is_none() {
-            return Ok(none);
-        }
-        let thread = match thread_id {
-            Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
-                Some(thread) if thread.room_id == room_id && thread.readable_by(conn, user_id)? => Some(thread.id as u64),
-                _ => None,
-            },
-            None => None,
-        };
-        let message = match message_id {
-            Some(id) => match campfire_db::Message::find_reachable(conn, user_id, id) {
-                Ok(message) => Some(message),
-                Err(campfire_db::Error::RecordNotFound(_)) => None,
-                Err(error) => return Err(error),
-            }.and_then(|message| {
-                if message.room_id != room_id {
-                    return None;
+    c.app()
+        .db
+        .read(move |conn| {
+            if Room::find_for_user(conn, user_id, room_id)?.is_none() {
+                return Ok(none);
+            }
+            let thread = match thread_id {
+                Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
+                    Some(thread)
+                        if thread.room_id == room_id && thread.readable_by(conn, user_id)? =>
+                    {
+                        Some(thread.id as u64)
+                    }
+                    _ => None,
+                },
+                None => None,
+            };
+            let message = match message_id {
+                Some(id) => match campfire_db::Message::find_reachable(conn, user_id, id) {
+                    Ok(message) => Some(message),
+                    Err(campfire_db::Error::RecordNotFound(_)) => None,
+                    Err(error) => return Err(error),
                 }
-                let on_thread = thread.is_some_and(|thread| message.thread_id == Some(thread as i64));
-                let on_timeline = thread.is_none() && message.thread_id.is_none();
-                (on_thread || on_timeline).then_some(message.id as u64)
-            }),
-            None => None,
-        };
-        Ok(campfire_spa::screens::ConfirmedRoomQuery { thread, message })
-    }).await.map_err(Error::internal)
+                .and_then(|message| {
+                    if message.room_id != room_id {
+                        return None;
+                    }
+                    let on_thread =
+                        thread.is_some_and(|thread| message.thread_id == Some(thread as i64));
+                    let on_timeline = thread.is_none() && message.thread_id.is_none();
+                    (on_thread || on_timeline).then_some(message.id as u64)
+                }),
+                None => None,
+            };
+            Ok(campfire_spa::screens::ConfirmedRoomQuery { thread, message })
+        })
+        .await
+        .map_err(Error::internal)
 }
 
 /// A browser opening a page: `Sec-Fetch-Mode: navigate` outside a frame, or, from a client that
@@ -457,7 +494,9 @@ fn navigates(c: &Ctx) -> bool {
         });
         return mode.eq_ignore_ascii_case("navigate") && !nested;
     }
-    c.request.header("accept").is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
+    c.request
+        .header("accept")
+        .is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
 }
 
 // --- VersionHeaders ----------------------------------------------------------------------------
@@ -626,8 +665,12 @@ pub fn expire_idle_timed_out_session(
 /// share this gate. Verified sessions do not query the credential; key authentication is exempt.
 pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> {
     let setup_page = setup_page(c);
-    let Some(session) = current_session(c) else { return Ok(()) };
-    let Some(user) = current_user(c) else { return Ok(()) };
+    let Some(session) = current_session(c) else {
+        return Ok(());
+    };
+    let Some(user) = current_user(c) else {
+        return Ok(());
+    };
     if authenticated_by(c) != AuthenticatedBy::Session || !user.requires_two_factor() {
         return Ok(());
     }
@@ -638,32 +681,45 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
         matches!(controller, "two_factor/challenges" | "pwa")
             || (controller == "two_factor/setups" && matches!(action, "show" | "create"))
             || (controller == "sessions" && action == "destroy")
-    }) || setup_page || session.two_factor_verified() {
+    }) || setup_page
+        || session.two_factor_verified()
+    {
         return Ok(());
     }
     let user = user.clone();
-    let enabled = c.app().db.read(move |conn| user.two_factor_enabled(conn)).await.map_err(Error::internal)?;
+    let enabled = c
+        .app()
+        .db
+        .read(move |conn| user.two_factor_enabled(conn))
+        .await
+        .map_err(Error::internal)?;
     let json = sudo::json_request(c)?;
     let html = html_navigation(c);
     if enabled {
         terminate_current_session(c).await?;
         if html {
-            return halt(c.redirect_to_with(&c.url_for("/app/session/new"), campfire_kit::Redirect {
-                alert: Some("Sign in again to verify two-step sign-in.".into()),
-                ..Default::default()
-            })?);
+            return halt(c.redirect_to_with(
+                &c.url_for("/app/session/new"),
+                campfire_kit::Redirect {
+                    alert: Some("Sign in again to verify two-step sign-in.".into()),
+                    ..Default::default()
+                },
+            )?);
         }
         halt(head(StatusCode::UNAUTHORIZED))
     } else if json {
         c.no_store();
-        halt(c.json(StatusCode::FORBIDDEN, &campfire_api_types::ApiErrorResponse {
-            error: campfire_api_types::ApiError::TwoFactorRequired {
-                message: "Set up two-step sign-in to continue".into(),
-                requirement: campfire_api_types::TwoFactorRequirement::Setup {
-                    location: c.url_for(TWO_FACTOR_SETUP_PAGE),
+        halt(c.json(
+            StatusCode::FORBIDDEN,
+            &campfire_api_types::ApiErrorResponse {
+                error: campfire_api_types::ApiError::TwoFactorRequired {
+                    message: "Set up two-step sign-in to continue".into(),
+                    requirement: campfire_api_types::TwoFactorRequirement::Setup {
+                        location: c.url_for(TWO_FACTOR_SETUP_PAGE),
+                    },
                 },
             },
-        })?)
+        )?)
     } else if html {
         if c.request.is_get() {
             let url = authentication_return_url(c);
@@ -759,7 +815,9 @@ pub fn authenticate_bot_reply_token(
         Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
         Err(error) => return Err(error),
     };
-    if campfire_db::models::agent_access::is_personal_user(conn, bot.id)? { return Ok(None); }
+    if campfire_db::models::agent_access::is_personal_user(conn, bot.id)? {
+        return Ok(None);
+    }
     Ok(Membership::find_by_room_and_user(conn, room_id, bot.id)?.map(|_| bot))
 }
 
@@ -767,14 +825,28 @@ pub fn authenticate_bot_reply_token(
 /// Unknown, revoked, expired and suspended credentials halt with 401; endpoint policy then
 /// denies a valid agent token on every controller that hasn't opted into agent access.
 pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
-    let Some(secret) = agent_bearer_secret(c.request.header("authorization")).map(str::to_string) else { return Ok(false) };
+    let Some(secret) = agent_bearer_secret(c.request.header("authorization")).map(str::to_string)
+    else {
+        return Ok(false);
+    };
     let ip = c.request.remote_ip()?.to_string();
-    let identity = c.app().db.write(move |tx| campfire_db::models::agent_access::authenticate_identity(tx, &secret, &ip)).await.map_err(Error::internal)?;
-    let Some(identity) = identity else { return halt(head(StatusCode::UNAUTHORIZED)) };
+    let identity = c
+        .app()
+        .db
+        .write(move |tx| campfire_db::models::agent_access::authenticate_identity(tx, &secret, &ip))
+        .await
+        .map_err(Error::internal)?;
+    let Some(identity) = identity else {
+        return halt(head(StatusCode::UNAUTHORIZED));
+    };
     if identity.oauth && c.request.path() != "/agents/mcp" {
         return halt(head(StatusCode::UNAUTHORIZED));
     }
-    c.set_current(CurrentAgent { agent_id: identity.agent_id, credential_id: identity.credential_id, oauth: identity.oauth });
+    c.set_current(CurrentAgent {
+        agent_id: identity.agent_id,
+        credential_id: identity.credential_id,
+        oauth: identity.oauth,
+    });
     c.set_current(CurrentUser(identity.user));
     set_authenticated_by(c, AuthenticatedBy::AgentToken);
     Ok(true)
@@ -782,15 +854,35 @@ pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
 
 /// AgentAuthorization: membership is checked by each controller first, with 404. Missing
 /// capabilities return the same JSON 403 for bot keys, agent tokens and bot sessions.
-pub async fn ensure_agent_capability(c: &mut Ctx, capability: &'static str, room_id: i64) -> Result<()> {
+pub async fn ensure_agent_capability(
+    c: &mut Ctx,
+    capability: &'static str,
+    room_id: i64,
+) -> Result<()> {
     let user = require_current_user(c)?;
-    if !user.is_bot() && !matches!(authenticated_by(c), AuthenticatedBy::BotKey | AuthenticatedBy::AgentToken) {
+    if !user.is_bot()
+        && !matches!(
+            authenticated_by(c),
+            AuthenticatedBy::BotKey | AuthenticatedBy::AgentToken
+        )
+    {
         return Ok(());
     }
     let user_id = user.id;
-    let allowed = c.app().db.read(move |conn| campfire_db::models::agent_access::capability_for_user(conn,user_id,capability,room_id)).await.map_err(Error::internal)?;
+    let allowed = c
+        .app()
+        .db
+        .read(move |conn| {
+            campfire_db::models::agent_access::capability_for_user(
+                conn, user_id, capability, room_id,
+            )
+        })
+        .await
+        .map_err(Error::internal)?;
     if allowed == Some(false) {
-        let body = serde_json::json!({"error":format!("Forbidden: agent lacks {capability} capability")}).to_string();
+        let body =
+            serde_json::json!({"error":format!("Forbidden: agent lacks {capability} capability")})
+                .to_string();
         return halt(c.render(StatusCode::FORBIDDEN, &campfire_kit::format::JSON, body));
     }
     Ok(())
@@ -1081,14 +1173,21 @@ pub async fn post_authenticating_url(c: &mut Ctx) -> Result<String> {
 
 /// Map a saved local destination after the final factor, preserving an existing SPA return.
 pub async fn post_authentication_destination(c: &Ctx, url: String) -> Result<String> {
-    let Some(user) = current_user(c) else { return Ok(url) };
+    let Some(user) = current_user(c) else {
+        return Ok(url);
+    };
     if !next_ui(c, user).await? {
         return Ok(url);
     }
-    let Some(local) = campfire_app::integrations::google::sign_in::safe_return_path(Some(&url), &c.request.host()) else {
+    let Some(local) = campfire_app::integrations::google::sign_in::safe_return_path(
+        Some(&url),
+        &c.request.host(),
+    ) else {
         return Ok(url);
     };
-    let (path, query) = local.split_once('?').map_or((local.as_str(), None), |(path, query)| (path, Some(query)));
+    let (path, query) = local
+        .split_once('?')
+        .map_or((local.as_str(), None), |(path, query)| (path, Some(query)));
     let confirmed = if campfire_spa::screens::room_show_id(path).is_some() {
         Some(confirmed_room_query(c, path, query).await?)
     } else {
@@ -1173,7 +1272,11 @@ pub async fn allow_browser(c: &mut Ctx) -> Result<()> {
 /// is for can't run the SPA, so it loads no script and no stylesheet: its style is inline, under
 /// the request's CSP nonce, and its only requests are the browser logos.
 fn render_incompatible_browser(c: &mut Ctx) -> Result {
-    let title = if platform(c).apple_messages() { "Smartfire" } else { "Unsupported browser" };
+    let title = if platform(c).apple_messages() {
+        "Smartfire"
+    } else {
+        "Unsupported browser"
+    };
     let nonce = c.content_security_policy_nonce();
     let html = incompatible_browser_page(title, nonce.as_deref());
     Ok(c.render_as(StatusCode::OK, campfire_kit::response::HTML_UTF8, html))
@@ -1182,7 +1285,9 @@ fn render_incompatible_browser(c: &mut Ctx) -> Result {
 fn incompatible_browser_page(title: &str, nonce: Option<&str>) -> String {
     use std::fmt::Write;
 
-    let nonce = nonce.map(|nonce| format!(" nonce=\"{}\"", campfire_richtext::ruby::html_escape(nonce))).unwrap_or_default();
+    let nonce = nonce
+        .map(|nonce| format!(" nonce=\"{}\"", campfire_richtext::ruby::html_escape(nonce)))
+        .unwrap_or_default();
     let mut browsers = String::new();
     for (browser, version) in platform::ALLOW_BROWSER_VERSIONS {
         let logo = campfire_static_assets::asset_path(&format!("browsers/{browser}.svg"));
@@ -1277,7 +1382,9 @@ pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
                 return Ok(None);
             };
             let room = membership.room(conn)?;
-            if room.deleted() { return Ok(None) }
+            if room.deleted() {
+                return Ok(None);
+            }
             Ok(Some((membership, room)))
         })
         .await

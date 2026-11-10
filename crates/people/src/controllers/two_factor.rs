@@ -70,7 +70,13 @@ pub async fn setup_show(c: &mut Ctx) -> Result {
 /// retained page sends it). It shares the retained page's endpoint, so the enrollment gate lets
 /// it through exactly as it does `/two_factor_setup`, and nothing else under `/app`.
 pub async fn setup_shell_before(c: &mut Ctx) -> Result<()> {
-    auth::before_actions(c, "two_factor/setups#show", Before::default(), ResponseMode::Html).await?;
+    auth::before_actions(
+        c,
+        "two_factor/setups#show",
+        Before::default(),
+        ResponseMode::Html,
+    )
+    .await?;
     ensure_human(c)?;
     no_store(c);
     if enabled(c).await? {
@@ -80,17 +86,23 @@ pub async fn setup_shell_before(c: &mut Ctx) -> Result<()> {
 }
 
 fn setup_mode(c: &mut Ctx) -> Result<ResponseMode> {
-    Ok(if concerns::sudo::json_request(c)? { ResponseMode::Json } else { ResponseMode::Html })
+    Ok(if concerns::sudo::json_request(c)? {
+        ResponseMode::Json
+    } else {
+        ResponseMode::Html
+    })
 }
 
 pub async fn setup_show_json(c: &mut Ctx) -> Result {
-    c.params.insert("format", campfire_kit::Param::Str("json".into()));
+    c.params
+        .insert("format", campfire_kit::Param::Str("json".into()));
     let result = setup_show(c).await;
     complete_setup(c, result)
 }
 
 pub async fn setup_create_json(c: &mut Ctx) -> Result {
-    c.params.insert("format", campfire_kit::Param::Str("json".into()));
+    c.params
+        .insert("format", campfire_kit::Param::Str("json".into()));
     let result = setup_create(c).await;
     complete_setup(c, result)
 }
@@ -100,9 +112,13 @@ fn complete_setup(c: &mut Ctx, result: Result) -> Result {
         && response.status == StatusCode::UNAUTHORIZED
         && matches!(response.body, campfire_kit::response::Body::Empty)
     {
-        return auth::json(c, response.status, &TwoFactorSetupResponse::Navigate {
-            location: c.url_for("/app/session/new"),
-        });
+        return auth::json(
+            c,
+            response.status,
+            &TwoFactorSetupResponse::Navigate {
+                location: c.url_for("/app/session/new"),
+            },
+        );
     }
     auth::complete(c, result)
 }
@@ -189,9 +205,15 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
                 .await
                 .map_err(Error::internal)?;
             let continue_url = concerns::post_authenticating_url(c).await?;
-            auth::json(c, StatusCode::OK, &TwoFactorSetupResponse::RecoveryCodes {
-                codes, signed_out, continue_url,
-            })
+            auth::json(
+                c,
+                StatusCode::OK,
+                &TwoFactorSetupResponse::RecoveryCodes {
+                    codes,
+                    signed_out,
+                    continue_url,
+                },
+            )
         }
     }
 }
@@ -237,7 +259,12 @@ async fn render_setup(c: &mut Ctx, status: StatusCode) -> Result {
         .map(|c| c.iter().collect::<String>())
         .collect::<Vec<_>>()
         .join(" ");
-    let setup = TwoFactorSetupState { secret, manual_key: key, otpauth_uri: uri, qr_svg: qr };
+    let setup = TwoFactorSetupState {
+        secret,
+        manual_key: key,
+        otpauth_uri: uri,
+        qr_svg: qr,
+    };
     let response = match c.flash().alert().map(str::to_owned) {
         Some(message) => TwoFactorSetupResponse::Error { message, setup },
         None => TwoFactorSetupResponse::Ready { setup },
@@ -482,7 +509,11 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
 }
 async fn render_challenge(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -> Result {
     if mode == ResponseMode::Html {
-        return concerns::redirect_to_signed_out_spa(c, "/app/two_factor/challenge", StatusCode::FOUND);
+        return concerns::redirect_to_signed_out_spa(
+            c,
+            "/app/two_factor/challenge",
+            StatusCode::FOUND,
+        );
     }
     let alert = c.flash().alert().map(str::to_owned);
     match alert {

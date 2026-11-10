@@ -112,3 +112,107 @@
 - name: deepseek
   file: deepseek.svg
   title: DeepSeek
+- name: qwen
+  file: qwen.svg
+  title: Qwen
+- name: alibaba
+  file: alibaba.svg
+  title: Alibaba
+- name: alibabacloud
+  file: alibabacloud.svg
+  title: Alibaba Cloud
+  aliases:
+    - aliyun
+- name: moonshot
+  file: moonshot.svg
+  title: Moonshot AI
+  aliases:
+    - moonshotai
+- name: kimi
+  file: kimi.svg
+  title: Kimi
+- name: xiaomi
+  file: xiaomi.svg
+  title: Xiaomi
+- name: mimo
+  file: xiaomimimo.svg
+  title: Xiaomi MiMo
+  aliases:
+    - xiaomimimo
+- name: tencent
+  file: tencent.svg
+  title: Tencent
+- name: hunyuan
+  file: hunyuan.svg
+  title: Tencent Hunyuan
+- name: bytedance
+  file: bytedance.svg
+  title: ByteDance
+- name: doubao
+  file: doubao.svg
+  title: Doubao
+- name: trae
+  file: trae.svg
+  title: TRAE
+- name: tiktok
+  file: tiktok.svg
+  title: TikTok
+- name: zhipu
+  file: zhipu.svg
+  title: Zhipu AI
+- name: zai
+  file: zai.svg
+  title: Z.ai
+  aliases:
+    - glm
+- name: minimax
+  file: minimax.svg
+  title: MiniMax
+- name: hailuo
+  file: hailuo.svg
+  title: Hailuo AI
+- name: stepfun
+  file: stepfun.svg
+  title: StepFun
+- name: baichuan
+  file: baichuan.svg
+  title: Baichuan
+- name: yi
+  file: yi.svg
+  title: 01.AI Yi
+  aliases:
+    - 01ai
+- name: baidu
+  file: baidu.svg
+  title: Baidu
+- name: ernie
+  file: wenxin.svg
+  title: ERNIE
+  aliases:
+    - wenxin
+- name: huawei
+  file: huawei.svg
+  title: Huawei
+- name: kling
+  file: kling.svg
+  title: Kling AI
+- name: longcat
+  file: longcat.svg
+  title: LongCat
+- name: internlm
+  file: internlm.svg
+  title: InternLM
+- name: sensenova
+  file: sensenova.svg
+  title: SenseNova
+- name: manus
+  file: manus.svg
+  title: Manus
+- name: spacex
+  file: spacex.svg
+  title: SpaceX
+- name: wechat
+  file: wechat.svg
+  title: WeChat
+  aliases:
+    - weixin

@@ -1,8 +1,4 @@
 use super::*;
-use campfire_app::integrations::fizzy::accounts::Account;
-use rails_compat::ar_encryption::ArEncryption;
-use serde_json::Value;
-use serde_json::json;
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{
@@ -10,7 +6,11 @@ use crate::{
         test_support::{FakeResolver, FakeServer, MappingDialer, Route, network},
     },
 };
+use campfire_app::integrations::fizzy::accounts::Account;
+use rails_compat::ar_encryption::ArEncryption;
 use rusqlite::params;
+use serde_json::Value;
+use serde_json::json;
 use std::sync::Arc;
 const OWNER_TOKEN: &str = "fixture-owner";
 async fn fixture(case: &str) -> (TestApp, i64) {
@@ -186,14 +186,43 @@ async fn ws15e_fizzy_agent_reads_reject_room_grants_suspension_and_corrupt_owner
 
 #[tokio::test]
 async fn ws15e_review_legacy_inactive_owner_cannot_read_fizzy() {
-    for status in [1,2] {
-        let (app,agent) = fixture("linked").await;
-        app.db().write(move |tx| {tx.conn().execute("UPDATE users SET status=? WHERE id=?",params![status,DAVID])?;Ok(())}).await.unwrap();
-        let server=FakeServer::start_ws15e(vec![Route::new("GET","app.fizzy.do","/897362094/boards.json",200).body("[]")]).await;
-        let resolver=Arc::new(FakeResolver::new([("app.fizzy.do",vec!["93.184.216.34"])]));
-        let dialer=Arc::new(MappingDialer {public:["93.184.216.34".parse().unwrap()].into(),to:server.addr,dialed:Default::default()});
-        let result=read(&app.booted.app,&network(resolver.clone(),dialer),"http://app.fizzy.do",agent,Read::Boards {account:json!(null)}).await.unwrap();
-        assert_eq!(result.status,403,"unsafe legacy owner cannot authenticate agent reads");
+    for status in [1, 2] {
+        let (app, agent) = fixture("linked").await;
+        app.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE users SET status=? WHERE id=?",
+                    params![status, DAVID],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let server = FakeServer::start_ws15e(vec![
+            Route::new("GET", "app.fizzy.do", "/897362094/boards.json", 200).body("[]"),
+        ])
+        .await;
+        let resolver = Arc::new(FakeResolver::new([("app.fizzy.do", vec!["93.184.216.34"])]));
+        let dialer = Arc::new(MappingDialer {
+            public: ["93.184.216.34".parse().unwrap()].into(),
+            to: server.addr,
+            dialed: Default::default(),
+        });
+        let result = read(
+            &app.booted.app,
+            &network(resolver.clone(), dialer),
+            "http://app.fizzy.do",
+            agent,
+            Read::Boards {
+                account: json!(null),
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            result.status, 403,
+            "unsafe legacy owner cannot authenticate agent reads"
+        );
         assert!(server.received().is_empty());
         assert!(resolver.lookups().is_empty());
     }

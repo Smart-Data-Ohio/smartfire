@@ -37,7 +37,7 @@ fn ws11_deletion_indicator_precedes_failed_ledger_with_webhook() {
 }
 
 fn deletion_indicator_before_ledger(webhook: bool) {
-    use crate::broadcasts::{Broadcast};
+    use crate::broadcasts::Broadcast;
     let oracle: Value = serde_json::from_str(include_str!(
         "../../../../vectors/agents_deletion_indicator_contract.json"
     ))
@@ -93,10 +93,17 @@ fn deletion_indicator_before_ledger(webhook: bool) {
             .take()
             .iter()
             .filter_map(|event| match event.as_broadcast()? {
-                Broadcast::ThreadIndicator { message_id, reply_count } => {
+                Broadcast::ThreadIndicator {
+                    message_id,
+                    reply_count,
+                } => {
                     assert_eq!(message_id, parent.id);
-                    Some((format!("thread_indicator_message_{}", parent.client_message_id), reply_count, true))
-                },
+                    Some((
+                        format!("thread_indicator_message_{}", parent.client_message_id),
+                        reply_count,
+                        true,
+                    ))
+                }
                 _ => None,
             })
             .collect();
@@ -221,24 +228,40 @@ fn ws11_review_deleted_ledger_failure_keeps_deletion() {
     assert!(failed.is_err());
     let exists = t.read(|conn| Ok(ChannelThread::find_by_id(conn, THREAD)?.is_some()));
     println!("REVIEW deletion-event failure: thread_exists={exists}");
-    let gold: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/agents_review_fixes_contract.json")).unwrap();
-    assert_eq!(exists, gold["results"]["deletion"]["thread_exists"].as_bool().unwrap());
+    let gold: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agents_review_fixes_contract.json"
+    ))
+    .unwrap();
+    assert_eq!(
+        exists,
+        gold["results"]["deletion"]["thread_exists"]
+            .as_bool()
+            .unwrap()
+    );
 }
 
 #[test]
 fn ws11_review_deletion_event_preserves_captured_agent_after_outer_removal() {
-    let t=setup();
-    t.write(|tx| {tx.conn().execute("DELETE FROM webhooks WHERE user_id=?",[id("bender")])?;Ok(())});
-    let result=t.try_write(|tx| {
-        ChannelThread::find(tx.conn(),THREAD)?.destroy(tx)?;
-        tx.conn().execute("DELETE FROM agents WHERE id=?",[id("bender_agent")])?;
+    let t = setup();
+    t.write(|tx| {
+        tx.conn()
+            .execute("DELETE FROM webhooks WHERE user_id=?", [id("bender")])?;
+        Ok(())
+    });
+    let result = t.try_write(|tx| {
+        ChannelThread::find(tx.conn(), THREAD)?.destroy(tx)?;
+        tx.conn()
+            .execute("DELETE FROM agents WHERE id=?", [id("bender_agent")])?;
         Ok(())
     });
     assert!(result.is_ok());
     let actual=t.read(|c|Ok(json!({"error":null,"thread_exists":ChannelThread::find_by_id(c,THREAD)?.is_some(),"agent_exists":crate::Agent::find(c,id("bender_agent"))?.is_some(),"events":c.query_row("SELECT COUNT(*) FROM agent_events WHERE json_extract(metadata,'$.thread_id')=?",[THREAD],|r|r.get::<_,i64>(0))?})));
-    let gold:Value=serde_json::from_str(include_str!("../../../../vectors/agents_review_fixes_contract.json")).unwrap();
+    let gold: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agents_review_fixes_contract.json"
+    ))
+    .unwrap();
     println!("WS11 captured-agent deletion event: {actual}");
-    assert_eq!(actual,gold["results"]["deletion_removed_agent"]);
+    assert_eq!(actual, gold["results"]["deletion_removed_agent"]);
 }
 
 #[test]
@@ -250,21 +273,54 @@ fn ws11_publication_deletion_id_follows_events_committed_in_parent() {
     let capture = observed.clone();
     let later = t.write(move |tx| {
         assert!(crate::Webhook::find_by_user(tx.conn(), id("bender"))?.is_some());
-        for cap in ["read_messages","external_action"] {
-            crate::AgentGrant::create(tx,crate::NewGrant{agent_id:id("bender_agent"),capability:cap.into(),granted_by_id:id("david"),..Default::default()})?;
+        for cap in ["read_messages", "external_action"] {
+            crate::AgentGrant::create(
+                tx,
+                crate::NewGrant {
+                    agent_id: id("bender_agent"),
+                    capability: cap.into(),
+                    granted_by_id: id("david"),
+                    ..Default::default()
+                },
+            )?;
         }
-        let approval=crate::AgentApproval::create(tx,crate::NewApproval{agent_id:id("bender_agent"),room_id:Some(id("watercooler")),action:"github.comment".into(),summary:"Committed completion".into(),..Default::default()})?;
+        let approval = crate::AgentApproval::create(
+            tx,
+            crate::NewApproval {
+                agent_id: id("bender_agent"),
+                room_id: Some(id("watercooler")),
+                action: "github.comment".into(),
+                summary: "Committed completion".into(),
+                ..Default::default()
+            },
+        )?;
         tx.after_commit(move |tx| {
-            let page = agent_event_polling::poll(tx.conn(), id("bender_agent"), None, None,
-                tx.now(), &Default::default(), |message| Ok(json!({"id":message.id})))?;
+            let page = agent_event_polling::poll(
+                tx.conn(),
+                id("bender_agent"),
+                None,
+                None,
+                tx.now(),
+                &Default::default(),
+                |message| Ok(json!({"id":message.id})),
+            )?;
             *capture.lock().unwrap() = Some(page);
             Ok(())
         });
         ChannelThread::find(tx.conn(), THREAD)?.destroy(tx)?;
-        Ok(AgentEvent::create(tx, NewEvent {agent_id:id("bender_agent"),
-            room_id:Some(id("watercooler")), agent_approval_id:Some(approval.id),event_type:"github_action_completed".into(),
-            outcome:Some("delivered".into()), metadata:json!({"status":"completed"}),
-            ..Default::default()})?.id)
+        Ok(AgentEvent::create(
+            tx,
+            NewEvent {
+                agent_id: id("bender_agent"),
+                room_id: Some(id("watercooler")),
+                agent_approval_id: Some(approval.id),
+                event_type: "github_action_completed".into(),
+                outcome: Some("delivered".into()),
+                metadata: json!({"status":"completed"}),
+                ..Default::default()
+            },
+        )?
+        .id)
     });
     let first = observed.lock().unwrap().take().unwrap();
     let actual = t.read(move |conn| {
@@ -281,20 +337,35 @@ fn ws11_publication_deletion_id_follows_events_committed_in_parent() {
             "thread_exists":ChannelThread::find_by_id(conn,THREAD)?.is_some()}))
     });
     println!("WS11 deletion publication same transaction: {actual}");
-    let oracle:Value=serde_json::from_str(include_str!("../../../../vectors/agents_deletion_publication_contract.json")).unwrap();
-    assert_eq!(actual,oracle["results"]["same_transaction"]);
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agents_deletion_publication_contract.json"
+    ))
+    .unwrap();
+    assert_eq!(actual, oracle["results"]["same_transaction"]);
 }
 
 fn callback_order_oracle() -> Value {
-    serde_json::from_str(include_str!("../../../../vectors/agents_deletion_callback_contract.json")).unwrap()
+    serde_json::from_str(include_str!(
+        "../../../../vectors/agents_deletion_callback_contract.json"
+    ))
+    .unwrap()
 }
 fn callback_thread(tx: &mut Tx<'_>, name: &str) -> Result<ChannelThread> {
-    let thread = ChannelThread::create(tx, crate::NewChannelThread {
-        room_id:id("watercooler"), creator_id:id("david"), name:Some(name.into()),
-        work_status:Some("planned".into()), ..Default::default()
-    })?;
-    tx.conn().execute("UPDATE channel_threads SET work_owner_id=? WHERE id=?",params![id("bender"),thread.id])?;
-    ChannelThread::find(tx.conn(),thread.id)
+    let thread = ChannelThread::create(
+        tx,
+        crate::NewChannelThread {
+            room_id: id("watercooler"),
+            creator_id: id("david"),
+            name: Some(name.into()),
+            work_status: Some("planned".into()),
+            ..Default::default()
+        },
+    )?;
+    tx.conn().execute(
+        "UPDATE channel_threads SET work_owner_id=? WHERE id=?",
+        params![id("bender"), thread.id],
+    )?;
+    ChannelThread::find(tx.conn(), thread.id)
 }
 fn callback_observation(t: &TestDb) -> Value {
     t.read(|conn| {
@@ -312,83 +383,128 @@ fn callback_observation(t: &TestDb) -> Value {
     })
 }
 fn callback_setup(webhook: bool) -> TestDb {
-    let t=setup();
-    t.write(move|tx| {
-        tx.conn().execute("DELETE FROM channel_threads WHERE id=?",[THREAD])?;
-        if !webhook {tx.conn().execute("DELETE FROM webhooks WHERE user_id=?",[id("bender")])?;}
+    let t = setup();
+    t.write(move |tx| {
+        tx.conn()
+            .execute("DELETE FROM channel_threads WHERE id=?", [THREAD])?;
+        if !webhook {
+            tx.conn()
+                .execute("DELETE FROM webhooks WHERE user_id=?", [id("bender")])?;
+        }
         Ok(())
     });
     t
 }
 #[test]
 fn ws11_r4_callback_created_first_matches_rails() {
-    for webhook in [false,true] {
-        let t=callback_setup(webhook);
-        t.write(|tx| {let a=callback_thread(tx,"A")?;let b=callback_thread(tx,"B")?;b.destroy(tx)?;a.destroy(tx)});
-        let actual=callback_observation(&t);
+    for webhook in [false, true] {
+        let t = callback_setup(webhook);
+        t.write(|tx| {
+            let a = callback_thread(tx, "A")?;
+            let b = callback_thread(tx, "B")?;
+            b.destroy(tx)?;
+            a.destroy(tx)
+        });
+        let actual = callback_observation(&t);
         println!("WS11 r4 created_first webhook={webhook}: {actual}");
-        assert_eq!(actual,callback_order_oracle()["results"][format!("created_same_transaction_{webhook}")]);
+        assert_eq!(
+            actual,
+            callback_order_oracle()["results"][format!("created_same_transaction_{webhook}")]
+        );
     }
 }
 #[test]
 fn ws11_r4_callback_updated_first_matches_rails() {
-    for webhook in [false,true] {
-        let t=callback_setup(webhook);
-        let (mut a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
-        t.write(move|tx| {a.update_settings(tx,Some("A edited"),None)?;b.destroy(tx)?;a.destroy(tx)});
-        let actual=callback_observation(&t);
+    for webhook in [false, true] {
+        let t = callback_setup(webhook);
+        let (mut a, b) = t.write(|tx| Ok((callback_thread(tx, "A")?, callback_thread(tx, "B")?)));
+        t.write(move |tx| {
+            a.update_settings(tx, Some("A edited"), None)?;
+            b.destroy(tx)?;
+            a.destroy(tx)
+        });
+        let actual = callback_observation(&t);
         println!("WS11 r4 updated_first webhook={webhook}: {actual}");
-        assert_eq!(actual,callback_order_oracle()["results"][format!("updated_first_{webhook}")]);
+        assert_eq!(
+            actual,
+            callback_order_oracle()["results"][format!("updated_first_{webhook}")]
+        );
     }
 }
 #[test]
 fn ws11_r4_callback_plain_reverse_deletion_matches_rails() {
-    for webhook in [false,true] {
-        let t=callback_setup(webhook);
-        let (a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
-        t.write(move|tx| {b.destroy(tx)?;a.destroy(tx)});
-        assert_eq!(callback_observation(&t),callback_order_oracle()["results"][format!("plain_{webhook}")]);
+    for webhook in [false, true] {
+        let t = callback_setup(webhook);
+        let (a, b) = t.write(|tx| Ok((callback_thread(tx, "A")?, callback_thread(tx, "B")?)));
+        t.write(move |tx| {
+            b.destroy(tx)?;
+            a.destroy(tx)
+        });
+        assert_eq!(
+            callback_observation(&t),
+            callback_order_oracle()["results"][format!("plain_{webhook}")]
+        );
     }
 }
 #[test]
 fn ws11_r4_callback_failure_stops_remaining_publications() {
-    let t=callback_setup(false);
-    let (a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
+    let t = callback_setup(false);
+    let (a, b) = t.write(|tx| Ok((callback_thread(tx, "A")?, callback_thread(tx, "B")?)));
     let failed=t.try_write(move|tx| {
         tx.conn().execute_batch(&format!("CREATE TEMP TRIGGER ws11_reject_first BEFORE INSERT ON agent_events WHEN NEW.event_type='work_unassigned' AND json_extract(NEW.metadata,'$.thread_id')={} BEGIN SELECT RAISE(ABORT,'WS11 rejected ledger'); END",b.id))?;
         b.destroy(tx)?;a.destroy(tx)
     });
     assert!(failed.is_err());
-    let actual=callback_observation(&t);
+    let actual = callback_observation(&t);
     println!("WS11 r4 first_callback_failure: {actual}");
-    assert_eq!(actual,callback_order_oracle()["results"]["first_ledger_failure"]);
+    assert_eq!(
+        actual,
+        callback_order_oracle()["results"]["first_ledger_failure"]
+    );
 }
 
 #[test]
 fn ws11_r4_callback_savepoint_discards_rolled_back_deletion() {
-    for webhook in [false,true] {
-        let t=callback_setup(webhook);
-        let (mut a,b)=t.write(|tx|Ok((callback_thread(tx,"A")?,callback_thread(tx,"B")?)));
-        t.write(move|tx| {
-            a.update_settings(tx,Some("A edited"),None)?;
-            let failed=tx.savepoint(|tx| {let c=callback_thread(tx,"Rolled back C")?;c.destroy(tx)?;Err::<(),_>(crate::Error::Other("WS11 nested rollback".into()))});
+    for webhook in [false, true] {
+        let t = callback_setup(webhook);
+        let (mut a, b) = t.write(|tx| Ok((callback_thread(tx, "A")?, callback_thread(tx, "B")?)));
+        t.write(move |tx| {
+            a.update_settings(tx, Some("A edited"), None)?;
+            let failed = tx.savepoint(|tx| {
+                let c = callback_thread(tx, "Rolled back C")?;
+                c.destroy(tx)?;
+                Err::<(), _>(crate::Error::Other("WS11 nested rollback".into()))
+            });
             assert!(failed.is_err());
-            assert!(ChannelThread::find_by_id(tx.conn(),a.id)?.is_some());
-            b.destroy(tx)?;a.destroy(tx)
+            assert!(ChannelThread::find_by_id(tx.conn(), a.id)?.is_some());
+            b.destroy(tx)?;
+            a.destroy(tx)
         });
-        assert_eq!(callback_observation(&t),callback_order_oracle()["results"][format!("savepoint_{webhook}")]);
+        assert_eq!(
+            callback_observation(&t),
+            callback_order_oracle()["results"][format!("savepoint_{webhook}")]
+        );
     }
 }
 
 #[test]
 fn ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs() {
-    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
     #[derive(serde::Serialize, serde::Deserialize)]
-    struct CommittedJob { which: u8 }
-    impl crate::Job for CommittedJob { const CLASS: &'static str = "WS11::CommittedCallbackProbeJob"; }
+    struct CommittedJob {
+        which: u8,
+    }
+    impl crate::Job for CommittedJob {
+        const CLASS: &'static str = "WS11::CommittedCallbackProbeJob";
+    }
     #[derive(serde::Serialize, serde::Deserialize)]
     struct LaterBroadcast;
-    impl crate::Broadcast for LaterBroadcast { const KIND: &'static str = "WS11::LaterCallbackProbeBroadcast"; }
+    impl crate::Broadcast for LaterBroadcast {
+        const KIND: &'static str = "WS11::LaterCallbackProbeBroadcast";
+    }
     let t = TestDb::new();
     let called = Arc::new(AtomicBool::new(false));
     let marker = called.clone();
@@ -399,16 +515,32 @@ fn ws11_r4_callback_failure_stops_hooks_but_wakes_committed_jobs() {
         tx.emit_record_job_once("users", -1, &CommittedJob { which: 3 });
         tx.emit_after_commit(crate::Event::PurgeBlob { blob_id: -1 });
         tx.emit_after_commit(crate::Event::broadcast(&LaterBroadcast));
-        tx.after_commit(move |_| { marker.store(true, Ordering::SeqCst); Ok(()) });
+        tx.after_commit(move |_| {
+            marker.store(true, Ordering::SeqCst);
+            Ok(())
+        });
         Ok(())
     });
     assert!(result.is_err());
     assert!(!called.load(Ordering::SeqCst), "later model callback ran");
-    let notifications: Vec<_> = t.events().into_iter().filter_map(|event| match event {
-        crate::Event::Job(job) if job.class == <CommittedJob as crate::Job>::CLASS => Some(job.arguments["which"].clone()),
-        _ => None,
-    }).collect();
+    let notifications: Vec<_> = t
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            crate::Event::Job(job) if job.class == <CommittedJob as crate::Job>::CLASS => {
+                Some(job.arguments["which"].clone())
+            }
+            _ => None,
+        })
+        .collect();
     assert_eq!(notifications, vec![json!(1), json!(2)]);
-    assert!(t.events().contains(&crate::Event::PurgeBlob { blob_id: -1 }));
-    assert!(!t.events().iter().any(|event| matches!(event, crate::Event::Broadcast(_))));
+    assert!(
+        t.events()
+            .contains(&crate::Event::PurgeBlob { blob_id: -1 })
+    );
+    assert!(
+        !t.events()
+            .iter()
+            .any(|event| matches!(event, crate::Event::Broadcast(_)))
+    );
 }

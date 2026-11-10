@@ -16,16 +16,18 @@ pub fn credentials(
                 name: r.get("credential_name")?,
                 last_four: r.get("token_last_four")?,
                 created_by: User::from_row(r)?.display_name().to_owned(),
-                created_at: r.get::<_, campfire_db::Timestamp>("credential_created_at")?.jiff(),
-                expires_at: r.get::<_, Option<campfire_db::Timestamp>>("expires_at")?.map(|t| {
-                    CredentialExpiry::Extended {
+                created_at: r
+                    .get::<_, campfire_db::Timestamp>("credential_created_at")?
+                    .jiff(),
+                expires_at: r
+                    .get::<_, Option<campfire_db::Timestamp>>("expires_at")?
+                    .map(|t| CredentialExpiry::Extended {
                         datetime:
                             crate::controllers::presenters::bot_input_casts::extended_datetime(
                                 t, zone, true,
                             ),
                         microseconds: t.as_wide_microsecond(),
-                    }
-                }),
+                    }),
                 last_used_at: r
                     .get::<_, Option<campfire_db::Timestamp>>("last_used_at")?
                     .map(|t| t.jiff()),

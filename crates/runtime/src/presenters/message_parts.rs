@@ -12,21 +12,23 @@ pub fn poll_view(
     let options = poll
         .options(conn)?
         .into_iter()
-        .map(|option| campfire_presentation::messages::parts::PollOption {
-            id: option.id,
-            label: option.label,
-        })
+        .map(
+            |option| campfire_presentation::messages::parts::PollOption {
+                id: option.id,
+                label: option.label,
+            },
+        )
         .collect();
     let votes = poll
         .votes_with_names(conn)?
         .into_iter()
-        .map(|(vote,name)| {
-            campfire_presentation::messages::parts::PollVote {
+        .map(
+            |(vote, name)| campfire_presentation::messages::parts::PollVote {
                 option_id: vote.poll_option_id,
                 user_id: vote.user_id,
                 user_name: name,
-            }
-        })
+            },
+        )
         .collect();
     Ok(campfire_presentation::messages::parts::Poll {
         id,

@@ -25,9 +25,10 @@ async fn demoted_administrator_keeps_owner_reads_but_loses_credential_and_grant_
         .unwrap();
     let path = format!("/account/bots/{bot}");
     for area in ["credentials", "grants"] {
-        let response = viewer.get(&format!("/api/v1/admin/bots/{bot}/{area}")).await;
+        let response = viewer
+            .get(&format!("/api/v1/admin/bots/{bot}/{area}"))
+            .await;
         assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-
     }
     assert_eq!(
         viewer
@@ -114,7 +115,6 @@ async fn credentials_create_requires_sudo_and_reveals_digest_backed_secret_once(
         let audit:String=conn.query_row("SELECT details FROM audit_logs WHERE action='agent.credential.create' ORDER BY id DESC LIMIT 1",[],|r|r.get(0))?;
         assert!(!audit.contains(&captured)); Ok(())
     }).await.unwrap();
-
 }
 #[tokio::test]
 async fn credentials_owner_lists_and_revokes_but_cannot_issue() {
@@ -125,7 +125,9 @@ async fn credentials_owner_lists_and_revokes_but_cannot_issue() {
     let mut viewer = test.browser("198.51.100.223");
     viewer.sign_in(&test.label("emails.kevin")).await;
     let path = format!("/account/bots/{id}/credentials");
-    let index = viewer.get(&path.replacen("/account/bots", "/api/v1/admin/bots", 1)).await;
+    let index = viewer
+        .get(&path.replacen("/account/bots", "/api/v1/admin/bots", 1))
+        .await;
     assert_eq!(index.status, StatusCode::OK);
 
     assert_eq!(
@@ -163,7 +165,13 @@ async fn credentials_invalid_name_and_nonowner_do_not_write() {
 
     let mut viewer = test.browser("198.51.100.225");
     viewer.sign_in(&test.label("emails.kevin")).await;
-    assert_eq!(viewer.get(&path.replacen("/account/bots", "/api/v1/admin/bots", 1)).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        viewer
+            .get(&path.replacen("/account/bots", "/api/v1/admin/bots", 1))
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
     assert_eq!(
         viewer
             .form("post", &path, &[("agent_credential[name]", "Sneaky")])
@@ -337,9 +345,10 @@ async fn grants_owner_views_and_revokes_but_cannot_widen() {
     let mut viewer = test.browser("198.51.100.229");
     viewer.sign_in(&test.label("emails.kevin")).await;
     viewer.grant_sudo_access();
-    let page = viewer.get(&path.replacen("/account/bots", "/api/v1/admin/bots", 1)).await;
+    let page = viewer
+        .get(&path.replacen("/account/bots", "/api/v1/admin/bots", 1))
+        .await;
     assert_eq!(page.status, StatusCode::OK);
-
 
     for capability in ["read_messages", "external_action"] {
         for room in ["", &test.label("rooms.watercooler")] {
@@ -401,7 +410,6 @@ async fn grants_invalid_scope_capability_and_missing_room_render_errors() {
             )
             .await;
         assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
-
     }
     assert_eq!(
         test.booted
@@ -466,7 +474,6 @@ async fn credential_local_expiry_uses_the_viewer_time_zone() {
         })
         .await
         .unwrap();
-
 }
 #[tokio::test]
 async fn credential_string_expiry_matches_pinned_rails_in_both_viewer_zones() {

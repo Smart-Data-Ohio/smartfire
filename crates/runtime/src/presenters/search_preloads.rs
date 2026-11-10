@@ -23,17 +23,40 @@ impl Preloads {
     pub fn load_plain_text(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
         let records = RenderingRecords::load_plain_text(p.conn, messages)?;
         let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
-        let mentions: Vec<_> = records.bodies.values().flatten().flat_map(|b| mention_ids(b,0))
-            .chain(messages.iter().map(|m|m.creator_id)).collect();
-        let users = User::where_ids(p.conn,&mentions)?.into_iter().map(|user| {
-            let id=user.id;
-            let icon_name=user.icon_name.clone();
-            (id,RenderingUser { user, uploaded_avatar:false, icon_name })
-        }).collect();
-        let attachments=campfire_storage::Blob::attached_messages(p.conn,&ids)
+        let mentions: Vec<_> = records
+            .bodies
+            .values()
+            .flatten()
+            .flat_map(|b| mention_ids(b, 0))
+            .chain(messages.iter().map(|m| m.creator_id))
+            .collect();
+        let users = User::where_ids(p.conn, &mentions)?
+            .into_iter()
+            .map(|user| {
+                let id = user.id;
+                let icon_name = user.icon_name.clone();
+                (
+                    id,
+                    RenderingUser {
+                        user,
+                        uploaded_avatar: false,
+                        icon_name,
+                    },
+                )
+            })
+            .collect();
+        let attachments = campfire_storage::Blob::attached_messages(p.conn, &ids)
             .map_err(super::storage_error)?;
-        let icons=crate::rich_text::icons(p.conn).map_err(campfire_db::Error::Other)?;
-        Ok(Self { records,users,attachments,icons,previewed_blobs:Default::default(),threads:None,custom_icons:Default::default() })
+        let icons = crate::rich_text::icons(p.conn).map_err(campfire_db::Error::Other)?;
+        Ok(Self {
+            records,
+            users,
+            attachments,
+            icons,
+            previewed_blobs: Default::default(),
+            threads: None,
+            custom_icons: Default::default(),
+        })
     }
     pub fn load_payload(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
         let records = RenderingRecords::load_payload(p.conn, messages)?;
@@ -64,7 +87,12 @@ impl Preloads {
         let attachments =
             campfire_storage::Blob::attached_messages(p.conn, &records.body_ids(messages))
                 .map_err(super::storage_error)?;
-        let videos = attachments.values().flat_map(|files| &files.files).filter(|file| !file.spoiler && file.blob.is_video()).map(|file| file.blob.id).collect::<Vec<_>>();
+        let videos = attachments
+            .values()
+            .flat_map(|files| &files.files)
+            .filter(|file| !file.spoiler && file.blob.is_video())
+            .map(|file| file.blob.id)
+            .collect::<Vec<_>>();
         let previewed_blobs = campfire_storage::Blob::previewed_blob_ids(p.conn, &videos)
             .map_err(super::storage_error)?;
         let icons = crate::rich_text::icons(p.conn).map_err(campfire_db::Error::Other)?;
@@ -107,7 +135,14 @@ impl Preloads {
             text = self
                 .attachments
                 .get(&m.id)
-                .map(|files| files.files.iter().map(|file| file.blob.filename.to_string()).collect::<Vec<_>>().join(", "))
+                .map(|files| {
+                    files
+                        .files
+                        .iter()
+                        .map(|file| file.blob.filename.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
                 .unwrap_or_default();
         }
         Ok(m.display_text(text))

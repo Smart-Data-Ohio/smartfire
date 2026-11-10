@@ -293,7 +293,9 @@ async fn scheduled_files_assignment_rechecks_derivative_privacy_inside_the_write
             crate::controllers::messages::attachment_blob(
                 tx,
                 assignment,
-                crate::controllers::messages::AttachmentPolicy::SignedBlob { actor_id: Some(DAVID) },
+                crate::controllers::messages::AttachmentPolicy::SignedBlob {
+                    actor_id: Some(DAVID),
+                },
                 "attachment",
             )
         })

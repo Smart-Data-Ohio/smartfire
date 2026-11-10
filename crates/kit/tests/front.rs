@@ -29,7 +29,9 @@ impl Server {
     /// On fresh ports, picking new ones when something took one between `free_port` and the bind.
     async fn start(vars: &[(&str, &str)], app: Router) -> Self {
         for _ in 0..5 {
-            if let Some(server) = Self::try_start(vars, app.clone(), None, free_port(), free_port()).await {
+            if let Some(server) =
+                Self::try_start(vars, app.clone(), None, free_port(), free_port()).await
+            {
                 return server;
             }
         }
@@ -37,9 +39,18 @@ impl Server {
     }
 
     /// `None` when the server stops before it's listening (a port was taken).
-    async fn try_start(vars: &[(&str, &str)], app: Router, acme: Option<AcmeOptions>, http: u16, https: u16) -> Option<Self> {
+    async fn try_start(
+        vars: &[(&str, &str)],
+        app: Router,
+        acme: Option<AcmeOptions>,
+        http: u16,
+        https: u16,
+    ) -> Option<Self> {
         let target = free_port();
-        let mut env: HashMap<String, String> = vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+        let mut env: HashMap<String, String> = vars
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
         env.entry("HTTP_PORT".into()).or_insert(http.to_string());
         env.entry("HTTPS_PORT".into()).or_insert(https.to_string());
         env.insert("TARGET_PORT".into(), target.to_string());
@@ -49,21 +60,35 @@ impl Server {
         let (ready, started) = oneshot::channel();
         let done = tokio::spawn(async move {
             if let Err(error) = front::serve_with_ready(
-                config, app, acme,
-                move || { let _ = ready.send(()); },
-                async move { let _ = stopped.await; },
+                config,
+                app,
+                acme,
+                move || {
+                    let _ = ready.send(());
+                },
+                async move {
+                    let _ = stopped.await;
+                },
             )
             .await
             {
                 eprintln!("front server stopped: {error}");
             }
         });
-        if !matches!(tokio::time::timeout(Duration::from_secs(2), started).await, Ok(Ok(()))) {
+        if !matches!(
+            tokio::time::timeout(Duration::from_secs(2), started).await,
+            Ok(Ok(()))
+        ) {
             let _ = stop.send(());
             let _ = tokio::time::timeout(Duration::from_secs(10), done).await;
             return None;
         }
-        Some(Self { http, target, stop: Some(stop), done })
+        Some(Self {
+            http,
+            target,
+            stop: Some(stop),
+            done,
+        })
     }
 
     async fn stop(mut self) {
@@ -73,7 +98,11 @@ impl Server {
 }
 
 fn free_port() -> u16 {
-    std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port()
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port()
 }
 
 #[tokio::test]
@@ -85,7 +114,10 @@ async fn readiness_does_not_accept_another_servers_listener() {
     if let Some(server) = server {
         server.stop().await;
     }
-    assert!(!incorrectly_started, "a connection to another listener must not establish readiness");
+    assert!(
+        !incorrectly_started,
+        "a connection to another listener must not establish readiness"
+    );
 }
 
 /// A raw HTTP/1.1 exchange on a fresh connection, read to EOF.
@@ -97,7 +129,11 @@ struct Reply {
 
 impl Reply {
     fn all(&self, name: &str) -> Vec<&str> {
-        self.headers.iter().filter(|(n, _)| n.eq_ignore_ascii_case(name)).map(|(_, v)| v.as_str()).collect()
+        self.headers
+            .iter()
+            .filter(|(n, _)| n.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.as_str())
+            .collect()
     }
 
     fn get(&self, name: &str) -> Option<&str> {
@@ -109,29 +145,56 @@ async fn exchange(port: u16, request: &str) -> Reply {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
     stream.write_all(request.as_bytes()).await.unwrap();
     let mut raw = Vec::new();
-    tokio::time::timeout(Duration::from_secs(10), stream.read_to_end(&mut raw)).await.unwrap().unwrap();
+    tokio::time::timeout(Duration::from_secs(10), stream.read_to_end(&mut raw))
+        .await
+        .unwrap()
+        .unwrap();
     parse(&raw)
 }
 
 fn parse(raw: &[u8]) -> Reply {
-    let split = raw.windows(4).position(|w| w == b"\r\n\r\n").expect("a complete head");
+    let split = raw
+        .windows(4)
+        .position(|w| w == b"\r\n\r\n")
+        .expect("a complete head");
     let head = std::str::from_utf8(&raw[..split]).unwrap();
     let mut lines = head.split("\r\n");
-    let status = lines.next().unwrap().split(' ').nth(1).unwrap().parse().unwrap();
-    let headers: Vec<(String, String)> =
-        lines.map(|l| l.split_once(": ").map(|(n, v)| (n.to_ascii_lowercase(), v.to_string())).unwrap()).collect();
+    let status = lines
+        .next()
+        .unwrap()
+        .split(' ')
+        .nth(1)
+        .unwrap()
+        .parse()
+        .unwrap();
+    let headers: Vec<(String, String)> = lines
+        .map(|l| {
+            l.split_once(": ")
+                .map(|(n, v)| (n.to_ascii_lowercase(), v.to_string()))
+                .unwrap()
+        })
+        .collect();
     let mut body = raw[split + 4..].to_vec();
-    if headers.iter().any(|(n, v)| n == "transfer-encoding" && v == "chunked") {
+    if headers
+        .iter()
+        .any(|(n, v)| n == "transfer-encoding" && v == "chunked")
+    {
         body = dechunk(&body);
     }
-    Reply { status, headers, body }
+    Reply {
+        status,
+        headers,
+        body,
+    }
 }
 
 fn dechunk(mut data: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
     loop {
         let line_end = data.windows(2).position(|w| w == b"\r\n").unwrap();
-        let size = usize::from_str_radix(std::str::from_utf8(&data[..line_end]).unwrap().trim(), 16).unwrap();
+        let size =
+            usize::from_str_radix(std::str::from_utf8(&data[..line_end]).unwrap().trim(), 16)
+                .unwrap();
         data = &data[line_end + 2..];
         if size == 0 {
             return out;
@@ -171,7 +234,9 @@ fn test_app() -> (Router, Arc<AtomicUsize>) {
             get(|| async {
                 // `send_file`: a streamed body whose length is declared up front, so the server
                 // never polls it past its last byte.
-                let chunks = futures_util::stream::iter(["stream", "ed"].map(|c| Ok::<_, std::io::Error>(axum::body::Bytes::from(c))));
+                let chunks = futures_util::stream::iter(
+                    ["stream", "ed"].map(|c| Ok::<_, std::io::Error>(axum::body::Bytes::from(c))),
+                );
                 Response::builder()
                     .header("cache-control", "public, max-age=60")
                     .header("content-length", "8")
@@ -191,17 +256,36 @@ fn test_app() -> (Router, Arc<AtomicUsize>) {
                     .unwrap()
             }),
         )
-        .route("/page", get(|| async { Response::builder().header("content-type", "text/html; charset=utf-8").body(Body::from("<p>campfire</p>".repeat(200))).unwrap() }))
+        .route(
+            "/page",
+            get(|| async {
+                Response::builder()
+                    .header("content-type", "text/html; charset=utf-8")
+                    .body(Body::from("<p>campfire</p>".repeat(200)))
+                    .unwrap()
+            }),
+        )
         .route("/headers", get(echo_headers).post(echo_headers))
-        .route("/upload", post(|body: axum::body::Bytes| async move { format!("{} bytes", body.len()) }))
-        .route("/slow", get(|| async { tokio::time::sleep(Duration::from_secs(3)).await; "late" }))
+        .route(
+            "/upload",
+            post(|body: axum::body::Bytes| async move { format!("{} bytes", body.len()) }),
+        )
+        .route(
+            "/slow",
+            get(|| async {
+                tokio::time::sleep(Duration::from_secs(3)).await;
+                "late"
+            }),
+        )
         .route(
             "/cable",
             any(|ws: WebSocketUpgrade| async move {
                 ws.on_upgrade(|mut socket| async move {
                     while let Some(Ok(message)) = socket.recv().await {
                         if let Message::Text(text) = message {
-                            let _ = socket.send(Message::Text(format!("echo {text}").into())).await;
+                            let _ = socket
+                                .send(Message::Text(format!("echo {text}").into()))
+                                .await;
                         }
                     }
                 })
@@ -212,9 +296,21 @@ fn test_app() -> (Router, Arc<AtomicUsize>) {
 
 async fn echo_headers(ConnectInfo(remote): ConnectInfo<SocketAddr>, request: Request) -> String {
     let headers: &HeaderMap = request.headers();
-    let get = |name| headers.get(name).and_then(|v| v.to_str().ok()).unwrap_or("-").to_string();
+    let get = |name| {
+        headers
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("-")
+            .to_string()
+    };
     if request.uri().query() == Some("h2") {
-        return format!("host={} cookie={} version={:?} uri={}", get("host"), get("cookie"), request.version(), request.uri());
+        return format!(
+            "host={} cookie={} version={:?} uri={}",
+            get("host"),
+            get("cookie"),
+            request.version(),
+            request.uri()
+        );
     }
     format!(
         "for={} host={} proto={} forwarded={} start={} peer={}",
@@ -232,37 +328,88 @@ async fn caches_public_responses() {
     let (app, renders) = test_app();
     let server = Server::start(&[], app).await;
 
-    let first = exchange(server.http, &get_request("/public", "Accept-Encoding: identity\r\n")).await;
+    let first = exchange(
+        server.http,
+        &get_request("/public", "Accept-Encoding: identity\r\n"),
+    )
+    .await;
     assert_eq!(first.status, 200);
     assert_eq!(first.get("x-cache"), Some("miss"));
-    assert_eq!(first.get("set-cookie"), None, "cacheable responses lose their cookies");
+    assert_eq!(
+        first.get("set-cookie"),
+        None,
+        "cacheable responses lose their cookies"
+    );
     assert_eq!(first.all("vary"), ["Accept-Encoding"]);
     assert!(first.get("date").is_some());
     assert_eq!(first.body, b"render 0");
 
-    let second = exchange(server.http, &get_request("/public?", "Accept-Encoding: identity\r\n")).await;
+    let second = exchange(
+        server.http,
+        &get_request("/public?", "Accept-Encoding: identity\r\n"),
+    )
+    .await;
     assert_eq!(second.get("x-cache"), Some("hit"));
     assert_eq!(second.body, b"render 0");
     assert_eq!(second.get("etag"), Some("\"v1\""));
 
     // Another Accept-Encoding is another variant.
-    let other = exchange(server.http, &get_request("/public", "Accept-Encoding: br\r\n")).await;
-    assert_eq!((other.get("x-cache"), other.body.as_slice()), (Some("miss"), b"render 1".as_slice()));
-    let again = exchange(server.http, &get_request("/public", "Accept-Encoding: br\r\n")).await;
-    assert_eq!((again.get("x-cache"), again.body.as_slice()), (Some("hit"), b"render 1".as_slice()));
+    let other = exchange(
+        server.http,
+        &get_request("/public", "Accept-Encoding: br\r\n"),
+    )
+    .await;
+    assert_eq!(
+        (other.get("x-cache"), other.body.as_slice()),
+        (Some("miss"), b"render 1".as_slice())
+    );
+    let again = exchange(
+        server.http,
+        &get_request("/public", "Accept-Encoding: br\r\n"),
+    )
+    .await;
+    assert_eq!(
+        (again.get("x-cache"), again.body.as_slice()),
+        (Some("hit"), b"render 1".as_slice())
+    );
 
-    let revalidated = exchange(server.http, &get_request("/public", "Accept-Encoding: identity\r\nIf-None-Match: \"v1\"\r\n")).await;
-    assert_eq!((revalidated.status, revalidated.get("x-cache")), (304, Some("hit")));
+    let revalidated = exchange(
+        server.http,
+        &get_request(
+            "/public",
+            "Accept-Encoding: identity\r\nIf-None-Match: \"v1\"\r\n",
+        ),
+    )
+    .await;
+    assert_eq!(
+        (revalidated.status, revalidated.get("x-cache")),
+        (304, Some("hit"))
+    );
     assert!(revalidated.body.is_empty());
 
-    let ranged = exchange(server.http, &get_request("/public", "Accept-Encoding: identity\r\nRange: bytes=0-1\r\n")).await;
-    assert_eq!(ranged.get("x-cache"), Some("bypass"), "ranges go to the app");
+    let ranged = exchange(
+        server.http,
+        &get_request(
+            "/public",
+            "Accept-Encoding: identity\r\nRange: bytes=0-1\r\n",
+        ),
+    )
+    .await;
+    assert_eq!(
+        ranged.get("x-cache"),
+        Some("bypass"),
+        "ranges go to the app"
+    );
     assert_eq!(renders.load(Ordering::SeqCst), 3);
 
     // Long URIs aren't cached.
     let long = format!("/public?pad={}", "x".repeat(4096));
     for _ in 0..2 {
-        let reply = exchange(server.http, &get_request(&long, "Accept-Encoding: identity\r\n")).await;
+        let reply = exchange(
+            server.http,
+            &get_request(&long, "Accept-Encoding: identity\r\n"),
+        )
+        .await;
         assert_eq!(reply.get("x-cache"), Some("bypass"));
     }
     assert_eq!(renders.load(Ordering::SeqCst), 5);
@@ -280,9 +427,22 @@ async fn caches_public_responses() {
 async fn caches_streamed_responses_of_declared_length() {
     let (app, _) = test_app();
     let server = Server::start(&[], app).await;
-    for (encoding, expected) in [("identity", "miss"), ("identity", "hit"), ("gzip", "miss"), ("gzip", "hit")] {
-        let reply = exchange(server.http, &get_request("/streamed", &format!("Accept-Encoding: {encoding}\r\n"))).await;
-        assert_eq!((reply.get("x-cache"), reply.body.as_slice()), (Some(expected), b"streamed".as_slice()), "{encoding}");
+    for (encoding, expected) in [
+        ("identity", "miss"),
+        ("identity", "hit"),
+        ("gzip", "miss"),
+        ("gzip", "hit"),
+    ] {
+        let reply = exchange(
+            server.http,
+            &get_request("/streamed", &format!("Accept-Encoding: {encoding}\r\n")),
+        )
+        .await;
+        assert_eq!(
+            (reply.get("x-cache"), reply.body.as_slice()),
+            (Some(expected), b"streamed".as_slice()),
+            "{encoding}"
+        );
     }
     server.stop().await;
 }
@@ -297,10 +457,14 @@ async fn bypassed_requests_repeat_vary() {
     assert_eq!(reply.all("vary"), ["Accept-Encoding"]);
 
     let (app, _) = test_app();
-    let with_vary = app.layer(axum::middleware::map_response(|mut response: Response<Body>| async move {
-        response.headers_mut().insert("vary", "Accept-Encoding".parse().unwrap());
-        response
-    }));
+    let with_vary = app.layer(axum::middleware::map_response(
+        |mut response: Response<Body>| async move {
+            response
+                .headers_mut()
+                .insert("vary", "Accept-Encoding".parse().unwrap());
+            response
+        },
+    ));
     let server2 = Server::start(&[], with_vary).await;
     let reply = exchange(server2.http, request).await;
     assert_eq!(reply.all("vary"), ["Accept-Encoding", "Accept-Encoding"]);
@@ -312,9 +476,16 @@ async fn bypassed_requests_repeat_vary() {
 async fn compresses_what_the_app_left_unencoded() {
     let (app, _) = test_app();
     let server = Server::start(&[], app).await;
-    let zstd = exchange(server.http, &get_request("/page", "Accept-Encoding: zstd\r\n")).await;
+    let zstd = exchange(
+        server.http,
+        &get_request("/page", "Accept-Encoding: zstd\r\n"),
+    )
+    .await;
     assert_eq!(zstd.get("content-encoding"), Some("zstd"));
-    assert_eq!(zstd::stream::decode_all(&zstd.body[..]).unwrap(), "<p>campfire</p>".repeat(200).as_bytes());
+    assert_eq!(
+        zstd::stream::decode_all(&zstd.body[..]).unwrap(),
+        "<p>campfire</p>".repeat(200).as_bytes()
+    );
     let plain = exchange(server.http, &get_request("/page", "")).await;
     assert_eq!(plain.get("content-encoding"), None);
     let head = exchange(server.http, "HEAD /page HTTP/1.1\r\nHost: chat.test\r\nConnection: close\r\nAccept-Encoding: gzip\r\n\r\n").await;
@@ -334,8 +505,18 @@ async fn forwards_client_addresses() {
 
     let (app, _) = test_app();
     let untrusting = Server::start(&[("FORWARD_HEADERS", "false")], app).await;
-    let reply = exchange(untrusting.http, &get_request("/headers", "X-Forwarded-For: 203.0.113.9\r\nX-Forwarded-Proto: https\r\n")).await;
-    assert_eq!(String::from_utf8(reply.body).unwrap(), "for=127.0.0.1 host=chat.test proto=http forwarded=- start=true peer=127.0.0.1");
+    let reply = exchange(
+        untrusting.http,
+        &get_request(
+            "/headers",
+            "X-Forwarded-For: 203.0.113.9\r\nX-Forwarded-Proto: https\r\n",
+        ),
+    )
+    .await;
+    assert_eq!(
+        String::from_utf8(reply.body).unwrap(),
+        "for=127.0.0.1 host=chat.test proto=http forwarded=- start=true peer=127.0.0.1"
+    );
     server.stop().await;
     untrusting.stop().await;
 }
@@ -355,18 +536,33 @@ async fn the_app_still_listens_on_the_target_port() {
 #[tokio::test]
 async fn the_target_port_is_loopback_only_and_limited() {
     let (app, _) = test_app();
-    let server = Server::start(&[("HTTP_READ_TIMEOUT", "1"), ("MAX_REQUEST_BODY", "10")], app).await;
+    let server = Server::start(
+        &[("HTTP_READ_TIMEOUT", "1"), ("MAX_REQUEST_BODY", "10")],
+        app,
+    )
+    .await;
     if let Some(address) = non_loopback_address() {
-        assert!(TcpStream::connect((address, server.target)).await.is_err(), "reachable on {address}");
+        assert!(
+            TcpStream::connect((address, server.target)).await.is_err(),
+            "reachable on {address}"
+        );
     }
 
     let large = exchange(server.target, "POST /upload HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Length: 11\r\n\r\nhello world").await;
     assert_eq!(large.status, 413);
 
-    let mut stream = TcpStream::connect(("127.0.0.1", server.target)).await.unwrap();
-    stream.write_all(b"GET / HTTP/1.1\r\nHost: x\r\n").await.unwrap();
+    let mut stream = TcpStream::connect(("127.0.0.1", server.target))
+        .await
+        .unwrap();
+    stream
+        .write_all(b"GET / HTTP/1.1\r\nHost: x\r\n")
+        .await
+        .unwrap();
     let mut buffer = vec![0; 4096];
-    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer)).await.expect("closed by the read timeout").unwrap_or(0);
+    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer))
+        .await
+        .expect("closed by the read timeout")
+        .unwrap_or(0);
     assert!(n == 0 || buffer.starts_with(b"HTTP/1.1 408"));
     server.stop().await;
 }
@@ -382,8 +578,15 @@ fn non_loopback_address() -> Option<std::net::IpAddr> {
 async fn limits_request_bodies() {
     let (app, _) = test_app();
     let server = Server::start(&[("MAX_REQUEST_BODY", "10")], app).await;
-    let small = exchange(server.http, "POST /upload HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Length: 5\r\n\r\nhello").await;
-    assert_eq!((small.status, small.body.as_slice()), (200, b"5 bytes".as_slice()));
+    let small = exchange(
+        server.http,
+        "POST /upload HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Length: 5\r\n\r\nhello",
+    )
+    .await;
+    assert_eq!(
+        (small.status, small.body.as_slice()),
+        (200, b"5 bytes".as_slice())
+    );
     let large = exchange(server.http, "POST /upload HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Length: 11\r\n\r\nhello world").await;
     assert_eq!(large.status, 413);
     let chunked = "POST /upload HTTP/1.1\r\nHost: x\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\n6\r\nhello \r\n5\r\nworld\r\n0\r\n\r\n";
@@ -422,7 +625,10 @@ async fn allocation_rise<T>(f: impl std::future::Future<Output = T>) -> (T, usiz
     let base = LIVE_BYTES.load(Ordering::Relaxed);
     PEAK_BYTES.store(base, Ordering::Relaxed);
     let value = f.await;
-    (value, PEAK_BYTES.load(Ordering::Relaxed).saturating_sub(base))
+    (
+        value,
+        PEAK_BYTES.load(Ordering::Relaxed).saturating_sub(base),
+    )
 }
 
 /// A kit app with the CSP reports' shape (an `unparsed_action` that keeps a prefix of its body and
@@ -430,15 +636,25 @@ async fn allocation_rise<T>(f: impl std::future::Future<Output = T>) -> (T, usiz
 fn kit_app() -> Router {
     async fn report(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
         let kept = c.read_body(16 * 1024).await;
-        Ok(c.head(if kept.is_empty() { campfire_kit::StatusCode::BAD_REQUEST } else { campfire_kit::StatusCode::NO_CONTENT }))
+        Ok(c.head(if kept.is_empty() {
+            campfire_kit::StatusCode::BAD_REQUEST
+        } else {
+            campfire_kit::StatusCode::NO_CONTENT
+        }))
     }
     async fn parsed(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
         Ok(c.head(campfire_kit::StatusCode::NO_CONTENT))
     }
     async fn file(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
         c.parse_spooled_params().await?;
-        let body = c.take_body_file().await.map_err(campfire_kit::Error::internal)?;
-        let size = body.metadata().map_err(campfire_kit::Error::internal)?.len();
+        let body = c
+            .take_body_file()
+            .await
+            .map_err(campfire_kit::Error::internal)?;
+        let size = body
+            .metadata()
+            .map_err(campfire_kit::Error::internal)?
+            .len();
         Ok(c.render_as(campfire_kit::StatusCode::OK, "text/plain", size.to_string()))
     }
     let router = Router::new()
@@ -446,7 +662,12 @@ fn kit_app() -> Router {
         .route("/file", post(campfire_kit::unparsed_action(file)))
         .route("/spooled", post(campfire_kit::spooled_action(file)))
         .route("/parsed", post(campfire_kit::action(parsed)));
-    let kit = campfire_kit::Kit::new(campfire_kit::KitConfig::default(), campfire_kit::testing::crypto(), campfire_kit::testing::frozen_clock(), ());
+    let kit = campfire_kit::Kit::new(
+        campfire_kit::KitConfig::default(),
+        campfire_kit::testing::crypto(),
+        campfire_kit::testing::frozen_clock(),
+        (),
+    );
     campfire_kit::app(router, kit)
 }
 
@@ -455,10 +676,18 @@ fn kit_app() -> Router {
 /// returns the reply's status.
 async fn post_chunked(port: u16, path: &str, total: usize, end: bool) -> u16 {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-    let content_type = if path == "/spooled" { "application/json" } else { "application/csp-report" };
-    let head = format!("POST {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: {content_type}\r\nTransfer-Encoding: chunked\r\n\r\n");
+    let content_type = if path == "/spooled" {
+        "application/json"
+    } else {
+        "application/csp-report"
+    };
+    let head = format!(
+        "POST {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: {content_type}\r\nTransfer-Encoding: chunked\r\n\r\n"
+    );
     stream.write_all(head.as_bytes()).await.unwrap();
-    if path == "/spooled" { stream.write_all(b"1\r\n\"\r\n").await.unwrap(); }
+    if path == "/spooled" {
+        stream.write_all(b"1\r\n\"\r\n").await.unwrap();
+    }
     let chunk = vec![if path == "/spooled" { b'x' } else { b' ' }; 64 * 1024];
     let mut sent = 0;
     while sent < total {
@@ -470,11 +699,16 @@ async fn post_chunked(port: u16, path: &str, total: usize, end: bool) -> u16 {
         sent += n;
     }
     if end {
-        if path == "/spooled" { stream.write_all(b"1\r\n\"\r\n").await.unwrap(); }
+        if path == "/spooled" {
+            stream.write_all(b"1\r\n\"\r\n").await.unwrap();
+        }
         let _ = stream.write_all(b"0\r\n\r\n").await;
     }
     let mut raw = Vec::new();
-    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut raw)).await.expect("a reply").unwrap();
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut raw))
+        .await
+        .expect("a reply")
+        .unwrap();
     parse(&raw).status
 }
 
@@ -485,7 +719,10 @@ async fn raw_file_uploads_are_spooled_with_bounded_memory_and_keep_configured_li
     for port in [server.http, server.target] {
         let (status, rise) = allocation_rise(post_chunked(port, "/file", SIZE, true)).await;
         assert_eq!(status, 200, "port {port}");
-        assert!(rise < SIZE / 4, "{rise} bytes retained for a {SIZE}-byte file on port {port}");
+        assert!(
+            rise < SIZE / 4,
+            "{rise} bytes retained for a {SIZE}-byte file on port {port}"
+        );
     }
     server.stop().await;
     let limited = Server::start(&[("MAX_REQUEST_BODY", "4096")], kit_app()).await;
@@ -503,7 +740,10 @@ async fn spooled_json_validates_large_strings_with_bounded_memory() {
     for port in [server.http, server.target] {
         let (status, rise) = allocation_rise(post_chunked(port, "/spooled", SIZE, true)).await;
         assert_eq!(status, 200, "port {port}");
-        assert!(rise < SIZE / 4, "{rise} bytes retained validating a {SIZE}-byte JSON string on port {port}");
+        assert!(
+            rise < SIZE / 4,
+            "{rise} bytes retained validating a {SIZE}-byte JSON string on port {port}"
+        );
     }
     server.stop().await;
 }
@@ -517,16 +757,33 @@ async fn request_bodies_stream_to_the_app_within_the_limit() {
     let limit = LIMIT.to_string();
     let server = Server::start(&[("MAX_REQUEST_BODY", limit.as_str())], kit_app()).await;
     for port in [server.http, server.target] {
-        let (status, rise) = allocation_rise(post_chunked(port, "/report", LIMIT * 3 / 4, true)).await;
+        let (status, rise) =
+            allocation_rise(post_chunked(port, "/report", LIMIT * 3 / 4, true)).await;
         assert_eq!(status, 204, "under the limit, port {port}");
-        assert!(rise < LIMIT / 4, "{rise} bytes held for a body of {} under a limit of {LIMIT}, port {port}", LIMIT * 3 / 4);
+        assert!(
+            rise < LIMIT / 4,
+            "{rise} bytes held for a body of {} under a limit of {LIMIT}, port {port}",
+            LIMIT * 3 / 4
+        );
 
-        let (status, rise) = allocation_rise(post_chunked(port, "/report", LIMIT + 256 * 1024, false)).await;
+        let (status, rise) =
+            allocation_rise(post_chunked(port, "/report", LIMIT + 256 * 1024, false)).await;
         assert_eq!(status, 413, "over the limit, port {port}");
-        assert!(rise < LIMIT / 4, "{rise} bytes held for a body over a limit of {LIMIT}, port {port}");
+        assert!(
+            rise < LIMIT / 4,
+            "{rise} bytes held for a body over a limit of {LIMIT}, port {port}"
+        );
 
-        assert_eq!(post_chunked(port, "/parsed", LIMIT + 256 * 1024, false).await, 413, "a parsed action, port {port}");
-        assert_eq!(post_chunked(port, "/parsed", 1024, true).await, 204, "a parsed action under the limit, port {port}");
+        assert_eq!(
+            post_chunked(port, "/parsed", LIMIT + 256 * 1024, false).await,
+            413,
+            "a parsed action, port {port}"
+        );
+        assert_eq!(
+            post_chunked(port, "/parsed", 1024, true).await,
+            204,
+            "a parsed action under the limit, port {port}"
+        );
     }
     server.stop().await;
 }
@@ -546,17 +803,28 @@ async fn raw_actions_wait_for_the_whole_body_before_running() {
         campfire_kit::testing::frozen_clock(),
         changes.clone(),
     );
-    let app = campfire_kit::app(Router::new().route("/change", post(campfire_kit::unparsed_action(change))), kit);
+    let app = campfire_kit::app(
+        Router::new().route("/change", post(campfire_kit::unparsed_action(change))),
+        kit,
+    );
     let server = Server::start(&[("MAX_REQUEST_BODY", "4096")], app).await;
     let mut outcomes = Vec::new();
     for port in [server.http, server.target] {
         let before = changes.load(Ordering::SeqCst);
         let status = post_chunked(port, "/change", 64 * 1024, true).await;
         outcomes.push((status, changes.load(Ordering::SeqCst) - before));
-        assert_eq!(post_chunked(port, "/change", 4096, true).await, 204, "exact limit, port {port}");
+        assert_eq!(
+            post_chunked(port, "/change", 4096, true).await,
+            204,
+            "exact limit, port {port}"
+        );
     }
     server.stop().await;
-    assert_eq!(outcomes, [(413, 0), (413, 0)], "front and target must refuse before entering the action");
+    assert_eq!(
+        outcomes,
+        [(413, 0), (413, 0)],
+        "front and target must refuse before entering the action"
+    );
 }
 
 #[tokio::test]
@@ -572,7 +840,10 @@ async fn parsed_actions_wait_for_the_whole_body_before_running() {
         campfire_kit::testing::frozen_clock(),
         changes.clone(),
     );
-    let app = campfire_kit::app(Router::new().route("/change", post(campfire_kit::action(change))), kit);
+    let app = campfire_kit::app(
+        Router::new().route("/change", post(campfire_kit::action(change))),
+        kit,
+    );
     let server = Server::start(&[("MAX_REQUEST_BODY", "4096")], app).await;
     let mut outcomes = Vec::new();
     for port in [server.http, server.target] {
@@ -592,53 +863,103 @@ async fn parsed_actions_wait_for_the_whole_body_before_running() {
                     "POST /change HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: {content_type}\r\nTransfer-Encoding: chunked\r\n\r\n"
                 );
                 stream.write_all(head.as_bytes()).await.unwrap();
-                stream.write_all(format!("{:x}\r\n{prefix}\r\n", prefix.len()).as_bytes()).await.unwrap();
+                stream
+                    .write_all(format!("{:x}\r\n{prefix}\r\n", prefix.len()).as_bytes())
+                    .await
+                    .unwrap();
                 tokio::time::sleep(Duration::from_millis(100)).await;
                 let early = changes.load(Ordering::SeqCst) - before;
                 let tail = vec![b' '; total - prefix.len()];
-                let suffix = [format!("{:x}\r\n", tail.len()).as_bytes(), &tail, b"\r\n0\r\n\r\n"].concat();
+                let suffix = [
+                    format!("{:x}\r\n", tail.len()).as_bytes(),
+                    &tail,
+                    b"\r\n0\r\n\r\n",
+                ]
+                .concat();
                 let _ = stream.write_all(&suffix).await;
                 let mut raw = Vec::new();
-                tokio::time::timeout(Duration::from_secs(10), stream.read_to_end(&mut raw)).await.unwrap().unwrap();
+                tokio::time::timeout(Duration::from_secs(10), stream.read_to_end(&mut raw))
+                    .await
+                    .unwrap()
+                    .unwrap();
                 let status = parse(&raw).status;
                 let added = changes.load(Ordering::SeqCst) - before;
-                let expected = if total == 4096 { (204, 0, 1) } else { (413, 0, 0) };
+                let expected = if total == 4096 {
+                    (204, 0, 1)
+                } else {
+                    (413, 0, 0)
+                };
                 outcomes.push((port, content_type, total, (status, early, added), expected));
             }
         }
     }
     server.stop().await;
     for (port, content_type, total, actual, expected) in outcomes {
-        assert_eq!(actual, expected, "port {port}, {content_type}, {total} bytes");
+        assert_eq!(
+            actual, expected,
+            "port {port}, {content_type}, {total} bytes"
+        );
     }
 }
 
 #[tokio::test]
 async fn closes_idle_and_slow_connections() {
     let (app, _) = test_app();
-    let server = Server::start(&[("HTTP_IDLE_TIMEOUT", "1"), ("HTTP_READ_TIMEOUT", "1"), ("HTTP_WRITE_TIMEOUT", "2")], app).await;
+    let server = Server::start(
+        &[
+            ("HTTP_IDLE_TIMEOUT", "1"),
+            ("HTTP_READ_TIMEOUT", "1"),
+            ("HTTP_WRITE_TIMEOUT", "2"),
+        ],
+        app,
+    )
+    .await;
 
     // Idle keep-alive connection.
-    let mut stream = TcpStream::connect(("127.0.0.1", server.http)).await.unwrap();
-    stream.write_all(b"GET /private HTTP/1.1\r\nHost: x\r\n\r\n").await.unwrap();
+    let mut stream = TcpStream::connect(("127.0.0.1", server.http))
+        .await
+        .unwrap();
+    stream
+        .write_all(b"GET /private HTTP/1.1\r\nHost: x\r\n\r\n")
+        .await
+        .unwrap();
     let mut buffer = vec![0; 4096];
     let n = stream.read(&mut buffer).await.unwrap();
     assert!(n > 0 && buffer.starts_with(b"HTTP/1.1 200"));
     let started = std::time::Instant::now();
-    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer)).await.unwrap().unwrap_or(0);
+    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer))
+        .await
+        .unwrap()
+        .unwrap_or(0);
     assert_eq!(n, 0, "closed");
     assert!(started.elapsed() >= Duration::from_millis(800));
 
     // A request that never finishes its headers.
-    let mut stream = TcpStream::connect(("127.0.0.1", server.http)).await.unwrap();
-    stream.write_all(b"GET / HTTP/1.1\r\nHost: x\r\n").await.unwrap();
-    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer)).await.unwrap().unwrap_or(0);
+    let mut stream = TcpStream::connect(("127.0.0.1", server.http))
+        .await
+        .unwrap();
+    stream
+        .write_all(b"GET / HTTP/1.1\r\nHost: x\r\n")
+        .await
+        .unwrap();
+    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer))
+        .await
+        .unwrap()
+        .unwrap_or(0);
     assert!(n == 0 || buffer.starts_with(b"HTTP/1.1 408"), "closed");
 
     // A response that takes longer than the write timeout: no response at all.
-    let mut stream = TcpStream::connect(("127.0.0.1", server.http)).await.unwrap();
-    stream.write_all(b"GET /slow HTTP/1.1\r\nHost: x\r\n\r\n").await.unwrap();
-    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer)).await.unwrap().unwrap_or(0);
+    let mut stream = TcpStream::connect(("127.0.0.1", server.http))
+        .await
+        .unwrap();
+    stream
+        .write_all(b"GET /slow HTTP/1.1\r\nHost: x\r\n\r\n")
+        .await
+        .unwrap();
+    let n = tokio::time::timeout(Duration::from_secs(5), stream.read(&mut buffer))
+        .await
+        .unwrap()
+        .unwrap_or(0);
     assert_eq!(n, 0, "dropped without a response");
     server.stop().await;
 }
@@ -646,14 +967,32 @@ async fn closes_idle_and_slow_connections() {
 #[tokio::test]
 async fn websockets_pass_through_and_outlive_the_timeouts() {
     let (app, _) = test_app();
-    let server = Server::start(&[("HTTP_IDLE_TIMEOUT", "1"), ("HTTP_READ_TIMEOUT", "1"), ("HTTP_WRITE_TIMEOUT", "1")], app).await;
-    let (mut socket, response) = tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{}/cable", server.http)).await.unwrap();
+    let server = Server::start(
+        &[
+            ("HTTP_IDLE_TIMEOUT", "1"),
+            ("HTTP_READ_TIMEOUT", "1"),
+            ("HTTP_WRITE_TIMEOUT", "1"),
+        ],
+        app,
+    )
+    .await;
+    let (mut socket, response) =
+        tokio_tungstenite::connect_async(format!("ws://127.0.0.1:{}/cable", server.http))
+            .await
+            .unwrap();
     assert_eq!(response.status(), 101);
     assert_eq!(response.headers()["x-cache"], "bypass");
     assert_eq!(response.headers()["vary"], "Accept-Encoding");
     tokio::time::sleep(Duration::from_millis(2500)).await;
-    socket.send(tokio_tungstenite::tungstenite::Message::Text("ping".into())).await.unwrap();
-    let reply = tokio::time::timeout(Duration::from_secs(5), socket.next()).await.unwrap().unwrap().unwrap();
+    socket
+        .send(tokio_tungstenite::tungstenite::Message::Text("ping".into()))
+        .await
+        .unwrap();
+    let reply = tokio::time::timeout(Duration::from_secs(5), socket.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
     assert_eq!(reply.into_text().unwrap().as_str(), "echo ping");
     drop(socket);
     server.stop().await;
@@ -668,8 +1007,17 @@ async fn speaks_h2c_only_when_enabled() {
     assert_eq!(reply.headers()["x-cache"], "miss");
     // The app gets it as Thruster's HTTP/1.1 request: a Host, an origin-form path, one Cookie.
     let reply = h2_get(server.http, "/headers?h2").await.unwrap();
-    let body = http_body_util::BodyExt::collect(reply.into_body()).await.unwrap().to_bytes();
-    assert_eq!(std::str::from_utf8(&body).unwrap(), format!("host=127.0.0.1:{} cookie=a=1; b=2 version=HTTP/1.1 uri=/headers?h2", server.http));
+    let body = http_body_util::BodyExt::collect(reply.into_body())
+        .await
+        .unwrap()
+        .to_bytes();
+    assert_eq!(
+        std::str::from_utf8(&body).unwrap(),
+        format!(
+            "host=127.0.0.1:{} cookie=a=1; b=2 version=HTTP/1.1 uri=/headers?h2",
+            server.http
+        )
+    );
     server.stop().await;
 
     let (app, _) = test_app();
@@ -680,10 +1028,17 @@ async fn speaks_h2c_only_when_enabled() {
 
 async fn h2_get(port: u16, path: &str) -> Result<Response<hyper::body::Incoming>, hyper::Error> {
     let stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-    let (mut sender, connection) =
-        hyper::client::conn::http2::handshake(hyper_util::rt::TokioExecutor::new(), hyper_util::rt::TokioIo::new(stream)).await?;
+    let (mut sender, connection) = hyper::client::conn::http2::handshake(
+        hyper_util::rt::TokioExecutor::new(),
+        hyper_util::rt::TokioIo::new(stream),
+    )
+    .await?;
     tokio::spawn(connection);
-    let request = axum::http::Request::get(format!("http://127.0.0.1:{port}{path}")).header("cookie", "a=1").header("cookie", "b=2").body(Body::empty()).unwrap();
+    let request = axum::http::Request::get(format!("http://127.0.0.1:{port}{path}"))
+        .header("cookie", "a=1")
+        .header("cookie", "b=2")
+        .body(Body::empty())
+        .unwrap();
     sender.send_request(request).await
 }
 

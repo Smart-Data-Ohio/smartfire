@@ -77,7 +77,10 @@ impl FromSql for RoomType {
 }
 
 #[derive(Clone, Copy)]
-enum OpenRoomGrants { AfterCommit, InTransaction }
+enum OpenRoomGrants {
+    AfterCommit,
+    InTransaction,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Room {
@@ -275,7 +278,11 @@ impl Room {
     // Creating
 
     /// The room created by this viewer's API operation, including soft-deleted rooms.
-    pub fn find_by_creation_key(conn: &Connection, creator_id: i64, key: &str) -> Result<Option<Self>> {
+    pub fn find_by_creation_key(
+        conn: &Connection,
+        creator_id: i64,
+        key: &str,
+    ) -> Result<Option<Self>> {
         // Physical destruction removes the key, so a later retry creates another room.
         // Accepted: keys live for one dialog opening, and destruction runs long after realistic retries.
         query_one(
@@ -294,7 +301,14 @@ impl Room {
         name: Option<&str>,
         creator_id: i64,
     ) -> Result<Self> {
-        Self::insert(tx, room_type, name, creator_id, None, OpenRoomGrants::AfterCommit)
+        Self::insert(
+            tx,
+            room_type,
+            name,
+            creator_id,
+            None,
+            OpenRoomGrants::AfterCommit,
+        )
     }
 
     fn insert(
@@ -316,7 +330,9 @@ impl Room {
         )?;
         if room_type == RoomType::Open {
             match grants {
-                OpenRoomGrants::AfterCommit => tx.after_commit(move |tx| grant_to_active_users(tx, id)),
+                OpenRoomGrants::AfterCommit => {
+                    tx.after_commit(move |tx| grant_to_active_users(tx, id))
+                }
                 OpenRoomGrants::InTransaction => grant_to_active_users(tx, id)?,
             }
         }
@@ -333,20 +349,46 @@ impl Room {
         creator_id: i64,
         user_ids: &[i64],
     ) -> Result<Self> {
-        Self::create_for_with_grants(tx, room_type, name, creator_id, user_ids, OpenRoomGrants::AfterCommit)
+        Self::create_for_with_grants(
+            tx,
+            room_type,
+            name,
+            creator_id,
+            user_ids,
+            OpenRoomGrants::AfterCommit,
+        )
     }
 
     /// Bulk structure creation keeps default open-room grants in the caller's transaction.
     pub fn create_for_atomically(
-        tx: &mut Tx<'_>, room_type: RoomType, name: Option<&str>, creator_id: i64, user_ids: &[i64],
+        tx: &mut Tx<'_>,
+        room_type: RoomType,
+        name: Option<&str>,
+        creator_id: i64,
+        user_ids: &[i64],
     ) -> Result<Self> {
-        Self::create_for_with_grants(tx, room_type, name, creator_id, user_ids, OpenRoomGrants::InTransaction)
+        Self::create_for_with_grants(
+            tx,
+            room_type,
+            name,
+            creator_id,
+            user_ids,
+            OpenRoomGrants::InTransaction,
+        )
     }
 
     fn create_for_with_grants(
-        tx: &mut Tx<'_>, room_type: RoomType, name: Option<&str>, creator_id: i64, user_ids: &[i64], grants: OpenRoomGrants,
+        tx: &mut Tx<'_>,
+        room_type: RoomType,
+        name: Option<&str>,
+        creator_id: i64,
+        user_ids: &[i64],
+        grants: OpenRoomGrants,
     ) -> Result<Self> {
-        if room_type == RoomType::Direct { super::agent_access::check_direct_members(tx.conn(),user_ids)?; super::ignore_policy::require_contact(tx.conn(), creator_id, user_ids)?; }
+        if room_type == RoomType::Direct {
+            super::agent_access::check_direct_members(tx.conn(), user_ids)?;
+            super::ignore_policy::require_contact(tx.conn(), creator_id, user_ids)?;
+        }
         let key = (room_type == RoomType::Direct).then(|| Self::direct_member_key_for(user_ids));
         let mut room = Self::insert(tx, room_type, name, creator_id, key.as_deref(), grants)?;
         room.grant_to(tx, user_ids)?;
@@ -360,14 +402,22 @@ impl Room {
     /// Room HTTP's narrow icon seam. Resolve through the application's existing icon
     /// catalog on this connection, before insert/grants or any after-commit callback.
     pub fn create_for_with_icon(
-        tx: &mut Tx<'_>, room_type: RoomType, name: Option<&str>, icon_name: Option<&str>,
-        creator_id: i64, user_ids: &[i64], resolves: impl FnOnce(&Connection, &str) -> Result<bool>,
+        tx: &mut Tx<'_>,
+        room_type: RoomType,
+        name: Option<&str>,
+        icon_name: Option<&str>,
+        creator_id: i64,
+        user_ids: &[i64],
+        resolves: impl FnOnce(&Connection, &str) -> Result<bool>,
     ) -> Result<Self> {
         let icon_name = Self::normalize_icon_name(icon_name);
         validate_icon(tx.conn(), icon_name.as_deref(), resolves)?;
         let mut room = Self::create_for(tx, room_type, name, creator_id, user_ids)?;
         if icon_name.is_some() {
-            tx.conn().execute_cached("UPDATE rooms SET icon_name=? WHERE id=?", params![icon_name, room.id])?;
+            tx.conn().execute_cached(
+                "UPDATE rooms SET icon_name=? WHERE id=?",
+                params![icon_name, room.id],
+            )?;
             room.icon_name = icon_name;
         }
         Ok(room)
@@ -376,8 +426,15 @@ impl Room {
     /// `Icons.normalize_name`: Ruby String#strip, edge colons, strip again, downcase,
     /// then Active Support presence. Unicode whitespace is blank but is not stripped.
     pub fn normalize_icon_name(name: Option<&str>) -> Option<String> {
-        fn strip(c: char) -> bool { matches!(c, '\0' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ') }
-        let name = name.unwrap_or_default().trim_matches(strip).trim_matches(':').trim_matches(strip).to_lowercase();
+        fn strip(c: char) -> bool {
+            matches!(c, '\0' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ')
+        }
+        let name = name
+            .unwrap_or_default()
+            .trim_matches(strip)
+            .trim_matches(':')
+            .trim_matches(strip)
+            .to_lowercase();
         (!name.chars().all(char::is_whitespace)).then_some(name)
     }
 
@@ -583,15 +640,26 @@ impl Room {
     /// `icon_name_changed?` validation precedes name/type conversion. Unchanged legacy
     /// unknown names remain writable; omitted icons and normalized no-ops stay untouched.
     pub fn update_with_icon(
-        &mut self, tx: &mut Tx<'_>, name: Option<Option<&str>>, room_type: Option<RoomType>,
-        icon_name: Option<Option<&str>>, resolves: impl FnOnce(&Connection, &str) -> Result<bool>,
+        &mut self,
+        tx: &mut Tx<'_>,
+        name: Option<Option<&str>>,
+        room_type: Option<RoomType>,
+        icon_name: Option<Option<&str>>,
+        resolves: impl FnOnce(&Connection, &str) -> Result<bool>,
     ) -> Result<()> {
-        let icon_name = icon_name.map(Self::normalize_icon_name).filter(|name| *name != self.icon_name);
-        if let Some(icon_name) = &icon_name { validate_icon(tx.conn(), icon_name.as_deref(), resolves)?; }
+        let icon_name = icon_name
+            .map(Self::normalize_icon_name)
+            .filter(|name| *name != self.icon_name);
+        if let Some(icon_name) = &icon_name {
+            validate_icon(tx.conn(), icon_name.as_deref(), resolves)?;
+        }
         self.update(tx, name, room_type)?;
         if let Some(icon_name) = icon_name {
             self.updated_at = tx.now();
-            tx.conn().execute_cached("UPDATE rooms SET icon_name=?,updated_at=? WHERE id=?", params![icon_name, self.updated_at, self.id])?;
+            tx.conn().execute_cached(
+                "UPDATE rooms SET icon_name=?,updated_at=? WHERE id=?",
+                params![icon_name, self.updated_at, self.id],
+            )?;
             self.icon_name = icon_name;
         }
         Ok(())
@@ -813,7 +881,8 @@ impl Room {
         let cutoff = Membership::connection_cutoff(now);
         let preferences = "(SELECT inbox_preferences FROM users WHERE id=memberships.user_id)";
         let involvement = super::notification_policy::involvement_sql("memberships", preferences);
-        let unmuted = super::notification_policy::unmuted_sql("memberships.room_id", preferences, "?2");
+        let unmuted =
+            super::notification_policy::unmuted_sql("memberships.room_id", preferences, "?2");
         let visible = super::ignore_policy::visible_sql("memberships.user_id", "?5");
         tx.conn().execute_cached(
             &format!(r#"UPDATE "memberships" SET "unread_at" = ?1, "updated_at" = ?2 WHERE "memberships"."room_id" = ?3 AND ({involvement}) != 'invisible' AND {unmuted} AND {visible} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?4) AND "memberships"."user_id" != ?5 AND ({involvement}) != 'muted'"#),
@@ -821,10 +890,13 @@ impl Room {
         )?;
 
         // Only a room with muted recipients needs the message's mentions.
-        let unmuted_recipients = super::notification_policy::unmuted_sql("memberships.room_id", preferences, "?4");
+        let unmuted_recipients =
+            super::notification_policy::unmuted_sql("memberships.room_id", preferences, "?4");
         let muted_recipients = sql::exists(
             tx.conn(),
-            &format!(r#"SELECT 1 AS one FROM "memberships" WHERE "memberships"."room_id" = ?1 AND ({involvement}) = 'muted' AND {unmuted_recipients} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?2) AND "memberships"."user_id" != ?3 LIMIT 1"#),
+            &format!(
+                r#"SELECT 1 AS one FROM "memberships" WHERE "memberships"."room_id" = ?1 AND ({involvement}) = 'muted' AND {unmuted_recipients} AND ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?2) AND "memberships"."user_id" != ?3 LIMIT 1"#
+            ),
             params![room_id, cutoff, message.creator_id, now],
         )?;
         let mentionee_ids: Vec<i64> = if muted_recipients {
@@ -973,9 +1045,17 @@ fn set_direct_member_key(tx: &Tx<'_>, room_id: i64, key: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_icon(conn: &Connection, name: Option<&str>, resolves: impl FnOnce(&Connection, &str) -> Result<bool>) -> Result<()> {
+fn validate_icon(
+    conn: &Connection,
+    name: Option<&str>,
+    resolves: impl FnOnce(&Connection, &str) -> Result<bool>,
+) -> Result<()> {
     let mut errors = Errors::default();
-    if let Some(name) = name && !resolves(conn, name)? { errors.add("icon_name", "is not a known icon"); }
+    if let Some(name) = name
+        && !resolves(conn, name)?
+    {
+        errors.add("icon_name", "is not a known icon");
+    }
     errors.into_result()
 }
 

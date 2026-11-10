@@ -48,12 +48,18 @@ pub fn step_seconds(ms: i64) -> String {
     }
     let seconds = value.to_string();
     let (whole, fraction) = seconds.split_once('.').unwrap_or((&seconds, ""));
-    let tenth = fraction.bytes().next().map_or(0, |digit| u64::from(digit - b'0'));
+    let tenth = fraction
+        .bytes()
+        .next()
+        .map_or(0, |digit| u64::from(digit - b'0'));
     let round_up = fraction.as_bytes().get(1).is_some_and(|&digit| {
-        digit > b'5' || (digit == b'5' && (tenth % 2 == 1 || fraction.bytes().skip(2).any(|digit| digit != b'0')))
+        digit > b'5'
+            || (digit == b'5'
+                && (tenth % 2 == 1 || fraction.bytes().skip(2).any(|digit| digit != b'0')))
     });
     // Non-negative i64 milliseconds yield finite seconds below 1e16, fitting u64 tenths.
-    let tenths = whole.parse::<u64>().expect("finite step seconds") * 10 + tenth + u64::from(round_up);
+    let tenths =
+        whole.parse::<u64>().expect("finite step seconds") * 10 + tenth + u64::from(round_up);
     format!("{}.{}s", tenths / 10, tenths % 10)
 }
 pub fn votes_label(count: usize) -> String {

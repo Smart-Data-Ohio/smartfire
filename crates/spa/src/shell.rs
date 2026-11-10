@@ -12,31 +12,77 @@ const PLACEHOLDER: &str = "<!--boot-->";
 /// `csp_meta_tag`, the manifest and icon links, and the boot JSON in
 /// `<script type="application/json" id="boot">`. With a nonce, every script and `modulepreload`
 /// link carries it, as the classic layout's import-map tags do.
-pub fn render_shell(boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>, favicon: &Favicon) -> String {
+pub fn render_shell(
+    boot: &Boot,
+    csrf_token: &str,
+    csp_nonce: Option<&str>,
+    favicon: &Favicon,
+) -> String {
     render(embedded::INDEX_HTML, boot, csrf_token, csp_nonce, favicon)
 }
 
-pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: Option<&str>, favicon: &Favicon) -> String {
-    render_boot(template, boot, csrf_token, csp_nonce, boot.custom_styles.as_deref(), favicon)
+pub(crate) fn render(
+    template: &str,
+    boot: &Boot,
+    csrf_token: &str,
+    csp_nonce: Option<&str>,
+    favicon: &Favicon,
+) -> String {
+    render_boot(
+        template,
+        boot,
+        csrf_token,
+        csp_nonce,
+        boot.custom_styles.as_deref(),
+        favicon,
+    )
 }
 
 /// Signed-out boot has its own DTO and carries no authenticated workspace or user facts.
-pub fn render_signed_out_shell(boot: &campfire_api_types::SignedOutBoot, csp_nonce: Option<&str>, favicon: &Favicon) -> String {
-    render_boot(embedded::INDEX_HTML, boot, &boot.csrf_token, csp_nonce, None, favicon)
+pub fn render_signed_out_shell(
+    boot: &campfire_api_types::SignedOutBoot,
+    csp_nonce: Option<&str>,
+    favicon: &Favicon,
+) -> String {
+    render_boot(
+        embedded::INDEX_HTML,
+        boot,
+        &boot.csrf_token,
+        csp_nonce,
+        None,
+        favicon,
+    )
 }
 
-fn render_boot(template: &str, boot: &impl Serialize, csrf_token: &str, csp_nonce: Option<&str>, custom_styles: Option<&str>, favicon: &Favicon) -> String {
-    let nonce = csp_nonce.map(|nonce| format!(" nonce=\"{}\"", escape(nonce))).unwrap_or_default();
+fn render_boot(
+    template: &str,
+    boot: &impl Serialize,
+    csrf_token: &str,
+    csp_nonce: Option<&str>,
+    custom_styles: Option<&str>,
+    favicon: &Favicon,
+) -> String {
+    let nonce = csp_nonce
+        .map(|nonce| format!(" nonce=\"{}\"", escape(nonce)))
+        .unwrap_or_default();
     let mut tags = format!(
         "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n<meta name=\"csrf-token\" content=\"{}\" />\n",
         escape(csrf_token)
     );
     if let Some(csp_nonce) = csp_nonce {
-        tags.push_str(&format!("<meta name=\"csp-nonce\" content=\"{}\" />\n", escape(csp_nonce)));
+        tags.push_str(&format!(
+            "<meta name=\"csp-nonce\" content=\"{}\" />\n",
+            escape(csp_nonce)
+        ));
     }
-    tags.push_str("<link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n");
+    tags.push_str(
+        "<link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n",
+    );
     tags.push_str(&favicon.links());
-    tags.push_str(&format!("<script type=\"application/json\" id=\"boot\"{nonce}>{}</script>", script_json(boot)));
+    tags.push_str(&format!(
+        "<script type=\"application/json\" id=\"boot\"{nonce}>{}</script>",
+        script_json(boot)
+    ));
 
     let page = with_nonce(template, &nonce);
     let page = match page.split_once(PLACEHOLDER) {
@@ -66,8 +112,12 @@ fn style_contents(css: &str) -> String {
     let mut from = 0;
     for (start, _) in css.match_indices('<') {
         let rest = &css[start..];
-        if rest.get(..7).is_some_and(|tag| tag.eq_ignore_ascii_case("</style"))
-            && rest.as_bytes().get(7).is_some_and(|byte| matches!(byte, b'\t' | b'\n' | b'\x0c' | b'\r' | b' ' | b'/' | b'>'))
+        if rest
+            .get(..7)
+            .is_some_and(|tag| tag.eq_ignore_ascii_case("</style"))
+            && rest.as_bytes().get(7).is_some_and(|byte| {
+                matches!(byte, b'\t' | b'\n' | b'\x0c' | b'\r' | b' ' | b'/' | b'>')
+            })
         {
             out.push_str(&css[from..start]);
             out.push_str("\\3c ");
@@ -115,5 +165,9 @@ fn next_tag(text: &str, tag: &str) -> Option<usize> {
 
 /// `ERB::Util.html_escape`
 pub(crate) fn escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&#39;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
 }

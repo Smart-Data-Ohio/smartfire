@@ -20,13 +20,13 @@ pub mod marcel;
 pub mod marshal;
 pub mod paths;
 pub mod process;
+pub mod sticker;
 pub mod storage;
 mod tables;
 pub mod variation;
 pub mod verifier;
 pub mod vips;
 pub mod workspace_icon;
-pub mod sticker;
 
 pub use blob::{Blob, NewBlob};
 pub use disk::DiskService;

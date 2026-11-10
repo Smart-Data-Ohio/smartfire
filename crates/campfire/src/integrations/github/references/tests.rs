@@ -1,18 +1,19 @@
 use super::super::pull_requests::PullRequest;
 use super::*;
-use campfire_db::Tx;
 use crate::{app, config::Config};
+use campfire_db::Tx;
 use campfire_db::{Message, MessageChanges, NewMessage, fixtures};
 
 pub(crate) async fn application() -> (app::App, tempfile::TempDir) {
     let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
-        std::fs::create_dir_all(&scratch).unwrap();
-        let dir = tempfile::tempdir_in(
+    std::fs::create_dir_all(&scratch).unwrap();
+    let dir = tempfile::tempdir_in(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g"),
     )
     .unwrap();
     let root = dir.path().to_string_lossy().into_owned();
-    let secret:serde_json::Value=serde_json::from_str(include_str!("../../../../../../vectors/github.json")).unwrap();
+    let secret: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../../vectors/github.json")).unwrap();
     let config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE" => secret["secret_key_base"].as_str().map(str::to_owned),
         "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),

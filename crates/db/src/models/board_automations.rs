@@ -191,7 +191,8 @@ struct StalePost {
 fn stale_posts(conn: &Connection, now: Timestamp) -> Result<BTreeMap<i64, Vec<StalePost>>> {
     let posts = query_all(
         conn,
-        &format!(r#"
+        &format!(
+            r#"
 SELECT t.*,{},b.creator_id AS board_creator,r.nudge_after_minutes
 FROM rooms b JOIN board_sla_rules r ON r.room_id=b.id
 JOIN channel_threads t ON t.room_id=b.id AND t.work_status=r.work_status
@@ -199,12 +200,20 @@ LEFT JOIN users u ON u.id=t.work_owner_id
 WHERE b.type='Rooms::Board' AND b.deleted_at IS NULL AND t.visibility='public' AND t.work_status!='done' AND t.work_status_changed_at IS NOT NULL
 AND NOT EXISTS(SELECT 1 FROM board_stale_digests d WHERE d.room_id=b.id AND d.digest_on=?)
 ORDER BY b.id,t.work_status_changed_at,t.id
-"#, crate::User::projection("u", "owner_")),
+"#,
+            crate::User::projection("u", "owner_")
+        ),
         [now.jiff().to_zoned(TimeZone::UTC).date().to_string()],
         |r| {
             Ok(StalePost {
                 thread: ChannelThread::from_row(r)?,
-                owner_name: r.get::<_, Option<i64>>("owner_id")?.map(|_| crate::User::from_prefixed_row(r, "owner_").map(|user| user.display_name().to_owned())).transpose()?,
+                owner_name: r
+                    .get::<_, Option<i64>>("owner_id")?
+                    .map(|_| {
+                        crate::User::from_prefixed_row(r, "owner_")
+                            .map(|user| user.display_name().to_owned())
+                    })
+                    .transpose()?,
                 entered: r.get("work_status_changed_at")?,
                 nudge_minutes: r.get("nudge_after_minutes")?,
             })
@@ -286,7 +295,8 @@ pub async fn dispatch_digests(db: &Database, now: Timestamp) -> Result<DispatchS
         // Rendering runs outside the writer and reports each successful note.
         let sink = db.env().sink.clone();
         let published = tokio::task::spawn_blocking(move || sink.broadcast_digest_notes(&notes))
-            .await.map_err(|error| crate::Error::Other(error.to_string()))
+            .await
+            .map_err(|error| crate::Error::Other(error.to_string()))
             .and_then(|result| result);
         let published: HashSet<_> = match published {
             Ok(ids) => ids.into_iter().collect(),

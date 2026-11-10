@@ -63,7 +63,9 @@ fn read(path: &str) -> String {
 /// The body of the item that starts at `start`, up to the first line that is just `}`.
 fn item<'a>(source: &'a str, start: &str) -> &'a str {
     let body = &source[source.find(start).unwrap_or_else(|| panic!("{start}"))..];
-    &body[..body.find("\n}\n").unwrap_or_else(|| panic!("the end of {start}"))]
+    &body[..body
+        .find("\n}\n")
+        .unwrap_or_else(|| panic!("the end of {start}"))]
 }
 
 /// The kinds the cable sink's `broadcast` matches on, named by their type's path.
@@ -73,11 +75,15 @@ fn sink_kinds() -> BTreeSet<String> {
     arm.captures_iter(item(&source, "fn broadcast("))
         .map(|captures| {
             let path = &captures[1];
-            ["campfire_db::models::", "crate::integrations::", "campfire_db::"]
-                .iter()
-                .find_map(|prefix| path.strip_prefix(prefix))
-                .unwrap_or(path)
-                .to_string()
+            [
+                "campfire_db::models::",
+                "crate::integrations::",
+                "campfire_db::",
+            ]
+            .iter()
+            .find_map(|prefix| path.strip_prefix(prefix))
+            .unwrap_or(path)
+            .to_string()
         })
         .collect()
 }
@@ -108,8 +114,16 @@ fn every_broadcast_point_has_a_sync_event_or_is_listed_as_not_yet_twinned() {
     let kinds = sink_kinds();
     let methods = named_broadcasts();
     // A read that found nothing would pass vacuously.
-    assert!(kinds.len() >= 20, "found only {} sink kinds: {kinds:?}", kinds.len());
-    assert!(methods.len() >= 15, "found only {} Broadcasts methods: {methods:?}", methods.len());
+    assert!(
+        kinds.len() >= 20,
+        "found only {} sink kinds: {kinds:?}",
+        kinds.len()
+    );
+    assert!(
+        methods.len() >= 15,
+        "found only {} Broadcasts methods: {methods:?}",
+        methods.len()
+    );
     let points: BTreeSet<String> = kinds
         .into_iter()
         .chain(methods)
@@ -126,13 +140,26 @@ fn every_broadcast_point_has_a_sync_event_or_is_listed_as_not_yet_twinned() {
         missing.is_empty(),
         "broadcast points with no sync event: give each a twin (campfire_app::cable::sync::TWINS) or list it in NOT_YET_TWINNED: {missing:?}"
     );
-    let stale: Vec<&&str> = twinned.iter().chain(&pending).filter(|point| !points.contains(**point)).collect();
-    assert!(stale.is_empty(), "listed broadcast points that no longer exist: {stale:?}");
+    let stale: Vec<&&str> = twinned
+        .iter()
+        .chain(&pending)
+        .filter(|point| !points.contains(**point))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "listed broadcast points that no longer exist: {stale:?}"
+    );
     let events = events();
     for (point, named) in TWINS {
-        assert!(!pending.contains(point), "{point} is both twinned and not yet twinned");
+        assert!(
+            !pending.contains(point),
+            "{point} is both twinned and not yet twinned"
+        );
         for event in *named {
-            assert!(events.contains(*event), "{point} names an unknown sync event {event}");
+            assert!(
+                events.contains(*event),
+                "{point} names an unknown sync event {event}"
+            );
         }
     }
 }
@@ -140,8 +167,15 @@ fn every_broadcast_point_has_a_sync_event_or_is_listed_as_not_yet_twinned() {
 #[test]
 fn every_sync_event_is_published_or_listed_as_not_yet_emitted() {
     let events = events();
-    assert!(events.len() >= 18, "found only {} sync events: {events:?}", events.len());
-    let published: BTreeSet<&str> = TWINS.iter().flat_map(|(_, named)| named.iter().copied()).collect();
+    assert!(
+        events.len() >= 18,
+        "found only {} sync events: {events:?}",
+        events.len()
+    );
+    let published: BTreeSet<&str> = TWINS
+        .iter()
+        .flat_map(|(_, named)| named.iter().copied())
+        .collect();
     let pending: BTreeSet<&str> = NOT_YET_EMITTED.iter().copied().collect();
     let silent: Vec<&String> = events
         .iter()
@@ -152,9 +186,18 @@ fn every_sync_event_is_published_or_listed_as_not_yet_emitted() {
         "sync events no broadcast point publishes: twin one (TWINS) or list it in NOT_YET_EMITTED: {silent:?}"
     );
     let both: Vec<&&str> = published.intersection(&pending).collect();
-    assert!(both.is_empty(), "published sync events still listed in NOT_YET_EMITTED: {both:?}");
-    let stale: Vec<&&str> = pending.iter().filter(|event| !events.contains(**event)).collect();
-    assert!(stale.is_empty(), "NOT_YET_EMITTED names events the contract doesn't define: {stale:?}");
+    assert!(
+        both.is_empty(),
+        "published sync events still listed in NOT_YET_EMITTED: {both:?}"
+    );
+    let stale: Vec<&&str> = pending
+        .iter()
+        .filter(|event| !events.contains(**event))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "NOT_YET_EMITTED names events the contract doesn't define: {stale:?}"
+    );
 }
 
 #[test]
@@ -163,12 +206,18 @@ fn the_events_read_are_the_contracts() {
     // Every tag read from the source parses as a SyncPayload: an unknown tag fails before the
     // data is looked at.
     for event in events() {
-        let parsed = serde_json::from_value::<SyncPayload>(serde_json::json!({"type": event, "data": {}}));
+        let parsed =
+            serde_json::from_value::<SyncPayload>(serde_json::json!({"type": event, "data": {}}));
         if let Err(error) = parsed {
-            assert!(!error.to_string().contains("unknown variant"), "{event}: {error}");
+            assert!(
+                !error.to_string().contains("unknown variant"),
+                "{event}: {error}"
+            );
         }
     }
-    let parsed: SyncPayload = serde_json::from_value(serde_json::json!({"type": "room.read", "data": {"roomId": 1}})).unwrap();
+    let parsed: SyncPayload =
+        serde_json::from_value(serde_json::json!({"type": "room.read", "data": {"roomId": 1}}))
+            .unwrap();
     assert_eq!(parsed, SyncPayload::RoomRead(RoomRead { room_id: 1 }));
 }
 

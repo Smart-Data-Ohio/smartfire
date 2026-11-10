@@ -14,9 +14,9 @@ mod server;
 // The app layer (crates/app), at the paths its modules had in this crate. `app`, `huddle` and
 // `integrations` also hold the tests of theirs that boot the whole app or reach the layers
 // above, until the test crate takes them (plans/crate-split-plan.md, "Tests").
-use campfire_app::{config, errors, net, queue, security};
 #[cfg(test)]
 use campfire_app::{cable, state, test_support};
+use campfire_app::{config, errors, net, queue, security};
 #[cfg(test)]
 use campfire_runtime::{authentication, messaging};
 
@@ -42,21 +42,50 @@ mod app {
     pub(crate) use campfire_app::app::*;
 
     #[cfg(test)]
-    mod security_tests;
+    mod admin_two_factor_tests;
     #[cfg(test)]
-    mod sudo_tests;
-    #[cfg(test)]
-    mod two_factor_tests;
+    #[path = "../../../../test-support/asset_goldens.rs"]
+    pub(crate) mod asset_goldens;
     #[cfg(test)]
     mod challenge_tests;
     #[cfg(test)]
-    mod enforcement_tests;
+    pub(crate) mod cutover_c_tests;
+    #[cfg(test)]
+    mod cutover_d_tests;
     #[cfg(test)]
     mod direct_upload_tests;
     #[cfg(test)]
-    mod session_management_tests;
+    mod enforcement_tests;
     #[cfg(test)]
-    mod admin_two_factor_tests;
+    mod google_admin_tests;
+    #[cfg(test)]
+    pub(crate) mod google_api_tests;
+    #[cfg(test)]
+    mod google_calendar_job_tests;
+    #[cfg(test)]
+    mod google_connection_tests;
+    #[cfg(test)]
+    mod google_consumer_tests;
+    #[cfg(test)]
+    mod google_drive_tests;
+    #[cfg(test)]
+    mod google_lifecycle_tests;
+    #[cfg(test)]
+    mod google_meeting_refresh_tests;
+    #[cfg(test)]
+    mod google_message_tests;
+    #[cfg(test)]
+    mod google_push_channel_tests;
+    #[cfg(test)]
+    mod google_reporting_tests;
+    #[cfg(test)]
+    mod google_review_tests;
+    #[cfg(test)]
+    pub(crate) mod google_test_support;
+    #[cfg(test)]
+    mod google_tests;
+    #[cfg(test)]
+    mod google_webhook_tests;
     #[cfg(test)]
     mod profile_security_tests;
     #[cfg(test)]
@@ -64,46 +93,17 @@ mod app {
     #[cfg(test)]
     mod round_three_security_tests;
     #[cfg(test)]
+    mod security_tests;
+    #[cfg(test)]
+    mod session_management_tests;
+    #[cfg(test)]
+    mod sudo_tests;
+    #[cfg(test)]
     mod tests;
     #[cfg(test)]
-    mod google_tests;
-    #[cfg(test)]
-    mod google_webhook_tests;
-    #[cfg(test)]
-    pub(crate) mod google_api_tests;
-    #[cfg(test)]
-    mod google_connection_tests;
-    #[cfg(test)]
-    mod google_drive_tests;
-    #[cfg(test)]
-    mod google_calendar_job_tests;
-    #[cfg(test)]
-    mod google_meeting_refresh_tests;
+    mod two_factor_tests;
     #[cfg(test)]
     mod ws14_profile_status_tests;
-    #[cfg(test)]
-    mod google_push_channel_tests;
-    #[cfg(test)]
-    pub(crate) mod google_test_support;
-    #[cfg(test)]
-    #[path = "../../../../test-support/asset_goldens.rs"]
-    pub(crate) mod asset_goldens;
-    #[cfg(test)]
-    mod google_review_tests;
-    #[cfg(test)]
-    mod google_consumer_tests;
-    #[cfg(test)]
-    mod google_lifecycle_tests;
-    #[cfg(test)]
-    mod google_admin_tests;
-    #[cfg(test)]
-    mod google_reporting_tests;
-    #[cfg(test)]
-    mod google_message_tests;
-    #[cfg(test)]
-    pub(crate) mod cutover_c_tests;
-    #[cfg(test)]
-    mod cutover_d_tests;
 }
 
 #[cfg(test)]
@@ -127,10 +127,10 @@ mod integrations {
     pub(crate) mod agent_repositories {
         pub(crate) use campfire_app::integrations::agent_repositories::*;
 
-        mod tests;
-        mod live_tests;
         mod bot_plaintext_cases;
+        mod live_tests;
         mod review_tests;
+        mod tests;
     }
     #[cfg(test)]
     pub(crate) mod agent_streaming {
@@ -139,8 +139,8 @@ mod integrations {
         #[allow(unused_imports)]
         pub(crate) use campfire_app::integrations::agent_streaming::*;
 
-        mod tests;
         mod case_tests;
+        mod tests;
     }
     pub(crate) mod fizzy {
         pub(crate) use campfire_app::integrations::fizzy::*;
@@ -230,8 +230,8 @@ mod integrations {
     pub(crate) mod link_embed {
         pub(crate) use campfire_app::integrations::link_embed::*;
 
-        mod rails_reference_tests;
         mod rails_fetcher_tests;
+        mod rails_reference_tests;
         pub(crate) mod fetcher {
             pub(crate) use campfire_app::integrations::link_embed::fetcher::*;
 
@@ -287,9 +287,9 @@ mod integrations {
         pub(crate) mod store {
             pub(crate) use campfire_app::integrations::slack::store::*;
 
-            pub(crate) mod tests;
             mod lifecycle_tests;
             mod self_dm_tests;
+            pub(crate) mod tests;
         }
         #[cfg(test)]
         pub(crate) mod undoer {
@@ -367,20 +367,30 @@ fn disable_transparent_huge_pages() {
         let off: libc::c_ulong = 1;
         // SAFETY: PR_SET_THP_DISABLE takes machine-width integer arguments and only changes this
         // process's memory policy.
-        if unsafe { libc::prctl(libc::PR_SET_THP_DISABLE, off, 0 as libc::c_ulong, 0 as libc::c_ulong, 0 as libc::c_ulong) } != 0 {
-            eprintln!("couldn't disable transparent huge pages: {}", std::io::Error::last_os_error());
+        if unsafe {
+            libc::prctl(
+                libc::PR_SET_THP_DISABLE,
+                off,
+                0 as libc::c_ulong,
+                0 as libc::c_ulong,
+                0 as libc::c_ulong,
+            )
+        } != 0
+        {
+            eprintln!(
+                "couldn't disable transparent huge pages: {}",
+                std::io::Error::last_os_error()
+            );
         }
     }
 }
 
-
-
 #[cfg(test)]
 mod layering_tests;
 #[cfg(test)]
-mod sync_twin_tests;
-#[cfg(test)]
 mod slash_commands_tests;
+#[cfg(test)]
+mod sync_twin_tests;
 
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
@@ -389,7 +399,10 @@ mod tests {
         super::disable_transparent_huge_pages();
         let zero: libc::c_ulong = 0;
         // SAFETY: as in `disable_transparent_huge_pages`.
-        assert_eq!(unsafe { libc::prctl(libc::PR_GET_THP_DISABLE, zero, zero, zero, zero) }, 1);
+        assert_eq!(
+            unsafe { libc::prctl(libc::PR_GET_THP_DISABLE, zero, zero, zero, zero) },
+            1
+        );
     }
 
     #[test]
@@ -398,7 +411,13 @@ mod tests {
         let mut len = std::mem::size_of_val(&thp);
         // SAFETY: `opt.thp` is a `const char *`, written into a variable of that type and size.
         let status = unsafe {
-            tikv_jemalloc_sys::mallctl(c"opt.thp".as_ptr(), (&raw mut thp).cast(), &mut len, std::ptr::null_mut(), 0)
+            tikv_jemalloc_sys::mallctl(
+                c"opt.thp".as_ptr(),
+                (&raw mut thp).cast(),
+                &mut len,
+                std::ptr::null_mut(),
+                0,
+            )
         };
         assert_eq!(status, 0);
         // SAFETY: jemalloc returned a pointer to one of its static option names.

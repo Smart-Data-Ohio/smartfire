@@ -21,23 +21,17 @@ mod workspace_invite_tests;
 #[cfg(test)]
 mod join_contract_tests;
 
-
 #[cfg(test)]
 mod status_popup_tests;
 
 #[cfg(test)]
 mod ban_lifecycle_tests;
 
-
-
-
-
 #[cfg(test)]
 mod stars_tests;
 
 #[cfg(test)]
 mod cutover_receipts_tests;
-
 
 #[cfg(test)]
 mod profile_gap_original_tests;
@@ -90,12 +84,9 @@ pub(crate) mod push_subscriptions {
         use campfire_db::models::push_subscription::TestNotificationJob;
         pub(crate) use campfire_people::controllers::users::push_subscriptions::test_notifications::*;
 
-
         mod tests;
+    }
 }
-}
-
-
 
 #[cfg(test)]
 pub(crate) mod statuses {

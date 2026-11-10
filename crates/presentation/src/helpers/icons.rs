@@ -1,5 +1,3 @@
-
-
 #[derive(Clone, Debug, serde::Deserialize, PartialEq)]
 pub enum AvatarIcon {
     Emoji {

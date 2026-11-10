@@ -61,19 +61,36 @@ impl FrontConfig {
         let find = |key: &str| get(&format!("THRUSTER_{key}")).or_else(|| get(key));
         let string = |key: &str, default: &str| find(key).unwrap_or_else(|| default.to_string());
         // strconv.Atoi: an optional sign and decimal digits, nothing else.
-        let int = |key: &str, default: i64| find(key).and_then(|v| v.parse::<i64>().ok()).unwrap_or(default);
-        let port = |key: &str, default: u16| u16::try_from(int(key, default.into())).unwrap_or(default);
-        let seconds = |key: &str, default: u64| {
-            find(key).and_then(|v| v.parse::<i64>().ok()).map(|s| Duration::from_secs(s.max(0) as u64)).unwrap_or(Duration::from_secs(default))
+        let int = |key: &str, default: i64| {
+            find(key)
+                .and_then(|v| v.parse::<i64>().ok())
+                .unwrap_or(default)
         };
-        let boolean = |key: &str, default: bool| find(key).and_then(|v| parse_bool(&v)).unwrap_or(default);
+        let port =
+            |key: &str, default: u16| u16::try_from(int(key, default.into())).unwrap_or(default);
+        let seconds = |key: &str, default: u64| {
+            find(key)
+                .and_then(|v| v.parse::<i64>().ok())
+                .map(|s| Duration::from_secs(s.max(0) as u64))
+                .unwrap_or(Duration::from_secs(default))
+        };
+        let boolean =
+            |key: &str, default: bool| find(key).and_then(|v| parse_bool(&v)).unwrap_or(default);
 
         let tls_domains = find("TLS_DOMAIN")
-            .map(|v| v.split(',').map(str::trim).filter(|d| !d.is_empty()).map(str::to_string).collect())
+            .map(|v| {
+                v.split(',')
+                    .map(str::trim)
+                    .filter(|d| !d.is_empty())
+                    .map(str::to_string)
+                    .collect()
+            })
             .unwrap_or_default();
         let mut config = Self {
             target_port: port("TARGET_PORT", 3000),
-            target_bind: find("TARGET_BIND").and_then(|v| v.parse().ok()).unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+            target_bind: find("TARGET_BIND")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             cache_size: int("CACHE_SIZE", 64 * MB),
             max_cache_item_size: int("MAX_CACHE_ITEM_SIZE", MB),
             gzip_compression_enabled: boolean("GZIP_COMPRESSION_ENABLED", true),
@@ -119,7 +136,10 @@ mod tests {
     use std::collections::HashMap;
 
     fn config(vars: &[(&str, &str)]) -> FrontConfig {
-        let vars: HashMap<String, String> = vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+        let vars: HashMap<String, String> = vars
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
         FrontConfig::from_lookup(|name| vars.get(name).cloned())
     }
 
@@ -136,26 +156,46 @@ mod tests {
         assert_eq!(c.storage_path, PathBuf::from("./storage/thruster"));
         assert_eq!(c.acme_directory_url, LETS_ENCRYPT_URL);
         assert_eq!(c.gzip_compression_jitter, 32);
-        assert!(c.gzip_compression_enabled && !c.gzip_compression_disable_on_auth && !c.h2c_enabled);
+        assert!(
+            c.gzip_compression_enabled && !c.gzip_compression_disable_on_auth && !c.h2c_enabled
+        );
         assert!(!c.has_tls() && c.forward_headers && c.log_requests);
     }
 
     #[test]
     fn prefixed_variables_win() {
-        let c = config(&[("HTTP_PORT", "8080"), ("THRUSTER_HTTP_PORT", "9090"), ("HTTPS_PORT", "8443")]);
+        let c = config(&[
+            ("HTTP_PORT", "8080"),
+            ("THRUSTER_HTTP_PORT", "9090"),
+            ("HTTPS_PORT", "8443"),
+        ]);
         assert_eq!((c.http_port, c.https_port), (9090, 8443));
     }
 
     #[test]
     fn target_bind_can_open_the_app_listener() {
-        assert_eq!(config(&[("TARGET_BIND", "0.0.0.0")]).target_bind, IpAddr::V4(Ipv4Addr::UNSPECIFIED));
-        assert_eq!(config(&[("TARGET_BIND", "::")]).target_bind.to_string(), "::");
-        assert_eq!(config(&[("TARGET_BIND", "everywhere")]).target_bind, IpAddr::V4(Ipv4Addr::LOCALHOST));
+        assert_eq!(
+            config(&[("TARGET_BIND", "0.0.0.0")]).target_bind,
+            IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+        );
+        assert_eq!(
+            config(&[("TARGET_BIND", "::")]).target_bind.to_string(),
+            "::"
+        );
+        assert_eq!(
+            config(&[("TARGET_BIND", "everywhere")]).target_bind,
+            IpAddr::V4(Ipv4Addr::LOCALHOST)
+        );
     }
 
     #[test]
     fn unparseable_values_fall_back_to_the_default() {
-        let c = config(&[("HTTP_PORT", "eighty"), ("HTTP_READ_TIMEOUT", "5s"), ("LOG_REQUESTS", "yes"), ("H2C_ENABLED", "1")]);
+        let c = config(&[
+            ("HTTP_PORT", "eighty"),
+            ("HTTP_READ_TIMEOUT", "5s"),
+            ("LOG_REQUESTS", "yes"),
+            ("H2C_ENABLED", "1"),
+        ]);
         assert_eq!(c.http_port, 80);
         assert_eq!(c.http_read_timeout, Duration::from_secs(30));
         assert!(c.log_requests && c.h2c_enabled);
@@ -166,7 +206,9 @@ mod tests {
         let c = config(&[("TLS_DOMAIN", " chat.example.com, ,other.example.com ")]);
         assert_eq!(c.tls_domains, vec!["chat.example.com", "other.example.com"]);
         assert!(c.has_tls() && !c.forward_headers);
-        assert!(config(&[("TLS_DOMAIN", "a.example.com"), ("FORWARD_HEADERS", "true")]).forward_headers);
+        assert!(
+            config(&[("TLS_DOMAIN", "a.example.com"), ("FORWARD_HEADERS", "true")]).forward_headers
+        );
         // Only TLS_DOMAIN counts (Thruster 0.1.23 doesn't read SSL_DOMAIN).
         assert!(!config(&[("SSL_DOMAIN", "a.example.com")]).has_tls());
         assert!(!config(&[("TLS_DOMAIN", " , ")]).has_tls());

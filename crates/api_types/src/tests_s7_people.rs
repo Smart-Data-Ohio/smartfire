@@ -26,7 +26,8 @@ fn directory_and_rows_round_trip() {
         starred: true,
         agent: false,
     };
-    let wire = json!({"userId": 7, "ignoredByMe": false, "online": true, "starred": true, "agent": false});
+    let wire =
+        json!({"userId": 7, "ignoredByMe": false, "online": true, "starred": true, "agent": false});
     assert_wire(&person, wire.clone());
     assert_wire(
         &PeopleDirectory {

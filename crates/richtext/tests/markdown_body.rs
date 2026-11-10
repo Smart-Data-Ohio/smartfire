@@ -18,14 +18,23 @@ fn stored(source: &str) -> String {
     let icons = IconCatalog::default();
     let html = markdown::render(source, &(|_: &str| None), &icons).unwrap();
     // Saving canonicalizes the rendered body, as the message model does.
-    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
     Content::load(&html, &ctx).unwrap().to_html()
 }
 
 /// The body the SPA receives for a Markdown message.
 fn shown(source: &str) -> String {
-    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
-    Content::load(&stored(source), &ctx).unwrap().to_rendered_markdown_html_with_layout(&ctx).unwrap()
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
+    Content::load(&stored(source), &ctx)
+        .unwrap()
+        .to_rendered_markdown_html_with_layout(&ctx)
+        .unwrap()
 }
 
 /// Whitespace between tags dropped, so the structure reads on one line.
@@ -40,21 +49,32 @@ fn a_simple_table_is_stored_and_shown_as_a_table() {
     let table = "<table><thead><tr><th>a</th><th>b</th><th>c</th></tr></thead><tbody>\
                  <tr><td>1</td><td>2</td><td>3</td></tr><tr><td>4</td><td>5</td><td>6</td></tr></tbody></table>";
     assert_eq!(compact(&stored(SIMPLE)), table);
-    assert_eq!(compact(&shown(SIMPLE)), format!("<div class=\"trix-content\">{table}</div>"));
+    assert_eq!(
+        compact(&shown(SIMPLE)),
+        format!("<div class=\"trix-content\">{table}</div>")
+    );
 }
 
 #[test]
 fn the_action_text_rendering_still_drops_tables() {
     // Legacy (Trix) bodies keep Rails' allowlist: the cells' text without the table.
-    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
-    let html = Content::load(&stored(SIMPLE), &ctx).unwrap().to_rendered_html_with_layout(&ctx).unwrap();
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
+    let html = Content::load(&stored(SIMPLE), &ctx)
+        .unwrap()
+        .to_rendered_html_with_layout(&ctx)
+        .unwrap();
     assert!(!html.contains("<table") && !html.contains("<td"), "{html}");
     assert!(html.contains('a') && html.contains('6'), "{html}");
 }
 
 #[test]
 fn column_alignment_survives() {
-    let html = compact(&shown("| L | C | R | N |\n| :--- | :---: | ---: | --- |\n| 1 | 2 | 3 | 4 |"));
+    let html = compact(&shown(
+        "| L | C | R | N |\n| :--- | :---: | ---: | --- |\n| 1 | 2 | 3 | 4 |",
+    ));
     assert!(
         html.contains("<tr><th align=\"left\">L</th><th align=\"center\">C</th><th align=\"right\">R</th><th>N</th></tr>"),
         "{html}"
@@ -67,7 +87,9 @@ fn column_alignment_survives() {
 
 #[test]
 fn cells_keep_inline_code_links_bold_and_emoji() {
-    let html = compact(&shown("| Code | Link | Bold |\n|---|---|---|\n| `a \\| b` | [docs](https://example.com) | **yes** :smile: |"));
+    let html = compact(&shown(
+        "| Code | Link | Bold |\n|---|---|---|\n| `a \\| b` | [docs](https://example.com) | **yes** :smile: |",
+    ));
     assert!(html.contains("<td><code>a | b</code></td>"), "{html}");
     assert!(
         html.contains("<td><a href=\"https://example.com\" target=\"_blank\" rel=\"nofollow noopener noreferrer\">docs</a></td>"),
@@ -78,8 +100,15 @@ fn cells_keep_inline_code_links_bold_and_emoji() {
 
 #[test]
 fn a_table_right_after_a_paragraph_line_is_a_table() {
-    let html = compact(&shown("Here is the summary:\n| Name | Status |\n|---|---|\n| Alpha | done |"));
-    assert!(html.contains("<p>Here is the summary:</p><table><thead><tr><th>Name</th><th>Status</th></tr></thead>"), "{html}");
+    let html = compact(&shown(
+        "Here is the summary:\n| Name | Status |\n|---|---|\n| Alpha | done |",
+    ));
+    assert!(
+        html.contains(
+            "<p>Here is the summary:</p><table><thead><tr><th>Name</th><th>Status</th></tr></thead>"
+        ),
+        "{html}"
+    );
 }
 
 #[test]
@@ -97,15 +126,26 @@ fn a_pasted_table_with_indents_trailing_spaces_and_crlf_is_a_table() {
 
 /// `html`, as the SPA's rendered body shows it when it is a Markdown body.
 fn shown_html(html: &str) -> String {
-    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
-    compact(&Content::load(html, &ctx).unwrap().to_rendered_markdown_html_with_layout(&ctx).unwrap())
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
+    compact(
+        &Content::load(html, &ctx)
+            .unwrap()
+            .to_rendered_markdown_html_with_layout(&ctx)
+            .unwrap(),
+    )
 }
 
 #[test]
 fn the_markdown_body_allowlist_drops_what_markdown_never_stores() {
     let hostile = "<table onclick=\"x()\" style=\"position:fixed\"><tr><td align=\"right\" onmouseover=\"x()\" \
                    colspan=\"9\">a</td></tr></table><iframe></iframe>";
-    assert_eq!(shown_html(hostile), "<div class=\"trix-content\"><table><tbody><tr><td align=\"right\">a</td></tr></tbody></table></div>");
+    assert_eq!(
+        shown_html(hostile),
+        "<div class=\"trix-content\"><table><tbody><tr><td align=\"right\">a</td></tr></tbody></table></div>"
+    );
 }
 
 #[test]
@@ -119,10 +159,16 @@ fn the_markdown_body_allowlist_is_action_text_plus_the_markdown_renderers_own() 
         assert!(list.attributes.contains(attribute), "{attribute}");
     }
     for tag in &list.tags {
-        assert!(MARKDOWN_TAGS.contains(tag) || action_text.tags.contains(tag), "{tag}");
+        assert!(
+            MARKDOWN_TAGS.contains(tag) || action_text.tags.contains(tag),
+            "{tag}"
+        );
     }
     for attribute in &list.attributes {
-        assert!(MARKDOWN_ATTRIBUTES.contains(attribute) || action_text.attributes.contains(attribute), "{attribute}");
+        assert!(
+            MARKDOWN_ATTRIBUTES.contains(attribute) || action_text.attributes.contains(attribute),
+            "{attribute}"
+        );
     }
 }
 
@@ -133,10 +179,23 @@ fn the_sent_message_shows_exactly_what_markdown_stored() {
                   | L | R |\n| :- | -: |\n| [docs](https://example.com) | `x` |\n\n[room](/rooms/1) https://example.org\n\n---\n\n\
                   ```rust\nfn main() {}\n```";
     let stored = stored(source);
-    for marker in ["<ol start=\"3\">", "type=\"checkbox\"", "checked", "<table>", "target=\"_blank\"", "data-spoiler", "<del>", "<hr>", "language-rust"] {
+    for marker in [
+        "<ol start=\"3\">",
+        "type=\"checkbox\"",
+        "checked",
+        "<table>",
+        "target=\"_blank\"",
+        "data-spoiler",
+        "<del>",
+        "<hr>",
+        "language-rust",
+    ] {
         assert!(stored.contains(marker), "{marker}: {stored}");
     }
-    assert_eq!(compact(&shown(source)), format!("<div class=\"trix-content\">{}</div>", compact(&stored)));
+    assert_eq!(
+        compact(&shown(source)),
+        format!("<div class=\"trix-content\">{}</div>", compact(&stored))
+    );
 }
 
 #[test]
@@ -162,9 +221,14 @@ fn only_a_disabled_checkbox_input_survives() {
 
 #[test]
 fn an_ordered_list_keeps_its_start() {
-    assert!(compact(&shown("7. seven\n8. eight")).contains("<ol start=\"7\"><li>seven</li><li>eight</li></ol>"));
+    assert!(
+        compact(&shown("7. seven\n8. eight"))
+            .contains("<ol start=\"7\"><li>seven</li><li>eight</li></ol>")
+    );
     assert_eq!(
-        shown_html("<ol start=\"2; x\"><li>a</li></ol><ul start=\"3\"><li>b</li></ul><p start=\"4\" type=\"x\" checked disabled>c</p>"),
+        shown_html(
+            "<ol start=\"2; x\"><li>a</li></ol><ul start=\"3\"><li>b</li></ul><p start=\"4\" type=\"x\" checked disabled>c</p>"
+        ),
         "<div class=\"trix-content\"><ol><li>a</li></ol><ul><li>b</li></ul><p>c</p></div>"
     );
 }
@@ -215,7 +279,10 @@ fn styles_and_handlers_never_survive() {
          <ul><li><input type=\"checkbox\" onchange=\"x()\" style=\"x\">c</li></ul><ol start=\"2\" onfocus=\"x()\"><li>d</li></ol>",
     );
     assert!(!html.contains(" style=") && !html.contains(" on"), "{html}");
-    assert!(html.contains("<td>a</td>") && html.contains("<ol start=\"2\"><li>d</li></ol>"), "{html}");
+    assert!(
+        html.contains("<td>a</td>") && html.contains("<ol start=\"2\"><li>d</li></ol>"),
+        "{html}"
+    );
 }
 
 #[test]
@@ -259,8 +326,19 @@ fn a_tables_elements_keep_no_dimensions_or_other_action_text_attributes() {
 #[test]
 fn elements_action_text_allows_keep_their_dimensions() {
     let img = "<p><img src=\"https://example.com/a.png\" width=\"40\" height=\"30\" alt=\"a\"></p>";
-    let ctx = RenderContext { resolver: &NoRecords, request_host: None };
-    let action_text = compact(&Content::load(img, &ctx).unwrap().to_rendered_html_with_layout(&ctx).unwrap());
-    assert!(action_text.contains("width=\"40\"") && action_text.contains("height=\"30\""), "{action_text}");
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
+    let action_text = compact(
+        &Content::load(img, &ctx)
+            .unwrap()
+            .to_rendered_html_with_layout(&ctx)
+            .unwrap(),
+    );
+    assert!(
+        action_text.contains("width=\"40\"") && action_text.contains("height=\"30\""),
+        "{action_text}"
+    );
     assert_eq!(shown_html(img), action_text);
 }

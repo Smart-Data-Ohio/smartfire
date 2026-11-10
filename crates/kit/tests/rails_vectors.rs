@@ -16,7 +16,9 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, header};
 use campfire_kit::crypto::SharedCrypto;
-use campfire_kit::{Crypto, Ctx, FrozenClock, Kit, KitConfig, RailsCrypto, Result, StatusCode, action};
+use campfire_kit::{
+    Crypto, Ctx, FrozenClock, Kit, KitConfig, RailsCrypto, Result, StatusCode, action,
+};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
@@ -52,7 +54,12 @@ async fn whoami(c: &mut Ctx) -> Result {
 
 fn app_with(crypto: SharedCrypto, vectors: &Value) -> Router {
     let now = vectors["now"].as_str().unwrap().parse().unwrap();
-    let kit = Kit::new(KitConfig::default(), crypto, Arc::new(FrozenClock::new(now)), ());
+    let kit = Kit::new(
+        KitConfig::default(),
+        crypto,
+        Arc::new(FrozenClock::new(now)),
+        (),
+    );
     let router = Router::new()
         .route("/session/new", campfire_kit::get(new_session))
         .route("/session", axum::routing::post(action(create_session)))
@@ -89,9 +96,15 @@ async fn post_session(app: &Router, post: Post<'_>) -> axum::response::Response 
     }
     let mut body = "email_address=david%40example.com&password=wrong".to_string();
     if let Some(token) = post.token {
-        body.push_str(&format!("&authenticity_token={}", campfire_kit::cookies::escape(token)));
+        body.push_str(&format!(
+            "&authenticity_token={}",
+            campfire_kit::cookies::escape(token)
+        ));
     }
-    app.clone().oneshot(request.body(Body::from(body)).unwrap()).await.unwrap()
+    app.clone()
+        .oneshot(request.body(Body::from(body)).unwrap())
+        .await
+        .unwrap()
 }
 
 fn session_cookie(raw: &str) -> String {
@@ -99,11 +112,18 @@ fn session_cookie(raw: &str) -> String {
 }
 
 fn set_cookies(response: &axum::response::Response) -> Vec<String> {
-    response.headers().get_all(header::SET_COOKIE).iter().map(|v| v.to_str().unwrap().to_string()).collect()
+    response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .map(|v| v.to_str().unwrap().to_string())
+        .collect()
 }
 
 async fn json_body(response: axum::response::Response) -> Value {
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     serde_json::from_slice(&body).unwrap()
 }
 
@@ -119,10 +139,19 @@ async fn rails_issued_tokens_are_accepted_and_rejected_as_rails_did() {
         let label = case["case"].as_str().unwrap();
         let cookie = match (case["cookies"].as_array().unwrap().is_empty(), label) {
             (true, _) => None,
-            (false, "form token with the other session's cookie") => Some(session_cookie(sign_in["other_session_cookie_raw"].as_str().unwrap())),
-            (false, _) => Some(session_cookie(sign_in["session_cookie_raw"].as_str().unwrap())),
+            (false, "form token with the other session's cookie") => Some(session_cookie(
+                sign_in["other_session_cookie_raw"].as_str().unwrap(),
+            )),
+            (false, _) => Some(session_cookie(
+                sign_in["session_cookie_raw"].as_str().unwrap(),
+            )),
         };
-        let post = Post { cookie, token: case["token"].as_str(), header: case["header"].as_str(), origin: case["origin"].as_str() };
+        let post = Post {
+            cookie,
+            token: case["token"].as_str(),
+            header: case["header"].as_str(),
+            origin: case["origin"].as_str(),
+        };
         let response = post_session(&app, post).await;
         // Rails answers an accepted post with sessions#create's 401 (wrong password), and a
         // rejected one with 422 and no cookies (the exception skips the session commit).
@@ -131,11 +160,21 @@ async fn rails_issued_tokens_are_accepted_and_rejected_as_rails_did() {
                 assert_eq!(response.status(), StatusCode::OK, "{label}: accepted");
                 let body = json_body(response).await;
                 assert_eq!(body["id"], sign_in["session"]["session_id"], "{label}");
-                assert_eq!(body["csrf"], sign_in["session"]["_csrf_token"], "{label}: Rails' token stays the session's");
+                assert_eq!(
+                    body["csrf"], sign_in["session"]["_csrf_token"],
+                    "{label}: Rails' token stays the session's"
+                );
             }
             422 => {
-                assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY, "{label}: rejected");
-                assert!(set_cookies(&response).is_empty(), "{label}: no cookies on a rejected post");
+                assert_eq!(
+                    response.status(),
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "{label}: rejected"
+                );
+                assert!(
+                    set_cookies(&response).is_empty(),
+                    "{label}: no cookies on a rejected post"
+                );
             }
             other => panic!("{label}: unexpected Rails status {other}"),
         }
@@ -150,19 +189,38 @@ async fn rails_sessions_carry_over_in_rails_format() {
     let cookie = session_cookie(sign_in["session_cookie_raw"].as_str().unwrap());
     let form_token = sign_in["session_form_token"].as_str().unwrap();
 
-    let response = post_session(&app, Post { cookie: Some(cookie), token: Some(form_token), header: None, origin: None }).await;
+    let response = post_session(
+        &app,
+        Post {
+            cookie: Some(cookie),
+            token: Some(form_token),
+            header: None,
+            origin: None,
+        },
+    )
+    .await;
     assert_eq!(response.status(), StatusCode::OK);
     let set_cookie = set_cookies(&response).into_iter().next().unwrap();
 
     // What we write back after a change is the same session (and CSRF token) plus the change.
-    let raw = set_cookie.strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap();
+    let raw = set_cookie
+        .strip_prefix("_campfire_session=")
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap();
     let raw = rails_compat::cookies::unescape(raw);
     let now = vectors["now"].as_str().unwrap().parse().unwrap();
-    let decoded = crypto.decrypt_cookie("_campfire_session", &raw, now).unwrap();
+    let decoded = crypto
+        .decrypt_cookie("_campfire_session", &raw, now)
+        .unwrap();
     let mut expected = sign_in["session"].clone();
     expected["return_to_after_authenticating"] = "/rooms/1".into();
     assert_eq!(decoded, expected);
-    assert!(set_cookie.ends_with("; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax"));
+    assert!(
+        set_cookie
+            .ends_with("; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax")
+    );
 }
 
 fn workspace_root() -> PathBuf {
@@ -185,7 +243,10 @@ async fn kit_issued_tokens_verify_here_and_are_written_for_rails() {
             if let Some(cookie) = cookie {
                 request = request.header(header::COOKIE, cookie);
             }
-            let response = app.oneshot(request.body(Body::empty()).unwrap()).await.unwrap();
+            let response = app
+                .oneshot(request.body(Body::empty()).unwrap())
+                .await
+                .unwrap();
             let cookies = set_cookies(&response);
             (cookies, json_body(response).await)
         }
@@ -193,28 +254,76 @@ async fn kit_issued_tokens_verify_here_and_are_written_for_rails() {
 
     // A new visitor: rendering tokens starts a session holding the token.
     let (cookies, fresh) = page(None).await;
-    assert_eq!(cookies.len(), 1, "the page's tokens need a session: {cookies:?}");
-    let fresh_raw = rails_compat::cookies::unescape(cookies[0].strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap());
-    let fresh_session = crypto.decrypt_cookie("_campfire_session", &fresh_raw, now).unwrap();
+    assert_eq!(
+        cookies.len(),
+        1,
+        "the page's tokens need a session: {cookies:?}"
+    );
+    let fresh_raw = rails_compat::cookies::unescape(
+        cookies[0]
+            .strip_prefix("_campfire_session=")
+            .unwrap()
+            .split(';')
+            .next()
+            .unwrap(),
+    );
+    let fresh_session = crypto
+        .decrypt_cookie("_campfire_session", &fresh_raw, now)
+        .unwrap();
     assert_eq!(fresh_session["_csrf_token"].as_str().unwrap().len(), 43);
     assert_eq!(fresh_session["session_id"].as_str().unwrap().len(), 32);
 
     // A visitor with Rails' session: the page reuses its token and needs no new cookie.
     let rails_cookie = session_cookie(sign_in["session_cookie_raw"].as_str().unwrap());
     let (cookies, carried) = page(Some(rails_cookie.clone())).await;
-    assert!(cookies.is_empty(), "an unchanged session isn't rewritten: {cookies:?}");
+    assert!(
+        cookies.is_empty(),
+        "an unchanged session isn't rewritten: {cookies:?}"
+    );
 
-    for (cookie, tokens) in [(session_cookie(&fresh_raw), &fresh), (rails_cookie.clone(), &carried)] {
-        for token in [tokens["meta"].as_str().unwrap(), tokens["form"].as_str().unwrap()] {
-            let ok = post_session(&app, Post { cookie: Some(cookie.clone()), token: Some(token), header: None, origin: None }).await;
+    for (cookie, tokens) in [
+        (session_cookie(&fresh_raw), &fresh),
+        (rails_cookie.clone(), &carried),
+    ] {
+        for token in [
+            tokens["meta"].as_str().unwrap(),
+            tokens["form"].as_str().unwrap(),
+        ] {
+            let ok = post_session(
+                &app,
+                Post {
+                    cookie: Some(cookie.clone()),
+                    token: Some(token),
+                    header: None,
+                    origin: None,
+                },
+            )
+            .await;
             assert_eq!(ok.status(), StatusCode::OK);
-            let as_header = post_session(&app, Post { cookie: Some(cookie.clone()), token: None, header: Some(token), origin: None }).await;
+            let as_header = post_session(
+                &app,
+                Post {
+                    cookie: Some(cookie.clone()),
+                    token: None,
+                    header: Some(token),
+                    origin: None,
+                },
+            )
+            .await;
             assert_eq!(as_header.status(), StatusCode::OK);
         }
     }
     // Each session's tokens only work with that session.
-    let crossed = Post { cookie: Some(rails_cookie), token: fresh["form"].as_str(), header: None, origin: None };
-    assert_eq!(post_session(&app, crossed).await.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let crossed = Post {
+        cookie: Some(rails_cookie),
+        token: fresh["form"].as_str(),
+        header: None,
+        origin: None,
+    };
+    assert_eq!(
+        post_session(&app, crossed).await.status(),
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
 
     let output = json!({
         "now": vectors["now"],
@@ -231,10 +340,18 @@ async fn rails_signed_session_token_cookie_is_read() {
     let vectors = rails_compat_vectors();
     let session = &vectors["session"];
     // Stock Campfire's cookie (SHA256 keys), which `RailsCrypto` reads.
-    let secrets = Arc::new(rails_compat::Secrets::new(vectors["secret_key_base"].as_str().unwrap()));
+    let secrets = Arc::new(rails_compat::Secrets::new(
+        vectors["secret_key_base"].as_str().unwrap(),
+    ));
     let app = app_with(Arc::new(RailsCrypto::new(secrets)), &vectors);
-    let cookie = format!("session_token={}", campfire_kit::cookies::escape(session["session_token_raw"].as_str().unwrap()));
-    let request = Request::get("/whoami").header(header::COOKIE, cookie).body(Body::empty()).unwrap();
+    let cookie = format!(
+        "session_token={}",
+        campfire_kit::cookies::escape(session["session_token_raw"].as_str().unwrap())
+    );
+    let request = Request::get("/whoami")
+        .header(header::COOKIE, cookie)
+        .body(Body::empty())
+        .unwrap();
     let response = app.oneshot(request).await.unwrap();
     let body = json_body(response).await;
     assert_eq!(body["token"], session["session_token_value"]);

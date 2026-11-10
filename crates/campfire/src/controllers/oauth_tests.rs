@@ -79,9 +79,18 @@ async fn oauth_switch_on_advertises_cimd_dcr_client_authentication_and_challenge
         meta.json()["registration_endpoint"],
         "https://smartfire.example/oauth/register"
     );
-    assert_eq!(meta.json()["token_endpoint_auth_signing_alg_values_supported"], json!(["RS256", "ES256"]));
-    assert_eq!(meta.json()["revocation_endpoint_auth_methods_supported"], json!(["none", "private_key_jwt"]));
-    assert_eq!(meta.json()["revocation_endpoint_auth_signing_alg_values_supported"], json!(["RS256", "ES256"]));
+    assert_eq!(
+        meta.json()["token_endpoint_auth_signing_alg_values_supported"],
+        json!(["RS256", "ES256"])
+    );
+    assert_eq!(
+        meta.json()["revocation_endpoint_auth_methods_supported"],
+        json!(["none", "private_key_jwt"])
+    );
+    assert_eq!(
+        meta.json()["revocation_endpoint_auth_signing_alg_values_supported"],
+        json!(["RS256", "ES256"])
+    );
     let mut owner = app.sign_in(DAVID).await;
     assert_eq!(
         owner.get("/api/v1/me/agents").await.json()["oauthAvailable"],
@@ -805,7 +814,11 @@ async fn oauth_unsupported_only_client_and_untrusted_redirect_use_error_page() {
         .get("/app/oauth/error?error=invalid_client")
         .await;
     assert_eq!(page.status.as_u16(), 200, "{}", page.text());
-    assert!(page.header("content-type").unwrap().starts_with("text/html"));
+    assert!(
+        page.header("content-type")
+            .unwrap()
+            .starts_with("text/html")
+    );
 }
 #[tokio::test]
 async fn oauth_internal_cimd_dns_answers_refused_without_dialing() {
@@ -1318,7 +1331,11 @@ async fn oauth_connections_list_with_client_and_explain_a_reuse_revocation() {
             .json_body(&json!({})),
         )
         .await;
-    assert_eq!(rotate.status.as_u16(), 404, "a connection has no secret to rotate");
+    assert_eq!(
+        rotate.status.as_u16(),
+        404,
+        "a connection has no secret to rotate"
+    );
     let attacker = refresh(
         &f.app,
         original["refresh_token"].as_str().unwrap(),
@@ -1429,12 +1446,13 @@ async fn oauth_admin_lists_blocks_and_unblocks_connected_clients() {
     assert_eq!(client["blockedAt"], Value::Null);
     let id = client["id"].as_i64().unwrap();
     let path = format!("/api/v1/admin/oauth_clients/{id}/block");
-    let mut member = f
-        .app
-        .sign_in(super::presenters::test_support::KEVIN)
-        .await;
+    let mut member = f.app.sign_in(super::presenters::test_support::KEVIN).await;
     assert_eq!(
-        member.get("/api/v1/admin/oauth_clients").await.status.as_u16(),
+        member
+            .get("/api/v1/admin/oauth_clients")
+            .await
+            .status
+            .as_u16(),
         403
     );
     assert_eq!(
@@ -1479,7 +1497,10 @@ async fn oauth_admin_lists_blocks_and_unblocks_connected_clients() {
     assert_eq!(audits, 2);
     assert_eq!(
         admin
-            .write(Req::new(Method::PUT, "/api/v1/admin/oauth_clients/999999/block"))
+            .write(Req::new(
+                Method::PUT,
+                "/api/v1/admin/oauth_clients/999999/block"
+            ))
             .await
             .status
             .as_u16(),
@@ -1841,7 +1862,10 @@ fn room_access(consent: &Value) -> Vec<(i64, Vec<String>)> {
             let capabilities = entry["capabilities"].as_array().unwrap();
             (
                 entry["roomId"].as_i64().unwrap(),
-                capabilities.iter().map(|c| c.as_str().unwrap().to_string()).collect(),
+                capabilities
+                    .iter()
+                    .map(|c| c.as_str().unwrap().to_string())
+                    .collect(),
             )
         })
         .collect()
@@ -1860,10 +1884,16 @@ async fn oauth_consent_shows_per_room_access_and_approval_replaces_it_room_by_ro
     for room in [ALL_TALK, HQ] {
         assert!(offered.iter().any(|r| r["id"] == room), "{consent}");
     }
-    assert_eq!(room_access(&consent), vec![], "a new connection's agent has no rooms yet");
+    assert_eq!(
+        room_access(&consent),
+        vec![],
+        "a new connection's agent has no rooms yet"
+    );
     owner.grant_sudo().await;
     let both = json!({"agentId":agent_id,"roomIds":[ALL_TALK,HQ],"capabilities":["read_messages","post_messages"]});
-    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    let approved = owner
+        .write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both))
+        .await;
     assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
     // It reads both rooms but posts only in All Talk.
     f.app.db().write(move |tx| {
@@ -1882,12 +1912,20 @@ async fn oauth_consent_shows_per_room_access_and_approval_replaces_it_room_by_ro
     ];
     expected.sort();
     assert_eq!(shown, expected);
-    assert!(consent["roomAccess"].as_array().unwrap().iter().all(|entry| entry["agentId"] == agent_id
-        && !entry["roomName"].as_str().unwrap().is_empty()));
+    assert!(
+        consent["roomAccess"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|entry| entry["agentId"] == agent_id
+                && !entry["roomName"].as_str().unwrap().is_empty())
+    );
     // Approving the same rooms and abilities gives posting in HQ too: every chosen room gets
     // every chosen ability, which is what the page shows as a change.
     owner.grant_sudo().await;
-    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    let approved = owner
+        .write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both))
+        .await;
     assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
     let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
     let path = consent_path(&next);
@@ -1902,7 +1940,9 @@ async fn oauth_consent_shows_per_room_access_and_approval_replaces_it_room_by_ro
     // Leaving a room drops it and everything the agent could do there.
     owner.grant_sudo().await;
     let one = json!({"agentId":agent_id,"roomIds":[ALL_TALK],"capabilities":["read_messages"]});
-    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one)).await;
+    let approved = owner
+        .write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one))
+        .await;
     assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
     let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
     let shown = room_access(&owner.get(&consent_path(&next)).await.json());
@@ -1916,26 +1956,51 @@ async fn oauth_consent_counts_rooms_the_owner_left_without_naming_them_and_appro
     let mut owner = f.app.sign_in(DAVID).await;
     let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
     let path = consent_path(&next);
-    let agent_id = owner.get(&path).await.json()["selectedAgentId"].as_i64().unwrap();
+    let agent_id = owner.get(&path).await.json()["selectedAgentId"]
+        .as_i64()
+        .unwrap();
     owner.grant_sudo().await;
     let both = json!({"agentId":agent_id,"roomIds":[ALL_TALK,QUIET_CORNER],"capabilities":["read_messages"]});
-    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both)).await;
+    let approved = owner
+        .write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&both))
+        .await;
     assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
     // David leaves the private room; the agent stays in it. Then it's renamed.
-    let bot_id = f.app.db().write(move |tx| {
-        let room = campfire_db::Room::find(tx.conn(), QUIET_CORNER)?;
-        room.revoke_from(tx, &[DAVID])?;
-        tx.conn().execute("UPDATE rooms SET name='Secret plans' WHERE id=?", [QUIET_CORNER])?;
-        Ok(tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| r.get::<_, i64>(0))?)
-    }).await.unwrap();
+    let bot_id = f
+        .app
+        .db()
+        .write(move |tx| {
+            let room = campfire_db::Room::find(tx.conn(), QUIET_CORNER)?;
+            room.revoke_from(tx, &[DAVID])?;
+            tx.conn().execute(
+                "UPDATE rooms SET name='Secret plans' WHERE id=?",
+                [QUIET_CORNER],
+            )?;
+            Ok(tx
+                .conn()
+                .query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| {
+                    r.get::<_, i64>(0)
+                })?)
+        })
+        .await
+        .unwrap();
     async fn member(app: &TestApp, room_id: i64, bot_id: i64) -> i64 {
-        app.db().read(move |conn| Ok(conn.query_row(
-            "SELECT COUNT(*) FROM memberships WHERE room_id=? AND user_id=?",
-            [room_id, bot_id],
-            |r| r.get::<_, i64>(0),
-        )?)).await.unwrap()
+        app.db()
+            .read(move |conn| {
+                Ok(conn.query_row(
+                    "SELECT COUNT(*) FROM memberships WHERE room_id=? AND user_id=?",
+                    [room_id, bot_id],
+                    |r| r.get::<_, i64>(0),
+                )?)
+            })
+            .await
+            .unwrap()
     }
-    assert_eq!(member(&f.app, QUIET_CORNER, bot_id).await, 1, "the agent is still in the room");
+    assert_eq!(
+        member(&f.app, QUIET_CORNER, bot_id).await,
+        1,
+        "the agent is still in the room"
+    );
     let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
     let path = consent_path(&next);
     let reply = owner.get(&path).await;
@@ -1943,16 +2008,27 @@ async fn oauth_consent_counts_rooms_the_owner_left_without_naming_them_and_appro
     assert!(!text.contains("Secret plans"), "{text}");
     assert!(!text.contains(&QUIET_CORNER.to_string()), "{text}");
     let consent = reply.json();
-    assert_eq!(room_access(&consent), vec![(ALL_TALK, vec!["read_messages".to_string()])]);
-    assert_eq!(consent["hiddenRooms"], json!([{"agentId":agent_id,"count":1}]));
+    assert_eq!(
+        room_access(&consent),
+        vec![(ALL_TALK, vec!["read_messages".to_string()])]
+    );
+    assert_eq!(
+        consent["hiddenRooms"],
+        json!([{"agentId":agent_id,"count":1}])
+    );
     // Approving takes the agent out of the room David can't see.
     owner.grant_sudo().await;
     let one = json!({"agentId":agent_id,"roomIds":[ALL_TALK],"capabilities":["read_messages"]});
-    let approved = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one)).await;
+    let approved = owner
+        .write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&one))
+        .await;
     assert_eq!(approved.status.as_u16(), 200, "{}", approved.text());
     assert_eq!(member(&f.app, QUIET_CORNER, bot_id).await, 0);
     let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
-    assert_eq!(owner.get(&consent_path(&next)).await.json()["hiddenRooms"], json!([]));
+    assert_eq!(
+        owner.get(&consent_path(&next)).await.json()["hiddenRooms"],
+        json!([])
+    );
 }
 #[tokio::test]
 async fn oauth_approval_gives_one_identical_error_for_any_room_the_owner_cannot_see() {
@@ -1960,19 +2036,27 @@ async fn oauth_approval_gives_one_identical_error_for_any_room_the_owner_cannot_
     let f = fixture(metadata()).await;
     let _pair = tokens(&f).await;
     // A private room David has left, so it exists but he can't see it.
-    f.app.db().write(|tx| {
-        campfire_db::Room::find(tx.conn(), QUIET_CORNER)?.revoke_from(tx, &[DAVID])?;
-        Ok(())
-    }).await.unwrap();
+    f.app
+        .db()
+        .write(|tx| {
+            campfire_db::Room::find(tx.conn(), QUIET_CORNER)?.revoke_from(tx, &[DAVID])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let mut owner = f.app.sign_in(DAVID).await;
     let next = owner.get(&authorize_url(CLIENT, REDIRECT)).await;
     let path = consent_path(&next);
-    let agent_id = owner.get(&path).await.json()["selectedAgentId"].as_i64().unwrap();
+    let agent_id = owner.get(&path).await.json()["selectedAgentId"]
+        .as_i64()
+        .unwrap();
     owner.grant_sudo().await;
     let mut bodies = Vec::new();
     for room in [999_999_999, QUIET_CORNER, DIRECT_KEVIN_BENDER] {
         let body = json!({"agentId":agent_id,"roomIds":[room],"capabilities":["read_messages"]});
-        let refused = owner.write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&body)).await;
+        let refused = owner
+            .write(Req::new(Method::POST, &format!("{path}/approve")).json_body(&body))
+            .await;
         assert_eq!(refused.status.as_u16(), 422, "{room}: {}", refused.text());
         bodies.push(refused.text());
     }

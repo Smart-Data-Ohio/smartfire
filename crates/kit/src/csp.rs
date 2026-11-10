@@ -61,7 +61,8 @@ impl ContentSecurityPolicy {
 
     /// `policy.<directive> *sources`, in declaration order.
     pub fn directive(mut self, name: &str, sources: impl IntoIterator<Item = Source>) -> Self {
-        self.directives.push((name.to_string(), sources.into_iter().collect()));
+        self.directives
+            .push((name.to_string(), sources.into_iter().collect()));
         self
     }
 
@@ -80,12 +81,18 @@ impl ContentSecurityPolicy {
 
     /// The header the middleware sets.
     pub fn header_name(&self) -> &'static str {
-        if self.report_only { "content-security-policy-report-only" } else { "content-security-policy" }
+        if self.report_only {
+            "content-security-policy-report-only"
+        } else {
+            "content-security-policy"
+        }
     }
 
     /// `request.content_security_policy_nonce`: `None` without a generator.
     pub fn generate_nonce(&self, session_id: Option<&str>) -> Option<String> {
-        self.nonce_generator.as_ref().map(|generate| generate(session_id))
+        self.nonce_generator
+            .as_ref()
+            .map(|generate| generate(session_id))
     }
 
     /// `policy.build(context, nonce, nonce_directives)`
@@ -103,7 +110,9 @@ impl ContentSecurityPolicy {
                     })
                     .collect();
                 match nonce {
-                    Some(nonce) if self.nonce_directives.contains(name) => format!("{name} {} 'nonce-{nonce}'", sources.join(" ")),
+                    Some(nonce) if self.nonce_directives.contains(name) => {
+                        format!("{name} {} 'nonce-{nonce}'", sources.join(" "))
+                    }
                     _ => format!("{name} {}", sources.join(" ")),
                 }
             })
@@ -119,11 +128,25 @@ mod tests {
     fn policy() -> ContentSecurityPolicy {
         ContentSecurityPolicy::new()
             .directive("default-src", ["'self'".into()])
-            .directive("script-src", ["'self'".into(), "https://apis.google.com".into()])
-            .directive("connect-src", ["'self'".into(), Source::Dynamic(Arc::new(|| vec!["wss://lk.test".into(), "https://lk.test".into()]))])
+            .directive(
+                "script-src",
+                ["'self'".into(), "https://apis.google.com".into()],
+            )
+            .directive(
+                "connect-src",
+                [
+                    "'self'".into(),
+                    Source::Dynamic(Arc::new(|| {
+                        vec!["wss://lk.test".into(), "https://lk.test".into()]
+                    })),
+                ],
+            )
             .directive("worker-src", [Source::Dynamic(Arc::new(Vec::new))])
             .directive("report-uri", ["/csp_reports".into()])
-            .nonce(Arc::new(|id: Option<&str>| format!("n-{}", id.unwrap_or("random"))), &["script-src"])
+            .nonce(
+                Arc::new(|id: Option<&str>| format!("n-{}", id.unwrap_or("random"))),
+                &["script-src"],
+            )
     }
 
     #[test]
@@ -142,14 +165,23 @@ mod tests {
 
     #[test]
     fn nonces_come_from_the_generator() {
-        assert_eq!(policy().generate_nonce(Some("sid")).as_deref(), Some("n-sid"));
+        assert_eq!(
+            policy().generate_nonce(Some("sid")).as_deref(),
+            Some("n-sid")
+        );
         assert_eq!(policy().generate_nonce(None).as_deref(), Some("n-random"));
-        assert_eq!(ContentSecurityPolicy::new().generate_nonce(Some("sid")), None);
+        assert_eq!(
+            ContentSecurityPolicy::new().generate_nonce(Some("sid")),
+            None
+        );
     }
 
     #[test]
     fn report_only_changes_the_header() {
         assert_eq!(policy().header_name(), "content-security-policy");
-        assert_eq!(policy().report_only(true).header_name(), "content-security-policy-report-only");
+        assert_eq!(
+            policy().report_only(true).header_name(),
+            "content-security-policy-report-only"
+        );
     }
 }

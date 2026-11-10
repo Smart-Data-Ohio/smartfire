@@ -143,7 +143,9 @@ impl WorkspaceIcon {
             name: r.get("name")?,
             title: r.get("title")?,
             creator_id: r.get("creator_id")?,
-            creator_name: crate::User::from_prefixed_row(r, "creator_")?.display_name().to_owned(),
+            creator_name: crate::User::from_prefixed_row(r, "creator_")?
+                .display_name()
+                .to_owned(),
             created_at: r.get("created_at")?,
             updated_at: r.get("updated_at")?,
         })

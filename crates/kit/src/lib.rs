@@ -23,9 +23,9 @@ pub mod app;
 pub mod body;
 pub mod clock;
 pub mod cookies;
+pub mod crypto;
 pub mod csp;
 pub mod csrf;
-pub mod crypto;
 pub mod ctx;
 pub mod deflater;
 pub mod error;
@@ -42,7 +42,10 @@ pub mod session;
 #[cfg(any(test, feature = "test-support"))]
 pub mod testing;
 
-pub use adapter::{ActionFn, OriginalMethod, RequestId, action, app, delete, get, patch, post, put, spooled_action, streamed_action, unparsed_action};
+pub use adapter::{
+    ActionFn, OriginalMethod, RequestId, action, app, delete, get, patch, post, put,
+    spooled_action, streamed_action, unparsed_action,
+};
 pub use app::{Kit, KitConfig};
 pub use clock::{Clock, FrozenClock, SharedClock, SystemClock};
 pub use cookies::{Cookie, CookieJar, SameSite};
@@ -50,8 +53,8 @@ pub use crypto::{Crypto, RailsCrypto, SharedCrypto};
 pub use ctx::{Ctx, Freshness, Redirect};
 pub use error::{Error, Result, halt};
 pub use format::{Format, Mime};
-pub use rate_limit::{RateLimit, RateLimitStore};
 pub use params::{Param, ParamMap, Permit, UploadedFile, parse_nested, permit_keys};
+pub use rate_limit::{RateLimit, RateLimitStore};
 pub use request::Request;
 pub use response::{Body, CacheControl, ExpiresIn, Response, SendOptions};
 pub use session::{Flash, Session};

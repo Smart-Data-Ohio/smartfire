@@ -77,7 +77,11 @@ pub fn action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, body_parser: BodyParser::Buffered, json_body_parser: None }
+    ActionHandler {
+        action: f,
+        body_parser: BodyParser::Buffered,
+        json_body_parser: None,
+    }
 }
 
 /// [`action`] for one that reads its own body ([`Ctx::read_body`]) and has no body params: the
@@ -88,7 +92,11 @@ pub fn unparsed_action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, body_parser: BodyParser::Unparsed, json_body_parser: None }
+    ActionHandler {
+        action: f,
+        body_parser: BodyParser::Unparsed,
+        json_body_parser: None,
+    }
 }
 
 /// Spool an upload, parsing Rack forms immediately and deferring JSON validation to
@@ -97,7 +105,11 @@ pub fn spooled_action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, body_parser: BodyParser::Spooled, json_body_parser: None }
+    ActionHandler {
+        action: f,
+        body_parser: BodyParser::Spooled,
+        json_body_parser: None,
+    }
 }
 
 /// An upload whose action authenticates and chooses a byte limit before spooling its body
@@ -106,7 +118,11 @@ pub fn streamed_action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, body_parser: BodyParser::Streaming, json_body_parser: None }
+    ActionHandler {
+        action: f,
+        body_parser: BodyParser::Streaming,
+        json_body_parser: None,
+    }
 }
 
 #[doc(hidden)]
@@ -119,7 +135,16 @@ where
     type Future = Pin<Box<dyn Future<Output = axum::response::Response> + Send>>;
 
     fn call(self, req: axum::extract::Request, kit: Kit) -> Self::Future {
-        Box::pin(async move { dispatch(kit, req, self.action, self.body_parser, self.json_body_parser).await })
+        Box::pin(async move {
+            dispatch(
+                kit,
+                req,
+                self.action,
+                self.body_parser,
+                self.json_body_parser,
+            )
+            .await
+        })
     }
 }
 
@@ -145,25 +170,62 @@ pub struct OriginalMethod(pub Method);
 #[derive(Debug, Clone)]
 pub struct RequestId(pub String);
 
-async fn dispatch<F>(kit: Kit, req: axum::extract::Request, action: F, body_parser: BodyParser, json_body_parser: Option<JsonBodyParser>) -> axum::response::Response
+async fn dispatch<F>(
+    kit: Kit,
+    req: axum::extract::Request,
+    action: F,
+    body_parser: BodyParser,
+    json_body_parser: Option<JsonBodyParser>,
+) -> axum::response::Response
 where
     F: for<'a> ActionFn<'a>,
 {
     let (mut parts, body) = req.into_parts();
-    let write_deadline = parts.extensions.get::<crate::front::WriteDeadline>().copied();
-    let path_params = RawPathParams::from_request_parts(&mut parts, &kit).await.map(|raw| {
-        raw.iter().map(|(k, v)| (k.to_string(), Param::Str(v.to_string()))).collect::<ParamMap>()
-    });
-    let original_method = parts.extensions.get::<OriginalMethod>().map(|m| m.0.clone()).unwrap_or(parts.method.clone());
-    let body_limit = [kit.config().max_body_bytes, parts.extensions.get::<body::RequestBodyLimit>().map(|limit| limit.0)]
-        .into_iter().flatten().min();
+    let write_deadline = parts
+        .extensions
+        .get::<crate::front::WriteDeadline>()
+        .copied();
+    let path_params = RawPathParams::from_request_parts(&mut parts, &kit)
+        .await
+        .map(|raw| {
+            raw.iter()
+                .map(|(k, v)| (k.to_string(), Param::Str(v.to_string())))
+                .collect::<ParamMap>()
+        });
+    let original_method = parts
+        .extensions
+        .get::<OriginalMethod>()
+        .map(|m| m.0.clone())
+        .unwrap_or(parts.method.clone());
+    let body_limit = [
+        kit.config().max_body_bytes,
+        parts
+            .extensions
+            .get::<body::RequestBodyLimit>()
+            .map(|limit| limit.0),
+    ]
+    .into_iter()
+    .flatten()
+    .min();
     // DiskController's session gate precedes formatted JSON parsing. Rack form
     // parsing still happens before that gate; keep its malformed-body precedence.
     let defer_spooled_params = matches!(body_parser, BodyParser::Spooled)
-        && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON);
+        && format::content_mime_type(
+            parts
+                .headers
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok()),
+        )
+        .ok()
+        .flatten()
+            == Some(&format::JSON);
     let mut unread = None;
     let mut streaming = None;
-    let file_limits = parts.extensions.get::<body::MultipartFileLimits>().cloned().unwrap_or_default();
+    let file_limits = parts
+        .extensions
+        .get::<body::MultipartFileLimits>()
+        .cloned()
+        .unwrap_or_default();
     let mut parsed = match parts.extensions.remove::<ParsedBody>() {
         Some(parsed) => Ok(parsed),
         None if matches!(body_parser, BodyParser::Streaming) => {
@@ -173,38 +235,71 @@ where
         None if !matches!(body_parser, BodyParser::Buffered) => {
             match body::validate_unparsed(body, body_limit).await {
                 Ok(mut body) => {
-                    let parsed = if matches!(body_parser, BodyParser::Spooled) && !defer_spooled_params {
-                        body::parse_spooled(&parts.headers, body.as_mut()).await
-                    } else {
-                        Ok(ParsedBody::empty())
-                    };
+                    let parsed =
+                        if matches!(body_parser, BodyParser::Spooled) && !defer_spooled_params {
+                            body::parse_spooled(&parts.headers, body.as_mut()).await
+                        } else {
+                            Ok(ParsedBody::empty())
+                        };
                     unread = body;
                     parsed
                 }
                 Err(error) => Err(error),
             }
         }
-        None => body::parse_with_file_limits(&original_method, &parts.headers, body, body_limit, &file_limits).await,
+        None => {
+            body::parse_with_file_limits(
+                &original_method,
+                &parts.headers,
+                body,
+                body_limit,
+                &file_limits,
+            )
+            .await
+        }
     };
     if let Some(parser) = json_body_parser
         && let Ok(parsed) = &mut parsed
         && !parsed.raw.is_empty()
-        && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON)
+        && format::content_mime_type(
+            parts
+                .headers
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok()),
+        )
+        .ok()
+        .flatten()
+            == Some(&format::JSON)
         && let Some(params) = parser(&parts.method, parts.uri.path(), &parsed.raw)
     {
         parsed.params = params;
     }
-    let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip());
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|c| c.0.ip());
     let head = parts.method == Method::HEAD;
 
     let (raw, body_params) = match parsed {
         Ok(ParsedBody { raw, params }) => (raw, params.map_err(Error::from)),
         Err(error) => (Bytes::new(), Err(Error::Status(error.status()))),
     };
-    let request = Request::new(parts.method, original_method, parts.uri, parts.headers, peer, raw, &kit.config().proxy);
+    let request = Request::new(
+        parts.method,
+        original_method,
+        parts.uri,
+        parts.headers,
+        peer,
+        raw,
+        &kit.config().proxy,
+    );
     let query_params = params::from_query_string(request.query_string()).map_err(Error::from);
     let cookies = CookieJar::from_headers(
-        request.headers.get_all(header::COOKIE).iter().filter_map(|v| v.to_str().ok()),
+        request
+            .headers
+            .get_all(header::COOKIE)
+            .iter()
+            .filter_map(|v| v.to_str().ok()),
         kit.crypto().clone(),
         kit.clock().clone(),
     );
@@ -237,10 +332,14 @@ where
     let result = match failure {
         Some(error) => Err(error),
         None => {
-            let future: Pin<Box<dyn Future<Output = Result<Response>> + Send + '_>> = Box::pin(action.call(&mut ctx));
+            let future: Pin<Box<dyn Future<Output = Result<Response>> + Send + '_>> =
+                Box::pin(action.call(&mut ctx));
             // A panicking action is an exception like any other: Rails' `ShowExceptions` answers
             // 500 with `public/500.html`, where an unwinding handler would drop the connection.
-            std::panic::AssertUnwindSafe(future).catch_unwind().await.unwrap_or_else(|panic| Err(panic_error(panic)))
+            std::panic::AssertUnwindSafe(future)
+                .catch_unwind()
+                .await
+                .unwrap_or_else(|panic| Err(panic_error(panic)))
         }
     };
     into_axum(ctx.finish(result), head).await
@@ -265,7 +364,13 @@ fn clone_error(error: &Error) -> Error {
 /// Hand a finished response to hyper, streaming files and dropping HEAD bodies (`Rack::Head`)
 /// while keeping their `Content-Length`.
 pub async fn into_axum(response: Response, head: bool) -> axum::response::Response {
-    let Response { status, mut headers, body, page_parts, .. } = response;
+    let Response {
+        status,
+        mut headers,
+        body,
+        page_parts,
+        ..
+    } = response;
     let app_set_length = headers.contains_key(header::CONTENT_LENGTH);
     let body = match body {
         Body::Empty => AxumBody::empty(),
@@ -296,7 +401,9 @@ pub async fn into_axum(response: Response, head: bool) -> axum::response::Respon
     *response.status_mut() = status;
     *response.headers_mut() = headers;
     if app_set_length {
-        response.extensions_mut().insert(crate::deflater::AppContentLength);
+        response
+            .extensions_mut()
+            .insert(crate::deflater::AppContentLength);
     }
     if let Some(parts) = page_parts {
         response.extensions_mut().insert(parts);
@@ -325,13 +432,23 @@ async fn file_stream(file: &crate::response::FileBody) -> std::io::Result<AxumBo
 }
 
 /// `Rack::MethodOverride::HTTP_METHODS`
-const OVERRIDABLE_METHODS: [&str; 9] = ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS", "PATCH", "LINK", "UNLINK"];
+const OVERRIDABLE_METHODS: [&str; 9] = [
+    "GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS", "PATCH", "LINK", "UNLINK",
+];
 
 /// Middleware that runs before routing: request id, forced SSL, and `_method` override (which
 /// needs the parsed form body, so POST bodies are parsed here and handed on).
-pub async fn rails_middleware(State(kit): State<Kit>, req: axum::extract::Request, next: Next) -> axum::response::Response {
+pub async fn rails_middleware(
+    State(kit): State<Kit>,
+    req: axum::extract::Request,
+    next: Next,
+) -> axum::response::Response {
     let started = std::time::Instant::now();
-    let request_id = request_id(req.headers().get("x-request-id").and_then(|v| v.to_str().ok()));
+    let request_id = request_id(
+        req.headers()
+            .get("x-request-id")
+            .and_then(|v| v.to_str().ok()),
+    );
     let config = kit.config();
     let ssl = config.proxy.assume_ssl || request::scheme_is_https(req.headers(), req.uri());
 
@@ -350,18 +467,26 @@ pub async fn rails_middleware(State(kit): State<Kit>, req: axum::extract::Reques
 
     // `Rack::Runtime` and `ActionDispatch::RequestId` sit below `ActionDispatch::Static`: public
     // files get neither header.
-    if response.extensions().get::<crate::deflater::StaticFile>().is_none() {
+    if response
+        .extensions()
+        .get::<crate::deflater::StaticFile>()
+        .is_none()
+    {
         if let Ok(value) = HeaderValue::from_str(&request_id) {
             response.headers_mut().insert("x-request-id", value);
         }
         if !response.headers().contains_key("x-runtime") {
             let runtime = format!("{:.6}", started.elapsed().as_secs_f64());
-            response.headers_mut().insert("x-runtime", HeaderValue::from_str(&runtime).unwrap());
+            response
+                .headers_mut()
+                .insert("x-runtime", HeaderValue::from_str(&runtime).unwrap());
         }
     }
     if config.force_ssl && ssl {
         if let Ok(value) = HeaderValue::from_str(&config.hsts) {
-            response.headers_mut().insert(header::STRICT_TRANSPORT_SECURITY, value);
+            response
+                .headers_mut()
+                .insert(header::STRICT_TRANSPORT_SECURITY, value);
         }
         flag_cookies_as_secure(response.headers_mut());
     }
@@ -375,20 +500,49 @@ async fn method_override(
     if req.method() != Method::POST {
         return Ok(req);
     }
-    let media = request::media_type(req.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()));
+    let media = request::media_type(
+        req.headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok()),
+    );
     let form_data = match media.as_deref() {
         None => true,
-        Some(media) => ["application/x-www-form-urlencoded", "multipart/form-data", "multipart/related", "multipart/mixed"]
-            .contains(&media),
+        Some(media) => [
+            "application/x-www-form-urlencoded",
+            "multipart/form-data",
+            "multipart/related",
+            "multipart/mixed",
+        ]
+        .contains(&media),
     };
     let (mut parts, body) = req.into_parts();
-    let body_limit = [kit.config().max_body_bytes, parts.extensions.get::<body::RequestBodyLimit>().map(|limit| limit.0)]
-        .into_iter().flatten().min();
+    let body_limit = [
+        kit.config().max_body_bytes,
+        parts
+            .extensions
+            .get::<body::RequestBodyLimit>()
+            .map(|limit| limit.0),
+    ]
+    .into_iter()
+    .flatten()
+    .min();
     // Only form data can carry `_method`, so other bodies (JSON, a raw upload) are left for the
     // action to read, rather than parsed here for every POST, before routing.
     let (parsed, from_param, body) = if form_data {
-        let file_limits = parts.extensions.get::<body::MultipartFileLimits>().cloned().unwrap_or_default();
-        let parsed = match body::parse_with_file_limits(&Method::POST, &parts.headers, body, body_limit, &file_limits).await {
+        let file_limits = parts
+            .extensions
+            .get::<body::MultipartFileLimits>()
+            .cloned()
+            .unwrap_or_default();
+        let parsed = match body::parse_with_file_limits(
+            &Method::POST,
+            &parts.headers,
+            body,
+            body_limit,
+            &file_limits,
+        )
+        .await
+        {
             Ok(parsed) => parsed,
             Err(error) => {
                 let mut response = axum::response::Response::new(AxumBody::empty());
@@ -396,18 +550,30 @@ async fn method_override(
                 return Err(Box::new(response));
             }
         };
-        let from_param = parsed.params.as_ref().ok().and_then(|p| p.str("_method")).map(str::to_string);
+        let from_param = parsed
+            .params
+            .as_ref()
+            .ok()
+            .and_then(|p| p.str("_method"))
+            .map(str::to_string);
         (Some(parsed), from_param, AxumBody::empty())
     } else {
         (None, None, body)
     };
-    let from_header = || parts.headers.get("x-http-method-override").and_then(|v| v.to_str().ok()).map(str::to_string);
+    let from_header = || {
+        parts
+            .headers
+            .get("x-http-method-override")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string)
+    };
     if let Some(method) = from_param.or_else(from_header).map(|m| m.to_uppercase())
         && OVERRIDABLE_METHODS.contains(&method.as_str())
-            && let Ok(method) = Method::from_bytes(method.as_bytes()) {
-                parts.extensions.insert(OriginalMethod(Method::POST));
-                parts.method = method;
-            }
+        && let Ok(method) = Method::from_bytes(method.as_bytes())
+    {
+        parts.extensions.insert(OriginalMethod(Method::POST));
+        parts.method = method;
+    }
     if let Some(parsed) = parsed {
         parts.extensions.insert(parsed);
     }
@@ -417,7 +583,11 @@ async fn method_override(
 /// `ActionDispatch::RequestId#make_request_id`
 fn request_id(incoming: Option<&str>) -> String {
     match incoming.filter(|id| !id.trim().is_empty()) {
-        Some(id) => id.chars().filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-' || *c == '@').take(255).collect(),
+        Some(id) => id
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-' || *c == '@')
+            .take(255)
+            .collect(),
         None => uuid::Uuid::new_v4().to_string(),
     }
 }
@@ -431,8 +601,16 @@ fn redirect_to_https(req: &axum::extract::Request) -> axum::response::Response {
         .and_then(|v| v.to_str().ok())
         .map(|h| h.rsplit(',').next().unwrap_or(h).trim().to_string())
         .unwrap_or_else(|| "localhost".into());
-    let host = host.rsplit_once(':').filter(|(_, p)| p.bytes().all(|b| b.is_ascii_digit())).map(|(h, _)| h.to_string()).unwrap_or(host);
-    let path = req.uri().path_and_query().map(|p| p.as_str()).unwrap_or("/");
+    let host = host
+        .rsplit_once(':')
+        .filter(|(_, p)| p.bytes().all(|b| b.is_ascii_digit()))
+        .map(|(h, _)| h.to_string())
+        .unwrap_or(host);
+    let path = req
+        .uri()
+        .path_and_query()
+        .map(|p| p.as_str())
+        .unwrap_or("/");
     let status = if matches!(*req.method(), Method::GET | Method::HEAD) {
         StatusCode::MOVED_PERMANENTLY
     } else {
@@ -440,7 +618,9 @@ fn redirect_to_https(req: &axum::extract::Request) -> axum::response::Response {
     };
     let mut response = axum::response::Response::new(AxumBody::empty());
     *response.status_mut() = status;
-    response.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html"));
+    response
+        .headers_mut()
+        .insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html"));
     if let Ok(location) = HeaderValue::from_str(&format!("https://{host}{path}")) {
         response.headers_mut().insert(header::LOCATION, location);
     }
@@ -449,15 +629,26 @@ fn redirect_to_https(req: &axum::extract::Request) -> axum::response::Response {
 
 /// `ActionDispatch::SSL#flag_cookies_as_secure!`
 fn flag_cookies_as_secure(headers: &mut axum::http::HeaderMap) {
-    let cookies: Vec<String> =
-        headers.get_all(header::SET_COOKIE).iter().filter_map(|v| v.to_str().ok()).map(str::to_string).collect();
+    let cookies: Vec<String> = headers
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .map(str::to_string)
+        .collect();
     if cookies.is_empty() {
         return;
     }
     headers.remove(header::SET_COOKIE);
     for cookie in cookies {
-        let secure = cookie.split(';').skip(1).any(|attr| attr.trim().eq_ignore_ascii_case("secure"));
-        let cookie = if secure { cookie } else { format!("{cookie}; secure") };
+        let secure = cookie
+            .split(';')
+            .skip(1)
+            .any(|attr| attr.trim().eq_ignore_ascii_case("secure"));
+        let cookie = if secure {
+            cookie
+        } else {
+            format!("{cookie}; secure")
+        };
         if let Ok(value) = HeaderValue::from_str(&cookie) {
             headers.append(header::SET_COOKIE, value);
         }
@@ -465,11 +656,20 @@ fn flag_cookies_as_secure(headers: &mut axum::http::HeaderMap) {
 }
 
 /// Rails' answer for an unmatched route (`ActionController::RoutingError`): the public 404 page.
-pub async fn not_found(State(kit): State<Kit>, req: axum::extract::Request) -> axum::response::Response {
+pub async fn not_found(
+    State(kit): State<Kit>,
+    req: axum::extract::Request,
+) -> axum::response::Response {
     let input = NegotiationInput {
         format_param: None,
-        accept: req.headers().get(header::ACCEPT).and_then(|v| v.to_str().ok()),
-        content_type: req.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()),
+        accept: req
+            .headers()
+            .get(header::ACCEPT)
+            .and_then(|v| v.to_str().ok()),
+        content_type: req
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok()),
         path: req.uri().path(),
         xhr: req
             .headers()
@@ -477,18 +677,36 @@ pub async fn not_found(State(kit): State<Kit>, req: axum::extract::Request) -> a
             .and_then(|v| v.to_str().ok())
             .is_some_and(|v| v.eq_ignore_ascii_case("xmlhttprequest")),
     };
-    let format = format::formats(&input).ok().and_then(|f| f.first().copied());
+    let format = format::formats(&input)
+        .ok()
+        .and_then(|f| f.first().copied());
     let head = req.method() == Method::HEAD;
-    into_axum(crate::exceptions::render(kit.error_pages(), StatusCode::NOT_FOUND, format, head), head).await
+    into_axum(
+        crate::exceptions::render(kit.error_pages(), StatusCode::NOT_FOUND, format, head),
+        head,
+    )
+    .await
 }
 
 /// Finish an app router: Rails-style 404s for unknown paths *and* unknown methods (Axum would say
 /// 405), the Kit state, the pre-routing middleware, and the configured request timeout.
 pub fn app(router: Router<Kit>, kit: Kit) -> Router {
-    let routed = router.fallback(not_found).method_not_allowed_fallback(not_found).with_state(kit.clone());
-    let mut app = Router::new().fallback_service(routed).layer(axum::middleware::from_fn_with_state(kit.clone(), rails_middleware));
+    let routed = router
+        .fallback(not_found)
+        .method_not_allowed_fallback(not_found)
+        .with_state(kit.clone());
+    let mut app =
+        Router::new()
+            .fallback_service(routed)
+            .layer(axum::middleware::from_fn_with_state(
+                kit.clone(),
+                rails_middleware,
+            ));
     if let Some(timeout) = kit.config().request_timeout {
-        app = app.layer(tower_http::timeout::TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, timeout));
+        app = app.layer(tower_http::timeout::TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            timeout,
+        ));
     }
     app
 }

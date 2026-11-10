@@ -60,7 +60,10 @@ impl Broadcast for RoleEvent {
     const KIND: &'static str = "Stage#broadcast_role_event_to_member";
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StageEndedNote { pub message_id:i64 }
-impl Broadcast for StageEndedNote { const KIND:&'static str="Stage#post_stage_ended_note"; }
+pub struct StageEndedNote {
+    pub message_id: i64,
+}
+impl Broadcast for StageEndedNote {
+    const KIND: &'static str = "Stage#post_stage_ended_note";
+}

@@ -72,7 +72,10 @@ fn board_automation_rule_models_match_rails_errors_and_dirty_updates() {
             if row["valid"] == true && row["existing_id"].is_null() {
                 let mut saved = BoardSlaRule::create(tx, attributes)?;
                 assert_eq!(json!(saved.nudge_after_minutes.to_string()), row["nudge"]);
-                assert_eq!(json!(saved.escalate_after_minutes.to_string()), row["escalate"]);
+                assert_eq!(
+                    json!(saved.escalate_after_minutes.to_string()),
+                    row["escalate"]
+                );
                 if saved.nudge_after_minutes < 43199 {
                     let mut stale = saved.clone();
                     saved.update(tx, Some("90".into()), Some("43200".into()))?;
@@ -163,12 +166,17 @@ fn board_automation_digests_match_rails_daily_claims_quiet_notes_order_and_escap
             .events()
             .iter()
             .filter_map(|event| match event {
-                Event::Broadcast(request) => request.decode::<crate::models::board_automations::DigestNotes>().map(|notes| notes.unwrap()),
+                Event::Broadcast(request) => request
+                    .decode::<crate::models::board_automations::DigestNotes>()
+                    .map(|notes| notes.unwrap()),
                 _ => None,
             })
             .collect::<Vec<_>>();
         assert_eq!(
-            emitted.iter().map(|notes| notes.message_ids.len()).sum::<usize>(),
+            emitted
+                .iter()
+                .map(|notes| notes.message_ids.len())
+                .sum::<usize>(),
             (t.read(Message::count) - before) as usize,
             "one append per quiet note"
         );
@@ -502,13 +510,43 @@ fn private_board_posts_are_omitted_from_shared_digest() {
         .unwrap();
     let t = crate::tests::channel_thread_test::frozen();
     let room_id = t.write(|tx| {
-        let room = crate::Room::create_for(tx, crate::RoomType::Board, Some("Private digest"), id("david"), &[id("david"), id("kevin")])?;
-        BoardSlaRule::create(tx, NewBoardSlaRule { room_id: room.id, work_status: Some("planned".into()), nudge_after_minutes: Some("60".into()), escalate_after_minutes: Some("120".into()) })?;
-        let thread = crate::ChannelThread::create(tx, crate::NewChannelThread { room_id: room.id, creator_id: id("david"), name: Some("Hidden digest title".into()), visibility: crate::channel_thread::ThreadVisibility::Private, work_status: Some("planned".into()), ..Default::default() })?;
-        tx.conn().execute("UPDATE channel_threads SET work_status_changed_at=? WHERE id=?", params![tx.now().ago(jiff::SignedDuration::from_hours(3)),thread.id])?;
+        let room = crate::Room::create_for(
+            tx,
+            crate::RoomType::Board,
+            Some("Private digest"),
+            id("david"),
+            &[id("david"), id("kevin")],
+        )?;
+        BoardSlaRule::create(
+            tx,
+            NewBoardSlaRule {
+                room_id: room.id,
+                work_status: Some("planned".into()),
+                nudge_after_minutes: Some("60".into()),
+                escalate_after_minutes: Some("120".into()),
+            },
+        )?;
+        let thread = crate::ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: room.id,
+                creator_id: id("david"),
+                name: Some("Hidden digest title".into()),
+                visibility: crate::channel_thread::ThreadVisibility::Private,
+                work_status: Some("planned".into()),
+                ..Default::default()
+            },
+        )?;
+        tx.conn().execute(
+            "UPDATE channel_threads SET work_status_changed_at=? WHERE id=?",
+            params![tx.now().ago(jiff::SignedDuration::from_hours(3)), thread.id],
+        )?;
         Ok(room.id)
     });
     runtime.block_on(dispatch_digests(&t.db, t.now())).unwrap();
     assert_eq!(t.read(|conn| Message::count_in_room(conn, room_id)), 0);
-    assert!(t.read(|conn| BoardStaleDigest::for_room(conn, room_id)).is_empty());
+    assert!(
+        t.read(|conn| BoardStaleDigest::for_room(conn, room_id))
+            .is_empty()
+    );
 }

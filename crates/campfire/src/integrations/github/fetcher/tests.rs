@@ -1,9 +1,9 @@
 use super::*;
-use campfire_db::Database;
 use crate::integrations::{
     github::{client::ReadClient, jobs::FetchPullRequestJob, tests::fake},
     test_support::{Route, TestDb},
 };
+use campfire_db::Database;
 use campfire_db::{Connection, Event, TestClock, Timestamp};
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -190,7 +190,14 @@ async fn github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rai
             case["name"]
         );
         for (actual, expected) in received.iter().zip(expected) {
-            let authorization = (expected["authorized"] == true).then(|| format!("Bearer {}", case.get("token").and_then(Value::as_str).unwrap_or("fixture-workspace-token")));
+            let authorization = (expected["authorized"] == true).then(|| {
+                format!(
+                    "Bearer {}",
+                    case.get("token")
+                        .and_then(Value::as_str)
+                        .unwrap_or("fixture-workspace-token")
+                )
+            });
             assert_eq!(actual.header("Authorization"), authorization.as_deref());
             assert_eq!(
                 actual.target,
@@ -198,11 +205,7 @@ async fn github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rai
                 "{}",
                 case["name"]
             );
-            for header in [
-                "Accept",
-                "User-Agent",
-                "X-GitHub-Api-Version",
-            ] {
+            for header in ["Accept", "User-Agent", "X-GitHub-Api-Version"] {
                 assert_eq!(
                     actual.header(header),
                     expected["headers"][header].as_str(),
@@ -219,8 +222,7 @@ async fn github_fetch_runtime_performs_discards_missing_and_does_not_retry_failu
     for mode in ["success", "missing", "persist_failure", "malformed"] {
         let case = &cases()["cases"][0];
         let (server, network) = fake(routes(case)).await;
-        let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let config = crate::config::Config::from_lookup(|name| match name {

@@ -1,7 +1,9 @@
 //! Named WebhookTest cases use the real app, HTTP parser and reply writers.
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
-use campfire_jobs::JobResult;
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
+use crate::integrations::webhook;
+use crate::net::Network;
 use campfire_channels::jobs::integrations as jobs;
 use campfire_db::Message;
 use campfire_db::Room;
@@ -10,10 +12,8 @@ use campfire_db::Webhook;
 use campfire_db::models::agent_delivery as domain;
 use campfire_db::models::agent_delivery::AgentEvent;
 use campfire_db::models::agent_delivery::AttemptOutcome;
-use crate::integrations::webhook;
-use crate::net::Network;
-use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use campfire_db::{ChannelThread, NewChannelThread, NewMessage, RoomType};
+use campfire_jobs::JobResult;
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
@@ -376,7 +376,15 @@ async fn ws11_webhook_case_approval_private_refused() {
     let a = t
         .db()
         .write(move |tx| {
-            campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:e.agent_id,capability:"external_action".into(),granted_by_id:127326141,..Default::default()})?;
+            campfire_db::AgentGrant::create(
+                tx,
+                campfire_db::NewGrant {
+                    agent_id: e.agent_id,
+                    capability: "external_action".into(),
+                    granted_by_id: 127326141,
+                    ..Default::default()
+                },
+            )?;
             let a = campfire_db::AgentApproval::create(
                 tx,
                 campfire_db::NewApproval {

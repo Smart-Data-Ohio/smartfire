@@ -84,8 +84,15 @@ async fn broadcast_to_members(c: &mut Ctx, room: &Room, update: bool) -> Result<
 
 pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     let (broadcasts, room) = (c.app().broadcasts.clone(), room.clone());
-    c.app().db.read(move |conn| {
-        if update { broadcasts.closed_room_update(conn, &room) }
-        else { broadcasts.closed_room_create(conn, &room) }
-    }).await.map_err(db_error)
+    c.app()
+        .db
+        .read(move |conn| {
+            if update {
+                broadcasts.closed_room_update(conn, &room)
+            } else {
+                broadcasts.closed_room_create(conn, &room)
+            }
+        })
+        .await
+        .map_err(db_error)
 }

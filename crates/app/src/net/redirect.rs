@@ -27,8 +27,16 @@ pub fn resolve(base: &Uri, location: Option<&str>) -> Option<Uri> {
 }
 
 fn merge_path(base: &str, relative: &str) -> String {
-    let mut base: Vec<&str> = if base.is_empty() { Vec::new() } else { base.split('/').collect() };
-    let mut relative: Vec<&str> = if relative.is_empty() { Vec::new() } else { relative.split('/').collect() };
+    let mut base: Vec<&str> = if base.is_empty() {
+        Vec::new()
+    } else {
+        base.split('/').collect()
+    };
+    let mut relative: Vec<&str> = if relative.is_empty() {
+        Vec::new()
+    } else {
+        relative.split('/').collect()
+    };
     if base.last() == Some(&"..") {
         base.push("");
     }
@@ -83,7 +91,8 @@ mod tests {
     use super::*;
     #[test]
     fn ws15e_redirects_match_rails_uri_merge() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws15e_embeds.json")).unwrap();
+        let vectors: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../vectors/ws15e_embeds.json")).unwrap();
         for case in vectors["redirects"].as_array().unwrap() {
             let base = uri::parse(case["base"].as_str().unwrap()).unwrap();
             let actual = resolve(&base, case["location"].as_str()).map(|u| u.to_s());

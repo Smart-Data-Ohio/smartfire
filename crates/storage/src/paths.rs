@@ -14,17 +14,31 @@ use crate::verifier::Verifier;
 pub const PREFIX: &str = "/rails/active_storage";
 
 /// `blob.signed_id`: the Active Storage verifier with purpose "blob_id".
-pub fn signed_blob_id(verifier: &dyn Verifier, blob_id: i64, expires_at: Option<jiff::Timestamp>) -> String {
+pub fn signed_blob_id(
+    verifier: &dyn Verifier,
+    blob_id: i64,
+    expires_at: Option<jiff::Timestamp>,
+) -> String {
     verifier.generate(&blob_id.to_string(), "blob_id", expires_at)
 }
 
 /// `ActiveStorage::Blob.find_signed(id)`'s verification half.
-pub fn verify_signed_blob_id(verifier: &dyn Verifier, signed_id: &str, now: jiff::Timestamp) -> Option<i64> {
-    Json::parse(&verifier.verified(signed_id, "blob_id", now)?).ok()?.as_i64()
+pub fn verify_signed_blob_id(
+    verifier: &dyn Verifier,
+    signed_id: &str,
+    now: jiff::Timestamp,
+) -> Option<i64> {
+    Json::parse(&verifier.verified(signed_id, "blob_id", now)?)
+        .ok()?
+        .as_i64()
 }
 
 /// `rails_blob_path(blob, disposition:)` → `/rails/active_storage/blobs/redirect/:signed_id/*filename`.
-pub fn blob_redirect_path(verifier: &dyn Verifier, blob: &Blob, disposition: Option<&str>) -> String {
+pub fn blob_redirect_path(
+    verifier: &dyn Verifier,
+    blob: &Blob,
+    disposition: Option<&str>,
+) -> String {
     blob_path("redirect", verifier, blob.id, &blob.filename, disposition)
 }
 
@@ -37,15 +51,29 @@ pub fn blob_proxy_path(verifier: &dyn Verifier, blob: &Blob, disposition: Option
 /// `/rails/active_storage/representations/redirect/:signed_blob_id/:variation_key/*filename`.
 /// `blob` is the *original* blob (the video for previews), `variation` is exactly the one the
 /// representation holds (defaulted for variants, as given for previews).
-pub fn representation_redirect_path(verifier: &dyn Verifier, blob: &Blob, variation: &Variation) -> String {
+pub fn representation_redirect_path(
+    verifier: &dyn Verifier,
+    blob: &Blob,
+    variation: &Variation,
+) -> String {
     representation_path("redirect", verifier, blob, variation)
 }
 
-pub fn representation_proxy_path(verifier: &dyn Verifier, blob: &Blob, variation: &Variation) -> String {
+pub fn representation_proxy_path(
+    verifier: &dyn Verifier,
+    blob: &Blob,
+    variation: &Variation,
+) -> String {
     representation_path("proxy", verifier, blob, variation)
 }
 
-fn blob_path(kind: &str, verifier: &dyn Verifier, blob_id: i64, filename: &Filename, disposition: Option<&str>) -> String {
+fn blob_path(
+    kind: &str,
+    verifier: &dyn Verifier,
+    blob_id: i64,
+    filename: &Filename,
+    disposition: Option<&str>,
+) -> String {
     let mut path = format!(
         "{PREFIX}/blobs/{kind}/{}/{}",
         escape_segment(&signed_blob_id(verifier, blob_id, None)),
@@ -58,7 +86,12 @@ fn blob_path(kind: &str, verifier: &dyn Verifier, blob_id: i64, filename: &Filen
     path
 }
 
-fn representation_path(kind: &str, verifier: &dyn Verifier, blob: &Blob, variation: &Variation) -> String {
+fn representation_path(
+    kind: &str,
+    verifier: &dyn Verifier,
+    blob: &Blob,
+    variation: &Variation,
+) -> String {
     format!(
         "{PREFIX}/representations/{kind}/{}/{}/{}",
         escape_segment(&signed_blob_id(verifier, blob.id, None)),
@@ -73,7 +106,9 @@ fn query_escape(s: &str) -> String {
     for b in s.bytes() {
         match b {
             b' ' => out.push('+'),
-            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'*' | b'-' | b'.' | b'_' => out.push(b as char),
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'*' | b'-' | b'.' | b'_' => {
+                out.push(b as char)
+            }
             _ => out.push_str(&format!("%{b:02X}")),
         }
     }

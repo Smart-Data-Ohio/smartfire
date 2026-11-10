@@ -9,8 +9,8 @@ use campfire_db::{Account, Message, Timeline};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::messages::{self as posting, MessageParams};
 use campfire_runtime::concerns::{self, Authentication, Before};
-use campfire_runtime::presenters::attachments::Assignment;
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::attachments::Assignment;
 use campfire_runtime::presenters::room_unread;
 use serde::de::DeserializeOwned;
 
@@ -201,7 +201,9 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
         .db
         .read(move |conn| {
             if let Timeline::Thread(thread_id) = timeline
-                && !campfire_db::ChannelThread::find(conn, thread_id)?.readable_by(conn, viewer_id)? {
+                && !campfire_db::ChannelThread::find(conn, thread_id)?
+                    .readable_by(conn, viewer_id)?
+            {
                 return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
             }
             let anchor = |id| Message::find_in(conn, timeline, id);
@@ -242,7 +244,8 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
                 Some(newest) if Message::exists_after(conn, timeline, newest)? => Some(newest.id),
                 _ => None,
             };
-            let (dtos, fetches) = dto::messages_and_fetches_for_viewer(conn, &app, &messages, viewer_id)?;
+            let (dtos, fetches) =
+                dto::messages_and_fetches_for_viewer(conn, &app, &messages, viewer_id)?;
             // The authors, and the repliers the thread indicators name, so their avatars need
             // no `GET /users`.
             let people = dtos.iter().flat_map(|message| {
@@ -293,8 +296,17 @@ async fn post_message(c: &mut Ctx) -> Result {
         signed_id.as_deref(),
         input.attachment_signed_ids.unwrap_or_default(),
     )?;
-    let gif_slug = crate::gifs::selection(c, input.gif_slug.as_deref(), signed_id.as_deref(), signed_ids.len())?;
-    let attachment_spoilers = file_spoilers(c, input.attachment_spoilers, signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()))?;
+    let gif_slug = crate::gifs::selection(
+        c,
+        input.gif_slug.as_deref(),
+        signed_id.as_deref(),
+        signed_ids.len(),
+    )?;
+    let attachment_spoilers = file_spoilers(
+        c,
+        input.attachment_spoilers,
+        signed_ids.len() + usize::from(signed_id.is_some()) + usize::from(gif_slug.is_some()),
+    )?;
     let drive_file_ids =
         crate::drive::require_drive_file_ids(c, input.drive_file_ids.as_deref().unwrap_or(&[]))?;
     if signed_id.is_none()
@@ -365,7 +377,9 @@ async fn post_message(c: &mut Ctx) -> Result {
                 attachments: signed_ids.into_iter().map(Assignment::Signed).collect(),
                 staged_attachments,
                 attachment_spoilers,
-                attachment_policy: posting::AttachmentPolicy::OwnedUpload { uploader_id: creator_id },
+                attachment_policy: posting::AttachmentPolicy::OwnedUpload {
+                    uploader_id: creator_id,
+                },
                 client_message_id: Some(client_message_id),
                 reply_to_message_id: input.reply_to_message_id,
                 reply_notify_author: input.reply_notify_author,
@@ -577,9 +591,16 @@ async fn index_presence(c: &mut Ctx) -> Result {
 }
 
 /// Boundary validation for the ordered upload flags shared by immediate and scheduled sends.
-pub(crate) fn file_spoilers(c: &mut Ctx, flags: Option<Vec<bool>>, count: usize) -> Result<Vec<bool>> {
+pub(crate) fn file_spoilers(
+    c: &mut Ctx,
+    flags: Option<Vec<bool>>,
+    count: usize,
+) -> Result<Vec<bool>> {
     match flags {
-        Some(flags) if flags.len() != count => Err(fail(c, validation("attachmentSpoilers", "must have one flag per file"))),
+        Some(flags) if flags.len() != count => Err(fail(
+            c,
+            validation("attachmentSpoilers", "must have one flag per file"),
+        )),
         Some(flags) => Ok(flags),
         None => Ok(vec![false; count]),
     }

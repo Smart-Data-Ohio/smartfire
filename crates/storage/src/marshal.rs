@@ -20,7 +20,10 @@ pub enum Value {
 }
 
 pub fn dump(value: &Value) -> Vec<u8> {
-    let mut writer = Writer { out: vec![4, 8], symbols: Vec::new() };
+    let mut writer = Writer {
+        out: vec![4, 8],
+        symbols: Vec::new(),
+    };
     writer.value(value);
     writer.out
 }

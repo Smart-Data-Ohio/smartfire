@@ -39,17 +39,62 @@ async fn ws11_stream_case_link_references_sync_only_at_finalize() {
         })
         .await
         .unwrap();
-    app.db.write(move|tx| {
-        let mut m=Message::find(tx.conn(),mid)?;
-        m.update(tx,MessageChanges{markdown_source:Some("See https://example.test/some/page and more".into()),..Default::default()})?;
-        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,expected("append"));
-        assert!(m.finalize_stream(tx)?);
-        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,expected("finalize"));
-        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",[],|r|r.get::<_,i64>(0))?,1);
-        assert!(!m.finalize_stream(tx)?);
-        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,expected("repeat"));
-        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())
-    }).await.unwrap();
+    app.db
+        .write(move |tx| {
+            let mut m = Message::find(tx.conn(), mid)?;
+            m.update(
+                tx,
+                MessageChanges {
+                    markdown_source: Some("See https://example.test/some/page and more".into()),
+                    ..Default::default()
+                },
+            )?;
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",
+                    [mid],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                expected("append")
+            );
+            assert!(m.finalize_stream(tx)?);
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",
+                    [mid],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                expected("finalize")
+            );
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            assert!(!m.finalize_stream(tx)?);
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",
+                    [mid],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                expected("repeat")
+            );
+            assert_eq!(
+                tx.conn().query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
     app.db
         .write(|tx| {
             let mut quiet = Message::create(
@@ -93,9 +138,27 @@ async fn ws11_stream_reference_fetch_failure_keeps_claim_and_reference_atomic() 
             .await
             .is_err()
     );
-    app.db.read(move|c| {
-        assert!(Message::find(c,mid)?.streaming);
-        assert_eq!(c.query_row("SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",[mid],|r|r.get::<_,i64>(0))?,0);
-        assert_eq!(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())
-    }).await.unwrap();
+    app.db
+        .read(move |c| {
+            assert!(Message::find(c, mid)?.streaming);
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM link_embed_references WHERE message_id=?",
+                    [mid],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                0
+            );
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='LinkEmbed::FetchJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }

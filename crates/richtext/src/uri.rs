@@ -24,11 +24,18 @@ pub struct Uri {
 impl Uri {
     /// `uri.is_a?(URI::HTTP)`, which includes `URI::HTTPS`.
     pub fn is_http(&self) -> bool {
-        self.scheme.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("http") || s.eq_ignore_ascii_case("https"))
+        self.scheme
+            .as_deref()
+            .is_some_and(|s| s.eq_ignore_ascii_case("http") || s.eq_ignore_ascii_case("https"))
     }
 
     fn default_port(&self) -> Option<u64> {
-        match self.scheme.as_deref().map(|s| s.to_ascii_uppercase()).as_deref() {
+        match self
+            .scheme
+            .as_deref()
+            .map(|s| s.to_ascii_uppercase())
+            .as_deref()
+        {
             Some("HTTP") | Some("WS") => Some(80),
             Some("HTTPS") | Some("WSS") => Some(443),
             Some("FTP") => Some(21),
@@ -48,7 +55,9 @@ impl Uri {
         if let Some(opaque) = &self.opaque {
             s.push_str(opaque);
         } else {
-            if self.host.is_some() || matches!(self.scheme.as_deref(), Some("file") | Some("postgres")) {
+            if self.host.is_some()
+                || matches!(self.scheme.as_deref(), Some("file") | Some("postgres"))
+            {
                 s.push_str("//");
             }
             if let Some(userinfo) = &self.userinfo {
@@ -59,10 +68,11 @@ impl Uri {
                 s.push_str(host);
             }
             if let Some(port) = self.port
-                && Some(port) != self.default_port() {
-                    s.push(':');
-                    s.push_str(&port.to_string());
-                }
+                && Some(port) != self.default_port()
+            {
+                s.push(':');
+                s.push_str(&port.to_string());
+            }
             s.push_str(self.path.as_deref().unwrap_or(""));
             if let Some(query) = &self.query {
                 s.push('?');
@@ -82,7 +92,9 @@ pub fn parse(value: &str) -> Result<Uri, UriError> {
     if !value.is_ascii() {
         return Err(UriError::InvalidUri);
     }
-    let mut uri = split_absolute(value).or_else(|| split_relative(value)).ok_or(UriError::InvalidUri)?;
+    let mut uri = split_absolute(value)
+        .or_else(|| split_relative(value))
+        .ok_or(UriError::InvalidUri)?;
     // URI::Generic#initialize assigns the query through `query=`, which rejects bad escapes
     if let Some(query) = &uri.query {
         uri.query = Some(escape_query(query)?);
@@ -94,18 +106,40 @@ pub fn parse(value: &str) -> Result<Uri, UriError> {
 
 /// The initializers of the scheme classes `URI.for` picks that can raise.
 fn check_scheme_class(uri: &Uri) -> Result<(), UriError> {
-    match uri.scheme.as_deref().map(|s| s.to_ascii_uppercase()).as_deref() {
+    match uri
+        .scheme
+        .as_deref()
+        .map(|s| s.to_ascii_uppercase())
+        .as_deref()
+    {
         Some("MAILTO") => {
-            let opaque = uri.opaque.clone().or_else(|| uri.query.as_ref().map(|q| format!("?{q}")));
-            let Some(opaque) = opaque else { return Err(UriError::InvalidComponent) };
+            let opaque = uri
+                .opaque
+                .clone()
+                .or_else(|| uri.query.as_ref().map(|q| format!("?{q}")));
+            let Some(opaque) = opaque else {
+                return Err(UriError::InvalidComponent);
+            };
             let to = opaque.split_once('?').map(|(to, _)| to).unwrap_or(&opaque);
-            if mailto_to_valid(to) { Ok(()) } else { Err(UriError::InvalidComponent) }
+            if mailto_to_valid(to) {
+                Ok(())
+            } else {
+                Err(UriError::InvalidComponent)
+            }
         }
         Some("LDAP") | Some("LDAPS") => {
-            if uri.fragment.is_some() || uri.path.is_none() { Err(UriError::InvalidUri) } else { Ok(()) }
+            if uri.fragment.is_some() || uri.path.is_none() {
+                Err(UriError::InvalidUri)
+            } else {
+                Ok(())
+            }
         }
         Some("FTP") => {
-            if uri.path.is_none() { Err(UriError::InvalidUri) } else { Ok(()) }
+            if uri.path.is_none() {
+                Err(UriError::InvalidUri)
+            } else {
+                Ok(())
+            }
         }
         _ => Ok(()),
     }
@@ -144,7 +178,10 @@ fn mailto_to_valid(to: &str) -> bool {
 
 /// `URI::Generic#query=`: rejects `%` followed by two non-hex characters and escapes the rest.
 fn escape_query(query: &str) -> Result<String, UriError> {
-    let cleaned: Vec<u8> = query.bytes().filter(|b| !matches!(b, b'\t' | b'\r' | b'\n')).collect();
+    let cleaned: Vec<u8> = query
+        .bytes()
+        .filter(|b| !matches!(b, b'\t' | b'\r' | b'\n'))
+        .collect();
     for w in cleaned.windows(3) {
         if w[0] == b'%' && !w[1].is_ascii_hexdigit() && !w[2].is_ascii_hexdigit() {
             return Err(UriError::InvalidUri);
@@ -154,8 +191,13 @@ fn escape_query(query: &str) -> Result<String, UriError> {
     let mut i = 0;
     while i < cleaned.len() {
         let b = cleaned[i];
-        let escape = i + 2 < cleaned.len() && b == b'%' && cleaned[i + 1].is_ascii_hexdigit() && cleaned[i + 2].is_ascii_hexdigit();
-        if escape || matches!(b, b'!' | b'$'..=b'&' | b'('..=b';' | b'=' | b'?'..=b'_' | b'a'..=b'~') {
+        let escape = i + 2 < cleaned.len()
+            && b == b'%'
+            && cleaned[i + 1].is_ascii_hexdigit()
+            && cleaned[i + 2].is_ascii_hexdigit();
+        if escape
+            || matches!(b, b'!' | b'$'..=b'&' | b'('..=b';' | b'=' | b'?'..=b'_' | b'a'..=b'~')
+        {
             out.push(b as char);
         } else {
             out.push_str(&format!("%{:02X}", b));
@@ -259,7 +301,9 @@ fn split_absolute(value: &str) -> Option<Uri> {
         uri.path = Some(value[authority.end..tail.hier_end].to_string());
         // path-abempty: (?:/seg*)?
         let path = &s[authority.end..tail.hier_end];
-        if !path.is_empty() && (path[0] != b'/' || take_while_class(s, authority.end, seg_char) != tail.hier_end) {
+        if !path.is_empty()
+            && (path[0] != b'/' || take_while_class(s, authority.end, seg_char) != tail.hier_end)
+        {
             return None;
         }
     } else if hier.starts_with(b"/") {
@@ -293,7 +337,9 @@ struct Tail {
 
 /// Splits off `(?:\?(?<query>[^#]*+))?(?:\#(?<fragment>FRAGMENT))?\z` from the end of the hier-part.
 fn parse_query_fragment_positions(s: &[u8], start: usize) -> Option<Tail> {
-    let hier_end = (start..s.len()).find(|&i| s[i] == b'?' || s[i] == b'#').unwrap_or(s.len());
+    let hier_end = (start..s.len())
+        .find(|&i| s[i] == b'?' || s[i] == b'#')
+        .unwrap_or(s.len());
     let mut i = hier_end;
     let mut query = None;
     if s.get(i) == Some(&b'?') {
@@ -310,7 +356,11 @@ fn parse_query_fragment_positions(s: &[u8], start: usize) -> Option<Tail> {
         fragment = Some((i + 1, s.len()));
         i = s.len();
     }
-    (i == s.len()).then_some(Tail { hier_end, query, fragment })
+    (i == s.len()).then_some(Tail {
+        hier_end,
+        query,
+        fragment,
+    })
 }
 
 struct Authority {
@@ -334,15 +384,26 @@ fn parse_authority(value: &str, start: usize, limit: usize) -> Option<Authority>
     let mut end = host_end;
     let mut port = None;
     if s.get(end) == Some(&b':') {
-        let digits_end = (end + 1..s.len()).find(|&j| !s[j].is_ascii_digit()).unwrap_or(s.len());
+        let digits_end = (end + 1..s.len())
+            .find(|&j| !s[j].is_ascii_digit())
+            .unwrap_or(s.len());
         let digits = &value[end + 1..digits_end];
-        port = if digits.is_empty() { None } else { Some(digits.parse::<u64>().unwrap_or(u64::MAX)) };
+        port = if digits.is_empty() {
+            None
+        } else {
+            Some(digits.parse::<u64>().unwrap_or(u64::MAX))
+        };
         end = digits_end;
     }
     if end < s.len() && s[end] != b'/' {
         return None;
     }
-    Some(Authority { userinfo, host, port, end })
+    Some(Authority {
+        userinfo,
+        host,
+        port,
+        end,
+    })
 }
 
 /// RFC3986_relative_ref: only validity matters here, since a relative reference is never HTTP.
@@ -359,7 +420,9 @@ fn split_relative(value: &str) -> Option<Uri> {
         take_while_class(s, 0, seg_char) == tail.hier_end
     } else {
         let first = take_while_class(s, 0, seg_nc_char);
-        first > 0 && (first == tail.hier_end || (s[first] == b'/' && take_while_class(s, first, seg_char) == tail.hier_end))
+        first > 0
+            && (first == tail.hier_end
+                || (s[first] == b'/' && take_while_class(s, first, seg_char) == tail.hier_end))
     };
     valid.then(|| Uri {
         scheme: None,
@@ -384,11 +447,20 @@ mod tests {
         assert_eq!(uri.query.as_deref(), Some("s=20"));
         assert!(parse("http://exa mple.com/ ").is_err());
         assert_eq!(parse("https:/rooms/1").unwrap().host, None);
-        assert_eq!(parse("https:rooms/1").unwrap().opaque.as_deref(), Some("rooms/1"));
+        assert_eq!(
+            parse("https:rooms/1").unwrap().opaque.as_deref(),
+            Some("rooms/1")
+        );
         assert_eq!(parse("https://").unwrap().host.as_deref(), Some(""));
-        assert_eq!(parse("http://[::1]/x").unwrap().host.as_deref(), Some("[::1]"));
+        assert_eq!(
+            parse("http://[::1]/x").unwrap().host.as_deref(),
+            Some("[::1]")
+        );
         assert_eq!(parse("mailto:foo"), Err(UriError::InvalidComponent));
         assert!(parse("mailto:a@b.com").is_ok());
-        assert_eq!(parse("https://x.com:443/a").unwrap().to_s(), "https://x.com/a");
+        assert_eq!(
+            parse("https://x.com:443/a").unwrap().to_s(),
+            "https://x.com/a"
+        );
     }
 }

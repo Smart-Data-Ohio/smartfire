@@ -18,52 +18,52 @@ macro_rules! endpoint {
 }
 
 pub mod activity;
-pub mod announcements;
+pub mod admin;
 pub mod agents;
+pub mod announcements;
+pub mod board_automations;
+pub mod boards;
+mod bot_avatars;
+pub mod bots;
+mod branding_images;
 pub mod cards;
-pub mod fizzy;
-pub mod gifs;
-pub mod github;
 pub mod composer;
 mod cursor;
 pub mod directory;
 pub mod drive;
 mod dto;
 pub mod endpoints;
-pub mod events;
 mod error;
-pub mod admin;
-pub mod templates;
-pub mod bots;
-mod bot_avatars;
-pub mod me_agents;
-pub mod oauth;
-pub mod webhooks;
-pub mod boards;
-mod branding_images;
-pub mod board_automations;
+pub mod events;
+pub mod fizzy;
+pub mod gifs;
+pub mod github;
 pub mod huddles;
-pub mod soundboard;
-pub mod stickers;
-pub mod join;
 pub mod invites;
+pub mod join;
+pub mod me_agents;
 pub mod message_actions;
+pub mod oauth;
 pub mod organize;
-pub mod room_integrations;
-pub mod room_management;
 pub mod people;
 pub mod public_pages;
+pub mod room_integrations;
+pub mod room_management;
 pub mod search;
 pub mod settings;
 pub mod slack;
+pub mod soundboard;
 pub mod stage;
+pub mod stickers;
 pub mod sync;
+pub mod templates;
+#[cfg(feature = "test-support")]
+pub mod test_hooks;
 pub mod threads;
+pub mod webhooks;
 pub mod welcome;
 pub mod work;
 pub mod work_links;
-#[cfg(feature = "test-support")]
-pub mod test_hooks;
 
 use std::sync::Arc;
 
@@ -78,7 +78,11 @@ pub const SYNC_PATH: &str = "/api/v1/sync";
 /// Starts the sync engine on the app's cable server and has the broadcast points publish their
 /// JSON twins. Call once, at boot, on the runtime the app serves from.
 pub fn install_renderer(app: &Arc<AppState>) {
-    app.broadcasts.install_sync_renderer(Arc::new(sync::Renderer::new(app, tokio::runtime::Handle::current())));
+    app.broadcasts
+        .install_sync_renderer(Arc::new(sync::Renderer::new(
+            app,
+            tokio::runtime::Handle::current(),
+        )));
 }
 
 pub fn install(app: &Arc<AppState>) {
@@ -93,7 +97,10 @@ pub fn install(app: &Arc<AppState>) {
 pub fn routes(app: &AppState) -> Router<Kit> {
     Router::new()
         .merge(oauth::routes(app.config.oauth_issuer().is_some()))
-        .route("/api/v1/public_pages/{page}", get(action(public_pages::show_json)))
+        .route(
+            "/api/v1/public_pages/{page}",
+            get(action(public_pages::show_json)),
+        )
         .route("/api/v1/me", get(action(endpoints::me)))
         .route(
             "/api/v1/rooms/{room_id}/messages/{message_id}/fizzy_cards/new",
@@ -112,14 +119,32 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             post(unparsed_action(fizzy::create)),
         )
         .route("/api/v1/sidebar", get(action(endpoints::sidebar)))
-        .route("/api/v1/rooms/{room_id}/announcement", put(unparsed_action(announcements::set)))
-        .route("/api/v1/rooms/{room_id}/announcement_follows", get(action(announcements::index)).post(unparsed_action(announcements::create)))
-        .route("/api/v1/rooms/{room_id}/announcement_follows/{target_room_id}", delete(action(announcements::destroy)))
-        .route("/api/v1/messages/{message_id}/publish", post(action(announcements::publish)))
-        .route("/api/v1/rooms", post(unparsed_action(room_management::create)))
+        .route(
+            "/api/v1/rooms/{room_id}/announcement",
+            put(unparsed_action(announcements::set)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/announcement_follows",
+            get(action(announcements::index)).post(unparsed_action(announcements::create)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/announcement_follows/{target_room_id}",
+            delete(action(announcements::destroy)),
+        )
+        .route(
+            "/api/v1/messages/{message_id}/publish",
+            post(action(announcements::publish)),
+        )
+        .route(
+            "/api/v1/rooms",
+            post(unparsed_action(room_management::create)),
+        )
         .route("/api/v1/rooms/new", get(action(room_management::new)))
         .route("/api/v1/rooms/browse", get(action(join::browse)))
-        .route("/api/v1/rooms/{room_id}/edit", get(action(room_management::edit)))
+        .route(
+            "/api/v1/rooms/{room_id}/edit",
+            get(action(room_management::edit)),
+        )
         .route(
             "/api/v1/rooms/{room_id}/github_subscriptions",
             get(action(room_integrations::github_subscriptions))
@@ -127,18 +152,31 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         )
         .route(
             "/api/v1/rooms/{room_id}/github_subscriptions/{id}",
-            patch(unparsed_action(room_integrations::update_github_subscription))
-                .delete(action(room_integrations::unsubscribe_repository)),
+            patch(unparsed_action(
+                room_integrations::update_github_subscription,
+            ))
+            .delete(action(room_integrations::unsubscribe_repository)),
         )
         .route(
             "/api/v1/rooms/{room_id}/inbound_email",
             get(action(room_integrations::inbound_email))
                 .post(action(room_integrations::rotate_inbound_email)),
         )
-        .route("/api/v1/rooms/{room_id}/membership", delete(action(room_management::leave)))
-        .route("/api/v1/rooms/{room_id}/preview", get(action(join::preview)))
+        .route(
+            "/api/v1/rooms/{room_id}/membership",
+            delete(action(room_management::leave)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/preview",
+            get(action(join::preview)),
+        )
         .route("/api/v1/rooms/{room_id}/join", post(action(join::join)))
-        .route("/api/v1/rooms/{room_id}", get(action(endpoints::room)).patch(unparsed_action(room_management::update)).delete(action(room_management::destroy)))
+        .route(
+            "/api/v1/rooms/{room_id}",
+            get(action(endpoints::room))
+                .patch(unparsed_action(room_management::update))
+                .delete(action(room_management::destroy)),
+        )
         .route(
             "/api/v1/rooms/{room_id}/messages",
             get(action(endpoints::messages)).post(unparsed_action(endpoints::create_message)),
@@ -338,18 +376,27 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/activity/{id}",
             patch(unparsed_action(activity::update)),
         )
-        .route(
-            "/api/v1/activity/{id}/open",
-            post(action(activity::open)),
-        )
+        .route("/api/v1/activity/{id}/open", post(action(activity::open)))
         .route(
             "/api/v1/rooms/{room_id}/threads",
             get(action(threads::threads)).post(unparsed_action(threads::create)),
         )
-        .route("/api/v1/rooms/{room_id}/board", get(action(boards::index)).patch(unparsed_action(boards::update_policy)))
-        .route("/api/v1/rooms/{room_id}/board/tags", get(action(boards::catalog)).post(unparsed_action(boards::create_tag)))
-        .route("/api/v1/rooms/{room_id}/board/tags/order", put(unparsed_action(boards::reorder_tags)))
-        .route("/api/v1/rooms/{room_id}/board/tags/{id}", patch(unparsed_action(boards::update_tag)).delete(action(boards::destroy_tag)))
+        .route(
+            "/api/v1/rooms/{room_id}/board",
+            get(action(boards::index)).patch(unparsed_action(boards::update_policy)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/board/tags",
+            get(action(boards::catalog)).post(unparsed_action(boards::create_tag)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/board/tags/order",
+            put(unparsed_action(boards::reorder_tags)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/board/tags/{id}",
+            patch(unparsed_action(boards::update_tag)).delete(action(boards::destroy_tag)),
+        )
         .route(
             "/api/v1/rooms/{room_id}/automations",
             get(action(board_automations::show)),
@@ -366,8 +413,14 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/automations/sla_timers",
             put(unparsed_action(board_automations::update_sla_timers)),
         )
-        .route("/api/v1/rooms/{room_id}/posts/new", get(action(boards::new)))
-        .route("/api/v1/rooms/{room_id}/posts", post(unparsed_action(boards::create)))
+        .route(
+            "/api/v1/rooms/{room_id}/posts/new",
+            get(action(boards::new)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/posts",
+            post(unparsed_action(boards::create)),
+        )
         .route(
             "/api/v1/threads/{thread_id}",
             get(action(threads::thread))
@@ -471,7 +524,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/members",
             get(action(directory::members)),
         )
-        .route("/api/v1/rooms/{room_id}/files", get(action(directory::files)))
+        .route(
+            "/api/v1/rooms/{room_id}/files",
+            get(action(directory::files)),
+        )
         .route(
             "/api/v1/users/{user_id}/star",
             put(action(directory::star)).delete(action(directory::unstar)),

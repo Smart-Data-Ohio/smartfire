@@ -16,22 +16,29 @@ use jiff::{SignedDuration, Timestamp, ToSpan, tz::TimeZone};
 use serde_json::Value;
 
 use crate::message_verifier::{Digest, Encoding};
-use crate::{MessageEncryptor, MessageVerifier, Secrets, json};
 use crate::metadata::Serializer;
+use crate::{MessageEncryptor, MessageVerifier, Secrets, json};
 
 pub const SIGNED_COOKIE_SALT: &str = "signed cookie";
 pub const AUTHENTICATED_ENCRYPTED_COOKIE_SALT: &str = "authenticated encrypted cookie";
 
 /// `cookies.permanent`: expires 20 years from now (calendar years, like `20.years.from_now`).
 pub fn permanent_expires_at(now: Timestamp) -> Timestamp {
-    now.to_zoned(TimeZone::UTC).checked_add(20.years()).expect("20 years from now is in range").timestamp()
+    now.to_zoned(TimeZone::UTC)
+        .checked_add(20.years())
+        .expect("20 years from now is in range")
+        .timestamp()
 }
 
 /// The raw value for `cookies.signed[name] = { value:, expires: expires_at }`.
 /// `cookies.signed.permanent[...]` is `expires_at: Some(permanent_expires_at(now))`.
 pub fn sign(secrets: &Secrets, name: &str, value: &str, expires_at: Option<Timestamp>) -> String {
     let dumped = json::encode(&Value::String(value.to_string()));
-    signed_cookie_verifier(secrets).generate(&Value::String(dumped), Some(&purpose(name)), expires_at)
+    signed_cookie_verifier(secrets).generate(
+        &Value::String(dumped),
+        Some(&purpose(name)),
+        expires_at,
+    )
 }
 
 /// Reads `cookies.signed[name]`; `None` wherever Rails returns nil. A value that is valid JSON
@@ -44,7 +51,12 @@ pub fn verify_signed(secrets: &Secrets, name: &str, raw: &str, now: Timestamp) -
 }
 
 /// Reads `cookies.signed[name]` as whatever JSON value it holds.
-pub fn verify_signed_value(secrets: &Secrets, name: &str, raw: &str, now: Timestamp) -> Option<Value> {
+pub fn verify_signed_value(
+    secrets: &Secrets,
+    name: &str,
+    raw: &str,
+    now: Timestamp,
+) -> Option<Value> {
     let verifier = signed_cookie_verifier(secrets);
     let dumped = verifier
         .verify(raw, Some(&purpose(name)), now)
@@ -55,9 +67,18 @@ pub fn verify_signed_value(secrets: &Secrets, name: &str, raw: &str, now: Timest
 
 /// The raw value for `cookies.encrypted[name] = { value:, expires: expires_at }`.
 /// The session store writes `_campfire_session` this way with a 20-year `expire_after`.
-pub fn encrypt(secrets: &Secrets, name: &str, value: &Value, expires_at: Option<Timestamp>) -> String {
+pub fn encrypt(
+    secrets: &Secrets,
+    name: &str,
+    value: &Value,
+    expires_at: Option<Timestamp>,
+) -> String {
     let dumped = json::encode(value);
-    encrypted_cookie_encryptor(secrets).encrypt_and_sign(&Value::String(dumped), Some(&purpose(name)), expires_at)
+    encrypted_cookie_encryptor(secrets).encrypt_and_sign(
+        &Value::String(dumped),
+        Some(&purpose(name)),
+        expires_at,
+    )
 }
 
 /// Reads `cookies.encrypted[name]`; `None` wherever Rails returns nil.
@@ -76,8 +97,14 @@ fn purpose(name: &str) -> String {
 
 /// `SerializerWithFallback[:json].load`: Marshal payloads aren't allowed for cookies.
 fn load(dumped: Value) -> Option<Value> {
-    let Value::String(dumped) = dumped else { return None };
-    Serializer::JsonWithFallback { allow_marshal: false }.load(dumped.as_bytes()).ok()
+    let Value::String(dumped) = dumped else {
+        return None;
+    };
+    Serializer::JsonWithFallback {
+        allow_marshal: false,
+    }
+    .load(dumped.as_bytes())
+    .ok()
 }
 
 /// Smartfire's own signed cookies, set by `app/controllers/concerns/authentication.rb`.
@@ -106,7 +133,12 @@ impl SignedCookie {
     /// The `Set-Cookie` header Rack writes: `name=<escaped>; path=/; expires=<httpdate>;
     /// [secure; ]httponly; samesite=lax`.
     pub fn set_cookie_header(&self) -> String {
-        let mut header = format!("{}={}; path=/; expires={}", self.name, escape(&self.value), self.expires.strftime("%a, %d %b %Y %H:%M:%S GMT"));
+        let mut header = format!(
+            "{}={}; path=/; expires={}",
+            self.name,
+            escape(&self.value),
+            self.expires.strftime("%a, %d %b %Y %H:%M:%S GMT")
+        );
         if self.secure {
             header.push_str("; secure");
         }
@@ -124,7 +156,14 @@ impl SignedCookie {
 /// written when the request has no valid one ([`read_device_id`]).
 pub fn device_id_cookie(secrets: &Secrets, device_id: &str, now: Timestamp) -> SignedCookie {
     let expires = permanent_expires_at(now);
-    SignedCookie { name: DEVICE_ID, value: sign(secrets, DEVICE_ID, device_id, Some(expires)), expires, secure: false, http_only: true, same_site: "lax" }
+    SignedCookie {
+        name: DEVICE_ID,
+        value: sign(secrets, DEVICE_ID, device_id, Some(expires)),
+        expires,
+        secure: false,
+        http_only: true,
+        same_site: "lax",
+    }
 }
 
 /// `cookies.signed[:device_id]`.
@@ -137,7 +176,14 @@ pub fn read_device_id(secrets: &Secrets, raw: &str, now: Timestamp) -> Option<St
 /// `SecureRandom.hex(32)`; only its SHA256 is stored (`TwoFactorRememberedDevice.digest`).
 pub fn two_factor_remember_cookie(secrets: &Secrets, token: &str, now: Timestamp) -> SignedCookie {
     let expires = now + TWO_FACTOR_REMEMBER_FOR;
-    SignedCookie { name: TWO_FACTOR_REMEMBER, value: sign(secrets, TWO_FACTOR_REMEMBER, token, Some(expires)), expires, secure: true, http_only: true, same_site: "lax" }
+    SignedCookie {
+        name: TWO_FACTOR_REMEMBER,
+        value: sign(secrets, TWO_FACTOR_REMEMBER, token, Some(expires)),
+        expires,
+        secure: true,
+        http_only: true,
+        same_site: "lax",
+    }
 }
 
 /// `cookies.signed[TWO_FACTOR_REMEMBER_COOKIE]`.
@@ -152,7 +198,9 @@ pub fn signed_cookie_verifier(secrets: &Secrets) -> MessageVerifier {
 }
 
 pub fn encrypted_cookie_encryptor(secrets: &Secrets) -> MessageEncryptor {
-    let secret = secrets.key_generator.generate_key(AUTHENTICATED_ENCRYPTED_COOKIE_SALT, 32);
+    let secret = secrets
+        .key_generator
+        .generate_key(AUTHENTICATED_ENCRYPTED_COOKIE_SALT, 32);
     MessageEncryptor::new(&secret, Serializer::Null)
 }
 
@@ -162,7 +210,9 @@ pub fn escape(raw: &str) -> String {
     let mut out = String::with_capacity(raw.len());
     for &byte in raw.as_bytes() {
         match byte {
-            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'*' | b'-' | b'.' | b'_' => out.push(byte as char),
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'*' | b'-' | b'.' | b'_' => {
+                out.push(byte as char)
+            }
             b' ' => out.push('+'),
             _ => out.push_str(&format!("%{byte:02X}")),
         }
@@ -179,9 +229,15 @@ pub fn unescape(wire: &str) -> String {
     while i < bytes.len() {
         match bytes[i] {
             b'+' => out.push(b' '),
-            b'%' => match bytes.get(i + 1..i + 3).filter(|hex| hex.iter().all(u8::is_ascii_hexdigit)) {
+            b'%' => match bytes
+                .get(i + 1..i + 3)
+                .filter(|hex| hex.iter().all(u8::is_ascii_hexdigit))
+            {
                 Some(hex) => {
-                    out.push(u8::from_str_radix(std::str::from_utf8(hex).expect("hex digits"), 16).expect("hex digits"));
+                    out.push(
+                        u8::from_str_radix(std::str::from_utf8(hex).expect("hex digits"), 16)
+                            .expect("hex digits"),
+                    );
                     i += 2;
                 }
                 None => return wire.to_string(),
@@ -205,18 +261,57 @@ mod tests {
         let remember = two_factor_remember_cookie(&secrets, "token", now);
         assert!(!device.secure && remember.secure && device.http_only && remember.http_only);
 
-        assert_eq!(read_device_id(&secrets, &device.value, device.expires - SignedDuration::from_secs(1)).as_deref(), Some("device"));
-        assert_eq!(read_device_id(&secrets, &device.value, device.expires + SignedDuration::from_secs(1)), None);
-        assert_eq!(read_two_factor_remember(&secrets, &remember.value, now + TWO_FACTOR_REMEMBER_FOR - SignedDuration::from_secs(1)).as_deref(), Some("token"));
-        assert_eq!(read_two_factor_remember(&secrets, &remember.value, now + TWO_FACTOR_REMEMBER_FOR), None);
+        assert_eq!(
+            read_device_id(
+                &secrets,
+                &device.value,
+                device.expires - SignedDuration::from_secs(1)
+            )
+            .as_deref(),
+            Some("device")
+        );
+        assert_eq!(
+            read_device_id(
+                &secrets,
+                &device.value,
+                device.expires + SignedDuration::from_secs(1)
+            ),
+            None
+        );
+        assert_eq!(
+            read_two_factor_remember(
+                &secrets,
+                &remember.value,
+                now + TWO_FACTOR_REMEMBER_FOR - SignedDuration::from_secs(1)
+            )
+            .as_deref(),
+            Some("token")
+        );
+        assert_eq!(
+            read_two_factor_remember(&secrets, &remember.value, now + TWO_FACTOR_REMEMBER_FOR),
+            None
+        );
 
         assert_eq!(read_two_factor_remember(&secrets, &device.value, now), None);
         assert_eq!(read_device_id(&secrets, &remember.value, now), None);
-        assert_eq!(verify_signed(&secrets, "session_token", &remember.value, now), None);
-        assert_eq!(read_two_factor_remember(&Secrets::new(&"b".repeat(128)), &remember.value, now), None);
+        assert_eq!(
+            verify_signed(&secrets, "session_token", &remember.value, now),
+            None
+        );
+        assert_eq!(
+            read_two_factor_remember(&Secrets::new(&"b".repeat(128)), &remember.value, now),
+            None
+        );
 
         let (data, digest) = remember.value.split_once("--").unwrap();
-        let tampered = format!("{data}--{}", if digest.starts_with('0') { digest.replacen('0', "1", 1) } else { format!("0{}", &digest[1..]) });
+        let tampered = format!(
+            "{data}--{}",
+            if digest.starts_with('0') {
+                digest.replacen('0', "1", 1)
+            } else {
+                format!("0{}", &digest[1..])
+            }
+        );
         assert_eq!(read_two_factor_remember(&secrets, &tampered, now), None);
     }
 }

@@ -505,8 +505,14 @@ fn slash_commands_round_trip() {
 fn scheduled_reply_edits_distinguish_omission_from_clearing() {
     for (input, expected) in [
         (json!({}), json!({})),
-        (json!({"replyToMessageId": null}), json!({"replyToMessageId": null})),
-        (json!({"replyToMessageId": 42}), json!({"replyToMessageId": 42})),
+        (
+            json!({"replyToMessageId": null}),
+            json!({"replyToMessageId": null}),
+        ),
+        (
+            json!({"replyToMessageId": 42}),
+            json!({"replyToMessageId": 42}),
+        ),
     ] {
         let edit: UpdateScheduledMessage = serde_json::from_value(input).unwrap();
         assert_eq!(serde_json::to_value(edit).unwrap(), expected);
@@ -696,9 +702,9 @@ fn threads_round_trip() {
                 sticker_id: None,
                 attachment_signed_id: None,
                 attachment_signed_ids: None,
-            attachment_spoilers: None,
+                attachment_spoilers: None,
                 drive_file_ids: None,
-            gif_slug: None,
+                gif_slug: None,
             },
         },
         json!({
@@ -1019,26 +1025,52 @@ fn private_thread_access_contract() {
         added_by_id: Some(7),
         created_at: "2026-10-12T10:00:00.000Z".into(),
     };
-    assert_wire(&member, json!({"userId":8,"addedById":7,"createdAt":"2026-10-12T10:00:00.000Z"}));
-    assert_wire(&ThreadAccessMembers { members: vec![member], users: vec![] },
-        json!({"members":[{"userId":8,"addedById":7,"createdAt":"2026-10-12T10:00:00.000Z"}],"users":[]}));
+    assert_wire(
+        &member,
+        json!({"userId":8,"addedById":7,"createdAt":"2026-10-12T10:00:00.000Z"}),
+    );
+    assert_wire(
+        &ThreadAccessMembers {
+            members: vec![member],
+            users: vec![],
+        },
+        json!({"members":[{"userId":8,"addedById":7,"createdAt":"2026-10-12T10:00:00.000Z"}],"users":[]}),
+    );
     assert_wire(&AddThreadAccessMember { user_id: 8 }, json!({"userId":8}));
     let omitted: CreateThread = serde_json::from_value(json!({
         "parentMessageId":9001,"name":null,"message":{
             "clientMessageId":"private-contract","markdownSource":"First!",
             "replyToMessageId":null,"replyNotifyAuthor":null,"attachmentSignedId":null
         }
-    })).unwrap();
-    assert_eq!(omitted.visibility.unwrap_or_default(), ThreadVisibility::Public);
+    }))
+    .unwrap();
+    assert_eq!(
+        omitted.visibility.unwrap_or_default(),
+        ThreadVisibility::Public
+    );
     for (reason, wire, status) in [
         (ThreadAccessRefusal::NotPrivate, "notPrivate", 422),
         (ThreadAccessRefusal::InviteForbidden, "inviteForbidden", 403),
         (ThreadAccessRefusal::RemoveForbidden, "removeForbidden", 403),
-        (ThreadAccessRefusal::ParentRoomRequired, "parentRoomRequired", 422),
-        (ThreadAccessRefusal::VisibilityImmutable, "visibilityImmutable", 422),
+        (
+            ThreadAccessRefusal::ParentRoomRequired,
+            "parentRoomRequired",
+            422,
+        ),
+        (
+            ThreadAccessRefusal::VisibilityImmutable,
+            "visibilityImmutable",
+            422,
+        ),
     ] {
-        let error = ApiError::ThreadAccess { message: "Refused".into(), reason };
+        let error = ApiError::ThreadAccess {
+            message: "Refused".into(),
+            reason,
+        };
         assert_eq!(error.status(), status);
-        assert_wire(&error, json!({"_tag":"ThreadAccess","message":"Refused","reason":wire}));
+        assert_wire(
+            &error,
+            json!({"_tag":"ThreadAccess","message":"Refused","reason":wire}),
+        );
     }
 }

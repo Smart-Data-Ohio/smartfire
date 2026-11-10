@@ -1,12 +1,12 @@
-pub mod support;
-pub mod reactions;
-pub mod parts;
 pub mod json;
+pub mod parts;
+pub mod reactions;
+pub mod support;
 
+use crate::helpers as h;
 use campfire_routes as routes;
 use jiff::Timestamp;
 use serde::Deserialize;
-use crate::helpers as h;
 use support::RubyNumber;
 
 /// `EmojiHelper::REACTIONS` (see [`crate::helpers::emoji`]).
@@ -237,7 +237,6 @@ impl RoomKind {
             RoomKind::Board => "rooms_board",
         }
     }
-
 }
 
 impl MessageView {
@@ -303,7 +302,6 @@ impl MessageView {
         }
         groups
     }
-
 }
 
 impl BoostView {

@@ -1,10 +1,4 @@
 use super::*;
-use campfire_app::integrations::fizzy::accounts::Account;
-use campfire_db::Message;
-use jiff::SignedDuration;
-use rails_compat::ar_encryption::ArEncryption;
-use rusqlite::params;
-use serde_json::Value;
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{
@@ -12,7 +6,13 @@ use crate::{
         test_support::*,
     },
 };
+use campfire_app::integrations::fizzy::accounts::Account;
+use campfire_db::Message;
 use campfire_db::{MessageChanges, NewMessage};
+use jiff::SignedDuration;
+use rails_compat::ar_encryption::ArEncryption;
+use rusqlite::params;
+use serde_json::Value;
 use serde_json::json;
 use std::{sync::Arc, time::Duration};
 

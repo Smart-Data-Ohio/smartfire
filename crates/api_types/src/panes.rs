@@ -104,7 +104,10 @@ mod tests {
 
     #[test]
     fn room_files_changed_names_the_room() {
-        let payload = crate::SyncPayload::RoomFilesChanged(super::RoomFilesChanged { room_id: 12, thread_id: 8 });
+        let payload = crate::SyncPayload::RoomFilesChanged(super::RoomFilesChanged {
+            room_id: 12,
+            thread_id: 8,
+        });
         let wire = json!({"type": "room.files.changed", "data": {"roomId": 12, "threadId": 8}});
         assert_eq!(serde_json::to_value(&payload).unwrap(), wire);
         assert_eq!(

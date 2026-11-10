@@ -10,7 +10,11 @@ pub fn render(html: &str, ctx: &RenderContext) -> Result<String, Error> {
     let mut dom = Dom::new();
     let root = dom.parse_fragment(html).map_err(Error::Parse)?;
     let markdown = Renderer { dom: &dom, ctx }.blocks(dom.children(root));
-    Ok(if is_blank(&markdown) { strip(&dom.text_content(root)).to_owned() } else { markdown })
+    Ok(if is_blank(&markdown) {
+        strip(&dom.text_content(root)).to_owned()
+    } else {
+        markdown
+    })
 }
 pub fn non_mention_attachments(html: &str) -> Result<String, Error> {
     let mut dom = Dom::new();
@@ -18,7 +22,10 @@ pub fn non_mention_attachments(html: &str) -> Result<String, Error> {
     Ok(dom
         .descendants(root)
         .into_iter()
-        .filter(|&n| dom.local_name(n) == Some(ATTACHMENT_TAG) && dom.attr(n, "content-type") != Some(MENTION_CONTENT_TYPE))
+        .filter(|&n| {
+            dom.local_name(n) == Some(ATTACHMENT_TAG)
+                && dom.attr(n, "content-type") != Some(MENTION_CONTENT_TYPE)
+        })
         .map(|n| dom.to_html(n))
         .collect::<Vec<_>>()
         .join("\n"))
@@ -29,7 +36,15 @@ struct Renderer<'a, 'b> {
 }
 impl Renderer<'_, '_> {
     fn blocks(&self, nodes: &[NodeId]) -> String {
-        strip(&nodes.iter().map(|&n| self.block(n)).filter(|s| !is_blank(s)).collect::<Vec<_>>().join("\n\n")).to_owned()
+        strip(
+            &nodes
+                .iter()
+                .map(|&n| self.block(n))
+                .filter(|s| !is_blank(s))
+                .collect::<Vec<_>>()
+                .join("\n\n"),
+        )
+        .to_owned()
     }
     fn block(&self, node: NodeId) -> String {
         if let Some(text) = self.dom.text(node) {
@@ -38,9 +53,17 @@ impl Renderer<'_, '_> {
         match self.dom.name(node).as_ref() {
             "p" | "div" | "section" | "article" | "figure" => strip(&self.inline(node)).to_owned(),
             name @ ("h1" | "h2" | "h3" | "h4" | "h5" | "h6") => {
-                format!("{} {}", "#".repeat(name.as_bytes()[1] as usize - b'0' as usize), strip(&self.inline(node)))
+                format!(
+                    "{} {}",
+                    "#".repeat(name.as_bytes()[1] as usize - b'0' as usize),
+                    strip(&self.inline(node))
+                )
             }
-            "blockquote" => self.blocks(self.dom.children(node)).split_inclusive('\n').map(|line| format!("> {line}")).collect(),
+            "blockquote" => self
+                .blocks(self.dom.children(node))
+                .split_inclusive('\n')
+                .map(|line| format!("> {line}"))
+                .collect(),
             "ul" => self.list(node, false),
             "ol" => self.list(node, true),
             "pre" => self.code_block(node),
@@ -57,7 +80,11 @@ impl Renderer<'_, '_> {
             .filter(|&n| self.dom.local_name(n) == Some("li"))
             .enumerate()
             .map(|(i, item)| {
-                let prefix = if ordered { format!("{}.", i + 1) } else { "-".into() };
+                let prefix = if ordered {
+                    format!("{}.", i + 1)
+                } else {
+                    "-".into()
+                };
                 let children = self
                     .dom
                     .children(item)
@@ -65,23 +92,52 @@ impl Renderer<'_, '_> {
                     .copied()
                     .filter(|&n| !matches!(self.dom.local_name(n), Some("ul" | "ol")))
                     .collect::<Vec<_>>();
-                let mut parts = vec![format!("{prefix} {}", strip(&self.inline_children(&children)))];
-                for nested in self.dom.element_children(item).into_iter().filter(|&n| matches!(self.dom.local_name(n), Some("ul" | "ol"))) {
+                let mut parts = vec![format!(
+                    "{prefix} {}",
+                    strip(&self.inline_children(&children))
+                )];
+                for nested in self
+                    .dom
+                    .element_children(item)
+                    .into_iter()
+                    .filter(|&n| matches!(self.dom.local_name(n), Some("ul" | "ol")))
+                {
                     let text = self.list(nested, self.dom.local_name(nested) == Some("ol"));
-                    parts.push(text.split_inclusive('\n').map(|line| format!("  {line}")).collect::<String>());
+                    parts.push(
+                        text.split_inclusive('\n')
+                            .map(|line| format!("  {line}"))
+                            .collect::<String>(),
+                    );
                 }
-                parts.into_iter().filter(|s| !is_blank(s)).collect::<Vec<_>>().join("\n")
+                parts
+                    .into_iter()
+                    .filter(|s| !is_blank(s))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             })
             .collect::<Vec<_>>()
             .join("\n")
     }
     fn code_block(&self, node: NodeId) -> String {
-        let code = self.dom.descendants(node).into_iter().find(|&n| self.dom.local_name(n) == Some("code")).unwrap_or(node);
-        let language =
-            self.dom.attr(code, "class").unwrap_or("").split_whitespace().find_map(|c| c.strip_prefix("language-")).unwrap_or("");
+        let code = self
+            .dom
+            .descendants(node)
+            .into_iter()
+            .find(|&n| self.dom.local_name(n) == Some("code"))
+            .unwrap_or(node);
+        let language = self
+            .dom
+            .attr(code, "class")
+            .unwrap_or("")
+            .split_whitespace()
+            .find_map(|c| c.strip_prefix("language-"))
+            .unwrap_or("");
         let text = self.dom.text_content(code);
         let delimiter = code_delimiter(&text);
-        format!("{delimiter}{language}\n{}\n{delimiter}", text.trim_end_matches([' ', '\t', '\n', '\r', '\u{b}', '\u{c}']))
+        format!(
+            "{delimiter}{language}\n{}\n{delimiter}",
+            text.trim_end_matches([' ', '\t', '\n', '\r', '\u{b}', '\u{c}'])
+        )
     }
     fn inline(&self, node: NodeId) -> String {
         self.inline_children(self.dom.children(node))
@@ -107,12 +163,18 @@ impl Renderer<'_, '_> {
                 format!("{delimiter}{text}{delimiter}")
             }
             "a" => match presence(self.dom.attr(node, "href")) {
-                Some(href) => format!("[{content}](<{}>)", href.replace('<', "\\<").replace('>', "\\>")),
+                Some(href) => format!(
+                    "[{content}](<{}>)",
+                    href.replace('<', "\\<").replace('>', "\\>")
+                ),
                 None => content,
             },
             "br" => "\n".into(),
             ATTACHMENT_TAG => self.attachment(node),
-            "ul" | "ol" => format!("\n{}\n", self.list(node, self.dom.local_name(node) == Some("ol"))),
+            "ul" | "ol" => format!(
+                "\n{}\n",
+                self.list(node, self.dom.local_name(node) == Some("ol"))
+            ),
             "pre" => format!("\n{}\n", self.code_block(node)),
             _ => content,
         }
@@ -124,7 +186,9 @@ impl Renderer<'_, '_> {
         {
             return format!("@[{}]", user.name);
         }
-        if let Some(value) = presence(self.dom.attr(node, "href")).or_else(|| presence(self.dom.attr(node, "url"))) {
+        if let Some(value) =
+            presence(self.dom.attr(node, "href")).or_else(|| presence(self.dom.attr(node, "url")))
+        {
             return value.to_owned();
         }
         if let Ok(attachment) = result {
@@ -142,7 +206,9 @@ impl Renderer<'_, '_> {
                 return plain;
             }
         }
-        presence(self.dom.attr(node, "filename")).unwrap_or("[attachment]").to_owned()
+        presence(self.dom.attr(node, "filename"))
+            .unwrap_or("[attachment]")
+            .to_owned()
     }
 }
 fn escaped_text(text: &str) -> String {

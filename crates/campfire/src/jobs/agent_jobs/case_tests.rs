@@ -1,14 +1,14 @@
 //! Named EventWebhookJobTest comparisons. Only DNS/TCP routing are substituted;
 //! real HTTP parsing, ledger claims, retries and durable queue writes run unchanged.
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
+use crate::net::Network;
 use campfire_db::Message;
 use campfire_db::Room;
 use campfire_db::User;
 use campfire_db::models::agent_delivery as domain;
 use campfire_db::models::agent_delivery::AgentEvent;
-use crate::net::Network;
-use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use rusqlite::params;
 use std::{
     collections::HashSet,
@@ -115,7 +115,11 @@ fn failed(e: &AgentEvent, attempt: i64, error: &str) {
 fn retry(e: &AgentEvent, error: &str, seconds: i64) {
     assert_eq!(e.webhook_status, "pending");
     assert_eq!(e.webhook_attempts, 1);
-    assert!(e.webhook_last_error.as_deref().unwrap().contains(error), "expected {error}, got {:?}", e.webhook_last_error);
+    assert!(
+        e.webhook_last_error.as_deref().unwrap().contains(error),
+        "expected {error}, got {:?}",
+        e.webhook_last_error
+    );
     assert_eq!(
         e.webhook_next_attempt_at.unwrap(),
         e.created_at.since(jiff::SignedDuration::from_secs(seconds))
@@ -241,7 +245,8 @@ async fn ws11_event_webhook_case_server_error_retries_then_exhausts() {
 #[tokio::test]
 async fn ws11_event_webhook_case_retry_after_forty_five() {
     let (t, e) = setup().await;
-    let (_server, n) = respond(Route::new("POST", "*", "/hook", 429).header("Retry-After", "45")).await;
+    let (_server, n) =
+        respond(Route::new("POST", "*", "/hook", 429).header("Retry-After", "45")).await;
     post(&t, e.id, 0, &n).await;
     retry(&read(&t, e.id).await, "429", 45);
     assert_eq!(queued(&t, e.id).await, 1);

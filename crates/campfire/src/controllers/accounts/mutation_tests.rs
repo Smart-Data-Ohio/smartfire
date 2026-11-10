@@ -102,9 +102,7 @@ async fn run_mutation_cases(selected: Option<&str>) {
     ))
     .unwrap();
     let mut browser = app.david();
-    let confirmed = browser
-        .confirm_sudo("secret123456")
-        .await;
+    let confirmed = browser.confirm_sudo("secret123456").await;
     assert_eq!(confirmed.status, StatusCode::OK);
     for case in cases["cases"]
         .as_array()

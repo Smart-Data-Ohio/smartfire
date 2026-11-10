@@ -5,15 +5,19 @@
 
 pub mod bot_access;
 
-use campfire_db::{Account, CachedStatements, Connection, Membership, PushSubscription, Room, RoomType, User};
-use campfire_presentation::accounts::{Bot, BotAgentForm, BotForm, BotGithubAccount, BotRoom, HelpContact};
+use campfire_db::{
+    Account, CachedStatements, Connection, Membership, PushSubscription, Room, RoomType, User,
+};
+use campfire_presentation::accounts::{
+    Bot, BotAgentForm, BotForm, BotGithubAccount, BotRoom, HelpContact,
+};
 use campfire_presentation::users::{
     MentionUser, ProfileMembership, PushSubscription as PushSubscriptionView, UserSummary,
 };
 use rails_compat::Secrets;
 use rails_compat::global_id::{self, GlobalId};
 use rails_compat::unicode;
-use rusqlite::{params, OptionalExtension};
+use rusqlite::{OptionalExtension, params};
 
 use super::{attachments, user_summary};
 
@@ -22,16 +26,30 @@ pub const TRANSFER_LINK_EXPIRY: jiff::SignedDuration = jiff::SignedDuration::fro
 
 /// `user.transfer_id`: `signed_id(purpose: :transfer, expires_in: 4.hours)`.
 pub fn transfer_id(secrets: &Secrets, user_id: i64, now: jiff::Timestamp) -> String {
-    rails_compat::signed_id::generate(secrets, "User", user_id, Some("transfer"), Some(now + TRANSFER_LINK_EXPIRY))
+    rails_compat::signed_id::generate(
+        secrets,
+        "User",
+        user_id,
+        Some("transfer"),
+        Some(now + TRANSFER_LINK_EXPIRY),
+    )
 }
 
 /// `User.find_by_transfer_id(id)`: the user id, if the signature and expiry check out.
-pub fn user_id_from_transfer_id(secrets: &Secrets, transfer_id: &str, now: jiff::Timestamp) -> Option<i64> {
+pub fn user_id_from_transfer_id(
+    secrets: &Secrets,
+    transfer_id: &str,
+    now: jiff::Timestamp,
+) -> Option<i64> {
     rails_compat::signed_id::verify(secrets, "User", transfer_id, Some("transfer"), now)
 }
 
 /// `User.from_avatar_token(sid)`'s verification half (`find_signed!(sid, purpose: :avatar)`).
-pub fn user_id_from_avatar_token(secrets: &Secrets, token: &str, now: jiff::Timestamp) -> Option<i64> {
+pub fn user_id_from_avatar_token(
+    secrets: &Secrets,
+    token: &str,
+    now: jiff::Timestamp,
+) -> Option<i64> {
     rails_compat::signed_id::verify(secrets, "User", token, Some("avatar"), now)
 }
 
@@ -64,7 +82,10 @@ pub fn help_contact(conn: &Connection) -> campfire_db::Result<Option<HelpContact
         })
         .map(Some)
         .or_else(no_rows)?;
-    Ok(owner.map(|(name, email_address)| HelpContact { name, email_address: email_address.unwrap_or_default() }))
+    Ok(owner.map(|(name, email_address)| HelpContact {
+        name,
+        email_address: email_address.unwrap_or_default(),
+    }))
 }
 
 /// `User.none?`
@@ -98,19 +119,35 @@ pub fn touch(
 }
 
 fn no_rows<T>(error: rusqlite::Error) -> Result<Option<T>, rusqlite::Error> {
-    if error == rusqlite::Error::QueryReturnedNoRows { Ok(None) } else { Err(error) }
+    if error == rusqlite::Error::QueryReturnedNoRows {
+        Ok(None)
+    } else {
+        Err(error)
+    }
 }
 
 // --- Users -----------------------------------------------------------------------------------------
 
 /// A user for `users/_mention` and the autocompletable views.
 pub fn mention_user(secrets: &Secrets, user: &User) -> MentionUser {
-    MentionUser { user: user_summary(secrets, user), attachable_sgid: attachable_sgid(secrets, user.id) }
+    MentionUser {
+        user: user_summary(secrets, user),
+        attachable_sgid: attachable_sgid(secrets, user.id),
+    }
 }
 
 /// `room_display_name(room, for_user:)`: a direct room is named after its other members.
-pub fn room_display_name(conn: &Connection, room: &Room, for_user: &User) -> campfire_db::Result<String> {
-    if room.direct() {room.direct_display_name(conn,Some(for_user),None).map(Option::unwrap_or_default)} else {Ok(room.name.clone().unwrap_or_default())}
+pub fn room_display_name(
+    conn: &Connection,
+    room: &Room,
+    for_user: &User,
+) -> campfire_db::Result<String> {
+    if room.direct() {
+        room.direct_display_name(conn, Some(for_user), None)
+            .map(Option::unwrap_or_default)
+    } else {
+        Ok(room.name.clone().unwrap_or_default())
+    }
 }
 
 /// `Room.model_name.param_key` for the room's STI class.
@@ -127,7 +164,10 @@ pub fn room_param_key(room_type: RoomType) -> &'static str {
 
 /// Users::ProfilesController#show: `Current.user.memberships.with_ordered_room.partition { |m| m.room.direct? }`,
 /// returned as `(direct, shared)`.
-pub fn profile_memberships(conn: &Connection, user: &User) -> campfire_db::Result<(Vec<ProfileMembership>, Vec<ProfileMembership>)> {
+pub fn profile_memberships(
+    conn: &Connection,
+    user: &User,
+) -> campfire_db::Result<(Vec<ProfileMembership>, Vec<ProfileMembership>)> {
     let mut direct = Vec::new();
     let mut shared = Vec::new();
     for (membership, room) in Membership::with_ordered_room(conn, user.id)? {
@@ -135,18 +175,25 @@ pub fn profile_memberships(conn: &Connection, user: &User) -> campfire_db::Resul
             room_id: room.id,
             room_param_key: room_param_key(room.room_type).to_string(),
             room_display_name: room_display_name(conn, &room, user)?,
-            involvement: membership.involvement.map(|involvement| involvement.name()).unwrap_or_default().to_string(),
+            involvement: membership
+                .involvement
+                .map(|involvement| involvement.name())
+                .unwrap_or_default()
+                .to_string(),
             direct: room.direct(),
         };
-        if room.direct() { direct.push(view) } else { shared.push(view) }
+        if room.direct() {
+            direct.push(view)
+        } else {
+            shared.push(view)
+        }
     }
     Ok((direct, shared))
 }
 
 /// Whether the classic profile offers password confirmation.
 pub fn profile_has_password(user: &User) -> bool {
-    user
-        .password_digest
+    user.password_digest
         .as_deref()
         .is_some_and(|s| !campfire_richtext::ruby::is_blank(s))
 }
@@ -187,8 +234,14 @@ pub fn profile_two_factor(
 pub const DIRECT_PLACEHOLDERS: i64 = 20;
 
 /// Suggestions for new direct conversations, excluding current direct-room peers.
-pub fn direct_placeholder_user_rows(conn: &Connection, user: &User) -> campfire_db::Result<Vec<User>> {
-    let direct_room_ids: Vec<i64> = Room::for_user_of_type(conn, user.id, RoomType::Direct)?.iter().map(|room| room.id).collect();
+pub fn direct_placeholder_user_rows(
+    conn: &Connection,
+    user: &User,
+) -> campfire_db::Result<Vec<User>> {
+    let direct_room_ids: Vec<i64> = Room::for_user_of_type(conn, user.id, RoomType::Direct)?
+        .iter()
+        .map(|room| room.id)
+        .collect();
     let mut exclude_user_ids: Vec<i64> = Vec::new();
     if !direct_room_ids.is_empty() {
         let sql = format!(
@@ -196,7 +249,9 @@ pub fn direct_placeholder_user_rows(conn: &Connection, user: &User) -> campfire_
             placeholders(direct_room_ids.len())
         );
         let mut statement = conn.prepare_cached(&sql)?;
-        let ids = statement.query_map(rusqlite::params_from_iter(&direct_room_ids), |row| row.get::<_, i64>(0))?;
+        let ids = statement.query_map(rusqlite::params_from_iter(&direct_room_ids), |row| {
+            row.get::<_, i64>(0)
+        })?;
         for id in ids {
             let id = id?;
             if !exclude_user_ids.contains(&id) {
@@ -221,8 +276,14 @@ pub fn direct_placeholder_user_rows(conn: &Connection, user: &User) -> campfire_
 /// AccountsController#account_users: `User.where(status: [ :active, :banned ])` for
 /// administrators, `User.active` otherwise; `.ordered.without_bots`.
 pub fn account_users(conn: &Connection, can_administer: bool) -> campfire_db::Result<Vec<User>> {
-    let status = if can_administer { r#""users"."status" IN (0, 2)"# } else { r#""users"."status" = 0"# };
-    let sql = format!(r#"SELECT * FROM "users" WHERE {status} AND "users"."role" != 2 ORDER BY LOWER(name)"#);
+    let status = if can_administer {
+        r#""users"."status" IN (0, 2)"#
+    } else {
+        r#""users"."status" = 0"#
+    };
+    let sql = format!(
+        r#"SELECT * FROM "users" WHERE {status} AND "users"."role" != 2 ORDER BY LOWER(name)"#
+    );
     query_users(conn, &sql, [])
 }
 
@@ -289,49 +350,117 @@ fn bot_with_associations(
 }
 
 /// Read-only facts for the bot edit form. Reading a legacy bot never creates an Agent.
-pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, bot: &User, zone: &campfire_presentation::time::Zone, github_usable: bool) -> campfire_db::Result<BotForm> {
-    use campfire_db::models::{agent_posting::{self, Cap}, webhook::Webhook};
+pub fn bot_form(
+    conn: &Connection,
+    app: &crate::app::AppState,
+    base_url: &str,
+    bot: &User,
+    zone: &campfire_presentation::time::Zone,
+    github_usable: bool,
+) -> campfire_db::Result<BotForm> {
+    use campfire_db::models::{
+        agent_posting::{self, Cap},
+        webhook::Webhook,
+    };
     let avatar = attachments::attached_blob(conn, "User", bot.id, "avatar")?;
-    let icon_name: Option<String> = conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| row.get(0))?;
+    let icon_name: Option<String> =
+        conn.query_row("SELECT icon_name FROM users WHERE id=?", [bot.id], |row| {
+            row.get(0)
+        })?;
     let profile = campfire_db::Agent::for_user(conn, bot.id)?;
     let webhook = Webhook::find_by_user(conn, bot.id)?;
     // Ruby's || falls back only for nil, not for an empty agent secret.
-    let agent_secret = profile.as_ref().map(|agent| agent.webhook_signing_secret(conn, &app.ar_encryption)).transpose()?.flatten();
+    let agent_secret = profile
+        .as_ref()
+        .map(|agent| agent.webhook_signing_secret(conn, &app.ar_encryption))
+        .transpose()?
+        .flatten();
     let signing_secret = match agent_secret {
         Some(value) => Some(value),
-        None => webhook.as_ref().map(|webhook| webhook.signing_secret(&app.ar_encryption)).transpose()?.flatten(),
+        None => webhook
+            .as_ref()
+            .map(|webhook| webhook.signing_secret(&app.ar_encryption))
+            .transpose()?
+            .flatten(),
     };
-    let budget_usage_line = profile.as_ref().map(|agent| -> campfire_db::Result<String> {
-        let window = agent_posting::daily_window(campfire_db::Timestamp::from_jiff(app.clock.now()), zone.tz())?;
-        let cells = [(Cap::Messages, agent.daily_message_cap, "messages"),
-            (Cap::BoardPosts, agent.daily_board_post_cap, "board posts"),
-            (Cap::ExternalActions, agent.daily_external_action_cap, "external actions")].into_iter().map(|(cap, limit, noun)| {
+    let budget_usage_line = profile
+        .as_ref()
+        .map(|agent| -> campfire_db::Result<String> {
+            let window = agent_posting::daily_window(
+                campfire_db::Timestamp::from_jiff(app.clock.now()),
+                zone.tz(),
+            )?;
+            let cells = [
+                (Cap::Messages, agent.daily_message_cap, "messages"),
+                (Cap::BoardPosts, agent.daily_board_post_cap, "board posts"),
+                (
+                    Cap::ExternalActions,
+                    agent.daily_external_action_cap,
+                    "external actions",
+                ),
+            ]
+            .into_iter()
+            .map(|(cap, limit, noun)| {
                 let used = agent_posting::cap_usage(conn, agent.id, bot.id, cap, &window)?;
-                Ok(limit.map(|limit| format!("{used}/{limit} {noun}")).unwrap_or_else(|| format!("{used} {noun}")))
-            }).collect::<campfire_db::Result<Vec<_>>>()?;
-        Ok(cells.join(" · "))
-    }).transpose()?.unwrap_or_default();
-    let github = crate::integrations::github::accounts::Account::for_user(conn, bot.id)?.map(|account| BotGithubAccount {
-        usable: github_usable, login: account.github_login, disconnected_reason: account.disconnected_reason,
-    });
+                Ok(limit
+                    .map(|limit| format!("{used}/{limit} {noun}"))
+                    .unwrap_or_else(|| format!("{used} {noun}")))
+            })
+            .collect::<campfire_db::Result<Vec<_>>>()?;
+            Ok(cells.join(" · "))
+        })
+        .transpose()?
+        .unwrap_or_default();
+    let github =
+        crate::integrations::github::accounts::Account::for_user(conn, bot.id)?.map(|account| {
+            BotGithubAccount {
+                usable: github_usable,
+                login: account.github_login,
+                disconnected_reason: account.disconnected_reason,
+            }
+        });
     Ok(BotForm {
-        name: Some(bot.name.clone()), webhook_url: bot.webhook_url(conn)?,
-        avatar_attachment_url: avatar.map(|blob| format!("{base_url}{}", campfire_storage::paths::blob_redirect_path(&*app.storage.verifier, &blob, None))),
-        persisted: true, icon_name: icon_name.clone(),
-        icon: icon_name.as_deref().and_then(|name| super::resolve_avatar_icon(conn, name)),
-        supports_bot_key: profile.as_ref().is_none_or(|agent| agent.kind != campfire_db::AgentKind::Personal),
+        name: Some(bot.name.clone()),
+        webhook_url: bot.webhook_url(conn)?,
+        avatar_attachment_url: avatar.map(|blob| {
+            format!(
+                "{base_url}{}",
+                campfire_storage::paths::blob_redirect_path(&*app.storage.verifier, &blob, None)
+            )
+        }),
+        persisted: true,
+        icon_name: icon_name.clone(),
+        icon: icon_name
+            .as_deref()
+            .and_then(|name| super::resolve_avatar_icon(conn, name)),
+        supports_bot_key: profile
+            .as_ref()
+            .is_none_or(|agent| agent.kind != campfire_db::AgentKind::Personal),
         agent: profile.map(|agent| BotAgentForm {
-            id: agent.id, owner_id: agent.owner_id, provider: agent.provider, runtime: agent.runtime,
-            description: agent.description, daily_message_cap: agent.daily_message_cap,
-            daily_board_post_cap: agent.daily_board_post_cap, daily_external_action_cap: agent.daily_external_action_cap,
-            raw_caps: Default::default(), suspended: agent.suspended_at.is_some(), errors: None, error_fields: Vec::new(),
-        }), budget_usage_line, signing_secret, github, ..Default::default()
+            id: agent.id,
+            owner_id: agent.owner_id,
+            provider: agent.provider,
+            runtime: agent.runtime,
+            description: agent.description,
+            daily_message_cap: agent.daily_message_cap,
+            daily_board_post_cap: agent.daily_board_post_cap,
+            daily_external_action_cap: agent.daily_external_action_cap,
+            raw_caps: Default::default(),
+            suspended: agent.suspended_at.is_some(),
+            errors: None,
+            error_fields: Vec::new(),
+        }),
+        budget_usage_line,
+        signing_secret,
+        github,
+        ..Default::default()
     })
 }
 
 /// A push subscription with its user agent parsed like `UserAgent.parse(push_subscription.user_agent)`.
 pub fn push_subscription(subscription: &PushSubscription) -> PushSubscriptionView {
-    let agent = crate::concerns::user_agent::parse(subscription.user_agent.as_deref().unwrap_or(""));
+    let agent =
+        crate::concerns::user_agent::parse(subscription.user_agent.as_deref().unwrap_or(""));
     PushSubscriptionView {
         id: subscription.id,
         endpoint: subscription.endpoint.clone().unwrap_or_default(),
@@ -353,9 +482,15 @@ pub fn placeholders(count: usize) -> String {
 }
 
 /// Users from a `SELECT "users".*` query.
-pub fn query_users(conn: &Connection, sql: &str, values: impl rusqlite::Params) -> campfire_db::Result<Vec<User>> {
+pub fn query_users(
+    conn: &Connection,
+    sql: &str,
+    values: impl rusqlite::Params,
+) -> campfire_db::Result<Vec<User>> {
     let mut statement = conn.prepare_cached(sql)?;
-    let users = statement.query_map(values, User::from_row)?.collect::<Result<_, _>>()?;
+    let users = statement
+        .query_map(values, User::from_row)?
+        .collect::<Result<_, _>>()?;
     Ok(users)
 }
 
@@ -377,7 +512,10 @@ pub fn string_attribute(params: &campfire_kit::ParamMap, key: &str) -> Option<Op
 }
 
 pub fn sidebar_direct_label(name: Option<&str>, members: &[UserSummary]) -> String {
-    sidebar_direct_label_for_names(name, &members.iter().map(|m| m.name.as_str()).collect::<Vec<_>>())
+    sidebar_direct_label_for_names(
+        name,
+        &members.iter().map(|m| m.name.as_str()).collect::<Vec<_>>(),
+    )
 }
 
 /// [`sidebar_direct_label`] from the members' names alone.
@@ -389,13 +527,22 @@ pub fn direct_room_label_for_names(name: Option<&str>, member_names: &[&str]) ->
     direct_label_for_names(name, member_names, sidebar_first_name)
 }
 
-fn direct_label_for_names(name: Option<&str>, member_names: &[&str], label: fn(&str) -> &str) -> String {
+fn direct_label_for_names(
+    name: Option<&str>,
+    member_names: &[&str],
+    label: fn(&str) -> &str,
+) -> String {
     if let Some(name) = name.filter(|s| !campfire_richtext::ruby::is_blank(s)) {
         return name.into();
     }
     let mut names = member_names.to_vec();
     names.sort_by_key(|name| unicode::downcase(name));
-    let label = names.iter().take(3).map(|name| label(name)).collect::<Vec<_>>().join(", ");
+    let label = names
+        .iter()
+        .take(3)
+        .map(|name| label(name))
+        .collect::<Vec<_>>()
+        .join(", ");
     if names.len() > 3 {
         format!("{label} +{}", names.len() - 3)
     } else {
@@ -404,7 +551,9 @@ fn direct_label_for_names(name: Option<&str>, member_names: &[&str], label: fn(&
 }
 
 fn sidebar_first_name(name: &str) -> &str {
-    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c']).find(|part| !part.is_empty()).unwrap_or_default()
+    name.split([' ', '\t', '\n', '\r', '\x0b', '\x0c'])
+        .find(|part| !part.is_empty())
+        .unwrap_or_default()
 }
 
 pub mod audit_logs;
@@ -418,16 +567,38 @@ mod tests {
         for (custom, members, expected) in [
             (None, vec![], ""),
             (None, vec!["Ada Lovelace"], "Ada Lovelace"),
-            (None, vec!["Grace Hopper", "ada Lovelace"], "ada Lovelace, Grace Hopper"),
             (
                 None,
-                vec!["Zoe Rivera", "Grace Hopper", "ada Lovelace", "Lin Chen", "Mary Jackson"],
+                vec!["Grace Hopper", "ada Lovelace"],
+                "ada Lovelace, Grace Hopper",
+            ),
+            (
+                None,
+                vec![
+                    "Zoe Rivera",
+                    "Grace Hopper",
+                    "ada Lovelace",
+                    "Lin Chen",
+                    "Mary Jackson",
+                ],
                 "ada Lovelace, Grace Hopper, Lin Chen +2",
             ),
-            (Some("Launch crew"), vec!["Ada Lovelace", "Grace Hopper"], "Launch crew"),
+            (
+                Some("Launch crew"),
+                vec!["Ada Lovelace", "Grace Hopper"],
+                "Launch crew",
+            ),
             (Some("  "), vec!["Ada Lovelace"], "Ada Lovelace"),
-            (None, vec!["Grace Hopper", "Lin Chen", "Ada Lovelace"], "Ada Lovelace, Grace Hopper, Lin Chen"),
-            (None, vec!["Zoe Rivera", "Grace Hopper", "Lin Chen", "Ada Lovelace"], "Ada Lovelace, Grace Hopper, Lin Chen +1"),
+            (
+                None,
+                vec!["Grace Hopper", "Lin Chen", "Ada Lovelace"],
+                "Ada Lovelace, Grace Hopper, Lin Chen",
+            ),
+            (
+                None,
+                vec!["Zoe Rivera", "Grace Hopper", "Lin Chen", "Ada Lovelace"],
+                "Ada Lovelace, Grace Hopper, Lin Chen +1",
+            ),
         ] {
             assert_eq!(sidebar_direct_label_for_names(custom, &members), expected);
         }

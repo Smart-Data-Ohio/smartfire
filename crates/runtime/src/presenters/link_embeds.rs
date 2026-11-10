@@ -2,7 +2,11 @@ use crate::{app::App, integrations::link_embed::Reference};
 use campfire_db::{Connection, Message};
 
 /// Claims and durable job rows share this write. Rechecking TTL/claim handles concurrent views.
-pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i64>) -> campfire_db::Result<()> {
+pub async fn enqueue_render_fetches(
+    app: &App,
+    ids: Vec<i64>,
+    twitter_ids: Vec<i64>,
+) -> campfire_db::Result<()> {
     if ids.is_empty() && twitter_ids.is_empty() {
         return Ok(());
     }
@@ -19,7 +23,9 @@ pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i
             }
             for id in twitter_ids {
                 match crate::integrations::twitter::post::Post::find(tx.conn(), id) {
-                    Ok(post) if post.fetch_pending() => { post.request_fetch(tx)?; }
+                    Ok(post) if post.fetch_pending() => {
+                        post.request_fetch(tx)?;
+                    }
                     Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => {}
                     Err(error) => return Err(error),
                 }
@@ -34,14 +40,20 @@ pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i
     dead_code,
     reason = "WS8b consumes the actions-menu policy; endpoint authorization is already wired"
 )]
-pub fn can_offer_suppression(conn: &Connection, message: &Message, viewer: i64) -> campfire_db::Result<bool> {
+pub fn can_offer_suppression(
+    conn: &Connection,
+    message: &Message,
+    viewer: i64,
+) -> campfire_db::Result<bool> {
     if message.creator_id != viewer || message.system_note || message.embeds_suppressed {
         return Ok(false);
     }
     if let Some(thread) = message.thread_id
-        && conn.query_row("SELECT locked_at IS NOT NULL FROM channel_threads WHERE id=?", [thread], |r| {
-            r.get::<_, bool>(0)
-        })?
+        && conn.query_row(
+            "SELECT locked_at IS NOT NULL FROM channel_threads WHERE id=?",
+            [thread],
+            |r| r.get::<_, bool>(0),
+        )?
     {
         return Ok(false);
     }
@@ -58,14 +70,22 @@ pub fn broadcast_updates(app: &App, embed_id: i64) -> anyhow::Result<()> {
         loop {
             let messages = message_batches::next(conn, Reference::LinkEmbed(embed_id), after)?;
             app.broadcasts.sync_message_cards(conn, &messages);
-            if messages.len() < message_batches::SIZE { break; }
+            if messages.len() < message_batches::SIZE {
+                break;
+            }
             after = messages.last().map(|message| message.id);
         }
         Ok(())
     })?;
     Ok(())
 }
-pub fn broadcast_message(app: &App, conn: &Connection, message: &Message, _linkedin: bool) -> campfire_db::Result<()> {
-    app.broadcasts.sync_message_cards(conn, std::slice::from_ref(message));
+pub fn broadcast_message(
+    app: &App,
+    conn: &Connection,
+    message: &Message,
+    _linkedin: bool,
+) -> campfire_db::Result<()> {
+    app.broadcasts
+        .sync_message_cards(conn, std::slice::from_ref(message));
     Ok(())
 }

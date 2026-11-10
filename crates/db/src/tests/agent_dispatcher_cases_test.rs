@@ -4,8 +4,7 @@ use super::*;
 use crate::models::agent_delivery::AgentEvent;
 use crate::slash_commands::{Context, dispatch};
 use crate::{
-    AgentGrant, AgentSlashCommand, ChannelThread, NewAgentSlashCommand,
-    NewChannelThread, NewGrant,
+    AgentGrant, AgentSlashCommand, ChannelThread, NewAgentSlashCommand, NewChannelThread, NewGrant,
 };
 fn setup() -> TestDb {
     let t = super::channel_thread_test::frozen();

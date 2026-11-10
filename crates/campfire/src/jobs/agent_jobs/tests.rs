@@ -1,12 +1,12 @@
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use crate::app::App;
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use campfire_db::Message;
 use campfire_db::Room;
 use campfire_db::User;
 use campfire_db::models::agent_delivery as domain;
 use campfire_db::models::agent_delivery::AgentEvent;
-use crate::app::App;
-use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
@@ -23,11 +23,11 @@ async fn pending(app: &App) -> AgentEvent {
                     ..Default::default()
                 },
             )?;
-            let agent_id = tx.conn().query_row(
-                "SELECT id FROM agents WHERE user_id=?",
-                [BENDER],
-                |r| r.get(0),
-            )?;
+            let agent_id =
+                tx.conn()
+                    .query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| {
+                        r.get(0)
+                    })?;
             let e = AgentEvent::create(
                 tx,
                 domain::NewEvent {
@@ -283,12 +283,20 @@ async fn ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox() {
         .await;
     let approval = db
         .write(|tx| {
-            let agent_id = tx.conn().query_row(
-                "SELECT id FROM agents WHERE user_id=?",
-                [BENDER],
-                |r| r.get(0),
+            let agent_id =
+                tx.conn()
+                    .query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| {
+                        r.get(0)
+                    })?;
+            campfire_db::AgentGrant::create(
+                tx,
+                campfire_db::NewGrant {
+                    agent_id,
+                    capability: "external_action".into(),
+                    granted_by_id: DAVID,
+                    ..Default::default()
+                },
             )?;
-            campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id,capability:"external_action".into(),granted_by_id:DAVID,..Default::default()})?;
             AgentApproval::create(
                 tx,
                 NewApproval {

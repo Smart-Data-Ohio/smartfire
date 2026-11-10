@@ -1,5 +1,3 @@
-
-
 /// `Users::AvatarsHelper::AVATAR_COLORS`.
 pub const AVATAR_COLORS: [&str; 18] = [
     "#AF2E1B", "#CC6324", "#3B4B59", "#BFA07A", "#ED8008", "#ED3F1C", "#BF1B1B", "#736B1E",
@@ -34,7 +32,10 @@ pub fn crc32(bytes: &[u8]) -> u32 {
 /// Unicode word characters, so "Élodie" contributes nothing.
 pub fn initials(name: &str) -> String {
     static WORD: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-        regex::Regex::new(r"\A[\p{Alphabetic}\p{Mark}\p{Number}\p{Connector_Punctuation}\p{Join_Control}]\z").unwrap()
+        regex::Regex::new(
+            r"\A[\p{Alphabetic}\p{Mark}\p{Number}\p{Connector_Punctuation}\p{Join_Control}]\z",
+        )
+        .unwrap()
     });
     let mut initials = String::new();
     let mut previous_word = false;

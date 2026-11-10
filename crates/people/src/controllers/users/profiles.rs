@@ -6,8 +6,8 @@ use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, permit_keys};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before};
-use crate::controllers::presenters::attachments::{self, Assignment, Record};
 use crate::controllers::presenters::accounts::string_attribute;
+use crate::controllers::presenters::attachments::{self, Assignment, Record};
 
 /// The SPA's profile edit alias. Classic has no edit action and keeps its 404.
 pub async fn edit(c: &mut Ctx) -> Result {
@@ -18,15 +18,24 @@ pub async fn edit(c: &mut Ctx) -> Result {
         return Err(Error::NotFound);
     };
     let user_id = session.user_id;
-    let user = c.app().db.read(move |conn| campfire_db::User::find_by_id(conn, user_id))
-        .await.map_err(Error::internal)?;
-    let Some(user) = user else { return Err(Error::NotFound) };
-    if user.is_bot() || concerns::session_expired(
-        &session,
-        &user,
-        c.app().config.admin_session_idle_timeout,
-        campfire_db::Timestamp::from_jiff(c.now()),
-    ) || !concerns::next_ui(c, &user).await? {
+    let user = c
+        .app()
+        .db
+        .read(move |conn| campfire_db::User::find_by_id(conn, user_id))
+        .await
+        .map_err(Error::internal)?;
+    let Some(user) = user else {
+        return Err(Error::NotFound);
+    };
+    if user.is_bot()
+        || concerns::session_expired(
+            &session,
+            &user,
+            c.app().config.admin_session_idle_timeout,
+            campfire_db::Timestamp::from_jiff(c.now()),
+        )
+        || !concerns::next_ui(c, &user).await?
+    {
         return Err(Error::NotFound);
     }
     concerns::before_actions(c, Before::default()).await?;

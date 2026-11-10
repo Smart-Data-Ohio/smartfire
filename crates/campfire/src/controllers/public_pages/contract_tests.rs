@@ -42,9 +42,18 @@ async fn assert_contracts(app: &TestApp, state: &str, member: bool) -> Vec<Publi
         assert_eq!(reply.header("set-cookie"), None, "{state} {slug}");
         let page: PublicPage = serde_json::from_slice(&reply.body).unwrap();
         assert_eq!(page.page, name);
-        assert_eq!(page.policy.operator_name, policy.operator_name, "{state} {slug}");
-        assert_eq!(page.policy.contact_email, policy.contact_email, "{state} {slug}");
-        assert_eq!(page.policy.effective_date, policy.effective_date, "{state} {slug}");
+        assert_eq!(
+            page.policy.operator_name, policy.operator_name,
+            "{state} {slug}"
+        );
+        assert_eq!(
+            page.policy.contact_email, policy.contact_email,
+            "{state} {slug}"
+        );
+        assert_eq!(
+            page.policy.effective_date, policy.effective_date,
+            "{state} {slug}"
+        );
 
         // The retained URL now goes to the SPA's page.
         let retained = app.anonymous().get(&format!("/{slug}")).await;
@@ -54,14 +63,28 @@ async fn assert_contracts(app: &TestApp, state: &str, member: bool) -> Vec<Publi
             Some(format!("http://campfire.test/app/{slug}"))
         );
         // Every in-text link to a page the SPA has stays in the SPA.
-        for retained_link in ["href=\"/privacy\"", "href=\"/terms\"", "href=\"/session/new\""] {
-            assert!(!page.html.contains(retained_link), "{state} {slug}: {retained_link}");
+        for retained_link in [
+            "href=\"/privacy\"",
+            "href=\"/terms\"",
+            "href=\"/session/new\"",
+        ] {
+            assert!(
+                !page.html.contains(retained_link),
+                "{state} {slug}: {retained_link}"
+            );
         }
 
         if member {
-            let signed_in = app.sign_in(DAVID).await.send(json_get(&format!("/api/v1/public_pages/{slug}"))).await;
+            let signed_in = app
+                .sign_in(DAVID)
+                .await
+                .send(json_get(&format!("/api/v1/public_pages/{slug}")))
+                .await;
             assert_eq!(signed_in.status, StatusCode::OK);
-            assert_eq!(signed_in.body, reply.body, "{state} {slug}: same for a member");
+            assert_eq!(
+                signed_in.body, reply.body,
+                "{state} {slug}: same for a member"
+            );
         }
         pages.push(page);
     }
@@ -98,7 +121,8 @@ async fn public_page_contract_follows_each_policy() {
             );
             if page.page != PublicPageName::About {
                 assert_eq!(
-                    page.html.contains("Your workspace\n    administrator can tell you who that is."),
+                    page.html
+                        .contains("Your workspace\n    administrator can tell you who that is."),
                     policy.operator_name.is_none(),
                     "state {index}"
                 );
@@ -174,7 +198,8 @@ async fn public_page_mock_fixture_matches_the_contract() {
     .expect("restore the frozen seeds");
     let fixture: Value = serde_json::from_str(include_str!(
         "../../../../../frontend/mock/s2/public-pages.json"
-    )).unwrap();
+    ))
+    .unwrap();
     let mut pages = serde_json::Map::new();
     for (slug, _) in PAGES {
         let reply = app
@@ -189,7 +214,8 @@ async fn public_page_mock_fixture_matches_the_contract() {
         pages.insert(slug.into(), reply.json());
     }
     let text = serde_json::to_string_pretty(&Value::Object(pages)).unwrap() + "\n";
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/mock/s2/public-pages.json");
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/mock/s2/public-pages.json");
     if std::env::var("UPDATE_PUBLIC_PAGE_FIXTURE").as_deref() == Ok("1") {
         std::fs::write(&path, &text).unwrap();
     } else {

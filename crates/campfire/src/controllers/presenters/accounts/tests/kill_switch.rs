@@ -32,7 +32,6 @@ async fn admin_kill_switch_cancels_pending_expires_overdue_revokes_and_clears_pr
         &admin.form("post", &path, &[]).await,
         &format!("http://campfire.test/account/bots/{bot}/edit"),
     );
-
 }
 #[tokio::test]
 async fn owner_kill_switch_does_not_require_sudo() {

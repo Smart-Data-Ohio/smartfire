@@ -4,10 +4,7 @@ use super::{
     Scope, ensure_can_administer, ensure_permission_to_create_rooms, existing_user_ids,
     redirect_to_room, room_name_param, set_room, user_ids_param,
 };
-use crate::controllers::presenters::{
-    Presenter,
-    page::db_error,
-};
+use crate::controllers::presenters::{Presenter, page::db_error};
 use crate::{
     app::AppCtx,
     concerns::{Before, before_actions, require_current_user},
@@ -17,7 +14,6 @@ use campfire_db::{CachedStatements, Membership, Room, RoomType, StageRole, User}
 use campfire_kit::{Ctx, Result, StatusCode};
 use campfire_presentation::helpers::IconSource;
 use serde_json::json;
-
 
 type CreateOutcome = std::result::Result<Room, (Option<String>, Option<String>)>;
 type UpdateOutcome = std::result::Result<Room, (Room, Vec<String>)>;
@@ -86,7 +82,6 @@ pub async fn create(c: &mut Ctx) -> Result {
     broadcast(c, &room, false).await?;
     redirect_to_room(c, room.id)
 }
-
 
 pub async fn create_room(
     c: &Ctx,
@@ -233,12 +228,16 @@ pub async fn update_room_with_topic(
 
 pub async fn broadcast(c: &Ctx, room: &Room, _update: bool) -> Result<()> {
     let (app, room) = (c.app().clone(), room.clone());
-    c.app().db.read(move |conn| {
-        for membership in room.memberships(conn)? {
-            app.broadcasts.sync_membership_row(membership.id);
-        }
-        Ok(())
-    }).await.map_err(db_error)
+    c.app()
+        .db
+        .read(move |conn| {
+            for membership in room.memberships(conn)? {
+                app.broadcasts.sync_membership_row(membership.id);
+            }
+            Ok(())
+        })
+        .await
+        .map_err(db_error)
 }
 
 /// Generic `/rooms/:id` deletion of a voice/stage channel delegates to WS8a's

@@ -251,7 +251,9 @@ async fn index_bots(c: &mut Ctx) -> Result {
                             id: room.id,
                             name: room.name,
                             message_command: campfire_presentation::helpers::curl_text_line(&url),
-                            attachment_command: campfire_presentation::helpers::curl_upload_line(&url),
+                            attachment_command: campfire_presentation::helpers::curl_upload_line(
+                                &url,
+                            ),
                         }
                     })
                     .collect(),
@@ -683,7 +685,10 @@ async fn save_grant(c: &mut Ctx) -> Result {
     if let Some(room_id) = create.room_id {
         let offered = grant_list(c, &bot, agent.id).await?;
         if !offered.rooms.iter().any(|room| room.id == room_id) {
-            return Err(fail(c, validation("room_id", "isn't one of the bot's rooms")));
+            return Err(fail(
+                c,
+                validation("room_id", "isn't one of the bot's rooms"),
+            ));
         }
     }
     match grants::grant(c, &bot, agent.id, create.capability, create.room_id).await? {

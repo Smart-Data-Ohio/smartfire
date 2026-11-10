@@ -10,11 +10,20 @@ pub struct Account {
     pub id: i64,
     pub user_id: i64,
     pub account_id: String,
-    #[allow(dead_code, reason = "Fizzy profile/agent controller consumers remain staged")]
+    #[allow(
+        dead_code,
+        reason = "Fizzy profile/agent controller consumers remain staged"
+    )]
     pub account_name: Option<String>,
-    #[allow(dead_code, reason = "Fizzy profile/agent controller consumers remain staged")]
+    #[allow(
+        dead_code,
+        reason = "Fizzy profile/agent controller consumers remain staged"
+    )]
     pub fizzy_user_id: Option<String>,
-    #[allow(dead_code, reason = "Fizzy profile/agent controller consumers remain staged")]
+    #[allow(
+        dead_code,
+        reason = "Fizzy profile/agent controller consumers remain staged"
+    )]
     pub fizzy_user_name: Option<String>,
     pub disconnected_reason: Option<String>,
     access_token: String,
@@ -59,11 +68,15 @@ impl Account {
         &self,
         crypto: &ArEncryption,
     ) -> std::result::Result<Option<String>, rails_compat::ar_encryption::DecryptionError> {
-        crypto.decrypt(&self.access_token).map(|token| (!token.chars().all(char::is_whitespace)).then_some(token))
+        crypto
+            .decrypt(&self.access_token)
+            .map(|token| (!token.chars().all(char::is_whitespace)).then_some(token))
     }
     pub fn usable_token(&self, tx: &Tx<'_>, crypto: &ArEncryption) -> Result<Option<String>> {
         let deactivated: bool = tx.conn().query_row(
-            "SELECT EXISTS(SELECT 1 FROM users WHERE id=? AND status=1)", [self.user_id], |r| r.get(0),
+            "SELECT EXISTS(SELECT 1 FROM users WHERE id=? AND status=1)",
+            [self.user_id],
+            |r| r.get(0),
         )?;
         if deactivated {
             self.mark_disconnected(tx, "Account deactivated")?;
@@ -88,11 +101,17 @@ impl Account {
         )?;
         Ok(())
     }
-    #[allow(dead_code, reason = "Fizzy connection controller consumer remains staged")]
+    #[allow(
+        dead_code,
+        reason = "Fizzy connection controller consumer remains staged"
+    )]
     pub fn create(tx: &Tx<'_>, crypto: &ArEncryption, input: &Input<'_>) -> Result<Self> {
         Self::save(tx, crypto, input, false)
     }
-    #[allow(dead_code, reason = "Fizzy connection controller consumer remains staged")]
+    #[allow(
+        dead_code,
+        reason = "Fizzy connection controller consumer remains staged"
+    )]
     pub fn relink(tx: &Tx<'_>, crypto: &ArEncryption, input: &Input<'_>) -> Result<Self> {
         Self::save(tx, crypto, input, true)
     }
@@ -110,7 +129,10 @@ impl Account {
         Ok(Self::for_user(tx.conn(), input.user_id)?.expect("saved account"))
     }
     /// Disconnect clears only this viewer's payloads; references/cards are shared.
-    #[allow(dead_code, reason = "Fizzy connection controller consumer remains staged")]
+    #[allow(
+        dead_code,
+        reason = "Fizzy connection controller consumer remains staged"
+    )]
     pub fn disconnect(tx: &Tx<'_>, user: i64) -> Result<()> {
         tx.conn()
             .execute("DELETE FROM fizzy_card_caches WHERE user_id=?", [user])?;
@@ -120,7 +142,6 @@ impl Account {
         )?;
         Ok(())
     }
-
 }
 
 fn validate(tx: &Tx<'_>, id: Option<i64>, user: i64, account: &str) -> Result<()> {
@@ -144,4 +165,3 @@ fn validate(tx: &Tx<'_>, id: Option<i64>, user: i64, account: &str) -> Result<()
     }
     errors.into_result()
 }
-

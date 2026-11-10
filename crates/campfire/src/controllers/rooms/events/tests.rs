@@ -42,7 +42,12 @@ async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
         .await
         .unwrap();
     let mut david = app.david();
-    for case in oracle["attendance"].as_array().unwrap().iter().filter(|case| case["show"] != true) {
+    for case in oracle["attendance"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["show"] != true)
+    {
         let head = event(&app).await;
         let rows = app.db().read(move |c| head.series_events(c)).await.unwrap();
         let path = format!("/rooms/{ALL_TALK}/events/{}/attendance", rows[1].id);
@@ -118,7 +123,6 @@ async fn pr174_attendance_parameter_shapes_match_pinned_rails() {
             case["responses"],
             "{label}: series responses"
         );
-
     }
 }
 #[tokio::test]
@@ -132,12 +136,18 @@ async fn attendance_controller_security_blocks_nonmembers_and_bots() {
         event.id
     );
     let mut kevin = app.sign_in(KEVIN).await;
-    assert_eq!(kevin.classic_page(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        kevin.classic_page(&path).await.status,
+        StatusCode::NOT_FOUND
+    );
     let mut bot = app.sign_in(BENDER).await;
     assert_eq!(bot.classic_page(&path).await.status, StatusCode::FORBIDDEN);
     let mut david = app.david();
     let wrong = format!("/rooms/{DIRECT_DAVID_JASON}/events/{}/attendance", event.id);
-    assert_eq!(david.classic_page(&wrong).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        david.classic_page(&wrong).await.status,
+        StatusCode::NOT_FOUND
+    );
     app.db()
         .write(|tx| {
             tx.conn().execute(
@@ -148,7 +158,10 @@ async fn attendance_controller_security_blocks_nonmembers_and_bots() {
         })
         .await
         .unwrap();
-    assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        david.classic_page(&path).await.status,
+        StatusCode::NOT_FOUND
+    );
 }
 #[tokio::test]
 async fn attendance_updates_redirect_to_the_event_even_when_refused() {
@@ -298,7 +311,6 @@ async fn event_write_controller_security_and_validation() {
         )
         .await;
     assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY);
-
 
     let missing = david
         .write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/events")))
@@ -554,7 +566,8 @@ async fn rescued_not_found_matches_rails_empty_bodies_and_headers() {
         let response = browser
             .send(
                 Req::new(Method::GET, v["path"].as_str().unwrap())
-                    .header("accept", v["accept"].as_str().unwrap()).header("x-requested-with", "XMLHttpRequest"),
+                    .header("accept", v["accept"].as_str().unwrap())
+                    .header("x-requested-with", "XMLHttpRequest"),
             )
             .await;
         assert_eq!(

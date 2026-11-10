@@ -31,7 +31,11 @@ pub fn read_dist(dist: &Path) -> (PathBuf, Vec<Entry>) {
     let mut files = Vec::new();
     walk(dist, dist, &mut files);
     files.sort();
-    let has = |path: &str| files.binary_search_by(|(p, _)| p.as_str().cmp(path)).is_ok();
+    let has = |path: &str| {
+        files
+            .binary_search_by(|(p, _)| p.as_str().cmp(path))
+            .is_ok()
+    };
     let sibling = |path: &str, extension: &str| {
         let encoded = format!("{path}.{extension}");
         has(&encoded).then(|| dist.join(&encoded))
@@ -43,7 +47,9 @@ pub fn read_dist(dist: &Path) -> (PathBuf, Vec<Entry>) {
         .iter()
         .filter(|(path, _)| path != "index.html")
         .filter(|(path, _)| {
-            let base = path.strip_suffix(".br").or_else(|| path.strip_suffix(".gz"));
+            let base = path
+                .strip_suffix(".br")
+                .or_else(|| path.strip_suffix(".gz"));
             !base.is_some_and(has)
         })
         .map(|(path, source)| Entry {
@@ -70,7 +76,10 @@ fn walk(root: &Path, dir: &Path, files: &mut Vec<(String, PathBuf)>) {
             walk(root, &path, files);
         } else {
             let relative = path.strip_prefix(root).unwrap();
-            let relative: Vec<String> = relative.components().map(|c| c.as_os_str().to_string_lossy().into_owned()).collect();
+            let relative: Vec<String> = relative
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                .collect();
             files.push((relative.join("/"), path));
         }
     }
@@ -78,7 +87,10 @@ fn walk(root: &Path, dir: &Path, files: &mut Vec<(String, PathBuf)>) {
 
 /// The `Content-Type` for a dist path, by extension.
 pub fn content_type(path: &str) -> &'static str {
-    let extension = path.rsplit_once('.').map(|(_, ext)| ext.to_ascii_lowercase()).unwrap_or_default();
+    let extension = path
+        .rsplit_once('.')
+        .map(|(_, ext)| ext.to_ascii_lowercase())
+        .unwrap_or_default();
     match extension.as_str() {
         "html" | "htm" => "text/html; charset=utf-8",
         "js" | "mjs" => "text/javascript; charset=utf-8",
@@ -125,32 +137,51 @@ pub fn compressible(content_type: &str) -> bool {
 /// base64url hash), so a URL always means the same bytes. Anything else under `assets/` (or a
 /// hash of another length) is served as revalidating rather than guessed at.
 pub fn immutable(path: &str) -> bool {
-    let Some(name) = path.strip_prefix("assets/") else { return false };
+    let Some(name) = path.strip_prefix("assets/") else {
+        return false;
+    };
     let file = name.rsplit('/').next().unwrap_or(name).as_bytes();
     let hash_char = |b: &u8| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_');
     // `[name]-[hash]` then only extensions: `index-B2x8Kq1f.js`, `app.config-B2x8Kq1f.js.map`.
     (1..file.len()).any(|dash| {
-        let (Some(hash), Some(extensions)) = (file.get(dash + 1..dash + 9), file.get(dash + 9..)) else { return false };
+        let (Some(hash), Some(extensions)) = (file.get(dash + 1..dash + 9), file.get(dash + 9..))
+        else {
+            return false;
+        };
         file[dash] == b'-'
             && hash.iter().all(hash_char)
             && extensions.first() == Some(&b'.')
-            && extensions.split(|&b| b == b'.').skip(1).all(|ext| !ext.is_empty() && ext.iter().all(u8::is_ascii_alphanumeric))
+            && extensions
+                .split(|&b| b == b'.')
+                .skip(1)
+                .all(|ext| !ext.is_empty() && ext.iter().all(u8::is_ascii_alphanumeric))
     })
 }
 
 /// Brotli at its best quality: done once per build, served many times.
 pub fn brotli(bytes: &[u8]) -> Vec<u8> {
     let mut out = Vec::new();
-    let params = brotli::enc::BrotliEncoderParams { quality: 11, lgwin: 22, ..Default::default() };
-    brotli::BrotliCompress(&mut &bytes[..], &mut out, &params).expect("compressing into memory can't fail");
+    let params = brotli::enc::BrotliEncoderParams {
+        quality: 11,
+        lgwin: 22,
+        ..Default::default()
+    };
+    brotli::BrotliCompress(&mut &bytes[..], &mut out, &params)
+        .expect("compressing into memory can't fail");
     out
 }
 
 /// gzip at level 9, with no file name or time in the header so builds are reproducible.
 pub fn gzip(bytes: &[u8]) -> Vec<u8> {
-    let mut encoder = flate2::GzBuilder::new().mtime(0).write(Vec::new(), flate2::Compression::best());
-    encoder.write_all(bytes).expect("compressing into memory can't fail");
-    encoder.finish().expect("compressing into memory can't fail")
+    let mut encoder = flate2::GzBuilder::new()
+        .mtime(0)
+        .write(Vec::new(), flate2::Compression::best());
+    encoder
+        .write_all(bytes)
+        .expect("compressing into memory can't fail");
+    encoder
+        .finish()
+        .expect("compressing into memory can't fail")
 }
 
 /// `encoded` if it's worth sending instead of `original`.

@@ -1,5 +1,5 @@
-use crate::users::UserSummary;
 use crate::helpers as h;
+use crate::users::UserSummary;
 pub mod history;
 
 #[derive(Clone, Debug)]
@@ -28,5 +28,4 @@ pub struct Profile {
     pub grants: String,
     pub management: Option<(String, String)>,
 }
-impl DirectoryAgent {
-}
+impl DirectoryAgent {}

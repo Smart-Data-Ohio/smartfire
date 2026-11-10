@@ -22,7 +22,10 @@ pub fn routes() -> Router<Kit> {
         .route("/api/v1/people", get(action(index)))
         .route("/api/v1/people/{id}", get(action(show)))
         .route("/api/v1/blocks", get(action(blocks)))
-        .route("/api/v1/people/{id}/block", put(action(block)).delete(action(unblock)))
+        .route(
+            "/api/v1/people/{id}/block",
+            put(action(block)).delete(action(unblock)),
+        )
         .route(
             "/api/v1/people/{id}/ban",
             post(action(ban)).delete(action(unban)),
@@ -53,29 +56,70 @@ async fn list_blocks(c: &mut Ctx) -> Result {
     let viewer = admin::viewer(c).await?.id;
     let now = c.app().db.env().now();
     let secrets = c.app().secrets.clone();
-    let list = c.app().db.read_snapshot(move |conn| {
-        let records = UserBlock::for_viewer(conn, viewer)?;
-        let users = dto::users(conn, &secrets, records.iter().map(|record| record.blocked_id), now)?;
-        let revision = conn.query_row("SELECT activity_revision FROM users WHERE id=?", [viewer], |row| row.get(0))?;
-        Ok(api::BlockList { viewer_id: viewer, revision, people: records.into_iter().filter_map(|record| {
-            users.iter().find(|user| user.id == record.blocked_id).cloned().map(|user| api::BlockedPerson {
-                user, ignored_by_me: true, created_at: dto::time(record.created_at),
+    let list = c
+        .app()
+        .db
+        .read_snapshot(move |conn| {
+            let records = UserBlock::for_viewer(conn, viewer)?;
+            let users = dto::users(
+                conn,
+                &secrets,
+                records.iter().map(|record| record.blocked_id),
+                now,
+            )?;
+            let revision = conn.query_row(
+                "SELECT activity_revision FROM users WHERE id=?",
+                [viewer],
+                |row| row.get(0),
+            )?;
+            Ok(api::BlockList {
+                viewer_id: viewer,
+                revision,
+                people: records
+                    .into_iter()
+                    .filter_map(|record| {
+                        users
+                            .iter()
+                            .find(|user| user.id == record.blocked_id)
+                            .cloned()
+                            .map(|user| api::BlockedPerson {
+                                user,
+                                ignored_by_me: true,
+                                created_at: dto::time(record.created_at),
+                            })
+                    })
+                    .collect(),
             })
-        }).collect() })
-    }).await.map_err(campfire_runtime::context::db_error)?;
+        })
+        .await
+        .map_err(campfire_runtime::context::db_error)?;
     c.json(StatusCode::OK, &list)
 }
 
-async fn create_block(c: &mut Ctx) -> Result { change_block(c, true).await }
-async fn destroy_block(c: &mut Ctx) -> Result { change_block(c, false).await }
+async fn create_block(c: &mut Ctx) -> Result {
+    change_block(c, true).await
+}
+async fn destroy_block(c: &mut Ctx) -> Result {
+    change_block(c, false).await
+}
 
 async fn change_block(c: &mut Ctx, ignored: bool) -> Result {
     let viewer = admin::viewer(c).await?.id;
     let person = find_user(c, "id").await?.id;
-    let state = c.app().db.write(move |tx| {
-        let revision = UserBlock::set(tx, viewer, person, ignored)?;
-        Ok(api::BlockState { viewer_id: viewer, user_id: person, ignored_by_me: ignored, revision })
-    }).await.map_err(campfire_runtime::context::db_error)?;
+    let state = c
+        .app()
+        .db
+        .write(move |tx| {
+            let revision = UserBlock::set(tx, viewer, person, ignored)?;
+            Ok(api::BlockState {
+                viewer_id: viewer,
+                user_id: person,
+                ignored_by_me: ignored,
+                revision,
+            })
+        })
+        .await
+        .map_err(campfire_runtime::context::db_error)?;
     campfire_app::cable::sync::blocks_updated(&c.app().cable, viewer, state.clone());
     c.json(StatusCode::OK, &state)
 }
@@ -137,9 +181,11 @@ async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
             let person = !user.is_bot() && !user.is_deactivated();
             let active = person && user.is_active();
             let other = user.id != viewer_id;
-            let can_manage_bot = user.is_bot() && user.is_active()
-                && (administrator || campfire_db::Agent::for_user(conn, user.id)?
-                    .is_some_and(|agent| agent.owner_id == Some(viewer_id)));
+            let can_manage_bot = user.is_bot()
+                && user.is_active()
+                && (administrator
+                    || campfire_db::Agent::for_user(conn, user.id)?
+                        .is_some_and(|agent| agent.owner_id == Some(viewer_id)));
             let email_address = (administrator && person)
                 .then(|| user.email_address.clone())
                 .flatten();

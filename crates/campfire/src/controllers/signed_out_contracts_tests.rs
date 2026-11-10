@@ -334,12 +334,18 @@ async fn unenrolled_sessions_read_public_pages_without_enrollment_or_a_new_retur
         .password_sign_in("david@37signals.com", "secret123456")
         .await;
     assert_eq!(
-        browser.get("/app/settings/security?return=1").await.location(),
+        browser
+            .get("/app/settings/security?return=1")
+            .await
+            .location(),
         Some("http://campfire.test/app/two_factor/setup?required=true")
     );
     let before = facts(&app).await;
     let return_path = browser_session(&app, &browser)["return_to_after_authenticating"].clone();
-    assert_eq!(return_path, "http://campfire.test/app/settings/security?return=1");
+    assert_eq!(
+        return_path,
+        "http://campfire.test/app/settings/security?return=1"
+    );
     for page in ["about", "privacy", "terms"] {
         // The retained page has moved for good to the SPA's, for this session as for anyone.
         let retained = browser.get(&format!("/{page}")).await;
@@ -354,20 +360,31 @@ async fn unenrolled_sessions_read_public_pages_without_enrollment_or_a_new_retur
         );
 
         let shell = browser.get(&format!("/app/{page}")).await;
-        assert_eq!(shell.status, StatusCode::OK, "/app/{page}: {}", shell.text());
+        assert_eq!(
+            shell.status,
+            StatusCode::OK,
+            "/app/{page}: {}",
+            shell.text()
+        );
         assert_eq!(shell.location(), None);
         // The page a visitor gets, as the retained page shows this session what it shows anyone.
         assert_eq!(inline_boot(&shell)["kind"], "signedOut", "/app/{page}");
 
         let contract = browser
-            .send(Req::new(Method::GET, &format!("/api/v1/public_pages/{page}")).header("accept", "application/json"))
+            .send(
+                Req::new(Method::GET, &format!("/api/v1/public_pages/{page}"))
+                    .header("accept", "application/json"),
+            )
             .await;
         assert_eq!(contract.status, StatusCode::OK, "{page}");
         assert_eq!(contract.json()["page"], page);
         assert_eq!(
             contract.body,
             app.anonymous()
-                .send(Req::new(Method::GET, &format!("/api/v1/public_pages/{page}")).header("accept", "application/json"))
+                .send(
+                    Req::new(Method::GET, &format!("/api/v1/public_pages/{page}"))
+                        .header("accept", "application/json")
+                )
                 .await
                 .body
         );
@@ -428,9 +445,7 @@ async fn body_authenticity_tokens_match_retained_validation() {
                 ),
             ];
             let mut cookies = Vec::new();
-            for (step, (step_json, api, retained, spa)) in
-                requests.into_iter().enumerate()
-            {
+            for (step, (step_json, api, retained, spa)) in requests.into_iter().enumerate() {
                 if !json && !spa.is_empty() {
                     for forged in [
                         body_token(retained.clone(), false, "invalid"),
@@ -457,8 +472,11 @@ async fn body_authenticity_tokens_match_retained_validation() {
                     );
                     assert_eq!(facts(&app).await, before);
                 }
-                let mut request =
-                    body_token(request, step_json, if valid_body { token } else { "invalid" });
+                let mut request = body_token(
+                    request,
+                    step_json,
+                    if valid_body { token } else { "invalid" },
+                );
                 if let Some(valid) = valid_header {
                     request = request.header("x-csrf-token", if valid { token } else { "invalid" });
                 }
@@ -514,7 +532,11 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
         assert_eq!(boot["firstRunPending"], false);
         // The retained sign-in page's help line: the first administrator and the version.
         assert_eq!(
-            boot["helpContact"].as_object().unwrap().keys().collect::<Vec<_>>(),
+            boot["helpContact"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .collect::<Vec<_>>(),
             ["name", "emailAddress"]
         );
         assert!(boot["version"].is_string());
@@ -546,9 +568,17 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
                 "workspace"
             ]
         );
-        let mut workspace_keys = boot["workspace"].as_object().unwrap().keys().map(String::as_str).collect::<Vec<_>>();
+        let mut workspace_keys = boot["workspace"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
         workspace_keys.sort();
-        assert_eq!(workspace_keys, ["description", "inviteSplashUrl", "logoUrl", "name"]);
+        assert_eq!(
+            workspace_keys,
+            ["description", "inviteSplashUrl", "logoUrl", "name"]
+        );
     }
     for path in [
         "/app/",
@@ -568,7 +598,10 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
     assert_retained_redirect(
         &app,
         &mut browser,
-        Req::new(Method::GET, "/session/new?email_address=david%4037signals.com"),
+        Req::new(
+            Method::GET,
+            "/session/new?email_address=david%4037signals.com",
+        ),
         "/app/session/new?email_address=david%4037signals.com",
     )
     .await;
@@ -601,7 +634,12 @@ async fn signed_out_boot_carries_a_redirects_flash_for_one_load() {
         reply.text()
     );
     // The public pages show no flash, so they leave it for the page that does.
-    for path in ["/app/privacy", "/api/v1/public_pages/privacy", "/app/about", "/app/terms"] {
+    for path in [
+        "/app/privacy",
+        "/api/v1/public_pages/privacy",
+        "/app/about",
+        "/app/terms",
+    ] {
         let reply = browser.get(path).await;
         assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
         if path.starts_with("/app/") {
@@ -613,13 +651,22 @@ async fn signed_out_boot_carries_a_redirects_flash_for_one_load() {
     assert_eq!(inline_boot(&page)["flash"], alert);
     let boot = browser.get("/api/v1/session/boot").await;
     assert_eq!(boot.json()["flash"], Value::Null);
-    assert_eq!(inline_boot(&browser.get("/app/session/new").await)["flash"], Value::Null);
+    assert_eq!(
+        inline_boot(&browser.get("/app/session/new").await)["flash"],
+        Value::Null
+    );
     // The JSON boot reads it the same way, once.
     browser.get(callback).await;
     let boot = browser.get("/api/v1/session/boot").await;
     assert_eq!(boot.json()["flash"], alert);
-    assert_eq!(inline_boot(&browser.get("/app/session/new").await)["flash"], Value::Null);
-    assert_eq!(browser.get("/api/v1/session/boot").await.json()["flash"], Value::Null);
+    assert_eq!(
+        inline_boot(&browser.get("/app/session/new").await)["flash"],
+        Value::Null
+    );
+    assert_eq!(
+        browser.get("/api/v1/session/boot").await.json()["flash"],
+        Value::Null
+    );
 }
 
 #[tokio::test]
@@ -632,8 +679,10 @@ async fn password_success_creates_the_same_session_cookies_and_audit() {
     assert_retained_redirect(
         &app,
         &mut browser,
-        Req::new(Method::POST, "/session")
-            .form(&[("email_address", "david@37signals.com"), ("password", "secret123456")]),
+        Req::new(Method::POST, "/session").form(&[
+            ("email_address", "david@37signals.com"),
+            ("password", "secret123456"),
+        ]),
         "/app/session/new",
     )
     .await;
@@ -684,11 +733,24 @@ async fn password_success_creates_the_same_session_cookies_and_audit() {
         after["sessions"].as_array().unwrap().len(),
         before["sessions"].as_array().unwrap().len() + 1
     );
-    assert_eq!(after["sessions"].as_array().unwrap().last().unwrap()[0], DAVID);
+    assert_eq!(
+        after["sessions"].as_array().unwrap().last().unwrap()[0],
+        DAVID
+    );
     assert_eq!(before["audits"], json!([]));
     assert_eq!(
         after["audits"],
-        json!([["session.sign_in.success",DAVID,"David <david@37signals.com>",null,null,null,"{\"method\":\"password\"}","",null]])
+        json!([[
+            "session.sign_in.success",
+            DAVID,
+            "David <david@37signals.com>",
+            null,
+            null,
+            null,
+            "{\"method\":\"password\"}",
+            "",
+            null
+        ]])
     );
 }
 
@@ -782,8 +844,7 @@ async fn challenge_totp_recovery_and_remembered_device_have_identical_effects() 
         );
         let wrong = challenge(&mut browser, "invalid", false).await;
         assert_eq!(wrong.status, StatusCode::UNPROCESSABLE_ENTITY);
-        let message =
-            "That code didn't work. Check your authenticator app or try a backup code.";
+        let message = "That code didn't work. Check your authenticator app or try a backup code.";
         assert_eq!(wrong.json()["fieldErrors"]["code"], json!([message]));
         let code = if recovery {
             codes[0].clone()
@@ -825,7 +886,11 @@ async fn challenge_totp_recovery_and_remembered_device_have_identical_effects() 
             .unwrap();
         assert_eq!(used, usize::from(recovery));
         let facts = facts(&app).await;
-        outcomes.push((cookie_contract(&reply), facts["sessions"].clone(), facts["devices"].clone()));
+        outcomes.push((
+            cookie_contract(&reply),
+            facts["sessions"].clone(),
+            facts["devices"].clone(),
+        ));
         // The remembered device must skip the next challenge and verify the new session.
         browser.write(Req::new(Method::DELETE, "/session")).await;
         let reply = password(&mut browser, "david@37signals.com", "secret123456").await;
@@ -1101,10 +1166,23 @@ async fn transfer_two_factor_uses_the_same_pending_session_and_audit() {
     let reply = challenge(&mut browser, &code, false).await;
     assert_eq!(destination(&reply, true), "http://campfire.test/app/");
     let facts = facts(&app).await;
-    assert_eq!(facts["sessions"].as_array().unwrap().last().unwrap()[0], DAVID);
+    assert_eq!(
+        facts["sessions"].as_array().unwrap().last().unwrap()[0],
+        DAVID
+    );
     assert_eq!(
         facts["audits"],
-        json!([["session.sign_in.success",DAVID,"David <david@37signals.com>",null,null,null,"{\"method\":\"transfer\",\"two_factor\":\"totp\"}","",null]])
+        json!([[
+            "session.sign_in.success",
+            DAVID,
+            "David <david@37signals.com>",
+            null,
+            null,
+            null,
+            "{\"method\":\"transfer\",\"two_factor\":\"totp\"}",
+            "",
+            null
+        ]])
     );
 }
 

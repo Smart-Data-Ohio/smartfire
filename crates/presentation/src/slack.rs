@@ -1,4 +1,3 @@
-
 #[derive(Clone, Debug, Default, serde::Deserialize)]
 pub struct RunSummary {
     pub id: i64,
@@ -108,14 +107,11 @@ pub fn target_value(c: &serde_json::Value, rooms: &[RoomTarget]) -> String {
     }
 }
 
-impl RunSummary {
-}
+impl RunSummary {}
 
-impl SetupData {
-}
+impl SetupData {}
 
-impl Issue {
-}
+impl Issue {}
 
 impl RunData {
     pub fn title(&self) -> String {

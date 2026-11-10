@@ -47,7 +47,12 @@ pub trait Channel<U: Send + Sync + 'static>: Send + 'static {
     /// Dispatches a `perform` from the client. Return `Ok(false)` when `action` isn't one of the
     /// channel's public methods, which Rails logs as "Unable to process". `action` is
     /// `data["action"]`, or `"receive"` when that's blank.
-    async fn perform(&mut self, action: &str, data: &Params, sub: &mut Subscription<U>) -> ChannelResult<bool> {
+    async fn perform(
+        &mut self,
+        action: &str,
+        data: &Params,
+        sub: &mut Subscription<U>,
+    ) -> ChannelResult<bool> {
         let _ = (action, data, sub);
         Ok(false)
     }
@@ -116,7 +121,8 @@ impl<U: Send + Sync + 'static> Subscription<U> {
 
     /// `broadcast_to` for this channel's class.
     pub fn broadcast_to<T: Serialize + ?Sized>(&self, broadcastables: &[&str], message: &T) {
-        self.server.broadcast(&self.broadcasting_for(broadcastables), message);
+        self.server
+            .broadcast(&self.broadcasting_for(broadcastables), message);
     }
 
     pub fn stream_from(&mut self, broadcasting: impl Into<String>) {
@@ -127,11 +133,20 @@ impl<U: Send + Sync + 'static> Subscription<U> {
         // Rails' recorded public `subscribed` action starts a second receiver. Preserve that
         // wire behavior, but bound repeated calls instead of growing tasks without limit.
         const MAX_RECEIVERS_PER_STREAM: usize = 2;
-        if self.streams.iter().filter(|(name, _)| *name == broadcasting).count() >= MAX_RECEIVERS_PER_STREAM {
+        if self
+            .streams
+            .iter()
+            .filter(|(name, _)| *name == broadcasting)
+            .count()
+            >= MAX_RECEIVERS_PER_STREAM
+        {
             return;
         }
         // The hub wraps each broadcast for this identifier once, for every subscriber sharing it.
-        let subscriber = self.server.hub().subscribe(&broadcasting, Some(self.encoded_identifier.clone()));
+        let subscriber = self
+            .server
+            .hub()
+            .subscribe(&broadcasting, Some(self.encoded_identifier.clone()));
         let (handle, registration) = AbortHandle::new_pair();
         self.started.push((subscriber, registration));
         self.streams.push((broadcasting, handle));
@@ -182,8 +197,10 @@ impl<U: Send + Sync + 'static> Subscription<U> {
 
     /// Sends `{"identifier":...,"message":...}` to this subscriber only.
     pub fn transmit<T: Serialize + ?Sized>(&mut self, message: &T) {
-        self.transmissions
-            .push(protocol::message(&self.encoded_identifier, &json::encode(message)));
+        self.transmissions.push(protocol::message(
+            &self.encoded_identifier,
+            &json::encode(message),
+        ));
     }
 }
 

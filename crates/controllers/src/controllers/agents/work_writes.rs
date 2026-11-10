@@ -3,7 +3,8 @@
 use super::{attribute_string, mcp::blank, reads::lookup_ids, ruby_i64};
 use crate::{app::AppCtx, concerns, controllers::presenters::page::db_error};
 use campfire_db::models::{
-    agent_access, agent_payloads, agent_reading, agent_service::ServiceResult, agent_work, audit_log,
+    agent_access, agent_payloads, agent_reading, agent_service::ServiceResult, agent_work,
+    audit_log,
 };
 use campfire_db::{Agent, AgentWorkChanges, ChannelThread, HandoffPackage, WorkHandoff};
 use campfire_kit::{Ctx, Result};
@@ -122,7 +123,7 @@ pub(super) async fn operation(
         .db
         .read_snapshot(move |conn| {
             // Tag assignment has its own after_commit write. Render the committed row.
-            let thread=agent_reading::work_response(conn,agent_id,id,creating)?;
+            let thread = agent_reading::work_response(conn, agent_id, id, creating)?;
             // The live batch already names the owner of each allowance and
             // work_payloads revalidates its account snapshot during rendering.
             // With no allowance there is no owner-specific data to expose.

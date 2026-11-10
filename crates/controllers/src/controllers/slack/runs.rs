@@ -1,5 +1,4 @@
 //! `accounts/slack_import_runs_controller.rb` and `slack/imports_controller.rb`.
-use campfire_runtime::presenters::slack::zone;
 use super::*;
 use campfire_db::{
     audit_log::{AuditLog, NewAuditLog, Target},
@@ -9,6 +8,7 @@ use campfire_db::{
     },
 };
 use campfire_kit::StatusCode;
+use campfire_runtime::presenters::slack::zone;
 use rusqlite::params;
 use serde_json::Value;
 
@@ -91,7 +91,11 @@ fn any_active(conn: &rusqlite::Connection, uid: Option<i64>) -> campfire_db::Res
     Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM slack_imports WHERE status IN ('queued','running','undoing') AND (? IS NULL OR user_id=?))",params![uid,uid],|r|r.get(0))?)
 }
 async fn active(c: &Ctx, uid: Option<i64>) -> Result<bool> {
-    c.app().db.read(move |conn| any_active(conn, uid)).await.map_err(Error::internal)
+    c.app()
+        .db
+        .read(move |conn| any_active(conn, uid))
+        .await
+        .map_err(Error::internal)
 }
 async fn blocker(c: &Ctx, uid: i64) -> Result<Option<&'static str>> {
     if connection(c, uid).await?.is_none() {

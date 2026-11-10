@@ -16,7 +16,11 @@ fn main() {
         std::process::exit(1);
     }
     let boot = Boot {
-        user: BootUser { id: 1, name: "Riel St. Amand".into(), avatar_url: "/avatar.svg".into() },
+        user: BootUser {
+            id: 1,
+            name: "Riel St. Amand".into(),
+            avatar_url: "/avatar.svg".into(),
+        },
         custom_styles: None,
         account: BootAccount {
             upload_limit_bytes: 104_857_600,
@@ -35,5 +39,8 @@ fn main() {
         flash: None,
         appearance_preferences: None,
     };
-    print!("{}", render_shell(&boot, "test-csrf-token", Some(nonce), &Favicon::Mark));
+    print!(
+        "{}",
+        render_shell(&boot, "test-csrf-token", Some(nonce), &Favicon::Mark)
+    );
 }

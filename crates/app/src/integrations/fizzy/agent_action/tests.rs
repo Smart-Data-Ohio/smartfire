@@ -5,8 +5,12 @@ use std::sync::Arc;
 fn ws15e_fizzy_agent_action_matches_pinned_rails() {
     // JSON.parse defaults to max_nesting=100, the same pinned boundary as Client.
     for depth in [98, 99, 100] {
-        let text=format!("{{\"kind\":\"comment\",\"extra\":{}0{}}}","[".repeat(depth),"]".repeat(depth));
-        assert_eq!(Action::from_stored(&text).is_some(),depth<100);
+        let text = format!(
+            "{{\"kind\":\"comment\",\"extra\":{}0{}}}",
+            "[".repeat(depth),
+            "]".repeat(depth)
+        );
+        assert_eq!(Action::from_stored(&text).is_some(), depth < 100);
     }
     let vectors: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),

@@ -5,9 +5,9 @@ use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use crate::controllers::presenters::test_support::*;
 
 async fn boot() -> TestApp {
-    TestApp::boot()
-        .await
-        .expect("WS8bm HTTP tests require the default seed (python3 parity/bin/frozen-seeds restore)")
+    TestApp::boot().await.expect(
+        "WS8bm HTTP tests require the default seed (python3 parity/bin/frozen-seeds restore)",
+    )
 }
 
 async fn create(app: &TestApp, creator_id: i64, system_note: bool) -> Message {
@@ -34,7 +34,10 @@ async fn author_only_edits_even_for_an_administrator() {
     let message = create(&app, JASON, false).await;
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut david = app.david();
-    assert_eq!(david.classic_page(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        david.classic_page(&format!("{path}/edit")).await.status,
+        StatusCode::FORBIDDEN
+    );
     assert_eq!(
         david
             .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -57,7 +60,10 @@ async fn system_notes_are_immutable_for_author_and_administrator() {
     for creator in [DAVID, JASON] {
         let note = create(&app, creator, true).await;
         let path = format!("/rooms/{ALL_TALK}/messages/{}", note.id);
-        assert_eq!(david.classic_page(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
+        assert_eq!(
+            david.classic_page(&format!("{path}/edit")).await.status,
+            StatusCode::FORBIDDEN
+        );
         assert_eq!(
             david
                 .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -67,7 +73,9 @@ async fn system_notes_are_immutable_for_author_and_administrator() {
         );
         assert_eq!(
             david
-                .write(Req::new(Method::DELETE, &path).header("accept", "text/vnd.turbo-stream.html"))
+                .write(
+                    Req::new(Method::DELETE, &path).header("accept", "text/vnd.turbo-stream.html")
+                )
                 .await
                 .status,
             StatusCode::FORBIDDEN
@@ -87,7 +95,8 @@ async fn non_author_non_admin_cannot_edit_or_delete() {
     let app = boot().await;
     app.db()
         .write(|tx| {
-            tx.conn().execute("UPDATE users SET role = 0 WHERE id = ?", [JASON])?;
+            tx.conn()
+                .execute("UPDATE users SET role = 0 WHERE id = ?", [JASON])?;
             Ok(())
         })
         .await
@@ -95,11 +104,33 @@ async fn non_author_non_admin_cannot_edit_or_delete() {
     let message = create(&app, DAVID, false).await;
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut jason = app.sign_in(JASON).await;
-    assert_eq!(jason.classic_page(&format!("{path}/edit")).await.status, StatusCode::FORBIDDEN);
-    let before=app.db().read(move|conn|Message::find(conn,message.id)).await.unwrap();
-    assert_eq!(jason.write(Req::new(Method::PATCH,&path).form(&[("message[markdown_source]","Other member edit")])).await.status,StatusCode::FORBIDDEN);
-    let id=before.id;
-    assert_eq!(app.db().read(move|conn|Message::find(conn,id)).await.unwrap(),before);
+    assert_eq!(
+        jason.classic_page(&format!("{path}/edit")).await.status,
+        StatusCode::FORBIDDEN
+    );
+    let before = app
+        .db()
+        .read(move |conn| Message::find(conn, message.id))
+        .await
+        .unwrap();
+    assert_eq!(
+        jason
+            .write(
+                Req::new(Method::PATCH, &path)
+                    .form(&[("message[markdown_source]", "Other member edit")])
+            )
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+    let id = before.id;
+    assert_eq!(
+        app.db()
+            .read(move |conn| Message::find(conn, id))
+            .await
+            .unwrap(),
+        before
+    );
     assert_eq!(
         jason
             .write(Req::new(Method::DELETE, &path).header("accept", "text/vnd.turbo-stream.html"))
@@ -112,16 +143,23 @@ async fn non_author_non_admin_cannot_edit_or_delete() {
 #[tokio::test]
 async fn preview_matches_real_rails_http_without_writing() {
     let app = boot().await;
-    let oracle: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../vectors/messaging/preview.json")).unwrap();
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/preview.json"
+    ))
+    .unwrap();
     let before = app
         .db()
-        .read(|conn| Ok(conn.query_row("SELECT count(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
+        .read(|conn| {
+            Ok(conn.query_row("SELECT count(*) FROM messages", [], |r| r.get::<_, i64>(0))?)
+        })
         .await
         .unwrap();
     let mut david = app.david();
     for row in oracle["previews"].as_array().unwrap() {
-        let body = serde_json::to_string(&serde_json::json!({"message": {"markdown_source": row["source"]}})).unwrap();
+        let body = serde_json::to_string(
+            &serde_json::json!({"message": {"markdown_source": row["source"]}}),
+        )
+        .unwrap();
         let reply = david
             .write(
                 Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages/preview"))
@@ -140,13 +178,20 @@ async fn preview_matches_real_rails_http_without_writing() {
             reply.json(),
             row["json"],
             "source prefix: {:?}",
-            row["source"].as_str().unwrap().chars().take(40).collect::<String>()
+            row["source"]
+                .as_str()
+                .unwrap()
+                .chars()
+                .take(40)
+                .collect::<String>()
         );
         assert_eq!(reply.text(), row["json_text"].as_str().unwrap());
     }
     let after = app
         .db()
-        .read(|conn| Ok(conn.query_row("SELECT count(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
+        .read(|conn| {
+            Ok(conn.query_row("SELECT count(*) FROM messages", [], |r| r.get::<_, i64>(0))?)
+        })
         .await
         .unwrap();
     assert_eq!(before, after);
@@ -204,8 +249,10 @@ async fn deleted_room_is_inaccessible_even_with_a_lingering_membership() {
     let message = create(&app, DAVID, false).await;
     app.db()
         .write(|tx| {
-            tx.conn()
-                .execute("UPDATE rooms SET deleted_at = ? WHERE id = ?", (tx.now(), ALL_TALK))?;
+            tx.conn().execute(
+                "UPDATE rooms SET deleted_at = ? WHERE id = ?",
+                (tx.now(), ALL_TALK),
+            )?;
             Ok(())
         })
         .await
@@ -215,7 +262,10 @@ async fn deleted_room_is_inaccessible_even_with_a_lingering_membership() {
         format!("/rooms/{ALL_TALK}/messages"),
         format!("/rooms/{ALL_TALK}/messages/{}", message.id),
     ] {
-        assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
+        assert_eq!(
+            david.classic_page(&path).await.status,
+            StatusCode::NOT_FOUND
+        );
     }
 }
 
@@ -225,7 +275,10 @@ async fn removed_and_non_members_cannot_read_or_edit_messages() {
     let message = create(&app, DAVID, false).await;
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut kevin = app.sign_in(KEVIN).await;
-    assert_eq!(kevin.classic_page(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        kevin.classic_page(&path).await.status,
+        StatusCode::NOT_FOUND
+    );
     app.db()
         .write(|tx| {
             tx.conn().execute(
@@ -237,7 +290,10 @@ async fn removed_and_non_members_cannot_read_or_edit_messages() {
         .await
         .unwrap();
     let mut david = app.david();
-    assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        david.classic_page(&path).await.status,
+        StatusCode::NOT_FOUND
+    );
     assert_eq!(
         david
             .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -278,7 +334,10 @@ async fn root_endpoint_cannot_read_edit_or_delete_thread_messages() {
         .unwrap();
     let path = format!("/rooms/{ALL_TALK}/messages/{}", message.id);
     let mut david = app.david();
-    assert_eq!(david.classic_page(&path).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        david.classic_page(&path).await.status,
+        StatusCode::NOT_FOUND
+    );
     assert_eq!(
         david
             .write(Req::new(Method::PATCH, &path).form(&[("message[body]", "changed")]))
@@ -320,12 +379,17 @@ async fn root_create_preserves_markdown_numeric_client_id_and_deduplicates_retri
         .await
         .unwrap()
         .expect("numeric id is cast to a string");
-    assert_eq!(message.markdown_source.as_deref(), Some("# Release\n\n**Ready**"));
+    assert_eq!(
+        message.markdown_source.as_deref(),
+        Some("# Release\n\n**Ready**")
+    );
     let runtime = app.booted.app.clone();
     let message_id = message.id;
     let plain = app
         .db()
-        .read(move |conn| Message::find(conn, message_id)?.plain_text_body(conn, &*runtime.db.env().rich_text))
+        .read(move |conn| {
+            Message::find(conn, message_id)?.plain_text_body(conn, &*runtime.db.env().rich_text)
+        })
         .await
         .unwrap();
     assert_eq!(plain, "Release\n\nReady");
@@ -358,10 +422,15 @@ async fn root_create_preserves_markdown_numeric_client_id_and_deduplicates_retri
 async fn root_create_scalar_columns_match_real_rails_casts() {
     let app = boot().await;
     let mut david = app.david();
-    let oracle: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../vectors/messaging/preview.json")).unwrap();
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/preview.json"
+    ))
+    .unwrap();
     let rows = oracle["scalar_casts"].as_array().unwrap();
-    for row in rows.iter().filter(|row| !row["value"].is_null() && row["value"] != "") {
+    for row in rows
+        .iter()
+        .filter(|row| !row["value"].is_null() && row["value"] != "")
+    {
         let input =
             serde_json::json!({"message": {"markdown_source": row["value"], "client_message_id": row["value"]}})
                 .to_string();
@@ -381,16 +450,19 @@ async fn root_create_scalar_columns_match_real_rails_casts() {
             .await
             .unwrap()
             .expect("Rails scalar column cast");
-        assert_eq!(message.markdown_source.as_deref(), row["markdown_source"].as_str());
+        assert_eq!(
+            message.markdown_source.as_deref(),
+            row["markdown_source"].as_str()
+        );
     }
     let before = app
         .db()
         .read(|conn| {
-            Ok(
-                conn.query_row("SELECT count(*) FROM messages WHERE client_message_id = 'f'", [], |r| {
-                    r.get::<_, i64>(0)
-                })?,
-            )
+            Ok(conn.query_row(
+                "SELECT count(*) FROM messages WHERE client_message_id = 'f'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
         })
         .await
         .unwrap();
@@ -410,11 +482,11 @@ async fn root_create_scalar_columns_match_real_rails_casts() {
     let after = app
         .db()
         .read(|conn| {
-            Ok(
-                conn.query_row("SELECT count(*) FROM messages WHERE client_message_id = 'f'", [], |r| {
-                    r.get::<_, i64>(0)
-                })?,
-            )
+            Ok(conn.query_row(
+                "SELECT count(*) FROM messages WHERE client_message_id = 'f'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
         })
         .await
         .unwrap();
@@ -430,8 +502,10 @@ async fn root_create_validates_markdown_and_drive_ids_with_rails_error_shapes() 
     let app = boot().await;
     let mut david = app.david();
     let path = format!("/rooms/{ALL_TALK}/messages.json");
-    let oracle: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../vectors/messaging/preview.json")).unwrap();
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/preview.json"
+    ))
+    .unwrap();
     for row in oracle["invalid_creates"].as_array().unwrap() {
         let body = serde_json::json!({"message": row["input"]}).to_string();
         let reply = david
@@ -441,7 +515,12 @@ async fn root_create_validates_markdown_and_drive_ids_with_rails_error_shapes() 
                     .body(body),
             )
             .await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
         assert_eq!(reply.json(), row["json"]);
     }
 }
@@ -517,9 +596,24 @@ async fn root_create_rolls_back_when_the_atomic_job_insert_is_rejected() {
 
 #[tokio::test]
 async fn administrator_can_delete_another_authors_ordinary_root_message() {
-    let app=boot().await;
-    let message=create(&app,JASON,false).await;
-    let id=message.id;
-    assert_eq!(app.david().write(Req::new(Method::DELETE,&format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"))).await.status,StatusCode::NO_CONTENT);
-    assert!(app.db().read(move|conn|Message::find_by_id(conn,id)).await.unwrap().is_none());
+    let app = boot().await;
+    let message = create(&app, JASON, false).await;
+    let id = message.id;
+    assert_eq!(
+        app.david()
+            .write(Req::new(
+                Method::DELETE,
+                &format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream")
+            ))
+            .await
+            .status,
+        StatusCode::NO_CONTENT
+    );
+    assert!(
+        app.db()
+            .read(move |conn| Message::find_by_id(conn, id))
+            .await
+            .unwrap()
+            .is_none()
+    );
 }

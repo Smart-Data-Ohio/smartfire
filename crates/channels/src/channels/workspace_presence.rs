@@ -23,14 +23,21 @@ pub struct WorkspacePresenceChannel {
 
 impl WorkspacePresenceChannel {
     pub fn new(db: Database, admin_session_idle_timeout: SignedDuration) -> Self {
-        Self { db, admin_session_idle_timeout, lease: None }
+        Self {
+            db,
+            admin_session_idle_timeout,
+            lease: None,
+        }
     }
 
     /// `@lease = WorkspacePresenceLease.establish(user: current_user, session: connection.current_session)`,
     /// and `reject unless @lease`.
     async fn establish(&mut self, sub: &mut Subscription<CableUser>) -> ChannelResult {
         let (user_id, session_id) = (sub.current_user().id, sub.current_user().session_id);
-        self.lease = self.db.write(move |tx| WorkspacePresenceLease::establish(tx, user_id, session_id)).await?;
+        self.lease = self
+            .db
+            .write(move |tx| WorkspacePresenceLease::establish(tx, user_id, session_id))
+            .await?;
         if self.lease.is_none() {
             sub.reject();
         }
@@ -38,7 +45,11 @@ impl WorkspacePresenceChannel {
     }
 
     /// `heartbeat(data)`
-    async fn heartbeat(&mut self, data: &Params, sub: &mut Subscription<CableUser>) -> ChannelResult {
+    async fn heartbeat(
+        &mut self,
+        data: &Params,
+        sub: &mut Subscription<CableUser>,
+    ) -> ChannelResult {
         let session_id = sub.current_user().session_id;
         let timeout = self.admin_session_idle_timeout;
         let active = data.get("active") == Some(&serde_json::Value::Bool(true));
@@ -87,7 +98,12 @@ impl Channel<CableUser> for WorkspacePresenceChannel {
     }
 
     /// Its public methods: `subscribed`, `unsubscribed` and `heartbeat`.
-    async fn perform(&mut self, action: &str, data: &Params, sub: &mut Subscription<CableUser>) -> ChannelResult<bool> {
+    async fn perform(
+        &mut self,
+        action: &str,
+        data: &Params,
+        sub: &mut Subscription<CableUser>,
+    ) -> ChannelResult<bool> {
         if sub.rejected() {
             return Ok(false);
         }

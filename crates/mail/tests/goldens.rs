@@ -151,12 +151,30 @@ fn header_injection_is_rejected() {
 
 #[test]
 fn oauth_refresh_reuse_notice_names_owner_and_reconnect_location_and_escapes_html() {
-    let config=Config::from_map(&[("APP_URL".into(),"https://smartfire.example".into())].into()).unwrap();
-    let message=outbound::oauth_refresh_reuse(&config,&User{name:"Owner <script>".into(),email:"owner@example.com".into()});
-    assert_eq!(message.to,"\"Owner <script>\" <owner@example.com>");
-    assert_eq!(message.subject,"Agent connection revoked: refresh token reused");
-    assert!(message.text.contains("All tokens for that connection have stopped working."));
-    assert!(message.text.contains("https://smartfire.example/app/settings/agents"));
+    let config =
+        Config::from_map(&[("APP_URL".into(), "https://smartfire.example".into())].into()).unwrap();
+    let message = outbound::oauth_refresh_reuse(
+        &config,
+        &User {
+            name: "Owner <script>".into(),
+            email: "owner@example.com".into(),
+        },
+    );
+    assert_eq!(message.to, "\"Owner <script>\" <owner@example.com>");
+    assert_eq!(
+        message.subject,
+        "Agent connection revoked: refresh token reused"
+    );
+    assert!(
+        message
+            .text
+            .contains("All tokens for that connection have stopped working.")
+    );
+    assert!(
+        message
+            .text
+            .contains("https://smartfire.example/app/settings/agents")
+    );
     assert!(message.html.contains("Owner &lt;script&gt;"));
     assert!(!message.html.contains("Owner <script>"));
 }

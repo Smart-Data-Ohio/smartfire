@@ -20,7 +20,11 @@ pub struct Served {
 pub enum BodyPart {
     Bytes(Vec<u8>),
     /// Inclusive byte range of `path`.
-    File { path: PathBuf, start: u64, end: u64 },
+    File {
+        path: PathBuf,
+        start: u64,
+        end: u64,
+    },
 }
 
 pub struct Request<'a> {
@@ -30,13 +34,28 @@ pub struct Request<'a> {
 }
 
 /// `serve_file(path, content_type:, disposition:)` as `DiskController#show` calls it.
-pub fn serve_file(request: &Request, path: &Path, content_type: Option<&str>, disposition: Option<&str>) -> Result<Served> {
+pub fn serve_file(
+    request: &Request,
+    path: &Path,
+    content_type: Option<&str>,
+    disposition: Option<&str>,
+) -> Result<Served> {
     let mut served = serving(request, path)?;
     if served.status == 416 {
-        served.headers.retain(|(name, _)| !name.eq_ignore_ascii_case("x-cascade"));
+        served
+            .headers
+            .retain(|(name, _)| !name.eq_ignore_ascii_case("x-cascade"));
     }
-    set_header(&mut served.headers, "content-type", content_type.unwrap_or("application/octet-stream"));
-    set_header(&mut served.headers, "content-disposition", disposition.unwrap_or("attachment"));
+    set_header(
+        &mut served.headers,
+        "content-type",
+        content_type.unwrap_or("application/octet-stream"),
+    );
+    set_header(
+        &mut served.headers,
+        "content-disposition",
+        disposition.unwrap_or("attachment"),
+    );
     Ok(served)
 }
 
@@ -44,23 +63,41 @@ fn serving(request: &Request, path: &Path) -> Result<Served> {
     if request.method == "OPTIONS" {
         return Ok(Served {
             status: 200,
-            headers: vec![("allow".into(), "GET, HEAD, OPTIONS".into()), ("content-length".into(), "0".into())],
+            headers: vec![
+                ("allow".into(), "GET, HEAD, OPTIONS".into()),
+                ("content-length".into(), "0".into()),
+            ],
             body: vec![],
         });
     }
     let metadata = std::fs::metadata(path)?;
     let last_modified = httpdate(metadata.modified()?);
     if request.if_modified_since == Some(last_modified.as_str()) {
-        return Ok(Served { status: 304, headers: vec![], body: vec![] });
+        return Ok(Served {
+            status: 304,
+            headers: vec![],
+            body: vec![],
+        });
     }
 
     // Disk keys have no extension, so Rack's mime lookup falls back to its default.
     let mime_type = "text/plain";
-    let mut headers = vec![("last-modified".to_string(), last_modified), ("content-type".to_string(), mime_type.to_string())];
+    let mut headers = vec![
+        ("last-modified".to_string(), last_modified),
+        ("content-type".to_string(), mime_type.to_string()),
+    ];
     let size = metadata.len();
 
     let (status, body, length) = match byte_ranges(request.range, size) {
-        None => (200, vec![BodyPart::File { path: path.to_path_buf(), start: 0, end: size.saturating_sub(1) }], size),
+        None => (
+            200,
+            vec![BodyPart::File {
+                path: path.to_path_buf(),
+                start: 0,
+                end: size.saturating_sub(1),
+            }],
+            size,
+        ),
         Some(ranges) if ranges.is_empty() => {
             let body = "Byte range unsatisfiable\n";
             return Ok(Served {
@@ -78,18 +115,35 @@ fn serving(request: &Request, path: &Path) -> Result<Served> {
             let mut parts = Vec::new();
             if ranges.len() == 1 {
                 let (start, end) = ranges[0];
-                headers.push(("content-range".into(), format!("bytes {start}-{end}/{size}")));
-                parts.push(BodyPart::File { path: path.to_path_buf(), start, end });
+                headers.push((
+                    "content-range".into(),
+                    format!("bytes {start}-{end}/{size}"),
+                ));
+                parts.push(BodyPart::File {
+                    path: path.to_path_buf(),
+                    start,
+                    end,
+                });
             } else {
-                set_header(&mut headers, "content-type", &format!("multipart/byteranges; boundary={MULTIPART_BOUNDARY}"));
+                set_header(
+                    &mut headers,
+                    "content-type",
+                    &format!("multipart/byteranges; boundary={MULTIPART_BOUNDARY}"),
+                );
                 for &(start, end) in &ranges {
                     let heading = format!(
                         "\r\n--{MULTIPART_BOUNDARY}\r\ncontent-type: {mime_type}\r\ncontent-range: bytes {start}-{end}/{size}\r\n\r\n"
                     );
                     parts.push(BodyPart::Bytes(heading.into_bytes()));
-                    parts.push(BodyPart::File { path: path.to_path_buf(), start, end });
+                    parts.push(BodyPart::File {
+                        path: path.to_path_buf(),
+                        start,
+                        end,
+                    });
                 }
-                parts.push(BodyPart::Bytes(format!("\r\n--{MULTIPART_BOUNDARY}--\r\n").into_bytes()));
+                parts.push(BodyPart::Bytes(
+                    format!("\r\n--{MULTIPART_BOUNDARY}--\r\n").into_bytes(),
+                ));
             }
             let length = parts
                 .iter()
@@ -103,8 +157,16 @@ fn serving(request: &Request, path: &Path) -> Result<Served> {
     };
 
     headers.push(("content-length".into(), length.to_string()));
-    let body = if request.method == "HEAD" || size == 0 { vec![] } else { body };
-    Ok(Served { status, headers, body })
+    let body = if request.method == "HEAD" || size == 0 {
+        vec![]
+    } else {
+        body
+    };
+    Ok(Served {
+        status,
+        headers,
+        body,
+    })
 }
 
 /// `Rack::Utils.get_byte_ranges`: `None` means "serve everything", an empty list means 416.
@@ -152,7 +214,12 @@ pub fn byte_ranges(header: Option<&str>, size: u64) -> Option<Vec<(u64, u64)>> {
     if ranges.iter().map(|(a, b)| b - a + 1).sum::<i128>() > size {
         return Some(vec![]);
     }
-    Some(ranges.into_iter().map(|(a, b)| (a as u64, b as u64)).collect())
+    Some(
+        ranges
+            .into_iter()
+            .map(|(a, b)| (a as u64, b as u64))
+            .collect(),
+    )
 }
 
 /// `/,[ \t]*/`
@@ -191,7 +258,9 @@ fn ruby_to_i(s: &str) -> i128 {
     for (i, c) in digits.char_indices() {
         match c {
             '0'..='9' => {
-                value = value.saturating_mul(10).saturating_add((c as u8 - b'0') as i128);
+                value = value
+                    .saturating_mul(10)
+                    .saturating_add((c as u8 - b'0') as i128);
                 previous_underscore = false;
             }
             '_' if i > 0 && !previous_underscore => previous_underscore = true,
@@ -202,7 +271,10 @@ fn ruby_to_i(s: &str) -> i128 {
 }
 
 fn set_header(headers: &mut Vec<(String, String)>, name: &str, value: &str) {
-    match headers.iter_mut().find(|(n, _)| n.eq_ignore_ascii_case(name)) {
+    match headers
+        .iter_mut()
+        .find(|(n, _)| n.eq_ignore_ascii_case(name))
+    {
         Some(entry) => entry.1 = value.to_string(),
         None => headers.push((name.to_string(), value.to_string())),
     }
@@ -225,7 +297,10 @@ mod tests {
         assert_eq!(byte_ranges(Some("bytes=5-"), 10), Some(vec![(5, 9)]));
         assert_eq!(byte_ranges(Some("bytes=-3"), 10), Some(vec![(7, 9)]));
         assert_eq!(byte_ranges(Some("bytes=-30"), 10), Some(vec![(0, 9)]));
-        assert_eq!(byte_ranges(Some("bytes=0-1, 3-4"), 10), Some(vec![(0, 1), (3, 4)]));
+        assert_eq!(
+            byte_ranges(Some("bytes=0-1, 3-4"), 10),
+            Some(vec![(0, 1), (3, 4)])
+        );
         assert_eq!(byte_ranges(Some("bytes=4-1"), 10), None);
         assert_eq!(byte_ranges(Some("bytes=20-30"), 10), Some(vec![]));
         assert_eq!(byte_ranges(Some("bytes=0-9,0-9"), 10), Some(vec![]));

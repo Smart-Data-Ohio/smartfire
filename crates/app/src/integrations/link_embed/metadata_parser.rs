@@ -20,10 +20,10 @@ pub fn parse(body: &[u8], base: &str) -> Result<Metadata, String> {
     let first = |selectors: &[(&str, &str)]| -> Option<String> {
         for (attribute, name) in selectors {
             // Rails at_xpath selects the first matching tag even when its content is blank.
-            if let Some(meta) = metas
-                .iter()
-                .find(|tag| tag.attr(attribute).is_some_and(|value| value.to_ascii_lowercase() == *name))
-            {
+            if let Some(meta) = metas.iter().find(|tag| {
+                tag.attr(attribute)
+                    .is_some_and(|value| value.to_ascii_lowercase() == *name)
+            }) {
                 let content = strip(meta.attr("content").unwrap_or(""));
                 if !content.chars().all(char::is_whitespace) {
                     return Some(content.to_string());
@@ -98,11 +98,19 @@ fn strip(value: &str) -> &str {
 mod tests {
     #[test]
     fn ws15e_link_metadata_matches_rails() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../../../vectors/ws15e_link_embed.json")).unwrap();
+        let vectors: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../../vectors/ws15e_link_embed.json"))
+                .unwrap();
         for case in vectors["metadata"].as_array().unwrap() {
             assert_eq!(
-                serde_json::to_value(super::parse(case["html"].as_str().unwrap().as_bytes(), case["base"].as_str().unwrap()).unwrap())
-                    .unwrap(),
+                serde_json::to_value(
+                    super::parse(
+                        case["html"].as_str().unwrap().as_bytes(),
+                        case["base"].as_str().unwrap()
+                    )
+                    .unwrap()
+                )
+                .unwrap(),
                 case["expected"],
                 "{case}"
             );

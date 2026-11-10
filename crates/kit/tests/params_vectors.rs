@@ -10,8 +10,17 @@ fn query_strings_parse_like_rails() {
         let input = vector["input"].as_str().unwrap();
         let actual = campfire_kit::parse_nested(input);
         if actual != vector["output"] {
-            failures.push(format!("{input:?}\n  rails: {}\n  ours:  {actual}", vector["output"]));
+            failures.push(format!(
+                "{input:?}\n  rails: {}\n  ours:  {actual}",
+                vector["output"]
+            ));
         }
     }
-    assert!(failures.is_empty(), "{} of {} differ:\n{}", failures.len(), vectors.len(), failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "{} of {} differ:\n{}",
+        failures.len(),
+        vectors.len(),
+        failures.join("\n")
+    );
 }

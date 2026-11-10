@@ -1,17 +1,17 @@
-use campfire_db::models::agent_streaming as domain;
-use campfire_db::models::agent_streaming::StreamTrailingBroadcastJob;
 use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use campfire_db::models::agent_posting::PostResult;
+use campfire_db::models::agent_streaming as domain;
+use campfire_db::models::agent_streaming::StreamTrailingBroadcastJob;
 use campfire_db::{ChannelThread, Event, Message, NewChannelThread, NewMessage, Room};
 use rusqlite::params;
 async fn setup(test: &TestApp) -> (i64, i64) {
     test.db()
         .write(|tx| {
-            let agent: i64 = tx.conn().query_row(
-                "SELECT id FROM agents WHERE user_id=?",
-                [BENDER],
-                |r| r.get(0),
-            )?;
+            let agent: i64 =
+                tx.conn()
+                    .query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| {
+                        r.get(0)
+                    })?;
             tx.conn()
                 .execute("DELETE FROM agent_grants WHERE agent_id=?", [agent])?;
             Room::find(tx.conn(), ALL_TALK)?.grant_to(tx, &[BENDER])?;

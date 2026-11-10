@@ -183,7 +183,10 @@ fn removing_a_membership_resets_the_users_connections() {
                 room_id: id("watercooler"),
                 room_class: "Rooms::Closed".into(),
             }),
-            Event::DisconnectUser { user_id: id("david"), reconnect: true },
+            Event::DisconnectUser {
+                user_id: id("david"),
+                reconnect: true
+            },
         ]
     );
 }
@@ -218,7 +221,11 @@ fn read_clears_unread_and_points_at_the_newest_root_message() {
     let m = t.read(|c| Membership::find(c, membership_id));
     assert!(m.unread());
     let m = run(&t, m, |m, tx| m.read(tx));
-    let newest = t.read(|c| crate::Message::last_page(c, designers)).last().unwrap().id;
+    let newest = t
+        .read(|c| crate::Message::last_page(c, designers))
+        .last()
+        .unwrap()
+        .id;
     let stored = t.read(|c| Membership::find(c, m.id));
     assert!(!stored.unread());
     assert_eq!(stored.last_read_message_id, Some(newest));
@@ -234,13 +241,25 @@ fn latest_root_message_id_skips_thread_messages_and_breaks_ties_by_id() {
     let (root_a, root_b, reply) = t.write(move |tx| {
         let thread_id = super::message_test::create_thread(tx, room_id, id("david"))?;
         let root = |tx: &mut Tx<'_>| {
-            crate::Message::create(tx, crate::NewMessage { room_id, creator_id: id("david"), ..Default::default() })
+            crate::Message::create(
+                tx,
+                crate::NewMessage {
+                    room_id,
+                    creator_id: id("david"),
+                    ..Default::default()
+                },
+            )
         };
         let root_a = root(tx)?;
         let root_b = root(tx)?;
         let reply = crate::Message::create(
             tx,
-            crate::NewMessage { room_id, creator_id: id("david"), thread_id: Some(thread_id), ..Default::default() },
+            crate::NewMessage {
+                room_id,
+                creator_id: id("david"),
+                thread_id: Some(thread_id),
+                ..Default::default()
+            },
         )?;
         Ok((root_a, root_b, reply))
     });
@@ -259,17 +278,31 @@ fn present_moves_the_read_pointer() {
     let m = run(&t, m, |m, tx| m.present(tx));
     let newest = t.read(|c| m.latest_root_message_id(c));
     assert!(newest.is_some());
-    assert_eq!(t.read(|c| Membership::find(c, m.id)).last_read_message_id, newest);
+    assert_eq!(
+        t.read(|c| Membership::find(c, m.id)).last_read_message_id,
+        newest
+    );
 }
 
 /// `enum :involvement` includes `muted`; `stage_role` reads back as its enum.
 #[test]
 fn muted_involvement_and_stage_role_round_trip() {
     let t = TestDb::new();
-    let m = run(&t, membership(&t), |m, tx| m.update_involvement(tx, crate::Involvement::Muted));
+    let m = run(&t, membership(&t), |m, tx| {
+        m.update_involvement(tx, crate::Involvement::Muted)
+    });
     let stored = t.read(|c| Membership::find(c, m.id));
     assert_eq!(stored.involvement, Some(crate::Involvement::Muted));
-    let raw: String = t.read(|c| Ok(c.query_row("SELECT involvement FROM memberships WHERE id = ?", [m.id], |r| r.get(0))?));
+    let raw: String = t.read(|c| {
+        Ok(c.query_row(
+            "SELECT involvement FROM memberships WHERE id = ?",
+            [m.id],
+            |r| r.get(0),
+        )?)
+    });
     assert_eq!(raw, "muted");
-    assert_eq!(stored.stage_role, None, "non-stage rooms leave the stage columns nil");
+    assert_eq!(
+        stored.stage_role, None,
+        "non-stage rooms leave the stage columns nil"
+    );
 }

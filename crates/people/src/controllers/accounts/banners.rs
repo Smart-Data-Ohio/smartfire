@@ -55,20 +55,22 @@ pub(crate) async fn send_image(
     };
     let small = name == "logo" && c.param_str("size") == Some("small");
     let original = animated && !still;
-    if !private && let Some(response) = c.fresh_when(Freshness {
-        etag: Some(format!(
-            "{etag_prefix}-{}-{}-{small}",
-            blob.id,
-            if original {
-                "original"
-            } else if still {
-                "still"
-            } else {
-                "variant"
-            }
-        )),
-        ..Freshness::default()
-    }) {
+    if !private
+        && let Some(response) = c.fresh_when(Freshness {
+            etag: Some(format!(
+                "{etag_prefix}-{}-{}-{small}",
+                blob.id,
+                if original {
+                    "original"
+                } else if still {
+                    "still"
+                } else {
+                    "variant"
+                }
+            )),
+            ..Freshness::default()
+        })
+    {
         return Ok(response);
     }
     c.expires_in(
@@ -135,10 +137,15 @@ pub(crate) async fn send_image(
             Err(_) => return Err(Error::NotFound),
         }
     };
-    let response = c.send_file(
-        c.app().storage.service.path_for(&image.key),
-        SendOptions::inline(image.content_type()),
-    )
-    .map_err(|_| Error::NotFound)?;
-    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
+    let response = c
+        .send_file(
+            c.app().storage.service.path_for(&image.key),
+            SendOptions::inline(image.content_type()),
+        )
+        .map_err(|_| Error::NotFound)?;
+    Ok(if private {
+        response.header("cache-control", "private, no-store")
+    } else {
+        response
+    })
 }

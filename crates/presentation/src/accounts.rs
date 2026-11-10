@@ -1,6 +1,6 @@
+pub mod audit_logs;
 pub mod bot_access;
 pub mod icons;
-pub mod audit_logs;
 
 use crate::helpers::{self as h};
 use crate::users::UserSummary;
@@ -67,8 +67,7 @@ pub struct BotGithubAccount {
     pub login: String,
     pub disconnected_reason: Option<String>,
 }
-impl BotAgentForm {
-}
+impl BotAgentForm {}
 
 impl Bot {
     /// "Workspace agent · Owned by Grace", as the list reads under the bot's name.

@@ -173,7 +173,11 @@ async fn ported_pages_send_everyone_to_the_spa() {
         ] {
             let reply = b.get(&classic).await;
             assert_eq!(reply.status, StatusCode::FOUND, "{user} {classic}");
-            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{user} {classic}");
+            assert_eq!(
+                reply.location(),
+                Some(to(&spa).as_str()),
+                "{user} {classic}"
+            );
         }
         let head = b
             .send(Req::new(Method::HEAD, &format!("/rooms/{room}")))
@@ -223,7 +227,10 @@ async fn a_classic_query_no_longer_keeps_the_classic_page() {
             format!("/app/r/{room}/m/{}", posted.id),
         ),
         ("/users/me/profile".to_string(), "/app/settings".to_string()),
-        ("/work?state=agents".to_string(), "/app/work?state=agents".to_string()),
+        (
+            "/work?state=agents".to_string(),
+            "/app/work?state=agents".to_string(),
+        ),
     ] {
         for path in with_classic(&classic).into_iter().chain([format!(
             "{classic}{}classic=0",
@@ -269,7 +276,12 @@ async fn the_ui_switch_is_gone() {
     );
 
     let profile = b.classic_page("/users/me/profile").await;
-    assert_eq!(profile.status, StatusCode::FOUND, "{:?}", profile.location());
+    assert_eq!(
+        profile.status,
+        StatusCode::FOUND,
+        "{:?}",
+        profile.location()
+    );
     let profile = profile.text();
     for gone in [
         r#"id="next_ui""#,
@@ -296,11 +308,18 @@ async fn spa_enabled_0_and_spa_default_classic_still_send_everyone_to_the_spa() 
         for (classic, spa) in [
             ("/".to_string(), "/app/".to_string()),
             (format!("/rooms/{room}"), format!("/app/r/{room}")),
-            ("/users/me/profile/edit".to_string(), "/app/settings".to_string()),
+            (
+                "/users/me/profile/edit".to_string(),
+                "/app/settings".to_string(),
+            ),
         ] {
             let reply = b.get(&classic).await;
             assert_eq!(reply.status, StatusCode::FOUND, "{user} {classic}");
-            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{user} {classic}");
+            assert_eq!(
+                reply.location(),
+                Some(to(&spa).as_str()),
+                "{user} {classic}"
+            );
         }
         let shell = b.get("/app/").await;
         assert_eq!(shell.status, StatusCode::OK, "{user}");
@@ -391,7 +410,11 @@ async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
         let bypass = david.get(&format!("{classic}?classic=1")).await;
         assert_eq!(bypass.status, StatusCode::FOUND, "{classic}?classic=1");
-        assert_eq!(bypass.location(), Some(to(&spa).as_str()), "{classic}?classic=1");
+        assert_eq!(
+            bypass.location(),
+            Some(to(&spa).as_str()),
+            "{classic}?classic=1"
+        );
     }
     let filter = "status=blocked&owner=me&tag=Release&page=2";
     let reply = david.get(&format!("/rooms/{BOARD}?{filter}")).await;
@@ -491,7 +514,13 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
             assert!(!reply.text().contains(SECRET), "{path}");
         }
         let fetched = david.classic_page(&classic).await;
-        let expected = if classic.contains("/threads") || classic.ends_with("/files") || classic.ends_with("/pins") || classic.ends_with("/involvement") || classic.contains("/boosts") || classic.starts_with("/rooms/") {
+        let expected = if classic.contains("/threads")
+            || classic.ends_with("/files")
+            || classic.ends_with("/pins")
+            || classic.ends_with("/involvement")
+            || classic.contains("/boosts")
+            || classic.starts_with("/rooms/")
+        {
             StatusCode::NOT_FOUND
         } else {
             StatusCode::FOUND
@@ -510,10 +539,7 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
         let reply = david.get(&path).await;
         assert_eq!(
             reply.location(),
-            Some(
-                to(&format!("/app/r/{DIRECT_KEVIN_BENDER}"))
-                .as_str()
-            ),
+            Some(to(&format!("/app/r/{DIRECT_KEVIN_BENDER}")).as_str()),
             "{path}"
         );
         assert!(!reply.text().contains(SECRET), "{path}");
@@ -552,28 +578,51 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
 
 #[tokio::test]
 async fn retired_html_shapes_redirect_and_machine_formats_remain_separate() {
-    let a=enabled().await.expect("seed required");
-    let room=room(&a).await;
-    let path=format!("/rooms/{room}");
-    for header in [("turbo-frame","messages"),("x-requested-with","XMLHttpRequest"),("sec-fetch-mode","cors")] {
-        let reply=a.david().send(Req::new(Method::GET,&path).header("accept","text/html").header(header.0,header.1)).await;
-        assert_eq!(reply.status,StatusCode::FOUND);
-        assert_eq!(reply.location(),Some(to(&format!("/app/r/{room}")).as_str()));
+    let a = enabled().await.expect("seed required");
+    let room = room(&a).await;
+    let path = format!("/rooms/{room}");
+    for header in [
+        ("turbo-frame", "messages"),
+        ("x-requested-with", "XMLHttpRequest"),
+        ("sec-fetch-mode", "cors"),
+    ] {
+        let reply = a
+            .david()
+            .send(
+                Req::new(Method::GET, &path)
+                    .header("accept", "text/html")
+                    .header(header.0, header.1),
+            )
+            .await;
+        assert_eq!(reply.status, StatusCode::FOUND);
+        assert_eq!(
+            reply.location(),
+            Some(to(&format!("/app/r/{room}")).as_str())
+        );
     }
-    let reply=a.david().send(Req::new(Method::GET,&format!("{path}.json"))).await;
-    assert_eq!(reply.status,StatusCode::NOT_ACCEPTABLE);
-    assert_eq!(a.anonymous().get(&path).await.location(),Some(to("/app/session/new").as_str()));
+    let reply = a
+        .david()
+        .send(Req::new(Method::GET, &format!("{path}.json")))
+        .await;
+    assert_eq!(reply.status, StatusCode::NOT_ACCEPTABLE);
+    assert_eq!(
+        a.anonymous().get(&path).await.location(),
+        Some(to("/app/session/new").as_str())
+    );
 }
-
 
 #[tokio::test]
 async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
     let Some(a) = enabled().await else { return };
-    let bot = a.db().write(|tx| {
-        let bot = campfire_db::User::create_bot(tx, "Legacy Bot", None)?;
-        assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
-        Ok(bot.id)
-    }).await.unwrap();
+    let bot = a
+        .db()
+        .write(|tx| {
+            let bot = campfire_db::User::create_bot(tx, "Legacy Bot", None)?;
+            assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
+            Ok(bot.id)
+        })
+        .await
+        .unwrap();
     let mut b = a.sign_in(DAVID).await;
     for (id, destination) in [
         (DAVID, "/app/settings".to_string()),
@@ -584,20 +633,38 @@ async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
             let path = format!("/users/{id}{suffix}?source=profile");
             let reply = b.get(&path).await;
             assert_eq!(reply.status, StatusCode::FOUND, "{path}: {}", reply.text());
-            assert_eq!(reply.location(), Some(to(&format!("{destination}?source=profile")).as_str()), "{path}");
+            assert_eq!(
+                reply.location(),
+                Some(to(&format!("{destination}?source=profile")).as_str()),
+                "{path}"
+            );
         }
     }
-    assert_eq!(b.get("/users/me/profile/edit").await.location(), Some(to("/app/settings").as_str()));
+    assert_eq!(
+        b.get("/users/me/profile/edit").await.location(),
+        Some(to("/app/settings").as_str())
+    );
     // `?classic=1` no longer keeps the classic answer (the edit alias's 404, the bot's page).
-    assert_eq!(b.get("/users/me/profile/edit?classic=1").await.location(), Some(to("/app/settings").as_str()));
-    assert_eq!(b.get(&format!("/users/{bot}?classic=1")).await.location(), Some(to(&format!("/app/people/{bot}")).as_str()));
+    assert_eq!(
+        b.get("/users/me/profile/edit?classic=1").await.location(),
+        Some(to("/app/settings").as_str())
+    );
+    assert_eq!(
+        b.get(&format!("/users/{bot}?classic=1")).await.location(),
+        Some(to(&format!("/app/people/{bot}")).as_str())
+    );
 }
 
 async fn profile_edit_is_not_found(browser: &mut Browser<'_>, query: &str) {
     for user in ["me".to_string(), DAVID.to_string(), JASON.to_string()] {
         let path = format!("/users/{user}/profile/edit{query}");
         let reply = browser.get(&path).await;
-        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}: {}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::NOT_FOUND,
+            "{path}: {}",
+            reply.text()
+        );
         assert_eq!(reply.location(), None, "{path}");
     }
 }
@@ -646,17 +713,21 @@ async fn save_profile(b: &mut Browser<'_>) {
 
 /// The shell's boot JSON in a page.
 fn boot_json(page: &str) -> serde_json::Value {
-    let pattern = regex::Regex::new(
-        r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#,
-    )
-    .unwrap();
+    let pattern =
+        regex::Regex::new(r#"(?s)<script type="application/json" id="boot"[^>]*>(.*?)</script>"#)
+            .unwrap();
     serde_json::from_str(&pattern.captures(page).expect("the shell's boot JSON")[1]).unwrap()
 }
 
 /// The SPA shell at `spa` shows the profile notice in its boot JSON, then not on the next load.
 async fn assert_shell_flash(b: &mut Browser<'_>, spa: &str) {
     let shell = b.get(spa).await;
-    assert_eq!(shell.status, StatusCode::OK, "{spa}: {:?}", shell.location());
+    assert_eq!(
+        shell.status,
+        StatusCode::OK,
+        "{spa}: {:?}",
+        shell.location()
+    );
     assert_eq!(
         boot_json(&shell.text())["flash"],
         serde_json::json!({"kind": "notice", "message": "✓"}),
@@ -664,20 +735,28 @@ async fn assert_shell_flash(b: &mut Browser<'_>, spa: &str) {
     );
     let again = b.get(spa).await;
     assert_eq!(again.status, StatusCode::OK, "{spa}");
-    assert!(boot_json(&again.text())["flash"].is_null(), "{spa} showed the notice once");
+    assert!(
+        boot_json(&again.text())["flash"].is_null(),
+        "{spa} showed the notice once"
+    );
 }
 
 #[tokio::test]
 async fn legacy_fetches_and_heads_open_the_same_spa_alias() {
-    let a=enabled().await.expect("seed required");
-    let room=room(&a).await;
-    for method in [Method::GET,Method::HEAD] {
-        let reply=a.david().send(Req::new(method,&format!("/rooms/{room}")).header("accept","*/*")).await;
-        assert_eq!(reply.status,StatusCode::FOUND);
-        assert_eq!(reply.location(),Some(to(&format!("/app/r/{room}")).as_str()));
+    let a = enabled().await.expect("seed required");
+    let room = room(&a).await;
+    for method in [Method::GET, Method::HEAD] {
+        let reply = a
+            .david()
+            .send(Req::new(method, &format!("/rooms/{room}")).header("accept", "*/*"))
+            .await;
+        assert_eq!(reply.status, StatusCode::FOUND);
+        assert_eq!(
+            reply.location(),
+            Some(to(&format!("/app/r/{room}")).as_str())
+        );
     }
 }
-
 
 /// Only a browser session is redirected: a bot key or an agent token reading a ported page, and
 /// any `POST` to one, get what they always got.
@@ -774,7 +853,10 @@ async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
 
     // The classic form's save runs as before and answers with the classic redirect, once sudo
     // is confirmed (its gate is the SPA's page now).
-    assert_eq!(david.confirm_sudo("secret123456").await.status, StatusCode::OK);
+    assert_eq!(
+        david.confirm_sudo("secret123456").await.status,
+        StatusCode::OK
+    );
     let save = david
         .write(
             Req::new(Method::PATCH, "/account/custom_styles")
@@ -894,10 +976,7 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
         .await;
     assert_eq!(
         cross_message.location(),
-        Some(
-            to(&format!("/app/r/{WATERCOOLER}"))
-            .as_str()
-        )
+        Some(to(&format!("/app/r/{WATERCOOLER}")).as_str())
     );
     let mut kevin = a.sign_in(KEVIN).await;
     let inaccessible = kevin
@@ -1029,8 +1108,8 @@ async fn settings_and_profile_aliases_stay_classic_for_xhr_and_turbo_frames_but_
         let profile_reply = b
             .send(Req::new(Method::GET, &profile).header(name, value))
             .await;
-        assert_eq!(profile_reply.status,StatusCode::FOUND);
-        assert_eq!(profile_reply.location(),Some(to("/app/settings").as_str()));
+        assert_eq!(profile_reply.status, StatusCode::FOUND);
+        assert_eq!(profile_reply.location(), Some(to("/app/settings").as_str()));
     }
 
     save_profile(&mut b).await;
@@ -1041,7 +1120,10 @@ async fn settings_and_profile_aliases_stay_classic_for_xhr_and_turbo_frames_but_
 
     save_profile(&mut b).await;
     let flashed_profile = b.get(&profile).await;
-    assert_eq!(flashed_profile.location(), Some(to("/app/settings").as_str()));
+    assert_eq!(
+        flashed_profile.location(),
+        Some(to("/app/settings").as_str())
+    );
     assert_shell_flash(&mut b, "/app/settings").await;
 }
 
@@ -1054,9 +1136,18 @@ fn navigation_aliases(thread_room: i64, thread: i64) -> [(String, String); 9] {
         // The sidebar's New message picker.
         ("/rooms/directs/new".into(), "/app/rooms/new/direct".into()),
         // The conversation, whose header has "Add people" and "Rename conversation".
-        (format!("/rooms/directs/{direct}/edit"), format!("/app/r/{direct}")),
-        (format!("/rooms/{direct}/settings"), format!("/app/r/{direct}")),
-        (format!("/users/{JASON}/card"), format!("/app/people/{JASON}")),
+        (
+            format!("/rooms/directs/{direct}/edit"),
+            format!("/app/r/{direct}"),
+        ),
+        (
+            format!("/rooms/{direct}/settings"),
+            format!("/app/r/{direct}"),
+        ),
+        (
+            format!("/users/{JASON}/card"),
+            format!("/app/people/{JASON}"),
+        ),
         (format!("/users/{DAVID}/card"), "/app/settings".into()),
         (
             format!("/rooms/{thread_room}/threads/{thread}/content"),
@@ -1067,7 +1158,10 @@ fn navigation_aliases(thread_room: i64, thread: i64) -> [(String, String); 9] {
             format!("/app/r/{thread_room}/t/{thread}"),
         ),
         ("/account/users".into(), "/app/admin/people".into()),
-        ("/account/users?page=2".into(), "/app/admin/people?page=2".into()),
+        (
+            "/account/users?page=2".into(),
+            "/app/admin/people?page=2".into(),
+        ),
     ]
 }
 
@@ -1081,7 +1175,11 @@ async fn direct_message_card_thread_and_people_list_pages_open_their_spa_state()
         assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
         assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
         for path in with_classic(&classic) {
-            assert_eq!(b.get(&path).await.location(), Some(to(&spa).as_str()), "{path}");
+            assert_eq!(
+                b.get(&path).await.location(),
+                Some(to(&spa).as_str()),
+                "{path}"
+            );
         }
         let navigated = b
             .send(
@@ -1091,7 +1189,11 @@ async fn direct_message_card_thread_and_people_list_pages_open_their_spa_state()
                     .header("sec-fetch-dest", "document"),
             )
             .await;
-        assert_eq!(navigated.location(), Some(to(&spa).as_str()), "navigate {classic}");
+        assert_eq!(
+            navigated.location(),
+            Some(to(&spa).as_str()),
+            "navigate {classic}"
+        );
         // The SPA's service worker forwards a navigation with `fetch(request)`: still
         // `Sec-Fetch-Mode: navigate`, but `Sec-Fetch-Dest: empty`.
         for accept in ["*/*", "text/html,application/xhtml+xml"] {
@@ -1103,7 +1205,11 @@ async fn direct_message_card_thread_and_people_list_pages_open_their_spa_state()
                         .header("sec-fetch-dest", "empty"),
                 )
                 .await;
-            assert_eq!(forwarded.status, StatusCode::FOUND, "worker {accept} {classic}");
+            assert_eq!(
+                forwarded.status,
+                StatusCode::FOUND,
+                "worker {accept} {classic}"
+            );
             assert_eq!(
                 forwarded.location(),
                 Some(to(&spa).as_str()),
@@ -1125,7 +1231,10 @@ async fn the_thread_content_reply_anchor_becomes_the_spa_m() {
     let base = format!("/rooms/{room}/threads/{thread}/content");
     for (query, spa) in [
         ("?message_id=123", format!("/app/r/{room}/t/{thread}?m=123")),
-        ("?message_id=123&classic=1", format!("/app/r/{room}/t/{thread}?m=123")),
+        (
+            "?message_id=123&classic=1",
+            format!("/app/r/{room}/t/{thread}?m=123"),
+        ),
         ("?message_id=latest", format!("/app/r/{room}/t/{thread}")),
     ] {
         let reply = b.get(&format!("{base}{query}")).await;
@@ -1135,16 +1244,26 @@ async fn the_thread_content_reply_anchor_becomes_the_spa_m() {
 
 #[tokio::test]
 async fn fragment_aliases_keep_old_urls_for_frames_and_fetches() {
-    let a=enabled().await.expect("seed required");
-    for (classic,spa) in navigation_aliases(DESIGNERS_ROOM,LAUNCH_THREAD) {
-        for (header,value) in [("turbo-frame","alias"),("x-requested-with","XMLHttpRequest"),("sec-fetch-mode","cors")] {
-            let reply=a.david().send(Req::new(Method::GET,&classic).header("accept","text/html").header(header,value)).await;
-            assert_eq!(reply.status,StatusCode::FOUND,"{classic}");
-            assert_eq!(reply.location(),Some(to(&spa).as_str()),"{classic}");
+    let a = enabled().await.expect("seed required");
+    for (classic, spa) in navigation_aliases(DESIGNERS_ROOM, LAUNCH_THREAD) {
+        for (header, value) in [
+            ("turbo-frame", "alias"),
+            ("x-requested-with", "XMLHttpRequest"),
+            ("sec-fetch-mode", "cors"),
+        ] {
+            let reply = a
+                .david()
+                .send(
+                    Req::new(Method::GET, &classic)
+                        .header("accept", "text/html")
+                        .header(header, value),
+                )
+                .await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
         }
     }
 }
-
 
 #[tokio::test]
 async fn html_suffixes_and_trailing_slashes_resolve_the_same_navigation_alias() {
@@ -1241,9 +1360,17 @@ async fn production_config_serves_the_spa_with_spa_enabled_absent_or_off() {
         assert_eq!(shell.status, StatusCode::OK, "{env:?}");
         assert!(shell.text().contains(SPA_BOOT), "{env:?}");
         let reply = b.get(&format!("/rooms/{WATERCOOLER}")).await;
-        assert_eq!(reply.location(), Some(to(&format!("/app/r/{WATERCOOLER}")).as_str()), "{env:?}");
+        assert_eq!(
+            reply.location(),
+            Some(to(&format!("/app/r/{WATERCOOLER}")).as_str()),
+            "{env:?}"
+        );
         let reply = b.get("/users/me/profile").await;
-        assert_eq!(reply.location(), Some(to("/app/settings").as_str()), "{env:?}");
+        assert_eq!(
+            reply.location(),
+            Some(to("/app/settings").as_str()),
+            "{env:?}"
+        );
     }
 }
 

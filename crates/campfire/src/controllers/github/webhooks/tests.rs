@@ -6,10 +6,7 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use tower::ServiceExt;
 
-use crate::{
-    app::App,
-    config::Config,
-};
+use crate::{app::App, config::Config};
 
 struct Fresh {
     app: App,
@@ -19,8 +16,7 @@ struct Fresh {
 
 impl Fresh {
     async fn new(secret: Option<&str>) -> Self {
-        let scratch =
-            std::env::temp_dir().join("github-webhooks");
+        let scratch = std::env::temp_dir().join("github-webhooks");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
         let config = Config::from_lookup(|name| match name {
@@ -33,7 +29,9 @@ impl Fresh {
         .unwrap();
         // The classic pages, until they're deleted.
         let booted = crate::server::boot(config).await.unwrap();
-        let crate::server::Booted { app, router, jobs, .. } = booted;
+        let crate::server::Booted {
+            app, router, jobs, ..
+        } = booted;
         jobs.shutdown(std::time::Duration::from_secs(1)).await;
         Self {
             app,

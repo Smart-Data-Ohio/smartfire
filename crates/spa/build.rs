@@ -29,7 +29,9 @@ fn main() {
     // mtimes than the last build's, so it passes a digest of the dist's contents as well.
     println!("cargo:rerun-if-env-changed=SPA_DIST_DIGEST");
 
-    let explicit = env::var_os("SPA_DIST").filter(|dist| !dist.is_empty()).map(PathBuf::from);
+    let explicit = env::var_os("SPA_DIST")
+        .filter(|dist| !dist.is_empty())
+        .map(PathBuf::from);
     let dist = match &explicit {
         Some(dist) => workspace.join(dist),
         None => workspace.join("frontend/dist"),
@@ -40,7 +42,10 @@ fn main() {
         println!("cargo:rerun-if-changed={}", dist.display());
         embed_dist(&dist, &out_dir)
     } else if let Some(explicit) = explicit {
-        panic!("SPA_DIST={} has no index.html (run `pnpm build` in frontend/)", explicit.display());
+        panic!(
+            "SPA_DIST={} has no index.html (run `pnpm build` in frontend/)",
+            explicit.display()
+        );
     } else {
         stub(&crate_dir)
     };
@@ -65,11 +70,19 @@ fn embed_dist(dist: &Path, out_dir: &Path) -> String {
 
     let mut code = String::new();
     code.push_str("pub(crate) const BUILT: bool = true;\n");
-    writeln!(code, "pub(crate) static INDEX_HTML: &str = include_str!({:?});", index.display().to_string()).unwrap();
+    writeln!(
+        code,
+        "pub(crate) static INDEX_HTML: &str = include_str!({:?});",
+        index.display().to_string()
+    )
+    .unwrap();
     code.push_str("pub(crate) static FILES: &[crate::File] = &[\n");
     for entry in &entries {
         let bytes = fs::read(&entry.source).unwrap();
-        let encoding = |vite: &Option<PathBuf>, extension: &str, encode: fn(&[u8]) -> Vec<u8>| -> Option<PathBuf> {
+        let encoding = |vite: &Option<PathBuf>,
+                        extension: &str,
+                        encode: fn(&[u8]) -> Vec<u8>|
+         -> Option<PathBuf> {
             if let Some(vite) = vite {
                 return Some(vite.clone());
             }

@@ -56,7 +56,13 @@ pub struct Validation<'a> {
 
 impl Default for Validation<'_> {
     fn default() -> Self {
-        Self { verify_expiration: true, verify_not_before: true, leeway: 0, issuer: None, required_claims: &[] }
+        Self {
+            verify_expiration: true,
+            verify_not_before: true,
+            leeway: 0,
+            issuer: None,
+            required_claims: &[],
+        }
     }
 }
 
@@ -80,7 +86,9 @@ impl Key<'_> {
         match self {
             // JWA::Hmac#verify: the key must be a non-empty string.
             Key::Hs256([]) => Err(JwtError::Malformed),
-            Key::Hs256(key) => bool::from(signature.ct_eq(&hs256(key, signing_input))).then_some(()).ok_or(JwtError::Signature),
+            Key::Hs256(key) => bool::from(signature.ct_eq(&hs256(key, signing_input)))
+                .then_some(())
+                .ok_or(JwtError::Signature),
             Key::Rs256(key) => key.verify(signing_input, signature),
         }
     }
@@ -100,8 +108,16 @@ pub struct RsaPublicKey {
 impl RsaPublicKey {
     /// `None` if either component is zero.
     pub fn from_components(n: &[u8], e: &[u8]) -> Option<Self> {
-        let strip = |bytes: &[u8]| bytes.iter().position(|&b| b != 0).map(|start| bytes[start..].to_vec());
-        Some(Self { n: strip(n)?, e: strip(e)? })
+        let strip = |bytes: &[u8]| {
+            bytes
+                .iter()
+                .position(|&b| b != 0)
+                .map(|start| bytes[start..].to_vec())
+        };
+        Some(Self {
+            n: strip(n)?,
+            e: strip(e)?,
+        })
     }
 
     /// The modulus, big-endian without leading zeros.
@@ -110,9 +126,16 @@ impl RsaPublicKey {
     }
 
     fn verify(&self, message: &[u8], signature: &[u8]) -> Result<(), JwtError> {
-        ring::signature::RsaPublicKeyComponents { n: &self.n, e: &self.e }
-            .verify(&ring::signature::RSA_PKCS1_2048_8192_SHA256, message, signature)
-            .map_err(|_| JwtError::Signature)
+        ring::signature::RsaPublicKeyComponents {
+            n: &self.n,
+            e: &self.e,
+        }
+        .verify(
+            &ring::signature::RSA_PKCS1_2048_8192_SHA256,
+            message,
+            signature,
+        )
+        .map_err(|_| JwtError::Signature)
     }
 }
 
@@ -129,10 +152,15 @@ pub fn encode_hs256(payload: &Map<String, Value>, key: &[u8]) -> String {
     let signing_input = format!(
         "{}.{}",
         encoding::urlsafe_encode_unpadded(header.as_bytes()),
-        encoding::urlsafe_encode_unpadded(json::generate(&Value::Object(payload.clone())).as_bytes())
+        encoding::urlsafe_encode_unpadded(
+            json::generate(&Value::Object(payload.clone())).as_bytes()
+        )
     );
     let signature = hs256(key, signing_input.as_bytes());
-    format!("{signing_input}.{}", encoding::urlsafe_encode_unpadded(&signature))
+    format!(
+        "{signing_input}.{}",
+        encoding::urlsafe_encode_unpadded(&signature)
+    )
 }
 
 /// The segments as `EncodedToken` splits them (`jwt.split('.')`, trailing empty ones dropped).
@@ -172,8 +200,15 @@ impl<'a> Segments<'a> {
             return Err(JwtError::Malformed);
         }
         if header.get("b64") == Some(&Value::Bool(false)) {
-            let crit_has_b64 = header.get("crit").and_then(Value::as_array).is_some_and(|crit| crit.iter().any(|c| c == "b64"));
-            return if crit_has_b64 { parse(payload.as_bytes()) } else { Err(JwtError::Malformed) };
+            let crit_has_b64 = header
+                .get("crit")
+                .and_then(Value::as_array)
+                .is_some_and(|crit| crit.iter().any(|c| c == "b64"));
+            return if crit_has_b64 {
+                parse(payload.as_bytes())
+            } else {
+                Err(JwtError::Malformed)
+            };
         }
         parse(&decode_segment(payload)?)
     }
@@ -188,18 +223,28 @@ fn parse(bytes: &[u8]) -> Result<Value, JwtError> {
 }
 
 /// `JWT.decode(token, key, true, algorithm:, **validation)` at `now` (unix seconds).
-pub fn decode(token: &str, key: Key<'_>, validation: &Validation<'_>, now: i64) -> Result<Decoded, JwtError> {
+pub fn decode(
+    token: &str,
+    key: Key<'_>,
+    validation: &Validation<'_>,
+    now: i64,
+) -> Result<Decoded, JwtError> {
     let segments = Segments::split(token, true)?;
 
     // verify_algo
-    let Value::Object(header) = segments.header()? else { return Err(JwtError::Malformed) };
+    let Value::Object(header) = segments.header()? else {
+        return Err(JwtError::Malformed);
+    };
     match header.get("alg") {
         Some(Value::String(alg)) if alg.eq_ignore_ascii_case(key.algorithm()) => {}
         _ => return Err(JwtError::IncorrectAlgorithm),
     }
 
     // verify_signature
-    key.verify(segments.signing_input().as_bytes(), &decode_segment(segments.signature)?)?;
+    key.verify(
+        segments.signing_input().as_bytes(),
+        &decode_segment(segments.signature)?,
+    )?;
 
     // Claims::DecodeVerifier
     let payload = segments.payload(&header)?;
@@ -235,7 +280,11 @@ fn verify_claims(payload: &Value, validation: &Validation<'_>, now: i64) -> Resu
     if let Some(issuer) = validation.issuer {
         // `payload['iss']` raises on an array or number payload; a string payload has no `iss`.
         if !matches!(claim("iss"), Some(Value::String(iss)) if iss == issuer) {
-            return Err(if payload.is_array() || payload.is_number() { JwtError::Malformed } else { JwtError::InvalidIssuer });
+            return Err(if payload.is_array() || payload.is_number() {
+                JwtError::Malformed
+            } else {
+                JwtError::InvalidIssuer
+            });
         }
     }
     for required in validation.required_claims {
@@ -261,22 +310,49 @@ mod tests {
         let decoded = decode(&token, Key::Hs256(b"secret"), &Validation::default(), 100).unwrap();
         assert_eq!(decoded.payload["sub"], "x");
 
-        assert_eq!(decode(&token, Key::Hs256(b"other"), &Validation::default(), 100), Err(JwtError::Signature));
-        assert_eq!(decode(&token, Key::Hs256(b""), &Validation::default(), 100), Err(JwtError::Malformed));
-        assert_eq!(decode(&token, Key::Hs256(b"secret"), &Validation::default(), 200), Err(JwtError::Expired));
+        assert_eq!(
+            decode(&token, Key::Hs256(b"other"), &Validation::default(), 100),
+            Err(JwtError::Signature)
+        );
+        assert_eq!(
+            decode(&token, Key::Hs256(b""), &Validation::default(), 100),
+            Err(JwtError::Malformed)
+        );
+        assert_eq!(
+            decode(&token, Key::Hs256(b"secret"), &Validation::default(), 200),
+            Err(JwtError::Expired)
+        );
         let mut tampered = token.clone().into_bytes();
         let middle = token.find('.').unwrap() + 2;
         tampered[middle] = if tampered[middle] == b'A' { b'B' } else { b'A' };
-        assert!(decode(std::str::from_utf8(&tampered).unwrap(), Key::Hs256(b"secret"), &Validation::default(), 100).is_err());
+        assert!(
+            decode(
+                std::str::from_utf8(&tampered).unwrap(),
+                Key::Hs256(b"secret"),
+                &Validation::default(),
+                100
+            )
+            .is_err()
+        );
     }
 
     #[test]
     fn the_algorithm_is_pinned_by_the_key() {
         let token = encode_hs256(&payload(json!({"sub": "x"})), b"secret");
         let key = RsaPublicKey::from_components(&[0xc5; 256], &[1, 0, 1]).unwrap();
-        assert_eq!(decode(&token, Key::Rs256(&key), &Validation::default(), 0), Err(JwtError::IncorrectAlgorithm));
+        assert_eq!(
+            decode(&token, Key::Rs256(&key), &Validation::default(), 0),
+            Err(JwtError::IncorrectAlgorithm)
+        );
 
-        let none = format!("{}.{}.", encoding::urlsafe_encode_unpadded(br#"{"alg":"none"}"#), encoding::urlsafe_encode_unpadded(br#"{"sub":"x"}"#));
-        assert_eq!(decode(&none, Key::Hs256(b"secret"), &Validation::default(), 0), Err(JwtError::IncorrectAlgorithm));
+        let none = format!(
+            "{}.{}.",
+            encoding::urlsafe_encode_unpadded(br#"{"alg":"none"}"#),
+            encoding::urlsafe_encode_unpadded(br#"{"sub":"x"}"#)
+        );
+        assert_eq!(
+            decode(&none, Key::Hs256(b"secret"), &Validation::default(), 0),
+            Err(JwtError::IncorrectAlgorithm)
+        );
     }
 }

@@ -2,8 +2,16 @@
 //! `load_defaults 8.2`, minus the types removed in `reference/config/initializers/vips.rb`).
 
 /// `variable_content_types` (bmp, ico and psd removed by config/initializers/vips.rb).
-pub const VARIABLE: &[&str] =
-    &["image/png", "image/gif", "image/jpeg", "image/tiff", "image/webp", "image/avif", "image/heic", "image/heif"];
+pub const VARIABLE: &[&str] = &[
+    "image/png",
+    "image/gif",
+    "image/jpeg",
+    "image/tiff",
+    "image/webp",
+    "image/avif",
+    "image/heic",
+    "image/heif",
+];
 
 /// `web_image_content_types` (webp added by `load_defaults 7.2`).
 pub const WEB_IMAGE: &[&str] = &["image/png", "image/jpeg", "image/gif", "image/webp"];
@@ -63,7 +71,11 @@ pub fn serve_as_binary(content_type: &str) -> bool {
 
 /// `content_type_for_serving`.
 pub fn for_serving(content_type: &str) -> &str {
-    if serve_as_binary(content_type) { BINARY_CONTENT_TYPE } else { content_type }
+    if serve_as_binary(content_type) {
+        BINARY_CONTENT_TYPE
+    } else {
+        content_type
+    }
 }
 
 /// `forced_disposition_for_serving`: `Some("attachment")` for binary or non-inline types.

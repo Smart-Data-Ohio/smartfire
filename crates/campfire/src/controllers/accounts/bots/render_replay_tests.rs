@@ -1,9 +1,7 @@
 //! PR196 R4 boundaries, captured from pinned Rails by render_replay.sh.
 use super::input_casts;
+use crate::controllers::presenters::test_support::{BENDER, DAVID, Req, TestApp};
 use crate::server::json_params;
-use crate::controllers::presenters::test_support::{
-    BENDER, DAVID, Req, TestApp,
-};
 use campfire_db::Timestamp;
 use campfire_kit::{Method, Param};
 use campfire_presentation::time::Zone;
@@ -11,9 +9,8 @@ use serde_json::{Value, json};
 
 fn inputs() -> Value {
     use std::io::Read;
-    let bytes = include_bytes!(
-        "../../../../../../test-support/agents_ui/render_replay_inputs.json.gz"
-    );
+    let bytes =
+        include_bytes!("../../../../../../test-support/agents_ui/render_replay_inputs.json.gz");
     let mut text = String::new();
     flate2::read::GzDecoder::new(&bytes[..])
         .read_to_string(&mut text)
@@ -263,12 +260,9 @@ async fn pr196_r4_overridden_routes_match_rails_and_keep_create_parser_scoped() 
                     .body("{\"access_token\":\"\"}"),
             )
             .await;
-        let selected = json_params::scoped_json_body_params(
-            &effective,
-            &path,
-            b"{\"access_token\":1e999}",
-        )
-        .is_some();
+        let selected =
+            json_params::scoped_json_body_params(&effective, &path, b"{\"access_token\":1e999}")
+                .is_some();
         let expected_selected = case["endpoint"]["action"] == "create";
         if response.status.as_u16() != case["status"].as_u64().unwrap() as u16
             || selected != expected_selected

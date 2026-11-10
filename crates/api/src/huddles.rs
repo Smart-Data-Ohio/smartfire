@@ -255,14 +255,20 @@ async fn create_huddle(c: &mut Ctx) -> Result {
     {
         Ok(grant) => grant,
         Err(campfire_db::Error::StageAudienceFull) => {
-            return Err(fail(c, api::ApiError::StageAudienceFull {
-                message: "This stage is full".into(),
-            }));
+            return Err(fail(
+                c,
+                api::ApiError::StageAudienceFull {
+                    message: "This stage is full".into(),
+                },
+            ));
         }
         Err(campfire_db::Error::HuddleRoomFull) => {
-            return Err(fail(c, api::ApiError::HuddleRoomFull {
-                message: "This voice room is full".into(),
-            }));
+            return Err(fail(
+                c,
+                api::ApiError::HuddleRoomFull {
+                    message: "This voice room is full".into(),
+                },
+            ));
         }
         Err(campfire_db::Error::Other(message)) if message == "HuddleGrant::Ineligible" => {
             return Err(room_not_found(c));
@@ -323,7 +329,9 @@ async fn record_huddle_activity(c: &mut Ctx) -> Result {
         grant.record_activity(tx)?;
         Ok(true)
     }).await.map_err(db_error)?;
-    if !recorded { return Err(fail(c, forbidden("This huddle grant is no longer active"))); }
+    if !recorded {
+        return Err(fail(c, forbidden("This huddle grant is no longer active")));
+    }
     Ok(c.head(StatusCode::NO_CONTENT))
 }
 

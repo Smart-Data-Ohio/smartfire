@@ -184,13 +184,20 @@ impl Membership {
 
     /// Persisted state for write decisions and publication eligibility, before personal filtering.
     pub fn find_stored(conn: &Connection, id: i64) -> Result<Self> {
-        query_one(conn, "SELECT * FROM memberships WHERE id=?", [id], Self::from_row)?
-            .or_not_found("Membership")
+        query_one(
+            conn,
+            "SELECT * FROM memberships WHERE id=?",
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("Membership")
     }
 
     fn policy_columns() -> String {
         let unread = super::ignore_policy::room_unread_sql();
-        format!("memberships.*, CASE WHEN {unread} THEN memberships.unread_at END AS visible_unread_at")
+        format!(
+            "memberships.*, CASE WHEN {unread} THEN memberships.unread_at END AS visible_unread_at"
+        )
     }
 
     fn policy_select() -> String {
@@ -218,7 +225,10 @@ impl Membership {
             errors.add("user", "must exist");
         }
         errors.into_result()?; // Single-membership creation validates both associations.
-        let stage_role = room.as_ref().filter(|room| room.stage()).map(|_| StageRole::Listener);
+        let stage_role = room
+            .as_ref()
+            .filter(|room| room.stage())
+            .map(|_| StageRole::Listener);
         let id = tx.conn().query_row_cached(
             "INSERT INTO memberships(room_id,user_id,stage_role,created_at,updated_at) VALUES(?,?,?,?,?) RETURNING id",
             params![room_id, user_id, stage_role, tx.now(), tx.now()],
@@ -250,7 +260,10 @@ impl Membership {
     }
 
     /// `room.memberships.includes(:user)`: retain membership order and missing-user rows.
-    pub fn for_room_with_users(conn: &Connection, room_id: i64) -> Result<Vec<(Self, Option<User>)>> {
+    pub fn for_room_with_users(
+        conn: &Connection,
+        room_id: i64,
+    ) -> Result<Vec<(Self, Option<User>)>> {
         let memberships = Self::for_room(conn, room_id)?;
         if memberships.is_empty() {
             return Ok(Vec::new());
@@ -291,7 +304,8 @@ impl Membership {
     ) -> Result<Option<Self>> {
         query_one(
             conn,
-            &(Self::policy_select() + " WHERE memberships.room_id=? AND memberships.user_id=? LIMIT 1"),
+            &(Self::policy_select()
+                + " WHERE memberships.room_id=? AND memberships.user_id=? LIMIT 1"),
             [room_id, user_id],
             Self::from_policy_row,
         )
@@ -319,7 +333,11 @@ impl Membership {
     pub fn visible_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Self::policy_columns(), Room::PREFIXED_COLUMNS),
+            &format!(
+                r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#,
+                Self::policy_columns(),
+                Room::PREFIXED_COLUMNS
+            ),
             [user_id],
             |row| Ok((Self::from_policy_row(row)?, Room::from_prefixed_row(row)?)),
         )
@@ -329,7 +347,11 @@ impl Membership {
     pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Self::policy_columns(), Room::PREFIXED_COLUMNS),
+            &format!(
+                r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#,
+                Self::policy_columns(),
+                Room::PREFIXED_COLUMNS
+            ),
             [user_id],
             |row| Ok((Self::from_policy_row(row)?, Room::from_prefixed_row(row)?)),
         )
@@ -348,10 +370,16 @@ impl Membership {
     pub fn unread_count(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
         let preferences = super::notification_policy::NotificationPreferences::load(conn, user_id)?;
         let unread = super::ignore_policy::room_unread_sql();
-        let rooms: Vec<i64> = sql::query_all(conn,
+        let rooms: Vec<i64> = sql::query_all(
+            conn,
             &format!("SELECT room_id FROM memberships WHERE user_id=? AND {unread}"),
-            [user_id], |row| row.get(0))?;
-        Ok(rooms.into_iter().filter(|room| !preferences.muted(*room, now)).count() as i64)
+            [user_id],
+            |row| row.get(0),
+        )?;
+        Ok(rooms
+            .into_iter()
+            .filter(|room| !preferences.muted(*room, now))
+            .count() as i64)
     }
 
     /// `Membership.connected.exists?(id)`
@@ -391,10 +419,20 @@ impl Membership {
 
     fn validate_organization(&self, conn: &Connection, category_id: Option<i64>) -> Result<()> {
         let mut errors = crate::Errors::default();
-        if Room::find_by_id(conn, self.room_id)?.is_none() { errors.add("room", "must exist"); }
-        if User::find_by_id(conn, self.user_id)?.is_none() { errors.add("user", "must exist"); }
-        if let Some(category) = category_id.map(|id| crate::RoomCategory::find_by_id(conn, id)).transpose()?.flatten()
-            && category.user_id != self.user_id { errors.add("room_category", "must belong to the member"); }
+        if Room::find_by_id(conn, self.room_id)?.is_none() {
+            errors.add("room", "must exist");
+        }
+        if User::find_by_id(conn, self.user_id)?.is_none() {
+            errors.add("user", "must exist");
+        }
+        if let Some(category) = category_id
+            .map(|id| crate::RoomCategory::find_by_id(conn, id))
+            .transpose()?
+            .flatten()
+            && category.user_id != self.user_id
+        {
+            errors.add("room_category", "must belong to the member");
+        }
         errors.into_result()
     }
 
@@ -407,7 +445,10 @@ impl Membership {
         self.reload(tx.conn())?;
         self.validate_organization(tx.conn(), category_id)?;
         if self.room_category_id != category_id {
-            tx.conn().execute_cached("UPDATE memberships SET room_category_id = ?, updated_at = ? WHERE id = ?", params![category_id, tx.now(), self.id])?;
+            tx.conn().execute_cached(
+                "UPDATE memberships SET room_category_id = ?, updated_at = ? WHERE id = ?",
+                params![category_id, tx.now(), self.id],
+            )?;
             self.reload(tx.conn())?;
             self.emit_organized(tx, vec![self.id]);
         }
@@ -424,15 +465,24 @@ impl Membership {
         .emit(tx);
     }
 
-    pub fn favorited(&self) -> bool { self.favorite_position.is_some() }
+    pub fn favorited(&self) -> bool {
+        self.favorite_position.is_some()
+    }
 
     pub fn favorites_for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
-        query_all(conn, "SELECT * FROM memberships WHERE user_id = ? AND favorite_position IS NOT NULL ORDER BY favorite_position, id", [user_id], Self::from_row)
+        query_all(
+            conn,
+            "SELECT * FROM memberships WHERE user_id = ? AND favorite_position IS NOT NULL ORDER BY favorite_position, id",
+            [user_id],
+            Self::from_row,
+        )
     }
 
     pub fn favorite(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.reload(tx.conn())?;
-        if self.favorited() { return Ok(()); }
+        if self.favorited() {
+            return Ok(());
+        }
         let position = tx.conn().query_row_cached("SELECT COALESCE(MAX(favorite_position), -1) + 1 FROM memberships WHERE user_id = ? AND favorite_position IS NOT NULL", [self.user_id], |r| r.get::<_, i64>(0))?;
         self.set_favorite_position(tx, Some(position))
     }
@@ -445,7 +495,10 @@ impl Membership {
     fn set_favorite_position(&mut self, tx: &mut Tx<'_>, position: Option<i64>) -> Result<()> {
         self.validate_organization(tx.conn(), self.room_category_id)?;
         if self.favorite_position != position {
-            tx.conn().execute_cached("UPDATE memberships SET favorite_position = ?, updated_at = ? WHERE id = ?", params![position, tx.now(), self.id])?;
+            tx.conn().execute_cached(
+                "UPDATE memberships SET favorite_position = ?, updated_at = ? WHERE id = ?",
+                params![position, tx.now(), self.id],
+            )?;
             self.reload(tx.conn())?;
             self.emit_organized(tx, vec![self.id]);
         }
@@ -464,7 +517,9 @@ impl Membership {
     /// with a hidden favourite ahead of it lands a place off. A classic bug fix.
     pub fn move_favorite_to(&mut self, tx: &mut Tx<'_>, position: i64) -> Result<()> {
         self.reload(tx.conn())?;
-        if !self.favorited() { return Ok(()); }
+        if !self.favorited() {
+            return Ok(());
+        }
         let favorites = Self::favorites_for_user(tx.conn(), self.user_id)?;
         let mut ids: Vec<_> = favorites
             .iter()
@@ -519,7 +574,11 @@ impl Membership {
     }
 
     /// `update!(involvement:)`
-    pub fn update_involvement(&mut self, tx: &mut Tx<'_>, involvement: impl Into<Option<Involvement>>) -> Result<()> {
+    pub fn update_involvement(
+        &mut self,
+        tx: &mut Tx<'_>,
+        involvement: impl Into<Option<Involvement>>,
+    ) -> Result<()> {
         let involvement = involvement.into();
         let path = format!("$.room_notification_levels.\"{}\"", self.room_id);
         let removed = tx.conn().execute(
@@ -532,9 +591,8 @@ impl Membership {
             }
             return Ok(());
         }
-        let visible = |level: Option<Involvement>| {
-            level.is_some_and(|level| level != Involvement::Invisible)
-        };
+        let visible =
+            |level: Option<Involvement>| level.is_some_and(|level| level != Involvement::Invisible);
         if visible(self.involvement) != visible(involvement)
             && sql::exists(
                 tx.conn(),
@@ -542,7 +600,9 @@ impl Membership {
                 [self.room_id],
             )?
         {
-            tx.emit_after_commit(Event::broadcast(&super::workspace_category::WorkspaceOrganized));
+            tx.emit_after_commit(Event::broadcast(
+                &super::workspace_category::WorkspaceOrganized,
+            ));
         }
         let now = tx.now();
         tx.conn().execute_cached(
@@ -559,8 +619,13 @@ impl Membership {
     pub fn read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         self.validate_organization(tx.conn(), self.room_category_id)?;
         let last_read_message_id = self.latest_root_message_id(tx.conn())?;
-        let stored = query_one(tx.conn(), "SELECT * FROM memberships WHERE id=?", [self.id], Self::from_row)?
-            .or_not_found("Membership")?;
+        let stored = query_one(
+            tx.conn(),
+            "SELECT * FROM memberships WHERE id=?",
+            [self.id],
+            Self::from_row,
+        )?
+        .or_not_found("Membership")?;
         if stored.unread_at.is_none() && stored.last_read_message_id == last_read_message_id {
             *self = stored;
             return Ok(());
@@ -584,15 +649,19 @@ impl Membership {
             return Err(crate::Error::RecordNotFound("Message"));
         }
         self.validate_organization(tx.conn(), self.room_category_id)?;
-        let previous_id = query_one(tx.conn(),
+        let previous_id = query_one(
+            tx.conn(),
             "SELECT id FROM messages WHERE room_id=? AND thread_id IS NULL AND (created_at,id)<(?,?) ORDER BY created_at DESC,id DESC LIMIT 1",
-            params![self.room_id, message.created_at, message.id], |row| row.get::<_, i64>(0))?;
+            params![self.room_id, message.created_at, message.id],
+            |row| row.get::<_, i64>(0),
+        )?;
         if self.unread_at == Some(message.created_at) && self.last_read_message_id == previous_id {
             return Ok(());
         }
         tx.conn().execute_cached(
             "UPDATE memberships SET unread_at=?,last_read_message_id=?,updated_at=? WHERE id=?",
-            params![message.created_at, previous_id, tx.now(), self.id])?;
+            params![message.created_at, previous_id, tx.now(), self.id],
+        )?;
         self.reload(tx.conn())
     }
 
@@ -612,8 +681,16 @@ impl Membership {
     /// declared. Huddle revocation, stream endings and last-host succession run synchronously.
     /// Agent revocation and calendar syncs belong to their owning workstreams.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
-        crate::models::huddle_grant::HuddleGrant::end_streams_for_membership(tx, self.room_id, self.id)?;
+        crate::models::huddle_grant::HuddleGrant::revoke_for_membership(
+            tx,
+            self.id,
+            &crate::models::room_delete::HuddleConfig::from_env(),
+        )?;
+        crate::models::huddle_grant::HuddleGrant::end_streams_for_membership(
+            tx,
+            self.room_id,
+            self.id,
+        )?;
         crate::models::AgentGrant::revoke_for_membership(tx, self.user_id, self.room_id)?;
         crate::ActivityItem::emit_hidden_in_room(tx, self.room_id, Some(self.user_id))?;
         crate::ScheduledMessage::emit_pending_in_room(tx, self.room_id, Some(self.user_id))?;
@@ -622,7 +699,12 @@ impl Membership {
             [self.id],
         )?;
         if self.stage_role == Some(StageRole::Host) {
-            super::stage::host_departed(tx,self.room_id,self.user_id,&super::room_delete::HuddleConfig::from_env())?;
+            super::stage::host_departed(
+                tx,
+                self.room_id,
+                self.user_id,
+                &super::room_delete::HuddleConfig::from_env(),
+            )?;
         }
         let (user_id, room_id) = (self.user_id, self.room_id);
         // Membership#sync_removed_room_calendar_entries reads the final committed
@@ -646,7 +728,11 @@ impl Membership {
         tx.after_commit(move |tx| {
             // `dom_id(room, :list)` raises for a room that's gone, which the callback rescues.
             if let Some(room) = Room::find_by_id(tx.conn(), room_id)? {
-                let broadcast = RoomRemovalBroadcast { user_id, room_id, room_class: room.room_type.class_name().to_string() };
+                let broadcast = RoomRemovalBroadcast {
+                    user_id,
+                    room_id,
+                    room_class: room.room_type.class_name().to_string(),
+                };
                 tx.emit_after_commit(Event::broadcast(&broadcast));
             }
             User::find(tx.conn(), user_id)?.reset_remote_connections(tx);
@@ -664,9 +750,19 @@ impl Membership {
 
     /// `raise_hand!`: a repeat keeps its original timestamp and skips validation/write.
     pub fn raise_hand(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        if self.hand_raised_at.is_some() { return Ok(false); }
-        self.validate_call_attributes(tx.conn(),self.stage_role,Some(tx.now()),self.server_muted_at)?;
-        tx.conn().execute_cached("UPDATE memberships SET hand_raised_at=?,updated_at=? WHERE id=?",params![tx.now(),tx.now(),self.id])?;
+        if self.hand_raised_at.is_some() {
+            return Ok(false);
+        }
+        self.validate_call_attributes(
+            tx.conn(),
+            self.stage_role,
+            Some(tx.now()),
+            self.server_muted_at,
+        )?;
+        tx.conn().execute_cached(
+            "UPDATE memberships SET hand_raised_at=?,updated_at=? WHERE id=?",
+            params![tx.now(), tx.now(), self.id],
+        )?;
         self.reload(tx.conn())?;
         Ok(true)
     }
@@ -674,9 +770,12 @@ impl Membership {
     /// `lower_hand!`: Rails' update! succeeds even when nothing was raised, and does not
     /// touch updated_at for that no-op. Controllers still broadcast the roster on success.
     pub fn lower_hand(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        self.validate_call_attributes(tx.conn(),self.stage_role,None,self.server_muted_at)?;
+        self.validate_call_attributes(tx.conn(), self.stage_role, None, self.server_muted_at)?;
         if self.hand_raised_at.is_some() {
-            tx.conn().execute_cached("UPDATE memberships SET hand_raised_at=NULL,updated_at=? WHERE id=?",params![tx.now(),self.id])?;
+            tx.conn().execute_cached(
+                "UPDATE memberships SET hand_raised_at=NULL,updated_at=? WHERE id=?",
+                params![tx.now(), self.id],
+            )?;
             self.reload(tx.conn())?;
         }
         Ok(true)
@@ -684,16 +783,37 @@ impl Membership {
 
     /// Rails' stage/mute validations run before either revocation callback. The immediate
     /// transaction serializes the last-host guard with concurrent role changes.
-    fn validate_call_attributes(&self, conn: &Connection, role: Option<StageRole>, hand: Option<Timestamp>, muted: Option<Timestamp>) -> Result<()> {
+    fn validate_call_attributes(
+        &self,
+        conn: &Connection,
+        role: Option<StageRole>,
+        hand: Option<Timestamp>,
+        muted: Option<Timestamp>,
+    ) -> Result<()> {
         let room = Room::find(conn, self.room_id)?;
         let mut errors = crate::Errors::default();
         if !room.stage() {
-            if role.is_some() { errors.add("stage_role", "only exists on stage rooms"); }
-            if hand.is_some() { errors.add("hand_raised_at", "only exists on stage rooms"); }
+            if role.is_some() {
+                errors.add("stage_role", "only exists on stage rooms");
+            }
+            if hand.is_some() {
+                errors.add("hand_raised_at", "only exists on stage rooms");
+            }
         }
-        if hand.is_some() && role != Some(StageRole::Listener) { errors.add("hand_raised_at", "can only be raised by a listener"); }
-        if !room.stage() && !room.voice() && muted.is_some() { errors.add("server_muted_at", "only exists on stage and voice rooms"); }
-        if self.stage_role == Some(StageRole::Host) && role != self.stage_role && !sql::exists(conn, "SELECT 1 FROM memberships WHERE room_id=? AND stage_role='host' AND id!=? LIMIT 1", params![self.room_id, self.id])? {
+        if hand.is_some() && role != Some(StageRole::Listener) {
+            errors.add("hand_raised_at", "can only be raised by a listener");
+        }
+        if !room.stage() && !room.voice() && muted.is_some() {
+            errors.add("server_muted_at", "only exists on stage and voice rooms");
+        }
+        if self.stage_role == Some(StageRole::Host)
+            && role != self.stage_role
+            && !sql::exists(
+                conn,
+                "SELECT 1 FROM memberships WHERE room_id=? AND stage_role='host' AND id!=? LIMIT 1",
+                params![self.room_id, self.id],
+            )?
+        {
             errors.add("stage_role", "can't demote the last host");
         }
         self.validate_organization(conn, self.room_category_id)?;
@@ -701,30 +821,55 @@ impl Membership {
     }
 
     pub fn change_stage_role(&mut self, tx: &mut Tx<'_>, role: StageRole) -> Result<()> {
-        self.change_stage_role_with_config(tx,role,&super::room_delete::HuddleConfig::from_env())
+        self.change_stage_role_with_config(tx, role, &super::room_delete::HuddleConfig::from_env())
     }
-    pub fn change_stage_role_with_config(&mut self, tx: &mut Tx<'_>, role: StageRole, config:&super::room_delete::HuddleConfig) -> Result<()> {
+    pub fn change_stage_role_with_config(
+        &mut self,
+        tx: &mut Tx<'_>,
+        role: StageRole,
+        config: &super::room_delete::HuddleConfig,
+    ) -> Result<()> {
         self.validate_call_attributes(tx.conn(), Some(role), None, self.server_muted_at)?;
-        if self.stage_role == Some(role) && self.hand_raised_at.is_none() { return Ok(()); }
-        let replace_grants = self.stage_role != Some(role) && (self.stage_role == Some(StageRole::Listener)) != (role == StageRole::Listener);
+        if self.stage_role == Some(role) && self.hand_raised_at.is_none() {
+            return Ok(());
+        }
+        let replace_grants = self.stage_role != Some(role)
+            && (self.stage_role == Some(StageRole::Listener)) != (role == StageRole::Listener);
         if self.stage_role != Some(role) && !replace_grants {
             tx.conn().execute_cached("UPDATE huddle_grants SET stage_role=? WHERE membership_id=? AND revoked_at IS NULL", params![role, self.id])?;
         }
-        tx.conn().execute_cached("UPDATE memberships SET stage_role=?,hand_raised_at=NULL,updated_at=? WHERE id=?", params![role, tx.now(), self.id])?;
+        tx.conn().execute_cached(
+            "UPDATE memberships SET stage_role=?,hand_raised_at=NULL,updated_at=? WHERE id=?",
+            params![role, tx.now(), self.id],
+        )?;
         if replace_grants {
             crate::models::huddle_grant::HuddleGrant::replace_for_membership(tx, self.id, config)?;
         }
         self.reload(tx.conn())
     }
 
-    pub fn server_mute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, true, &super::room_delete::HuddleConfig::from_env()) }
-    pub fn server_unmute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, false, &super::room_delete::HuddleConfig::from_env()) }
-    pub fn set_server_muted(&mut self, tx: &mut Tx<'_>, muted: bool, config: &super::room_delete::HuddleConfig) -> Result<bool> {
-        if self.server_muted_at.is_some() == muted { return Ok(false); }
+    pub fn server_mute(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        self.set_server_muted(tx, true, &super::room_delete::HuddleConfig::from_env())
+    }
+    pub fn server_unmute(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        self.set_server_muted(tx, false, &super::room_delete::HuddleConfig::from_env())
+    }
+    pub fn set_server_muted(
+        &mut self,
+        tx: &mut Tx<'_>,
+        muted: bool,
+        config: &super::room_delete::HuddleConfig,
+    ) -> Result<bool> {
+        if self.server_muted_at.is_some() == muted {
+            return Ok(false);
+        }
         let at = muted.then(|| tx.now());
         self.validate_call_attributes(tx.conn(), self.stage_role, self.hand_raised_at, at)?;
         crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, config)?;
-        tx.conn().execute_cached("UPDATE memberships SET server_muted_at=?,updated_at=? WHERE id=?", params![at, tx.now(), self.id])?;
+        tx.conn().execute_cached(
+            "UPDATE memberships SET server_muted_at=?,updated_at=? WHERE id=?",
+            params![at, tx.now(), self.id],
+        )?;
         self.reload(tx.conn())?;
         Ok(true)
     }
@@ -818,7 +963,8 @@ impl Membership {
         } else {
             r#"UPDATE "memberships" SET "connections" = COALESCE("memberships"."connections", 0) - ?, "updated_at" = ? WHERE "memberships"."id" = ?"#
         };
-        tx.conn().execute_cached(sql, params![by.abs(), now, self.id])?;
+        tx.conn()
+            .execute_cached(sql, params![by.abs(), now, self.id])?;
         self.connections += by;
         self.updated_at = now;
         Ok(())

@@ -159,7 +159,10 @@ async fn rejected_transfer_writes_a_filtered_failure_audit() {
     assert_eq!(retained.status, StatusCode::SEE_OTHER);
     assert_eq!(failures(&a).await, before);
     let response = b
-        .write(Req::new(Method::PUT, "/api/v1/session/transfers/invalid-transfer").json_body(&json!({})))
+        .write(
+            Req::new(Method::PUT, "/api/v1/session/transfers/invalid-transfer")
+                .json_body(&json!({})),
+        )
         .await;
     assert_eq!(response.status, StatusCode::BAD_REQUEST);
     assert_eq!(failures(&a).await, before + 1);
@@ -313,7 +316,6 @@ async fn profile_guard_fields_errors_and_security_writes_match_pinned_rails() {
                 },
                 "{name}"
             );
-
         }
     }
 }

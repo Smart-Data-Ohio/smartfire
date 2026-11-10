@@ -73,7 +73,11 @@ impl Network {
             roots.add_parsable_certificates(native.certs);
             tls_config(roots)
         });
-        Self { resolver: Arc::new(SystemResolver), dialer: Arc::new(TcpDialer), tls: tls.clone() }
+        Self {
+            resolver: Arc::new(SystemResolver),
+            dialer: Arc::new(TcpDialer),
+            tls: tls.clone(),
+        }
     }
 }
 

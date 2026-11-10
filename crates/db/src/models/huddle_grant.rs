@@ -142,7 +142,14 @@ impl HuddleGrant {
         room_id: i64,
         config: &HuddleConfig,
     ) -> Result<Self> {
-        Self::issue_with_admission(tx, session_id, membership_id, room_id, config, Admission::Regular)
+        Self::issue_with_admission(
+            tx,
+            session_id,
+            membership_id,
+            room_id,
+            config,
+            Admission::Regular,
+        )
     }
 
     fn issue_with_admission(
@@ -154,8 +161,9 @@ impl HuddleGrant {
         admission: Admission,
     ) -> Result<Self> {
         for attempt in 0..3 {
-            let result =
-                tx.savepoint(|tx| Self::issue_once(tx, session_id, membership_id, room_id, config, admission));
+            let result = tx.savepoint(|tx| {
+                Self::issue_once(tx, session_id, membership_id, room_id, config, admission)
+            });
             if result
                 .as_ref()
                 .is_err_and(|error| error.is_record_not_unique())
@@ -217,7 +225,10 @@ impl HuddleGrant {
                     "UPDATE huddle_grants SET last_issued_at=?,updated_at=? WHERE id=?",
                     params![now, now, grant.id],
                 )?;
-                return Ok((Self::find_by_id(tx.conn(), grant.id)?.unwrap(), grant.last_issued_at));
+                return Ok((
+                    Self::find_by_id(tx.conn(), grant.id)?.unwrap(),
+                    grant.last_issued_at,
+                ));
             }
             grant.revoke(tx, true, config)?;
         }
@@ -241,7 +252,11 @@ impl HuddleGrant {
     }
 
     /// Replace role-bound grants atomically, retaining admitted users' slots for reconnect.
-    pub(crate) fn replace_for_membership(tx: &mut Tx<'_>, id: i64, config: &HuddleConfig) -> Result<()> {
+    pub(crate) fn replace_for_membership(
+        tx: &mut Tx<'_>,
+        id: i64,
+        config: &HuddleConfig,
+    ) -> Result<()> {
         let member = crate::Membership::find(tx.conn(), id)?;
         let mut grants = query_all(
             tx.conn(),
@@ -254,9 +269,10 @@ impl HuddleGrant {
         for grant in &mut grants {
             grant.revoke(tx, true, config)?;
         }
-        for grant in grants.into_iter().filter(|grant| {
-            grant.in_call(now) || grant.last_issued_at.is_some_and(|at| at > since)
-        }) {
+        for grant in grants
+            .into_iter()
+            .filter(|grant| grant.in_call(now) || grant.last_issued_at.is_some_and(|at| at > since))
+        {
             tx.conn().execute_cached(
                 "INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,stage_role,server_muted,last_issued_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                 params![Self::new_identity(), grant.room_name, grant.session_id, grant.user_id, member.id, member.room_id, member.stage_role, member.server_muted_at.is_some(), now, now, now],
@@ -315,10 +331,10 @@ impl HuddleGrant {
     }
 
     pub fn stage_audience_budget(conn: &Connection) -> Result<i64> {
-        Ok(crate::Account::first(conn)?.map_or(
-            super::account::DEFAULT_STAGE_AUDIENCE_BUDGET,
-            |account| account.settings().stage_audience_budget(),
-        ))
+        Ok(crate::Account::first(conn)?
+            .map_or(super::account::DEFAULT_STAGE_AUDIENCE_BUDGET, |account| {
+                account.settings().stage_audience_budget()
+            }))
     }
 
     /// Distinct listeners present, occupying a slot, and whether this user already has a slot.
@@ -400,7 +416,9 @@ impl HuddleGrant {
         crate::models::huddle_effects::broadcast_presence(tx, self.room_id);
         let id = self.id;
         tx.after_commit(move |tx| {
-            if let Some(grant) = Self::find_by_id(tx.conn(), id)?.filter(|grant| grant.in_call(tx.now())) {
+            if let Some(grant) =
+                Self::find_by_id(tx.conn(), id)?.filter(|grant| grant.in_call(tx.now()))
+            {
                 crate::models::huddle_notices::call_ended(tx, &grant)?;
                 crate::models::huddle_notices::notify_leave(tx, &grant)?;
             }
@@ -483,7 +501,9 @@ impl HuddleGrant {
         )?;
         self.last_seen_at = Some(now);
         if first_seen {
-            if crate::Account::first(tx.conn())?.is_some_and(|account| account.settings().afk_policy().room_id.is_some()) {
+            if crate::Account::first(tx.conn())?
+                .is_some_and(|account| account.settings().afk_policy().room_id.is_some())
+            {
                 self.record_activity(tx)?;
             }
             tx.emit_after_commit(Event::job(&PresenceJob { grant_id: self.id }));
@@ -500,37 +520,69 @@ impl HuddleGrant {
     pub fn record_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         let now = tx.now();
         if self.updated_at <= now.ago(SignedDuration::from_secs(SEEN_TOUCH_INTERVAL)) {
-            tx.conn().execute_cached("UPDATE huddle_grants SET updated_at=? WHERE id=?", params![now, self.id])?;
+            tx.conn().execute_cached(
+                "UPDATE huddle_grants SET updated_at=? WHERE id=?",
+                params![now, self.id],
+            )?;
             self.updated_at = now;
         }
         Ok(())
     }
 
     pub fn move_if_idle(&mut self, tx: &mut Tx<'_>, config: &HuddleConfig) -> Result<bool> {
-        let Some(account) = crate::Account::first(tx.conn())? else { return Ok(false); };
+        let Some(account) = crate::Account::first(tx.conn())? else {
+            return Ok(false);
+        };
         let policy = account.settings().afk_policy();
-        let Some(room_id) = policy.room_id else { return Ok(false); };
-        if self.revoked() || !self.in_call(tx.now()) || self.room_id == room_id
+        let Some(room_id) = policy.room_id else {
+            return Ok(false);
+        };
+        if self.revoked()
+            || !self.in_call(tx.now())
+            || self.room_id == room_id
             || self.stage_role.as_deref() == Some("listener")
-            || self.updated_at > tx.now().ago(SignedDuration::from_secs(policy.timeout_minutes * 60))
+            || self.updated_at
+                > tx.now()
+                    .ago(SignedDuration::from_secs(policy.timeout_minutes * 60))
             || !self.authorized(tx.conn())?
-        { return Ok(false); }
+        {
+            return Ok(false);
+        }
         let source = crate::Room::find(tx.conn(), self.room_id)?;
-        if !source.voice() && !source.stage() { return Ok(false); }
-        if source.stage()
-            && !matches!(self.stage_role.as_deref(), Some("speaker" | "host"))
-        { return Ok(false); }
-        let Some(room) = crate::Room::find_by_id(tx.conn(), room_id)?.filter(|room| room.voice() && !room.deleted()) else { return Ok(false); };
-        let Some(member) = crate::Membership::find_by_room_and_user(tx.conn(), room_id, self.user_id)? else {
+        if !source.voice() && !source.stage() {
+            return Ok(false);
+        }
+        if source.stage() && !matches!(self.stage_role.as_deref(), Some("speaker" | "host")) {
+            return Ok(false);
+        }
+        let Some(room) = crate::Room::find_by_id(tx.conn(), room_id)?
+            .filter(|room| room.voice() && !room.deleted())
+        else {
+            return Ok(false);
+        };
+        let Some(member) =
+            crate::Membership::find_by_room_and_user(tx.conn(), room_id, self.user_id)?
+        else {
             return Ok(false);
         };
         self.revoke(tx, true, config)?;
         // Reserve this session's destination before notifying it. Ordinary issuance and the
         // gateway can reuse the slot for IN_CALL_WINDOW seconds, then capacity applies again.
-        Self::issue_with_admission(tx, self.session_id, member.id, room_id, config, Admission::AfkMove)?;
+        Self::issue_with_admission(
+            tx,
+            self.session_id,
+            member.id,
+            room_id,
+            config,
+            Admission::AfkMove,
+        )?;
         tx.emit_after_commit(Event::broadcast(&super::huddle_effects::AfkMoved {
-            user_id: self.user_id, identity: self.identity.clone(), source_room_id: self.room_id,
-            room_id, room_name: room.name.unwrap_or_default(), timeout_minutes: policy.timeout_minutes,
+            user_id: self.user_id,
+            identity: self.identity.clone(),
+            source_room_id: self.room_id,
+            room_id,
+            room_name: room.name.unwrap_or_default(),
+            timeout_minutes: policy.timeout_minutes,
         }));
         Ok(true)
     }
@@ -539,7 +591,10 @@ impl HuddleGrant {
         tx: &mut Tx<'_>,
         seen_after: Option<Timestamp>,
     ) -> Result<bool> {
-        if self.last_seen_at.is_some_and(|seen| seen_after.is_some_and(|floor| seen > floor)) {
+        if self
+            .last_seen_at
+            .is_some_and(|seen| seen_after.is_some_and(|floor| seen > floor))
+        {
             return Ok(false);
         }
         // An explicit leave also releases an issued slot before the first sighting.
@@ -568,7 +623,9 @@ impl HuddleGrant {
             tx.after_commit(move |tx| {
                 if let Some(grant) = Self::find_by_id(tx.conn(), id)? {
                     crate::models::huddle_notices::call_ended(tx, &grant)?;
-                    if !grant.revoked() { crate::models::huddle_notices::notify_leave(tx, &grant)?; }
+                    if !grant.revoked() {
+                        crate::models::huddle_notices::notify_leave(tx, &grant)?;
+                    }
                 }
                 Ok(())
             });

@@ -171,11 +171,17 @@ fn public_thread_followers_keep_historical_authors_without_granting_private_acce
     let private = private(&t, "designers", "jz");
     t.write(move |tx| {
         private.add_access_member(tx, id("jz"), id("kevin"))?;
-        let public = ChannelThread::create(tx, NewChannelThread {
-            room_id: id("designers"), creator_id: id("jz"), name: Some("Imported public thread".into()),
-            ..Default::default()
-        })?;
-        tx.conn().execute("UPDATE users SET status=2 WHERE id=?", [id("kevin")])?;
+        let public = ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id: id("designers"),
+                creator_id: id("jz"),
+                name: Some("Imported public thread".into()),
+                ..Default::default()
+            },
+        )?;
+        tx.conn()
+            .execute("UPDATE users SET status=2 WHERE id=?", [id("kevin")])?;
         let member = ThreadMembership::join(tx, public.id, id("kevin"))?;
         assert_eq!(member.thread_id, public.id);
         assert_eq!(member.user_id, id("kevin"));

@@ -84,8 +84,13 @@ async fn restriction(app: &TestApp) {
 #[tokio::test]
 async fn show_redirects_to_get_general_show() {
     let app = setup().await;
-    assert_eq!(app.david().classic_page(&format!("/rooms/boards/{BOARD}")).await.location(),
-        Some(format!("http://campfire.test/rooms/{BOARD}").as_str()));
+    assert_eq!(
+        app.david()
+            .classic_page(&format!("/rooms/boards/{BOARD}"))
+            .await
+            .location(),
+        Some(format!("http://campfire.test/rooms/{BOARD}").as_str())
+    );
 }
 #[tokio::test]
 async fn create_case() {
@@ -125,7 +130,6 @@ async fn create_prepends_the_board_row_into_the_boards_section() {
         .write(request(Method::POST, None, "Launch", &[DAVID]))
         .await;
     redirect(&reply, created(&reply));
-
 }
 #[tokio::test]
 async fn create_forbidden_by_non_admin_when_account_restricts_creation_to_admins() {
@@ -208,7 +212,6 @@ async fn update_replaces_the_board_row_and_header() {
             .await,
         board.id,
     );
-
 }
 #[tokio::test]
 async fn a_non_administrator_creator_can_manage_members_of_their_own_board() {
@@ -238,7 +241,6 @@ async fn only_admins_or_creators_can_update() {
         StatusCode::FORBIDDEN
     );
     assert_eq!(room(&app, board.id).await.name, board.name);
-
 }
 #[tokio::test]
 async fn remove_yourself() {

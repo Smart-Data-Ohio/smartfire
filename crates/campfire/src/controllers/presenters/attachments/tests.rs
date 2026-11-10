@@ -4,9 +4,9 @@ use campfire_storage::{Blob, Filename};
 use sha2::Digest as _;
 
 use super::*;
+use crate::controllers::presenters::test_support::*;
 use campfire_db::Connection;
 use campfire_db::Event;
-use crate::controllers::presenters::test_support::*;
 
 fn vectors() -> serde_json::Value {
     serde_json::from_str(include_str!(concat!(
@@ -966,10 +966,7 @@ async fn durable_analysis_other_callers_roll_back() {
         };
         if kind == "bot create" {
             assert_eq!(
-                browser
-                    .confirm_sudo("secret123456")
-                    .await
-                    .status,
+                browser.confirm_sudo("secret123456").await.status,
                 StatusCode::OK
             );
         }
@@ -1037,14 +1034,31 @@ async fn durable_analysis_other_callers_roll_back() {
         if kind == "first run" {
             // Rails FirstRun.create! commits Account.create! before the user/room save.
             // The pinned HTTP oracle rejects an attachment in that later transaction.
-            let oracle: serde_json::Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/users_first_run_attachment_failure.json"))).unwrap();
+            let oracle: serde_json::Value = serde_json::from_str(include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../vectors/users_first_run_attachment_failure.json"
+            )))
+            .unwrap();
             let (accounts, users, blobs, attachments) = counts(&app).await;
-            assert_eq!(serde_json::json!([accounts, users, blobs, attachments]), oracle["counts"]);
-            app.db().read(move |conn| {
-                assert_eq!(conn.query_row("SELECT COUNT(*) FROM rooms", [], |r| r.get::<_, i64>(0))?, oracle["rooms"].as_i64().unwrap());
-                assert_eq!(conn.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get::<_, i64>(0))?, oracle["sessions"].as_i64().unwrap());
-                Ok(())
-            }).await.unwrap();
+            assert_eq!(
+                serde_json::json!([accounts, users, blobs, attachments]),
+                oracle["counts"]
+            );
+            app.db()
+                .read(move |conn| {
+                    assert_eq!(
+                        conn.query_row("SELECT COUNT(*) FROM rooms", [], |r| r.get::<_, i64>(0))?,
+                        oracle["rooms"].as_i64().unwrap()
+                    );
+                    assert_eq!(
+                        conn.query_row("SELECT COUNT(*) FROM sessions", [], |r| r
+                            .get::<_, i64>(0))?,
+                        oracle["sessions"].as_i64().unwrap()
+                    );
+                    Ok(())
+                })
+                .await
+                .unwrap();
         } else {
             assert_eq!(counts(&app).await, before, "{kind}");
         }
