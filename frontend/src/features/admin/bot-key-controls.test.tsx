@@ -5,12 +5,15 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { Bot } from "../../gen/Bot.ts";
+import type { BotChange } from "../../gen/BotChange.ts";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { bots, oauthClients } from "../../sync/admin.ts";
+import { ActionError } from "../../sync/run.ts";
+import { toastSnapshot } from "../../ui/toast-store.ts";
 import { AdminContext } from "./admin-parts.tsx";
 import { BotSection } from "./bot-section.tsx";
 import { BotsSection } from "./bots-section.tsx";
@@ -57,6 +60,7 @@ const bot = {
     dailyExternalActionCap: null,
     usage: "0 messages",
     suspended: false,
+    paused: false,
     ledgerUrl: "/agents/11/events",
     approvalsUrl: "/agents/11/approvals",
   },
@@ -117,6 +121,7 @@ it("shows bot-key posting commands only for bots that support keys", async () =>
     icon: null,
     botAvatar: null,
     ownership: "Personal agent · Owned by David",
+    paused: false,
     supportsBotKey: false,
     rooms: [
       {
@@ -145,4 +150,126 @@ it("shows bot-key posting commands only for bots that support keys", async () =>
   expect(personal.querySelector("details")).toBeNull();
   expect(workspaceBot.querySelector("details")).toBeTruthy();
   expect(within(workspaceBot).getByText("curl -d 'Hello!' /rooms/1/BOT_KEY/messages")).toBeTruthy();
+});
+
+it("lets an administrator pause and resume any agent, and shows it paused", async () => {
+  vi.spyOn(bots, "get").mockResolvedValue(bot);
+
+  const setPaused = vi
+    .spyOn(bots, "setPaused")
+    .mockResolvedValueOnce({ bot: { ...bot, agent: { ...bot.agent, paused: true } }, notice: null })
+    .mockResolvedValueOnce({ bot, notice: null });
+
+  await renderSection(<BotSection />, true);
+  fireEvent.click(await screen.findByRole("button", { name: "Pause" }));
+
+  expect(await screen.findByText("This agent is paused.")).toBeTruthy();
+  expect(setPaused).toHaveBeenCalledWith(9, true);
+  expect(toastSnapshot().some((shown) => shown.title === "Agent paused")).toBe(true);
+
+  fireEvent.click(screen.getByRole("button", { name: "Resume" }));
+
+  expect(await screen.findByRole("button", { name: "Pause" })).toBeTruthy();
+  expect(setPaused).toHaveBeenLastCalledWith(9, false);
+  expect(screen.queryByText("This agent is paused.")).toBeNull();
+});
+
+it("offers the owner no pause on the bot page: theirs is in Settings → Agents", async () => {
+  vi.spyOn(bots, "get").mockResolvedValue({ ...bot, canAdminister: false });
+  await renderSection(<BotSection />, true);
+
+  expect(await screen.findByRole("button", { name: "Kill switch" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
+});
+
+it("marks a paused agent on the bot list", async () => {
+  const summary = {
+    id: 9,
+    name: "Personal helper",
+    avatarUrl: "/avatar.svg",
+    icon: null,
+    botAvatar: null,
+    ownership: "Personal agent · Owned by David",
+    paused: true,
+    supportsBotKey: false,
+    rooms: [],
+  };
+
+  vi.spyOn(bots, "list").mockResolvedValue({
+    bots: [summary, { ...summary, id: 10, name: "Runner", paused: false }],
+  });
+  vi.spyOn(oauthClients, "list").mockResolvedValue({ clients: [], oauthAvailable: false });
+  await renderSection(<BotsSection />);
+
+  const paused = (await screen.findByText("Personal helper", { selector: "strong" })).closest("li");
+  const running = screen.getByText("Runner", { selector: "strong" }).closest("li");
+
+  if (paused === null || running === null) throw new Error("Missing bot row");
+  expect(within(paused).getByText("Paused")).toBeTruthy();
+  expect(within(running).queryByText("Paused")).toBeNull();
+});
+
+it("keeps an unsaved name edit when the agent is paused", async () => {
+  vi.spyOn(bots, "get").mockResolvedValue(bot);
+  vi.spyOn(bots, "setPaused").mockResolvedValue({
+    bot: { ...bot, agent: { ...bot.agent, paused: true } },
+    notice: null,
+  });
+  await renderSection(<BotSection />, true);
+  const name = await screen.findByRole("textbox", { name: "Name" });
+  fireEvent.change(name, { target: { value: "Unsaved new name" } });
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  await screen.findByText("This agent is paused.");
+  expect(name).toHaveProperty("value", "Unsaved new name");
+});
+
+function deferred<T>() {
+  let resolve!: (answer: T) => void;
+  let reject!: (error: Error) => void;
+
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+
+  return { promise, resolve, reject };
+}
+
+it("keeps a pause that answers before a save sent while it was out", async () => {
+  const pause = deferred<BotChange>();
+  const edit = deferred<BotChange>();
+  vi.spyOn(bots, "get").mockResolvedValue(bot);
+  vi.spyOn(bots, "setPaused").mockReturnValue(pause.promise);
+  const update = vi.spyOn(bots, "update").mockReturnValue(edit.promise);
+  await renderSection(<BotSection />, true);
+  fireEvent.click(await screen.findByRole("button", { name: "Pause" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "Renamed" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(update).toHaveBeenCalledOnce());
+  await act(async () =>
+    pause.resolve({ bot: { ...bot, agent: { ...bot.agent, paused: true } }, notice: null }),
+  );
+  expect(screen.getByRole("button", { name: "Resume" })).toBeTruthy();
+  await act(async () => edit.resolve({ bot: { ...bot, name: "Renamed" }, notice: null }));
+  expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty("value", "Renamed");
+  expect(screen.queryByRole("button", { name: "Resume" })).not.toBeNull();
+});
+
+it("pauses again after a pause whose answer was lost", async () => {
+  vi.spyOn(bots, "get").mockResolvedValue(bot);
+
+  const request = vi
+    .spyOn(bots, "setPaused")
+    .mockRejectedValueOnce(new ActionError("NetworkError", "Lost pause response"))
+    .mockResolvedValueOnce({ bot: { ...bot, agent: { ...bot.agent, paused: true } }, notice: null })
+    .mockResolvedValueOnce({ bot, notice: null });
+
+  await renderSection(<BotSection />, true);
+  fireEvent.click(await screen.findByRole("button", { name: "Pause" }));
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  await act(async () => {});
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Resume" }));
+  await screen.findByRole("button", { name: "Pause" });
+  expect(request).toHaveBeenCalledTimes(3);
 });

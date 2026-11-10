@@ -123,7 +123,7 @@ if (SHOTS) {
   matrix("an agent's profile", async ({ page, theme }) => {
     await openApp(page, `agents/${SCOUT}`, theme);
     await expect(page.getByRole("heading", { level: 2, name: "Scout" })).toBeVisible();
-    await expect(page.getByText("Personal agent of Theo", { exact: false })).toBeVisible();
+    await expect(page.getByText("Personal assistant of Theo", { exact: false })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Capabilities" })).toBeVisible();
     await expect(page.getByRole("meter").first()).toBeVisible();
     await page.mouse.move(0, 0);

@@ -1088,6 +1088,18 @@
     overflow-wrap: anywhere;
   }
 
+  /* Paused: amber, like a suppressed delivery, so it reads as "held", not "broken". */
+  .settings-badge[data-tone="paused"] {
+    background: color-mix(in oklch, var(--warning) 16%, transparent);
+    color: var(--warning-text);
+  }
+
+  .agents-paused {
+    margin: 0;
+    background: color-mix(in oklch, var(--warning) 12%, transparent);
+    overflow-wrap: anywhere;
+  }
+
   .agents-unconfirmed {
     display: flex;
     flex-wrap: wrap;
@@ -1217,6 +1229,12 @@
     border: 0;
   }
 
+  .agents-client-group {
+    margin-top: var(--space-1);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
   .agents-client {
     display: flex;
     align-items: center;
@@ -1323,6 +1341,15 @@
     flex-direction: column;
     gap: var(--space-3);
     min-width: 0;
+  }
+
+  .agents-instructions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    margin: 0;
+    padding-left: var(--space-5);
+    overflow-wrap: anywhere;
   }
 
   .agents-secret-warning {

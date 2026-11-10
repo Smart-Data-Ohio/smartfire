@@ -45,11 +45,11 @@ export function identityOf(user: User | undefined): Identity {
   };
 }
 
-/** "Personal agent" or "Workspace agent"; a kind this client doesn't know is just "Agent". */
+/** "Personal assistant" or "Workspace agent"; a kind this client doesn't know is just "Agent". */
 export function agentKindLabel(kind: string): string {
   switch (kind) {
     case "personal":
-      return "Personal agent";
+      return "Personal assistant";
     case "workspace":
       return "Workspace agent";
     default:

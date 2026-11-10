@@ -1,10 +1,18 @@
 import { Link } from "@tanstack/react-router";
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { PersonalAgent } from "../../gen/PersonalAgent.ts";
 import type { PersonalAgentAccess } from "../../gen/PersonalAgentAccess.ts";
 import type { PersonalAgentCredential } from "../../gen/PersonalAgentCredential.ts";
 import type { PersonalAgentList } from "../../gen/PersonalAgentList.ts";
 import type { UpdatePersonalAgent } from "../../gen/UpdatePersonalAgent.ts";
+import type { WakePolicy } from "../../gen/WakePolicy.ts";
 import { ActionError } from "../../sync/run.ts";
 import { meAgents, SAVE_UNCONFIRMED } from "../../sync/settings.ts";
 import { AgentAvatar } from "../../ui/agent-avatar.tsx";
@@ -29,15 +37,18 @@ import {
   IdentityFields,
   ReconnectSetup,
   SecretBlock,
+  WakeField,
 } from "./agent-parts.tsx";
 import { AgentWizard, WIZARD_DRAFT_KEY } from "./agent-wizard.tsx";
 import {
   type AgentCache,
+  agentCache,
   isUnconfirmed,
   nextSequence,
   withAgent,
   withCreated,
-  withList,
+  withPauseSent,
+  withPauseSettled,
   withRemoved,
   withTokens,
   withUnconfirmed,
@@ -58,7 +69,10 @@ import {
   emptyDraft,
   expiresAtOf,
   isConnection,
+  isPaused,
+  PAUSED_EFFECT,
   parseDraft,
+  pausedLine,
   roomNames,
   shortDay,
   sortedTokens,
@@ -67,6 +81,7 @@ import {
   turnedOff,
   usage,
   type WizardDraft,
+  wakeText,
 } from "./agents-format.ts";
 import {
   FieldError,
@@ -77,10 +92,11 @@ import {
   useBusy,
 } from "./settings-parts.tsx";
 
+/** Whether this section's own first load is back; the list itself is `agentCache`'s. */
 type Load =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
-  | { readonly status: "ready"; readonly cache: AgentCache };
+  | { readonly status: "ready" };
 
 /** A token being issued or rotated: which agent, and the token it replaces. */
 interface TokenAsk {
@@ -123,6 +139,7 @@ interface AgentWrites {
     change: Partial<UpdatePersonalAgent>,
   ) => Promise<PersonalAgent>;
   readonly setAccess: (agentId: number, access: PersonalAgentAccess) => Promise<PersonalAgent>;
+  readonly setPaused: (agentId: number, paused: boolean) => Promise<PersonalAgent>;
   readonly reload: () => Promise<void>;
 }
 
@@ -252,6 +269,7 @@ function AgentCard({
   unconfirmed,
   onReload,
   onEdit,
+  onPause,
   onRemove,
   onIssue,
   onRotate,
@@ -265,6 +283,8 @@ function AgentCard({
   readonly unconfirmed: boolean;
   readonly onReload: () => void;
   readonly onEdit: () => void;
+  /** Pause it (`true`) or resume it (`false`). */
+  readonly onPause: (paused: boolean) => void;
   readonly onRemove: () => void;
   readonly onIssue: () => void;
   readonly onRotate: (credential: PersonalAgentCredential) => void;
@@ -276,9 +296,14 @@ function AgentCard({
   const now = Date.now();
   const tokens = agent.credentials.filter((credential) => !isConnection(credential));
   const connections = agent.credentials.filter(isConnection);
+  const paused = isPaused(agent);
 
   return (
-    <article className="agents-card" aria-labelledby={`agent-${agent.id}-name`}>
+    <article
+      className="agents-card"
+      aria-labelledby={`agent-${agent.id}-name`}
+      data-paused={paused || undefined}
+    >
       <header className="agents-card-header">
         <AgentAvatar
           seed={`${agent.userId}`}
@@ -288,13 +313,20 @@ function AgentCard({
           picture={agent.avatarUrl}
           size={40}
           decorative
-          {...(agent.suspended || !list.enabled ? { state: "muted" as const } : {})}
+          {...(agent.suspended || paused || !list.enabled ? { state: "muted" as const } : {})}
         />
         <span className="agents-card-title">
           <h3 id={`agent-${agent.id}-name`} className="text-title">
             {agent.name}
             {agent.suspended ? <span className="settings-badge">Suspended</span> : null}
-            {!agent.suspended && !list.enabled ? <span className="settings-badge">Off</span> : null}
+            {paused ? (
+              <span className="settings-badge" data-tone="paused">
+                Paused
+              </span>
+            ) : null}
+            {!agent.suspended && !paused && !list.enabled ? (
+              <span className="settings-badge">Off</span>
+            ) : null}
           </h3>
           <span className="text-faint">
             {client === null ? "Agent" : client.label}
@@ -305,6 +337,11 @@ function AgentCard({
           </span>
         </span>
       </header>
+      {paused ? (
+        <p className="settings-callout agents-paused" role="status">
+          <strong>{pausedLine(agent, (at) => timeAgo(at, now))}</strong> {PAUSED_EFFECT}
+        </p>
+      ) : null}
       <dl className="agents-facts">
         <div>
           <dt className="settings-label">Rooms</dt>
@@ -319,6 +356,10 @@ function AgentCard({
                 : agent.capabilities.map(abilityLabel).join(", ")
               : "None while personal agents are off"}
           </dd>
+        </div>
+        <div>
+          <dt className="settings-label">Who can wake it</dt>
+          <dd>{wakeText(agent.wakePolicy)}</dd>
         </div>
       </dl>
       {unconfirmed ? (
@@ -398,6 +439,19 @@ function AgentCard({
             </Button>
           </>
         ) : null}
+        {agent.suspended ? null : (
+          <Button
+            variant={paused ? "primary" : "secondary"}
+            size="sm"
+            icon={paused ? "play" : "pause"}
+            loading={busy(`pause-${agent.id}`)}
+            disabled={busy(`pause-${agent.id}`)}
+            onClick={() => onPause(!paused)}
+            aria-label={`${paused ? "Resume" : "Pause"} ${agent.name}`}
+          >
+            {paused ? "Resume" : "Pause"}
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -542,6 +596,7 @@ function TokenDialog({
 interface EditForm {
   readonly name: string;
   readonly avatar: AvatarChoice;
+  readonly wakePolicy: WakePolicy;
   readonly roomIds: readonly number[];
   readonly capabilities: readonly string[];
 }
@@ -550,10 +605,11 @@ interface EditForm {
 interface Touched {
   readonly name: boolean;
   readonly avatar: boolean;
+  readonly wake: boolean;
   readonly access: boolean;
 }
 
-const UNTOUCHED: Touched = { name: false, avatar: false, access: false };
+const UNTOUCHED: Touched = { name: false, avatar: false, wake: false, access: false };
 
 /** An agent's picture field: its picked avatar, else what it has now. */
 function avatarOf(agent: PersonalAgent): AvatarChoice {
@@ -562,11 +618,20 @@ function avatarOf(agent: PersonalAgent): AvatarChoice {
 
 /** The form for `agent` as the cache holds it. */
 function formOf(agent: PersonalAgent | null, offered: readonly string[]): EditForm {
-  if (agent === null) return { name: "", avatar: { kind: "keep" }, roomIds: [], capabilities: [] };
+  if (agent === null) {
+    return {
+      name: "",
+      avatar: { kind: "keep" },
+      wakePolicy: "owner",
+      roomIds: [],
+      capabilities: [],
+    };
+  }
 
   return {
     name: agent.name,
     avatar: avatarOf(agent),
+    wakePolicy: agent.wakePolicy,
     roomIds: agent.roomIds,
     capabilities: agent.roomIds.length === 0 ? offered : agent.capabilities,
   };
@@ -671,8 +736,9 @@ function EditDialog({
     });
 
     const repicture = touched.avatar && changesAvatar(form.avatar, shown);
+    const rewake = touched.wake && (unconfirmed || form.wakePolicy !== agent.wakePolicy);
 
-    if (!rename && !repicture && !touched.access) {
+    if (!rename && !repicture && !rewake && !touched.access) {
       onClose();
 
       return;
@@ -681,15 +747,19 @@ function EditDialog({
     const save = async () => {
       let latest = agent;
 
-      if (rename || repicture) {
+      if (rename || repicture || rewake) {
         // `null` leaves that field as the server holds it.
         const picture = repicture ? await avatarFields(form.avatar, shown, pictureUpload) : null;
 
-        latest = await writes.rename(agent.id, {
+        const change: Partial<UpdatePersonalAgent> = {
           name: rename ? name : null,
           iconName: null,
           ...picture,
-        });
+        };
+
+        if (rewake) change.wakePolicy = form.wakePolicy;
+
+        latest = await writes.rename(agent.id, change);
       }
 
       if (touched.access) {
@@ -802,6 +872,10 @@ function EditDialog({
           }
           onName={(name) => edit({ name }, "name")}
           onAvatar={(avatar) => edit({ avatar }, "avatar")}
+        />
+        <WakeField
+          value={form.wakePolicy}
+          onChange={(wakePolicy) => edit({ wakePolicy }, "wake")}
         />
         <AccessFields
           rooms={list.rooms}
@@ -917,17 +991,17 @@ export function AgentsSection() {
   const [ask, setAsk] = useState<Ask>(null);
   const { busy, track } = useBusy();
   const restoredOnce = useRef(false);
+  const held = useSyncExternalStore(agentCache.subscribe, agentCache.current);
+  const cache = load.status === "ready" ? held : null;
 
   // A load of the whole list, numbered when sent: it lands under what was written since.
   const loadList = useCallback((): Promise<void> => {
     const at = nextSequence();
 
-    return meAgents.list().then((fresh) =>
-      setLoad((current) => ({
-        status: "ready",
-        cache: withList(current.status === "ready" ? current.cache : null, fresh, at),
-      })),
-    );
+    return meAgents.list().then((fresh) => {
+      agentCache.list(fresh, at);
+      setLoad({ status: "ready" });
+    });
   }, []);
 
   // The first load, a retry, and the quiet reload after a write finds personal agents turned
@@ -942,7 +1016,7 @@ export function AgentsSection() {
 
   useEffect(fetchList, [fetchList]);
 
-  const list = load.status === "ready" ? load.cache.list : null;
+  const list = cache === null ? null : cache.list;
 
   // A wizard left for a Google confirmation comes back where it stopped: on its last step.
   useEffect(() => {
@@ -963,14 +1037,20 @@ export function AgentsSection() {
     fetchList();
   };
 
-  const replace = (change: (current: AgentCache) => AgentCache) =>
-    setLoad((current) =>
-      current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
-    );
+  // Into the cache that outlives the section, so an answer that comes back after the person left
+  // still lands in the section they come back to.
+  const replace = (change: (current: AgentCache) => AgentCache) => agentCache.change(change);
 
-  // An agent write, numbered when sent. Its answer lands in the cache; a failure that may have
-  // come after the save (no answer in time, a dropped connection, a server error) marks the agent
-  // unconfirmed there, so whichever opening of its dialog comes next knows.
+  // A failure that may have come after the save (no answer in time, a dropped connection, a
+  // server error) marks the agent unconfirmed in the cache, so whichever opening of its dialog
+  // comes next knows.
+  const markUnconfirmed = (agentId: number, at: number, failure: Error) => {
+    if (writeMayHaveLanded(failure)) {
+      replace((current) => withUnconfirmed(current, agentId, at));
+    }
+  };
+
+  // A rename or access save, numbered when sent: its answer lands in the cache.
   const write = (agentId: number, send: () => Promise<PersonalAgent>): Promise<PersonalAgent> => {
     const at = nextSequence();
 
@@ -981,9 +1061,33 @@ export function AgentsSection() {
         return agent;
       },
       (failure: Error) => {
-        if (writeMayHaveLanded(failure)) {
-          replace((current) => withUnconfirmed(current, agentId, at));
-        }
+        markUnconfirmed(agentId, at, failure);
+
+        throw failure;
+      },
+    );
+  };
+
+  // A pause or resume: while it's out, no other answer touches the agent's pause state, and once
+  // it's back only answers to requests sent after that do (see agents-cache.ts).
+  const writePause = (agentId: number, paused: boolean): Promise<PersonalAgent> => {
+    const at = nextSequence();
+
+    replace((current) => withPauseSent(current, agentId));
+
+    return meAgents.setPaused(agentId, paused).then(
+      (agent) => {
+        const settled = nextSequence();
+
+        replace((current) => withPauseSettled(current, agentId, agent, at, settled));
+
+        return agent;
+      },
+      (failure: Error) => {
+        const settled = nextSequence();
+
+        markUnconfirmed(agentId, at, failure);
+        replace((current) => withPauseSettled(current, agentId, null, at, settled));
 
         throw failure;
       },
@@ -993,8 +1097,26 @@ export function AgentsSection() {
   const writes: AgentWrites = {
     rename: (agentId, change) => write(agentId, () => meAgents.update(agentId, change)),
     setAccess: (agentId, access) => write(agentId, () => meAgents.setAccess(agentId, access)),
+    setPaused: writePause,
     reload: loadList,
   };
+
+  const pause = (agent: PersonalAgent, paused: boolean) =>
+    void track(
+      `pause-${agent.id}`,
+      writes.setPaused(agent.id, paused).then(
+        (next) =>
+          toast({
+            title: paused ? `${next.name} is paused` : `${next.name} is resumed`,
+            tone: "success",
+          }),
+        (error: Error) =>
+          toastFailure(
+            paused ? `Couldn't pause ${agent.name}` : `Couldn't resume ${agent.name}`,
+            error,
+          ),
+      ),
+    );
 
   // The card's Reload after an unanswered save: it answers for what the server holds.
   const recheck = () =>
@@ -1154,12 +1276,13 @@ export function AgentsSection() {
                     agent={agent}
                     list={list}
                     busy={busy}
-                    unconfirmed={load.status === "ready" && isUnconfirmed(load.cache, agent.id)}
+                    unconfirmed={cache !== null && isUnconfirmed(cache, agent.id)}
                     onReload={recheck}
                     onEdit={() => {
                       setEditing(agent.id);
                       setOpening((count) => count + 1);
                     }}
+                    onPause={(paused) => pause(agent, paused)}
                     onRemove={() => remove(agent)}
                     onIssue={() => setTokenAsk({ agent, replacing: null })}
                     onRotate={(credential) => setTokenAsk({ agent, replacing: credential })}
@@ -1177,9 +1300,7 @@ export function AgentsSection() {
           <EditDialog
             key={opening}
             agent={editing === null ? null : (list.agents.find((a) => a.id === editing) ?? null)}
-            unconfirmed={
-              editing !== null && load.status === "ready" && isUnconfirmed(load.cache, editing)
-            }
+            unconfirmed={editing !== null && cache !== null && isUnconfirmed(cache, editing)}
             list={list}
             writes={writes}
             onClose={() => setEditing(null)}

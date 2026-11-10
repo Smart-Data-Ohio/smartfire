@@ -59,6 +59,7 @@ export const BotSummary = Schema.Struct({
   icon: Schema.NullOr(BotIcon),
   botAvatar: Schema.NullOr(BotAvatarSpec),
   ownership: Schema.String,
+  paused: Schema.Boolean,
   supportsBotKey: Schema.Boolean,
   rooms: Schema.Array(BotRoom),
 });
@@ -81,6 +82,7 @@ export const BotAgent = Schema.Struct({
   dailyExternalActionCap: Schema.NullOr(Schema.Int),
   usage: Schema.String,
   suspended: Schema.Boolean,
+  paused: Schema.Boolean,
   ledgerUrl: Schema.String,
   approvalsUrl: Schema.String,
 });

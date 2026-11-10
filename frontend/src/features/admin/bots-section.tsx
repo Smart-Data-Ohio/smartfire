@@ -27,7 +27,14 @@ function BotRow({ bot }: { readonly bot: BotSummary }) {
         spec={bot.botAvatar}
       />
       <span className="settings-list-main">
-        <strong>{bot.name}</strong>
+        <strong>
+          {bot.name}
+          {bot.paused ? (
+            <span className="settings-badge" data-tone="paused">
+              Paused
+            </span>
+          ) : null}
+        </strong>
         <span className="text-faint">{bot.ownership}</span>
       </span>
       <Link

@@ -6,6 +6,7 @@ import { ActionError } from "../../sync/run.ts";
 import {
   abilityLabel,
   agentIcon,
+  assistantOf,
   baseProblem,
   canConnect,
   canCreate,
@@ -20,7 +21,9 @@ import {
   emptyDraft,
   expiresAtOf,
   iconOf,
+  isPaused,
   parseDraft,
+  pausedLine,
   REUSED_REASON,
   roomNames,
   serializeDraft,
@@ -30,6 +33,8 @@ import {
   tokenMeta,
   turnedOff,
   usage,
+  WAKE_CHOICES,
+  wakeText,
   withClient,
 } from "./agents-format.ts";
 
@@ -99,8 +104,8 @@ describe("clients", () => {
       "Other MCP or API client",
     ]);
     expect(clientChoices(true).map((c) => c.value)).toEqual([
-      "claude-ai",
       "chatgpt",
+      "claude-ai",
       "grok",
       "claude-code",
       "codex",
@@ -207,8 +212,8 @@ describe("the cards", () => {
     expect(canConnect(list({ limit: 0, oauthAvailable: true }))).toBe(false);
     expect(canConnect(list({ ...signing, enabled: false }))).toBe(false);
     expect(connectChoices(signing).map((choice) => choice.value)).toEqual([
-      "claude-ai",
       "chatgpt",
+      "claude-ai",
       "grok",
       "claude-code",
       "codex",
@@ -404,5 +409,45 @@ describe("connections", () => {
     expect(by("https://chatgpt.com/oauth/other.json")).toBeNull();
     expect(by("https://grok.com/oauth/client.json")).toBeNull();
     expect(connectedProduct(token({}))).toBeNull();
+  });
+});
+
+describe("assistants", () => {
+  it("offers the dots and Duet presets first, each named for the assistant it sets up", () => {
+    const [dots, duet] = clientChoices(true);
+
+    expect(dots).toMatchObject({ value: "chatgpt", label: "ChatGPT (dots)", provider: "openai" });
+    expect(duet).toMatchObject({
+      value: "claude-ai",
+      label: "Claude (Duet)",
+      provider: "anthropic",
+    });
+    expect(assistantOf("chatgpt")).toBe("dots");
+    expect(assistantOf("claude-ai")).toBe("Duet");
+    expect(assistantOf("grok")).toBeNull();
+    expect(assistantOf("other")).toBeNull();
+    expect(assistantOf(null)).toBeNull();
+  });
+
+  it("says who can wake it, owner-only first", () => {
+    expect(WAKE_CHOICES.map((choice) => choice.label)).toEqual(["Only me", "Anyone in its rooms"]);
+    expect(wakeText("owner")).toBe("Only you");
+    expect(wakeText("anyone")).toBe("Anyone in its rooms");
+  });
+
+  it("calls an agent paused only while it isn't suspended", () => {
+    const at = "2026-11-09T12:00:00.000Z";
+
+    expect(isPaused({ pausedAt: at, suspended: false })).toBe(true);
+    expect(isPaused({ pausedAt: at, suspended: true })).toBe(false);
+    expect(isPaused({ pausedAt: null, suspended: false })).toBe(false);
+  });
+
+  it("says who paused it and when, or only when without a name", () => {
+    const ago = () => "2 hours ago";
+    const at = "2026-11-09T12:00:00.000Z";
+
+    expect(pausedLine({ pausedAt: at, pausedBy: "Riel" }, ago)).toBe("Paused by Riel 2 hours ago.");
+    expect(pausedLine({ pausedAt: at, pausedBy: null }, ago)).toBe("Paused 2 hours ago.");
   });
 });

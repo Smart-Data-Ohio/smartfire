@@ -14,7 +14,7 @@ import { avatarFields, keptUpload } from "../bot-avatar/avatar-choice.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
 import { AccessFields, IdentityFields } from "../settings/agent-parts.tsx";
-import { agentIcon } from "../settings/agents-format.ts";
+import { agentIcon, isPaused } from "../settings/agents-format.ts";
 import { RoutePending } from "../shell/route-pending.tsx";
 import {
   type AccessDiff,
@@ -229,6 +229,8 @@ function AgentPicker({
               <span className="text-faint">This app connected as it last time</span>
             ) : agent.suspended ? (
               <span className="text-faint">Suspended</span>
+            ) : isPaused(agent) ? (
+              <span className="text-faint">Paused: resume it in Settings → Agents</span>
             ) : null}
           </span>
         </label>

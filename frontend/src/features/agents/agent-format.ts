@@ -33,14 +33,14 @@ export function capabilityLabel(capability: string): string {
 }
 
 /**
- * The kind line: "Personal agent of Theo", "Workspace agent, managed by Riel", or with no owner
- * "Personal agent, no owner recorded". An unknown kind reads "Agent".
+ * The kind line: "Personal assistant of Theo", "Workspace agent, managed by Riel", or with no
+ * owner "Personal assistant, no owner recorded". An unknown kind reads "Agent".
  */
 export function kindDescription(kind: string, ownerName: string | null): string {
   if (kind === "personal") {
     return ownerName === null
-      ? "Personal agent, no owner recorded"
-      : `Personal agent of ${ownerName}`;
+      ? "Personal assistant, no owner recorded"
+      : `Personal assistant of ${ownerName}`;
   }
 
   if (kind === "workspace") {
