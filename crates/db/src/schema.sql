@@ -1185,7 +1185,7 @@ CREATE TABLE mcp_event_deliveries (
   next_attempt_at datetime NOT NULL,
   last_error TEXT,
   created_at datetime NOT NULL,
-  updated_at datetime NOT NULL,
+  updated_at datetime NOT NULL, body TEXT,
   UNIQUE(subscription_id, agent_event_id)
 );
 CREATE INDEX mcp_deliveries_sweep ON mcp_event_deliveries(status, next_attempt_at);

@@ -63,14 +63,21 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
         }
         if !campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),d.event_id)? {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)}
         let Some(event)=AgentEvent::find(tx.conn(),d.event_id)? else {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)};
-        let mut presenter=Presenter::new(tx.conn(),&state,None);
-        presenter.cache_base_url=Some(tx.env().default_url_origin.clone());
-        presenter.current_user_id=Some(campfire_db::Agent::find(tx.conn(),s.agent_id)?.expect("live agent").user_id);
-        presenter.use_viewer_zone(presenter.current_user_id.expect("agent viewer"))?;
-        let Some(data)=campfire_db::models::agent_event_polling::event_payload(tx.conn(),&event,tx.now(),&access,|m|presenter.agent_message_payload(m))? else {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)};
-        let cursor=domain::delivery_cursor(tx.conn(),&s.id,Some(d.id))?;
-        let body=json!({"eventId":d.webhook_id,"name":event.event_type,"timestamp":event.created_at.jiff().to_string(),"data":data,"cursor":cursor.to_string()}).to_string();
-        if !campfire_app::integrations::mcp_events::body_fits(&body) {domain::finish(tx,&d,DeliveryOutcome::Permanent(Category::Http4xx))?;return Ok(Prepared::Skip)}
+        let body = match d.body.clone() {
+            Some(body) => body,
+            None => {
+                let mut presenter=Presenter::new(tx.conn(),&state,None);
+                presenter.cache_base_url=Some(tx.env().default_url_origin.clone());
+                presenter.current_user_id=Some(campfire_db::Agent::find(tx.conn(),s.agent_id)?.expect("live agent").user_id);
+                presenter.use_viewer_zone(presenter.current_user_id.expect("agent viewer"))?;
+                let Some(data)=campfire_db::models::agent_event_polling::event_payload(tx.conn(),&event,tx.now(),&access,|m|presenter.agent_message_payload(m))? else {domain::suppress(tx,&d)?;return Ok(Prepared::Skip)};
+                let cursor=domain::delivery_cursor(tx.conn(),&s.id,Some(d.id))?;
+                let body=json!({"eventId":d.webhook_id,"name":event.event_type,"timestamp":event.created_at.jiff().to_string(),"data":data,"cursor":cursor.to_string()}).to_string();
+                if !campfire_app::integrations::mcp_events::body_fits(&body) {domain::finish(tx,&d,DeliveryOutcome::Permanent(Category::Http4xx))?;return Ok(Prepared::Skip)}
+                if tx.conn().execute("UPDATE mcp_event_deliveries SET body=? WHERE id=? AND attempts=? AND status='pending'", rusqlite::params![body,d.id,d.attempts])? == 0 { return Ok(Prepared::Skip) }
+                body
+            }
+        };
         Ok(Prepared::Event(s,body))
     }).await?;
     let (subscription, body) = match prepared {

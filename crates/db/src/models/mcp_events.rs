@@ -298,6 +298,7 @@ pub struct Delivery {
     pub subscription_id: String,
     pub event_id: i64,
     pub webhook_id: String,
+    pub body: Option<String>,
     pub attempts: i64,
 }
 impl Delivery {
@@ -307,6 +308,7 @@ impl Delivery {
             subscription_id: r.get("subscription_id")?,
             event_id: r.get("agent_event_id")?,
             webhook_id: r.get("webhook_id")?,
+            body: r.get("body")?,
             attempts: r.get("attempts")?,
         })
     }

@@ -407,23 +407,50 @@ async fn mcp_events_mention_matches_polling_and_ack_does_not_cancel_delivery() {
     );
 }
 #[tokio::test]
-async fn mcp_events_reply_wins_over_mention_and_routes_by_name() {
-    let (app, server, _) = setup().await;
+async fn mcp_events_reply_wins_over_mention_and_retries_the_polling_row() {
+    let (app, server, clock) = setup().await;
     subscribe(&app, "mention").await;
     subscribe(&app, "reply").await;
     let root = post(&app, "Agent here", None, BENDER).await;
     let reply = post(&app, "Hey @[Bender Bot]", Some(root), DAVID).await;
-    publish(&app, reply).await;
-    let jobs = jobs(&app).await;
-    assert_eq!(jobs.len(), 1);
-    deliver(&app, jobs[0].clone()).await;
-    let r = server.received();
-    assert_eq!(r.len(), 2);
-    assert_eq!(
-        serde_json::from_slice::<Value>(&r[1].body).unwrap()["name"],
-        "reply"
+    let eid = publish(&app, reply).await;
+    let poll = app
+        .anonymous()
+        .send(
+            Req::new(Method::GET, "/agents/events?envelope=1")
+                .header("authorization", &format!("Bearer {SECRET}")),
+        )
+        .await;
+    let poll: Value = serde_json::from_slice(&poll.body).unwrap();
+    let expected = poll["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["id"] == eid)
+        .unwrap();
+    let pending = jobs(&app).await;
+    assert_eq!(pending.len(), 1);
+    server.replace_routes(vec![Route::new("POST", "*", "/hook", 503)]);
+    deliver(&app, pending[0].clone()).await;
+    clock.advance(jiff::SignedDuration::from_secs(31));
+    server.replace_routes(vec![Route::new("POST", "*", "/hook", 200)]);
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    let received = server.received();
+    assert_eq!(received.len(), 3);
+    assert_eq!(received[1].body, received[2].body);
+    assert_ne!(
+        received[1].header("webhook-timestamp"),
+        received[2].header("webhook-timestamp")
     );
-    signed(&r[1], KEY);
+    for r in &received[1..] {
+        signed(r, KEY);
+        let body: Value = serde_json::from_slice(&r.body).unwrap();
+        assert_eq!(body["name"], "reply");
+        assert_eq!(body["data"], *expected);
+        assert_eq!(body["eventId"], r.header("webhook-id").unwrap());
+        assert!(body["eventId"].as_str().unwrap().starts_with("msg_"));
+    }
+    assert_eq!(status(&app).await, json!(["delivered", 2, null]));
 }
 #[tokio::test]
 async fn mcp_events_retries_keep_id_and_sweep_recovers_stranded_work() {
@@ -464,6 +491,16 @@ async fn mcp_events_retries_keep_id_and_sweep_recovers_stranded_work() {
             .unwrap(),
         1
     );
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE agent_events SET outcome='acknowledged' WHERE message_id=?",
+                [m],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     server.replace_routes(vec![Route::new("POST", "*", "/hook", 200)]);
     deliver(&app, jobs(&app).await.remove(0)).await;
     assert_eq!(status(&app).await, json!(["delivered", 2, null]));
