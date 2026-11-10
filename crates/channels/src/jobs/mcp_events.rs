@@ -57,6 +57,7 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
             domain::finish(tx,&d,DeliveryOutcome::Terminate(domain::Termination::AccessRevoked))?;
             return Ok(None);
         }
+        if campfire_db::Agent::find(tx.conn(),s.agent_id)?.is_some_and(|a|a.paused()) {domain::suppress(tx,&d)?;return Ok(None)}
         if !campfire_db::models::agent_event_access::delivery_authorized(tx.conn(),d.event_id)? {domain::suppress(tx,&d)?;return Ok(None)}
         let Some(event)=AgentEvent::find(tx.conn(),d.event_id)? else {domain::suppress(tx,&d)?;return Ok(None)};
         let cached = d.body.as_ref().map(|body| serde_json::from_str::<serde_json::Value>(body)

@@ -346,7 +346,9 @@ impl Agent {
         Ok(errors)
     }
     pub fn create(tx: &Tx<'_>, mut a: NewAgent) -> Result<Self> {
-        if a.kind == AgentKind::Workspace { a.wake_policy = WakePolicy::Anyone; }
+        if a.kind == AgentKind::Workspace {
+            a.wake_policy = WakePolicy::Anyone;
+        }
         Self::validate(tx.conn(), &a, None)?.into_result()?;
         let id=tx.conn().query_row("INSERT INTO agents(user_id,owner_id,kind,wake_policy,paused_at,paused_by_id,description,provider,runtime,status,status_note,suspended_at,daily_message_cap,daily_board_post_cap,daily_external_action_cap,working_presence,working_presence_expires_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.user_id,a.owner_id,a.kind.name(),a.wake_policy,a.paused_at,a.paused_by_id,a.description,a.provider,a.runtime,a.status,a.status_note,a.suspended_at,a.daily_message_cap,a.daily_board_post_cap,a.daily_external_action_cap,a.working_presence,a.working_presence_expires_at,tx.now(),tx.now()],|r|r.get(0))?;
         if a.kind == AgentKind::Personal {
@@ -474,7 +476,9 @@ impl Agent {
         Ok(())
     }
     pub fn save(&mut self, tx: &mut Tx<'_>) -> Result<()> {
-        if self.kind == AgentKind::Workspace { self.wake_policy = WakePolicy::Anyone; }
+        if self.kind == AgentKind::Workspace {
+            self.wake_policy = WakePolicy::Anyone;
+        }
         let before =
             Self::find(tx.conn(), self.id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
         Self::validate(tx.conn(), &self.attributes(), Some(self.id))?.into_result()?;

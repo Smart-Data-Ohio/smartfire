@@ -143,6 +143,9 @@ pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
     ("users", "appearance_preferences"),
     ("users", "pronouns"),
     ("users", "nickname"),
+    ("agents", "wake_policy"),
+    ("agents", "paused_at"),
+    ("agents", "paused_by_id"),
 ];
 
 /// Whether `table.column` is in [`RUST_ONLY_COLUMNS`].

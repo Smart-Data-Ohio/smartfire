@@ -424,11 +424,17 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
         }
     }
     for (agent_id, kind) in recipients {
-        if let Some(thread_id) = message.thread_id {
-            let user_id: i64 = tx.conn().query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
-            if !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), user_id)? { continue; }
+        let agent = crate::Agent::find(tx.conn(), agent_id)?.expect("candidate agent");
+        if !agent.message_can_wake(message.creator_id) {
+            continue;
         }
-        let (kind, outcome, detail) = if hop >= 3 {
+        if let Some(thread_id) = message.thread_id
+            && !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), agent.user_id)? {
+            continue;
+        }
+        let (kind, outcome, detail) = if agent.paused() {
+            (kind, "suppressed", Some("Agent paused".into()))
+        } else if hop >= 3 {
             (
                 "delivery_suppressed_hop_limit",
                 "suppressed",
@@ -479,6 +485,10 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
         return Ok(());
     };
     if !MESSAGE_TYPES.contains(&e.event_type.as_str()) {
+        return Ok(());
+    }
+    if crate::Agent::find(tx.conn(), e.agent_id)?.is_some_and(|a| a.paused()) {
+        tx.conn().execute("UPDATE agent_events SET outcome='suppressed',detail='Agent paused',webhook_status='none' WHERE id=? AND outcome IN ('pending','acknowledged')", [e.id])?;
         return Ok(());
     }
     if e.outcome.as_deref() == Some("acknowledged") {
@@ -547,6 +557,10 @@ pub fn claim_webhook(tx: &Tx<'_>, job: &EventWebhookJob) -> Result<Option<AgentE
     let Some(e) = AgentEvent::find(tx.conn(), job.event_id)? else {
         return Ok(None);
     };
+    if crate::Agent::find(tx.conn(), e.agent_id)?.is_some_and(|a| a.paused()) {
+        tx.conn().execute("UPDATE agent_events SET outcome='suppressed',detail='Agent paused',webhook_status='none' WHERE id=? AND webhook_status='pending'", [e.id])?;
+        return Ok(None);
+    }
     if e.webhook_status == "delivered" {
         return Ok(None);
     }

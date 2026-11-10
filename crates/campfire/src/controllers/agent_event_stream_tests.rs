@@ -518,3 +518,21 @@ async fn agent_sse_review_external_commit_arrives_after_stream_catches_up() {
     assert_eq!(data["id"], id);
     assert!(frame(&mut body).await.unwrap().starts_with(": ping"));
 }
+
+#[tokio::test]
+async fn assistants_pause_closes_sse_stream() {
+    let app = setup().await;
+    let mut body = stream(&app, "", None).await;
+    frame(&mut body).await.unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agents SET paused_at=? WHERE id=?",
+                rusqlite::params![tx.now(), AGENT],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    closed_promptly(&mut body).await;
+}

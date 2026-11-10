@@ -23,6 +23,9 @@ pub async fn dispatch(
     if method == "events/list" {
         return Ok(rpc_result(c, id, modern_result(descriptors(), modern)));
     }
+    if method == "events/subscribe" && crate::concerns::agent_api::action_paused(c).await? {
+        return error(c, id, -32024, "Agent paused", None);
+    }
     if matches!(method, "events/poll" | "events/stream") {
         return error(
             c,
@@ -214,6 +217,7 @@ pub async fn dispatch(
                 modern,
             ),
         )),
+        GrantResult::Paused => error(c, id, -32024, "Agent paused", None),
         GrantResult::Forbidden => error(c, id, -32024, "Forbidden", None),
         GrantResult::Limit => error(
             c,
