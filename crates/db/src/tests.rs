@@ -1,5 +1,6 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
+mod assistant_controls_test;
 mod agent_work_test;
 mod personal_agent_access_test;
 mod oauth_test;
