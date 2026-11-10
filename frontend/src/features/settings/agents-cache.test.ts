@@ -10,6 +10,7 @@ import {
   withAgent,
   withCreated,
   withList,
+  withPause,
   withRemoved,
   withTokens,
   withUnconfirmed,
@@ -91,6 +92,48 @@ describe("the agents cache", () => {
     expect(names(withList(saved, list([{ ...AGENT, name: "Server" }]), nextSequence()))).toEqual([
       "Server",
     ]);
+  });
+
+  it("lands a pause answered after a rename sent later, without undoing the rename", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const pause = nextSequence();
+    const rename = nextSequence();
+    const paused = { ...AGENT, pausedAt: "2026-11-09T12:00:00.000Z", pausedBy: "Riel" };
+    const renamed = withAgent(first, { ...AGENT, name: "Renamed" }, rename);
+    const after = withPause(renamed, { ...paused, name: "Helper" }, pause);
+
+    expect(names(after)).toEqual(["Renamed"]);
+    expect(after.list.agents[0]?.pausedAt).toBe(paused.pausedAt);
+  });
+
+  it("keeps a pause when a rename sent before it answers last", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const rename = nextSequence();
+    const pause = nextSequence();
+    const paused = withPause(first, { ...AGENT, pausedAt: "2026-11-09T12:00:00.000Z" }, pause);
+    const after = withAgent(paused, { ...AGENT, name: "Renamed" }, rename);
+
+    expect(names(after)).toEqual(["Renamed"]);
+    expect(after.list.agents[0]?.pausedAt).toBe("2026-11-09T12:00:00.000Z");
+    expect(
+      withAgent(paused, { ...AGENT, name: "Later" }, nextSequence()).list.agents[0]?.pausedAt,
+    ).toBe("2026-11-09T12:00:00.000Z");
+  });
+
+  it("drops a resume answered after a newer pause, and an older reload's pause state", () => {
+    const first = withList(null, list([AGENT]), nextSequence());
+    const resume = nextSequence();
+    const reload = nextSequence();
+    const pause = nextSequence();
+    const paused = withPause(first, { ...AGENT, pausedAt: "2026-11-09T12:00:00.000Z" }, pause);
+
+    expect(withPause(paused, AGENT, resume).list.agents[0]?.pausedAt).toBe(
+      "2026-11-09T12:00:00.000Z",
+    );
+    expect(withList(paused, list([AGENT]), reload).list.agents[0]?.pausedAt).toBe(
+      "2026-11-09T12:00:00.000Z",
+    );
+    expect(withList(paused, list([AGENT]), nextSequence()).list.agents[0]?.pausedAt).toBeNull();
   });
 
   it("ignores a whole list older than the one it holds", () => {

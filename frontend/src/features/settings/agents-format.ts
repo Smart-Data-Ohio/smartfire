@@ -59,14 +59,14 @@ const WEB_CONNECTORS: readonly (ClientChoice & { readonly value: WebConnector })
   {
     value: "chatgpt",
     label: "ChatGPT (dots)",
-    hint: "OpenAI's assistant in ChatGPT. Signs in, and new messages reach it as events",
+    hint: "OpenAI's assistant in ChatGPT. Signs in; subscribe it to events and it answers new messages",
     provider: "openai",
     assistant: "dots",
   },
   {
     value: "claude-ai",
     label: "Claude (Duet)",
-    hint: "Anthropic's assistant in Claude. Signs in, and checks for new messages itself",
+    hint: "Anthropic's assistant in Claude. Signs in, and checks for new messages when you ask",
     provider: "anthropic",
     assistant: "Duet",
   },

@@ -83,6 +83,15 @@ Add the URL in your client and choose OAuth authentication:
 | [Grok](https://docs.x.ai/grok/connectors) | Open [Connectors](https://grok.com/connectors), choose **New Connector → Custom**, enter the URL, and complete authentication. |
 | [MCP Inspector](https://github.com/modelcontextprotocol/inspector) | Run `npx @modelcontextprotocol/inspector`. Select Streamable HTTP, enter the URL, and use the OAuth flow in Auth settings before connecting. |
 
+ChatGPT answers new messages only after you subscribe it to Smartfire events.
+Start a Work chat on ChatGPT web (or select **Work** and **Cloud** in the
+desktop app), or open a dot. Ask it to subscribe and say how to respond, for
+example: "Subscribe to my Smartfire mentions, replies and direct messages. When
+one arrives, read the conversation and reply in the same room or thread."
+ChatGPT then calls `events/subscribe` and handles each event in that chat. See
+[Events (webhooks)](#events-webhooks). Claude doesn't receive MCP Events: it sees
+new messages only when you ask it to check, through `poll_events`.
+
 Cursor's URL-only configuration lets it discover OAuth and register its client:
 
 ```json

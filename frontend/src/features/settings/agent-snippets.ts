@@ -169,7 +169,8 @@ function other(input: SnippetInput): Snippet {
 
 /**
  * Each web app's custom connector setup, as docs/agents-mcp.md ("Connect by URL") has it, checked
- * against the apps' own docs: ChatGPT's custom MCP server plugin (OAuth with CIMD), Claude's custom
+ * against the apps' own docs: ChatGPT's custom MCP server plugin (OAuth with CIMD) and its MCP
+ * Events subscription (asked for in a Work chat or a dot), Claude's custom
  * connector (Sign in now), and Grok's custom connector.
  */
 const CONNECTOR_SETUP: Readonly<Record<WebConnector, readonly string[]>> = {
@@ -177,6 +178,7 @@ const CONNECTOR_SETUP: Readonly<Record<WebConnector, readonly string[]>> = {
     "In ChatGPT on the web, open Plugins and select + → Add custom MCP server.",
     "Paste the connector URL as the Server URL. Choose OAuth and CIMD, then create and install the plugin.",
     "Sign in to Smartfire when ChatGPT asks, and approve it.",
+    'Start a Work chat (or open a dot) and ask ChatGPT to watch Smartfire, for example: "Subscribe to my Smartfire mentions, replies and direct messages. When one arrives, read the conversation and reply in the same room or thread."',
   ],
   "claude-ai": [
     "In Claude, open Customize → Connectors and select Add custom connector.",
@@ -193,9 +195,9 @@ const CONNECTOR_SETUP: Readonly<Record<WebConnector, readonly string[]>> = {
 /** How each web app hears about new messages once it's connected; empty when there's no more to say. */
 const CONNECTOR_NOTE: Readonly<Record<WebConnector, string>> = {
   chatgpt:
-    "Mentions, replies and direct messages reach it as events, so it can answer without being asked to check.",
+    "Once subscribed, mentions, replies and direct messages reach that chat as events, and ChatGPT answers them the way you asked. Events reach Work chats and dots only.",
   "claude-ai":
-    "Claude doesn't take events yet, so it checks for mentions, replies and direct messages itself.",
+    "Claude doesn't take events, so it doesn't answer on its own: ask it to check Smartfire, and it looks up new mentions, replies and direct messages then.",
   grok: "",
 };
 

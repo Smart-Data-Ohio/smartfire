@@ -424,9 +424,7 @@ describe("the wizard, signing in", () => {
     expect(screen.getByText(/Customize → Connectors and select Add custom connector/)).toBeTruthy();
     expect(screen.getByText(/choose Sign in now/)).toBeTruthy();
     expect(screen.getByText(/name it Duet/)).toBeTruthy();
-    expect(
-      screen.getByText(/checks for mentions, replies and direct messages itself/),
-    ).toBeTruthy();
+    expect(screen.getByText(/ask it to check Smartfire/)).toBeTruthy();
     expect(screen.getByText(/There's no token to keep/)).toBeTruthy();
     expect(
       screen.getAllByRole("listitem").some((item) => item.textContent?.includes("Identity")),
@@ -1207,4 +1205,28 @@ describe("who can wake it, and pausing", () => {
     expect(within(paused).getByRole("button", { name: "Resume Helper" })).toBeTruthy();
     expect(within(paused).queryByText("Off")).toBeNull();
   });
+});
+
+it("keeps a pause that answers after a later-sent edit", async () => {
+  await mount(list());
+  const pause = deferred<PersonalAgent>();
+  const edit = deferred<PersonalAgent>();
+  vi.spyOn(meAgents, "setPaused").mockReturnValue(pause.promise);
+  vi.spyOn(meAgents, "update").mockReturnValue(edit.promise);
+  fireEvent.click(await screen.findByRole("button", { name: "Pause Helper" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Helper" }));
+  fireEvent.click(within(editDialog()).getByRole("radio", { name: /Anyone in its rooms/ }));
+  fireEvent.click(button("Save"));
+  await act(async () => edit.settle.resolve({ ...AGENT, wakePolicy: "anyone" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await act(async () =>
+    pause.settle.resolve({
+      ...AGENT,
+      wakePolicy: "anyone",
+      pausedAt: new Date().toISOString(),
+      pausedBy: "Riel",
+    }),
+  );
+  expect(toastSnapshot().some((shown) => shown.title === "Helper is paused")).toBe(true);
+  expect(screen.getByRole("button", { name: "Resume Helper" })).toBeTruthy();
 });

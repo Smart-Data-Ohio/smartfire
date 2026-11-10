@@ -206,3 +206,17 @@ it("marks a paused agent on the bot list", async () => {
   expect(within(paused).getByText("Paused")).toBeTruthy();
   expect(within(running).queryByText("Paused")).toBeNull();
 });
+
+it("keeps an unsaved name edit when the agent is paused", async () => {
+  vi.spyOn(bots, "get").mockResolvedValue(bot);
+  vi.spyOn(bots, "setPaused").mockResolvedValue({
+    bot: { ...bot, agent: { ...bot.agent, paused: true } },
+    notice: null,
+  });
+  await renderSection(<BotSection />, true);
+  const name = await screen.findByRole("textbox", { name: "Name" });
+  fireEvent.change(name, { target: { value: "Unsaved new name" } });
+  fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+  await screen.findByText("This agent is paused.");
+  expect(name).toHaveProperty("value", "Unsaved new name");
+});

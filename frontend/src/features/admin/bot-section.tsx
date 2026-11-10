@@ -305,6 +305,31 @@ export function BotSection() {
     );
   };
 
+  // A pause or resume changes only whether the agent is paused: it takes that from the answer and
+  // leaves the bot and any unsaved edit as they are.
+  const pauseLanded = ({ bot: next, notice }: BotChange) => {
+    setLoad((current) =>
+      current.status !== "ready" || current.bot.agent === null || next.agent === null
+        ? current
+        : {
+            status: "ready",
+            bot: { ...current.bot, agent: { ...current.bot.agent, paused: next.agent.paused } },
+          },
+    );
+
+    if (notice !== null) toast({ title: notice, tone: "success" });
+  };
+
+  const setPaused = (paused: boolean) =>
+    void track(
+      "pause",
+      bots.setPaused(id, paused).then(
+        (change) =>
+          pauseLanded({ ...change, notice: change.notice ?? (paused ? PAUSED : RESUMED) }),
+        (error: Error) => adminFailure("Couldn't change the bot", error),
+      ),
+    );
+
   const write = (what: string, work: () => Promise<BotChange>) => {
     void track(
       what,
@@ -506,14 +531,7 @@ export function BotSection() {
                   icon={agent.paused ? "play" : "pause"}
                   loading={busy("pause")}
                   disabled={busy("pause")}
-                  onClick={() =>
-                    write("pause", () =>
-                      bots.setPaused(id, !agent.paused).then((change) => ({
-                        ...change,
-                        notice: change.notice ?? (agent.paused ? RESUMED : PAUSED),
-                      })),
-                    )
-                  }
+                  onClick={() => setPaused(!agent.paused)}
                 >
                   {agent.paused ? "Resume" : "Pause"}
                 </Button>

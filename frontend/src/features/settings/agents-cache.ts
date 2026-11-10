@@ -16,6 +16,11 @@
  * slow answer can't unblock a connection a later one showed blocked. Why it was revoked sticks
  * like the state: once any answer says, no answer without a reason clears it.
  *
+ * Whether it's paused: only pausing and resuming change that, so it has its own number. A pause
+ * or resume answer sets only that, and a rename or access save's answer never does. So a pause
+ * still lands when a rename sent after it is answered first (the two don't touch the same
+ * fields), and a slow rename can't put back an older pause state. A whole-list load sets both.
+ *
  * And which agents a save went unanswered for: it may or may not have landed, so the cache can't
  * tell what the server holds for them until an answer to a request sent after it says.
  */
@@ -27,6 +32,8 @@ export interface AgentCache {
   readonly list: PersonalAgentList;
   /** The newest request applied to each agent's profile and access, removed agents included. */
   readonly applied: ReadonlyMap<number, number>;
+  /** The newest pause or resume applied to each agent's pause state. */
+  readonly pausing: ReadonlyMap<number, number>;
   /** The newest whole-list load applied: it speaks for everything not written to since. */
   readonly listSequence: number;
   /** Agents with a save that went unanswered, by the number that save was sent as. */
@@ -47,6 +54,16 @@ export function nextSequence(): number {
 /** The newest request applied to agent `agentId`'s profile and access. */
 function profileAt(cache: AgentCache, agentId: number): number {
   return Math.max(cache.applied.get(agentId) ?? 0, cache.listSequence);
+}
+
+/** The newest request applied to agent `agentId`'s pause state. */
+function pauseAt(cache: AgentCache, agentId: number): number {
+  return Math.max(cache.pausing.get(agentId) ?? 0, cache.listSequence);
+}
+
+/** `agent` with `from`'s pause state. */
+function pausedAs(agent: PersonalAgent, from: PersonalAgent): PersonalAgent {
+  return { ...agent, pausedAt: from.pausedAt, pausedBy: from.pausedBy };
 }
 
 /** How far along a token is; it never goes back. */
@@ -170,7 +187,14 @@ export function withList(
       fresh.agents.flatMap((agent) => agent.credentials.map((token) => [token.id, at] as const)),
     );
 
-    return { list: fresh, applied: new Map(), listSequence: at, unconfirmed: new Map(), tokensAt };
+    return {
+      list: fresh,
+      applied: new Map(),
+      pausing: new Map(),
+      listSequence: at,
+      unconfirmed: new Map(),
+      tokensAt,
+    };
   }
 
   // An older load says nothing new about profiles or the agents listed, but its tokens' states
@@ -183,6 +207,7 @@ export function withList(
   const agents = fresh.agents.flatMap((agent) => {
     const held = cache.list.agents.find((a) => a.id === agent.id);
     const profileNewer = (cache.applied.get(agent.id) ?? 0) > at;
+    const pauseNewer = (cache.pausing.get(agent.id) ?? 0) > at;
 
     // Removed after this load was sent.
     if (held === undefined) return profileNewer ? [] : [agent];
@@ -191,7 +216,9 @@ export function withList(
 
     tokensAt = tokens.tokensAt;
 
-    return [{ ...(profileNewer ? held : agent), credentials: tokens.credentials }];
+    const profile = profileNewer ? held : agent;
+
+    return [{ ...pausedAs(profile, pauseNewer ? held : agent), credentials: tokens.credentials }];
   });
 
   // Connected after this load was sent, so it couldn't list them.
@@ -207,30 +234,59 @@ export function withList(
   return {
     list: { ...fresh, agents: [...agents, ...later] },
     applied: cache.applied,
+    pausing: cache.pausing,
     listSequence: at,
     unconfirmed,
     tokensAt,
   };
 }
 
-/** An agent as the answer to request `at` (a rename or an access save) gives it. */
+/** An agent as the answer to request `at` (a rename or an access save) gives it, but its pause state. */
 export function withAgent(cache: AgentCache, agent: PersonalAgent, at: number): AgentCache {
   const held = cache.list.agents.find((a) => a.id === agent.id);
 
   if (held === undefined) return cache;
 
-  const tokens = mergedTokens(held.credentials, agent.credentials, at, cache.tokensAt);
   const newer = at > profileAt(cache, agent.id);
-  const next = { ...(newer ? agent : held), credentials: tokens.credentials };
   const applied = new Map(cache.applied);
 
   if (newer) applied.set(agent.id, at);
 
+  return withAnswer({ ...cache, applied }, held, newer ? pausedAs(agent, held) : held, agent, at);
+}
+
+/** An agent's pause state as the answer to request `at` (a pause or a resume) gives it. */
+export function withPause(cache: AgentCache, agent: PersonalAgent, at: number): AgentCache {
+  const held = cache.list.agents.find((a) => a.id === agent.id);
+
+  if (held === undefined) return cache;
+
+  const newer = at > pauseAt(cache, agent.id);
+  const pausing = new Map(cache.pausing);
+
+  if (newer) pausing.set(agent.id, at);
+
+  return withAnswer({ ...cache, pausing }, held, newer ? pausedAs(held, agent) : held, agent, at);
+}
+
+/** `cache` with `held` replaced by `next`, the answer's tokens merged in, its save confirmed. */
+function withAnswer(
+  cache: AgentCache,
+  held: PersonalAgent,
+  next: PersonalAgent,
+  answer: PersonalAgent,
+  at: number,
+): AgentCache {
+  const tokens = mergedTokens(held.credentials, answer.credentials, at, cache.tokensAt);
+  const merged = { ...next, credentials: tokens.credentials };
+
   return {
     ...cache,
-    list: { ...cache.list, agents: cache.list.agents.map((a) => (a.id === agent.id ? next : a)) },
-    applied,
-    unconfirmed: confirmed(cache.unconfirmed, agent.id, at),
+    list: {
+      ...cache.list,
+      agents: cache.list.agents.map((a) => (a.id === held.id ? merged : a)),
+    },
+    unconfirmed: confirmed(cache.unconfirmed, held.id, at),
     tokensAt: tokens.tokensAt,
   };
 }

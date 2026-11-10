@@ -40,6 +40,7 @@ import {
   withAgent,
   withCreated,
   withList,
+  withPause,
   withRemoved,
   withTokens,
   withUnconfirmed,
@@ -1032,15 +1033,20 @@ export function AgentsSection() {
       current.status === "ready" ? { status: "ready", cache: change(current.cache) } : current,
     );
 
-  // An agent write, numbered when sent. Its answer lands in the cache; a failure that may have
+  // An agent write, numbered when sent. Its answer lands in the cache (a pause or resume's only
+  // in the agent's pause state, so other writes overlapping it can't undo it); a failure that may have
   // come after the save (no answer in time, a dropped connection, a server error) marks the agent
   // unconfirmed there, so whichever opening of its dialog comes next knows.
-  const write = (agentId: number, send: () => Promise<PersonalAgent>): Promise<PersonalAgent> => {
+  const write = (
+    agentId: number,
+    send: () => Promise<PersonalAgent>,
+    land: typeof withAgent = withAgent,
+  ): Promise<PersonalAgent> => {
     const at = nextSequence();
 
     return send().then(
       (agent) => {
-        replace((current) => withAgent(current, agent, at));
+        replace((current) => land(current, agent, at));
 
         return agent;
       },
@@ -1057,7 +1063,8 @@ export function AgentsSection() {
   const writes: AgentWrites = {
     rename: (agentId, change) => write(agentId, () => meAgents.update(agentId, change)),
     setAccess: (agentId, access) => write(agentId, () => meAgents.setAccess(agentId, access)),
-    setPaused: (agentId, paused) => write(agentId, () => meAgents.setPaused(agentId, paused)),
+    setPaused: (agentId, paused) =>
+      write(agentId, () => meAgents.setPaused(agentId, paused), withPause),
     reload: loadList,
   };
 
