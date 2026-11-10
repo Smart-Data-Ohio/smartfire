@@ -323,7 +323,7 @@ fn header_mismatch(c: &Ctx, method: &str, params: &Value, modern: bool) -> Optio
     if modern && let Some(message) = method_header_mismatch(c, method) {
         return Some(message);
     }
-    name_header_mismatch(c, method, params, modern)
+    name_header_mismatch(c, method, params)
 }
 
 fn method_header_mismatch(c: &Ctx, method: &str) -> Option<String> {
@@ -344,17 +344,14 @@ fn method_header_mismatch(c: &Ctx, method: &str) -> Option<String> {
     None
 }
 
-fn name_header_mismatch(c: &Ctx, method: &str, params: &Value, modern: bool) -> Option<String> {
+fn name_header_mismatch(c: &Ctx, method: &str, params: &Value) -> Option<String> {
     if !matches!(
         method,
         "tools/call" | "events/subscribe" | "events/unsubscribe"
-    ) || (!modern && method == "tools/call") {
+    ) {
         return None;
     }
-    let Some(name) = c.request.header("mcp-name") else {
-        return (modern && method == "tools/call")
-            .then(|| "Header mismatch: Mcp-Name header is required".into());
-    };
+    let name = c.request.header("mcp-name")?;
     let decoded = decode_header(name);
     let Some(decoded) = decoded else {
         return Some("Header mismatch: Mcp-Name header value is malformed".into());

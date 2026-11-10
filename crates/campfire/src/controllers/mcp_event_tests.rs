@@ -976,6 +976,30 @@ async fn mcp_events_production_rejects_http_callbacks() {
 async fn mcp_events_legacy_client_subscribes_receives_and_unsubscribes_without_name_header() {
     for version in ["2025-03-26", "2025-11-25", "2026-07-28"] {
         let (app, server, _) = setup().await;
+        for name in [None, Some("poll_events")] {
+            let result = rpc_token(
+                &app,
+                "tools/call",
+                json!({"name":"poll_events","arguments":{}}),
+                SECRET,
+                version,
+                name,
+            )
+            .await;
+            assert_eq!(result.0, 200);
+            assert_eq!(result.1["result"]["isError"], false);
+        }
+        let mismatch = rpc_token(
+            &app,
+            "tools/call",
+            json!({"name":"poll_events","arguments":{}}),
+            SECRET,
+            version,
+            Some("ack_events"),
+        )
+        .await;
+        assert_eq!(mismatch.0, 400);
+        assert_eq!(mismatch.1["error"]["code"], -32020);
         let mismatch = rpc_token(
             &app,
             "events/subscribe",

@@ -2973,16 +2973,26 @@
         "MCP-Protocol-Version": "2026-07-28",
         "Mcp-Method": "tools/call"
       },
-      "status": 400,
+      "status": 200,
       "response": {
         "jsonrpc": "2.0",
         "id": 7,
-        "error": {
-          "code": -32020,
-          "message": "Header mismatch: Mcp-Name header is required"
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"events\":[],\"next_since\":0}"
+            }
+          ],
+          "structuredContent": {
+            "events": [],
+            "next_since": 0
+          },
+          "isError": false,
+          "resultType": "complete"
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32020,\"message\":\"Header mismatch: Mcp-Name header is required\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"events\\\":[],\\\"next_since\\\":0}\"}],\"structuredContent\":{\"events\":[],\"next_since\":0},\"isError\":false,\"resultType\":\"complete\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
