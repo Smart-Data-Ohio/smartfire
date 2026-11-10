@@ -1270,6 +1270,120 @@ async fn mcp_events_room_filters_validate_access_canonicalize_and_limit_live_and
 }
 
 #[tokio::test]
+async fn mcp_events_refresh_preserves_verification_across_unsubscribe() {
+    let (app, server, clock) = setup().await;
+    let subscription = subscribe(&app, "mention").await;
+    let proof: campfire_db::Timestamp = app
+        .db()
+        .read(|c| {
+            Ok(
+                c.query_row("SELECT verified_at FROM mcp_event_subscriptions", [], |r| {
+                    r.get(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    clock.advance(jiff::SignedDuration::from_mins(10));
+    let (entered, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let db = app.db().clone();
+    let blocker = tokio::spawn(async move {
+        db.write(move |_| {
+            entered.send(()).unwrap();
+            wait.recv_timeout(std::time::Duration::from_secs(10))
+                .unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    ready.await.unwrap();
+    let request = rpc(&app, "events/subscribe", params("mention"));
+    tokio::pin!(request);
+    let db = app.db();
+    let queued = |count| async move {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            while db.queued_writes() < count {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("the request queued behind the held writer");
+    };
+    tokio::select! {
+        _ = &mut request => panic!("refresh completed while authentication was blocked"),
+        () = queued(1) => {}
+    }
+    // Queue unsubscribe after authentication, before refresh can enqueue its grant.
+    let (entered, ready) = tokio::sync::oneshot::channel();
+    let (resume, wait) = std::sync::mpsc::channel();
+    let db = app.db().clone();
+    let deletion = tokio::spawn(async move {
+        db.write(move |tx| {
+            let saved = domain::Subscription::find(tx.conn(), &subscription)?.unwrap();
+            assert!(domain::unsubscribe(
+                tx,
+                saved.credential_id,
+                &saved.url,
+                &saved.name,
+                &domain::Arguments::default()
+            )?);
+            entered.send(()).unwrap();
+            wait.recv_timeout(std::time::Duration::from_secs(10))
+                .unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    queued(2).await;
+    release.send(()).unwrap();
+    blocker.await.unwrap();
+    ready.await.unwrap();
+    // WAL readers still see the committed verification while unsubscribe is held.
+    tokio::select! {
+        _ = &mut request => panic!("refresh completed while unsubscribe was uncommitted"),
+        () = queued(1) => {}
+    }
+    resume.send(()).unwrap();
+    let result = request.await;
+    deletion.await.unwrap();
+    assert!(result.get("error").is_none(), "{result}");
+    assert_eq!(result["result"]["deliveryStatus"]["active"], true);
+    let message = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    publish(&app, message).await;
+    let pending = jobs(&app).await;
+    assert_eq!(
+        pending.len(),
+        1,
+        "successful refresh must receive future events"
+    );
+    deliver(&app, pending[0].clone()).await;
+    assert_eq!(status(&app).await[0], "delivered");
+    assert_eq!(
+        server.received().len(),
+        2,
+        "cached proof avoids another challenge"
+    );
+    let saved: campfire_db::Timestamp = app
+        .db()
+        .read(|c| {
+            Ok(
+                c.query_row("SELECT verified_at FROM mcp_event_subscriptions", [], |r| {
+                    r.get(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        saved, proof,
+        "refresh must not extend verification lifetime"
+    );
+}
+
+#[tokio::test]
 async fn mcp_events_verification_expires_without_refresh_extending_it() {
     let (app, server, clock) = setup().await;
     let id = subscribe(&app, "mention").await;
@@ -1470,10 +1584,21 @@ async fn mcp_events_explicit_replay_lowers_watermark_and_cached_retry_cursor() {
 
 #[tokio::test]
 async fn mcp_events_expired_delivery_reactivates_on_replay_with_same_id() {
+    assert_expired_delivery_reactivates(Some(json!("0"))).await;
+}
+
+#[tokio::test]
+async fn mcp_events_expired_delivery_reactivates_on_refresh_without_cursor() {
+    for cursor in [None, Some(Value::Null)] {
+        assert_expired_delivery_reactivates(cursor).await;
+    }
+}
+
+async fn assert_expired_delivery_reactivates(cursor: Option<Value>) {
     let (app, server, clock) = setup().await;
     let subscription = subscribe(&app, "mention").await;
     let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
-    publish(&app, m).await;
+    let event = publish(&app, m).await;
     let original: String = app
         .db()
         .read(|c| {
@@ -1490,7 +1615,9 @@ async fn mcp_events_expired_delivery_reactivates_on_replay_with_same_id() {
     assert_eq!(server.received().len(), 1);
     assert_eq!(status(&app).await[0], "expired");
     let mut p = params("mention");
-    p["cursor"] = json!("0");
+    if let Some(cursor) = cursor {
+        p["cursor"] = cursor;
+    }
     let refreshed = rpc(&app, "events/subscribe", p).await;
     assert_eq!(refreshed["result"]["id"], subscription);
     assert_eq!(refreshed["result"]["truncated"], false);
@@ -1501,6 +1628,8 @@ async fn mcp_events_expired_delivery_reactivates_on_replay_with_same_id() {
     let received = server.received();
     assert_eq!(received.len(), 2);
     assert_eq!(received[1].header("webhook-id"), Some(original.as_str()));
+    let body: Value = serde_json::from_slice(&received[1].body).unwrap();
+    assert_eq!(body["cursor"], event.to_string());
 }
 
 #[tokio::test]
@@ -1625,4 +1754,55 @@ async fn mcp_events_broader_replay_can_include_previously_age_skipped_events() {
     let received = server.received();
     let body: Value = serde_json::from_slice(&received[1].body).unwrap();
     assert_eq!(body["data"]["id"], event);
+}
+
+#[tokio::test]
+async fn mcp_events_refresh_settles_ineligible_expired_deliveries() {
+    for reason in ["age", "access", "outcome"] {
+        let (app, server, clock) = setup().await;
+        let subscription = subscribe(&app, "mention").await;
+        let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+        let event = publish(&app, m).await;
+        clock.advance(jiff::SignedDuration::from_hours(2));
+        deliver(&app, jobs(&app).await.remove(0)).await;
+        assert_eq!(status(&app).await[0], "expired");
+        app.db()
+            .write(move |tx| {
+                match reason {
+                    "access" => {
+                        tx.conn().execute(
+                            "UPDATE agent_events SET message_id=NULL WHERE id=?",
+                            [event],
+                        )?;
+                    }
+                    "outcome" => {
+                        tx.conn().execute(
+                            "UPDATE agent_events SET outcome='suppressed' WHERE id=?",
+                            [event],
+                        )?;
+                    }
+                    _ => {}
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let mut p = params("mention");
+        p["maxAgeMs"] = json!(60_000);
+        let result = rpc(&app, "events/subscribe", p).await;
+        assert!(result.get("error").is_none(), "{result}");
+        assert_eq!(result["result"]["truncated"], reason == "age");
+        assert!(jobs(&app).await.is_empty());
+        assert_eq!(status(&app).await[0], "suppressed", "{reason}");
+        let cursor = app
+            .db()
+            .read(move |c| domain::delivery_cursor(c, &subscription, None))
+            .await
+            .unwrap();
+        assert_eq!(
+            cursor, event,
+            "settled expiry must not hold the cursor for {reason}"
+        );
+        assert_eq!(server.received().len(), 1);
+    }
 }
