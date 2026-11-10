@@ -45,12 +45,22 @@ async fn spa_only_password_and_challenge_success_map_returns_to_the_spa_for_ever
                 let retained = b.get("/session/new").await;
                 assert_eq!(retained.location(), Some(to("/app/session/new").as_str()));
                 b.get("/app/session/new").await;
-                let reply = b.password_sign_in("david@37signals.com", "secret123456").await;
+                let reply = b
+                    .password_sign_in("david@37signals.com", "secret123456")
+                    .await;
                 assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
                 let reply = if let Some(secret) = secret {
-                    assert_eq!(reply.json()["kind"], "secondFactorRequired", "{}", reply.text());
+                    assert_eq!(
+                        reply.json()["kind"],
+                        "secondFactorRequired",
+                        "{}",
+                        reply.text()
+                    );
                     let retained = b.get("/two_factor_challenge").await;
-                    assert_eq!(retained.location(), Some(to("/app/two_factor/challenge").as_str()));
+                    assert_eq!(
+                        retained.location(),
+                        Some(to("/app/two_factor/challenge").as_str())
+                    );
                     let code = totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
                     let reply = b.answer_challenge(&code, false).await;
                     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());

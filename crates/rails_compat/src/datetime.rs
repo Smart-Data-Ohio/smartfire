@@ -231,7 +231,10 @@ pub fn boundary_period(zone: &jiff::tz::TimeZone, seconds: i64) -> Option<(i64, 
         return None;
     };
     let sample = jiff::Timestamp::from_second(sample).ok()?;
-    Some((offset, zone.to_offset_info(sample).abbreviation().to_owned()))
+    Some((
+        offset,
+        zone.to_offset_info(sample).abbreviation().to_owned(),
+    ))
 }
 /// Extended-year rendering uses the same pinned zone periods as the request cast.
 fn local_parts<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone) -> (jiff::Zoned, I512, i64, bool) {
@@ -245,18 +248,29 @@ fn local_parts<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone) -> (jiff::Zoned, 
         .calendar_proxy();
     let local = local.to_zoned(jiff::tz::TimeZone::UTC);
     let year = I512::from(local.year()) + shift;
-    (local, year, offset, matches!(zone.to_offset_info(proxy).abbreviation(), "UTC" | "UCT"))
+    (
+        local,
+        year,
+        offset,
+        matches!(zone.to_offset_info(proxy).abbreviation(), "UTC" | "UCT"),
+    )
 }
 
 fn year_text(year: I512) -> String {
-    if year.is_negative() { format!("-{:04}", year.unsigned_abs()) } else { format!("{year:04}") }
+    if year.is_negative() {
+        format!("-{:04}", year.unsigned_abs())
+    } else {
+        format!("{year:04}")
+    }
 }
 
 /// Rails strftime for the existing wide UTC value, in the real target period.
 /// Calendar proxies retain weekday/leap structure; %Y retains the full year.
 pub fn format<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone, pattern: &str) -> String {
     let (local, year, _, _) = local_parts(at, zone);
-    local.strftime(&pattern.replace("%Y", &year_text(year))).to_string()
+    local
+        .strftime(&pattern.replace("%Y", &year_text(year)))
+        .to_string()
 }
 
 pub fn render<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone, suffix: bool) -> String {

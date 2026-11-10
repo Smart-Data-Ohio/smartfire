@@ -17,7 +17,14 @@ pub fn live_ids(conn: &Connection) -> Result<Vec<i64>> {
 /// Recheck liveness in the immediate write transaction so a fresh gateway sighting wins
 /// over the sweep's earlier read. Only this presenter membership in this room counts.
 pub fn end_stale(tx: &mut Tx<'_>, id: i64) -> Result<()> {
-    let row=tx.conn().query_row_cached("SELECT room_id,membership_id FROM streams WHERE id=? AND ended_at IS NULL",[id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,i64>(1)?))).optional()?;
+    let row = tx
+        .conn()
+        .query_row_cached(
+            "SELECT room_id,membership_id FROM streams WHERE id=? AND ended_at IS NULL",
+            [id],
+            |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
+        )
+        .optional()?;
     let Some((room, member)) = row else {
         return Ok(());
     };

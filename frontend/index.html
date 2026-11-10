@@ -16,6 +16,12 @@
     -->
     <meta name="theme-color" content="#f1f4f6" media="(prefers-color-scheme: light)" data-scheme="light" />
     <meta name="theme-color" content="#141619" media="(prefers-color-scheme: dark)" data-scheme="dark" />
+    <!--
+      Smartfire has its own dark theme. Dark Reader can't follow the `light-dark()` tokens the
+      build lowers to `--lightningcss-*` variables, and leaves popovers, menus and the hover bar
+      without a background; this asks it to leave the app alone.
+    -->
+    <meta name="darkreader-lock" />
     <title>Smartfire</title>
     <!--
       The cascade-layer order, ahead of every stylesheet. The build splits CSS per chunk and links

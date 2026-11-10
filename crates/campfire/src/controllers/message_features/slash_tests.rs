@@ -141,17 +141,34 @@ async fn bots_are_forbidden() {
 async fn agent_commands_invoke_through_the_room_and_persist_the_rails_event() {
     let oracle: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/agent_command.json"
-    )).unwrap();
+    ))
+    .unwrap();
     let app = app().await.without_job_runner().await;
-    app.db().write(|tx| {
-        let agent_id = tx.conn().query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| r.get(0))?;
-        campfire_db::AgentSlashCommand::create(tx, campfire_db::NewAgentSlashCommand {
-            agent_id, room_id: ALL_TALK, name: "deploy".into(), ..Default::default()
-        })?;
-        Ok(())
-    }).await.unwrap();
+    app.db()
+        .write(|tx| {
+            let agent_id =
+                tx.conn()
+                    .query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| {
+                        r.get(0)
+                    })?;
+            campfire_db::AgentSlashCommand::create(
+                tx,
+                campfire_db::NewAgentSlashCommand {
+                    agent_id,
+                    room_id: ALL_TALK,
+                    name: "deploy".into(),
+                    ..Default::default()
+                },
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let response = slash(&mut app.david(), ALL_TALK, "/deploy staging").await;
-    assert_eq!(response.status.as_u16(), oracle["status"].as_u64().unwrap() as u16);
+    assert_eq!(
+        response.status.as_u16(),
+        oracle["status"].as_u64().unwrap() as u16
+    );
     assert_eq!(response.text(), oracle["body"].as_str().unwrap());
     let event = app.db().read(|conn| {
         Ok(conn.query_row("SELECT agent_id,room_id,actor_id,event_type,outcome,metadata FROM agent_events WHERE event_type='slash_command' ORDER BY id DESC LIMIT 1", [], |r| {
@@ -165,11 +182,11 @@ async fn agent_commands_with_unreadable_option_schema_return_validation() {
     let app = app().await.without_job_runner().await;
     app.db()
         .write(|tx| {
-            let agent_id = tx.conn().query_row(
-                "SELECT id FROM agents WHERE user_id=?",
-                [BENDER],
-                |r| r.get(0),
-            )?;
+            let agent_id =
+                tx.conn()
+                    .query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| {
+                        r.get(0)
+                    })?;
             let command = campfire_db::AgentSlashCommand::create(
                 tx,
                 campfire_db::NewAgentSlashCommand {
@@ -803,28 +820,69 @@ async fn user_tokens_check_duplicates_outside_the_page_and_omit_invalid_names() 
 #[tokio::test]
 async fn classic_slash_commands_deny_removed_private_creators() {
     let app = app().await;
-    let thread_id = app.db().write(|tx| {
-        if campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, KEVIN)?.is_none() {
-            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
-        }
-        Ok(ChannelThread::create(tx, NewChannelThread {
-            room_id: ALL_TALK, creator_id: KEVIN,
-            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
-            ..Default::default()
-        })?.id)
-    }).await.unwrap();
+    let thread_id = app
+        .db()
+        .write(|tx| {
+            if campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, KEVIN)?.is_none()
+            {
+                campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            }
+            Ok(ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: KEVIN,
+                    visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
     let mut browser = app.sign_in(KEVIN).await;
     let path = format!("/rooms/{ALL_TALK}/slash_commands");
-    let request = || Req::new(Method::POST, &path).json(serde_json::json!({"text":"/shrug private","thread_id":thread_id}));
+    let request = || {
+        Req::new(Method::POST, &path)
+            .json(serde_json::json!({"text":"/shrug private","thread_id":thread_id}))
+    };
     assert_eq!(browser.write(request()).await.status, StatusCode::OK);
-    app.db().write(move |tx| ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)
+        })
+        .await
+        .unwrap();
     for text in ["/shrug denied", "/status denied"] {
-        let reply = browser.write(Req::new(Method::POST, &path).json(serde_json::json!({"text":text,"thread_id":thread_id}))).await;
+        let reply = browser
+            .write(
+                Req::new(Method::POST, &path)
+                    .json(serde_json::json!({"text":text,"thread_id":thread_id})),
+            )
+            .await;
         assert_eq!(reply.status, StatusCode::NOT_FOUND);
     }
-    assert_eq!(browser.get(&format!("/autocompletable/slash_commands.json?room_id={ALL_TALK}&thread_id={thread_id}")).await.status, StatusCode::NOT_FOUND);
-    app.db().read(move |conn| {
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM messages WHERE thread_id=? AND system_note=0", [thread_id], |row| row.get::<_,i64>(0))?, 1);
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(
+        browser
+            .get(&format!(
+                "/autocompletable/slash_commands.json?room_id={ALL_TALK}&thread_id={thread_id}"
+            ))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    app.db()
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM messages WHERE thread_id=? AND system_note=0",
+                    [thread_id],
+                    |row| row.get::<_, i64>(0)
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }

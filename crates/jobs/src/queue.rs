@@ -32,14 +32,34 @@ const UNREGISTERED_QUEUE: &str = "default";
 impl JobQueue {
     /// The queue for `registry`'s classes, running on `config`'s queues. Fails when a class's
     /// queue isn't one of them: its jobs would never run.
-    pub fn new<C: Send + 'static>(registry: &Registry<C>, config: &RunnerConfig) -> anyhow::Result<Self> {
-        let wakers: HashMap<String, Arc<Notify>> = config.queues.iter().map(|queue| (queue.name.clone(), Arc::new(Notify::new()))).collect();
+    pub fn new<C: Send + 'static>(
+        registry: &Registry<C>,
+        config: &RunnerConfig,
+    ) -> anyhow::Result<Self> {
+        let wakers: HashMap<String, Arc<Notify>> = config
+            .queues
+            .iter()
+            .map(|queue| (queue.name.clone(), Arc::new(Notify::new())))
+            .collect();
         let mut routes = HashMap::new();
         for (class, kind) in registry.kinds() {
-            anyhow::ensure!(wakers.contains_key(kind.queue), "{class} runs on the {:?} queue, which has no workers", kind.queue);
-            routes.insert(class, Route { queue: kind.queue, version: kind.version });
+            anyhow::ensure!(
+                wakers.contains_key(kind.queue),
+                "{class} runs on the {:?} queue, which has no workers",
+                kind.queue
+            );
+            routes.insert(
+                class,
+                Route {
+                    queue: kind.queue,
+                    version: kind.version,
+                },
+            );
         }
-        Ok(Self { routes: Arc::new(routes), wakers: Arc::new(wakers) })
+        Ok(Self {
+            routes: Arc::new(routes),
+            wakers: Arc::new(wakers),
+        })
     }
 
     /// `perform_later`: inserts the job's row in `tx`'s transaction, due after its `wait`. It
@@ -48,10 +68,18 @@ impl JobQueue {
         let route = self.route(request.class);
         let now = tx.now();
         let run_at = match request.wait {
-            Some(wait) => now.since(jiff::SignedDuration::try_from(wait).unwrap_or(jiff::SignedDuration::MAX)),
+            Some(wait) => {
+                now.since(jiff::SignedDuration::try_from(wait).unwrap_or(jiff::SignedDuration::MAX))
+            }
             None => now,
         };
-        let job = store::NewJob { queue: route.queue, class: request.class, arguments: &request.arguments, version: route.version, run_at };
+        let job = store::NewJob {
+            queue: route.queue,
+            class: request.class,
+            arguments: &request.arguments,
+            version: route.version,
+            run_at,
+        };
         store::insert(tx.conn(), job, now)
     }
 
@@ -61,12 +89,29 @@ impl JobQueue {
     /// they're never lost, only late if the process dies first), then release them. A job whose
     /// hold ran out first is left to its runner: its retry backoff or rerun wait stands. Call
     /// [`JobQueue::wake`] once `tx` commits. Returns how many were released.
-    pub fn release_held(&self, tx: &Tx<'_>, class: &str, argument: &str, value: i64) -> campfire_db::Result<usize> {
-        store::make_due(tx.conn(), self.route(class).queue, class, &format!("$.{argument}"), value, tx.now())
+    pub fn release_held(
+        &self,
+        tx: &Tx<'_>,
+        class: &str,
+        argument: &str,
+        value: i64,
+    ) -> campfire_db::Result<usize> {
+        store::make_due(
+            tx.conn(),
+            self.route(class).queue,
+            class,
+            &format!("$.{argument}"),
+            value,
+            tx.now(),
+        )
     }
 
     /// Enqueues a job in a write of its own, and wakes its queue.
-    pub async fn perform_later(&self, db: &Database, request: JobRequest) -> campfire_db::Result<i64> {
+    pub async fn perform_later(
+        &self,
+        db: &Database,
+        request: JobRequest,
+    ) -> campfire_db::Result<i64> {
         let queue = self.clone();
         let class = request.class;
         let id = db.write(move |tx| queue.enqueue(tx, &request)).await?;
@@ -94,7 +139,10 @@ impl JobQueue {
             Some(route) => *route,
             None => {
                 tracing::error!(job = class, "enqueueing a job class that has no handler");
-                Route { queue: UNREGISTERED_QUEUE, version: 1 }
+                Route {
+                    queue: UNREGISTERED_QUEUE,
+                    version: 1,
+                }
             }
         }
     }

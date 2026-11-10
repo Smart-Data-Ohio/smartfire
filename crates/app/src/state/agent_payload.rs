@@ -12,7 +12,12 @@ impl State {
     #[cfg(any(test, feature = "test-support"))]
     pub fn fixture_snapshot(&self) -> Self {
         Self {
-            adapter: RwLock::new(self.adapter.read().unwrap_or_else(|p| p.into_inner()).clone()),
+            adapter: RwLock::new(
+                self.adapter
+                    .read()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone(),
+            ),
         }
     }
 
@@ -20,6 +25,9 @@ impl State {
         *self.adapter.write().unwrap_or_else(|p| p.into_inner()) = Some(adapter);
     }
     pub fn erased(&self) -> Option<Arc<dyn Any + Send + Sync>> {
-        self.adapter.read().unwrap_or_else(|p| p.into_inner()).clone()
+        self.adapter
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone()
     }
 }

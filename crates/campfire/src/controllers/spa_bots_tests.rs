@@ -9,7 +9,9 @@ use serde_json::{Value, json};
 use super::admin_tests::{
     app, assert_parity, audits, classic, dump, error, get, json_body, nothing, parse, spa, write,
 };
-use crate::controllers::presenters::test_support::{ALL_TALK, Browser, DAVID, HQ, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{
+    ALL_TALK, Browser, DAVID, HQ, KEVIN, Req, TestApp,
+};
 
 /// Bender: a workspace agent David owns, with a webhook.
 const BENDER: i64 = 394959859;

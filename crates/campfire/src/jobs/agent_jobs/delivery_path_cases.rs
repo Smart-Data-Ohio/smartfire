@@ -1,17 +1,17 @@
 //! Pinned DeliveryJobTest and DeliveryConcurrencyTest through real app writes/HTTP.
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use crate::app::App;
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, SEED_NOW, TestApp};
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
+use crate::net::Network;
 use campfire_channels::jobs::integrations as jobs;
 use campfire_db::Message;
 use campfire_db::Room;
 use campfire_db::User;
 use campfire_db::models::agent_delivery as domain;
 use campfire_db::models::agent_delivery::AgentEvent;
-use campfire_jobs::Execution;
-use crate::app::App;
-use crate::net::Network;
-use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, SEED_NOW, TestApp};
 use campfire_db::{Agent, NewMessage};
+use campfire_jobs::Execution;
 use serde_json::{Value, json};
 use std::{
     collections::HashSet,
@@ -308,49 +308,131 @@ async fn ws11_delivery_path_concurrent_mentions_obey_rate_limit() {
 #[tokio::test]
 async fn private_thread_webhooks_recheck_access_before_delivery_and_retry() {
     let (app, _dir) = setup().await;
-    let (thread_id, message_id, first_id) = app.db.write(|tx| {
-        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID,
-            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
-        })?;
-        thread.add_access_member(tx, DAVID, BENDER)?;
-        let message = Message::create(tx, NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, thread_id: Some(thread.id),
-            markdown_source: Some("Private webhook payload".into()), ..Default::default()
-        })?;
-        let agent = Agent::for_user(tx.conn(), BENDER)?.unwrap();
-        let event = AgentEvent::create(tx, domain::NewEvent {
-            agent_id: agent.id, room_id: Some(ALL_TALK), message_id: Some(message.id),
-            actor_id: Some(DAVID), event_type: "mention".into(), outcome: Some("pending".into()), ..Default::default()
-        })?;
-        Ok((thread.id,message.id,event.id))
-    }).await.unwrap();
+    let (thread_id, message_id, first_id) = app
+        .db
+        .write(|tx| {
+            let thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            thread.add_access_member(tx, DAVID, BENDER)?;
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    thread_id: Some(thread.id),
+                    markdown_source: Some("Private webhook payload".into()),
+                    ..Default::default()
+                },
+            )?;
+            let agent = Agent::for_user(tx.conn(), BENDER)?.unwrap();
+            let event = AgentEvent::create(
+                tx,
+                domain::NewEvent {
+                    agent_id: agent.id,
+                    room_id: Some(ALL_TALK),
+                    message_id: Some(message.id),
+                    actor_id: Some(DAVID),
+                    event_type: "mention".into(),
+                    outcome: Some("pending".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((thread.id, message.id, event.id))
+        })
+        .await
+        .unwrap();
     let (server, network) = endpoint("").await;
     run(&app, first_id, &network).await;
     assert_eq!(server.received().len(), 1);
-    assert!(String::from_utf8_lossy(&server.received()[0].body).contains("Private webhook payload"));
-    let retry_id = app.db.write(move |tx| {
-        let agent = Agent::for_user(tx.conn(), BENDER)?.unwrap();
-        let event = AgentEvent::create(tx, domain::NewEvent {
-            agent_id: agent.id, room_id: Some(ALL_TALK), message_id: Some(message_id),
-            actor_id: Some(DAVID), event_type: "mention".into(), outcome: Some("pending".into()), ..Default::default()
-        })?;
-        domain::perform_delivery(tx, event.id)?;
-        campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, DAVID, BENDER)?;
-        Ok(event.id)
-    }).await.unwrap();
-    post_with_network(&app, domain::EventWebhookJob {event_id:retry_id,attempt:Some(0)}, &network).await.unwrap();
-    assert_eq!(server.received().len(), 1, "a queued webhook cannot send after removal");
-    let event = app.db.read(move |conn| AgentEvent::find(conn,retry_id)).await.unwrap().unwrap();
-    assert_eq!(event.webhook_status,"failed");
-    let pending_id = app.db.write(move |tx| {
-        let agent = Agent::for_user(tx.conn(), BENDER)?.unwrap();
-        Ok(AgentEvent::create(tx, domain::NewEvent {
-            agent_id: agent.id, room_id: Some(ALL_TALK), message_id: Some(message_id),
-            actor_id: Some(DAVID), event_type: "mention".into(), outcome: Some("pending".into()), ..Default::default()
-        })?.id)
-    }).await.unwrap();
+    assert!(
+        String::from_utf8_lossy(&server.received()[0].body).contains("Private webhook payload")
+    );
+    let retry_id = app
+        .db
+        .write(move |tx| {
+            let agent = Agent::for_user(tx.conn(), BENDER)?.unwrap();
+            let event = AgentEvent::create(
+                tx,
+                domain::NewEvent {
+                    agent_id: agent.id,
+                    room_id: Some(ALL_TALK),
+                    message_id: Some(message_id),
+                    actor_id: Some(DAVID),
+                    event_type: "mention".into(),
+                    outcome: Some("pending".into()),
+                    ..Default::default()
+                },
+            )?;
+            domain::perform_delivery(tx, event.id)?;
+            campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                .remove_access_member(tx, DAVID, BENDER)?;
+            Ok(event.id)
+        })
+        .await
+        .unwrap();
+    post_with_network(
+        &app,
+        domain::EventWebhookJob {
+            event_id: retry_id,
+            attempt: Some(0),
+        },
+        &network,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        server.received().len(),
+        1,
+        "a queued webhook cannot send after removal"
+    );
+    let event = app
+        .db
+        .read(move |conn| AgentEvent::find(conn, retry_id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(event.webhook_status, "failed");
+    let pending_id = app
+        .db
+        .write(move |tx| {
+            let agent = Agent::for_user(tx.conn(), BENDER)?.unwrap();
+            Ok(AgentEvent::create(
+                tx,
+                domain::NewEvent {
+                    agent_id: agent.id,
+                    room_id: Some(ALL_TALK),
+                    message_id: Some(message_id),
+                    actor_id: Some(DAVID),
+                    event_type: "mention".into(),
+                    outcome: Some("pending".into()),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
     run(&app, pending_id, &network).await;
-    assert_eq!(server.received().len(), 1, "removed agents cannot receive pending delivery");
-    assert_eq!(app.db.read(move |conn| AgentEvent::find(conn,pending_id)).await.unwrap().unwrap().outcome.as_deref(), Some("suppressed"));
+    assert_eq!(
+        server.received().len(),
+        1,
+        "removed agents cannot receive pending delivery"
+    );
+    assert_eq!(
+        app.db
+            .read(move |conn| AgentEvent::find(conn, pending_id))
+            .await
+            .unwrap()
+            .unwrap()
+            .outcome
+            .as_deref(),
+        Some("suppressed")
+    );
 }

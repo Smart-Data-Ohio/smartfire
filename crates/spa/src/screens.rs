@@ -385,10 +385,30 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     screen("users/sidebars#show", "/users/me/sidebar", "/app/", true),
-    screen("users/sidebars#show", "/users/:user_id/sidebar", "/app/", true),
-    screen("users/statuses#edit", "/users/:user_id/status/edit", "/app/settings/status", true),
-    screen("users/sessions#index", "/users/:user_id/sessions", "/app/settings/sessions", true),
-    screen("users/push_subscriptions#index", "/users/:user_id/push_subscriptions", "/app/settings/devices", true),
+    screen(
+        "users/sidebars#show",
+        "/users/:user_id/sidebar",
+        "/app/",
+        true,
+    ),
+    screen(
+        "users/statuses#edit",
+        "/users/:user_id/status/edit",
+        "/app/settings/status",
+        true,
+    ),
+    screen(
+        "users/sessions#index",
+        "/users/:user_id/sessions",
+        "/app/settings/sessions",
+        true,
+    ),
+    screen(
+        "users/push_subscriptions#index",
+        "/users/:user_id/push_subscriptions",
+        "/app/settings/devices",
+        true,
+    ),
     // S7: the people directory and a person's page.
     screen("users#index", "/users", "/app/people", true),
     screen("users#show", "/users/:id", "/app/people/:id", true),
@@ -405,7 +425,12 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     // A person's hover card, opened as a page: their page.
-    screen("users/cards#show", "/users/:id/card", "/app/people/:id", true),
+    screen(
+        "users/cards#show",
+        "/users/:id/card",
+        "/app/people/:id",
+        true,
+    ),
     // S7: the workspace's account pages. The people list is the account page's lower half: it
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),
@@ -491,7 +516,12 @@ pub const SCREENS: &[Screen] = &[
         "/app/admin/slack/runs/:id",
         true,
     ),
-    screen("accounts/slack_import_runs#status", "/account/slack_import/runs/:id/status", "/app/admin/slack/runs/:id", true),
+    screen(
+        "accounts/slack_import_runs#status",
+        "/account/slack_import/runs/:id/status",
+        "/app/admin/slack/runs/:id",
+        true,
+    ),
     screen(
         "accounts/slack_import_runs#plan",
         "/account/slack_import/runs/:id/plan",
@@ -510,7 +540,12 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings/slack/:id",
         true,
     ),
-    screen("slack/imports#status", "/slack/imports/:id/status", "/app/settings/slack/:id", true),
+    screen(
+        "slack/imports#status",
+        "/slack/imports/:id/status",
+        "/app/settings/slack/:id",
+        true,
+    ),
 ];
 
 /// A room-query id the server has checked: it belongs to that room, and the viewer can see it.
@@ -561,7 +596,12 @@ pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String
 }
 
 /// Profile aliases for the authenticated viewer open their settings; other ids keep their page.
-pub fn profile_url(endpoint: &str, path: &str, query: Option<&str>, viewer_id: i64) -> Option<String> {
+pub fn profile_url(
+    endpoint: &str,
+    path: &str,
+    query: Option<&str>,
+    viewer_id: i64,
+) -> Option<String> {
     let pattern = match endpoint {
         "users#show" => "/users/:id",
         "users/cards#show" => "/users/:id/card",

@@ -7,7 +7,11 @@ use serde_json::{Value, json};
 
 async fn media(app: &TestApp, source: i64) -> (Blob, Blob) {
     let pending = app.db().read(move |c| Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob' AND json_extract(arguments,'$.blob_id')=?)", [source], |r| r.get::<_,bool>(0))?)).await.unwrap();
-    if pending { super::messages::attachment_processing_tests::perform_queued(app, 1).await.unwrap(); }
+    if pending {
+        super::messages::attachment_processing_tests::perform_queued(app, 1)
+            .await
+            .unwrap();
+    }
     app.db()
         .read(move |conn| {
             let preview = Blob::attached(conn, "ActiveStorage::Blob", source, "preview_image")
@@ -77,10 +81,17 @@ async fn pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and
         !later.load(Ordering::SeqCst),
         "ordinary model callbacks retain Rails' failure ordering"
     );
-    app.db().write(move |tx| {
-        let message = tx.conn().query_row("SELECT id FROM messages WHERE client_message_id='pr192-r4-after-commit'", [], |r| r.get::<_,i64>(0))?;
-        campfire_db::models::message_attachment_processing::recover(tx, message, source)
-    }).await.unwrap();
+    app.db()
+        .write(move |tx| {
+            let message = tx.conn().query_row(
+                "SELECT id FROM messages WHERE client_message_id='pr192-r4-after-commit'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?;
+            campfire_db::models::message_attachment_processing::recover(tx, message, source)
+        })
+        .await
+        .unwrap();
     let (preview, image) = media(&app, source).await;
     let (preview_id, image_id) = (preview.id, image.id);
     app.db().read(move |conn| {
@@ -284,16 +295,26 @@ async fn pr192_r4_late_media_failures_preserve_posts_but_precommit_job_failure_r
             .unwrap();
         let rows = super::agent_review_tests::snapshot(&app).await;
         let files = super::agent_review_tests::stored_files(&app);
-        let reply = app.anonymous().send(post(&app, source, "pr192-r4-precommit")).await;
+        let reply = app
+            .anonymous()
+            .send(post(&app, source, "pr192-r4-precommit"))
+            .await;
         if trigger.contains("PushMessageJob") {
             assert_eq!(reply.status.as_u16(), 500);
             assert_eq!(super::agent_review_tests::snapshot(&app).await, rows);
             assert_eq!(super::agent_review_tests::stored_files(&app), files);
         } else {
             assert_eq!(reply.status.as_u16(), 201);
-            assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+            assert!(
+                super::messages::attachment_processing_tests::perform_queued(&app, 1)
+                    .await
+                    .is_err()
+            );
             let retained = super::agent_review_tests::stored_files(&app);
-            assert_eq!(retained.len(), files.len() + usize::from(trigger.contains("variant attachment")));
+            assert_eq!(
+                retained.len(),
+                files.len() + usize::from(trigger.contains("variant attachment"))
+            );
             let storage = app.booted.app.storage.clone();
             app.db().read(move |c| {
                 assert!(campfire_db::Message::find_duplicate(c, 486777696, 394959859, "pr192-r4-precommit")?.is_some());

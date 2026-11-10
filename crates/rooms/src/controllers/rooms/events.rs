@@ -1,11 +1,11 @@
 //! rooms/events_controller.rb and rooms/events/attendances_controller.rb.
 pub mod input;
-use campfire_runtime::presenters::events::viewer_zone;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::page::{self, db_error as default_db_error};
 use campfire_db::{CalendarEvent, Error as DbError};
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, halt};
+use campfire_runtime::presenters::events::viewer_zone;
 
 // Both Rails controllers rescue RecordNotFound with head :not_found, even for
 // JSON requests; this is a callback response, before format selection.
@@ -168,19 +168,26 @@ pub async fn create(c: &mut Ctx) -> Result {
     match c
         .app()
         .db
-        .write_scoped(move || page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(&viewer_zone))), {
-            let a = a.clone();
-            move |tx| {
-                // Rails save returns false for event validation, but exceptions from the
-                // subsequent after-commit writes escape to production's public 500 page.
-                let errors = CalendarEvent::validate(tx.conn(), &a)?;
-                if errors.is_empty() {
-                    CalendarEvent::create(tx, a).map(Ok)
-                } else {
-                    Ok(Err(errors))
+        .write_scoped(
+            move || {
+                page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(
+                    &viewer_zone,
+                )))
+            },
+            {
+                let a = a.clone();
+                move |tx| {
+                    // Rails save returns false for event validation, but exceptions from the
+                    // subsequent after-commit writes escape to production's public 500 page.
+                    let errors = CalendarEvent::validate(tx.conn(), &a)?;
+                    if errors.is_empty() {
+                        CalendarEvent::create(tx, a).map(Ok)
+                    } else {
+                        Ok(Err(errors))
+                    }
                 }
-            }
-        })
+            },
+        )
         .await
     {
         Ok(Ok(e)) => redirect_event(
@@ -208,14 +215,21 @@ pub async fn update(c: &mut Ctx) -> Result {
     match c
         .app()
         .db
-        .write_scoped(move || page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(&viewer_zone))), {
-            let changes = changes.clone();
-            move |tx| CalendarEvent::update_with_scope(tx, id, changes, &scope, Some(actor))
-        })
+        .write_scoped(
+            move || {
+                page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(
+                    &viewer_zone,
+                )))
+            },
+            {
+                let changes = changes.clone();
+                move |tx| CalendarEvent::update_with_scope(tx, id, changes, &scope, Some(actor))
+            },
+        )
         .await
     {
         Ok(_) => redirect_event(c, &e, "Event updated."),
-        Err(DbError::RecordInvalid(_errors)) => { Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)) }
+        Err(DbError::RecordInvalid(_errors)) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
         Err(e) => Err(db_error(e)),
     }
 }
@@ -229,8 +243,14 @@ pub async fn cancel(c: &mut Ctx) -> Result {
     let cancelled = c
         .app()
         .db
-        .write_scoped(move || page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(&viewer_zone))),
-            move |tx| CalendarEvent::cancel_with_scope(tx, id, &scope, Some(actor)))
+        .write_scoped(
+            move || {
+                page::enter_time_zone(campfire_presentation::time::Zone::for_user(Some(
+                    &viewer_zone,
+                )))
+            },
+            move |tx| CalendarEvent::cancel_with_scope(tx, id, &scope, Some(actor)),
+        )
         .await
         .map_err(db_error)?;
     redirect_event(

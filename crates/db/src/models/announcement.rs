@@ -368,7 +368,9 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                     });
                 }
                 for (name, blob_id, spoiler) in &blobs {
-                    crate::Attachment::create_with_spoiler(tx, "Message", copy.id, name, *blob_id, *spoiler)?;
+                    crate::Attachment::create_with_spoiler(
+                        tx, "Message", copy.id, name, *blob_id, *spoiler,
+                    )?;
                 }
                 copy.touch(tx)?;
             }
@@ -407,7 +409,12 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                     sticker_id: source.sticker_id,
                     sticker_name: source.sticker_name.clone(),
                     embeds_suppressed: source.embeds_suppressed,
-                    attachment_spoilers: blobs.iter().filter(|(name, _, _)| name == "attachment").chain(blobs.iter().filter(|(name, _, _)| name == "attachments")).map(|(_, _, spoiler)| *spoiler).collect(),
+                    attachment_spoilers: blobs
+                        .iter()
+                        .filter(|(name, _, _)| name == "attachment")
+                        .chain(blobs.iter().filter(|(name, _, _)| name == "attachments"))
+                        .map(|(_, _, spoiler)| *spoiler)
+                        .collect(),
                     attachment_blob_id: blobs
                         .iter()
                         .find(|(name, _, _)| name == "attachment")
@@ -419,7 +426,8 @@ pub fn deliver(tx: &mut Tx<'_>, publication: i64) -> crate::Result<Vec<(Message,
                         .collect(),
                     drive_file_ids: drive_ids.clone(),
                     webhook: super::channel_webhook::ChannelWebhook::message_snapshot(
-                        tx.conn(), source.id,
+                        tx.conn(),
+                        source.id,
                     )?,
                     ..Default::default()
                 },

@@ -83,16 +83,21 @@ fn approval(tx: &Tx<'_>, id: i64) -> campfire_db::Result<Option<Approval>> {
 fn claim(tx: &Tx<'_>, a: &Approval) -> campfire_db::Result<Option<i64>> {
     use campfire_db::models::agent_delivery::{AgentEvent, NewEvent};
     let exists: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM agent_events WHERE agent_id=?1 AND event_type='fizzy_action_completed' AND (agent_approval_id=?2 OR CAST(json_extract(metadata,'$.approval_id') AS INTEGER)=?2))",params![a.agent,a.id],|r|r.get(0))?;
-    if exists { return Ok(None) }
-    let event = AgentEvent::create(tx, NewEvent {
-        agent_id: a.agent,
-        agent_approval_id: Some(a.id),
-        actor_id: a.actor,
-        event_type: "fizzy_action_completed".into(),
-        outcome: Some("delivered".into()),
-        metadata: json!({"approval_id":a.id,"action":a.action,"status":"running"}),
-        ..Default::default()
-    })?;
+    if exists {
+        return Ok(None);
+    }
+    let event = AgentEvent::create(
+        tx,
+        NewEvent {
+            agent_id: a.agent,
+            agent_approval_id: Some(a.id),
+            actor_id: a.actor,
+            event_type: "fizzy_action_completed".into(),
+            outcome: Some("delivered".into()),
+            metadata: json!({"approval_id":a.id,"action":a.action,"status":"running"}),
+            ..Default::default()
+        },
+    )?;
     Ok(Some(event.id))
 }
 fn finish(

@@ -78,41 +78,63 @@ pub(super) async fn prepare(case: &Value) -> TestApp {
     app
 }
 pub(super) fn request(case: &Value) -> Req {
-        let mut req = Req::new(
-            Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
-            case["path"].as_str().unwrap(),
-        )
-        .header("accept", "application/json")
-        .header("user-agent", "ws11api-work-contract")
-        .header("content-type",case["setup"]["content_type"].as_str().unwrap_or("application/json"))
-        ;
-        if case["setup"]["work_write"]==true {req=req.header("x-forwarded-for","203.0.113.31");}
-        if case["setup"]["bot_key"]!=true {req=req.header("authorization", &["Bearer", SECRET].join(" "));}
-        if let Some(body) = case["body"].as_str() {
-            req = req.body(body);
-        }
-        if let Some(filename)=case["setup"]["upload_filename"].as_str() {
-            let mime=case["setup"]["upload_mime"].as_str().unwrap();
-            let field=if case["setup"]["bot_key"]==true {"attachment"} else {"message[attachment]"};
-            let mut body=format!("--ws11api-attachment\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"{filename}\"\r\nContent-Type: {mime}\r\n\r\n").into_bytes();
-            let bytes=case["setup"]["upload_bytes"].as_str().map(str::as_bytes).unwrap_or_else(|| {
-                assert_eq!(filename,"moon.jpg");
+    let mut req = Req::new(
+        Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
+        case["path"].as_str().unwrap(),
+    )
+    .header("accept", "application/json")
+    .header("user-agent", "ws11api-work-contract")
+    .header(
+        "content-type",
+        case["setup"]["content_type"]
+            .as_str()
+            .unwrap_or("application/json"),
+    );
+    if case["setup"]["work_write"] == true {
+        req = req.header("x-forwarded-for", "203.0.113.31");
+    }
+    if case["setup"]["bot_key"] != true {
+        req = req.header("authorization", &["Bearer", SECRET].join(" "));
+    }
+    if let Some(body) = case["body"].as_str() {
+        req = req.body(body);
+    }
+    if let Some(filename) = case["setup"]["upload_filename"].as_str() {
+        let mime = case["setup"]["upload_mime"].as_str().unwrap();
+        let field = if case["setup"]["bot_key"] == true {
+            "attachment"
+        } else {
+            "message[attachment]"
+        };
+        let mut body=format!("--ws11api-attachment\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"{filename}\"\r\nContent-Type: {mime}\r\n\r\n").into_bytes();
+        let bytes = case["setup"]["upload_bytes"]
+            .as_str()
+            .map(str::as_bytes)
+            .unwrap_or_else(|| {
+                assert_eq!(filename, "moon.jpg");
                 include_bytes!("../../../../vectors/users_logos/moon.jpg")
             });
-            body.extend_from_slice(bytes);
-            body.extend_from_slice(format!("\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nmedia-{}\r\n--ws11api-attachment--\r\n",case["name"].as_str().unwrap()).as_bytes());
-            req=req.body(body);
-        }
-        req
+        body.extend_from_slice(bytes);
+        body.extend_from_slice(format!("\r\n--ws11api-attachment\r\nContent-Disposition: form-data; name=\"message[client_message_id]\"\r\n\r\nmedia-{}\r\n--ws11api-attachment--\r\n",case["name"].as_str().unwrap()).as_bytes());
+        req = req.body(body);
+    }
+    req
 }
 pub(super) async fn check(case: &Value) {
-    let app=prepare(case).await;
-    let request=||request(case);
+    let app = prepare(case).await;
+    let request = || request(case);
     for _ in 0..case["setup"]["repeat"].as_u64().unwrap_or(0) {
         let warm = app.anonymous().send(request()).await;
         if case["setup"]["transition"].is_string() {
-            assert_eq!(warm.status.as_u16(), case["warm_status"].as_u64().unwrap() as u16);
-            assert_eq!(warm.text(), case["warm_body"].as_str().unwrap(), "successful request before permission change");
+            assert_eq!(
+                warm.status.as_u16(),
+                case["warm_status"].as_u64().unwrap() as u16
+            );
+            assert_eq!(
+                warm.text(),
+                case["warm_body"].as_str().unwrap(),
+                "successful request before permission change"
+            );
         }
     }
     let transition = case["setup"]["transition"].as_str().map(str::to_owned);
@@ -148,10 +170,10 @@ pub(super) async fn check(case: &Value) {
     for (key, expected) in case["response_headers"].as_object().unwrap() {
         assert_eq!(reply.header(key), expected.as_str(), "{name}: {key}");
     }
-    if let Some(expected)=case.get("state") {
-        super::agent_work_writes_tests::assert_state(&app,expected,name).await;
+    if let Some(expected) = case.get("state") {
+        super::agent_work_writes_tests::assert_state(&app, expected, name).await;
     }
-    if let Some(expected)=case.get("attachment_state") {
+    if let Some(expected) = case.get("attachment_state") {
         let actual=app.db().read(|conn| {
             let count:i64=conn.query_row("SELECT COUNT(*) FROM messages WHERE id>=1900700004",[],|row|row.get(0))?;
             let id:Option<i64>=conn.query_row("SELECT MAX(id) FROM messages WHERE id>=1900700004",[],|row|row.get(0))?;
@@ -159,7 +181,7 @@ pub(super) async fn check(case: &Value) {
             let blob=if let Some(message)=&message {campfire_storage::Blob::attached(conn,"Message",message.id,"attachment").map_err(|error|campfire_db::Error::Other(error.to_string()))?} else {None};
             Ok(serde_json::json!({"messages":count,"markdown_source":message.and_then(|message|message.markdown_source),"attachment":blob.map(|blob|serde_json::json!({"filename":blob.filename.to_string(),"content_type":blob.content_type,"byte_size":blob.byte_size,"checksum":blob.checksum,"metadata":serde_json::from_str::<Value>(&blob.metadata.encode()).unwrap()}))}))
         }).await.unwrap();
-        assert_eq!(&actual,expected,"{name}: persisted attachment state");
+        assert_eq!(&actual, expected, "{name}: persisted attachment state");
     }
 
     eprintln!("WS11-api read wire case {name}: 1 passed; 0 failed");

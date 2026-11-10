@@ -90,7 +90,6 @@ async fn review_unicode_sidebar_avatars_match_rails_and_the_per_room_endpoint() 
     );
 }
 
-
 #[tokio::test]
 async fn review_unicode_presence_matches_rails_and_the_per_room_endpoint() {
     let (test, room) = unicode_call().await;

@@ -55,7 +55,12 @@ impl RetryPolicy {
     /// :polynomially_longer)` with `retry_on`'s default 5 attempts and the app's 0.15 retry
     /// jitter (`config.active_job.retry_jitter`, a `load_defaults` value).
     pub fn application_job() -> Self {
-        Self { attempts: 5, wait: Wait::PolynomiallyLonger { jitter: 0.15 }, retry_on: is_transient, timeout: None }
+        Self {
+            attempts: 5,
+            wait: Wait::PolynomiallyLonger { jitter: 0.15 },
+            retry_on: is_transient,
+            timeout: None,
+        }
     }
 
     /// `retry_on ..., attempts: 1`: never retried.
@@ -86,7 +91,12 @@ impl RetryPolicy {
     /// The delay before the retry that follows the `executions`th execution, or `None` once the
     /// attempts are used up. `retry_after` (an endpoint's `Retry-After`) replaces the computed
     /// wait, capped at [`Self::RETRY_AFTER_CAP`]. `random` is in `[0, 1)`, for the jitter.
-    pub fn retry_delay(&self, executions: u32, retry_after: Option<Duration>, random: f64) -> Option<Duration> {
+    pub fn retry_delay(
+        &self,
+        executions: u32,
+        retry_after: Option<Duration>,
+        random: f64,
+    ) -> Option<Duration> {
         if executions >= self.attempts.max(1) {
             return None;
         }
@@ -105,7 +115,11 @@ impl Default for RetryPolicy {
 
 impl fmt::Debug for RetryPolicy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RetryPolicy").field("attempts", &self.attempts).field("wait", &self.wait).field("timeout", &self.timeout).finish()
+        f.debug_struct("RetryPolicy")
+            .field("attempts", &self.attempts)
+            .field("wait", &self.wait)
+            .field("timeout", &self.timeout)
+            .finish()
     }
 }
 
@@ -129,7 +143,9 @@ impl Wait {
                 let base = f64::from(executions).powi(4);
                 Duration::from_secs_f64(jittered(base, jitter) + 2.0)
             }
-            Wait::Fixed { wait, jitter } => Duration::from_secs_f64(jittered(wait.as_secs_f64(), jitter)),
+            Wait::Fixed { wait, jitter } => {
+                Duration::from_secs_f64(jittered(wait.as_secs_f64(), jitter))
+            }
             Wait::Custom(delay) => delay(executions),
         }
     }
@@ -193,7 +209,10 @@ pub enum JobError {
     /// Worth another attempt whatever the policy's `retry_on` says, after `retry_after` (the
     /// endpoint's `Retry-After`, capped at an hour) or the policy's wait. Failed for good once
     /// the attempts are used up.
-    Retry { error: anyhow::Error, retry_after: Option<Duration> },
+    Retry {
+        error: anyhow::Error,
+        retry_after: Option<Duration>,
+    },
     /// A Rails `retry_on` handler, with its own durable exception counter. The handler's
     /// budget and polynomial delay use this counter rather than all executions of the job.
     RetryGroup {
@@ -219,11 +238,17 @@ impl JobError {
     }
 
     pub fn retry(error: impl Into<anyhow::Error>) -> Self {
-        JobError::Retry { error: error.into(), retry_after: None }
+        JobError::Retry {
+            error: error.into(),
+            retry_after: None,
+        }
     }
 
     pub fn retry_after(error: impl Into<anyhow::Error>, retry_after: Duration) -> Self {
-        JobError::Retry { error: error.into(), retry_after: Some(retry_after) }
+        JobError::Retry {
+            error: error.into(),
+            retry_after: Some(retry_after),
+        }
     }
 
     pub fn discard(error: impl Into<anyhow::Error>) -> Self {
@@ -236,7 +261,11 @@ impl JobError {
 
     pub fn error(&self) -> &anyhow::Error {
         match self {
-            JobError::Error(error) | JobError::Retry { error, .. } | JobError::RetryGroup { error, .. } | JobError::Discard(error) | JobError::Fail(error) => error,
+            JobError::Error(error)
+            | JobError::Retry { error, .. }
+            | JobError::RetryGroup { error, .. }
+            | JobError::Discard(error)
+            | JobError::Fail(error) => error,
         }
     }
 }
@@ -260,14 +289,20 @@ mod tests {
     #[test]
     fn polynomially_longer_matches_active_job() {
         let wait = Wait::PolynomiallyLonger { jitter: 0.15 };
-        assert_eq!([1, 2, 3, 4].map(|n| seconds(wait.delay(n, 0.0))), [3.0, 18.0, 83.0, 258.0]);
+        assert_eq!(
+            [1, 2, 3, 4].map(|n| seconds(wait.delay(n, 0.0))),
+            [3.0, 18.0, 83.0, 258.0]
+        );
         assert_eq!(seconds(wait.delay(2, 0.5)), 16.0 + 0.5 * 16.0 * 0.15 + 2.0);
         assert!(seconds(wait.delay(4, 0.999_999)) < 256.0 * 1.15 + 2.0);
     }
 
     #[test]
     fn fixed_waits_jitter_by_their_duration() {
-        let wait = Wait::Fixed { wait: Duration::from_secs(3), jitter: 0.15 };
+        let wait = Wait::Fixed {
+            wait: Duration::from_secs(3),
+            jitter: 0.15,
+        };
         assert_eq!(seconds(wait.delay(7, 0.0)), 3.0);
         assert_eq!(seconds(wait.delay(7, 0.5)), 3.225);
     }
@@ -276,27 +311,54 @@ mod tests {
     #[test]
     fn retries_stop_when_the_attempts_are_used_up() {
         let policy = RetryPolicy::application_job().wait(Wait::PolynomiallyLonger { jitter: 0.0 });
-        let delays: Vec<_> = (1..=5).map(|n| policy.retry_delay(n, None, 0.0).map(seconds)).collect();
-        assert_eq!(delays, [Some(3.0), Some(18.0), Some(83.0), Some(258.0), None]);
+        let delays: Vec<_> = (1..=5)
+            .map(|n| policy.retry_delay(n, None, 0.0).map(seconds))
+            .collect();
+        assert_eq!(
+            delays,
+            [Some(3.0), Some(18.0), Some(83.0), Some(258.0), None]
+        );
         assert_eq!(RetryPolicy::no_retries().retry_delay(1, None, 0.0), None);
     }
 
     #[test]
     fn retry_after_replaces_the_wait_up_to_an_hour() {
         let policy = RetryPolicy::application_job();
-        assert_eq!(policy.retry_delay(1, Some(Duration::from_secs(120)), 0.9), Some(Duration::from_secs(120)));
-        assert_eq!(policy.retry_delay(1, Some(Duration::from_secs(86_400)), 0.9), Some(Duration::from_secs(3600)));
-        assert_eq!(policy.retry_delay(5, Some(Duration::from_secs(1)), 0.9), None, "still bounded by attempts");
+        assert_eq!(
+            policy.retry_delay(1, Some(Duration::from_secs(120)), 0.9),
+            Some(Duration::from_secs(120))
+        );
+        assert_eq!(
+            policy.retry_delay(1, Some(Duration::from_secs(86_400)), 0.9),
+            Some(Duration::from_secs(3600))
+        );
+        assert_eq!(
+            policy.retry_delay(5, Some(Duration::from_secs(1)), 0.9),
+            None,
+            "still bounded by attempts"
+        );
     }
 
     #[test]
     fn transient_errors_are_timeouts_and_a_busy_database() {
-        let busy = rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_BUSY), None);
-        assert!(is_transient(&anyhow::Error::new(campfire_db::Error::Sqlite(busy))));
+        let busy = rusqlite::Error::SqliteFailure(
+            rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_BUSY),
+            None,
+        );
+        assert!(is_transient(&anyhow::Error::new(
+            campfire_db::Error::Sqlite(busy)
+        )));
         let timed_out = std::io::Error::new(std::io::ErrorKind::TimedOut, "read timed out");
-        assert!(is_transient(&anyhow::Error::new(timed_out).context("delivering")));
-        let constraint = rusqlite::Error::SqliteFailure(rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CONSTRAINT), None);
+        assert!(is_transient(
+            &anyhow::Error::new(timed_out).context("delivering")
+        ));
+        let constraint = rusqlite::Error::SqliteFailure(
+            rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CONSTRAINT),
+            None,
+        );
         assert!(!is_transient(&anyhow::Error::new(constraint)));
-        assert!(!is_transient(&anyhow::anyhow!("undefined method 'deliver' for nil")));
+        assert!(!is_transient(&anyhow::anyhow!(
+            "undefined method 'deliver' for nil"
+        )));
     }
 }

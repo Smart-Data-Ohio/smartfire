@@ -116,8 +116,16 @@ fn message_body_is_indexed_and_searchable() {
 #[test]
 fn search_words_are_never_query_syntax() {
     let t = TestDb::new();
-    let message = create(&t, "designers", "jason", "Do NOT feed the eel OR the shark", "c1");
-    for query in ["NOT", "OR", "AND", "NEAR", "eel NOT", "NOT eel", "shark OR", "\"", "*", "", "a\0b", "\0"] {
+    let message = create(
+        &t,
+        "designers",
+        "jason",
+        "Do NOT feed the eel OR the shark",
+        "c1",
+    );
+    for query in [
+        "NOT", "OR", "AND", "NEAR", "eel NOT", "NOT eel", "shark OR", "\"", "*", "", "a\0b", "\0",
+    ] {
         search(&t, "designers", query);
     }
     assert_eq!(search(&t, "designers", "NOT eel"), vec![message.id]);
@@ -220,13 +228,27 @@ fn creating_a_blank_message_with_attachment_uses_filename_as_plain_text_body() {
 }
 
 fn grouped_files_blobs(t: &TestDb) -> Vec<i64> {
-    t.write(|tx| (0..11).map(|index| {
-        Blob::create(tx, &Blob {
-            id: 0, key: format!("grouped-limit-{index}"), filename: format!("{index}.txt"),
-            content_type: Some("text/plain".into()), metadata: None, service_name: "local".into(),
-            byte_size: 5, checksum: None, created_at: tx.now(),
-        }).map(|blob| blob.id)
-    }).collect::<Result<Vec<_>>>())
+    t.write(|tx| {
+        (0..11)
+            .map(|index| {
+                Blob::create(
+                    tx,
+                    &Blob {
+                        id: 0,
+                        key: format!("grouped-limit-{index}"),
+                        filename: format!("{index}.txt"),
+                        content_type: Some("text/plain".into()),
+                        metadata: None,
+                        service_name: "local".into(),
+                        byte_size: 5,
+                        checksum: None,
+                        created_at: tx.now(),
+                    },
+                )
+                .map(|blob| blob.id)
+            })
+            .collect::<Result<Vec<_>>>()
+    })
 }
 
 #[test]
@@ -235,21 +257,40 @@ fn grouped_files_round4_creates_enforce_total_across_both_slots() {
     let blobs = grouped_files_blobs(&t);
     for single in [false, true] {
         let files = blobs.clone();
-        let error = t.try_write(move |tx| Message::create(tx, NewMessage {
-            room_id: id("hq"), creator_id: id("david"),
-            attachment_blob_id: single.then_some(files[0]),
-            attachment_blob_ids: files[usize::from(single)..].to_vec(),
-            ..Default::default()
-        })).unwrap_err();
-        let crate::Error::RecordInvalid(errors) = error else { panic!("{error}") };
-        assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"]);
+        let error = t
+            .try_write(move |tx| {
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: id("hq"),
+                        creator_id: id("david"),
+                        attachment_blob_id: single.then_some(files[0]),
+                        attachment_blob_ids: files[usize::from(single)..].to_vec(),
+                        ..Default::default()
+                    },
+                )
+            })
+            .unwrap_err();
+        let crate::Error::RecordInvalid(errors) = error else {
+            panic!("{error}")
+        };
+        assert_eq!(
+            errors.on("attachments"),
+            vec!["are limited to 10 per message"]
+        );
         let files = blobs[..10].to_vec();
-        let message = t.write(move |tx| Message::create(tx, NewMessage {
-            room_id: id("hq"), creator_id: id("david"),
-            attachment_blob_id: single.then_some(files[0]),
-            attachment_blob_ids: files[usize::from(single)..].to_vec(),
-            ..Default::default()
-        }));
+        let message = t.write(move |tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("hq"),
+                    creator_id: id("david"),
+                    attachment_blob_id: single.then_some(files[0]),
+                    attachment_blob_ids: files[usize::from(single)..].to_vec(),
+                    ..Default::default()
+                },
+            )
+        });
         assert_eq!(t.read(move |conn| message.attachments(conn)).len(), 10);
     }
 }
@@ -259,14 +300,28 @@ fn grouped_files_round4_replacements_enforce_total_across_both_slots() {
     let t = TestDb::new();
     let blobs = grouped_files_blobs(&t);
     let extra = blobs[10];
-    let message = t.write(move |tx| Message::create(tx, NewMessage {
-        room_id: id("hq"), creator_id: id("david"), attachment_blob_ids: blobs[..10].to_vec(),
-        ..Default::default()
-    }));
+    let message = t.write(move |tx| {
+        Message::create(
+            tx,
+            NewMessage {
+                room_id: id("hq"),
+                creator_id: id("david"),
+                attachment_blob_ids: blobs[..10].to_vec(),
+                ..Default::default()
+            },
+        )
+    });
     let mut edited = message.clone();
-    let error = t.try_write(move |tx| edited.replace_attachment(tx, Some(extra))).unwrap_err();
-    let crate::Error::RecordInvalid(errors) = error else { panic!("{error}") };
-    assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"]);
+    let error = t
+        .try_write(move |tx| edited.replace_attachment(tx, Some(extra)))
+        .unwrap_err();
+    let crate::Error::RecordInvalid(errors) = error else {
+        panic!("{error}")
+    };
+    assert_eq!(
+        errors.on("attachments"),
+        vec!["are limited to 10 per message"]
+    );
     assert_eq!(t.read(move |conn| message.attachments(conn)).len(), 10);
 }
 
@@ -276,70 +331,173 @@ fn grouped_files_round5_edits_normalize_both_attachment_slots() {
         ("keep ten grouped files", None, 10, Some(0), None, true),
         ("keep a grouped file", None, 1, Some(0), None, true),
         ("keep a legacy file", Some(9), 0, Some(9), Some(9), true),
-        ("keep a legacy file with nine grouped", Some(9), 9, Some(9), Some(9), true),
-        ("replace a legacy file", Some(9), 0, Some(10), Some(10), true),
-        ("replace a legacy file with nine grouped", Some(9), 9, Some(10), Some(10), true),
-        ("keep a grouped file alongside a legacy file", Some(9), 9, Some(0), Some(9), true),
+        (
+            "keep a legacy file with nine grouped",
+            Some(9),
+            9,
+            Some(9),
+            Some(9),
+            true,
+        ),
+        (
+            "replace a legacy file",
+            Some(9),
+            0,
+            Some(10),
+            Some(10),
+            true,
+        ),
+        (
+            "replace a legacy file with nine grouped",
+            Some(9),
+            9,
+            Some(10),
+            Some(10),
+            true,
+        ),
+        (
+            "keep a grouped file alongside a legacy file",
+            Some(9),
+            9,
+            Some(0),
+            Some(9),
+            true,
+        ),
         ("add a legacy file", None, 0, Some(10), Some(10), true),
-        ("add a legacy file to nine grouped", None, 9, Some(10), Some(10), true),
+        (
+            "add a legacy file to nine grouped",
+            None,
+            9,
+            Some(10),
+            Some(10),
+            true,
+        ),
         ("reject an eleventh file", None, 10, Some(10), None, false),
         ("remove a legacy file", Some(9), 0, None, None, true),
-        ("remove a legacy file with nine grouped", Some(9), 9, None, None, true),
+        (
+            "remove a legacy file with nine grouped",
+            Some(9),
+            9,
+            None,
+            None,
+            true,
+        ),
         ("remove an absent legacy file", None, 10, None, None, true),
-        ("keep a blob already in both slots", Some(0), 9, Some(0), None, true),
-        ("remove a duplicate legacy slot", Some(0), 9, None, None, true),
-        ("replace a duplicate legacy slot", Some(0), 9, Some(10), Some(10), true),
+        (
+            "keep a blob already in both slots",
+            Some(0),
+            9,
+            Some(0),
+            None,
+            true,
+        ),
+        (
+            "remove a duplicate legacy slot",
+            Some(0),
+            9,
+            None,
+            None,
+            true,
+        ),
+        (
+            "replace a duplicate legacy slot",
+            Some(0),
+            9,
+            Some(10),
+            Some(10),
+            true,
+        ),
     ] {
         let t = TestDb::new();
         let blobs = grouped_files_blobs(&t);
         let files = blobs.clone();
-        let message = t.write(move |tx| Message::create(tx, NewMessage {
-            room_id: id("hq"), creator_id: id("david"),
-            markdown_source: Some("Original".into()),
-            attachment_blob_id: legacy.map(|index| files[index]),
-            attachment_blob_ids: files[..grouped_count].to_vec(),
-            ..Default::default()
-        }));
+        let message = t.write(move |tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: id("hq"),
+                    creator_id: id("david"),
+                    markdown_source: Some("Original".into()),
+                    attachment_blob_id: legacy.map(|index| files[index]),
+                    attachment_blob_ids: files[..grouped_count].to_vec(),
+                    ..Default::default()
+                },
+            )
+        });
         let original = t.read(|conn| message.attachments(conn));
         let submitted = submitted.map(|index| blobs[index]);
         let mut edited = message.clone();
         let result = t.try_write(move |tx| {
             edited.replace_attachment(tx, submitted)?;
-            edited.edit(tx, crate::MessageChanges {
-                markdown_source: Some("Changed".into()), ..Default::default()
-            })
+            edited.edit(
+                tx,
+                crate::MessageChanges {
+                    markdown_source: Some("Changed".into()),
+                    ..Default::default()
+                },
+            )
         });
         assert_eq!(result.is_ok(), succeeds, "{name}: {result:?}");
         if !succeeds {
-            let crate::Error::RecordInvalid(errors) = result.unwrap_err() else { panic!("{name}") };
-            assert_eq!(errors.on("attachments"), vec!["are limited to 10 per message"], "{name}");
+            let crate::Error::RecordInvalid(errors) = result.unwrap_err() else {
+                panic!("{name}")
+            };
+            assert_eq!(
+                errors.on("attachments"),
+                vec!["are limited to 10 per message"],
+                "{name}"
+            );
         }
         t.read(|conn| {
             let saved = Message::find(conn, message.id)?;
             let attachments = saved.attachments(conn)?;
-            assert_eq!(saved.markdown_source.as_deref(), Some(if succeeds { "Changed" } else { "Original" }), "{name}");
+            assert_eq!(
+                saved.markdown_source.as_deref(),
+                Some(if succeeds { "Changed" } else { "Original" }),
+                "{name}"
+            );
             if succeeds {
-                let mut expected: Vec<_> = blobs[..grouped_count].iter()
-                    .map(|&blob| ("attachments", blob)).collect();
-                if let Some(index) = expected_legacy { expected.push(("attachment", blobs[index])); }
-                let mut actual: Vec<_> = attachments.iter()
-                    .map(|(attachment, blob)| (attachment.name.as_str(), blob.id)).collect();
+                let mut expected: Vec<_> = blobs[..grouped_count]
+                    .iter()
+                    .map(|&blob| ("attachments", blob))
+                    .collect();
+                if let Some(index) = expected_legacy {
+                    expected.push(("attachment", blobs[index]));
+                }
+                let mut actual: Vec<_> = attachments
+                    .iter()
+                    .map(|(attachment, blob)| (attachment.name.as_str(), blob.id))
+                    .collect();
                 actual.sort_unstable();
                 expected.sort_unstable();
                 assert_eq!(actual, expected, "{name}");
-                let grouped: Vec<_> = attachments.iter().filter(|(a, _)| a.name == "attachments").collect();
-                let original_grouped: Vec<_> = original.iter().filter(|(a, _)| a.name == "attachments").collect();
+                let grouped: Vec<_> = attachments
+                    .iter()
+                    .filter(|(a, _)| a.name == "attachments")
+                    .collect();
+                let original_grouped: Vec<_> = original
+                    .iter()
+                    .filter(|(a, _)| a.name == "attachments")
+                    .collect();
                 assert_eq!(grouped, original_grouped, "{name}");
             } else {
                 assert_eq!(attachments, original, "{name}");
             }
             Ok(())
         });
-        let purged: Vec<_> = t.events().into_iter().filter_map(|event| match event {
-            Event::PurgeBlob { blob_id } => Some(blob_id), _ => None,
-        }).collect();
-        let expected_purge: Vec<_> = legacy.filter(|&index| succeeds && legacy != expected_legacy && index >= grouped_count)
-            .map(|index| blobs[index]).into_iter().collect();
+        let purged: Vec<_> = t
+            .events()
+            .into_iter()
+            .filter_map(|event| match event {
+                Event::PurgeBlob { blob_id } => Some(blob_id),
+                _ => None,
+            })
+            .collect();
+        let expected_purge: Vec<_> = legacy
+            .filter(|&index| succeeds && legacy != expected_legacy && index >= grouped_count)
+            .map(|index| blobs[index])
+            .into_iter()
+            .collect();
         assert_eq!(purged, expected_purge, "{name}");
     }
 }
@@ -437,7 +595,16 @@ fn create_at_one_instant(t: &TestDb, room: &str, count: usize) -> Vec<Message> {
     let room_id = id(room);
     t.write(move |tx| {
         (0..count)
-            .map(|_| Message::create(tx, NewMessage { room_id, creator_id: id("david"), ..Default::default() }))
+            .map(|_| {
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id,
+                        creator_id: id("david"),
+                        ..Default::default()
+                    },
+                )
+            })
             .collect()
     })
 }
@@ -459,7 +626,11 @@ fn pagination_cursors_break_created_at_ties_by_id() {
     assert!(!t.read(|c| Message::exists_after(c, room, &tied[2])));
     assert!(t.read(|c| Message::exists_before(c, room, &tied[1])));
     let around = t.read(|c| Message::page_around(c, room, &tied[1]));
-    assert_eq!(around.iter().filter(|m| tied.contains(m)).count(), 3, "no tied message lost or repeated");
+    assert_eq!(
+        around.iter().filter(|m| tied.contains(m)).count(),
+        3,
+        "no tied message lost or repeated"
+    );
 }
 
 /// Paging through a tie wider than a page visits every message exactly once, in `(created_at,
@@ -500,21 +671,37 @@ fn room_timeline_is_the_root_messages() {
         let thread_id = create_thread(tx, room_id, id("david"))?;
         let reply = Message::create(
             tx,
-            NewMessage { room_id, creator_id: id("david"), thread_id: Some(thread_id), body: Some("in a thread".into()), ..Default::default() },
+            NewMessage {
+                room_id,
+                creator_id: id("david"),
+                thread_id: Some(thread_id),
+                body: Some("in a thread".into()),
+                ..Default::default()
+            },
         )?;
         Ok((thread_id, reply))
     });
     let room = t.read(|c| Message::last_page(c, Timeline::Room(room_id)));
     assert!(!room.contains(&reply));
-    assert_eq!(t.read(|c| Message::last_page(c, Timeline::Thread(thread_id))), vec![reply.clone()]);
+    assert_eq!(
+        t.read(|c| Message::last_page(c, Timeline::Thread(thread_id))),
+        vec![reply.clone()]
+    );
     assert!(matches!(
         t.read(|c| Ok(Message::find_in(c, Timeline::Room(room_id), reply.id))),
         Err(crate::Error::RecordNotFound("Message"))
     ));
-    assert_eq!(t.read(|c| Message::find_in(c, Timeline::Thread(thread_id), reply.id)), reply);
+    assert_eq!(
+        t.read(|c| Message::find_in(c, Timeline::Thread(thread_id), reply.id)),
+        reply
+    );
     // Thread replies are indexed but, until `ChannelThread#receive` is ported, don't mark the room unread or push.
     assert_eq!(search(&t, "watercooler", "thread"), vec![reply.id]);
-    assert!(!t.events().iter().any(|e| matches!(e, Event::PushMessage { .. })));
+    assert!(
+        !t.events()
+            .iter()
+            .any(|e| matches!(e, Event::PushMessage { .. }))
+    );
 }
 
 /// The root timeline's newest page reads `index_messages_on_room_thread_created` in order: the
@@ -527,7 +714,9 @@ fn root_timeline_pages_read_the_room_thread_created_index_without_sorting() {
     let plan = |sql: &str, values: Vec<rusqlite::types::Value>| -> String {
         t.read(|c| {
             let mut stmt = c.prepare(&format!("EXPLAIN QUERY PLAN {sql}"))?;
-            let rows = stmt.query_map(rusqlite::params_from_iter(values), |r| r.get::<_, String>(3))?;
+            let rows = stmt.query_map(rusqlite::params_from_iter(values), |r| {
+                r.get::<_, String>(3)
+            })?;
             Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?.join("\n"))
         })
     };
@@ -535,13 +724,23 @@ fn root_timeline_pages_read_the_room_thread_created_index_without_sorting() {
         r#"SELECT "messages".* FROM "messages" WHERE "messages"."room_id" = ? AND "messages"."thread_id" IS NULL ORDER BY "messages"."created_at" DESC, "messages"."id" DESC LIMIT 40"#,
         vec![room_id.into()],
     );
-    assert!(last_page.contains("index_messages_on_room_thread_created"), "{last_page}");
+    assert!(
+        last_page.contains("index_messages_on_room_thread_created"),
+        "{last_page}"
+    );
     assert!(!last_page.contains("TEMP B-TREE"), "{last_page}");
     let before = plan(
         r#"SELECT "messages".* FROM "messages" WHERE "messages"."room_id" = ? AND "messages"."thread_id" IS NULL AND ((messages.created_at, messages.id) < (?, ?)) ORDER BY "messages"."created_at" DESC, "messages"."id" DESC LIMIT 40"#,
-        vec![room_id.into(), "2030-01-01 00:00:00.000000".to_string().into(), 1.into()],
+        vec![
+            room_id.into(),
+            "2030-01-01 00:00:00.000000".to_string().into(),
+            1.into(),
+        ],
     );
-    assert!(before.contains("index_messages_on_room_thread_created"), "{before}");
+    assert!(
+        before.contains("index_messages_on_room_thread_created"),
+        "{before}"
+    );
     assert!(!before.contains("TEMP B-TREE"), "{before}");
 }
 
@@ -554,15 +753,28 @@ fn system_notes_are_quiet() {
     let note = t.write(move |tx| {
         Message::create(
             tx,
-            NewMessage { room_id, creator_id: id("david"), system_note: true, body: Some("renamed the group".into()), ..Default::default() },
+            NewMessage {
+                room_id,
+                creator_id: id("david"),
+                system_note: true,
+                body: Some("renamed the group".into()),
+                ..Default::default()
+            },
         )
     });
     assert!(note.system_note);
-    assert!(t.read(|c| Message::last_page(c, Timeline::Room(room_id))).contains(&note));
+    assert!(
+        t.read(|c| Message::last_page(c, Timeline::Room(room_id)))
+            .contains(&note)
+    );
     assert!(t.events().is_empty(), "{:?}", t.events());
     assert!(search(&t, "designers", "renamed").is_empty());
     let unread: i64 = t.read(|c| {
-        crate::sql::count(c, "SELECT COUNT(*) FROM memberships WHERE room_id = ? AND unread_at = ?", rusqlite::params![room_id, note.created_at])
+        crate::sql::count(
+            c,
+            "SELECT COUNT(*) FROM memberships WHERE room_id = ? AND unread_at = ?",
+            rusqlite::params![room_id, note.created_at],
+        )
     });
     assert_eq!(unread, 0);
 }
@@ -576,14 +788,26 @@ fn streaming_messages_defer_their_side_effects() {
     let message = t.write(move |tx| {
         Message::create(
             tx,
-            NewMessage { room_id, creator_id: id("david"), streaming: true, body: Some("partial answer".into()), ..Default::default() },
+            NewMessage {
+                room_id,
+                creator_id: id("david"),
+                streaming: true,
+                body: Some("partial answer".into()),
+                ..Default::default()
+            },
         )
     });
     assert!(message.streaming);
     assert_eq!(message.streaming_updated_at, Some(message.created_at));
     assert!(t.events().is_empty(), "{:?}", t.events());
     assert!(search(&t, "designers", "partial").is_empty());
-    let indexed: i64 = t.read(|c| crate::sql::count(c, "SELECT COUNT(*) FROM message_search_index WHERE rowid = ?", [message.id]));
+    let indexed: i64 = t.read(|c| {
+        crate::sql::count(
+            c,
+            "SELECT COUNT(*) FROM message_search_index WHERE rowid = ?",
+            [message.id],
+        )
+    });
     assert_eq!(indexed, 0);
 }
 
@@ -597,7 +821,10 @@ fn messages_in_deleted_rooms_are_unreachable() {
     assert!(t.read(|c| Ok(Message::find_reachable(c, creator, message.id).is_ok())));
     let room_id = message.room_id;
     t.write(move |tx| {
-        tx.conn().execute("UPDATE rooms SET deleted_at = ? WHERE id = ?", rusqlite::params![tx.now(), room_id])?;
+        tx.conn().execute(
+            "UPDATE rooms SET deleted_at = ? WHERE id = ?",
+            rusqlite::params![tx.now(), room_id],
+        )?;
         Ok(())
     });
     assert!(matches!(
@@ -606,11 +833,23 @@ fn messages_in_deleted_rooms_are_unreachable() {
     ));
 }
 
-fn create_in(t: &TestDb, room_id: i64, thread_id: Option<i64>, system_note: bool) -> crate::Result<Message> {
+fn create_in(
+    t: &TestDb,
+    room_id: i64,
+    thread_id: Option<i64>,
+    system_note: bool,
+) -> crate::Result<Message> {
     t.try_write(move |tx| {
         Message::create(
             tx,
-            NewMessage { room_id, creator_id: id("david"), thread_id, system_note, body: Some("hi".into()), ..Default::default() },
+            NewMessage {
+                room_id,
+                creator_id: id("david"),
+                thread_id,
+                system_note,
+                body: Some("hi".into()),
+                ..Default::default()
+            },
         )
     })
 }
@@ -631,7 +870,10 @@ fn thread_messages_stay_in_their_threads_room() {
     let before = t.read(Message::count);
 
     let error = full_messages(create_in(&t, id("designers"), Some(thread), false));
-    assert_eq!(error, ["Thread must belong to the message room and cannot be a direct room thread"]);
+    assert_eq!(
+        error,
+        ["Thread must belong to the message room and cannot be a direct room thread"]
+    );
     assert_eq!(t.read(Message::count), before);
 
     assert!(create_in(&t, id("watercooler"), Some(thread), false).is_ok());
@@ -643,7 +885,10 @@ fn direct_room_threads_take_no_messages() {
     let t = TestDb::new();
     let thread = t.write(|tx| create_thread(tx, id("david_and_kevin"), id("david")));
     let error = full_messages(create_in(&t, id("david_and_kevin"), Some(thread), false));
-    assert_eq!(error, ["Thread must belong to the message room and cannot be a direct room thread"]);
+    assert_eq!(
+        error,
+        ["Thread must belong to the message room and cannot be a direct room thread"]
+    );
 }
 
 /// `no_root_messages_in_boards`: a board's chat lives in its posts' threads; only quiet system
@@ -651,10 +896,21 @@ fn direct_room_threads_take_no_messages() {
 #[test]
 fn boards_take_no_root_messages_except_system_notes() {
     let t = TestDb::new();
-    let board = t.write(|tx| Room::create_for(tx, RoomType::Board, Some("Work"), id("david"), &[id("david")]));
+    let board = t.write(|tx| {
+        Room::create_for(
+            tx,
+            RoomType::Board,
+            Some("Work"),
+            id("david"),
+            &[id("david")],
+        )
+    });
     let before = t.read(Message::count);
 
-    assert_eq!(full_messages(create_in(&t, board.id, None, false)), ["Thread must be present in a board"]);
+    assert_eq!(
+        full_messages(create_in(&t, board.id, None, false)),
+        ["Thread must be present in a board"]
+    );
     assert_eq!(t.read(Message::count), before);
 
     assert!(create_in(&t, board.id, None, true).is_ok());
@@ -671,7 +927,16 @@ fn saving_a_streaming_message_restarts_its_activity_clock() {
     let room_id = id("designers");
     let started = t.now();
     let mut message = t.write(move |tx| {
-        Message::create(tx, NewMessage { room_id, creator_id: id("david"), streaming: true, body: Some("partial".into()), ..Default::default() })
+        Message::create(
+            tx,
+            NewMessage {
+                room_id,
+                creator_id: id("david"),
+                streaming: true,
+                body: Some("partial".into()),
+                ..Default::default()
+            },
+        )
     });
     assert_eq!(message.streaming_updated_at, Some(started));
 
@@ -680,23 +945,40 @@ fn saving_a_streaming_message_restarts_its_activity_clock() {
     let mut m = message.clone();
     message = t.write(move |tx| m.update_body(tx, "partial answer").map(|_| m));
     assert_eq!(message.streaming_updated_at, Some(edited));
-    assert_eq!(t.read(|c| Message::find(c, message.id)).streaming_updated_at, Some(edited));
+    assert_eq!(
+        t.read(|c| Message::find(c, message.id))
+            .streaming_updated_at,
+        Some(edited)
+    );
 
     t.travel(60);
     let mut m = message.clone();
     t.write(move |tx| m.update_body(tx, "partial answer"));
-    assert_eq!(t.read(|c| Message::find(c, message.id)).streaming_updated_at, Some(t.now()), "a save with the same body still saves");
+    assert_eq!(
+        t.read(|c| Message::find(c, message.id))
+            .streaming_updated_at,
+        Some(t.now()),
+        "a save with the same body still saves"
+    );
 
     let touched_at = t.now();
     t.travel(60);
     let mut m = message.clone();
     t.write(move |tx| m.touch(tx));
-    assert_eq!(t.read(|c| Message::find(c, message.id)).streaming_updated_at, Some(touched_at));
+    assert_eq!(
+        t.read(|c| Message::find(c, message.id))
+            .streaming_updated_at,
+        Some(touched_at)
+    );
 
     // Finished messages keep no activity clock.
     let mut done = t.read(|c| Message::find(c, id("first")));
     t.write(move |tx| done.update_body(tx, "rewritten"));
-    assert_eq!(t.read(|c| Message::find(c, id("first"))).streaming_updated_at, None);
+    assert_eq!(
+        t.read(|c| Message::find(c, id("first")))
+            .streaming_updated_at,
+        None
+    );
 }
 
 /// `update!(attachment: nil)` on a streaming message with no attachment still saves (the
@@ -707,7 +989,16 @@ fn a_streaming_attachment_save_touches_the_room() {
     t.clock.travel_to(t.now());
     let room_id = id("designers");
     let message = t.write(move |tx| {
-        Message::create(tx, NewMessage { room_id, creator_id: id("david"), streaming: true, body: Some("partial".into()), ..Default::default() })
+        Message::create(
+            tx,
+            NewMessage {
+                room_id,
+                creator_id: id("david"),
+                streaming: true,
+                body: Some("partial".into()),
+                ..Default::default()
+            },
+        )
     });
     t.travel(60);
     let mut m = message.clone();
@@ -720,12 +1011,21 @@ fn a_streaming_attachment_save_touches_the_room() {
 
 fn create_thread_under(tx: &mut Tx<'_>, parent: &Message) -> Result<i64> {
     let thread_id = create_thread(tx, parent.room_id, parent.creator_id)?;
-    tx.conn().execute(r#"UPDATE "channel_threads" SET "parent_message_id" = ? WHERE "id" = ?"#, rusqlite::params![parent.id, thread_id])?;
+    tx.conn().execute(
+        r#"UPDATE "channel_threads" SET "parent_message_id" = ? WHERE "id" = ?"#,
+        rusqlite::params![parent.id, thread_id],
+    )?;
     Ok(thread_id)
 }
 
 fn messages_count(t: &TestDb, thread_id: i64) -> i64 {
-    t.read(move |c| crate::sql::count(c, r#"SELECT "messages_count" FROM "channel_threads" WHERE "id" = ?"#, [thread_id]))
+    t.read(move |c| {
+        crate::sql::count(
+            c,
+            r#"SELECT "messages_count" FROM "channel_threads" WHERE "id" = ?"#,
+            [thread_id],
+        )
+    })
 }
 
 /// `after_create`/`after_destroy :refresh_thread_messages_count, if: :thread_reply?`
@@ -746,8 +1046,23 @@ fn thread_replies_refresh_the_thread_counter() {
     assert_eq!(t.read(|c| Message::find(c, parent.id)).updated_at, t.now());
 
     create_in(&t, room_id, Some(thread), true).unwrap();
-    t.write(move |tx| Message::create(tx, NewMessage { room_id, creator_id: id("david"), thread_id: Some(thread), streaming: true, ..Default::default() }));
-    assert_eq!(messages_count(&t, thread), 1, "notes and streams don't count");
+    t.write(move |tx| {
+        Message::create(
+            tx,
+            NewMessage {
+                room_id,
+                creator_id: id("david"),
+                thread_id: Some(thread),
+                streaming: true,
+                ..Default::default()
+            },
+        )
+    });
+    assert_eq!(
+        messages_count(&t, thread),
+        1,
+        "notes and streams don't count"
+    );
 
     t.travel(10);
     t.write(move |tx| reply.destroy(tx));
@@ -791,14 +1106,40 @@ fn destroying_a_message_tombstones_replies_and_clears_dependents() {
     t.write(move |tx| target.destroy(tx));
 
     let reply = t.read(move |c| Message::find(c, reply_id));
-    assert_eq!((reply.reply_to_message_id, reply.reply_target_deleted_at), (None, Some(t.now())));
+    assert_eq!(
+        (reply.reply_to_message_id, reply.reply_target_deleted_at),
+        (None, Some(t.now()))
+    );
     assert_eq!(reply.updated_at, t.now());
     let remaining = |sql: &'static str| t.read(move |c| crate::sql::count(c, sql, [target_id]));
-    assert_eq!(remaining(r#"SELECT COUNT(*) FROM "activity_items" WHERE "source_type" = 'Message' AND "source_id" = ?"#), 0);
-    assert_eq!(remaining(r#"SELECT COUNT(*) FROM "agent_steps" WHERE "message_id" = ?"#), 0);
-    assert_eq!(remaining(r#"SELECT COUNT(*) FROM "board_stale_digests" WHERE "message_id" = ?"#), 0);
-    assert_eq!(t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "board_stale_digests""#, [])), 1);
-    let parent: Option<i64> = t.read(move |c| crate::sql::query_one(c, r#"SELECT "parent_message_id" FROM "channel_threads" WHERE "id" = ?"#, [thread], |r| r.get(0))).flatten();
+    assert_eq!(
+        remaining(
+            r#"SELECT COUNT(*) FROM "activity_items" WHERE "source_type" = 'Message' AND "source_id" = ?"#
+        ),
+        0
+    );
+    assert_eq!(
+        remaining(r#"SELECT COUNT(*) FROM "agent_steps" WHERE "message_id" = ?"#),
+        0
+    );
+    assert_eq!(
+        remaining(r#"SELECT COUNT(*) FROM "board_stale_digests" WHERE "message_id" = ?"#),
+        0
+    );
+    assert_eq!(
+        t.read(|c| crate::sql::count(c, r#"SELECT COUNT(*) FROM "board_stale_digests""#, [])),
+        1
+    );
+    let parent: Option<i64> = t
+        .read(move |c| {
+            crate::sql::query_one(
+                c,
+                r#"SELECT "parent_message_id" FROM "channel_threads" WHERE "id" = ?"#,
+                [thread],
+                |r| r.get(0),
+            )
+        })
+        .flatten();
     assert_eq!(parent, None);
 }
 
@@ -808,20 +1149,37 @@ fn file_spoilers_belong_to_each_attachment_and_survive_text_edits() {
     let blobs = grouped_files_blobs(&t);
     let blob_id = blobs[0];
     let (covered, public) = t.write(move |tx| {
-        let covered = Message::create(tx, NewMessage {
-            room_id: id("hq"), creator_id: id("david"), attachment_blob_id: Some(blob_id),
-            attachment_spoilers: vec![true], ..Default::default()
-        })?;
-        let public = Message::create(tx, NewMessage {
-            room_id: id("hq"), creator_id: id("david"), attachment_blob_id: Some(blob_id),
-            ..Default::default()
-        })?;
+        let covered = Message::create(
+            tx,
+            NewMessage {
+                room_id: id("hq"),
+                creator_id: id("david"),
+                attachment_blob_id: Some(blob_id),
+                attachment_spoilers: vec![true],
+                ..Default::default()
+            },
+        )?;
+        let public = Message::create(
+            tx,
+            NewMessage {
+                room_id: id("hq"),
+                creator_id: id("david"),
+                attachment_blob_id: Some(blob_id),
+                ..Default::default()
+            },
+        )?;
         Ok((covered, public))
     });
     let to_edit = covered.clone();
     t.write(move |tx| {
         let mut edited = to_edit;
-        edited.edit(tx, crate::MessageChanges { markdown_source: Some("Caption".into()), ..Default::default() })
+        edited.edit(
+            tx,
+            crate::MessageChanges {
+                markdown_source: Some("Caption".into()),
+                ..Default::default()
+            },
+        )
     });
     t.read(|conn| {
         let hidden = covered.attachment(conn).unwrap().unwrap();
@@ -829,7 +1187,13 @@ fn file_spoilers_belong_to_each_attachment_and_survive_text_edits() {
         assert_eq!(hidden.0.blob_id, visible.0.blob_id);
         assert!(hidden.0.spoiler);
         assert!(!visible.0.spoiler);
-        let payload = crate::PushSubscription::payload_for(conn, &BasicRichText, &Room::find(conn, covered.room_id).unwrap(), &covered).unwrap();
+        let payload = crate::PushSubscription::payload_for(
+            conn,
+            &BasicRichText,
+            &Room::find(conn, covered.room_id).unwrap(),
+            &covered,
+        )
+        .unwrap();
         let wire = serde_json::to_value(payload).unwrap();
         assert!(wire.get("image").is_none());
         assert!(wire.get("image_url").is_none());
@@ -837,15 +1201,49 @@ fn file_spoilers_belong_to_each_attachment_and_survive_text_edits() {
         Ok(())
     });
     let files = blobs[..3].to_vec();
-    let mixed = t.write(move |tx| Message::create(tx, NewMessage {
-        room_id: id("hq"), creator_id: id("david"), attachment_blob_ids: files,
-        attachment_spoilers: vec![true, false, true], ..Default::default()
-    }));
-    t.read(|conn| { assert_eq!(mixed.attachments(conn)?.iter().map(|(file, _)| file.spoiler).collect::<Vec<_>>(), [true, false, true]); Ok(()) });
+    let mixed = t.write(move |tx| {
+        Message::create(
+            tx,
+            NewMessage {
+                room_id: id("hq"),
+                creator_id: id("david"),
+                attachment_blob_ids: files,
+                attachment_spoilers: vec![true, false, true],
+                ..Default::default()
+            },
+        )
+    });
+    t.read(|conn| {
+        assert_eq!(
+            mixed
+                .attachments(conn)?
+                .iter()
+                .map(|(file, _)| file.spoiler)
+                .collect::<Vec<_>>(),
+            [true, false, true]
+        );
+        Ok(())
+    });
     let to_edit = mixed.clone();
     t.write(move |tx| {
         let mut mixed = to_edit;
-        mixed.edit(tx, crate::MessageChanges { attachment_spoilers: Some(vec![false, true, false]), ..Default::default() })
+        mixed.edit(
+            tx,
+            crate::MessageChanges {
+                attachment_spoilers: Some(vec![false, true, false]),
+                ..Default::default()
+            },
+        )
     });
-    t.read(|conn| { assert_eq!(mixed.attachments(conn)?.iter().map(|(file, _)| file.spoiler).collect::<Vec<_>>(), [false, true, false]); Ok(()) });
+    t.read(|conn| {
+        assert_eq!(
+            mixed
+                .attachments(conn)?
+                .iter()
+                .map(|(file, _)| file.spoiler)
+                .collect::<Vec<_>>(),
+            [false, true, false]
+        );
+        Ok(())
+    });
 }

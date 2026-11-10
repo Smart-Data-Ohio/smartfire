@@ -21,8 +21,12 @@ fn message(tx: &mut Tx<'_>, source: &str) -> campfire_db::Result<Message> {
     )
 }
 fn urls(tx: &Tx<'_>, message: &Message) -> campfire_db::Result<Vec<String>> {
-    let mut urls=Reference::for_message(tx.conn(),message)?.iter().map(|r|r.embed.normalized_url.clone()).collect::<Vec<_>>();
-    urls.sort(); Ok(urls)
+    let mut urls = Reference::for_message(tx.conn(), message)?
+        .iter()
+        .map(|r| r.embed.normalized_url.clone())
+        .collect::<Vec<_>>();
+    urls.sort();
+    Ok(urls)
 }
 
 fn jobs(tx: &Tx<'_>) -> campfire_db::Result<i64> {

@@ -11,7 +11,9 @@ pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
     let query = Some(c.request.query_string().to_string()).filter(|query| !query.is_empty());
-    if c.format()?.is_some_and(|kind| kind == &campfire_kit::format::HTML || kind == &campfire_kit::format::ALL) {
+    if c.format()?.is_some_and(|kind| {
+        kind == &campfire_kit::format::HTML || kind == &campfire_kit::format::ALL
+    }) {
         let screen = if spa_settings(room.room_type) {
             format!("/app/r/{}/settings", room.id)
         } else {

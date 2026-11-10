@@ -48,36 +48,85 @@ impl Blob {
     }
 
     /// Catalog media stays in its catalog; signed identities cannot restore revoked private media.
-    pub fn reusable_by(conn: &Connection, blob_id: i64, user_id: i64, record_type: &str) -> Result<bool> {
-        let roots: Vec<i64> = crate::sql::query_all(conn,
+    pub fn reusable_by(
+        conn: &Connection,
+        blob_id: i64,
+        user_id: i64,
+        record_type: &str,
+    ) -> Result<bool> {
+        let roots: Vec<i64> = crate::sql::query_all(
+            conn,
             "WITH RECURSIVE roots(id) AS (VALUES (?1) UNION SELECT v.blob_id FROM active_storage_attachments a JOIN active_storage_variant_records v ON v.id=a.record_id JOIN roots r ON r.id=a.blob_id WHERE a.record_type='ActiveStorage::VariantRecord' AND a.name='image' UNION SELECT a.record_id FROM active_storage_attachments a JOIN roots r ON r.id=a.blob_id WHERE a.record_type='ActiveStorage::Blob' AND a.name='preview_image') SELECT b.id FROM roots r JOIN active_storage_blobs b ON b.id=r.id",
-            [blob_id], |row| row.get(0))?;
-        if !roots.contains(&blob_id) { return Err(crate::Error::RecordNotFound("ActiveStorage::Blob")); }
+            [blob_id],
+            |row| row.get(0),
+        )?;
+        if !roots.contains(&blob_id) {
+            return Err(crate::Error::RecordNotFound("ActiveStorage::Blob"));
+        }
         let ids = serde_json::json!(roots).to_string();
         if record_type != "Sticker" {
             // Reattaching catalog media would let message privacy and purging affect the sticker.
             let catalog_image: bool = conn.query_row(
                 "SELECT EXISTS (SELECT 1 FROM active_storage_attachments WHERE record_type='Sticker' AND name='image' AND blob_id IN (SELECT value FROM json_each(?)))",
                 [&ids], |row| row.get(0))?;
-            if catalog_image { return Ok(false); }
+            if catalog_image {
+                return Ok(false);
+            }
         }
         let restricted: bool = conn.query_row(
             "SELECT EXISTS (SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?)) AND COALESCE(json_extract(b.metadata,'$.private_thread_media'),0)=1) OR EXISTS (SELECT 1 FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id LEFT JOIN poll_options po ON a.record_type='PollOption' AND po.id=a.record_id LEFT JOIN polls p ON p.id=po.poll_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id WHEN a.record_type='PollOption' THEN p.message_id END JOIN channel_threads t ON t.id=m.thread_id WHERE a.blob_id IN (SELECT value FROM json_each(?)) AND t.visibility='private')",
             [&ids, &ids], |row| row.get(0))?;
-        let personal=super::agent_access::is_personal_user(conn,user_id)?;
-        if personal && crate::sql::exists(conn,"SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?1)) AND (json_extract(b.metadata,'$.scheduled_by') IS NOT NULL OR (json_extract(b.metadata,'$.uploader_id') IS NOT NULL AND json_extract(b.metadata,'$.uploader_id')!=?2 AND NOT EXISTS (SELECT 1 FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.blob_id=b.id AND a.record_type='Message' AND a.name IN ('attachment','attachments')))) UNION ALL SELECT 1 FROM active_storage_attachments a WHERE a.blob_id IN (SELECT value FROM json_each(?1)) AND a.record_type='ScheduledMessage'",params![&ids,user_id])? {return Ok(false);}
-        let poll_media=personal && crate::sql::exists(conn,"SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?1)) AND COALESCE(json_extract(b.metadata,'$.poll_media'),0)=1 UNION ALL SELECT 1 FROM active_storage_attachments a WHERE a.blob_id IN (SELECT value FROM json_each(?1)) AND a.record_type='PollOption'",[&ids])?;
-        if !restricted && !poll_media { return Ok(true); }
-        let messages: Vec<i64> = crate::sql::query_all(conn,
+        let personal = super::agent_access::is_personal_user(conn, user_id)?;
+        if personal
+            && crate::sql::exists(
+                conn,
+                "SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?1)) AND (json_extract(b.metadata,'$.scheduled_by') IS NOT NULL OR (json_extract(b.metadata,'$.uploader_id') IS NOT NULL AND json_extract(b.metadata,'$.uploader_id')!=?2 AND NOT EXISTS (SELECT 1 FROM active_storage_attachments a JOIN messages m ON m.id=a.record_id WHERE a.blob_id=b.id AND a.record_type='Message' AND a.name IN ('attachment','attachments')))) UNION ALL SELECT 1 FROM active_storage_attachments a WHERE a.blob_id IN (SELECT value FROM json_each(?1)) AND a.record_type='ScheduledMessage'",
+                params![&ids, user_id],
+            )?
+        {
+            return Ok(false);
+        }
+        let poll_media = personal
+            && crate::sql::exists(
+                conn,
+                "SELECT 1 FROM active_storage_blobs b WHERE b.id IN (SELECT value FROM json_each(?1)) AND COALESCE(json_extract(b.metadata,'$.poll_media'),0)=1 UNION ALL SELECT 1 FROM active_storage_attachments a WHERE a.blob_id IN (SELECT value FROM json_each(?1)) AND a.record_type='PollOption'",
+                [&ids],
+            )?;
+        if !restricted && !poll_media {
+            return Ok(true);
+        }
+        let messages: Vec<i64> = crate::sql::query_all(
+            conn,
             "SELECT m.id FROM active_storage_attachments a LEFT JOIN action_text_rich_texts rt ON a.record_type='ActionText::RichText' AND rt.id=a.record_id LEFT JOIN poll_options po ON a.record_type='PollOption' AND po.id=a.record_id LEFT JOIN polls p ON p.id=po.poll_id JOIN messages m ON m.id=CASE WHEN a.record_type='Message' THEN a.record_id WHEN rt.record_type='Message' THEN rt.record_id WHEN a.record_type='PollOption' THEN p.message_id END WHERE a.blob_id IN (SELECT value FROM json_each(?))",
-            [&ids], |row| row.get(0))?;
+            [&ids],
+            |row| row.get(0),
+        )?;
         for message_id in messages {
             match crate::Message::find_reachable(conn, user_id, message_id) {
                 Ok(source) => {
-                    let private=source.thread_id.map(|id|crate::ChannelThread::find(conn,id)).transpose()?.is_some_and(|thread|thread.visibility==super::channel_thread::ThreadVisibility::Private);
-                    if !personal || super::agent_access::capability_for_user(conn,user_id,if private {"read_messages"} else {"post_messages"},source.room_id)? == Some(true) { return Ok(true); }
+                    let private = source
+                        .thread_id
+                        .map(|id| crate::ChannelThread::find(conn, id))
+                        .transpose()?
+                        .is_some_and(|thread| {
+                            thread.visibility == super::channel_thread::ThreadVisibility::Private
+                        });
+                    if !personal
+                        || super::agent_access::capability_for_user(
+                            conn,
+                            user_id,
+                            if private {
+                                "read_messages"
+                            } else {
+                                "post_messages"
+                            },
+                            source.room_id,
+                        )? == Some(true)
+                    {
+                        return Ok(true);
+                    }
                 }
-                Err(crate::Error::RecordNotFound(_)) => {},
+                Err(crate::Error::RecordNotFound(_)) => {}
                 Err(error) => return Err(error),
             }
         }
@@ -149,7 +198,14 @@ impl Attachment {
         Self::create_with_spoiler(tx, record_type, record_id, name, blob_id, false)
     }
 
-    pub fn create_with_spoiler(tx: &Tx<'_>, record_type: &str, record_id: i64, name: &str, blob_id: i64, spoiler: bool) -> Result<Self> {
+    pub fn create_with_spoiler(
+        tx: &Tx<'_>,
+        record_type: &str,
+        record_id: i64,
+        name: &str,
+        blob_id: i64,
+        spoiler: bool,
+    ) -> Result<Self> {
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "active_storage_attachments" ("blob_id", "created_at", "name", "record_id", "record_type", "spoiler") VALUES (?, ?, ?, ?, ?, ?) RETURNING "id""#,

@@ -89,7 +89,12 @@ mod tests {
 
     #[test]
     fn public_pages_are_a_fixed_allow_list() {
-        for path in ["/app/about", "/app/privacy", "/app/terms", "/app/oauth/error"] {
+        for path in [
+            "/app/about",
+            "/app/privacy",
+            "/app/terms",
+            "/app/oauth/error",
+        ] {
             assert!(is_public_page(path), "{path}");
             assert_eq!(signed_out_route(path), None, "{path}");
         }

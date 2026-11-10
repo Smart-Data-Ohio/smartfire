@@ -27,7 +27,9 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
             match v {
                 Value::Null => SqlValue::Null,
                 Value::Bool(b) => SqlValue::Integer(i64::from(*b)),
-                Value::String(s) if key == "time_zone" && campfire_richtext::ruby::is_blank(s) => SqlValue::Null,
+                Value::String(s) if key == "time_zone" && campfire_richtext::ruby::is_blank(s) => {
+                    SqlValue::Null
+                }
                 Value::String(s) => SqlValue::Text(s.clone()),
                 _ => unreachable!("typed internal changes"),
             },
@@ -114,7 +116,9 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
                 }
                 continue;
             }
-            if crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS.contains(&key.as_str()) {
+            if crate::models::notification_policy::NOTIFICATION_PREFERENCE_KEYS
+                .contains(&key.as_str())
+            {
                 if !crate::models::notification_policy::valid_preference(key, value) {
                     errors.add("inbox_preferences", format!("{key} is invalid"));
                 }

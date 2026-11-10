@@ -1,9 +1,9 @@
 use super::*;
+use crate::integrations::{slack::client::tests::fake, test_support::Route};
 use campfire_app::net::http::HttpError;
 use rails_compat::Secrets;
 use serde_json::Value;
 use serde_json::json;
-use crate::integrations::{slack::client::tests::fake, test_support::Route};
 fn vectors() -> Value {
     serde_json::from_str(include_str!("../../../../../../vectors/slack/oauth.json")).unwrap()
 }

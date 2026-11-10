@@ -243,12 +243,7 @@ async fn submitted_time_zone_marks_choice_only_after_successful_save() {
 async fn admin_browser(a: &TestApp) -> Browser<'_> {
     let mut b = a.sign_in(DAVID).await;
     b.get("/users/me/profile").await;
-    assert_eq!(
-        b.confirm_sudo("secret123456")
-            .await
-            .status,
-        StatusCode::OK
-    );
+    assert_eq!(b.confirm_sudo("secret123456").await.status, StatusCode::OK);
     clear_audits(a).await;
     b
 }

@@ -7,8 +7,8 @@ use campfire_api_types as api;
 use campfire_db::{CachedStatements, Membership, RoomType};
 use serde_json::Value;
 
-use super::api_tests::{app, get, json_body, parse, serve, tag, Sync};
-use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, DAVID, HQ, KEVIN};
+use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
+use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, HQ, KEVIN, TestApp};
 
 fn oracle() -> Value {
     serde_json::from_str(include_str!("../../../../vectors/rooms_join.json")).unwrap()
@@ -346,7 +346,14 @@ async fn joining_a_hidden_room_brings_it_back_at_the_default_involvement() {
             row.membership.id,
             row.membership.involvement,
         ),
-        (HQ, before.id, api::Involvement::Mentions, HQ, before.id, api::Involvement::Mentions)
+        (
+            HQ,
+            before.id,
+            api::Involvement::Mentions,
+            HQ,
+            before.id,
+            api::Involvement::Mentions
+        )
     );
     let after = member(&app, HQ, DAVID).await.expect("unchanged");
     assert_eq!(

@@ -1,6 +1,4 @@
 use super::*;
-use campfire_app::integrations::github::accounts::Accounts;
-use campfire_db::Database;
 use crate::integrations::{
     github::{
         client::AppClient,
@@ -8,6 +6,8 @@ use crate::integrations::{
     },
     test_support::{Received, Route, TestDb},
 };
+use campfire_app::integrations::github::accounts::Accounts;
+use campfire_db::Database;
 use campfire_db::{BasicRichText, Env, Event, EventSink, TestClock, Timestamp, Tx};
 use campfire_jobs::{JobQueue, QueueConfig, Registry, RunnerConfig};
 use rusqlite::{OptionalExtension, params};
@@ -45,8 +45,7 @@ async fn database(case: &Value) -> TestDb {
         bcrypt_cost: 4,
         ..Default::default()
     };
-    let directory =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+    let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     let fixture = tokio::task::spawn_blocking(move || TestDb::with_env(env, &directory))
         .await
         .unwrap();
@@ -325,8 +324,7 @@ async fn github_agent_runtime_performs_discards_and_leaves_terminal_claim_on_wri
             .body(json!({"html_url":"https://github.com/rails/rails/pull/12#fixture"}).to_string()),
         ])
         .await;
-        let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
         let fixture_secret: Value =
@@ -523,22 +521,34 @@ async fn github_agent_completion_index_is_scoped_to_agent_approval_and_event_typ
     }).await.unwrap();
 }
 
-
 #[tokio::test]
 async fn pause_regression_github_failure_records_suppression() {
     let case = vectors()["cases"][0].clone();
     let fixture = database(&case).await;
-    fixture.db.write(|tx| {
-        tx.conn().execute("UPDATE agents SET paused_at=? WHERE id=812",[tx.now()])?;
-        tx.conn().execute("UPDATE agent_approvals SET status='denied' WHERE id=813",[])?;
-        Ok(())
-    }).await.unwrap();
-    let (server, network)=fake(vec![]).await;
-    let accounts=Accounts::with_network(fixture.db.clone(),crypto(),AppClient::new(None,None),network);
-    perform(&fixture.db,&accounts,813).await.unwrap();
+    fixture
+        .db
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE agents SET paused_at=? WHERE id=812", [tx.now()])?;
+            tx.conn().execute(
+                "UPDATE agent_approvals SET status='denied' WHERE id=813",
+                [],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let (server, network) = fake(vec![]).await;
+    let accounts = Accounts::with_network(
+        fixture.db.clone(),
+        crypto(),
+        AppClient::new(None, None),
+        network,
+    );
+    perform(&fixture.db, &accounts, 813).await.unwrap();
     assert!(server.received().is_empty());
-    let state=snapshot(&fixture.db).await;
-    assert_eq!(state["events"][0]["outcome"],"suppressed");
-    assert_eq!(state["events"][0]["webhook_status"],"none");
+    let state = snapshot(&fixture.db).await;
+    assert_eq!(state["events"][0]["outcome"], "suppressed");
+    assert_eq!(state["events"][0]["webhook_status"], "none");
     assert!(state["jobs"].as_array().unwrap().is_empty());
 }

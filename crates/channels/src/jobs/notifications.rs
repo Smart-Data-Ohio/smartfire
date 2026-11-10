@@ -194,22 +194,32 @@ async fn board_nudge(app: App, job: BoardNudge, _: Execution) -> JobResult {
         .map_err(super::discard_missing)?;
     Ok(Outcome::Done)
 }
-async fn huddle_delivery(app: App, payload: campfire_db::PushPayload, ids: Vec<i64>, sender_id: Option<i64>) -> JobResult {
+async fn huddle_delivery(
+    app: App,
+    payload: campfire_db::PushPayload,
+    ids: Vec<i64>,
+    sender_id: Option<i64>,
+) -> JobResult {
     let Some(pool) = app.web_push.clone() else {
         return Ok(Outcome::Done);
     };
     let now = app.db.env().now();
     // Old jobs without a sender cannot authorize delivery after a policy change.
-    let Some(sender_id) = sender_id else { return Ok(Outcome::Done); };
+    let Some(sender_id) = sender_id else {
+        return Ok(Outcome::Done);
+    };
     app.db
         .read(move |conn| {
             pool.queue(
                 conn,
                 &payload,
                 {
-                    let blockers = campfire_db::models::ignore_policy::blockers_of(conn, sender_id)?;
-                    campfire_db::PushSubscription::for_ids(conn, &ids)?.into_iter()
-                        .filter(|subscription| !blockers.contains(&subscription.user_id)).collect()
+                    let blockers =
+                        campfire_db::models::ignore_policy::blockers_of(conn, sender_id)?;
+                    campfire_db::PushSubscription::for_ids(conn, &ids)?
+                        .into_iter()
+                        .filter(|subscription| !blockers.contains(&subscription.user_id))
+                        .collect()
                 },
                 now,
             )

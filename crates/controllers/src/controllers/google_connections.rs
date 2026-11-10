@@ -4,10 +4,7 @@ use crate::{
     concerns::{self, Before},
     integrations::google::api,
 };
-use campfire_db::{
-    Timestamp,
-    models::google_account::ConnectionGrant,
-};
+use campfire_db::{Timestamp, models::google_account::ConnectionGrant};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode};
 use rails_compat::ar_encryption::ArEncryption;
 use rand::RngCore;
@@ -73,7 +70,11 @@ async fn callback_redirect(c: &mut Ctx, message: &str, notice: bool) -> Result {
         Some(user) => concerns::next_ui(c, &user).await?,
         None => false,
     };
-    let path = if next { "/app/settings/integrations" } else { "/users/me/profile" };
+    let path = if next {
+        "/app/settings/integrations"
+    } else {
+        "/users/me/profile"
+    };
     redirect_to(c, path, message, notice)
 }
 pub async fn callback(c: &mut Ctx) -> Result {
@@ -129,12 +130,14 @@ pub async fn callback(c: &mut Ctx) -> Result {
     .await;
     match result {
         Ok(true) => callback_redirect(c, "Google Calendar connected.", true).await,
-        Ok(false) => callback_redirect(
-            c,
-            "Calendar permission was not granted. Reconnect to publish events.",
-            false,
-        )
-        .await,
+        Ok(false) => {
+            callback_redirect(
+                c,
+                "Calendar permission was not granted. Reconnect to publish events.",
+                false,
+            )
+            .await
+        }
         Err(api::Error::Storage(e)) => Err(Error::internal(e)),
         Err(e) => {
             tracing::warn!("Google OAuth callback failed: {}", e.class());
@@ -157,15 +160,28 @@ pub async fn disconnect_user(c: &Ctx, user: campfire_db::User) -> Result<String>
     let id = user.id;
     let secrets = c.app().secrets.clone();
     let for_prepare = user.clone();
-    let plan = c.app().db.write(move |tx| {
-        campfire_db::models::google_connection::prepare_disconnect(tx, &for_prepare, &secrets)
-    }).await.map_err(Error::internal)?;
+    let plan = c
+        .app()
+        .db
+        .write(move |tx| {
+            campfire_db::models::google_connection::prepare_disconnect(tx, &for_prepare, &secrets)
+        })
+        .await
+        .map_err(Error::internal)?;
     if let Some(plan) = plan {
-        let channel = crate::integrations::google::calendar::stop_remote(c.app(), id).await.map_err(Error::internal)?;
+        let channel = crate::integrations::google::calendar::stop_remote(c.app(), id)
+            .await
+            .map_err(Error::internal)?;
         let context = super::two_factor::audit_context(c)?;
-        c.app().db.write(move |tx| {
-            campfire_db::models::google_connection::finish_disconnect(tx, &user, plan, channel, &context)
-        }).await.map_err(Error::internal)?;
+        c.app()
+            .db
+            .write(move |tx| {
+                campfire_db::models::google_connection::finish_disconnect(
+                    tx, &user, plan, channel, &context,
+                )
+            })
+            .await
+            .map_err(Error::internal)?;
     }
     Ok("Google Calendar disconnected.".into())
 }

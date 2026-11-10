@@ -23,8 +23,9 @@ static AUTO_LINK_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// `AUTO_EMAIL_RE` without its lookbehind, which is checked separately.
-static AUTO_EMAIL_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\A[a-zA-Z0-9_.!#$%+-]\.?[a-zA-Z0-9_.!#$%&'*/=?^`{|}~+-]*@[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)+").unwrap());
+static AUTO_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\A[a-zA-Z0-9_.!#$%+-]\.?[a-zA-Z0-9_.!#$%&'*/=?^`{|}~+-]*@[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)+").unwrap()
+});
 
 fn is_email_local_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || "_.!#$%&'*/=?^`{|}~+-".contains(c)
@@ -70,7 +71,10 @@ impl TagIndex {
                 b'<' => {
                     index.lts.push(i);
                     unclosed_lt.get_or_insert(i);
-                    if bytes.get(i + 1..i + 4).is_some_and(|s| s.eq_ignore_ascii_case(b"/a>")) {
+                    if bytes
+                        .get(i + 1..i + 4)
+                        .is_some_and(|s| s.eq_ignore_ascii_case(b"/a>"))
+                    {
                         index.close_anchors.push(i);
                     }
                     let after_previous = index.open_anchors.last().is_none_or(|&(_, end)| end <= i);
@@ -82,7 +86,10 @@ impl TagIndex {
                     index.gts.push(i);
                     unclosed_lt = None;
                 }
-                b'\n' if index.first_dangling_newline.is_none() && unclosed_lt.is_some_and(|lt| lt + 2 <= i) => {
+                b'\n'
+                    if index.first_dangling_newline.is_none()
+                        && unclosed_lt.is_some_and(|lt| lt + 2 <= i) =>
+                {
                     index.first_dangling_newline = Some(i);
                 }
                 _ => {}
@@ -94,18 +101,28 @@ impl TagIndex {
     /// `auto_linked?(text[..start], text[end..])`: inside a tag, or inside an unclosed `<a>`.
     fn auto_linked(&self, start: usize, end: usize) -> bool {
         let before = self.attribute_values.partition_point(|&(s, _)| s <= start);
-        let in_attribute = before.checked_sub(1).is_some_and(|i| start < self.attribute_values[i].1);
-        in_attribute || (self.open_tag_at_line_end(start) && self.closes_tag(end)) || self.inside_anchor(start)
+        let in_attribute = before
+            .checked_sub(1)
+            .is_some_and(|i| start < self.attribute_values[i].1);
+        in_attribute
+            || (self.open_tag_at_line_end(start) && self.closes_tag(end))
+            || self.inside_anchor(start)
     }
 
     /// `left =~ /<[^>]+$/`
     fn open_tag_at_line_end(&self, start: usize) -> bool {
-        if self.first_dangling_newline.is_some_and(|newline| newline < start) {
+        if self
+            .first_dangling_newline
+            .is_some_and(|newline| newline < start)
+        {
             return true;
         }
         // At the end of `left`: a `<` after the last `>`, with at least one character after it
         let last_gt = self.gts[..self.gts.partition_point(|&p| p < start)].last();
-        let first_lt_after = self.lts.get(self.lts.partition_point(|&p| last_gt.is_some_and(|&gt| p <= gt)));
+        let first_lt_after = self.lts.get(
+            self.lts
+                .partition_point(|&p| last_gt.is_some_and(|&gt| p <= gt)),
+        );
         first_lt_after.is_some_and(|&lt| lt + 2 <= start)
     }
 
@@ -121,7 +138,9 @@ impl TagIndex {
         let Some(&(_, anchor_end)) = before.checked_sub(1).map(|i| &self.open_anchors[i]) else {
             return false;
         };
-        let close = self.close_anchors.get(self.close_anchors.partition_point(|&p| p < anchor_end));
+        let close = self
+            .close_anchors
+            .get(self.close_anchors.partition_point(|&p| p < anchor_end));
         !close.is_some_and(|&p| p + 4 <= start)
     }
 }
@@ -142,7 +161,10 @@ impl BracketCounts {
     }
 
     fn count(&self, bracket: char) -> usize {
-        Self::BRACKETS.iter().position(|&b| b == bracket).map_or(0, |i| self.0[i])
+        Self::BRACKETS
+            .iter()
+            .position(|&b| b == bracket)
+            .map_or(0, |i| self.0[i])
     }
 
     fn remove(&mut self, c: char) {
@@ -218,7 +240,11 @@ fn auto_link_urls(text: &str) -> Result<String, ParseError> {
         }
         let mut punctuation: Vec<char> = Vec::new();
         let mut brackets = BracketCounts::of(&href);
-        while let Some(c) = href.chars().last().filter(|&c| !(is_word_char(c) || matches!(c, '/' | '-' | '=' | ';'))) {
+        while let Some(c) = href
+            .chars()
+            .last()
+            .filter(|&c| !(is_word_char(c) || matches!(c, '/' | '-' | '=' | ';')))
+        {
             href.pop();
             punctuation.push(c);
             brackets.remove(c);
@@ -241,7 +267,11 @@ fn auto_link_urls(text: &str) -> Result<String, ParseError> {
         let link_text = sanitize(&link_text, &SafeList::defaults())?;
         let href = sanitize(&href, &SafeList::defaults())?;
         // content_tag(:a, link_text, attrs, false): nothing escaped but double quotes in attributes
-        out.push_str(&format!("<a target=\"_blank\" href=\"{}\">{}</a>", href.replace('"', "&quot;"), link_text));
+        out.push_str(&format!(
+            "<a target=\"_blank\" href=\"{}\">{}</a>",
+            href.replace('"', "&quot;"),
+            link_text
+        ));
         // SafeBuffer#+ escapes the (unsafe) punctuation string
         let trailing: String = punctuation.iter().rev().collect();
         out.push_str(&html_escape(&trailing));
@@ -257,8 +287,15 @@ fn auto_link_email_addresses(text: &str) -> Result<String, ParseError> {
     let mut position = 0;
     let tags = TagIndex::new(text);
     while position < text.len() {
-        let preceded_by_local_char = text[..position].chars().last().is_some_and(is_email_local_char);
-        let found = if preceded_by_local_char { None } else { AUTO_EMAIL_RE.find(&text[position..]) };
+        let preceded_by_local_char = text[..position]
+            .chars()
+            .last()
+            .is_some_and(is_email_local_char);
+        let found = if preceded_by_local_char {
+            None
+        } else {
+            AUTO_EMAIL_RE.find(&text[position..])
+        };
         let Some(m) = found else {
             position += text[position..].chars().next().map_or(1, char::len_utf8);
             continue;
@@ -271,9 +308,17 @@ fn auto_link_email_addresses(text: &str) -> Result<String, ParseError> {
         } else {
             let sanitized = sanitize(email, &SafeList::defaults())?;
             // display_text is only sanitized (and so marked safe) when sanitizing changed the address
-            let display = if sanitized == email { html_escape(email) } else { sanitize(email, &SafeList::defaults())? };
+            let display = if sanitized == email {
+                html_escape(email)
+            } else {
+                sanitize(email, &SafeList::defaults())?
+            };
             let href = format!("mailto:{}", url_encode(&sanitized).replace("%40", "@"));
-            out.push_str(&format!("<a target=\"_blank\" href=\"{}\">{}</a>", html_escape(&href), display));
+            out.push_str(&format!(
+                "<a target=\"_blank\" href=\"{}\">{}</a>",
+                html_escape(&href),
+                display
+            ));
         }
         copied = end;
         position = end.max(position + 1);
@@ -288,14 +333,19 @@ mod tests {
 
     /// rails_autolink's `auto_linked?`, as regular expressions over the whole of `left`.
     fn auto_linked_by_regex(left: &str, right: &str) -> bool {
-        static OPEN_TAG_AT_LINE_END: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)<[^>]+$").unwrap());
+        static OPEN_TAG_AT_LINE_END: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"(?m)<[^>]+$").unwrap());
         static CLOSES_TAG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)^[^>]*>").unwrap());
-        static OPEN_ANCHOR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)<a\b.*?>").unwrap());
+        static OPEN_ANCHOR: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"(?i)<a\b.*?>").unwrap());
         static CLOSE_ANCHOR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)</a>").unwrap());
         if OPEN_TAG_AT_LINE_END.is_match(left) && CLOSES_TAG.is_match(right) {
             return true;
         }
-        let last = left.char_indices().rev().find_map(|(i, _)| OPEN_ANCHOR.find_at(left, i).filter(|m| m.start() == i));
+        let last = left
+            .char_indices()
+            .rev()
+            .find_map(|(i, _)| OPEN_ANCHOR.find_at(left, i).filter(|m| m.start() == i));
         last.is_some_and(|m| !CLOSE_ANCHOR.is_match(&left[m.end()..]))
     }
 
@@ -315,7 +365,11 @@ mod tests {
             let index = TagIndex::new(text);
             for start in (0..=text.len()).filter(|&i| text.is_char_boundary(i)) {
                 for end in (start..=text.len()).filter(|&i| text.is_char_boundary(i)) {
-                    if index.attribute_values.iter().any(|&(s, e)| s <= start && start < e) {
+                    if index
+                        .attribute_values
+                        .iter()
+                        .any(|&(s, e)| s <= start && start < e)
+                    {
                         assert!(index.auto_linked(start, end));
                         continue;
                     }

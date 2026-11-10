@@ -27,9 +27,13 @@ fn authorized_sql() -> String {
         ("SAVED_THREAD_ACCESS", "activity_saved_messages.thread_id"),
         ("WORK_THREAD_ACCESS", "activity_work_threads.id"),
         ("SLA_THREAD_ACCESS", "activity_sla_threads.id"),
-        ("SCHEDULED_THREAD_ACCESS", "activity_scheduled_messages.thread_id"),
+        (
+            "SCHEDULED_THREAD_ACCESS",
+            "activity_scheduled_messages.thread_id",
+        ),
     ] {
-        let access = super::super::channel_thread::readable_by_sql(expression, "activity_items.user_id");
+        let access =
+            super::super::channel_thread::readable_by_sql(expression, "activity_items.user_id");
         sql = sql.replace(marker, &format!("({expression} IS NULL OR {access})"));
     }
     sql
@@ -60,7 +64,10 @@ fn unread_activity_sql() -> String {
 
 fn unmuted_activity_sql() -> String {
     let room = "COALESCE(activity_messages.room_id, activity_saved_messages.room_id, activity_work_threads.room_id, activity_sla_nudges.room_id, activity_huddle_grants.room_id, activity_events.room_id)";
-    format!(" AND {}", crate::models::notification_policy::unmuted_sql(room, "users.inbox_preferences", "?2"))
+    format!(
+        " AND {}",
+        crate::models::notification_policy::unmuted_sql(room, "users.inbox_preferences", "?2")
+    )
 }
 
 impl ActivityItem {
@@ -69,19 +76,24 @@ impl ActivityItem {
         user_id: i64,
         now: Timestamp,
     ) -> Result<ActivityUnread> {
-        let count =
-            access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + &unread_activity_sql()
-                + &unmuted_activity_sql();
+        let count = access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
+            + &unread_activity_sql()
+            + &unmuted_activity_sql();
         let sql = format!("SELECT ({count}), activity_revision FROM users WHERE id = ?1");
-        Ok(crate::sql::query_one(conn, &sql, rusqlite::params![user_id, now], |row| {
-            Ok(ActivityUnread {
-                count: row.get(0)?,
-                revision: row.get(1)?,
+        Ok(
+            crate::sql::query_one(conn, &sql, rusqlite::params![user_id, now], |row| {
+                Ok(ActivityUnread {
+                    count: row.get(0)?,
+                    revision: row.get(1)?,
+                    evaluated_at: now,
+                })
+            })?
+            .unwrap_or(ActivityUnread {
+                count: 0,
+                revision: 0,
                 evaluated_at: now,
-            })
-        })?
-        .unwrap_or(ActivityUnread { count: 0, revision: 0, evaluated_at: now }))
+            }),
+        )
     }
 
     pub fn accessible_to(conn: &Connection, user: &User) -> Result<Vec<Self>> {
@@ -98,7 +110,9 @@ impl ActivityItem {
 
     /// Source authorization without ignore filtering, for publication eligibility only.
     pub fn find_authorized(conn: &Connection, user: &User, id: i64) -> Result<Option<Self>> {
-        if !user.is_active() || user.is_bot() { return Ok(None); }
+        if !user.is_active() || user.is_bot() {
+            return Ok(None);
+        }
         let sql = format!("{} AND activity_items.id=?2", authorized_sql());
         crate::sql::query_one(conn, &sql, rusqlite::params![user.id, id], Self::from_row)
     }
@@ -107,10 +121,9 @@ impl ActivityItem {
         if !user.is_active() || user.is_bot() {
             return Ok(0);
         }
-        let sql =
-            access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
-                + &unread_activity_sql()
-                + &unmuted_activity_sql();
+        let sql = access_sql().replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
+            + &unread_activity_sql()
+            + &unmuted_activity_sql();
         Ok(conn.query_row(&sql, rusqlite::params![user.id, now], |row| row.get(0))?)
     }
 

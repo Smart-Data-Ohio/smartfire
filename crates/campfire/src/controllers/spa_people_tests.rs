@@ -157,15 +157,23 @@ async fn ban_and_remove_ban_match_classic() {
             public_sessions,
             async |b, _| classic(b, method.clone(), &path, &[]).await,
             async |b, _| {
-                let before = b.app().db()
-                    .read(move |conn| User::find(conn, id)).await.unwrap();
+                let before = b
+                    .app()
+                    .db()
+                    .read(move |conn| User::find(conn, id))
+                    .await
+                    .unwrap();
                 let profile: api::PersonProfile =
                     spa(b, method.clone(), &api_path, Value::Null).await;
                 assert_eq!(profile.user.id, id);
                 assert_eq!(profile.user.status, status);
                 assert!(profile.user.updated_at > updated_at(&before));
-                let after = b.app().db()
-                    .read(move |conn| User::find(conn, id)).await.unwrap();
+                let after = b
+                    .app()
+                    .db()
+                    .read(move |conn| User::find(conn, id))
+                    .await
+                    .unwrap();
                 assert_eq!(profile.user.updated_at, updated_at(&after));
                 assert!(profile.status.is_some());
                 assert!(profile.email_address.is_some());
@@ -591,7 +599,10 @@ async fn profile_fields_share_the_row_after_a_racing_ban_or_unban() {
         assert_eq!(profile.transfer_url.is_some(), !racing_ban);
         assert_eq!(
             profile.transfer_qr_svg,
-            profile.transfer_url.as_deref().and_then(qr_code::transfer_svg)
+            profile
+                .transfer_url
+                .as_deref()
+                .and_then(qr_code::transfer_svg)
         );
         assert_eq!(
             profile.email_address.as_deref(),
@@ -634,7 +645,8 @@ async fn check_profile(
                 &viewer_user,
                 now,
                 &campfire_presentation::time::Zone::for_user(settings.time_zone.as_deref()),
-            )?.is_some_and(|profile| profile.management.is_some());
+            )?
+            .is_some_and(|profile| profile.management.is_some());
             Ok((user, viewer_user, status, manages_agent))
         })
         .await
@@ -703,14 +715,26 @@ async fn check_profile(
 #[tokio::test]
 async fn legacy_bot_profiles_keep_classic_actions_and_admin_visibility() {
     let Some(a) = app().await else { return };
-    let id = a.db().write(|tx| {
-        let bot = User::create_bot(tx, "Legacy Bot", None)?;
-        assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
-        Ok(bot.id)
-    }).await.unwrap();
-    let member = a.db().read(|conn| {
-        Ok(conn.query_row("SELECT id FROM users WHERE name='JZ'", [], |row| row.get::<_, i64>(0))?)
-    }).await.unwrap();
+    let id = a
+        .db()
+        .write(|tx| {
+            let bot = User::create_bot(tx, "Legacy Bot", None)?;
+            assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
+            Ok(bot.id)
+        })
+        .await
+        .unwrap();
+    let member = a
+        .db()
+        .read(|conn| {
+            Ok(
+                conn.query_row("SELECT id FROM users WHERE name='JZ'", [], |row| {
+                    row.get::<_, i64>(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
     for viewer in [DAVID, member] {
         let mut browser = a.sign_in(viewer).await;
         let profile = check_profile(&a, &mut browser, viewer, id).await;
@@ -722,38 +746,51 @@ async fn legacy_bot_profiles_keep_classic_actions_and_admin_visibility() {
         assert!(profile.transfer_url.is_none());
         assert!(!profile.can_ban);
         assert_eq!(profile.can_manage_bot, viewer == DAVID);
-
     }
 }
 
 #[tokio::test]
 async fn active_bot_profiles_allow_the_non_admin_agent_owner_to_manage() {
     let Some(a) = app().await else { return };
-    let (id, owner) = a.db().write(|tx| {
-        let owner = tx.conn().query_row("SELECT id FROM users WHERE name='JZ'", [], |row| row.get::<_, i64>(0))?;
-        let bot = User::create_bot(tx, "Owned Bot", None)?;
-        campfire_db::Agent::create(tx, campfire_db::NewAgent {
-            user_id: bot.id,
-            owner_id: Some(owner),
-            ..Default::default()
-        })?;
-        Ok((bot.id, owner))
-    }).await.unwrap();
+    let (id, owner) = a
+        .db()
+        .write(|tx| {
+            let owner = tx
+                .conn()
+                .query_row("SELECT id FROM users WHERE name='JZ'", [], |row| {
+                    row.get::<_, i64>(0)
+                })?;
+            let bot = User::create_bot(tx, "Owned Bot", None)?;
+            campfire_db::Agent::create(
+                tx,
+                campfire_db::NewAgent {
+                    user_id: bot.id,
+                    owner_id: Some(owner),
+                    ..Default::default()
+                },
+            )?;
+            Ok((bot.id, owner))
+        })
+        .await
+        .unwrap();
     let mut browser = a.sign_in(owner).await;
     let profile = check_profile(&a, &mut browser, owner, id).await;
     assert!(profile.can_manage_bot);
-
 }
 
 #[tokio::test]
 async fn inactive_legacy_bot_profiles_hide_classic_actions() {
     let Some(a) = app().await else { return };
-    let id = a.db().write(|tx| {
-        let mut bot = User::create_bot(tx, "Inactive Legacy Bot", None)?;
-        bot.deactivate(tx)?;
-        assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
-        Ok(bot.id)
-    }).await.unwrap();
+    let id = a
+        .db()
+        .write(|tx| {
+            let mut bot = User::create_bot(tx, "Inactive Legacy Bot", None)?;
+            bot.deactivate(tx)?;
+            assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
+            Ok(bot.id)
+        })
+        .await
+        .unwrap();
     let mut browser = a.sign_in(DAVID).await;
     let profile = check_profile(&a, &mut browser, DAVID, id).await;
     assert_eq!(profile.user.status, api::UserStatus::Deactivated);
@@ -765,7 +802,6 @@ async fn inactive_legacy_bot_profiles_hide_classic_actions() {
     assert!(profile.dnd_allowed.is_none());
     assert!(profile.email_address.is_none());
     assert!(profile.transfer_url.is_none());
-
 }
 
 #[tokio::test]

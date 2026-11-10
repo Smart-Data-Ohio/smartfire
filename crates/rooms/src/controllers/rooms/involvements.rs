@@ -34,7 +34,9 @@ pub async fn change(
         .write(move |tx| {
             let mut membership = Membership::find_stored(tx.conn(), membership_id)?;
             membership.update_involvement(tx, involvement)?;
-            if membership.involved_in(Involvement::Muted) { membership.read(tx)?; }
+            if membership.involved_in(Involvement::Muted) {
+                membership.read(tx)?;
+            }
             Membership::find(tx.conn(), membership_id)
         })
         .await
@@ -51,5 +53,10 @@ fn involvement_param(c: &Ctx) -> Result<Option<Involvement>> {
         .as_str()
         .and_then(Involvement::from_name)
         .map(Some)
-        .ok_or_else(|| Error::internal(anyhow::anyhow!("{:?} is not a valid involvement", param.to_s())))
+        .ok_or_else(|| {
+            Error::internal(anyhow::anyhow!(
+                "{:?} is not a valid involvement",
+                param.to_s()
+            ))
+        })
 }

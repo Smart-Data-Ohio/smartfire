@@ -4,9 +4,9 @@
 //! ([`Renderer`]).
 
 use std::collections::BTreeSet;
-use std::sync::{Arc, Weak};
 #[cfg(feature = "test-support")]
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Weak};
 
 use campfire_api_types as api;
 use campfire_app::app::AppState;
@@ -127,7 +127,11 @@ impl SyncRenderer for Renderer {
         workspace_layout(conn, user_id).map(Some)
     }
 
-    fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {
+    fn thread(
+        &self,
+        conn: &Connection,
+        thread: &campfire_db::ChannelThread,
+    ) -> Option<api::Thread> {
         let app = self.app.upgrade()?;
         let now = app.db.env().now();
         let dto = Room::find(conn, thread.room_id)
@@ -137,7 +141,9 @@ impl SyncRenderer for Renderer {
                         .remove(&thread.id);
                 Ok(dto::thread(thread, &room, now, work))
             })
-            .inspect_err(|error| tracing::warn!(%error, thread_id = thread.id, "sync: thread not rendered"))
+            .inspect_err(
+                |error| tracing::warn!(%error, thread_id = thread.id, "sync: thread not rendered"),
+            )
             .ok();
         #[cfg(feature = "test-support")]
         crate::test_hooks::after_thread_snapshot(app.db.path(), thread.id);
@@ -198,13 +204,7 @@ impl SyncRenderer for Renderer {
         let Some(row) = campfire_db::ScheduledMessage::find_by_id(conn, id)? else {
             return Ok(None);
         };
-        Ok(crate::composer::scheduled_rows(
-            conn,
-            &[row],
-            app.db.env().now(),
-            &app,
-        )?
-        .pop())
+        Ok(crate::composer::scheduled_rows(conn, &[row], app.db.env().now(), &app)?.pop())
     }
 
     fn agent_status(
@@ -294,7 +294,13 @@ impl SyncRenderer for Renderer {
         let Some(app) = self.app.upgrade() else {
             return Ok(None);
         };
-        crate::cards::poll_changed(conn, poll_id, voter_id, app.db.env().now(), &*app.storage.verifier)
+        crate::cards::poll_changed(
+            conn,
+            poll_id,
+            voter_id,
+            app.db.env().now(),
+            &*app.storage.verifier,
+        )
     }
 
     fn message_cards(
@@ -386,7 +392,11 @@ impl SyncHandler<CableUser> for Handler {
         user.id
     }
 
-    async fn open(&self, user: Arc<CableUser>, device_class: Option<api::DeviceClass>) -> Box<dyn SyncSession> {
+    async fn open(
+        &self,
+        user: Arc<CableUser>,
+        device_class: Option<api::DeviceClass>,
+    ) -> Box<dyn SyncSession> {
         let mut session = Session {
             app: self.app.clone(),
             user,
@@ -463,7 +473,12 @@ impl Session {
         match app
             .db
             .write(move |tx| {
-                let lease = WorkspacePresenceLease::establish_for_device(tx, user_id, session_id, device_class)?;
+                let lease = WorkspacePresenceLease::establish_for_device(
+                    tx,
+                    user_id,
+                    session_id,
+                    device_class,
+                )?;
                 if lease.is_some() {
                     publish_presence_after_commit(tx, presence_app, &user);
                 }
@@ -534,25 +549,37 @@ fn event_thread_id(event: &api::SyncEvent) -> Option<i64> {
     if matches!(event.payload, api::SyncPayload::ThreadRemoved(_)) {
         return None;
     }
-    if let Some(id) = event.topic.strip_prefix("thread:").and_then(|id| id.parse().ok()) {
+    if let Some(id) = event
+        .topic
+        .strip_prefix("thread:")
+        .and_then(|id| id.parse().ok())
+    {
         return Some(id);
     }
     match &event.payload {
-        api::SyncPayload::ThreadCreated(thread) | api::SyncPayload::ThreadUpdated(thread) => Some(thread.id),
-        api::SyncPayload::ThreadIndicator(change) => change.thread.as_ref().map(|thread| thread.thread_id),
+        api::SyncPayload::ThreadCreated(thread) | api::SyncPayload::ThreadUpdated(thread) => {
+            Some(thread.id)
+        }
+        api::SyncPayload::ThreadIndicator(change) => {
+            change.thread.as_ref().map(|thread| thread.thread_id)
+        }
         api::SyncPayload::ThreadUnread(change) => Some(change.thread_id),
         api::SyncPayload::MessageNotified(notified) => notified.thread_id,
         api::SyncPayload::RoomFilesChanged(change) => Some(change.thread_id),
         api::SyncPayload::ThreadRead(change) => Some(change.thread_id),
         api::SyncPayload::ThreadGithubUpdated(change) => Some(change.thread_id),
-        api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => message.thread_id,
+        api::SyncPayload::MessageCreated(message) | api::SyncPayload::MessageUpdated(message) => {
+            message.thread_id
+        }
         api::SyncPayload::MessageRemoved(message) => message.thread_id,
         api::SyncPayload::MessageReactions(reactions) => reactions.thread_id,
         api::SyncPayload::MessageCards(cards) => cards.thread_id,
         api::SyncPayload::PollUpdated(poll) => poll.thread_id,
         api::SyncPayload::PollBallot(ballot) => ballot.thread_id,
         api::SyncPayload::AgentSteps(steps) => steps.thread_id,
-        api::SyncPayload::ActivityItem(change) => change.item.as_ref().and_then(|item| item.source.thread_id),
+        api::SyncPayload::ActivityItem(change) => {
+            change.item.as_ref().and_then(|item| item.source.thread_id)
+        }
         api::SyncPayload::BlocksUpdated(_)
         | api::SyncPayload::SettingsUpdated(_)
         | api::SyncPayload::UserUpdated(_)
@@ -628,8 +655,15 @@ impl SyncSession for Session {
                 }
             }
         }
-        if message_ids.is_empty() && thread_ids.is_empty() && pin_ids.is_empty() && scheduled_ids.is_empty() {
-            return events.into_iter().map(|(wire, _)| wire.to_owned()).collect();
+        if message_ids.is_empty()
+            && thread_ids.is_empty()
+            && pin_ids.is_empty()
+            && scheduled_ids.is_empty()
+        {
+            return events
+                .into_iter()
+                .map(|(wire, _)| wire.to_owned())
+                .collect();
         }
         let viewer = self.user.id;
         let access = if let Some(app) = self.app.upgrade() {
@@ -685,42 +719,52 @@ impl SyncSession for Session {
         } else {
             Default::default()
         };
-        events.into_iter().filter_map(|(wire, mut event)| {
-            // Removal is a control event: it must reach a revoked viewer to clear their pane
-            // and unsubscribe even though their access has already gone.
-            if let Some(id) = event_thread_id(&event)
-                && !access.1.contains(&id) {
-                return None;
-            }
-            match &mut event.payload {
-                api::SyncPayload::ScheduledChanged(message) => {
-                    *message = access.3.get(&message.id)?.clone();
-                    serde_json::to_string(&event).ok()
+        events
+            .into_iter()
+            .filter_map(|(wire, mut event)| {
+                // Removal is a control event: it must reach a revoked viewer to clear their pane
+                // and unsubscribe even though their access has already gone.
+                if let Some(id) = event_thread_id(&event)
+                    && !access.1.contains(&id)
+                {
+                    return None;
                 }
-                api::SyncPayload::MessagePinned(state) => {
-                    let (room_id, count) = access.2.get(&state.message_id)?;
-                    state.room_id = *room_id;
-                    state.pin_count = *count;
-                    serde_json::to_string(&event).ok()
-                }
-                api::SyncPayload::MessageCreated(message)
-                | api::SyncPayload::MessageUpdated(message) => {
-                    if !access.0.rooms.contains(&message.room_id) {
-                        return None;
+                match &mut event.payload {
+                    api::SyncPayload::ScheduledChanged(message) => {
+                        *message = access.3.get(&message.id)?.clone();
+                        serde_json::to_string(&event).ok()
                     }
-                    if message.thread.as_ref().is_some_and(|indicator| !access.1.contains(&indicator.thread_id)) {
-                        message.thread = None;
+                    api::SyncPayload::MessagePinned(state) => {
+                        let (room_id, count) = access.2.get(&state.message_id)?;
+                        state.room_id = *room_id;
+                        state.pin_count = *count;
+                        serde_json::to_string(&event).ok()
                     }
-                    message.announcement_source = access.0.sources.get(&message.id).map(|source| api::AnnouncementSource {
-                        room_id: source.room_id,
-                        message_id: source.message_id,
-                        room_name: source.room_name.clone(),
-                    });
-                    serde_json::to_string(&event).ok()
+                    api::SyncPayload::MessageCreated(message)
+                    | api::SyncPayload::MessageUpdated(message) => {
+                        if !access.0.rooms.contains(&message.room_id) {
+                            return None;
+                        }
+                        if message
+                            .thread
+                            .as_ref()
+                            .is_some_and(|indicator| !access.1.contains(&indicator.thread_id))
+                        {
+                            message.thread = None;
+                        }
+                        message.announcement_source =
+                            access.0.sources.get(&message.id).map(|source| {
+                                api::AnnouncementSource {
+                                    room_id: source.room_id,
+                                    message_id: source.message_id,
+                                    room_name: source.room_name.clone(),
+                                }
+                            });
+                        serde_json::to_string(&event).ok()
+                    }
+                    _ => Some(wire.to_owned()),
                 }
-                _ => Some(wire.to_owned()),
-            }
-        })
+            })
             .collect()
     }
 
@@ -749,8 +793,12 @@ impl SyncSession for Session {
         let Ok(Some((room, name))) = app
             .db
             .read(move |conn| {
-                let Some(room) = conversation.room(conn, user_id)? else { return Ok(None) };
-                let name = campfire_db::User::find(conn, user_id)?.display_name().to_owned();
+                let Some(room) = conversation.room(conn, user_id)? else {
+                    return Ok(None);
+                };
+                let name = campfire_db::User::find(conn, user_id)?
+                    .display_name()
+                    .to_owned();
                 Ok(Some((room, name)))
             })
             .await

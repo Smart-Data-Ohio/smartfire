@@ -379,7 +379,14 @@ fn decode_header(value: &str) -> Option<String> {
 
 async fn call_tool(c: &mut Ctx, id: Value, params: &Value, agent_id: i64, modern: bool) -> Result {
     if agent_api::action_paused(c).await? {
-        return Ok(rpc_result(c, id, modern_result(json!({"content":[{"type":"text","text":"agent_paused"}],"structuredContent":{"error":"agent_paused","status":403},"isError":true}), modern)));
+        return Ok(rpc_result(
+            c,
+            id,
+            modern_result(
+                json!({"content":[{"type":"text","text":"agent_paused"}],"structuredContent":{"error":"agent_paused","status":403},"isError":true}),
+                modern,
+            ),
+        ));
     }
     let name = params.get("name").unwrap_or(&Value::Null);
     let Some(tool) = METADATA["tools"]
@@ -742,7 +749,9 @@ async fn execute(
             if let Some(denial) = denial {
                 return Ok(denial);
             }
-            if let Some(id) = args.get("sticker_id") && id.as_i64().is_none() {
+            if let Some(id) = args.get("sticker_id")
+                && id.as_i64().is_none()
+            {
                 return Err(ToolError::Invalid("sticker_id must be an integer".into()));
             }
             if args.get("body").is_none_or(blank)

@@ -1199,7 +1199,9 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     let mut new_admin = next.sign_in(JASON).await;
     assert_eq!(
         old_admin
-            .send(get(&format!("/api/v1/rooms/{DESIGNERS}/events/{LAUNCH}/edit")))
+            .send(get(&format!(
+                "/api/v1/rooms/{DESIGNERS}/events/{LAUNCH}/edit"
+            )))
             .await
             .status,
         StatusCode::OK
@@ -1215,7 +1217,9 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
     );
     assert_eq!(
         old_admin
-            .send(get(&format!("/api/v1/rooms/{DESIGNERS}/events/{CANCELLED}/edit")))
+            .send(get(&format!(
+                "/api/v1/rooms/{DESIGNERS}/events/{CANCELLED}/edit"
+            )))
             .await
             .status,
         StatusCode::FORBIDDEN
@@ -1257,7 +1261,10 @@ async fn spa_api_events_permissions_match_classic_without_broader_access() {
         sql(a,"UPDATE users SET role=0 WHERE id=712064548; UPDATE rooms SET deleted_at='2026-03-02 16:00:00' WHERE id=654632876;").await;
     }
     let path = format!("/rooms/{DESIGNERS}/events");
-    assert_eq!(old.send(get(&format!("/api/v1{path}"))).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        old.send(get(&format!("/api/v1{path}"))).await.status,
+        StatusCode::NOT_FOUND
+    );
     assert_eq!(
         new.send(get(&format!("/api/v1{path}"))).await.status,
         StatusCode::NOT_FOUND
@@ -1606,7 +1613,10 @@ async fn assert_refused(
         let (expected, actual) = if write && matches!(caller, Caller::Session) {
             (old.write(classic).await, new.write(api).await)
         } else {
-            (old.send(if write { classic } else { api.clone() }).await, new.send(api).await)
+            (
+                old.send(if write { classic } else { api.clone() }).await,
+                new.send(api).await,
+            )
         };
         assert_eq!(
             (expected.status, actual.status),
@@ -1685,13 +1695,19 @@ async fn spa_api_events_direct_rooms_serve_participants_and_refuse_others_like_c
     new_david.authenticity_token().await;
     // Classic has no room-type check: a participant lists, opens the form and schedules.
     let path = format!("/rooms/{DIRECT_DAVID_JASON}/events");
-    assert_eq!(old_david.send(get(&format!("/api/v1{path}"))).await.status, StatusCode::OK);
+    assert_eq!(
+        old_david.send(get(&format!("/api/v1{path}"))).await.status,
+        StatusCode::OK
+    );
     let list = ok(&new_david.send(get(&format!("/api/v1{path}"))).await);
     assert_eq!(list["roomId"], DIRECT_DAVID_JASON);
     assert_eq!(list["roomKind"], "direct");
     assert_eq!(list["mayCreate"], true);
     assert_eq!(
-        old_david.send(get(&format!("/api/v1{path}/new"))).await.status,
+        old_david
+            .send(get(&format!("/api/v1{path}/new")))
+            .await
+            .status,
         StatusCode::OK
     );
     let form = ok(&new_david.send(get(&format!("/api/v1{path}/new"))).await);
@@ -1730,7 +1746,10 @@ async fn spa_api_events_direct_rooms_serve_participants_and_refuse_others_like_c
     let mut old_jason = classic.sign_in(JASON).await;
     let mut new_jason = next.sign_in(JASON).await;
     assert_eq!(
-        old_jason.send(get(&format!("/api/v1{path}/{id}"))).await.status,
+        old_jason
+            .send(get(&format!("/api/v1{path}/{id}")))
+            .await
+            .status,
         StatusCode::OK
     );
     ok(&new_jason.send(get(&format!("/api/v1{path}/{id}"))).await);

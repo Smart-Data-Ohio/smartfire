@@ -25,8 +25,7 @@ fn before() -> Before {
 pub async fn service_worker(c: &mut Ctx) -> Result {
     concerns::before_actions(c, before()).await?;
     c.respond_to(&[&format::JS])?;
-    let served = pwa::file("service-worker.js", None)
-        .expect("PWA fallback worker");
+    let served = pwa::file("service-worker.js", None).expect("PWA fallback worker");
     c.set_header("cache-control", "no-cache, no-transform");
     c.set_header("service-worker-allowed", "/");
     Ok(c.render_as(StatusCode::OK, served.file.content_type, served.body))
@@ -75,9 +74,7 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
             Some(served) => {
                 let mut response =
                     super::spa::served_response(&kit, served, immutable_cache_control);
-                if path == "offline.html"
-                    && campfire_spa::file(path, None).is_none()
-                {
+                if path == "offline.html" && campfire_spa::file(path, None).is_none() {
                     // The original standalone shell has inline retry/reconnect scripts and,
                     // like ActionDispatch::Static, needs no request's nonce policy.
                     response.headers_mut().remove("content-security-policy");
@@ -92,7 +89,10 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
         .route("/favicon.svg", axum::routing::get(files))
         .route("/favicon.png", axum::routing::get(files))
         .route("/apple-touch-icon.png", axum::routing::get(files))
-        .route("/favicon.ico", axum::routing::get(campfire_kit::action(favicon)))
+        .route(
+            "/favicon.ico",
+            axum::routing::get(campfire_kit::action(favicon)),
+        )
         .route("/pwa/assets/{*path}", axum::routing::get(files))
         .route("/app/offline.html", axum::routing::get(files))
         .route("/app/service-worker.js", axum::routing::get(files))
@@ -126,6 +126,12 @@ async fn render_manifest(c: &mut Ctx) -> Result {
 }
 
 pub(crate) fn manifest_logo_path(account: Option<&Account>, size: Option<&str>) -> String {
-    let version = account.map(|account| account.updated_at.jiff().strftime("%Y%m%d%H%M%S").to_string());
+    let version = account.map(|account| {
+        account
+            .updated_at
+            .jiff()
+            .strftime("%Y%m%d%H%M%S")
+            .to_string()
+    });
     campfire_routes::fresh_account_logo(version.as_deref(), size)
 }

@@ -156,7 +156,13 @@ pub async fn connect(c: &mut Ctx) -> Result {
         &c.url_for(&campfire_routes::github_app_callback()),
         &oauth::sign_state(&c.app().secrets, &raw),
     );
-    c.redirect_to_with(&location, Redirect { allow_other_host: true, ..Default::default() })
+    c.redirect_to_with(
+        &location,
+        Redirect {
+            allow_other_host: true,
+            ..Default::default()
+        },
+    )
 }
 pub async fn callback(c: &mut Ctx) -> Result {
     app_before(c).await?;

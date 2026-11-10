@@ -32,12 +32,18 @@ impl State {
     pub fn from_config(config: &crate::config::Config) -> Self {
         let transport = Arc::new(client::HttpClient(crate::net::Network::system()));
         Self(
-            Arc::new(RwLock::new(Arc::new(sign_in::SignIn::with_client(sign_in::Config {
-                client_id: config.google_client.client_id.clone(),
-                client_secret: config.google_client.client_secret.clone(),
-                domains: config.sign_in_google_domains.clone(),
-            }, transport.clone())))),
-            Arc::new(RwLock::new(Arc::new(api::Api::new(config.google_client.clone(), transport)))),
+            Arc::new(RwLock::new(Arc::new(sign_in::SignIn::with_client(
+                sign_in::Config {
+                    client_id: config.google_client.client_id.clone(),
+                    client_secret: config.google_client.client_secret.clone(),
+                    domains: config.sign_in_google_domains.clone(),
+                },
+                transport.clone(),
+            )))),
+            Arc::new(RwLock::new(Arc::new(api::Api::new(
+                config.google_client.clone(),
+                transport,
+            )))),
             Arc::new(drive::State::new(config.google_picker.is_some())),
         )
     }

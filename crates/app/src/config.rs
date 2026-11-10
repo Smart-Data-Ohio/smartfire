@@ -101,17 +101,27 @@ impl StoragePaths {
 
     /// Where `prepare-backup` writes the snapshot: `storage/backups/<database file name>`.
     pub fn backup_file(&self) -> PathBuf {
-        self.backups.join(self.database.file_name().unwrap_or_else(|| "production.sqlite3".as_ref()))
+        self.backups.join(
+            self.database
+                .file_name()
+                .unwrap_or_else(|| "production.sqlite3".as_ref()),
+        )
     }
 }
 
 impl Config {
     /// OAuth's issuer comes only from a configured origin, never a request header.
     pub fn oauth_issuer(&self) -> Option<String> {
-        if !self.mcp_oauth {return None;}
+        if !self.mcp_oauth {
+            return None;
+        }
         let origin = self.mail.validated_app_url()?;
         let url = url::Url::parse(&origin).ok()?;
-        (url.scheme()=="https" || (self.environment=="development" && url.scheme()=="http" && url.host_str()==Some("localhost"))).then_some(origin)
+        (url.scheme() == "https"
+            || (self.environment == "development"
+                && url.scheme() == "http"
+                && url.host_str() == Some("localhost")))
+        .then_some(origin)
     }
 
     pub fn from_env() -> anyhow::Result<Self> {
@@ -125,12 +135,16 @@ impl Config {
         let secret_key_base = match present("SECRET_KEY_BASE") {
             Some(secret) => secret,
             None if present("SECRET_KEY_BASE_DUMMY").is_some() => dummy_secret(),
-            None => bail!("Missing `secret_key_base` for 'production' environment, set SECRET_KEY_BASE"),
+            None => {
+                bail!("Missing `secret_key_base` for 'production' environment, set SECRET_KEY_BASE")
+            }
         };
         let environment = present("RAILS_ENV").unwrap_or_else(|| "production".into());
 
-        let storage_root = present("CAMPFIRE_STORAGE_PATH").or_else(|| present("CAMPFIRE_STORAGE"))
-            .map(PathBuf::from).unwrap_or_else(|| PathBuf::from("storage"));
+        let storage_root = present("CAMPFIRE_STORAGE_PATH")
+            .or_else(|| present("CAMPFIRE_STORAGE"))
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("storage"));
         let mut storage = StoragePaths::new(storage_root, &environment);
         if let Some(database) = present("CAMPFIRE_DATABASE_PATH") {
             storage.database = database.into();
@@ -144,31 +158,58 @@ impl Config {
 
         let number = |name: &str, default: usize| -> anyhow::Result<usize> {
             match present(name) {
-                Some(value) => value.trim().parse().with_context(|| format!("{name}={value:?} is not a number")),
+                Some(value) => value
+                    .trim()
+                    .parse()
+                    .with_context(|| format!("{name}={value:?} is not a number")),
                 None => Ok(default),
             }
         };
 
-        let google_client_configured = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"].iter()
+        let google_client_configured = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
+            .iter()
             .all(|key| get(key).is_some_and(|value| !campfire_richtext::ruby::is_blank(&value)));
         let sign_in_google_domains = if google_client_configured {
             rails_compat::jwt::google::allowed_domains(get("GOOGLE_SIGN_IN_DOMAINS").as_deref())
-        } else { Vec::new() };
+        } else {
+            Vec::new()
+        };
 
         Ok(Self {
-            mcp_oauth: present("SMARTFIRE_MCP_OAUTH").is_none_or(|v| !matches!(v.trim().to_ascii_lowercase().as_str(), "0" | "false" | "off" | "no")),
-            mail: campfire_mail::config::Config::from_map(&[
-                "SMTP_ADDRESS", "SMTP_PORT", "SMTP_DOMAIN", "SMTP_USER_NAME", "SMTP_PASSWORD",
-                "SMTP_AUTHENTICATION", "SMTP_ENABLE_STARTTLS", "MAILER_FROM", "APP_URL",
-                "INBOUND_EMAIL_DOMAIN", "INBOUND_EMAIL_AUTHSERV_ID", "RAILS_INBOUND_EMAIL_PASSWORD",
-            ].into_iter().filter_map(|name| get(name).map(|value| (name.to_owned(), value))).collect())?,
+            mcp_oauth: present("SMARTFIRE_MCP_OAUTH").is_none_or(|v| {
+                !matches!(
+                    v.trim().to_ascii_lowercase().as_str(),
+                    "0" | "false" | "off" | "no"
+                )
+            }),
+            mail: campfire_mail::config::Config::from_map(
+                &[
+                    "SMTP_ADDRESS",
+                    "SMTP_PORT",
+                    "SMTP_DOMAIN",
+                    "SMTP_USER_NAME",
+                    "SMTP_PASSWORD",
+                    "SMTP_AUTHENTICATION",
+                    "SMTP_ENABLE_STARTTLS",
+                    "MAILER_FROM",
+                    "APP_URL",
+                    "INBOUND_EMAIL_DOMAIN",
+                    "INBOUND_EMAIL_AUTHSERV_ID",
+                    "RAILS_INBOUND_EMAIL_PASSWORD",
+                ]
+                .into_iter()
+                .filter_map(|name| get(name).map(|value| (name.to_owned(), value)))
+                .collect(),
+            )?,
             secret_key_base,
             github_webhook_secret: present("GITHUB_WEBHOOK_SECRET"),
             vapid_public_key: present("VAPID_PUBLIC_KEY"),
             vapid_private_key: present("VAPID_PRIVATE_KEY"),
             vapid_subject: "mailto:support@smartdata.net".into(),
             disable_ssl: present("DISABLE_SSL").is_some(),
-            app_version: present("APP_VERSION").or_else(|| present("GIT_REVISION")).unwrap_or_else(|| "0".into()),
+            app_version: present("APP_VERSION")
+                .or_else(|| present("GIT_REVISION"))
+                .unwrap_or_else(|| "0".into()),
             git_revision: get("GIT_REVISION"),
             environment,
             storage,
@@ -180,7 +221,9 @@ impl Config {
             agent_event_stream: crate::state::agent_streams::Timing::from_lookup(&get),
             huddles_configured: crate::huddle_readiness::huddles_configured(&get),
             google_picker: crate::picker_configuration::picker(&get),
-            admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
+            admin_session_idle_timeout: admin_session_idle_timeout(get(
+                "ADMIN_SESSION_IDLE_TIMEOUT_DAYS",
+            )),
             public_policy: crate::public_policy::PublicPolicy::from_lookup(&get),
             sign_in_google_domains,
             google_client: crate::integrations::google::api::Config {
@@ -189,7 +232,6 @@ impl Config {
                 webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
             },
             klipy_api_key: present("KLIPY_API_KEY"),
-
         })
     }
 }
@@ -213,24 +255,41 @@ mod tests {
     use std::collections::HashMap;
 
     fn config(vars: &[(&str, &str)]) -> anyhow::Result<Config> {
-        let vars: HashMap<String, String> = vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+        let vars: HashMap<String, String> = vars
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
         Config::from_lookup(|name| vars.get(name).cloned())
     }
 
     #[test]
     fn requires_a_secret_key_base() {
         assert!(config(&[]).is_err());
-        assert_eq!(config(&[("SECRET_KEY_BASE_DUMMY", "1")]).unwrap().secret_key_base.len(), 128);
+        assert_eq!(
+            config(&[("SECRET_KEY_BASE_DUMMY", "1")])
+                .unwrap()
+                .secret_key_base
+                .len(),
+            128
+        );
     }
 
     #[test]
     fn klipy_key_is_optional_and_blank_disables_gifs() {
         for value in [None, Some(""), Some("  ")] {
             let mut vars = vec![("SECRET_KEY_BASE", "abc")];
-            if let Some(value) = value { vars.push(("KLIPY_API_KEY", value)); }
+            if let Some(value) = value {
+                vars.push(("KLIPY_API_KEY", value));
+            }
             assert!(config(&vars).unwrap().klipy_api_key.is_none());
         }
-        assert_eq!(config(&[("SECRET_KEY_BASE", "abc"), ("KLIPY_API_KEY", "test-key")]).unwrap().klipy_api_key.as_deref(), Some("test-key"));
+        assert_eq!(
+            config(&[("SECRET_KEY_BASE", "abc"), ("KLIPY_API_KEY", "test-key")])
+                .unwrap()
+                .klipy_api_key
+                .as_deref(),
+            Some("test-key")
+        );
     }
 
     #[test]
@@ -240,29 +299,56 @@ mod tests {
         assert!(!config.disable_ssl);
         assert_eq!(config.app_version, "0");
         assert_eq!(config.git_revision, None);
-        assert_eq!(config.storage.database, PathBuf::from("storage/db/production.sqlite3"));
+        assert_eq!(
+            config.storage.database,
+            PathBuf::from("storage/db/production.sqlite3")
+        );
         assert_eq!(config.storage.files, PathBuf::from("storage/files"));
-        assert_eq!(config.storage.backup_file(), PathBuf::from("storage/backups/production.sqlite3"));
+        assert_eq!(
+            config.storage.backup_file(),
+            PathBuf::from("storage/backups/production.sqlite3")
+        );
     }
 
     #[test]
     fn storage_alias_and_explicit_paths_have_one_precedence() {
-        let alias = config(&[("SECRET_KEY_BASE", "fixture"), ("CAMPFIRE_STORAGE", "/custom")]).unwrap();
-        assert_eq!(alias.storage.database, PathBuf::from("/custom/db/production.sqlite3"));
-        assert_eq!(alias.storage.backup_file(), PathBuf::from("/custom/backups/production.sqlite3"));
+        let alias = config(&[
+            ("SECRET_KEY_BASE", "fixture"),
+            ("CAMPFIRE_STORAGE", "/custom"),
+        ])
+        .unwrap();
+        assert_eq!(
+            alias.storage.database,
+            PathBuf::from("/custom/db/production.sqlite3")
+        );
+        assert_eq!(
+            alias.storage.backup_file(),
+            PathBuf::from("/custom/backups/production.sqlite3")
+        );
         let explicit = config(&[
-            ("SECRET_KEY_BASE", "fixture"), ("CAMPFIRE_STORAGE", "/ignored"), ("CAMPFIRE_STORAGE_PATH", "/root"),
-            ("CAMPFIRE_DATABASE_PATH", "/db/renamed.sqlite3"), ("CAMPFIRE_FILES_PATH", "/files"),
+            ("SECRET_KEY_BASE", "fixture"),
+            ("CAMPFIRE_STORAGE", "/ignored"),
+            ("CAMPFIRE_STORAGE_PATH", "/root"),
+            ("CAMPFIRE_DATABASE_PATH", "/db/renamed.sqlite3"),
+            ("CAMPFIRE_FILES_PATH", "/files"),
             ("CAMPFIRE_BACKUPS_PATH", "/snapshots"),
-        ]).unwrap();
-        assert_eq!(explicit.storage.database, PathBuf::from("/db/renamed.sqlite3"));
+        ])
+        .unwrap();
+        assert_eq!(
+            explicit.storage.database,
+            PathBuf::from("/db/renamed.sqlite3")
+        );
         assert_eq!(explicit.storage.files, PathBuf::from("/files"));
-        assert_eq!(explicit.storage.backup_file(), PathBuf::from("/snapshots/renamed.sqlite3"));
+        assert_eq!(
+            explicit.storage.backup_file(),
+            PathBuf::from("/snapshots/renamed.sqlite3")
+        );
     }
 
     #[test]
     fn admin_session_idle_timeout_matches_the_reference() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap();
+        let vectors: serde_json::Value =
+            serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap();
         for case in vectors["admin_idle_timeout"].as_array().unwrap() {
             let env = case["env"].as_str();
             let mut vars = vec![("SECRET_KEY_BASE", "abc")];
@@ -270,46 +356,91 @@ mod tests {
                 vars.push(("ADMIN_SESSION_IDLE_TIMEOUT_DAYS", env));
             }
             let timeout = config(&vars).unwrap().admin_session_idle_timeout;
-            assert_eq!(timeout.as_secs(), case["seconds"].as_i64().unwrap(), "{env:?}");
+            assert_eq!(
+                timeout.as_secs(),
+                case["seconds"].as_i64().unwrap(),
+                "{env:?}"
+            );
         }
     }
 
     #[test]
     fn version_falls_back_to_the_revision() {
-        let config = config(&[("SECRET_KEY_BASE", "abc"), ("APP_VERSION", ""), ("GIT_REVISION", "abc123")]).unwrap();
+        let config = config(&[
+            ("SECRET_KEY_BASE", "abc"),
+            ("APP_VERSION", ""),
+            ("GIT_REVISION", "abc123"),
+        ])
+        .unwrap();
         assert_eq!(config.app_version, "abc123");
         assert_eq!(config.git_revision.as_deref(), Some("abc123"));
     }
 
     #[test]
     fn disable_ssl_is_any_non_blank_value() {
-        assert!(config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", "false")]).unwrap().disable_ssl);
-        assert!(!config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", " ")]).unwrap().disable_ssl);
+        assert!(
+            config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", "false")])
+                .unwrap()
+                .disable_ssl
+        );
+        assert!(
+            !config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", " ")])
+                .unwrap()
+                .disable_ssl
+        );
     }
 
     #[test]
     fn the_spa_is_on_whatever_the_old_switches_say() {
-        let accepts = |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).is_ok();
+        let accepts =
+            |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).is_ok();
         assert!(accepts(&[]));
         for value in ["0", "false", "off", "", "1", "garbage"] {
             for default in ["classic", "next", "", "garbage"] {
-                assert!(accepts(&[("SPA_ENABLED", value), ("SPA_DEFAULT", default)]), "{value:?}/{default:?}");
+                assert!(
+                    accepts(&[("SPA_ENABLED", value), ("SPA_DEFAULT", default)]),
+                    "{value:?}/{default:?}"
+                );
             }
         }
     }
 
     #[test]
     fn vapid_keys_must_not_be_blank() {
-        let config = config(&[("SECRET_KEY_BASE", "abc"), ("VAPID_PUBLIC_KEY", ""), ("VAPID_PRIVATE_KEY", " ")]).unwrap();
-        assert_eq!((config.vapid_public_key, config.vapid_private_key), (None, None));
+        let config = config(&[
+            ("SECRET_KEY_BASE", "abc"),
+            ("VAPID_PUBLIC_KEY", ""),
+            ("VAPID_PRIVATE_KEY", " "),
+        ])
+        .unwrap();
+        assert_eq!(
+            (config.vapid_public_key, config.vapid_private_key),
+            (None, None)
+        );
     }
 
     #[test]
     fn vapid_subject_matches_smartfire() {
-        let subject = |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).unwrap().vapid_subject;
-        assert_eq!(subject(&[("VAPID_SUBJECT", "mailto:ops@example.com"), ("TLS_DOMAIN", "chat.example.com")]), "mailto:support@smartdata.net");
-        assert_eq!(subject(&[("TLS_DOMAIN", " , chat.example.com,other.example.com")]), "mailto:support@smartdata.net");
-        assert_eq!(subject(&[("VAPID_SUBJECT", " ")]), "mailto:support@smartdata.net");
+        let subject = |vars: &[(&str, &str)]| {
+            config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat())
+                .unwrap()
+                .vapid_subject
+        };
+        assert_eq!(
+            subject(&[
+                ("VAPID_SUBJECT", "mailto:ops@example.com"),
+                ("TLS_DOMAIN", "chat.example.com")
+            ]),
+            "mailto:support@smartdata.net"
+        );
+        assert_eq!(
+            subject(&[("TLS_DOMAIN", " , chat.example.com,other.example.com")]),
+            "mailto:support@smartdata.net"
+        );
+        assert_eq!(
+            subject(&[("VAPID_SUBJECT", " ")]),
+            "mailto:support@smartdata.net"
+        );
     }
 
     #[test]
@@ -320,7 +451,10 @@ mod tests {
             ("CAMPFIRE_FILES_PATH", "/seed/storage"),
         ])
         .unwrap();
-        assert_eq!(config.storage.database, PathBuf::from("/rails/storage/db/production.sqlite3"));
+        assert_eq!(
+            config.storage.database,
+            PathBuf::from("/rails/storage/db/production.sqlite3")
+        );
         assert_eq!(config.storage.files, PathBuf::from("/seed/storage"));
     }
 }
@@ -330,19 +464,75 @@ mod oauth_tests {
     use super::*;
     #[test]
     fn oauth_availability_requires_switch_and_configured_https_or_development_localhost() {
-        let config=|url:Option<&str>,switch:Option<&str>,environment:&str|Config::from_lookup(|key|match key {
-            "SECRET_KEY_BASE"=>Some("fixture".into()),"APP_URL"=>url.map(str::to_owned),"SMARTFIRE_MCP_OAUTH"=>switch.map(str::to_owned),"RAILS_ENV"=>Some(environment.into()),_=>None
-        }).unwrap();
-        assert!(config(None,Some("1"),"production").oauth_issuer().is_none());
-        for switch in [Some("0"),Some("off"),Some("false"),Some("no"),Some(" FALSE "),Some(" Off "),Some(" NO "),Some(" 0 ")] {
-            assert!(config(Some("https://smartfire.example"),switch,"production").oauth_issuer().is_none());
+        let config = |url: Option<&str>, switch: Option<&str>, environment: &str| {
+            Config::from_lookup(|key| match key {
+                "SECRET_KEY_BASE" => Some("fixture".into()),
+                "APP_URL" => url.map(str::to_owned),
+                "SMARTFIRE_MCP_OAUTH" => switch.map(str::to_owned),
+                "RAILS_ENV" => Some(environment.into()),
+                _ => None,
+            })
+            .unwrap()
+        };
+        assert!(
+            config(None, Some("1"), "production")
+                .oauth_issuer()
+                .is_none()
+        );
+        for switch in [
+            Some("0"),
+            Some("off"),
+            Some("false"),
+            Some("no"),
+            Some(" FALSE "),
+            Some(" Off "),
+            Some(" NO "),
+            Some(" 0 "),
+        ] {
+            assert!(
+                config(Some("https://smartfire.example"), switch, "production")
+                    .oauth_issuer()
+                    .is_none()
+            );
         }
-        for switch in [None,Some(""),Some(" "),Some("1"),Some("true"),Some("on"),Some("yes"),Some("unknown")] {
-            assert_eq!(config(Some("https://smartfire.example"),switch,"production").oauth_issuer().as_deref(),Some("https://smartfire.example"));
+        for switch in [
+            None,
+            Some(""),
+            Some(" "),
+            Some("1"),
+            Some("true"),
+            Some("on"),
+            Some("yes"),
+            Some("unknown"),
+        ] {
+            assert_eq!(
+                config(Some("https://smartfire.example"), switch, "production")
+                    .oauth_issuer()
+                    .as_deref(),
+                Some("https://smartfire.example")
+            );
         }
-        assert_eq!(config(Some("https://smartfire.example/"),Some("1"),"production").oauth_issuer().as_deref(),Some("https://smartfire.example"));
-        assert!(config(Some("http://smartfire.example"),Some("1"),"development").oauth_issuer().is_none());
-        assert!(config(Some("http://localhost:4305"),Some("1"),"production").oauth_issuer().is_none());
-        assert_eq!(config(Some("http://localhost:4305"),Some("1"),"development").oauth_issuer().as_deref(),Some("http://localhost:4305"));
+        assert_eq!(
+            config(Some("https://smartfire.example/"), Some("1"), "production")
+                .oauth_issuer()
+                .as_deref(),
+            Some("https://smartfire.example")
+        );
+        assert!(
+            config(Some("http://smartfire.example"), Some("1"), "development")
+                .oauth_issuer()
+                .is_none()
+        );
+        assert!(
+            config(Some("http://localhost:4305"), Some("1"), "production")
+                .oauth_issuer()
+                .is_none()
+        );
+        assert_eq!(
+            config(Some("http://localhost:4305"), Some("1"), "development")
+                .oauth_issuer()
+                .as_deref(),
+            Some("http://localhost:4305")
+        );
     }
 }

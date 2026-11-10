@@ -61,9 +61,15 @@ impl QueueDrain {
         a: &TestApp,
         attempt: u32,
     ) -> Option<campfire_db::Timestamp> {
-        self.job_attempt(a, "Calendar::DisconnectCleanupJob", attempt).await
+        self.job_attempt(a, "Calendar::DisconnectCleanupJob", attempt)
+            .await
     }
-    pub async fn job_attempt(&mut self, a: &TestApp, class: &'static str, attempt: u32) -> Option<campfire_db::Timestamp> {
+    pub async fn job_attempt(
+        &mut self,
+        a: &TestApp,
+        class: &'static str,
+        attempt: u32,
+    ) -> Option<campfire_db::Timestamp> {
         use rusqlite::OptionalExtension;
         loop {
             while self.changed.try_recv().is_ok() {}

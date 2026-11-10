@@ -229,10 +229,15 @@ impl Message {
     }
     /// Batched association preload, preserving the same rows as `find_by_id`.
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
-        if ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn,
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
             r#"SELECT * FROM "messages" WHERE id IN (SELECT value FROM json_each(?))"#,
-            [serde_json::json!(ids).to_string()], Self::from_row)
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
     }
 
     /// `Message.last`
@@ -303,9 +308,11 @@ impl Message {
         let sql = format!(
             r#"{SELECT_REACHABLE} WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "messages"."id" = ? LIMIT 1"#
         );
-        let message = query_one(conn, &sql, [user_id, id], Self::from_row)?.or_not_found("Message")?;
+        let message =
+            query_one(conn, &sql, [user_id, id], Self::from_row)?.or_not_found("Message")?;
         if let Some(thread_id) = message.thread_id
-            && !ChannelThread::find(conn, thread_id)?.readable_by(conn, user_id)? {
+            && !ChannelThread::find(conn, thread_id)?.readable_by(conn, user_id)?
+        {
             return Err(crate::Error::RecordNotFound("Message"));
         }
         Ok(message)
@@ -394,12 +401,24 @@ impl Message {
     /// out): the page before its id. Messages created here get increasing ids, so this is the
     /// page the cursor gave; elsewhere (imports) it's the nearest page by id.
     pub fn page_before_id(conn: &Connection, timeline: Timeline, id: i64) -> Result<Vec<Self>> {
-        Self::page(conn, timeline, r#" AND ("messages"."id" < ?)"#, vec![id.into()], true)
+        Self::page(
+            conn,
+            timeline,
+            r#" AND ("messages"."id" < ?)"#,
+            vec![id.into()],
+            true,
+        )
     }
 
     /// [`Message::page_after`] for a cursor whose message is gone: the page after its id.
     pub fn page_after_id(conn: &Connection, timeline: Timeline, id: i64) -> Result<Vec<Self>> {
-        Self::page(conn, timeline, r#" AND ("messages"."id" > ?)"#, vec![id.into()], false)
+        Self::page(
+            conn,
+            timeline,
+            r#" AND ("messages"."id" > ?)"#,
+            vec![id.into()],
+            false,
+        )
     }
 
     /// `page_around(message)`: up to 40 before, the message, up to 40 after.
@@ -538,11 +557,25 @@ impl Message {
 
     /// A quiet root note with already-loaded Rails belongs_to associations. Only their
     /// existence reads are skipped; rendering, validation, touches and callbacks stay shared.
-    pub(crate) fn create_quiet_note(tx: &mut Tx<'_>, room: &Room, creator: &User, body: String) -> Result<Self> {
-        Self::create_with_options(tx, NewMessage {
-            room_id: room.id, creator_id: creator.id, system_note: true, body: Some(body),
-            ..Default::default()
-        }, None, false, true)
+    pub(crate) fn create_quiet_note(
+        tx: &mut Tx<'_>,
+        room: &Room,
+        creator: &User,
+        body: String,
+    ) -> Result<Self> {
+        Self::create_with_options(
+            tx,
+            NewMessage {
+                room_id: room.id,
+                creator_id: creator.id,
+                system_note: true,
+                body: Some(body),
+                ..Default::default()
+            },
+            None,
+            false,
+            true,
+        )
     }
 
     fn create_with_options(
@@ -554,8 +587,13 @@ impl Message {
     ) -> Result<Self> {
         let importing = imported_time.is_some();
         let body = Self::rendered_body(tx, &attributes)?;
-        Self::validate_with_associations(tx.conn(), &attributes, true, loaded_associations)?.into_result()?;
-        for blob_id in attributes.attachment_blob_id.iter().chain(&attributes.attachment_blob_ids) {
+        Self::validate_with_associations(tx.conn(), &attributes, true, loaded_associations)?
+            .into_result()?;
+        for blob_id in attributes
+            .attachment_blob_id
+            .iter()
+            .chain(&attributes.attachment_blob_ids)
+        {
             if !Blob::reusable_by(tx.conn(), *blob_id, attributes.creator_id, "Message")? {
                 let mut errors = Errors::default();
                 errors.add("attachment", "is inaccessible");
@@ -625,12 +663,34 @@ impl Message {
             touched = true;
         }
         if let Some(blob_id) = attributes.attachment_blob_id {
-            Attachment::create_with_spoiler(tx, RECORD_TYPE, id, "attachment", blob_id, attributes.attachment_spoilers.first().copied().unwrap_or(false))?;
+            Attachment::create_with_spoiler(
+                tx,
+                RECORD_TYPE,
+                id,
+                "attachment",
+                blob_id,
+                attributes
+                    .attachment_spoilers
+                    .first()
+                    .copied()
+                    .unwrap_or(false),
+            )?;
             touched = true;
         }
         for (index, &blob_id) in attributes.attachment_blob_ids.iter().enumerate() {
             let offset = usize::from(attributes.attachment_blob_id.is_some());
-            Attachment::create_with_spoiler(tx, RECORD_TYPE, id, "attachments", blob_id, attributes.attachment_spoilers.get(index + offset).copied().unwrap_or(false))?;
+            Attachment::create_with_spoiler(
+                tx,
+                RECORD_TYPE,
+                id,
+                "attachments",
+                blob_id,
+                attributes
+                    .attachment_spoilers
+                    .get(index + offset)
+                    .copied()
+                    .unwrap_or(false),
+            )?;
             touched = true;
         }
         for file_id in &attributes.drive_file_ids {
@@ -648,7 +708,9 @@ impl Message {
         }
 
         if !message.streaming {
-            if !importing { message.invite_mentionees(tx, message.creator_id)?; }
+            if !importing {
+                message.invite_mentionees(tx, message.creator_id)?;
+            }
             // Bookkeeping commits with the message (lead decision, round 2). Receive only
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
@@ -694,12 +756,20 @@ impl Message {
     /// must not warm previews. Import callers pass false to retain DB references without fetches.
     pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
         use crate::callbacks::Phase;
-        for sync in tx.env().message_reference_syncs.clone() { sync(tx,self,enqueue)?; }
-        let sink=tx.env().sink.clone();
-        for phase in [Phase::MessageFizzyReferences,Phase::MessageTwitterReferences,Phase::MessageEventReferences,Phase::MessageLinkReferences] {
-            if phase == Phase::MessageEventReferences { crate::models::calendar_event::references::sync(tx, self)?; }
-            sink.sync_message_reference_phase(tx,self,phase,enqueue)?;
-
+        for sync in tx.env().message_reference_syncs.clone() {
+            sync(tx, self, enqueue)?;
+        }
+        let sink = tx.env().sink.clone();
+        for phase in [
+            Phase::MessageFizzyReferences,
+            Phase::MessageTwitterReferences,
+            Phase::MessageEventReferences,
+            Phase::MessageLinkReferences,
+        ] {
+            if phase == Phase::MessageEventReferences {
+                crate::models::calendar_event::references::sync(tx, self)?;
+            }
+            sink.sync_message_reference_phase(tx, self, phase, enqueue)?;
         }
         Ok(())
     }
@@ -777,15 +847,26 @@ impl Message {
 
     fn validate_attachment_count(count: usize, errors: &mut Errors) {
         if count > ATTACHMENTS_PER_MESSAGE {
-            errors.add("attachments", format!("are limited to {ATTACHMENTS_PER_MESSAGE} per message"));
+            errors.add(
+                "attachments",
+                format!("are limited to {ATTACHMENTS_PER_MESSAGE} per message"),
+            );
         }
     }
 
-    fn validate_with_associations(conn: &Connection, attributes: &NewMessage, new_record: bool, loaded_associations: bool) -> Result<Errors> {
+    fn validate_with_associations(
+        conn: &Connection,
+        attributes: &NewMessage,
+        new_record: bool,
+        loaded_associations: bool,
+    ) -> Result<Errors> {
         let mut errors = Errors::default();
-        let file_count = attributes.attachment_blob_ids.len() + usize::from(attributes.attachment_blob_id.is_some());
+        let file_count = attributes.attachment_blob_ids.len()
+            + usize::from(attributes.attachment_blob_id.is_some());
         Self::validate_attachment_count(file_count, &mut errors);
-        if !attributes.attachment_spoilers.is_empty() && attributes.attachment_spoilers.len() != file_count {
+        if !attributes.attachment_spoilers.is_empty()
+            && attributes.attachment_spoilers.len() != file_count
+        {
             errors.add("attachment_spoilers", "must have one flag per file");
         }
         // `belongs_to :room` and `:creator` (required)
@@ -796,7 +877,11 @@ impl Message {
             errors.add("creator", "must exist");
         }
         if let Some(id) = attributes.sticker_id
-            && !conn.query_row("SELECT EXISTS(SELECT 1 FROM stickers WHERE id=?)", [id], |row| row.get::<_, bool>(0))?
+            && !conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM stickers WHERE id=?)",
+                [id],
+                |row| row.get::<_, bool>(0),
+            )?
         {
             errors.add("sticker_id", "must exist");
         }
@@ -829,7 +914,10 @@ impl Message {
             && attributes.drive_file_ids.is_empty()
             && attributes.sticker_id.is_none()
             && attributes.sticker_name.is_none()
-            && attributes.webhook.as_ref().is_none_or(|input| input.embeds().as_array().is_none_or(Vec::is_empty))
+            && attributes
+                .webhook
+                .as_ref()
+                .is_none_or(|input| input.embeds().as_array().is_none_or(Vec::is_empty))
         {
             errors.add("markdown_source", "can't be blank");
         }
@@ -968,7 +1056,10 @@ impl Message {
         }
         // The new body replaces a forwarded Markdown snapshot (`save_changes`).
         if self.forwarded_markdown {
-            tx.conn().execute_cached(r#"UPDATE "messages" SET "forwarded_markdown" = ? WHERE "messages"."id" = ?"#, params![false, self.id])?;
+            tx.conn().execute_cached(
+                r#"UPDATE "messages" SET "forwarded_markdown" = ? WHERE "messages"."id" = ?"#,
+                params![false, self.id],
+            )?;
             self.forwarded_markdown = false;
         }
         self.touch(tx)?;
@@ -1027,7 +1118,12 @@ impl Message {
         if *body == previous {
             return Ok(false);
         }
-        let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.display_name().to_owned());
+        let names = |id| {
+            User::find_by_id(conn, id)
+                .ok()
+                .flatten()
+                .map(|u| u.display_name().to_owned())
+        };
         let has_text = |html: &str| {
             rich_text
                 .try_to_plain_text(conn, html, &names)
@@ -1058,16 +1154,30 @@ impl Message {
     ) -> Result<()> {
         self.validate_streaming_state(tx.conn())?;
         let conn = tx.conn();
-        let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
-        let markdown_source = if changes.clear_markdown_source { None }
-            else if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() }
-            else { self.markdown_source.clone() };
+        let content_changes =
+            stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
+        let markdown_source = if changes.clear_markdown_source {
+            None
+        } else if self.markdown_source_will_change(&changes) {
+            changes.markdown_source.clone()
+        } else {
+            self.markdown_source.clone()
+        };
         let body = match &changes.markdown_source {
             Some(source) if self.markdown_source_will_change(&changes) => {
                 if source.chars().count() <= SOURCE_LIMIT {
-                    let rendered = tx.rich_text().render_markdown(conn, source, self.room_id).map_err(crate::error::Error::Other)?;
-                    Some([Some(rendered), changes.legacy_attachment_snapshot.clone()].into_iter().flatten()
-                        .filter(|body| !body.chars().all(char::is_whitespace)).collect::<Vec<_>>().join("\n"))
+                    let rendered = tx
+                        .rich_text()
+                        .render_markdown(conn, source, self.room_id)
+                        .map_err(crate::error::Error::Other)?;
+                    Some(
+                        [Some(rendered), changes.legacy_attachment_snapshot.clone()]
+                            .into_iter()
+                            .flatten()
+                            .filter(|body| !body.chars().all(char::is_whitespace))
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    )
                 } else {
                     None
                 }
@@ -1084,7 +1194,9 @@ impl Message {
         // A forward of a Markdown message renders as Markdown (tables, task lists) only while its
         // body is the forwarded snapshot. Any body written here, HTML from an edit endpoint or a
         // bot, or a new Markdown source, replaces the snapshot, so it no longer counts as one.
-        let forwarded_markdown = changes.forwarded_markdown.unwrap_or(self.forwarded_markdown && body.is_none());
+        let forwarded_markdown = changes
+            .forwarded_markdown
+            .unwrap_or(self.forwarded_markdown && body.is_none());
         let references_changed =
             !self.streaming && (markdown_source != self.markdown_source || body.is_some());
         let current_drive_ids = drive_file_ids(conn, self.id)?;
@@ -1097,13 +1209,26 @@ impl Message {
             .clone()
             .unwrap_or_else(|| self.forward_note.clone());
         let embeds_suppressed = changes.embeds_suppressed.unwrap_or(self.embeds_suppressed);
-        let client_message_id = changes.client_message_id.clone().unwrap_or_else(|| Some(self.client_message_id.clone()));
-        let reply_to_message_id = changes.reply_to_message_id.unwrap_or(self.reply_to_message_id);
-        let reply_notify_author = changes.reply_notify_author.unwrap_or(self.reply_notify_author);
+        let client_message_id = changes
+            .client_message_id
+            .clone()
+            .unwrap_or_else(|| Some(self.client_message_id.clone()));
+        let reply_to_message_id = changes
+            .reply_to_message_id
+            .unwrap_or(self.reply_to_message_id);
+        let reply_notify_author = changes
+            .reply_notify_author
+            .unwrap_or(self.reply_notify_author);
 
         let files = self.attachments(conn)?;
-        let current_spoilers = files.iter().map(|(attachment, _)| attachment.spoiler).collect::<Vec<_>>();
-        let flags = changes.attachment_spoilers.as_ref().unwrap_or(&current_spoilers);
+        let current_spoilers = files
+            .iter()
+            .map(|(attachment, _)| attachment.spoiler)
+            .collect::<Vec<_>>();
+        let flags = changes
+            .attachment_spoilers
+            .as_ref()
+            .unwrap_or(&current_spoilers);
         if flags.len() != files.len() {
             let mut errors = Errors::default();
             errors.add("attachment_spoilers", "must have one flag per file");
@@ -1120,9 +1245,12 @@ impl Message {
             attachment_spoilers: flags.clone(),
             attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?
                 .map(|a| a.blob_id),
-            attachment_blob_ids: self.attachments(conn)?.into_iter()
+            attachment_blob_ids: self
+                .attachments(conn)?
+                .into_iter()
                 .filter(|(attachment, _)| attachment.name == "attachments")
-                .map(|(attachment, _)| attachment.blob_id).collect(),
+                .map(|(attachment, _)| attachment.blob_id)
+                .collect(),
             thread_id: self.thread_id,
             system_note: self.system_note,
             streaming: self.streaming,
@@ -1137,7 +1265,9 @@ impl Message {
             forward_note: forward_note.clone(),
             forwarded_markdown,
             drive_file_ids: drive_file_ids.clone(),
-            webhook: crate::models::channel_webhook::ChannelWebhook::message_snapshot(conn, self.id)?,
+            webhook: crate::models::channel_webhook::ChannelWebhook::message_snapshot(
+                conn, self.id,
+            )?,
         };
         Self::validate_attributes(conn, &attributes, false)?.into_result()?;
 
@@ -1156,7 +1286,12 @@ impl Message {
             || forwarded_markdown != self.forwarded_markdown
             || edited_at != self.edited_at;
         let drive_changed = drive_file_ids != current_drive_ids;
-        if !(columns_changed || body.is_some() || drive_changed || spoilers_changed || self.streaming) {
+        if !(columns_changed
+            || body.is_some()
+            || drive_changed
+            || spoilers_changed
+            || self.streaming)
+        {
             return Ok(());
         }
         let previous_mentionees = if !self.streaming
@@ -1191,7 +1326,10 @@ impl Message {
         }
         if spoilers_changed {
             for ((attachment, _), &spoiler) in files.iter().zip(flags) {
-                tx.conn().execute_cached("UPDATE active_storage_attachments SET spoiler=? WHERE id=?", params![spoiler, attachment.id])?;
+                tx.conn().execute_cached(
+                    "UPDATE active_storage_attachments SET spoiler=? WHERE id=?",
+                    params![spoiler, attachment.id],
+                )?;
             }
         }
         if drive_changed {
@@ -1226,7 +1364,9 @@ impl Message {
         if !self.streaming {
             self.invite_mentionees(tx, changes.mention_inviter_id.unwrap_or(self.creator_id))?;
             self.update_in_index(tx)?;
-            if references_changed { self.sync_all_references(tx)?; }
+            if references_changed {
+                self.sync_all_references(tx)?;
+            }
             if let Some(previous) = previous_mentionees {
                 crate::ActivityItem::reconcile_message_mentions(tx, self, &previous)?;
             }
@@ -1276,28 +1416,46 @@ impl Message {
         self.replace_attachment_for(tx, blob_id, self.creator_id)
     }
 
-    pub fn replace_attachment_for(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>, actor_id: i64) -> Result<()> {
-        if let Some(blob_id) = blob_id && !Blob::reusable_by(tx.conn(), blob_id, actor_id, "Message")? {
+    pub fn replace_attachment_for(
+        &mut self,
+        tx: &mut Tx<'_>,
+        blob_id: Option<i64>,
+        actor_id: i64,
+    ) -> Result<()> {
+        if let Some(blob_id) = blob_id
+            && !Blob::reusable_by(tx.conn(), blob_id, actor_id, "Message")?
+        {
             let mut errors = Errors::default();
             errors.add("attachment", "is inaccessible");
             return Err(crate::Error::RecordInvalid(errors));
         }
         let (current, publication) = crate::models::announcement::record_with_publication(
-            tx.conn(), self.id, "active_storage_attachments", "attachment", Attachment::from_row,
+            tx.conn(),
+            self.id,
+            "active_storage_attachments",
+            "attachment",
+            Attachment::from_row,
         )?;
-        let grouped_blob_ids: Vec<_> = self.attachments(tx.conn())?.into_iter()
+        let grouped_blob_ids: Vec<_> = self
+            .attachments(tx.conn())?
+            .into_iter()
             .filter(|(attachment, _)| attachment.name == "attachments")
-            .map(|(attachment, _)| attachment.blob_id).collect();
+            .map(|(attachment, _)| attachment.blob_id)
+            .collect();
         // Retaining a grouped blob leaves the legacy slot alone, with one row per blob.
         let retaining_grouped = blob_id.is_some_and(|id| grouped_blob_ids.contains(&id));
         let blob_id = if retaining_grouped {
             current.as_ref().map(|attachment| attachment.blob_id)
         } else {
             blob_id
-        }.filter(|id| !grouped_blob_ids.contains(id));
+        }
+        .filter(|id| !grouped_blob_ids.contains(id));
         let changed = current.as_ref().map(|attachment| attachment.blob_id) != blob_id;
         let mut errors = Errors::default();
-        Self::validate_attachment_count(grouped_blob_ids.len() + usize::from(blob_id.is_some()), &mut errors);
+        Self::validate_attachment_count(
+            grouped_blob_ids.len() + usize::from(blob_id.is_some()),
+            &mut errors,
+        );
         errors.into_result()?;
         self.touch_streaming_activity(tx)?;
         if let Some(attachment) = current {
@@ -1373,9 +1531,13 @@ impl Message {
             r#"UPDATE "messages" SET "reply_to_message_id" = NULL, "reply_target_deleted_at" = ?, "updated_at" = ? WHERE "messages"."reply_to_message_id" = ?"#,
             params![now, now, self.id],
         )?;
-        if let Some(avatar) = Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "webhook_avatar")? {
+        if let Some(avatar) =
+            Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "webhook_avatar")?
+        {
             avatar.delete(tx)?;
-            tx.emit_after_commit(Event::PurgeBlob { blob_id: avatar.blob_id });
+            tx.emit_after_commit(Event::PurgeBlob {
+                blob_id: avatar.blob_id,
+            });
         }
         for (attachment, _) in self.attachments(tx.conn())? {
             attachment.delete(tx)?;
@@ -1458,7 +1620,9 @@ impl Message {
         }
         if !self.system_note {
             tx.emit_after_commit(Event::broadcast(
-                &crate::models::notification_push::MessageNotified { message_id: self.id },
+                &crate::models::notification_push::MessageNotified {
+                    message_id: self.id,
+                },
             ));
         }
     }
@@ -1503,9 +1667,16 @@ impl Message {
         RichTextRecord::find_for(conn, RECORD_TYPE, self.id, "body")
     }
 
-    fn body_with_publication(&self, conn: &Connection) -> Result<(Option<RichTextRecord>, Option<i64>)> {
+    fn body_with_publication(
+        &self,
+        conn: &Connection,
+    ) -> Result<(Option<RichTextRecord>, Option<i64>)> {
         crate::models::announcement::record_with_publication(
-            conn, self.id, "action_text_rich_texts", "body", RichTextRecord::from_row,
+            conn,
+            self.id,
+            "action_text_rich_texts",
+            "body",
+            RichTextRecord::from_row,
         )
     }
 
@@ -1522,15 +1693,21 @@ impl Message {
     /// Every file, including the legacy single slot, ordered by attachment id.
     pub fn attachments(&self, conn: &Connection) -> Result<Vec<(Attachment, Blob)>> {
         let legacy = Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?;
-        let mut attachments = query_all(conn,
+        let mut attachments = query_all(
+            conn,
             "SELECT * FROM active_storage_attachments WHERE record_type='Message' AND record_id=? AND name='attachments' ORDER BY id",
-            [self.id], Attachment::from_row)?;
+            [self.id],
+            Attachment::from_row,
+        )?;
         attachments.extend(legacy);
         attachments.sort_by_key(|attachment| attachment.id);
-        attachments.into_iter().map(|attachment| {
-            let blob = attachment.blob(conn)?;
-            Ok((attachment, blob))
-        }).collect()
+        attachments
+            .into_iter()
+            .map(|attachment| {
+                let blob = attachment.blob(conn)?;
+                Ok((attachment, blob))
+            })
+            .collect()
     }
 
     pub fn attachment_summary(&self, conn: &Connection) -> Result<String> {
@@ -1538,7 +1715,9 @@ impl Message {
     }
 
     fn filenames(&self, conn: &Connection) -> Result<Vec<String>> {
-        Ok(self.attachments(conn)?.into_iter()
+        Ok(self
+            .attachments(conn)?
+            .into_iter()
             .map(|(_, blob)| campfire_storage::Filename::new(blob.filename).to_string())
             .collect())
     }
@@ -1553,14 +1732,30 @@ impl Message {
     /// message's filenames are bounded by `NOTIFICATION_FILENAME_BYTES` (web push rejects a
     /// record over 4096 bytes, so a long list would deliver nothing).
     pub fn notification_text(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<String> {
-        self.plain_text_body_from_html(conn, rich_text, self.body_html(conn)?.as_deref(), Some(NOTIFICATION_FILENAME_BYTES))
+        self.plain_text_body_from_html(
+            conn,
+            rich_text,
+            self.body_html(conn)?.as_deref(),
+            Some(NOTIFICATION_FILENAME_BYTES),
+        )
     }
 
     /// `budget`: `Some` bounds a file-only summary by `bounded_filenames`; `None` keeps every name.
-    fn plain_text_body_from_html(&self, conn: &Connection, rich_text: &dyn RichText, html: Option<&str>, budget: Option<usize>) -> Result<String> {
+    fn plain_text_body_from_html(
+        &self,
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        html: Option<&str>,
+        budget: Option<usize>,
+    ) -> Result<String> {
         let mut text = String::new();
         if let Some(html) = html {
-            let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.display_name().to_owned());
+            let names = |id| {
+                User::find_by_id(conn, id)
+                    .ok()
+                    .flatten()
+                    .map(|u| u.display_name().to_owned())
+            };
             text = if self.markdown() {
                 rich_text
                     .try_markdown_plain_text(conn, html, &names)
@@ -1582,10 +1777,16 @@ impl Message {
 
     /// Apply the retained sticker name and forward note after rendering text and filenames.
     pub fn display_text(&self, mut text: String) -> String {
-        if text.trim().is_empty() && let Some(name) = &self.sticker_name {
+        if text.trim().is_empty()
+            && let Some(name) = &self.sticker_name
+        {
             text = format!("Sticker: {name}");
         }
-        match self.forward_note.as_deref().filter(|note| !note.trim().is_empty()) {
+        match self
+            .forward_note
+            .as_deref()
+            .filter(|note| !note.trim().is_empty())
+        {
             Some(note) if text.trim().is_empty() => note.to_string(),
             Some(note) => format!("{note}\n\n{text}"),
             None => text,
@@ -1661,7 +1862,11 @@ impl Message {
     /// `mentionees`: mentioned users who are members of the room. A forward's body is a
     /// snapshot whose mentions never notify anyone; only its note's `@[Name]` tokens do, each
     /// naming exactly one active member of the destination room (`forward_note_mentionees`).
-    fn parent_room_mentionees(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<Vec<User>> {
+    fn parent_room_mentionees(
+        &self,
+        conn: &Connection,
+        rich_text: &dyn RichText,
+    ) -> Result<Vec<User>> {
         if self.forwarded() {
             return forward_note_mentionees(
                 conn,
@@ -1680,22 +1885,36 @@ impl Message {
 
     pub fn mentionees(&self, conn: &Connection, rich_text: &dyn RichText) -> Result<Vec<User>> {
         let candidates = self.parent_room_mentionees(conn, rich_text)?;
-        let Some(thread_id) = self.thread_id else { return Ok(candidates); };
+        let Some(thread_id) = self.thread_id else {
+            return Ok(candidates);
+        };
         let thread = ChannelThread::find(conn, thread_id)?;
         let mut visible = Vec::new();
         for candidate in candidates {
-            if thread.readable_by(conn, candidate.id)? { visible.push(candidate); }
+            if thread.readable_by(conn, candidate.id)? {
+                visible.push(candidate);
+            }
         }
         Ok(visible)
     }
 
     fn invite_mentionees(&self, tx: &mut Tx<'_>, actor_id: i64) -> Result<()> {
-        let Some(thread_id) = self.thread_id else { return Ok(()); };
+        let Some(thread_id) = self.thread_id else {
+            return Ok(());
+        };
         let thread = ChannelThread::find(tx.conn(), thread_id)?;
-        if thread.visibility != crate::models::channel_thread::ThreadVisibility::Private || self.system_note { return Ok(()); }
-        if !thread.readable_by(tx.conn(), actor_id)? { return Ok(()); }
+        if thread.visibility != crate::models::channel_thread::ThreadVisibility::Private
+            || self.system_note
+        {
+            return Ok(());
+        }
+        if !thread.readable_by(tx.conn(), actor_id)? {
+            return Ok(());
+        }
         for user in self.parent_room_mentionees(tx.conn(), tx.rich_text())? {
-            if user.is_active() { thread.add_access_member(tx, actor_id, user.id)?; }
+            if user.is_active() {
+                thread.add_access_member(tx, actor_id, user.id)?;
+            }
         }
         Ok(())
     }
@@ -1773,27 +1992,46 @@ impl Message {
 
     fn sync_all_references_with_body(&self, tx: &mut Tx<'_>, body: Option<&str>) -> Result<()> {
         use crate::callbacks::Phase;
-        for phase in [Phase::MessageGithubReferences, Phase::MessageFizzyReferences,
-            Phase::MessageTwitterReferences, Phase::MessageEventReferences] {
+        for phase in [
+            Phase::MessageGithubReferences,
+            Phase::MessageFizzyReferences,
+            Phase::MessageTwitterReferences,
+            Phase::MessageEventReferences,
+        ] {
             self.sync_reference_phase_with_body(tx, phase, true, body)?;
         }
         match body {
             Some(body) => crate::models::message_reference::sync_from_body(tx, self, body)?,
-            None => crate::models::message_reference::sync(tx,self)?,
+            None => crate::models::message_reference::sync(tx, self)?,
         }
         self.sync_reference_phase_with_body(tx, Phase::MessageLinkReferences, true, body)
     }
 
-    fn sync_reference_phase_with_body(&self, tx: &mut Tx<'_>, phase: crate::callbacks::Phase, enqueue: bool, body: Option<&str>) -> Result<()> {
+    fn sync_reference_phase_with_body(
+        &self,
+        tx: &mut Tx<'_>,
+        phase: crate::callbacks::Phase,
+        enqueue: bool,
+        body: Option<&str>,
+    ) -> Result<()> {
         tx.model_callback(phase, self.id)?;
         if phase == crate::callbacks::Phase::MessageGithubReferences {
-            for sync in tx.env().message_reference_syncs.clone() { sync(tx, self, enqueue)?; }
+            for sync in tx.env().message_reference_syncs.clone() {
+                sync(tx, self, enqueue)?;
+            }
         }
         if phase == crate::callbacks::Phase::MessageEventReferences {
             match body {
                 Some(body) => {
-                    let plain = self.plain_text_body_from_html(tx.conn(), tx.rich_text(), Some(body), None)?;
-                    crate::models::calendar_event::references::sync_from_plain_text(tx, self, &plain)?;
+                    let plain = self.plain_text_body_from_html(
+                        tx.conn(),
+                        tx.rich_text(),
+                        Some(body),
+                        None,
+                    )?;
+                    crate::models::calendar_event::references::sync_from_plain_text(
+                        tx, self, &plain,
+                    )?;
                 }
                 None => crate::models::calendar_event::references::sync(tx, self)?,
             }
@@ -1807,43 +2045,67 @@ impl Message {
     /// returns it after commit; a durable enqueue error still rolls the entire
     /// write back through Tx::persist_error (the fixed queue-atomicity decision).
     pub fn finalize_stream(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
+        if !self.claim_stream_finalized_without_indicator(tx)? {
+            return Ok(false);
+        }
         let effects = (|| {
             let agent = crate::Agent::for_user(tx.conn(), self.creator_id)?;
-            if !agent.as_ref().map(|a| a.active(tx.conn())).transpose()?.unwrap_or(false) {
+            if !agent
+                .as_ref()
+                .map(|a| a.active(tx.conn()))
+                .transpose()?
+                .unwrap_or(false)
+            {
                 return self.finalize_claimed_stream_quietly(tx);
             }
             self.invite_mentionees(tx, self.creator_id)?;
             self.create_in_index(tx)?;
             self.receive_in_conversation(tx)?;
             self.push_later_in_conversation(tx);
-            if !self.system_note { crate::ActivityItem::record_message(tx, self)?; tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?; }
-            crate::models::agent_delivery::enqueue_for_message(tx,self)?;
+            if !self.system_note {
+                crate::ActivityItem::record_message(tx, self)?;
+                tx.model_callback(crate::callbacks::Phase::MessageActivity, self.id)?;
+            }
+            crate::models::agent_delivery::enqueue_for_message(tx, self)?;
             self.sync_all_references(tx)?;
-            crate::models::bot_webhook_fanout::deliver(tx,self)?;
-            if self.thread_id.is_none() && !self.system_note {crate::models::agent_posting::broadcast_unread_room(tx,self)?;}
-            if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+            crate::models::bot_webhook_fanout::deliver(tx, self)?;
+            if self.thread_id.is_none() && !self.system_note {
+                crate::models::agent_posting::broadcast_unread_room(tx, self)?;
+            }
+            if let Some(mut agent) = crate::Agent::for_user(tx.conn(), self.creator_id)? {
+                agent.clear_working_presence(tx)?;
+            }
             self.broadcast_finalized_thread_indicator(tx);
-            crate::models::agent_streaming::broadcast_final(tx,self)
+            crate::models::agent_streaming::broadcast_final(tx, self)
         })();
-        if let Err(error) = effects { tx.after_commit(move |_| Err(error)); }
+        if let Err(error) = effects {
+            tx.after_commit(move |_| Err(error));
+        }
         Ok(true)
     }
 
     /// Quiet finalize is used by suspension even in locked threads. It claims
     /// once and broadcasts the final draft without indexing, receive or fanout.
     pub fn finalize_stream_quietly(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
-        if !self.claim_stream_finalized_without_indicator(tx)? { return Ok(false); }
-        if let Err(error) = self.finalize_claimed_stream_quietly(tx) { tx.after_commit(move |_| Err(error)); }
+        if !self.claim_stream_finalized_without_indicator(tx)? {
+            return Ok(false);
+        }
+        if let Err(error) = self.finalize_claimed_stream_quietly(tx) {
+            tx.after_commit(move |_| Err(error));
+        }
         Ok(true)
     }
     fn finalize_claimed_stream_quietly(&self, tx: &mut Tx<'_>) -> Result<()> {
-        if let Some(mut agent) = crate::Agent::for_user(tx.conn(),self.creator_id)? {agent.clear_working_presence(tx)?;}
+        if let Some(mut agent) = crate::Agent::for_user(tx.conn(), self.creator_id)? {
+            agent.clear_working_presence(tx)?;
+        }
         self.broadcast_finalized_thread_indicator(tx);
-        crate::models::agent_streaming::broadcast_final(tx,self)
+        crate::models::agent_streaming::broadcast_final(tx, self)
     }
     fn broadcast_finalized_thread_indicator(&self, tx: &mut Tx<'_>) {
-        if self.thread_reply() && let Some(thread_id)=self.thread_id {
+        if self.thread_reply()
+            && let Some(thread_id) = self.thread_id
+        {
             tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &[thread_id]));
         }
     }
@@ -1998,11 +2260,17 @@ mod tests {
 
     #[test]
     fn file_only_summary_bounds_long_cjk_filenames_under_the_push_budget() {
-        let names: Vec<String> = (0..10).map(|i| format!("{}-{i}.txt", "漢".repeat(150))).collect();
+        let names: Vec<String> = (0..10)
+            .map(|i| format!("{}-{i}.txt", "漢".repeat(150)))
+            .collect();
 
         let summary = bounded_filenames(&names, NOTIFICATION_FILENAME_BYTES);
 
-        assert!(summary.len() <= NOTIFICATION_FILENAME_BYTES + 32, "{} bytes", summary.len());
+        assert!(
+            summary.len() <= NOTIFICATION_FILENAME_BYTES + 32,
+            "{} bytes",
+            summary.len()
+        );
         assert!(summary.starts_with(&names[0]));
         assert!(summary.ends_with(", and 8 more files"), "{summary}");
     }
@@ -2011,7 +2279,10 @@ mod tests {
     fn short_file_list_is_joined_in_full() {
         let names = vec!["a.txt".to_string(), "b.txt".to_string()];
 
-        assert_eq!(bounded_filenames(&names, NOTIFICATION_FILENAME_BYTES), "a.txt, b.txt");
+        assert_eq!(
+            bounded_filenames(&names, NOTIFICATION_FILENAME_BYTES),
+            "a.txt, b.txt"
+        );
     }
 
     #[test]
@@ -2020,7 +2291,11 @@ mod tests {
 
         let summary = bounded_filenames(&names, NOTIFICATION_FILENAME_BYTES);
 
-        assert!(summary.len() <= NOTIFICATION_FILENAME_BYTES, "{} bytes", summary.len());
+        assert!(
+            summary.len() <= NOTIFICATION_FILENAME_BYTES,
+            "{} bytes",
+            summary.len()
+        );
         assert!(summary.ends_with('…'));
     }
 }

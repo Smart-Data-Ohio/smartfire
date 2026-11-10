@@ -39,19 +39,29 @@ fn expected(principal: Principal) -> Option<&'static str> {
         Principal::Member => Some("CCCCCCCCCCCC"),
         Principal::NonMember => Some("CRRRRCCCCCCC"),
         Principal::Bot => Some("CCCCCRRRCCCC"),
-        Principal::Banned | Principal::Deactivated | Principal::TwoFactorPending | Principal::ExpiredSession => None,
+        Principal::Banned
+        | Principal::Deactivated
+        | Principal::TwoFactorPending
+        | Principal::ExpiredSession => None,
     }
 }
 
 /// The room is watercooler (Jason, David and Bender; not Kevin).
-fn identifiers(_app: &TestApp, room: &campfire_db::Room, thread: i64, _user_id: i64) -> Vec<String> {
+fn identifiers(
+    _app: &TestApp,
+    room: &campfire_db::Room,
+    thread: i64,
+    _user_id: i64,
+) -> Vec<String> {
     let plain = |channel: &str| identifier(json!({ "channel": channel }));
     vec![
         plain("HeartbeatChannel"),
         room_identifier("RoomChannel", room.id),
         room_identifier("PresenceChannel", room.id),
         room_identifier("TypingNotificationsChannel", room.id),
-        identifier(json!({ "channel": "TypingNotificationsChannel", "room_id": room.id, "thread_id": thread })),
+        identifier(
+            json!({ "channel": "TypingNotificationsChannel", "room_id": room.id, "thread_id": thread }),
+        ),
         plain("ActivityChannel"),
         plain("HuddleNoticeChannel"),
         plain("AgentsChannel"),
@@ -73,15 +83,27 @@ async fn prepare(app: &TestApp, principal: Principal) -> (&'static str, String) 
     let session = app.session_for(user, verified).await;
     let user_id = id(user);
     match principal {
-        Principal::Banned => app.db.write(move |tx| campfire_db::User::find(tx.conn(), user_id)?.ban(tx)).await.unwrap(),
-        Principal::Deactivated => app.db.write(move |tx| campfire_db::User::find(tx.conn(), user_id)?.deactivate(tx)).await.unwrap(),
+        Principal::Banned => app
+            .db
+            .write(move |tx| campfire_db::User::find(tx.conn(), user_id)?.ban(tx))
+            .await
+            .unwrap(),
+        Principal::Deactivated => app
+            .db
+            .write(move |tx| campfire_db::User::find(tx.conn(), user_id)?.deactivate(tx))
+            .await
+            .unwrap(),
         Principal::ExpiredSession => {
             // Jason is an administrator; the connection checks expiry on the process clock.
-            let idle = campfire_db::Timestamp::from_jiff(jiff::Timestamp::now()).ago(jiff::SignedDuration::from_hours(8 * 24));
+            let idle = campfire_db::Timestamp::from_jiff(jiff::Timestamp::now())
+                .ago(jiff::SignedDuration::from_hours(8 * 24));
             let session_id = session.id;
             app.db
                 .write(move |tx| {
-                    tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![idle, session_id])?;
+                    tx.conn().execute(
+                        "UPDATE sessions SET last_active_at = ? WHERE id = ?",
+                        rusqlite::params![idle, session_id],
+                    )?;
                     Ok(())
                 })
                 .await
@@ -132,18 +154,30 @@ async fn authorization_matrix() {
         let actual = outcomes(&app, principal).await;
         match (expected(principal), actual.as_deref()) {
             (Some(expected), Some(actual)) => {
-                for ((channel, want), got) in CHANNELS.iter().zip(expected.chars()).zip(actual.chars()) {
+                for ((channel, want), got) in
+                    CHANNELS.iter().zip(expected.chars()).zip(actual.chars())
+                {
                     if want != got {
-                        mismatches.push(format!("{principal:?} on {channel}: expected {want}, got {got}"));
+                        mismatches.push(format!(
+                            "{principal:?} on {channel}: expected {want}, got {got}"
+                        ));
                     }
                 }
             }
             (None, None) => {}
-            (None, Some(_)) => mismatches.push(format!("{principal:?}: expected the connection refused, but it connected")),
-            (Some(_), None) => mismatches.push(format!("{principal:?}: expected a connection, but it was refused")),
+            (None, Some(_)) => mismatches.push(format!(
+                "{principal:?}: expected the connection refused, but it connected"
+            )),
+            (Some(_), None) => mismatches.push(format!(
+                "{principal:?}: expected a connection, but it was refused"
+            )),
         }
     }
-    assert!(mismatches.is_empty(), "authorization mismatches:\n{}", mismatches.join("\n"));
+    assert!(
+        mismatches.is_empty(),
+        "authorization mismatches:\n{}",
+        mismatches.join("\n")
+    );
 }
 
 /// The expired session is destroyed as it's refused.
@@ -153,6 +187,16 @@ async fn an_expired_administrator_session_is_destroyed_when_refused() {
     let (_, cookie) = prepare(&app, Principal::ExpiredSession).await;
     let mut client = app.connect_with_cookie(Some(&cookie)).await;
     client.until_closed().await;
-    let sessions = app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM sessions WHERE user_id = ?", [id("jason")], |row| row.get::<_, i64>(0))?)).await.unwrap();
+    let sessions = app
+        .db
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM sessions WHERE user_id = ?",
+                [id("jason")],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
     assert_eq!(sessions, 0);
 }

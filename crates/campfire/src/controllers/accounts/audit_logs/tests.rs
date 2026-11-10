@@ -1,9 +1,11 @@
-use campfire_db::Timestamp;
-use campfire_kit::StatusCode;
-use campfire_runtime::presenters::accounts::audit_logs::{filters, selection, csv_body, parse_date};
-use campfire_presentation::time::Zone;
 use crate::controllers::presenters::test_support::*;
 use axum::http::Method;
+use campfire_db::Timestamp;
+use campfire_kit::StatusCode;
+use campfire_presentation::time::Zone;
+use campfire_runtime::presenters::accounts::audit_logs::{
+    csv_body, filters, parse_date, selection,
+};
 use serde_json::Value;
 
 fn vectors() -> Value {
@@ -55,7 +57,6 @@ async fn html_navigation_csv_and_filtered_order_match_rails() {
             &csv_body(&all, &Zone::utc()),
             case["csv"].as_str().unwrap(),
         );
-
     }
 }
 #[test]
@@ -79,7 +80,11 @@ async fn authorization_and_csv_sudo_are_checked_before_export() {
     ] {
         assert_eq!(app.anonymous().get(path).await.location(), Some(sign_in));
         assert_eq!(
-            app.sign_in(KEVIN).await.send(Req::new(Method::GET, path).header("x-requested-with", "XMLHttpRequest")).await.status,
+            app.sign_in(KEVIN)
+                .await
+                .send(Req::new(Method::GET, path).header("x-requested-with", "XMLHttpRequest"))
+                .await
+                .status,
             StatusCode::FORBIDDEN
         );
     }
@@ -93,10 +98,7 @@ async fn authorization_and_csv_sudo_are_checked_before_export() {
         Some("http://campfire.test/sudo/new")
     );
     assert_eq!(
-        browser
-            .confirm_sudo("secret123456")
-            .await
-            .status,
+        browser.confirm_sudo("secret123456").await.status,
         StatusCode::OK
     );
     let response = browser
@@ -129,9 +131,7 @@ async fn export_cap_and_truncated_filename_use_filtered_count() {
         tx.conn().execute("WITH RECURSIVE n(i) AS (VALUES(1) UNION ALL SELECT i+1 FROM n WHERE i<5001) INSERT INTO audit_logs(id,action,details,created_at,updated_at) SELECT i,'user.unban','{}',?,? FROM n",rusqlite::params![tx.now(),tx.now()])?;Ok(())
     }).await.unwrap();
     let mut browser = app.david();
-    browser
-        .confirm_sudo("secret123456")
-        .await;
+    browser.confirm_sudo("secret123456").await;
     let csv = browser
         .get("/account/audit_log.csv?audit_action=user.unban")
         .await;

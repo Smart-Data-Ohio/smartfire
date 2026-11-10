@@ -30,7 +30,8 @@ pub(crate) fn json_body_params(
     for (key, value) in fields {
         let param = if key == "access_token" {
             Param::Str(
-                crate::controllers::presenters::bot_input_casts::json_token_string(&value).map_err(|_| ParamError::Parse)?,
+                crate::controllers::presenters::bot_input_casts::json_token_string(&value)
+                    .map_err(|_| ParamError::Parse)?,
             )
         } else {
             unused_json_param(&value)?
@@ -71,7 +72,8 @@ fn unused_json_param(
             Param::Hash(fields)
         }
         Some(b'-' | b'0'..=b'9') => {
-            let text = crate::controllers::presenters::bot_input_casts::json_token_string(raw).map_err(|_| ParamError::Parse)?;
+            let text = crate::controllers::presenters::bot_input_casts::json_token_string(raw)
+                .map_err(|_| ParamError::Parse)?;
             if matches!(text.as_str(), "Infinity" | "-Infinity") {
                 Param::Null
             } else if let Ok(serde_json::Value::Number(number)) = serde_json::from_str(raw.get())

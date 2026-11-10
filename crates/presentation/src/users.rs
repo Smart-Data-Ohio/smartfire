@@ -1,14 +1,14 @@
+pub mod appearance;
+pub mod google;
+pub mod people;
 pub mod profile_sections;
 pub mod statuses;
-pub mod appearance;
-pub mod people;
 pub mod summary;
-pub mod google;
 
-pub use summary::*;
-pub use people::*;
 pub use appearance::*;
+pub use people::*;
 pub use profile_sections::*;
+pub use summary::*;
 
 /// A user as `users/_mention` and the autocompletable views see it.
 #[derive(Clone, Debug, Default)]

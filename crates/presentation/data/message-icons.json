@@ -4171,6 +4171,413 @@
         }
       }
     },
+    "qwen": {
+      "title": "Qwen",
+      "icon_alt": ":qwen:",
+      "icon": {
+        "Image": {
+          "title": "Qwen",
+          "url": "icons/brands/qwen.svg",
+          "brand": true
+        }
+      }
+    },
+    "alibaba": {
+      "title": "Alibaba",
+      "icon_alt": ":alibaba:",
+      "icon": {
+        "Image": {
+          "title": "Alibaba",
+          "url": "icons/brands/alibaba.svg",
+          "brand": true
+        }
+      }
+    },
+    "alibabacloud": {
+      "title": "Alibaba Cloud",
+      "icon_alt": ":alibabacloud:",
+      "icon": {
+        "Image": {
+          "title": "Alibaba Cloud",
+          "url": "icons/brands/alibabacloud.svg",
+          "brand": true
+        }
+      }
+    },
+    "aliyun": {
+      "title": "Alibaba Cloud",
+      "icon_alt": ":alibabacloud:",
+      "icon": {
+        "Image": {
+          "title": "Alibaba Cloud",
+          "url": "icons/brands/alibabacloud.svg",
+          "brand": true
+        }
+      }
+    },
+    "moonshot": {
+      "title": "Moonshot AI",
+      "icon_alt": ":moonshot:",
+      "icon": {
+        "Image": {
+          "title": "Moonshot AI",
+          "url": "icons/brands/moonshot.svg",
+          "brand": true
+        }
+      }
+    },
+    "moonshotai": {
+      "title": "Moonshot AI",
+      "icon_alt": ":moonshot:",
+      "icon": {
+        "Image": {
+          "title": "Moonshot AI",
+          "url": "icons/brands/moonshot.svg",
+          "brand": true
+        }
+      }
+    },
+    "kimi": {
+      "title": "Kimi",
+      "icon_alt": ":kimi:",
+      "icon": {
+        "Image": {
+          "title": "Kimi",
+          "url": "icons/brands/kimi.svg",
+          "brand": true
+        }
+      }
+    },
+    "xiaomi": {
+      "title": "Xiaomi",
+      "icon_alt": ":xiaomi:",
+      "icon": {
+        "Image": {
+          "title": "Xiaomi",
+          "url": "icons/brands/xiaomi.svg",
+          "brand": true
+        }
+      }
+    },
+    "mimo": {
+      "title": "Xiaomi MiMo",
+      "icon_alt": ":mimo:",
+      "icon": {
+        "Image": {
+          "title": "Xiaomi MiMo",
+          "url": "icons/brands/xiaomimimo.svg",
+          "brand": true
+        }
+      }
+    },
+    "xiaomimimo": {
+      "title": "Xiaomi MiMo",
+      "icon_alt": ":mimo:",
+      "icon": {
+        "Image": {
+          "title": "Xiaomi MiMo",
+          "url": "icons/brands/xiaomimimo.svg",
+          "brand": true
+        }
+      }
+    },
+    "tencent": {
+      "title": "Tencent",
+      "icon_alt": ":tencent:",
+      "icon": {
+        "Image": {
+          "title": "Tencent",
+          "url": "icons/brands/tencent.svg",
+          "brand": true
+        }
+      }
+    },
+    "hunyuan": {
+      "title": "Tencent Hunyuan",
+      "icon_alt": ":hunyuan:",
+      "icon": {
+        "Image": {
+          "title": "Tencent Hunyuan",
+          "url": "icons/brands/hunyuan.svg",
+          "brand": true
+        }
+      }
+    },
+    "bytedance": {
+      "title": "ByteDance",
+      "icon_alt": ":bytedance:",
+      "icon": {
+        "Image": {
+          "title": "ByteDance",
+          "url": "icons/brands/bytedance.svg",
+          "brand": true
+        }
+      }
+    },
+    "doubao": {
+      "title": "Doubao",
+      "icon_alt": ":doubao:",
+      "icon": {
+        "Image": {
+          "title": "Doubao",
+          "url": "icons/brands/doubao.svg",
+          "brand": true
+        }
+      }
+    },
+    "trae": {
+      "title": "TRAE",
+      "icon_alt": ":trae:",
+      "icon": {
+        "Image": {
+          "title": "TRAE",
+          "url": "icons/brands/trae.svg",
+          "brand": true
+        }
+      }
+    },
+    "tiktok": {
+      "title": "TikTok",
+      "icon_alt": ":tiktok:",
+      "icon": {
+        "Image": {
+          "title": "TikTok",
+          "url": "icons/brands/tiktok.svg",
+          "brand": true
+        }
+      }
+    },
+    "zhipu": {
+      "title": "Zhipu AI",
+      "icon_alt": ":zhipu:",
+      "icon": {
+        "Image": {
+          "title": "Zhipu AI",
+          "url": "icons/brands/zhipu.svg",
+          "brand": true
+        }
+      }
+    },
+    "zai": {
+      "title": "Z.ai",
+      "icon_alt": ":zai:",
+      "icon": {
+        "Image": {
+          "title": "Z.ai",
+          "url": "icons/brands/zai.svg",
+          "brand": true
+        }
+      }
+    },
+    "glm": {
+      "title": "Z.ai",
+      "icon_alt": ":zai:",
+      "icon": {
+        "Image": {
+          "title": "Z.ai",
+          "url": "icons/brands/zai.svg",
+          "brand": true
+        }
+      }
+    },
+    "minimax": {
+      "title": "MiniMax",
+      "icon_alt": ":minimax:",
+      "icon": {
+        "Image": {
+          "title": "MiniMax",
+          "url": "icons/brands/minimax.svg",
+          "brand": true
+        }
+      }
+    },
+    "hailuo": {
+      "title": "Hailuo AI",
+      "icon_alt": ":hailuo:",
+      "icon": {
+        "Image": {
+          "title": "Hailuo AI",
+          "url": "icons/brands/hailuo.svg",
+          "brand": true
+        }
+      }
+    },
+    "stepfun": {
+      "title": "StepFun",
+      "icon_alt": ":stepfun:",
+      "icon": {
+        "Image": {
+          "title": "StepFun",
+          "url": "icons/brands/stepfun.svg",
+          "brand": true
+        }
+      }
+    },
+    "baichuan": {
+      "title": "Baichuan",
+      "icon_alt": ":baichuan:",
+      "icon": {
+        "Image": {
+          "title": "Baichuan",
+          "url": "icons/brands/baichuan.svg",
+          "brand": true
+        }
+      }
+    },
+    "yi": {
+      "title": "01.AI Yi",
+      "icon_alt": ":yi:",
+      "icon": {
+        "Image": {
+          "title": "01.AI Yi",
+          "url": "icons/brands/yi.svg",
+          "brand": true
+        }
+      }
+    },
+    "01ai": {
+      "title": "01.AI Yi",
+      "icon_alt": ":yi:",
+      "icon": {
+        "Image": {
+          "title": "01.AI Yi",
+          "url": "icons/brands/yi.svg",
+          "brand": true
+        }
+      }
+    },
+    "baidu": {
+      "title": "Baidu",
+      "icon_alt": ":baidu:",
+      "icon": {
+        "Image": {
+          "title": "Baidu",
+          "url": "icons/brands/baidu.svg",
+          "brand": true
+        }
+      }
+    },
+    "ernie": {
+      "title": "ERNIE",
+      "icon_alt": ":ernie:",
+      "icon": {
+        "Image": {
+          "title": "ERNIE",
+          "url": "icons/brands/wenxin.svg",
+          "brand": true
+        }
+      }
+    },
+    "wenxin": {
+      "title": "ERNIE",
+      "icon_alt": ":ernie:",
+      "icon": {
+        "Image": {
+          "title": "ERNIE",
+          "url": "icons/brands/wenxin.svg",
+          "brand": true
+        }
+      }
+    },
+    "huawei": {
+      "title": "Huawei",
+      "icon_alt": ":huawei:",
+      "icon": {
+        "Image": {
+          "title": "Huawei",
+          "url": "icons/brands/huawei.svg",
+          "brand": true
+        }
+      }
+    },
+    "kling": {
+      "title": "Kling AI",
+      "icon_alt": ":kling:",
+      "icon": {
+        "Image": {
+          "title": "Kling AI",
+          "url": "icons/brands/kling.svg",
+          "brand": true
+        }
+      }
+    },
+    "longcat": {
+      "title": "LongCat",
+      "icon_alt": ":longcat:",
+      "icon": {
+        "Image": {
+          "title": "LongCat",
+          "url": "icons/brands/longcat.svg",
+          "brand": true
+        }
+      }
+    },
+    "internlm": {
+      "title": "InternLM",
+      "icon_alt": ":internlm:",
+      "icon": {
+        "Image": {
+          "title": "InternLM",
+          "url": "icons/brands/internlm.svg",
+          "brand": true
+        }
+      }
+    },
+    "sensenova": {
+      "title": "SenseNova",
+      "icon_alt": ":sensenova:",
+      "icon": {
+        "Image": {
+          "title": "SenseNova",
+          "url": "icons/brands/sensenova.svg",
+          "brand": true
+        }
+      }
+    },
+    "manus": {
+      "title": "Manus",
+      "icon_alt": ":manus:",
+      "icon": {
+        "Image": {
+          "title": "Manus",
+          "url": "icons/brands/manus.svg",
+          "brand": true
+        }
+      }
+    },
+    "spacex": {
+      "title": "SpaceX",
+      "icon_alt": ":spacex:",
+      "icon": {
+        "Image": {
+          "title": "SpaceX",
+          "url": "icons/brands/spacex.svg",
+          "brand": true
+        }
+      }
+    },
+    "wechat": {
+      "title": "WeChat",
+      "icon_alt": ":wechat:",
+      "icon": {
+        "Image": {
+          "title": "WeChat",
+          "url": "icons/brands/wechat.svg",
+          "brand": true
+        }
+      }
+    },
+    "weixin": {
+      "title": "WeChat",
+      "icon_alt": ":wechat:",
+      "icon": {
+        "Image": {
+          "title": "WeChat",
+          "url": "icons/brands/wechat.svg",
+          "brand": true
+        }
+      }
+    },
     "grinning": {
       "title": "Grinning",
       "icon": {

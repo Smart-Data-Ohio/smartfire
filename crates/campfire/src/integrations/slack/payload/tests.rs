@@ -7,9 +7,10 @@ use serde_json::Value;
 use serde_json::json;
 #[tokio::test]
 async fn slack_malformed_payloads_match_actual_rails_classes_messages_and_results() {
-    let oracle: Value =
-        serde_json::from_str(include_str!("../../../../../../vectors/slack/payloads.json"))
-            .unwrap();
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/slack/payloads.json"
+    ))
+    .unwrap();
     let (db, _, _dir) = setup().await;
     let id = start(&db).await;
     let run = run(&db, id).await;

@@ -50,7 +50,9 @@ pub async fn create(c: &mut Ctx) -> Result {
                 "non-time expires_at has no strftime"
             )))
         }
-        Err(campfire_db::Error::RecordInvalid(_errors)) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
+        Err(campfire_db::Error::RecordInvalid(_errors)) => {
+            Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
+        }
         Err(error) => Err(Error::internal(error)),
     }
 }

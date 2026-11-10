@@ -33,7 +33,14 @@ pub fn row(
         .map(|s| User::find(conn, s.user_id).map(|u| u.display_name().to_owned()))
         .transpose()?
         .unwrap_or_default();
-    Ok(row_with_call_facts(app, conn, room, participants, live.is_some(), live_name))
+    Ok(row_with_call_facts(
+        app,
+        conn,
+        room,
+        participants,
+        live.is_some(),
+        live_name,
+    ))
 }
 
 pub fn row_with_call_facts(

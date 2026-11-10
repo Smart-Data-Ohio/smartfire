@@ -15,20 +15,27 @@ use campfire_kit::{Crypto, RailsCrypto};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
-use campfire_app::config::Config;
-use crate::server::*;
 use crate::controllers::presenters::test_support::{masked_session_token, spa_auth_location};
+use crate::server::*;
+use campfire_app::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 const PASSWORD: &str = "secret123456";
 
 fn vectors() -> Value {
-    serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/kit_security.json"))).unwrap()
+    serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../vectors/kit_security.json"
+    )))
+    .unwrap()
 }
 
 fn parity_env(name: &str) -> String {
-    let env = std::fs::read_to_string(std::path::Path::new(ROOT).join("parity/.env.reference")).unwrap();
-    env.lines().find_map(|line| line.strip_prefix(&format!("{name}=")).map(str::to_string)).unwrap()
+    let env =
+        std::fs::read_to_string(std::path::Path::new(ROOT).join("parity/.env.reference")).unwrap();
+    env.lines()
+        .find_map(|line| line.strip_prefix(&format!("{name}=")).map(str::to_string))
+        .unwrap()
 }
 
 struct Fresh {
@@ -52,7 +59,10 @@ async fn boot_fresh(ssl: bool) -> Fresh {
     })
     .unwrap();
     // The classic pages, until they're deleted.
-    Fresh { booted: boot(config).await.unwrap(), _dir: dir }
+    Fresh {
+        booted: boot(config).await.unwrap(),
+        _dir: dir,
+    }
 }
 
 impl Fresh {
@@ -70,7 +80,8 @@ impl Fresh {
                     password_digest: Some(digest),
                     role: Role::Administrator,
                     bio: None,
-                    icon_name: None, bot_token_digest: None,
+                    icon_name: None,
+                    bot_token_digest: None,
                     ..Default::default()
                 };
                 User::create(tx, david)
@@ -83,8 +94,15 @@ impl Fresh {
         let response = self.booted.router.clone().oneshot(request).await.unwrap();
         let status = response.status();
         let headers = response.headers().clone();
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().to_vec();
-        Reply { status, headers, body }
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .to_vec();
+        Reply {
+            status,
+            headers,
+            body,
+        }
     }
 
     fn crypto(&self) -> RailsCrypto {
@@ -93,16 +111,26 @@ impl Fresh {
 
     /// The `_campfire_session` a response set, as sent back (still escaped).
     fn session_cookie(reply: &Reply) -> Option<String> {
-        reply.set_cookies().iter().find_map(|cookie| cookie.split(';').next()?.strip_prefix("_campfire_session=").map(str::to_string))
+        reply.set_cookies().iter().find_map(|cookie| {
+            cookie
+                .split(';')
+                .next()?
+                .strip_prefix("_campfire_session=")
+                .map(str::to_string)
+        })
     }
 
     fn session(&self, raw: &str) -> Value {
         let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
-        self.crypto().decrypt_cookie("_campfire_session", &raw, jiff::Timestamp::now()).unwrap()
+        self.crypto()
+            .decrypt_cookie("_campfire_session", &raw, jiff::Timestamp::now())
+            .unwrap()
     }
 
     fn session_token_cookie(&self, session: &Session) -> String {
-        let signed = self.crypto().sign_cookie("session_token", &session.token, None);
+        let signed = self
+            .crypto()
+            .sign_cookie("session_token", &session.token, None);
         format!("session_token={}", campfire_kit::cookies::escape(&signed))
     }
 }
@@ -123,17 +151,32 @@ impl Reply {
     }
 
     fn set_cookies(&self) -> Vec<String> {
-        self.headers.get_all(header::SET_COOKIE).iter().map(|v| v.to_str().unwrap().to_string()).collect()
+        self.headers
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .map(|v| v.to_str().unwrap().to_string())
+            .collect()
     }
 }
 
 fn request(method: &str, path: &str) -> axum::http::request::Builder {
-    Request::builder().method(method).uri(path).header(header::HOST, "campfire.test")
+    Request::builder()
+        .method(method)
+        .uri(path)
+        .header(header::HOST, "campfire.test")
 }
 
 fn form(pairs: &[(&str, &str)]) -> Body {
-    let encode = |value: &str| percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string();
-    Body::from(pairs.iter().map(|(k, v)| format!("{}={}", encode(k), encode(v))).collect::<Vec<_>>().join("&"))
+    let encode = |value: &str| {
+        percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string()
+    };
+    Body::from(
+        pairs
+            .iter()
+            .map(|(k, v)| format!("{}={}", encode(k), encode(v)))
+            .collect::<Vec<_>>()
+            .join("&"),
+    )
 }
 
 // --- Headers per route class -------------------------------------------------------------------
@@ -166,7 +209,15 @@ fn masked(name: &str, value: &str) -> String {
 }
 
 fn compared(headers: impl Fn(&str) -> Option<String>) -> Vec<(String, Option<String>)> {
-    COMPARED.iter().map(|name| (name.to_string(), headers(name).map(|value| masked(name, &value)))).collect()
+    COMPARED
+        .iter()
+        .map(|name| {
+            (
+                name.to_string(),
+                headers(name).map(|value| masked(name, &value)),
+            )
+        })
+        .collect()
 }
 
 /// The SPA's sign-in call, as `POST /api/v1/session` takes it.
@@ -174,16 +225,28 @@ fn sign_in_json(email_address: &str, password: &str) -> Body {
     Body::from(json!({ "emailAddress": email_address, "password": password }).to_string())
 }
 
-async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<&str>, token: Option<&str>) -> Reply {
+async fn replay(
+    app: &Fresh,
+    name: &str,
+    vector: &Value,
+    session_cookie: Option<&str>,
+    token: Option<&str>,
+) -> Reply {
     // The vector's classic base.css is retired; an embedded media file keeps its header contract. The
     // retained first-run and sign-in pages now redirect to the SPA's, which render each page
     // class, and sign-in attempts (forged or refused) go to the SPA's JSON call.
     let (method, path) = match name {
-        "asset" | "asset_head" => (vector["method"].as_str().unwrap(), campfire_static_assets::asset_path("default-bot-avatar.svg")),
+        "asset" | "asset_head" => (
+            vector["method"].as_str().unwrap(),
+            campfire_static_assets::asset_path("default-bot-avatar.svg"),
+        ),
         "html_page" => ("GET", "/app/first_run".to_string()),
         "sign_in_page" | "sign_in_page_with_session" => ("GET", "/app/session/new".to_string()),
         "forgery" | "unauthorized_render" => ("POST", "/api/v1/session".to_string()),
-        _ => (vector["method"].as_str().unwrap(), vector["path"].as_str().unwrap().to_string()),
+        _ => (
+            vector["method"].as_str().unwrap(),
+            vector["path"].as_str().unwrap().to_string(),
+        ),
     };
     let env = &vector["env"];
     let mut builder = request(method, &path);
@@ -193,8 +256,14 @@ async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<
     if let Some(ip) = env["REMOTE_ADDR"].as_str() {
         builder = builder.header("x-forwarded-for", ip);
     }
-    if vector["cookies"].as_array().is_some_and(|cookies| !cookies.is_empty()) {
-        builder = builder.header(header::COOKIE, format!("_campfire_session={}", session_cookie.unwrap()));
+    if vector["cookies"]
+        .as_array()
+        .is_some_and(|cookies| !cookies.is_empty())
+    {
+        builder = builder.header(
+            header::COOKIE,
+            format!("_campfire_session={}", session_cookie.unwrap()),
+        );
     }
     let body = match (name, env["input"].as_str()) {
         (_, Some(input)) => {
@@ -202,7 +271,9 @@ async fn replay(app: &Fresh, name: &str, vector: &Value, session_cookie: Option<
             Body::from(input.to_string())
         }
         ("forgery" | "unauthorized_render", None) => {
-            builder = builder.header(header::CONTENT_TYPE, "application/json").header(header::ACCEPT, "application/json");
+            builder = builder
+                .header(header::CONTENT_TYPE, "application/json")
+                .header(header::ACCEPT, "application/json");
             if name == "unauthorized_render" {
                 builder = builder.header(campfire_kit::csrf::HEADER, token.unwrap());
             }
@@ -224,7 +295,10 @@ async fn assert_headers_match(ssl: bool) {
         // personalized manifests now have explicit revalidation policies.
         // The retained first-run page's redirect now names the SPA's. The SPA's pages and its
         // sign-in call carry the session's authenticity token, so no cache keeps them.
-        let spa = matches!(name, "html_page" | "sign_in_page" | "sign_in_page_with_session" | "unauthorized_render");
+        let spa = matches!(
+            name,
+            "html_page" | "sign_in_page" | "sign_in_page_with_session" | "unauthorized_render"
+        );
         let expected = compared(|header| match (header, vector["path"].as_str()) {
             ("cache-control", Some("/service-worker.js")) => Some("no-cache, no-transform".into()),
             ("cache-control", Some("/webmanifest.json")) => Some("private, no-cache".into()),
@@ -232,44 +306,106 @@ async fn assert_headers_match(ssl: bool) {
             ("location", _) => vector["headers"][header].as_str().map(spa_auth_location),
             _ => vector["headers"][header].as_str().map(str::to_string),
         });
-        let actual = compared(|header| reply.headers.get(header).map(|value| value.to_str().unwrap().to_string()));
+        let actual = compared(|header| {
+            reply
+                .headers
+                .get(header)
+                .map(|value| value.to_str().unwrap().to_string())
+        });
         let status = vector["status"].as_u64().unwrap() as u16;
         if reply.status.as_u16() != status {
-            mismatches.push(format!("{name}: status {} (reference {status})", reply.status));
+            mismatches.push(format!(
+                "{name}: status {} (reference {status})",
+                reply.status
+            ));
         }
         for ((header, expected), (_, actual)) in expected.iter().zip(&actual) {
             if expected != actual {
-                mismatches.push(format!("{name}: {header}: {actual:?} (reference {expected:?})"));
+                mismatches.push(format!(
+                    "{name}: {header}: {actual:?} (reference {expected:?})"
+                ));
             }
         }
     };
 
-    for name in ["html_page", "redirect", "health", "json", "javascript", "asset", "asset_head", "missing_asset", "public_file", "not_found", "csp_report"] {
+    for name in [
+        "html_page",
+        "redirect",
+        "health",
+        "json",
+        "javascript",
+        "asset",
+        "asset_head",
+        "missing_asset",
+        "public_file",
+        "not_found",
+        "csp_report",
+    ] {
         let reply = replay(&app, name, &section[name], None, None).await;
         check(name, &reply);
     }
 
     app.seed().await;
-    let page = app.send(request("GET", "/app/session/new").body(Body::empty()).unwrap()).await;
+    let page = app
+        .send(
+            request("GET", "/app/session/new")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
     let session_cookie = Fresh::session_cookie(&page).expect("the sign-in page starts a session");
     let token = masked_session_token(&app.booted.app.secrets, &session_cookie).unwrap();
-    for name in ["sign_in_page", "sign_in_page_with_session", "json_head", "forgery", "unauthorized_render"] {
-        let reply = replay(&app, name, &section[name], Some(&session_cookie), Some(&token)).await;
+    for name in [
+        "sign_in_page",
+        "sign_in_page_with_session",
+        "json_head",
+        "forgery",
+        "unauthorized_render",
+    ] {
+        let reply = replay(
+            &app,
+            name,
+            &section[name],
+            Some(&session_cookie),
+            Some(&token),
+        )
+        .await;
         check(name, &reply);
     }
     assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
 
     // The retained sign-in page and form post only send people to the SPA's page.
-    let page = app.send(request("GET", "/session/new").body(Body::empty()).unwrap()).await;
+    let page = app
+        .send(request("GET", "/session/new").body(Body::empty()).unwrap())
+        .await;
     let scheme = if ssl { "https" } else { "http" };
-    assert_eq!((page.status, page.header("location")), (StatusCode::FOUND, Some(format!("{scheme}://campfire.test/app/session/new").as_str())));
+    assert_eq!(
+        (page.status, page.header("location")),
+        (
+            StatusCode::FOUND,
+            Some(format!("{scheme}://campfire.test/app/session/new").as_str())
+        )
+    );
     let post = request("POST", "/session")
-        .header(header::COOKIE, format!("_campfire_session={session_cookie}"))
+        .header(
+            header::COOKIE,
+            format!("_campfire_session={session_cookie}"),
+        )
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .body(form(&[("email_address", "david@example.com"), ("password", "wrong"), ("authenticity_token", &token)]))
+        .body(form(&[
+            ("email_address", "david@example.com"),
+            ("password", "wrong"),
+            ("authenticity_token", &token),
+        ]))
         .unwrap();
     let post = app.send(post).await;
-    assert_eq!((post.status, post.header("location")), (StatusCode::SEE_OTHER, Some(format!("{scheme}://campfire.test/app/session/new").as_str())));
+    assert_eq!(
+        (post.status, post.header("location")),
+        (
+            StatusCode::SEE_OTHER,
+            Some(format!("{scheme}://campfire.test/app/session/new").as_str())
+        )
+    );
 }
 
 #[tokio::test]
@@ -290,7 +426,13 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
     let expected = &vectors["rate_limit"];
     let app = boot_fresh(false).await;
     app.seed().await;
-    let page = app.send(request("GET", "/app/session/new").body(Body::empty()).unwrap()).await;
+    let page = app
+        .send(
+            request("GET", "/app/session/new")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
     let cookie = Fresh::session_cookie(&page).unwrap();
     let token = masked_session_token(&app.booted.app.secrets, &cookie).unwrap();
     let attempt = |ip: &'static str, token: &str| {
@@ -306,7 +448,13 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
 
     // Forgery protection runs before the limit, so forged attempts don't use it up.
     for _ in 0..3 {
-        assert_eq!(app.send(attempt("10.3.0.1", "forged")).await.status.as_u16(), expected["forged_status"].as_u64().unwrap() as u16);
+        assert_eq!(
+            app.send(attempt("10.3.0.1", "forged"))
+                .await
+                .status
+                .as_u16(),
+            expected["forged_status"].as_u64().unwrap() as u16
+        );
     }
     // Nor does the retained form post, which only sends people to the SPA's sign-in page.
     for _ in 0..3 {
@@ -314,7 +462,11 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
             .header("x-forwarded-for", "10.3.0.1")
             .header(header::COOKIE, format!("_campfire_session={cookie}"))
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .body(form(&[("email_address", "david@example.com"), ("password", "wrong"), ("authenticity_token", &token)]))
+            .body(form(&[
+                ("email_address", "david@example.com"),
+                ("password", "wrong"),
+                ("authenticity_token", &token),
+            ]))
             .unwrap();
         assert_eq!(app.send(post).await.status, StatusCode::SEE_OTHER);
     }
@@ -329,12 +481,18 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
     // Rails rendered the sign-in form again with its alert; the SPA's call answers with the
     // alert as the form's error.
     let limited = last.unwrap();
-    assert_eq!(limited.header("content-type"), Some("application/json; charset=utf-8"));
+    assert_eq!(
+        limited.header("content-type"),
+        Some("application/json; charset=utf-8")
+    );
     assert_eq!(
         serde_json::from_slice::<Value>(&limited.body).unwrap(),
         json!({ "kind": "error", "fieldErrors": { "base": ["Too many requests or unauthorized."] } })
     );
-    assert_eq!(app.send(attempt("10.3.0.2", &token)).await.status.as_u16(), expected["other_ip_status"].as_u64().unwrap() as u16);
+    assert_eq!(
+        app.send(attempt("10.3.0.2", &token)).await.status.as_u16(),
+        expected["other_ip_status"].as_u64().unwrap() as u16
+    );
 }
 
 /// `start_new_session_for`: the browser's signed `device_id` cookie is stored on its session,
@@ -343,7 +501,13 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
 async fn a_sign_in_records_the_browser_device_on_its_session() {
     let app = boot_fresh(false).await;
     let david = app.seed().await;
-    let page = app.send(request("GET", "/app/session/new").body(Body::empty()).unwrap()).await;
+    let page = app
+        .send(
+            request("GET", "/app/session/new")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
     let cookie = Fresh::session_cookie(&page).unwrap();
     let token = masked_session_token(&app.booted.app.secrets, &cookie).unwrap();
     let sign_in = request("POST", "/api/v1/session")
@@ -355,16 +519,47 @@ async fn a_sign_in_records_the_browser_device_on_its_session() {
         .unwrap();
     let reply = app.send(sign_in).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert_eq!(serde_json::from_slice::<Value>(&reply.body).unwrap()["kind"], "signedIn", "{}", reply.text());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&reply.body).unwrap()["kind"],
+        "signedIn",
+        "{}",
+        reply.text()
+    );
 
     let set_cookie = |name: &str| {
-        reply.set_cookies().iter().find_map(|c| c.split(';').next()?.strip_prefix(&format!("{name}=")).map(str::to_string)).unwrap()
+        reply
+            .set_cookies()
+            .iter()
+            .find_map(|c| {
+                c.split(';')
+                    .next()?
+                    .strip_prefix(&format!("{name}="))
+                    .map(str::to_string)
+            })
+            .unwrap()
     };
-    let raw = |value: String| percent_encoding::percent_decode_str(&value).decode_utf8_lossy().into_owned();
+    let raw = |value: String| {
+        percent_encoding::percent_decode_str(&value)
+            .decode_utf8_lossy()
+            .into_owned()
+    };
     let now = jiff::Timestamp::now();
-    let device_id = app.crypto().verify_signed_cookie("device_id", &raw(set_cookie("device_id")), now).unwrap();
-    let session_token = app.crypto().verify_signed_cookie("session_token", &raw(set_cookie("session_token")), now).unwrap();
-    let session = app.booted.app.db.read(move |conn| Session::find_by_token(conn, &session_token)).await.unwrap().unwrap();
+    let device_id = app
+        .crypto()
+        .verify_signed_cookie("device_id", &raw(set_cookie("device_id")), now)
+        .unwrap();
+    let session_token = app
+        .crypto()
+        .verify_signed_cookie("session_token", &raw(set_cookie("session_token")), now)
+        .unwrap();
+    let session = app
+        .booted
+        .app
+        .db
+        .read(move |conn| Session::find_by_token(conn, &session_token))
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(session.user_id, david.id);
     assert_eq!(session.device_id.as_deref(), Some(device_id.as_str()));
     assert_eq!(device_id.len(), 32);
@@ -380,8 +575,17 @@ async fn bot_reply_tokens_sign_in_their_bot_for_their_room() {
 
     async fn whoami(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
         // `allow_bot_access`, as the bot-facing controllers declare.
-        before_actions(c, Before { deny_bots: false, ..Before::default() }).await?;
-        let name = current_user(c).map(|user| user.name.clone()).unwrap_or_default();
+        before_actions(
+            c,
+            Before {
+                deny_bots: false,
+                ..Before::default()
+            },
+        )
+        .await?;
+        let name = current_user(c)
+            .map(|user| user.name.clone())
+            .unwrap_or_default();
         Ok(c.html(name))
     }
 
@@ -394,10 +598,31 @@ async fn bot_reply_tokens_sign_in_their_bot_for_their_room() {
         .write(move |tx| {
             let bot = User::create(
                 tx,
-                NewUser { name: "Replier".into(), email_address: None, password_digest: None, role: Role::Bot, bio: None, icon_name: None, bot_token_digest: None, ..Default::default() },
+                NewUser {
+                    name: "Replier".into(),
+                    email_address: None,
+                    password_digest: None,
+                    role: Role::Bot,
+                    bio: None,
+                    icon_name: None,
+                    bot_token_digest: None,
+                    ..Default::default()
+                },
             )?;
-            let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Bots"), david.id, &[david.id, bot.id])?;
-            let other = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Elsewhere"), david.id, &[david.id])?;
+            let room = campfire_db::Room::create_for(
+                tx,
+                campfire_db::RoomType::Closed,
+                Some("Bots"),
+                david.id,
+                &[david.id, bot.id],
+            )?;
+            let other = campfire_db::Room::create_for(
+                tx,
+                campfire_db::RoomType::Closed,
+                Some("Elsewhere"),
+                david.id,
+                &[david.id],
+            )?;
             Ok((bot, room, other))
         })
         .await
@@ -408,15 +633,33 @@ async fn bot_reply_tokens_sign_in_their_bot_for_their_room() {
         app.booted.app.clock.clone(),
         app.booted.app.clone(),
     );
-    let router = campfire_kit::app(axum::Router::new().route("/whoami", campfire_kit::get(whoami).post(campfire_kit::action(whoami))), kit);
+    let router = campfire_kit::app(
+        axum::Router::new().route(
+            "/whoami",
+            campfire_kit::get(whoami).post(campfire_kit::action(whoami)),
+        ),
+        kit,
+    );
     let post = |bot_key: String, room_id: i64| {
         let router = router.clone();
         async move {
             let body = form(&[("bot_key", &bot_key), ("room_id", &room_id.to_string())]);
-            let request = request("POST", "/whoami").header(header::CONTENT_TYPE, "application/x-www-form-urlencoded").body(body).unwrap();
+            let request = request("POST", "/whoami")
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(body)
+                .unwrap();
             let response = router.oneshot(request).await.unwrap();
             let status = response.status();
-            (status, String::from_utf8(axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().to_vec()).unwrap())
+            (
+                status,
+                String::from_utf8(
+                    axum::body::to_bytes(response.into_body(), usize::MAX)
+                        .await
+                        .unwrap()
+                        .to_vec(),
+                )
+                .unwrap(),
+            )
         }
     };
     let secrets = &app.booted.app.secrets;
@@ -427,19 +670,51 @@ async fn bot_reply_tokens_sign_in_their_bot_for_their_room() {
     assert_ne!(refused.0, StatusCode::OK);
     let refused = refused.0;
 
-    assert_eq!(post(format!(" {token}\n"), room.id).await, (StatusCode::OK, "Replier".to_string()), "no authenticity token needed");
-    assert_eq!(post(token.clone(), other_room.id).await.0, refused, "bound to its room");
-    let lapsed = rails_compat::verifiers::bot_reply::token_for(secrets, bot.id, room.id, now - jiff::SignedDuration::from_mins(16));
+    assert_eq!(
+        post(format!(" {token}\n"), room.id).await,
+        (StatusCode::OK, "Replier".to_string()),
+        "no authenticity token needed"
+    );
+    assert_eq!(
+        post(token.clone(), other_room.id).await.0,
+        refused,
+        "bound to its room"
+    );
+    let lapsed = rails_compat::verifiers::bot_reply::token_for(
+        secrets,
+        bot.id,
+        room.id,
+        now - jiff::SignedDuration::from_mins(16),
+    );
     assert_eq!(post(lapsed, room.id).await.0, refused, "expired");
     let not_a_bot = rails_compat::verifiers::bot_reply::token_for(secrets, david.id, room.id, now);
     assert_eq!(post(not_a_bot, room.id).await.0, refused, "only bots");
 
     let (bot_id, room_id) = (bot.id, room.id);
-    app.booted.app.db.write(move |tx| campfire_db::Room::find(tx.conn(), room_id)?.revoke_from(tx, &[bot_id])).await.unwrap();
-    assert_eq!(post(token.clone(), room.id).await.0, refused, "a member of the room");
-    app.booted.app.db.write(move |tx| campfire_db::Room::find(tx.conn(), room_id)?.grant_to(tx, &[bot_id])).await.unwrap();
+    app.booted
+        .app
+        .db
+        .write(move |tx| campfire_db::Room::find(tx.conn(), room_id)?.revoke_from(tx, &[bot_id]))
+        .await
+        .unwrap();
+    assert_eq!(
+        post(token.clone(), room.id).await.0,
+        refused,
+        "a member of the room"
+    );
+    app.booted
+        .app
+        .db
+        .write(move |tx| campfire_db::Room::find(tx.conn(), room_id)?.grant_to(tx, &[bot_id]))
+        .await
+        .unwrap();
     assert_eq!(post(token.clone(), room.id).await.0, StatusCode::OK);
-    app.booted.app.db.write(move |tx| User::find(tx.conn(), bot_id)?.deactivate(tx)).await.unwrap();
+    app.booted
+        .app
+        .db
+        .write(move |tx| User::find(tx.conn(), bot_id)?.deactivate(tx))
+        .await
+        .unwrap();
     assert_eq!(post(token, room.id).await.0, refused, "an active bot");
 }
 
@@ -452,7 +727,9 @@ async fn csp_reports_are_rate_limited_per_ip() {
         request("POST", "/csp_reports")
             .header("x-forwarded-for", ip)
             .header(header::CONTENT_TYPE, "application/csp-report")
-            .body(Body::from(r#"{"csp-report":{"violated-directive":"img-src"}}"#))
+            .body(Body::from(
+                r#"{"csp-report":{"violated-directive":"img-src"}}"#,
+            ))
             .unwrap()
     };
     let mut statuses = Vec::new();
@@ -460,7 +737,10 @@ async fn csp_reports_are_rate_limited_per_ip() {
         statuses.push(json!(app.send(report("10.4.0.1")).await.status.as_u16()));
     }
     assert_eq!(Value::Array(statuses), expected["statuses"]);
-    assert_eq!(app.send(report("10.4.0.2")).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        app.send(report("10.4.0.2")).await.status,
+        StatusCode::NO_CONTENT
+    );
 }
 
 /// The rate limit comes before anything parses the validated body: a malformed JSON
@@ -496,7 +776,11 @@ async fn csp_reports_read_a_bounded_prefix_of_any_body() {
             .header(header::CONTENT_TYPE, content_type.as_str())
             .body(Body::from(body.clone()))
             .unwrap();
-        assert_eq!(json!(app.send(report).await.status.as_u16()), *status, "{content_type}");
+        assert_eq!(
+            json!(app.send(report).await.status.as_u16()),
+            *status,
+            "{content_type}"
+        );
     }
 }
 
@@ -508,11 +792,21 @@ fn start_front_server(
     http: tokio::net::TcpListener,
     upstream: tokio::net::TcpListener,
     stopped: tokio::sync::oneshot::Receiver<()>,
-) -> (tokio::task::JoinHandle<std::io::Result<()>>, crate::test_support::ServerStartup) {
+) -> (
+    tokio::task::JoinHandle<std::io::Result<()>>,
+    crate::test_support::ServerStartup,
+) {
     crate::test_support::spawn_server(move |ready| {
-        campfire_kit::front::serve_with_bound_listeners(config, app, None, (http, upstream), ready, async move {
-            let _ = stopped.await;
-        })
+        campfire_kit::front::serve_with_bound_listeners(
+            config,
+            app,
+            None,
+            (http, upstream),
+            ready,
+            async move {
+                let _ = stopped.await;
+            },
+        )
     })
 }
 
@@ -521,8 +815,8 @@ fn start_front_server(
 /// once sent as multipart now redirects unread, so the SPA's JSON call carries the credentials;
 /// JSON allows trailing whitespace as multipart allows an epilogue.)
 async fn delayed_sign_in_body_is_bounded(target: bool) {
-    use campfire_kit::front::FrontConfig;
     use crate::test_support::{LISTENER_BINDING, bind_listener_locked, wait};
+    use campfire_kit::front::FrontConfig;
     use futures_util::Stream;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpStream;
@@ -532,7 +826,10 @@ async fn delayed_sign_in_body_is_bounded(target: bool) {
     let binding = LISTENER_BINDING.lock().await;
     let http_listener = bind_listener_locked().await;
     let upstream_listener = bind_listener_locked().await;
-    let (http, upstream) = (http_listener.local_addr().unwrap().port(), upstream_listener.local_addr().unwrap().port());
+    let (http, upstream) = (
+        http_listener.local_addr().unwrap().port(),
+        upstream_listener.local_addr().unwrap().port(),
+    );
     let config = FrontConfig::from_lookup(|name| match name {
         "HTTP_PORT" => Some(http.to_string()),
         "TARGET_PORT" => Some(upstream.to_string()),
@@ -548,92 +845,147 @@ async fn delayed_sign_in_body_is_bounded(target: bool) {
         move |request: Request<Body>, next: axum::middleware::Next| {
             let body_read = body_read.clone();
             async move {
-                let request = if request.method() == "POST" && request.uri().path() == "/api/v1/session" {
-                    let (parts, body) = request.into_parts();
-                    let mut body = body.into_data_stream();
-                    let (mut read, mut reported) = (0, 0);
-                    let stream = futures_util::stream::poll_fn(move |cx| {
-                        let polled = std::pin::Pin::new(&mut body).poll_next(cx);
-                        if let std::task::Poll::Ready(Some(Ok(bytes))) = &polled {
-                            read += bytes.len();
-                        } else if polled.is_pending() && read > reported {
-                            // The reader has consumed these bytes and asked for more. Reporting
-                            // on Pending also catches a reader that stops at the closing brace.
-                            let _ = body_read.send(read - reported);
-                            reported = read;
-                        }
-                        polled
-                    });
-                    Request::from_parts(parts, Body::from_stream(stream))
-                } else {
-                    request
-                };
+                let request =
+                    if request.method() == "POST" && request.uri().path() == "/api/v1/session" {
+                        let (parts, body) = request.into_parts();
+                        let mut body = body.into_data_stream();
+                        let (mut read, mut reported) = (0, 0);
+                        let stream = futures_util::stream::poll_fn(move |cx| {
+                            let polled = std::pin::Pin::new(&mut body).poll_next(cx);
+                            if let std::task::Poll::Ready(Some(Ok(bytes))) = &polled {
+                                read += bytes.len();
+                            } else if polled.is_pending() && read > reported {
+                                // The reader has consumed these bytes and asked for more. Reporting
+                                // on Pending also catches a reader that stops at the closing brace.
+                                let _ = body_read.send(read - reported);
+                                reported = read;
+                            }
+                            polled
+                        });
+                        Request::from_parts(parts, Body::from_stream(stream))
+                    } else {
+                        request
+                    };
                 next.run(request).await
             }
         },
     ));
-    let (server, started) = start_front_server(
-        config,
-        observed,
-        http_listener,
-        upstream_listener,
-        stopped,
-    );
-    wait("both front server listeners to bind", started).await
+    let (server, started) =
+        start_front_server(config, observed, http_listener, upstream_listener, stopped);
+    wait("both front server listeners to bind", started)
+        .await
         .expect("server task reports its startup outcome")
         .unwrap_or_else(|error| panic!("HTTP {http}, target {upstream}: {error}"));
     drop(binding);
     let port = if target { upstream } else { http };
     async fn read_reply(stream: &mut TcpStream) -> Reply {
         let mut raw = Vec::new();
-        wait("HTTP reply to complete", stream.read_to_end(&mut raw)).await.unwrap();
+        wait("HTTP reply to complete", stream.read_to_end(&mut raw))
+            .await
+            .unwrap();
         let split = raw.windows(4).position(|w| w == b"\r\n\r\n").unwrap();
         let head = std::str::from_utf8(&raw[..split]).unwrap();
         let mut lines = head.split("\r\n");
-        let status = StatusCode::from_u16(lines.next().unwrap().split(' ').nth(1).unwrap().parse().unwrap()).unwrap();
+        let status = StatusCode::from_u16(
+            lines
+                .next()
+                .unwrap()
+                .split(' ')
+                .nth(1)
+                .unwrap()
+                .parse()
+                .unwrap(),
+        )
+        .unwrap();
         let mut headers = axum::http::HeaderMap::new();
         for line in lines {
             let (name, value) = line.split_once(':').unwrap();
-            headers.append(axum::http::HeaderName::from_bytes(name.as_bytes()).unwrap(), value.trim().parse().unwrap());
+            headers.append(
+                axum::http::HeaderName::from_bytes(name.as_bytes()).unwrap(),
+                value.trim().parse().unwrap(),
+            );
         }
-        Reply { status, headers, body: raw[split + 4..].to_vec() }
+        Reply {
+            status,
+            headers,
+            body: raw[split + 4..].to_vec(),
+        }
     }
-    let mut stream = wait("front test TCP connection", TcpStream::connect(("127.0.0.1", port))).await.unwrap();
-    stream.write_all(b"GET /app/session/new HTTP/1.1\r\nHost: campfire.test\r\nConnection: close\r\n\r\n").await.unwrap();
+    let mut stream = wait(
+        "front test TCP connection",
+        TcpStream::connect(("127.0.0.1", port)),
+    )
+    .await
+    .unwrap();
+    stream
+        .write_all(
+            b"GET /app/session/new HTTP/1.1\r\nHost: campfire.test\r\nConnection: close\r\n\r\n",
+        )
+        .await
+        .unwrap();
     let page = read_reply(&mut stream).await;
     assert_eq!(page.status, StatusCode::OK);
-    let cookies = page.set_cookies().iter().map(|c| c.split(';').next().unwrap()).collect::<Vec<_>>().join("; ");
+    let cookies = page
+        .set_cookies()
+        .iter()
+        .map(|c| c.split(';').next().unwrap())
+        .collect::<Vec<_>>()
+        .join("; ");
     let session_cookie = Fresh::session_cookie(&page).expect("the sign-in page starts a session");
     let token = masked_session_token(&app.booted.app.secrets, &session_cookie).unwrap();
     let prefix = json!({ "emailAddress": "david@example.com", "password": PASSWORD }).to_string();
     assert!(prefix.len() < 4096);
     let sessions = || {
-        app.booted
-            .app
-            .db
-            .read(|conn| Ok(conn.query_row("SELECT count(*) FROM sessions", [], |row| row.get::<_, i64>(0))?))
+        app.booted.app.db.read(|conn| {
+            Ok(conn.query_row("SELECT count(*) FROM sessions", [], |row| {
+                row.get::<_, i64>(0)
+            })?)
+        })
     };
     let before = sessions().await.unwrap();
-    let mut stream = wait("front test TCP connection", TcpStream::connect(("127.0.0.1", port))).await.unwrap();
+    let mut stream = wait(
+        "front test TCP connection",
+        TcpStream::connect(("127.0.0.1", port)),
+    )
+    .await
+    .unwrap();
     let head = format!(
         "POST /api/v1/session HTTP/1.1\r\nHost: campfire.test\r\nContent-Type: application/json\r\nAccept: application/json\r\nX-CSRF-Token: {token}\r\nCookie: {cookies}\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"
     );
     stream.write_all(head.as_bytes()).await.unwrap();
-    stream.write_all(format!("{:x}\r\n{prefix}\r\n", prefix.len()).as_bytes()).await.unwrap();
-    wait("body reader to consume the JSON and wait for the HTTP epilogue", async {
-        let mut read = 0;
-        while read < prefix.len() {
-            read += body_reads.recv().await.expect("request body observer is still open");
-        }
-    }).await;
+    stream
+        .write_all(format!("{:x}\r\n{prefix}\r\n", prefix.len()).as_bytes())
+        .await
+        .unwrap();
+    wait(
+        "body reader to consume the JSON and wait for the HTTP epilogue",
+        async {
+            let mut read = 0;
+            while read < prefix.len() {
+                read += body_reads
+                    .recv()
+                    .await
+                    .expect("request body observer is still open");
+            }
+        },
+    )
+    .await;
     let early_sessions = sessions().await.unwrap() - before;
     let epilogue = vec![b' '; 64 * 1024];
-    let suffix = [format!("{:x}\r\n", epilogue.len()).as_bytes(), &epilogue, b"\r\n0\r\n\r\n"].concat();
+    let suffix = [
+        format!("{:x}\r\n", epilogue.len()).as_bytes(),
+        &epilogue,
+        b"\r\n0\r\n\r\n",
+    ]
+    .concat();
     // A broken implementation may already have replied and closed after the closing brace.
     let _ = stream.write_all(&suffix).await;
     let reply = read_reply(&mut stream).await;
     let added = sessions().await.unwrap() - before;
-    let cookie = reply.set_cookies().iter().any(|c| c.starts_with("session_token="));
+    let cookie = reply
+        .set_cookies()
+        .iter()
+        .any(|c| c.starts_with("session_token="));
     eprintln!(
         "delayed sign-in body: target={target} body_bytes={} limit=4096 status={} early_sessions={early_sessions} added_sessions={added} session_cookie={cookie}",
         prefix.len() + epilogue.len(),
@@ -641,16 +993,39 @@ async fn delayed_sign_in_body_is_bounded(target: bool) {
     );
 
     // The identical credentials/token with an in-limit epilogue must still create a session.
-    let mut control = wait("front test TCP connection", TcpStream::connect(("127.0.0.1", port))).await.unwrap();
+    let mut control = wait(
+        "front test TCP connection",
+        TcpStream::connect(("127.0.0.1", port)),
+    )
+    .await
+    .unwrap();
     control.write_all(head.as_bytes()).await.unwrap();
-    control.write_all(format!("{:x}\r\n{prefix}\r\n1\r\n \r\n0\r\n\r\n", prefix.len()).as_bytes()).await.unwrap();
+    control
+        .write_all(format!("{:x}\r\n{prefix}\r\n1\r\n \r\n0\r\n\r\n", prefix.len()).as_bytes())
+        .await
+        .unwrap();
     let signed_in = read_reply(&mut control).await;
-    assert_eq!(signed_in.status, StatusCode::OK, "valid sign-in control: {}", signed_in.text());
-    assert!(signed_in.text().contains(r#""kind":"signedIn""#), "valid sign-in control: {}", signed_in.text());
+    assert_eq!(
+        signed_in.status,
+        StatusCode::OK,
+        "valid sign-in control: {}",
+        signed_in.text()
+    );
+    assert!(
+        signed_in.text().contains(r#""kind":"signedIn""#),
+        "valid sign-in control: {}",
+        signed_in.text()
+    );
     assert_eq!(sessions().await.unwrap() - before, added + 1);
     let _ = stop.send(());
-    wait("front test server shutdown", server).await.unwrap().unwrap();
-    assert_eq!((reply.status, early_sessions, added, cookie), (StatusCode::PAYLOAD_TOO_LARGE, 0, 0, false));
+    wait("front test server shutdown", server)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        (reply.status, early_sessions, added, cookie),
+        (StatusCode::PAYLOAD_TOO_LARGE, 0, 0, false)
+    );
 }
 
 #[tokio::test]
@@ -680,17 +1055,23 @@ async fn front_server_keeps_its_reserved_ports_through_startup() {
         _ => None,
     });
     let (stop, stopped) = tokio::sync::oneshot::channel();
-    let (server, started) = start_front_server(config, axum::Router::new(), http, upstream, stopped);
+    let (server, started) =
+        start_front_server(config, axum::Router::new(), http, upstream, stopped);
     let http_competitor = std::net::TcpListener::bind(http_addr);
     let upstream_competitor = std::net::TcpListener::bind(upstream_addr);
     let reserved = matches!(http_competitor, Err(ref error) if error.kind() == std::io::ErrorKind::AddrInUse)
         && matches!(upstream_competitor, Err(ref error) if error.kind() == std::io::ErrorKind::AddrInUse);
-    let startup = wait("reserved front listeners to start", started).await.unwrap();
+    let startup = wait("reserved front listeners to start", started)
+        .await
+        .unwrap();
     let _ = stop.send(());
     let result = wait("reserved front server to stop", server).await.unwrap();
     drop((http_competitor, upstream_competitor));
     drop(binding);
-    assert!(reserved, "a competing socket could claim a reserved port; startup: {startup:?}; server: {result:?}");
+    assert!(
+        reserved,
+        "a competing socket could claim a reserved port; startup: {startup:?}; server: {result:?}"
+    );
     startup.unwrap();
     result.unwrap();
 }
@@ -706,11 +1087,23 @@ async fn front_server_reports_startup_bind_errors() {
         _ => None,
     });
     let (server, started) = spawn_server(move |ready| {
-        campfire_kit::front::serve_with_ready(config, axum::Router::new(), None, ready, std::future::pending::<()>())
+        campfire_kit::front::serve_with_ready(
+            config,
+            axum::Router::new(),
+            None,
+            ready,
+            std::future::pending::<()>(),
+        )
     });
-    let startup = wait("front startup error report", started).await.unwrap().unwrap_err();
+    let startup = wait("front startup error report", started)
+        .await
+        .unwrap()
+        .unwrap_err();
     assert!(startup.contains("AddrInUse"), "{startup}");
-    let error = wait("failed front server to finish", server).await.unwrap().unwrap_err();
+    let error = wait("failed front server to finish", server)
+        .await
+        .unwrap()
+        .unwrap_err();
     assert_eq!(error.kind(), std::io::ErrorKind::AddrInUse);
 }
 
@@ -718,7 +1111,11 @@ async fn front_server_reports_startup_bind_errors() {
 async fn idle_administrator_sessions_expire_when_restored() {
     let app = boot_fresh(false).await;
     let david = app.seed().await;
-    let days = |n: i64| campfire_db::Timestamp::from_jiff(jiff::Timestamp::now() - jiff::SignedDuration::from_hours(24 * n));
+    let days = |n: i64| {
+        campfire_db::Timestamp::from_jiff(
+            jiff::Timestamp::now() - jiff::SignedDuration::from_hours(24 * n),
+        )
+    };
     let (stale, fresh) = app
         .booted
         .app
@@ -727,21 +1124,66 @@ async fn idle_administrator_sessions_expire_when_restored() {
             let stale = Session::start(tx, david.id, Some("test"), None)?;
             let mut fresh = Session::start(tx, david.id, Some("test"), None)?;
             fresh.mark_two_factor_verified(tx)?; // Rails' sign_in helper verifies its sessions.
-            tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![days(8), stale.id])?;
-            tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![days(6), fresh.id])?;
+            tx.conn().execute(
+                "UPDATE sessions SET last_active_at = ? WHERE id = ?",
+                rusqlite::params![days(8), stale.id],
+            )?;
+            tx.conn().execute(
+                "UPDATE sessions SET last_active_at = ? WHERE id = ?",
+                rusqlite::params![days(6), fresh.id],
+            )?;
             Ok((stale, fresh))
         })
         .await
         .unwrap();
 
-    let expired = app.send(request("GET", "/users/me/profile").header(header::COOKIE, app.session_token_cookie(&stale)).body(Body::empty()).unwrap()).await;
-    assert_eq!((expired.status, expired.header("location")), (StatusCode::FOUND, Some("http://campfire.test/app/session/new")));
-    assert!(expired.set_cookies().iter().any(|cookie| cookie.starts_with("session_token=;")), "{:?}", expired.set_cookies());
+    let expired = app
+        .send(
+            request("GET", "/users/me/profile")
+                .header(header::COOKIE, app.session_token_cookie(&stale))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(
+        (expired.status, expired.header("location")),
+        (
+            StatusCode::FOUND,
+            Some("http://campfire.test/app/session/new")
+        )
+    );
+    assert!(
+        expired
+            .set_cookies()
+            .iter()
+            .any(|cookie| cookie.starts_with("session_token=;")),
+        "{:?}",
+        expired.set_cookies()
+    );
     let token = stale.token.clone();
-    assert!(app.booted.app.db.read(move |conn| Session::find_by_token(conn, &token)).await.unwrap().is_none(), "destroyed");
+    assert!(
+        app.booted
+            .app
+            .db
+            .read(move |conn| Session::find_by_token(conn, &token))
+            .await
+            .unwrap()
+            .is_none(),
+        "destroyed"
+    );
 
-    let restored = app.send(request("GET", "/users/me/profile").header(header::COOKIE, app.session_token_cookie(&fresh)).body(Body::empty()).unwrap()).await;
-    assert_eq!((restored.status, restored.header("location")), (StatusCode::FOUND, Some("http://campfire.test/app/settings")));
+    let restored = app
+        .send(
+            request("GET", "/users/me/profile")
+                .header(header::COOKIE, app.session_token_cookie(&fresh))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(
+        (restored.status, restored.header("location")),
+        (StatusCode::FOUND, Some("http://campfire.test/app/settings"))
+    );
 }
 
 #[tokio::test]
@@ -755,29 +1197,74 @@ async fn a_pending_second_factor_goes_back_to_its_challenge() {
             "two_factor_pending_expires_at": jiff::Timestamp::now().as_second() + expires_in,
             "two_factor_pending_method": "totp",
         });
-        let raw = app.crypto().encrypt_cookie("_campfire_session", &session, None);
+        let raw = app
+            .crypto()
+            .encrypt_cookie("_campfire_session", &session, None);
         format!("_campfire_session={}", campfire_kit::cookies::escape(&raw))
     };
 
-    let waiting = app.send(request("GET", "/users/me/profile").header(header::COOKIE, pending(300)).body(Body::empty()).unwrap()).await;
-    assert_eq!(waiting.header("location"), Some("http://campfire.test/app/two_factor/challenge"));
-    let lapsed = app.send(request("GET", "/users/me/profile").header(header::COOKIE, pending(-1)).body(Body::empty()).unwrap()).await;
-    assert_eq!(lapsed.header("location"), Some("http://campfire.test/app/session/new"));
+    let waiting = app
+        .send(
+            request("GET", "/users/me/profile")
+                .header(header::COOKIE, pending(300))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(
+        waiting.header("location"),
+        Some("http://campfire.test/app/two_factor/challenge")
+    );
+    let lapsed = app
+        .send(
+            request("GET", "/users/me/profile")
+                .header(header::COOKIE, pending(-1))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(
+        lapsed.header("location"),
+        Some("http://campfire.test/app/session/new")
+    );
 }
 
 #[tokio::test]
 async fn page_navigations_bounce_back_after_sign_in() {
     let app = boot_fresh(false).await;
     app.seed().await;
-    let page = app.send(request("GET", "/users/me/profile?tab=1").header(header::ACCEPT, "text/html").body(Body::empty()).unwrap()).await;
-    assert_eq!(page.header("location"), Some("http://campfire.test/app/session/new"));
+    let page = app
+        .send(
+            request("GET", "/users/me/profile?tab=1")
+                .header(header::ACCEPT, "text/html")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+    assert_eq!(
+        page.header("location"),
+        Some("http://campfire.test/app/session/new")
+    );
     let session = app.session(&Fresh::session_cookie(&page).unwrap());
-    assert_eq!(session["return_to_after_authenticating"], "http://campfire.test/users/me/profile?tab=1");
+    assert_eq!(
+        session["return_to_after_authenticating"],
+        "http://campfire.test/users/me/profile?tab=1"
+    );
 
     for accept in ["application/json", "text/vnd.turbo-stream.html"] {
-        let poll = app.send(request("GET", "/users/me/profile").header(header::ACCEPT, accept).body(Body::empty()).unwrap()).await;
+        let poll = app
+            .send(
+                request("GET", "/users/me/profile")
+                    .header(header::ACCEPT, accept)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
         let session = Fresh::session_cookie(&poll).map(|raw| app.session(&raw));
-        assert!(session.is_none_or(|session| session.get("return_to_after_authenticating").is_none()), "{accept}");
+        assert!(
+            session.is_none_or(|session| session.get("return_to_after_authenticating").is_none()),
+            "{accept}"
+        );
     }
 }
 
@@ -785,9 +1272,26 @@ async fn page_navigations_bounce_back_after_sign_in() {
 async fn agent_bearer_tokens_are_refused_not_sent_to_sign_in() {
     let app = boot_fresh(false).await;
     app.seed().await;
-    let agent = app.send(request("GET", "/users/me/profile").header(header::AUTHORIZATION, format!("{} {}", "Bearer", "cfa_unknown")).body(Body::empty()).unwrap()).await;
+    let agent = app
+        .send(
+            request("GET", "/users/me/profile")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("{} {}", "Bearer", "cfa_unknown"),
+                )
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
     assert_eq!(agent.status, StatusCode::UNAUTHORIZED);
-    let other_scheme = app.send(request("GET", "/users/me/profile").header(header::AUTHORIZATION, "Basic abc").body(Body::empty()).unwrap()).await;
+    let other_scheme = app
+        .send(
+            request("GET", "/users/me/profile")
+                .header(header::AUTHORIZATION, "Basic abc")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
     assert_eq!(other_scheme.status, StatusCode::FOUND);
 }
 
@@ -813,7 +1317,10 @@ async fn sudo_mode_stashes_the_request_until_confirmed() {
         app.booted.app.clone(),
     );
     let routes = axum::Router::new()
-        .route("/danger", campfire_kit::get(guarded).post(campfire_kit::action(guarded)))
+        .route(
+            "/danger",
+            campfire_kit::get(guarded).post(campfire_kit::action(guarded)),
+        )
         .route("/confirm", campfire_kit::get(confirm));
     let router = campfire_kit::app(routes, kit);
     let send = |request: Request<Body>| {
@@ -821,20 +1328,54 @@ async fn sudo_mode_stashes_the_request_until_confirmed() {
         async move {
             let response = router.oneshot(request).await.unwrap();
             let (parts, body) = response.into_parts();
-            Reply { status: parts.status, headers: parts.headers, body: axum::body::to_bytes(body, usize::MAX).await.unwrap().to_vec() }
+            Reply {
+                status: parts.status,
+                headers: parts.headers,
+                body: axum::body::to_bytes(body, usize::MAX)
+                    .await
+                    .unwrap()
+                    .to_vec(),
+            }
         }
     };
 
-    let prompt = send(request("GET", "/danger?x=1").header(header::REFERER, "http://campfire.test/rooms/1").body(Body::empty()).unwrap()).await;
-    assert_eq!(prompt.header("location"), Some("http://campfire.test/app/sudo/new"));
+    let prompt = send(
+        request("GET", "/danger?x=1")
+            .header(header::REFERER, "http://campfire.test/rooms/1")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(
+        prompt.header("location"),
+        Some("http://campfire.test/app/sudo/new")
+    );
     let cookie = Fresh::session_cookie(&prompt).unwrap();
     let stashed = app.session(&cookie);
-    assert_eq!(stashed["sudo_pending_request"], json!({ "method": "GET", "path": "/danger?x=1", "params": null, "origin": "/rooms/1", "session_id": null }));
+    assert_eq!(
+        stashed["sudo_pending_request"],
+        json!({ "method": "GET", "path": "/danger?x=1", "params": null, "origin": "/rooms/1", "session_id": null })
+    );
 
-    let confirmed = send(request("GET", "/confirm").header(header::COOKIE, format!("_campfire_session={cookie}")).body(Body::empty()).unwrap()).await;
+    let confirmed = send(
+        request("GET", "/confirm")
+            .header(header::COOKIE, format!("_campfire_session={cookie}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
     let cookie = Fresh::session_cookie(&confirmed).unwrap();
-    let through = send(request("GET", "/danger").header(header::COOKIE, format!("_campfire_session={cookie}")).body(Body::empty()).unwrap()).await;
-    assert_eq!((through.status, through.text()), (StatusCode::OK, "done".to_string()));
+    let through = send(
+        request("GET", "/danger")
+            .header(header::COOKIE, format!("_campfire_session={cookie}"))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(
+        (through.status, through.text()),
+        (StatusCode::OK, "done".to_string())
+    );
 }
 
 #[test]
@@ -843,9 +1384,19 @@ fn sudo_confirmations_are_limited_to_ten_in_three_minutes() {
     let store = campfire_kit::RateLimitStore::new();
     let start = jiff::Timestamp::from_second(1_767_268_800).unwrap();
     for attempt in 1..=10 {
-        assert!(!limit.exceeded(&store, "10.5.0.1", start), "attempt {attempt}");
+        assert!(
+            !limit.exceeded(&store, "10.5.0.1", start),
+            "attempt {attempt}"
+        );
     }
     assert!(limit.exceeded(&store, "10.5.0.1", start), "the eleventh");
     assert!(!limit.exceeded(&store, "10.5.0.2", start), "per IP");
-    assert!(!limit.exceeded(&store, "10.5.0.1", start + jiff::SignedDuration::from_mins(3)), "reset");
+    assert!(
+        !limit.exceeded(
+            &store,
+            "10.5.0.1",
+            start + jiff::SignedDuration::from_mins(3)
+        ),
+        "reset"
+    );
 }

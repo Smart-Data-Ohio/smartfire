@@ -53,7 +53,9 @@ pub fn begin_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Res
     // update! validates unchanged direct names too. The icon/type are unchanged: their
     // change-conditional validations do not run. All Room STI classes require a creator.
     validate_room(tx, room)?;
-    for webhook in crate::models::channel_webhook::ChannelWebhook::list_for_room(tx.conn(), room.id)? {
+    for webhook in
+        crate::models::channel_webhook::ChannelWebhook::list_for_room(tx.conn(), room.id)?
+    {
         crate::models::channel_webhook::ChannelWebhook::delete(tx, webhook.id)?;
     }
     tx.conn().execute_cached(
@@ -260,7 +262,8 @@ pub async fn perform_with_config(db: &Database, room_id: i64, config: HuddleConf
 /// messages use dependent:delete_all, so their dropped-message inbox items survive too.
 /// A Slack import's undo (`importing`) broadcasts nothing.
 pub(crate) fn destroy(tx: &mut Tx<'_>, room: &Room, importing: bool) -> Result<()> {
-    tx.conn().execute_cached("DELETE FROM memberships WHERE room_id=?", [room.id])?;
+    tx.conn()
+        .execute_cached("DELETE FROM memberships WHERE room_id=?", [room.id])?;
     for table in ["messages", "channel_threads", "events"] {
         loop {
             let batch = ids(tx, table, room.id, BATCH_SIZE)?;
@@ -331,7 +334,10 @@ fn finish_destroy(
         tx.conn()
             .execute_cached("DELETE FROM streams WHERE room_id=?", [room.id])?;
     }
-    tx.conn().execute_cached("DELETE FROM github_pull_request_threads WHERE room_id=?", [room.id])?;
+    tx.conn().execute_cached(
+        "DELETE FROM github_pull_request_threads WHERE room_id=?",
+        [room.id],
+    )?;
     crate::WorkspaceCategory::remove_room_from_layout(tx, room.id, importing)?;
     tx.conn()
         .execute_cached("DELETE FROM rooms WHERE id=?", [room.id])?;

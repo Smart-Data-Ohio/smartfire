@@ -24,7 +24,8 @@ fn room_message(t: &TestDb) -> Message {
 }
 fn room_push(t: &TestDb, message: &Message) -> (PushPayload, Vec<i64>) {
     t.read(|conn| {
-        let (payload, pushes) = PushSubscription::pushes_for(conn, &BasicRichText, message, t.now())?;
+        let (payload, pushes) =
+            PushSubscription::pushes_for(conn, &BasicRichText, message, t.now())?;
         Ok((payload, pushes.into_iter().map(|s| s.user_id).collect()))
     })
 }
@@ -273,11 +274,24 @@ fn push_routing_thread_messages_wait_for_idle_computers() {
     });
     assert_eq!(thread_push(&t, &thread, &message).len(), 1);
     let mut desktop = t.write(|tx| {
-        let session = crate::Session::start(tx, id("jason"), Some("Mozilla/5.0 (X11; Linux x86_64)"), None)?;
-        Ok(crate::WorkspacePresenceLease::establish_for_device(tx, id("jason"), session.id, Some(crate::DeviceClass::Desktop))?.unwrap())
+        let session = crate::Session::start(
+            tx,
+            id("jason"),
+            Some("Mozilla/5.0 (X11; Linux x86_64)"),
+            None,
+        )?;
+        Ok(crate::WorkspacePresenceLease::establish_for_device(
+            tx,
+            id("jason"),
+            session.id,
+            Some(crate::DeviceClass::Desktop),
+        )?
+        .unwrap())
     });
     assert!(thread_push(&t, &thread, &message).is_empty());
-    t.clock.travel(crate::models::workspace_presence_lease::IDLE_AFTER + jiff::SignedDuration::from_secs(1));
+    t.clock.travel(
+        crate::models::workspace_presence_lease::IDLE_AFTER + jiff::SignedDuration::from_secs(1),
+    );
     t.write(move |tx| desktop.refresh(tx, false));
     assert_eq!(thread_push(&t, &thread, &message).len(), 1);
 }

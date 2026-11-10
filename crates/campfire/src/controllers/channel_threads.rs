@@ -13,15 +13,11 @@ mod page_tests;
 #[cfg(test)]
 mod agent_work_tests;
 
-
 #[cfg(test)]
 mod board_write_tests;
 
 #[cfg(test)]
 pub(crate) mod write_tests;
-
-
-
 
 #[cfg(test)]
 mod declaration_tests;

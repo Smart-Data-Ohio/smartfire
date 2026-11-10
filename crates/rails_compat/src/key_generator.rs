@@ -46,7 +46,12 @@ impl KeyGenerator {
 
     /// `ActiveSupport::KeyGenerator.new(secret, hash_digest_class:, iterations:)`.
     pub fn with_options(secret: &[u8], digest: HashDigest, iterations: u32) -> Self {
-        Self { secret: secret.to_vec(), digest, iterations, cache: Mutex::new(HashMap::new()) }
+        Self {
+            secret: secret.to_vec(),
+            digest,
+            iterations,
+            cache: Mutex::new(HashMap::new()),
+        }
     }
 
     pub fn generate_key(&self, salt: &str, length: usize) -> Vec<u8> {
@@ -55,15 +60,25 @@ impl KeyGenerator {
 
     /// For binary salts (Active Record encryption's `key_derivation_salt`).
     pub fn generate_key_from_bytes(&self, salt: &[u8], length: usize) -> Vec<u8> {
-        let mut cache = self.cache.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-        cache.entry((salt.to_vec(), length)).or_insert_with(|| self.derive(salt, length)).clone()
+        let mut cache = self
+            .cache
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        cache
+            .entry((salt.to_vec(), length))
+            .or_insert_with(|| self.derive(salt, length))
+            .clone()
     }
 
     fn derive(&self, salt: &[u8], length: usize) -> Vec<u8> {
         let mut key = vec![0u8; length];
         match self.digest {
-            HashDigest::Sha1 => pbkdf2::pbkdf2_hmac::<sha1::Sha1>(&self.secret, salt, self.iterations, &mut key),
-            HashDigest::Sha256 => pbkdf2::pbkdf2_hmac::<sha2::Sha256>(&self.secret, salt, self.iterations, &mut key),
+            HashDigest::Sha1 => {
+                pbkdf2::pbkdf2_hmac::<sha1::Sha1>(&self.secret, salt, self.iterations, &mut key)
+            }
+            HashDigest::Sha256 => {
+                pbkdf2::pbkdf2_hmac::<sha2::Sha256>(&self.secret, salt, self.iterations, &mut key)
+            }
         }
         key
     }

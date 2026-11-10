@@ -2,15 +2,33 @@ use super::*;
 use crate::{BoardTag, BoardTagPolicy, ChannelThread, NewChannelThread, Room, RoomType};
 
 fn board(t: &TestDb) -> i64 {
-    t.write(|tx| Room::create_for(tx, RoomType::Board, Some("Catalog"), id("david"), &[id("david"), id("jz"), id("bender")])).id
+    t.write(|tx| {
+        Room::create_for(
+            tx,
+            RoomType::Board,
+            Some("Catalog"),
+            id("david"),
+            &[id("david"), id("jz"), id("bender")],
+        )
+    })
+    .id
 }
 
 fn post(t: &TestDb, room_id: i64, tags: &[&str]) -> Result<ChannelThread> {
     let tags = tags.iter().map(|name| (*name).to_string()).collect();
-    t.try_write(move |tx| ChannelThread::create(tx, NewChannelThread {
-        room_id, creator_id: id("jz"), name: Some("Catalog post".into()),
-        work_status: Some("planned".into()), tag_names: Some(tags), ..Default::default()
-    }))
+    t.try_write(move |tx| {
+        ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id,
+                creator_id: id("jz"),
+                name: Some("Catalog post".into()),
+                work_status: Some("planned".into()),
+                tag_names: Some(tags),
+                ..Default::default()
+            },
+        )
+    })
 }
 
 fn names(t: &TestDb, post: &ChannelThread) -> Vec<String> {
@@ -22,24 +40,48 @@ fn board_catalog_crud_limits_and_reorder() {
     let t = channel_thread_test::frozen();
     let room_id = board(&t);
     for name in [" ".to_string(), "é".repeat(21)] {
-        assert!(t.try_write(move |tx| BoardTag::create(tx, room_id, &name, None)).is_err());
+        assert!(
+            t.try_write(move |tx| BoardTag::create(tx, room_id, &name, None))
+                .is_err()
+        );
     }
     let tag = t.write(move |tx| BoardTag::create(tx, room_id, "  Bug Report  ", Some("🐛")));
     assert_eq!(tag.name, "Bug Report");
     assert_eq!(tag.position, 0);
-    assert!(t.try_write(move |tx| BoardTag::create(tx, room_id, "bug report", None)).is_err());
+    assert!(
+        t.try_write(move |tx| BoardTag::create(tx, room_id, "bug report", None))
+            .is_err()
+    );
     let mut ids = vec![tag.id];
     for index in 1..20 {
-        ids.push(t.write(move |tx| BoardTag::create(tx, room_id, &format!("tag-{index}"), None)).id);
+        ids.push(
+            t.write(move |tx| BoardTag::create(tx, room_id, &format!("tag-{index}"), None))
+                .id,
+        );
     }
-    assert!(t.try_write(move |tx| BoardTag::create(tx, room_id, "overflow", None)).is_err());
+    assert!(
+        t.try_write(move |tx| BoardTag::create(tx, room_id, "overflow", None))
+            .is_err()
+    );
     ids.reverse();
     let order = ids.clone();
     t.write(move |tx| BoardTag::reorder(tx, room_id, &order));
-    assert_eq!(t.read(|conn| BoardTag::for_room(conn, room_id)).iter().map(|tag| tag.id).collect::<Vec<_>>(), ids);
-    assert!(t.try_write(move |tx| BoardTag::reorder(tx, room_id, &[tag.id,tag.id])).is_err());
+    assert_eq!(
+        t.read(|conn| BoardTag::for_room(conn, room_id))
+            .iter()
+            .map(|tag| tag.id)
+            .collect::<Vec<_>>(),
+        ids
+    );
+    assert!(
+        t.try_write(move |tx| BoardTag::reorder(tx, room_id, &[tag.id, tag.id]))
+            .is_err()
+    );
     let room2 = board(&t);
-    assert!(t.try_write(move |tx| BoardTagPolicy::update(tx, room2, true, Some(tag.id))).is_err());
+    assert!(
+        t.try_write(move |tx| BoardTagPolicy::update(tx, room2, true, Some(tag.id)))
+            .is_err()
+    );
 }
 
 #[test]
@@ -55,17 +97,27 @@ fn board_catalog_rename_delete_merge_names_only_in_own_board() {
     assert_eq!(names(&t, &post), ["legacy", "new-name"]);
     assert_eq!(names(&t, &other_post), ["bug"]);
     let changes = t.events()[from..].iter().filter(|event| matches!(event, Event::Broadcast(request) if request.decode::<crate::models::channel_thread::ThreadWorkChange>().is_some())).count();
-    assert_eq!(changes, 1, "renaming publishes the final post snapshot once");
+    assert_eq!(
+        changes, 1,
+        "renaming publishes the final post snapshot once"
+    );
     let counts = t.read(|conn| ChannelThread::board_tag_counts(conn, room_id, None));
-    assert_eq!(counts, [("legacy".into(),1),("new-name".into(),1)]);
+    assert_eq!(counts, [("legacy".into(), 1), ("new-name".into(), 1)]);
     t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, Some(tag.id)));
     let from = t.events().len();
     t.write(move |tx| BoardTag::destroy(tx, room_id, tag.id));
     assert_eq!(names(&t, &post), ["legacy"]);
     assert_eq!(names(&t, &other_post), ["bug"]);
-    assert_eq!(t.read(|conn| BoardTagPolicy::for_room(conn, room_id)).default_board_tag_id, None);
+    assert_eq!(
+        t.read(|conn| BoardTagPolicy::for_room(conn, room_id))
+            .default_board_tag_id,
+        None
+    );
     let changes = t.events()[from..].iter().filter(|event| matches!(event, Event::Broadcast(request) if request.decode::<crate::models::channel_thread::ThreadWorkChange>().is_some())).count();
-    assert_eq!(changes, 1, "deleting publishes the final post snapshot once");
+    assert_eq!(
+        changes, 1,
+        "deleting publishes the final post snapshot once"
+    );
 }
 
 #[test]
@@ -77,16 +129,43 @@ fn board_catalog_required_default_create_edit_and_legacy() {
     t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, None));
     assert!(post(&t, room_id, &[]).is_err());
     assert!(post(&t, room_id, &["legacy"]).is_err());
-    let curated = post(&t, room_id, &[" bug report ","BUG REPORT","legacy"]).unwrap();
-    assert_eq!(names(&t, &curated), ["Bug Report","legacy"]);
-    t.write(move |tx| ChannelThread::find(tx.conn(), legacy.id)?.update_metadata(tx, Some("Legacy renamed"), None, None));
-    assert!(t.try_write(move |tx| ChannelThread::find(tx.conn(), curated.id)?.update_metadata(tx, None, None, Some(&[]))).is_err());
+    let curated = post(&t, room_id, &[" bug report ", "BUG REPORT", "legacy"]).unwrap();
+    assert_eq!(names(&t, &curated), ["Bug Report", "legacy"]);
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), legacy.id)?.update_metadata(
+            tx,
+            Some("Legacy renamed"),
+            None,
+            None,
+        )
+    });
+    assert!(
+        t.try_write(
+            move |tx| ChannelThread::find(tx.conn(), curated.id)?.update_metadata(
+                tx,
+                None,
+                None,
+                Some(&[])
+            )
+        )
+        .is_err()
+    );
     t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, Some(tag.id)));
     let defaulted = post(&t, room_id, &[]).unwrap();
     assert_eq!(names(&t, &defaulted), ["Bug Report"]);
-    t.write(move |tx| ChannelThread::find(tx.conn(), curated.id)?.update_metadata(tx, None, None, Some(&["legacy".into()])));
-    assert_eq!(names(&t, &curated), ["Bug Report","legacy"]);
-    assert!(post(&t, room_id, &["a","b","c","d","e"]).is_err(), "default cannot exceed the five-tag limit");
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), curated.id)?.update_metadata(
+            tx,
+            None,
+            None,
+            Some(&["legacy".into()]),
+        )
+    });
+    assert_eq!(names(&t, &curated), ["Bug Report", "legacy"]);
+    assert!(
+        post(&t, room_id, &["a", "b", "c", "d", "e"]).is_err(),
+        "default cannot exceed the five-tag limit"
+    );
 }
 
 #[test]
@@ -96,7 +175,19 @@ fn board_catalog_names_allow_unicode_and_filter_case_insensitively() {
     t.write(move |tx| BoardTag::create(tx, room_id, "Équipe produit", None));
     let post = post(&t, room_id, &[" ÉQUIPE PRODUIT "]).unwrap();
     assert_eq!(names(&t, &post), ["Équipe produit"]);
-    assert_eq!(t.read(|conn| ChannelThread::board_posts_for(conn, room_id, "all", "anyone", "équipe produit", None, 1))[0].id, post.id);
+    assert_eq!(
+        t.read(|conn| ChannelThread::board_posts_for(
+            conn,
+            room_id,
+            "all",
+            "anyone",
+            "équipe produit",
+            None,
+            1
+        ))[0]
+            .id,
+        post.id
+    );
 }
 
 #[test]
@@ -132,12 +223,24 @@ fn board_catalog_default_preserves_case_insensitive_tag_auto_assignment() {
     let t = channel_thread_test::frozen();
     let room_id = board(&t);
     let tag = t.write(move |tx| BoardTag::create(tx, room_id, "Bug", None));
-    t.write(move |tx| crate::BoardTagAssignment::create(tx, crate::NewBoardTagAssignment {
-        room_id, tag: "bug".into(), assignee_id: id("jz"), created_by_id: id("david"),
-    }));
+    t.write(move |tx| {
+        crate::BoardTagAssignment::create(
+            tx,
+            crate::NewBoardTagAssignment {
+                room_id,
+                tag: "bug".into(),
+                assignee_id: id("jz"),
+                created_by_id: id("david"),
+            },
+        )
+    });
     t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, Some(tag.id)));
     let post = post(&t, room_id, &[]).unwrap();
-    assert_eq!(t.read(|conn| ChannelThread::find(conn, post.id)).work_owner_id, Some(id("jz")));
+    assert_eq!(
+        t.read(|conn| ChannelThread::find(conn, post.id))
+            .work_owner_id,
+        Some(id("jz"))
+    );
 }
 
 #[test]
@@ -149,8 +252,13 @@ fn board_catalog_filter_includes_legacy_spelling_of_catalog_name() {
     let curated = post(&t, room_id, &["rust"]).unwrap();
     assert_eq!(names(&t, &legacy), ["rust"]);
     assert_eq!(names(&t, &curated), ["Rust"]);
-    let filtered = t.read(|conn| ChannelThread::board_posts_for(conn, room_id, "all", "anyone", "RUST", None, 1));
-    assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [curated.id, legacy.id]);
+    let filtered = t.read(|conn| {
+        ChannelThread::board_posts_for(conn, room_id, "all", "anyone", "RUST", None, 1)
+    });
+    assert_eq!(
+        filtered.iter().map(|post| post.id).collect::<Vec<_>>(),
+        [curated.id, legacy.id]
+    );
 }
 
 #[test]
@@ -166,30 +274,82 @@ fn board_catalog_agent_filters_include_catalog_legacy_and_renamed_tags() {
         let filtered = t.read(|conn| {
             let agent = crate::Agent::find(conn, id("bender_agent"))?.unwrap();
             let room = Room::find(conn, room_id)?;
-            crate::models::agent_work::list_board_posts(conn, &agent, &room, Some("all"), None, Some(filter))
+            crate::models::agent_work::list_board_posts(
+                conn,
+                &agent,
+                &room,
+                Some("all"),
+                None,
+                Some(filter),
+            )
         });
         let crate::models::agent_work::Outcome::Success { payload, status } = filtered else {
             panic!("tag filter was denied");
         };
         assert_eq!(status, 200);
-        let expected = if filter.eq_ignore_ascii_case("legacy") { vec![legacy.id] } else { vec![curated.id, legacy.id] };
-        assert_eq!(payload.iter().map(|post| post.id).collect::<Vec<_>>(), expected, "filter {filter}");
-        let filtered = t.read(|conn| crate::models::agent_reading::board_posts(conn, room_id, id("bender"), "all", "", filter));
-        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), expected, "transport reader filter {filter}");
+        let expected = if filter.eq_ignore_ascii_case("legacy") {
+            vec![legacy.id]
+        } else {
+            vec![curated.id, legacy.id]
+        };
+        assert_eq!(
+            payload.iter().map(|post| post.id).collect::<Vec<_>>(),
+            expected,
+            "filter {filter}"
+        );
+        let filtered = t.read(|conn| {
+            crate::models::agent_reading::board_posts(
+                conn,
+                room_id,
+                id("bender"),
+                "all",
+                "",
+                filter,
+            )
+        });
+        assert_eq!(
+            filtered.iter().map(|post| post.id).collect::<Vec<_>>(),
+            expected,
+            "transport reader filter {filter}"
+        );
     }
     t.write(move |tx| BoardTag::update(tx, room_id, tag.id, "Renamed", None));
     for filter in ["Renamed", "renamed", "RENAMED"] {
         let filtered = t.read(|conn| {
             let agent = crate::Agent::find(conn, id("bender_agent"))?.unwrap();
             let room = Room::find(conn, room_id)?;
-            crate::models::agent_work::list_board_posts(conn, &agent, &room, Some("all"), None, Some(filter))
+            crate::models::agent_work::list_board_posts(
+                conn,
+                &agent,
+                &room,
+                Some("all"),
+                None,
+                Some(filter),
+            )
         });
         let crate::models::agent_work::Outcome::Success { payload, .. } = filtered else {
             panic!("tag filter was denied");
         };
-        assert_eq!(payload.iter().map(|post| post.id).collect::<Vec<_>>(), [curated.id, legacy.id], "filter {filter}");
-        let filtered = t.read(|conn| crate::models::agent_reading::board_posts(conn, room_id, id("bender"), "all", "", filter));
-        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [curated.id, legacy.id], "transport reader filter {filter}");
+        assert_eq!(
+            payload.iter().map(|post| post.id).collect::<Vec<_>>(),
+            [curated.id, legacy.id],
+            "filter {filter}"
+        );
+        let filtered = t.read(|conn| {
+            crate::models::agent_reading::board_posts(
+                conn,
+                room_id,
+                id("bender"),
+                "all",
+                "",
+                filter,
+            )
+        });
+        assert_eq!(
+            filtered.iter().map(|post| post.id).collect::<Vec<_>>(),
+            [curated.id, legacy.id],
+            "transport reader filter {filter}"
+        );
     }
 }
 
@@ -201,7 +361,9 @@ fn board_catalog_creation_rejects_unicode_case_equivalent_names() {
         t.write(move |tx| BoardTag::create(tx, room_id, name, None));
         let result = t.try_write(move |tx| BoardTag::create(tx, room_id, variant, None));
         let Err(crate::Error::RecordInvalid(errors)) = result else {
-            panic!("case-equivalent catalog name {variant} was not rejected by the model: {result:?}");
+            panic!(
+                "case-equivalent catalog name {variant} was not rejected by the model: {result:?}"
+            );
         };
         assert_eq!(errors.on("name"), ["has already been taken"]);
         assert_eq!(t.read(|conn| BoardTag::for_room(conn, room_id)).len(), 1);
@@ -218,10 +380,15 @@ fn board_catalog_rename_rejects_unicode_case_equivalent_names() {
         let other_id = other.id;
         let result = t.try_write(move |tx| BoardTag::update(tx, room_id, other_id, variant, None));
         let Err(crate::Error::RecordInvalid(errors)) = result else {
-            panic!("case-equivalent catalog rename {variant} was not rejected by the model: {result:?}");
+            panic!(
+                "case-equivalent catalog rename {variant} was not rejected by the model: {result:?}"
+            );
         };
         assert_eq!(errors.on("name"), ["has already been taken"]);
-        assert_eq!(t.read(|conn| BoardTag::find(conn, room_id, other_id)), other);
+        assert_eq!(
+            t.read(|conn| BoardTag::find(conn, room_id, other_id)),
+            other
+        );
     }
 }
 
@@ -232,24 +399,54 @@ fn board_catalog_unicode_case_equivalence_applies_to_lookup_posts_and_filters() 
     t.write(move |tx| BoardTag::create(tx, room_id, "Σ", None));
     t.write(move |tx| BoardTagPolicy::update(tx, room_id, true, None));
     for variant in ["Σ", "σ", "ς"] {
-        assert_eq!(t.read(|conn| BoardTag::canonical_name(conn, room_id, variant)), Some("Σ".into()));
+        assert_eq!(
+            t.read(|conn| BoardTag::canonical_name(conn, room_id, variant)),
+            Some("Σ".into())
+        );
     }
     let post = post(&t, room_id, &["ς", "σ", "Σ"]).unwrap();
     assert_eq!(names(&t, &post), ["Σ"]);
     for variant in ["Σ", "σ", "ς"] {
-        let filtered = t.read(|conn| ChannelThread::board_posts_for(conn, room_id, "all", "anyone", variant, None, 1));
-        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [post.id]);
+        let filtered = t.read(|conn| {
+            ChannelThread::board_posts_for(conn, room_id, "all", "anyone", variant, None, 1)
+        });
+        assert_eq!(
+            filtered.iter().map(|post| post.id).collect::<Vec<_>>(),
+            [post.id]
+        );
         let filtered = t.read(|conn| {
             let agent = crate::Agent::find(conn, id("bender_agent"))?.unwrap();
             let room = Room::find(conn, room_id)?;
-            crate::models::agent_work::list_board_posts(conn, &agent, &room, Some("all"), None, Some(variant))
+            crate::models::agent_work::list_board_posts(
+                conn,
+                &agent,
+                &room,
+                Some("all"),
+                None,
+                Some(variant),
+            )
         });
         let crate::models::agent_work::Outcome::Success { payload, .. } = filtered else {
             panic!("tag filter was denied");
         };
-        assert_eq!(payload.iter().map(|post| post.id).collect::<Vec<_>>(), [post.id]);
-        let filtered = t.read(|conn| crate::models::agent_reading::board_posts(conn, room_id, id("bender"), "all", "", variant));
-        assert_eq!(filtered.iter().map(|post| post.id).collect::<Vec<_>>(), [post.id]);
+        assert_eq!(
+            payload.iter().map(|post| post.id).collect::<Vec<_>>(),
+            [post.id]
+        );
+        let filtered = t.read(|conn| {
+            crate::models::agent_reading::board_posts(
+                conn,
+                room_id,
+                id("bender"),
+                "all",
+                "",
+                variant,
+            )
+        });
+        assert_eq!(
+            filtered.iter().map(|post| post.id).collect::<Vec<_>>(),
+            [post.id]
+        );
     }
 }
 
@@ -293,8 +490,15 @@ fn board_catalog_deleting_the_last_tag_lifts_the_requirement() {
     let policy = t.read(|conn| BoardTagPolicy::for_room(conn, room_id));
     assert!(!policy.tags_required);
     assert_eq!(policy.default_board_tag_id, None);
-    assert_eq!(names(&t, &post(&t, room_id, &[]).unwrap()), Vec::<String>::new());
-    assert!(t.try_write(move |tx| BoardTagPolicy::update(tx, room_id, true, None)).is_err(), "nothing to require");
+    assert_eq!(
+        names(&t, &post(&t, room_id, &[]).unwrap()),
+        Vec::<String>::new()
+    );
+    assert!(
+        t.try_write(move |tx| BoardTagPolicy::update(tx, room_id, true, None))
+            .is_err(),
+        "nothing to require"
+    );
     t.write(move |tx| BoardTagPolicy::update(tx, room_id, false, None));
 }
 
@@ -302,16 +506,31 @@ fn board_catalog_deleting_the_last_tag_lifts_the_requirement() {
 #[test]
 fn board_catalog_case_folding_pins_the_spa_table() {
     for (name, folded) in [
-        ("Straße", "strasse"), ("STRASSE", "strasse"), ("\u{1e9e}", "ss"),
-        ("İstanbul", "i\u{307}stanbul"), ("ISTANBUL", "istanbul"), ("ı", "ı"),
-        ("ΟΔΟΣ", "οδοσ"), ("οδος", "οδοσ"), ("ﬁle", "file"), ("ﬀ", "ff"),
-        ("Ꭰ", "Ꭰ"), ("ꭰ", "Ꭰ"), ("ǅ", "ǆ"), ("\u{212a}", "k"), ("µ", "μ"), ("Équipe", "équipe"),
-        ("\u{a7ce}", "\u{a7ce}"), ("\u{a7cf}", "\u{a7cf}"),
+        ("Straße", "strasse"),
+        ("STRASSE", "strasse"),
+        ("\u{1e9e}", "ss"),
+        ("İstanbul", "i\u{307}stanbul"),
+        ("ISTANBUL", "istanbul"),
+        ("ı", "ı"),
+        ("ΟΔΟΣ", "οδοσ"),
+        ("οδος", "οδοσ"),
+        ("ﬁle", "file"),
+        ("ﬀ", "ff"),
+        ("Ꭰ", "Ꭰ"),
+        ("ꭰ", "Ꭰ"),
+        ("ǅ", "ǆ"),
+        ("\u{212a}", "k"),
+        ("µ", "μ"),
+        ("Équipe", "équipe"),
+        ("\u{a7ce}", "\u{a7ce}"),
+        ("\u{a7cf}", "\u{a7cf}"),
     ] {
         assert_eq!(caseless::default_case_fold_str(name), folded, "{name}");
     }
     assert!(caseless::default_caseless_match_str("Straße", "STRASSE"));
     assert!(!caseless::default_caseless_match_str("ı", "I"));
     // Newer than the server's tables: a Unicode 17 runtime lower-cases U+A7CE to U+A7CF.
-    assert!(!caseless::default_caseless_match_str("\u{a7ce}", "\u{a7cf}"));
+    assert!(!caseless::default_caseless_match_str(
+        "\u{a7ce}", "\u{a7cf}"
+    ));
 }

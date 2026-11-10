@@ -5,7 +5,9 @@ use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use super::admin_tests::{app, error, get, parse, write};
-use crate::controllers::presenters::test_support::{ALL_TALK, BENDER_KEY, Browser, DAVID, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{
+    ALL_TALK, BENDER_KEY, Browser, DAVID, KEVIN, Req, TestApp,
+};
 
 const CATALOG: &str = "/api/v1/stickers";
 const ADMIN: &str = "/api/v1/admin/stickers";

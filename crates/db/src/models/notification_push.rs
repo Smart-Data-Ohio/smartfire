@@ -49,7 +49,10 @@ impl MessageNotified {
         let blockers = super::ignore_policy::blockers_of(conn, message.creator_id)?;
         Ok(user_ids
             .into_iter()
-            .map(|user_id| NotifiedUser { user_id, ignores_author: blockers.contains(&user_id) })
+            .map(|user_id| NotifiedUser {
+                user_id,
+                ignores_author: blockers.contains(&user_id),
+            })
             .collect())
     }
 }
@@ -151,7 +154,9 @@ impl EventReminderSource {
     pub fn payload(&self, conn: &Connection, now: Timestamp) -> Result<PushPayload> {
         let room = Room::find(conn, self.room_id)?;
         let title = if room.direct() {
-            User::find(conn, self.organizer_id)?.display_name().to_owned()
+            User::find(conn, self.organizer_id)?
+                .display_name()
+                .to_owned()
         } else {
             room.name.unwrap_or_default()
         };
@@ -181,7 +186,12 @@ impl EventReminderSource {
         ))
     }
 }
-fn allowed_reminders(conn: &Connection, ids: &[i64], room_id: i64, now: Timestamp) -> Result<Vec<i64>> {
+fn allowed_reminders(
+    conn: &Connection,
+    ids: &[i64],
+    room_id: i64,
+    now: Timestamp,
+) -> Result<Vec<i64>> {
     let users = UserStatusSettings::for_ids(conn, ids)?;
     Ok(ids
         .iter()
@@ -239,8 +249,14 @@ pub struct BoardNudgeSource {
 impl BoardNudgeSource {
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         let nudge = crate::BoardSlaNudge::find(conn, id)?;
-        Ok(Self { id: nudge.id, room_id: nudge.room_id, thread_id: nudge.channel_thread_id,
-            recipient_id: nudge.recipient_id, work_status: nudge.work_status, stage: nudge.stage })
+        Ok(Self {
+            id: nudge.id,
+            room_id: nudge.room_id,
+            thread_id: nudge.channel_thread_id,
+            recipient_id: nudge.recipient_id,
+            work_status: nudge.work_status,
+            stage: nudge.stage,
+        })
     }
     pub fn payload(&self, conn: &Connection) -> Result<PushPayload> {
         let room = Room::find(conn, self.room_id)?;
@@ -275,12 +291,18 @@ fn humanize(value: &str) -> String {
     // ActiveSupport::Inflector.humanize and config/initializers/inflections.rb.
     let spaces = value.replace('_', " ");
     let mut text = spaces.trim_start_matches(['\0', ' ', '\t', '\n', '\r', '\x0b', '\x0c']);
-    if value.ends_with("_id") { text = text.strip_suffix(" id").unwrap_or(text); }
+    if value.ends_with("_id") {
+        text = text.strip_suffix(" id").unwrap_or(text);
+    }
     let mut result = String::new();
     let mut run = String::new();
     let append = |result: &mut String, run: &mut String| {
         let lowered = rails_compat::unicode::downcase(run);
-        result.push_str(match lowered.as_str() { "http" => "HTTP", "oauth" => "OAuth", _ => &lowered });
+        result.push_str(match lowered.as_str() {
+            "http" => "HTTP",
+            "oauth" => "OAuth",
+            _ => &lowered,
+        });
         run.clear();
     };
     for c in text.chars() {
@@ -292,7 +314,11 @@ fn humanize(value: &str) -> String {
         }
     }
     append(&mut result, &mut run);
-    if let Some(c) = result.chars().next().filter(|c| rails_compat::unicode::alphabetic(*c)) {
+    if let Some(c) = result
+        .chars()
+        .next()
+        .filter(|c| rails_compat::unicode::alphabetic(*c))
+    {
         let mut bytes = [0; 4];
         let first = rails_compat::unicode::upcase(c.encode_utf8(&mut bytes));
         result.replace_range(..c.len_utf8(), &first);
@@ -396,7 +422,10 @@ fn huddle_recipient(
     } else {
         "('invisible','nothing')"
     };
-    let effective = super::notification_policy::involvement_sql("memberships", "(SELECT inbox_preferences FROM users WHERE id=memberships.user_id)");
+    let effective = super::notification_policy::involvement_sql(
+        "memberships",
+        "(SELECT inbox_preferences FROM users WHERE id=memberships.user_id)",
+    );
     let eligible:bool=conn.query_row(&format!("SELECT EXISTS(SELECT 1 FROM memberships WHERE id=? AND ({effective}) NOT IN {excluded} AND (connected_at IS NULL OR connected_at<?))"),params![membership.as_ref().map(|m|m.id),now.since(-crate::models::membership::CONNECTION_TTL)],|r|r.get(0))?;
     if join && (!eligible || !huddle_inbox_enabled(conn, recipient_id)?) {
         return Ok(None);

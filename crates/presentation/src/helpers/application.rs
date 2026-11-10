@@ -1,5 +1,3 @@
-
-
 /// `truncate(text, length:, omission:)` with Rails' default of no separator: the result,
 /// omission included, is at most `length` characters. Returns plain text (escape on output).
 pub fn truncate(text: &str, length: usize, omission: &str) -> String {

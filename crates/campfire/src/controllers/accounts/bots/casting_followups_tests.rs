@@ -1,8 +1,6 @@
 //! PR196 Casting follow-ups boundaries, captured from pinned Rails by render_replay.sh.
 use super::input_casts;
-use crate::controllers::presenters::test_support::{
-    BENDER, DAVID, Req, TestApp,
-};
+use crate::controllers::presenters::test_support::{BENDER, DAVID, Req, TestApp};
 use campfire_db::Timestamp;
 use campfire_kit::{Method, Param};
 use campfire_presentation::time::Zone;

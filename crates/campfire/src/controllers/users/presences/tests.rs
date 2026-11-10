@@ -5,9 +5,10 @@ use serde_json::json;
 
 #[test]
 fn ws17_presence_ids_match_ruby_integer_coercion() {
-    let vectors: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../db/src/tests/ws17_vectors.json"))
-            .unwrap();
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../db/src/tests/ws17_vectors.json"
+    ))
+    .unwrap();
     for row in vectors["integer_coercions"].as_array().unwrap() {
         let expected = if row["output"].is_null() {
             None
@@ -29,8 +30,7 @@ async fn ws17_presence_http_bodies_match_rails_vectors() {
         .await
         .unwrap();
     let vectors: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../../vectors/ws17_presence.json"))
-            .unwrap();
+        serde_json::from_str(include_str!("../../../../../../vectors/ws17_presence.json")).unwrap();
     for row in vectors["cases"].as_array().unwrap() {
         let setup = row.clone();
         app.db().write(move |tx| {
@@ -84,12 +84,20 @@ async fn ws17_presence_endpoint_returns_live_humans_and_expired_status_is_hidden
     let app = TestApp::boot()
         .await
         .expect("WS17 requires the Rails parity seed");
-    app.booted.app.db.write(|tx| {
-        let session = Session::start(tx, JASON, Some("WS17"), None)?;
-        WorkspacePresenceLease::establish(tx,JASON,session.id)?;
-        tx.conn().execute("UPDATE users SET custom_status_text='Old',custom_status_expires_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_hours(1)),JASON])?;
-        Ok(())
-    }).await.unwrap();
+    app.booted
+        .app
+        .db
+        .write(|tx| {
+            let session = Session::start(tx, JASON, Some("WS17"), None)?;
+            WorkspacePresenceLease::establish(tx, JASON, session.id)?;
+            tx.conn().execute(
+                "UPDATE users SET custom_status_text='Old',custom_status_expires_at=? WHERE id=?",
+                rusqlite::params![tx.now().ago(jiff::SignedDuration::from_hours(1)), JASON],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let reply = app
         .david()
         .get(&format!(

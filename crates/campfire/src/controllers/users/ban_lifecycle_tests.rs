@@ -6,9 +6,7 @@ use campfire_db::{Message, NewMessage, Session, TwoFactorSetupSecret, User};
 
 async fn confirm(app: &TestApp) -> Browser<'_> {
     let mut browser = app.david();
-    let response = browser
-        .confirm_sudo("secret123456")
-        .await;
+    let response = browser.confirm_sudo("secret123456").await;
     assert_eq!(response.status, StatusCode::OK);
     // Parity's authenticated target session uses loopback; Rails refuses to ban private IPs.
     // These original cases use public target addresses, so keep the browser seed out of that
@@ -218,7 +216,11 @@ async fn ban_http_removes_the_users_messages_through_the_real_runner() {
         );
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
-    assert_eq!(count().await.unwrap(), 0, "original all banned-user messages are removed");
+    assert_eq!(
+        count().await.unwrap(),
+        0,
+        "original all banned-user messages are removed"
+    );
     assert!(
         app.db()
             .read(move |conn| Message::find_by_id(conn, message_id))

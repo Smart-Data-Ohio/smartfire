@@ -10,11 +10,17 @@ pub async fn create(c: &mut Ctx) -> Result {
     let (_, room) = concerns::set_room(c).await?;
     let user_id = concerns::require_current_user(c)?.id;
     let id = c
-        .params.get("pull_request_id").and_then(campfire_kit::Param::to_s).as_deref()
+        .params
+        .get("pull_request_id")
+        .and_then(campfire_kit::Param::to_s)
+        .as_deref()
         .and_then(cast_integer)
         .ok_or(Error::NotFound)?;
     let parent = c
-        .params.get("message_id").and_then(campfire_kit::Param::to_s).as_deref()
+        .params
+        .get("message_id")
+        .and_then(campfire_kit::Param::to_s)
+        .as_deref()
         .and_then(cast_integer)
         .ok_or(Error::NotFound)?;
     let room_id = room.id;

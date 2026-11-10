@@ -58,14 +58,17 @@ impl Error {
         match self {
             Error::Halt(response) => response.status,
             Error::BadRequest(_) | Error::ParameterMissing(_) => StatusCode::BAD_REQUEST,
-            Error::InvalidAuthenticityToken(_) | Error::InvalidCrossOriginRequest => StatusCode::UNPROCESSABLE_ENTITY,
+            Error::InvalidAuthenticityToken(_) | Error::InvalidCrossOriginRequest => {
+                StatusCode::UNPROCESSABLE_ENTITY
+            }
             Error::UnknownFormat => StatusCode::NOT_ACCEPTABLE,
             Error::NotFound => StatusCode::NOT_FOUND,
             Error::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
             Error::Status(status) => *status,
-            Error::CookieOverflow(_) | Error::UnsafeRedirect(_) | Error::IpSpoofAttack | Error::Internal(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            Error::CookieOverflow(_)
+            | Error::UnsafeRedirect(_)
+            | Error::IpSpoofAttack
+            | Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 

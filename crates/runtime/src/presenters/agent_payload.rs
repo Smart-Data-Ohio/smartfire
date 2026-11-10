@@ -24,7 +24,9 @@ impl MessagePayload for SharedPayload {
         viewer: &User,
         base_url: &str,
     ) -> Result<Value> {
-        crate::controllers::presenters::message_payload::message(presenter, message, viewer, base_url)
+        crate::controllers::presenters::message_payload::message(
+            presenter, message, viewer, base_url,
+        )
     }
 }
 pub use crate::state::agent_payload::State;

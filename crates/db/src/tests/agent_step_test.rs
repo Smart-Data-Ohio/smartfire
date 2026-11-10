@@ -517,18 +517,45 @@ fn private_step_parents_recheck_access_after_agent_removal() {
             crate::Membership::create_default(tx, id("watercooler"), user)?;
         }
         for capability in ["post_messages", "manage_threads"] {
-            AgentGrant::create(tx, NewGrant { agent_id: agent, capability: capability.into(), granted_by_id: id("david"), ..Default::default() })?;
+            AgentGrant::create(
+                tx,
+                NewGrant {
+                    agent_id: agent,
+                    capability: capability.into(),
+                    granted_by_id: id("david"),
+                    ..Default::default()
+                },
+            )?;
         }
-        let mut thread = ChannelThread::create(tx, crate::NewChannelThread {
-            room_id: id("watercooler"), creator_id: user,
-            visibility: crate::models::channel_thread::ThreadVisibility::Private,
-            work_status: Some("in_progress".into()), work_owner_id: Some(user),
-            ..Default::default()
-        })?;
-        let message = thread.post_message(tx, user, crate::NewMessage { markdown_source: Some("Private result".into()), ..Default::default() })?;
+        let mut thread = ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: id("watercooler"),
+                creator_id: user,
+                visibility: crate::models::channel_thread::ThreadVisibility::Private,
+                work_status: Some("in_progress".into()),
+                work_owner_id: Some(user),
+                ..Default::default()
+            },
+        )?;
+        let message = thread.post_message(
+            tx,
+            user,
+            crate::NewMessage {
+                markdown_source: Some("Private result".into()),
+                ..Default::default()
+            },
+        )?;
         let parents = [
-            NewAgentStep { message_id: Some(message.id), ..base() },
-            NewAgentStep { message_id: None, channel_thread_id: Some(thread.id), ..base() },
+            NewAgentStep {
+                message_id: Some(message.id),
+                ..base()
+            },
+            NewAgentStep {
+                message_id: None,
+                channel_thread_id: Some(thread.id),
+                ..base()
+            },
         ];
         let mut ids = Vec::new();
         for attrs in &parents {
@@ -539,10 +566,23 @@ fn private_step_parents_recheck_access_after_agent_removal() {
         thread.remove_access_member(tx, user, user)?;
         for (attrs, step_id) in parents.into_iter().zip(ids) {
             assert_eq!(steps::create(tx, agent, attrs)?.status, 404);
-            let result = steps::update(tx, agent, step_id, AgentStepChanges { output_summary: Some(Some("Changed".into())), ..Default::default() })?;
+            let result = steps::update(
+                tx,
+                agent,
+                step_id,
+                AgentStepChanges {
+                    output_summary: Some(Some("Changed".into())),
+                    ..Default::default()
+                },
+            )?;
             assert_eq!(result.status, 403);
             assert!(result.payload.is_none());
-            assert!(AgentStep::find(tx.conn(), step_id)?.unwrap().output_summary.is_none());
+            assert!(
+                AgentStep::find(tx.conn(), step_id)?
+                    .unwrap()
+                    .output_summary
+                    .is_none()
+            );
         }
         Ok(())
     });

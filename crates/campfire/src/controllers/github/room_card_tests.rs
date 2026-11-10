@@ -24,7 +24,14 @@ async fn github_room_refresh_claims_dedupe_many_messages_and_different_viewers()
             Ok(campfire_db::Session::start_with(tx,812,campfire_db::NewSession{two_factor_verified:true,..Default::default()})?.token)
         }).await.unwrap();
         assert_eq!(fetch_count(&fresh).await, 0);
-        let (status, _, _body) = request(&fresh, "GET", "/api/v1/rooms/815/messages", Value::Null, json!({})).await;
+        let (status, _, _body) = request(
+            &fresh,
+            "GET",
+            "/api/v1/rooms/815/messages",
+            Value::Null,
+            json!({}),
+        )
+        .await;
         assert_eq!(status, 200);
 
         let expected = i64::from(age != Some(60));
@@ -55,11 +62,19 @@ async fn github_room_refresh_claims_dedupe_many_messages_and_different_viewers()
             .await
             .unwrap();
         let messages: Value = serde_json::from_slice(&body).unwrap();
-        assert!(messages["messages"].as_array().unwrap().iter().any(|message| {
-            message["cards"].as_array().is_some_and(|cards| {
-                cards.iter().any(|card| card["kind"] == "github" && card["data"]["pullRequestId"] == 816)
-            })
-        }));
+        assert!(
+            messages["messages"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|message| {
+                    message["cards"].as_array().is_some_and(|cards| {
+                        cards.iter().any(|card| {
+                            card["kind"] == "github" && card["data"]["pullRequestId"] == 816
+                        })
+                    })
+                })
+        );
         assert_eq!(
             fetch_count(&fresh).await,
             expected,
@@ -86,8 +101,14 @@ async fn github_room_refresh_claims_dedupe_many_messages_and_different_viewers()
 #[tokio::test]
 async fn github_room_cards_security_redirects_nonmembers_without_card_data() {
     let fresh = Fresh::new(&json!({"member":false,"private":false})).await;
-    let (status, _, body) =
-        request(&fresh, "GET", "/api/v1/rooms/815/messages", Value::Null, json!({})).await;
+    let (status, _, body) = request(
+        &fresh,
+        "GET",
+        "/api/v1/rooms/815/messages",
+        Value::Null,
+        json!({}),
+    )
+    .await;
     assert_eq!(status, 404);
     assert!(!body.contains("Secret title") && !body.contains("github-pr-card"));
     assert!(fresh.server.received().is_empty());

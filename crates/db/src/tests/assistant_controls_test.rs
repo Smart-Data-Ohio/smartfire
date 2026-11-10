@@ -57,12 +57,22 @@ fn assistants_migration_preserves_existing_wake_behavior_and_defaults_new_person
         (WakePolicy::Anyone, "2026-11-09".into(), 2)
     );
     assert_eq!(
-        conn.query_row("SELECT status,body FROM mcp_event_deliveries WHERE webhook_id='msg_paused'", [], |r| Ok((r.get::<_, String>(0)?,r.get::<_, String>(1)?))).unwrap(),
+        conn.query_row(
+            "SELECT status,body FROM mcp_event_deliveries WHERE webhook_id='msg_paused'",
+            [],
+            |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+        )
+        .unwrap(),
         ("suppressed".into(), "cached occurrence".into())
     );
-    conn.execute("UPDATE mcp_event_deliveries SET status='expired'", []).unwrap();
+    conn.execute("UPDATE mcp_event_deliveries SET status='expired'", [])
+        .unwrap();
     assert_eq!(
-        conn.query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| r.get::<_, i64>(0)).unwrap(),
+        conn.query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| r
+            .get::<_, i64>(
+            0
+        ))
+        .unwrap(),
         0
     );
 }
@@ -174,24 +184,51 @@ fn assistants_paused_messages_schedule_no_delivery_and_queued_webhooks_stop() {
     assert!(t.events().iter().all(|e|e.as_job::<DeliveryJob>().is_none() && e.as_job::<EventWebhookJob>().is_none()));
 }
 
-
 #[test]
 fn pause_regression_work_assignment_stays_hidden_after_resume() {
-    use crate::{AgentGrant, ChannelThread, NewChannelThread, NewGrant, Room};
     use crate::models::{agent_delivery::AgentEvent, agent_event_access};
+    use crate::{AgentGrant, ChannelThread, NewChannelThread, NewGrant, Room};
     let t = super::channel_thread_test::frozen();
     t.write(|tx| {
         let agent = id("bender_agent");
         Room::find(tx.conn(), id("watercooler"))?.grant_to(tx, &[id("bender")])?;
         tx.conn().execute("DELETE FROM agent_events", [])?;
-        tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?", [agent])?;
-        tx.conn().execute("UPDATE agents SET kind='personal',owner_id=?,paused_at=? WHERE id=?", rusqlite::params![id("david"),tx.now(),agent])?;
+        tx.conn()
+            .execute("DELETE FROM agent_grants WHERE agent_id=?", [agent])?;
+        tx.conn().execute(
+            "UPDATE agents SET kind='personal',owner_id=?,paused_at=? WHERE id=?",
+            rusqlite::params![id("david"), tx.now(), agent],
+        )?;
         for capability in ["read_messages", "post_messages"] {
-            AgentGrant::create(tx, NewGrant { agent_id: agent, room_id: Some(id("watercooler")), capability: capability.into(), granted_by_id: id("david"), ..Default::default() })?;
+            AgentGrant::create(
+                tx,
+                NewGrant {
+                    agent_id: agent,
+                    room_id: Some(id("watercooler")),
+                    capability: capability.into(),
+                    granted_by_id: id("david"),
+                    ..Default::default()
+                },
+            )?;
         }
-        ChannelThread::create_board_post(tx, NewChannelThread { room_id: id("watercooler"), creator_id: id("david"), name: Some("Paused assignment".into()), work_status: Some("planned".into()), work_owner_id: Some(id("bender")), ..Default::default() }, None)?;
-        tx.conn().execute("UPDATE agents SET paused_at=NULL WHERE id=?", [agent])?;
-        assert!(agent_event_access::readable_page(tx.conn(), agent, 0, None)?.is_empty(), "paused assignment leaked after resume");
+        ChannelThread::create_board_post(
+            tx,
+            NewChannelThread {
+                room_id: id("watercooler"),
+                creator_id: id("david"),
+                name: Some("Paused assignment".into()),
+                work_status: Some("planned".into()),
+                work_owner_id: Some(id("bender")),
+                ..Default::default()
+            },
+            None,
+        )?;
+        tx.conn()
+            .execute("UPDATE agents SET paused_at=NULL WHERE id=?", [agent])?;
+        assert!(
+            agent_event_access::readable_page(tx.conn(), agent, 0, None)?.is_empty(),
+            "paused assignment leaked after resume"
+        );
         let events = AgentEvent::for_agent(tx.conn(), agent)?;
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].outcome.as_deref(), Some("suppressed"));
@@ -199,29 +236,71 @@ fn pause_regression_work_assignment_stays_hidden_after_resume() {
         assert_eq!(events[0].webhook_status, "none");
         Ok(())
     });
-    assert!(t.events().iter().all(|e| e.as_job::<crate::models::agent_delivery::EventWebhookJob>().is_none()));
+    assert!(t.events().iter().all(|e| {
+        e.as_job::<crate::models::agent_delivery::EventWebhookJob>()
+            .is_none()
+    }));
 }
 
 #[test]
 fn pause_regression_slash_command_never_queues_or_revives() {
+    use crate::models::{
+        agent_delivery::{self as d, AgentEvent},
+        agent_slash_command,
+    };
     use crate::{AgentSlashCommand, NewAgentSlashCommand, Room};
-    use crate::models::{agent_delivery::{self as d, AgentEvent}, agent_slash_command};
     let t = super::channel_thread_test::frozen();
     t.write(|tx| {
         let agent = id("bender_agent");
         Room::find(tx.conn(), id("watercooler"))?.grant_to(tx, &[id("bender")])?;
-        AgentSlashCommand::create(tx, NewAgentSlashCommand { agent_id: agent, room_id: id("watercooler"), name: "pauseprobe".into(), ..Default::default() })?;
+        AgentSlashCommand::create(
+            tx,
+            NewAgentSlashCommand {
+                agent_id: agent,
+                room_id: id("watercooler"),
+                name: "pauseprobe".into(),
+                ..Default::default()
+            },
+        )?;
         tx.conn().execute("DELETE FROM agent_events", [])?;
-        tx.conn().execute("UPDATE agents SET paused_at=? WHERE id=?", rusqlite::params![tx.now(),agent])?;
-        agent_slash_command::invoke(tx, &crate::slash_commands::Context { user_id: id("david"), room_id: id("watercooler"), thread_id: None, huddles_configured: false }, "pauseprobe", "during pause")?.unwrap();
-        tx.conn().execute("UPDATE agents SET paused_at=NULL WHERE id=?", [agent])?;
+        tx.conn().execute(
+            "UPDATE agents SET paused_at=? WHERE id=?",
+            rusqlite::params![tx.now(), agent],
+        )?;
+        agent_slash_command::invoke(
+            tx,
+            &crate::slash_commands::Context {
+                user_id: id("david"),
+                room_id: id("watercooler"),
+                thread_id: None,
+                huddles_configured: false,
+            },
+            "pauseprobe",
+            "during pause",
+        )?
+        .unwrap();
+        tx.conn()
+            .execute("UPDATE agents SET paused_at=NULL WHERE id=?", [agent])?;
         let event = AgentEvent::for_agent(tx.conn(), agent)?.pop().unwrap();
-        assert!(d::claim_webhook(tx, &d::EventWebhookJob { event_id: event.id, attempt: Some(0) })?.is_none(), "paused slash webhook revived");
+        assert!(
+            d::claim_webhook(
+                tx,
+                &d::EventWebhookJob {
+                    event_id: event.id,
+                    attempt: Some(0)
+                }
+            )?
+            .is_none(),
+            "paused slash webhook revived"
+        );
         assert_eq!(event.outcome.as_deref(), Some("suppressed"));
         assert_eq!(event.webhook_status, "none");
         Ok(())
     });
-    assert!(t.events().iter().all(|e| e.as_job::<crate::models::agent_delivery::EventWebhookJob>().is_none()));
+    assert!(t.events().iter().all(|e| {
+        e.as_job::<crate::models::agent_delivery::EventWebhookJob>()
+            .is_none()
+    }));
 }
 
 #[test]
@@ -232,63 +311,146 @@ fn pause_regression_claimed_completion_cannot_revive_after_pause_and_resume() {
         t.sink.take();
         t.write(move |tx| {
             let agent_id = id("bender_agent");
-            let event = AgentEvent::create(tx, NewEvent { agent_id, event_type: "mention".into(), outcome: Some("delivered".into()), ..Default::default() })?;
-            tx.conn().execute("UPDATE agent_events SET webhook_status='pending' WHERE id=?", [event.id])?;
-            let claimed = d::claim_webhook(tx, &d::EventWebhookJob { event_id: event.id, attempt: Some(0) })?.unwrap();
+            let event = AgentEvent::create(
+                tx,
+                NewEvent {
+                    agent_id,
+                    event_type: "mention".into(),
+                    outcome: Some("delivered".into()),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute(
+                "UPDATE agent_events SET webhook_status='pending' WHERE id=?",
+                [event.id],
+            )?;
+            let claimed = d::claim_webhook(
+                tx,
+                &d::EventWebhookJob {
+                    event_id: event.id,
+                    attempt: Some(0),
+                },
+            )?
+            .unwrap();
             let mut agent = Agent::find(tx.conn(), agent_id)?.unwrap();
-            agent.update(tx, AgentChanges { paused_at: Some(Some(tx.now())), ..Default::default() })?;
-            agent.update(tx, AgentChanges { paused_at: Some(None), ..Default::default() })?;
-            d::finish_webhook(tx, &claimed, if retry { d::AttemptOutcome::Retry("late 500".into(), None) } else { d::AttemptOutcome::Delivered })?;
+            agent.update(
+                tx,
+                AgentChanges {
+                    paused_at: Some(Some(tx.now())),
+                    ..Default::default()
+                },
+            )?;
+            agent.update(
+                tx,
+                AgentChanges {
+                    paused_at: Some(None),
+                    ..Default::default()
+                },
+            )?;
+            d::finish_webhook(
+                tx,
+                &claimed,
+                if retry {
+                    d::AttemptOutcome::Retry("late 500".into(), None)
+                } else {
+                    d::AttemptOutcome::Delivered
+                },
+            )?;
             let saved = AgentEvent::find(tx.conn(), event.id)?.unwrap();
-            assert_eq!(saved.webhook_status, "none", "late completion revived delivery");
+            assert_eq!(
+                saved.webhook_status, "none",
+                "late completion revived delivery"
+            );
             assert_eq!(saved.outcome.as_deref(), Some("suppressed"));
             Ok(())
         });
-        assert!(t.events().iter().all(|e| e.as_job::<d::EventWebhookJob>().is_none()));
+        assert!(
+            t.events()
+                .iter()
+                .all(|e| e.as_job::<d::EventWebhookJob>().is_none())
+        );
     }
 }
-
 
 #[test]
 fn pause_regression_all_callback_types_record_suppression() {
     use crate::models::agent_delivery::{self as d, NewEvent};
     let t = super::channel_thread_test::frozen();
     t.write(|tx| {
-        tx.conn().execute("UPDATE agents SET paused_at=? WHERE id=?", rusqlite::params![tx.now(),id("bender_agent")])?;
+        tx.conn().execute(
+            "UPDATE agents SET paused_at=? WHERE id=?",
+            rusqlite::params![tx.now(), id("bender_agent")],
+        )?;
         for kind in d::DELIVERABLE_TYPES {
-            let event = d::record_delivered(tx, NewEvent { agent_id: id("bender_agent"), room_id: Some(id("watercooler")), event_type: kind.into(), ..Default::default() })?;
+            let event = d::record_delivered(
+                tx,
+                NewEvent {
+                    agent_id: id("bender_agent"),
+                    room_id: Some(id("watercooler")),
+                    event_type: kind.into(),
+                    ..Default::default()
+                },
+            )?;
             assert_eq!(event.outcome.as_deref(), Some("suppressed"), "{kind}");
             assert_eq!(event.detail.as_deref(), Some("Agent paused"), "{kind}");
             assert_eq!(event.webhook_status, "none", "{kind}");
         }
         Ok(())
     });
-    assert!(t.events().iter().all(|e| e.as_job::<d::EventWebhookJob>().is_none()));
+    assert!(
+        t.events()
+            .iter()
+            .all(|e| e.as_job::<d::EventWebhookJob>().is_none())
+    );
 }
 
 #[test]
 fn pause_regression_deleted_work_never_queues_during_pause() {
-    use crate::{ChannelThread, NewChannelThread, Room};
     use crate::models::{agent_delivery::AgentEvent, agent_event_access};
+    use crate::{ChannelThread, NewChannelThread, Room};
     let t = super::channel_thread_test::frozen();
     let thread = t.write(|tx| {
-        Room::find(tx.conn(),id("watercooler"))?.grant_to(tx,&[id("bender")])?;
-        let thread = ChannelThread::create_board_post(tx, NewChannelThread { room_id: id("watercooler"), creator_id: id("david"), name: Some("Delete during pause".into()), work_status: Some("planned".into()), work_owner_id: Some(id("bender")), ..Default::default() },None)?;
-        tx.conn().execute("DELETE FROM agent_events",[])?;
-        tx.conn().execute("UPDATE agents SET paused_at=? WHERE id=?",rusqlite::params![tx.now(),id("bender_agent")])?;
+        Room::find(tx.conn(), id("watercooler"))?.grant_to(tx, &[id("bender")])?;
+        let thread = ChannelThread::create_board_post(
+            tx,
+            NewChannelThread {
+                room_id: id("watercooler"),
+                creator_id: id("david"),
+                name: Some("Delete during pause".into()),
+                work_status: Some("planned".into()),
+                work_owner_id: Some(id("bender")),
+                ..Default::default()
+            },
+            None,
+        )?;
+        tx.conn().execute("DELETE FROM agent_events", [])?;
+        tx.conn().execute(
+            "UPDATE agents SET paused_at=? WHERE id=?",
+            rusqlite::params![tx.now(), id("bender_agent")],
+        )?;
         Ok(thread)
     });
     t.sink.take();
     t.write(move |tx| thread.destroy(tx));
     t.write(|tx| {
-        tx.conn().execute("UPDATE agents SET paused_at=NULL WHERE id=?",[id("bender_agent")])?;
-        assert!(agent_event_access::readable_page(tx.conn(),id("bender_agent"),0,None)?.is_empty(),"deleted work revived");
-        let events=AgentEvent::for_agent(tx.conn(),id("bender_agent"))?;
-        assert_eq!(events.len(),1);
-        assert_eq!(events[0].outcome.as_deref(),Some("suppressed"));
+        tx.conn().execute(
+            "UPDATE agents SET paused_at=NULL WHERE id=?",
+            [id("bender_agent")],
+        )?;
+        assert!(
+            agent_event_access::readable_page(tx.conn(), id("bender_agent"), 0, None)?.is_empty(),
+            "deleted work revived"
+        );
+        let events = AgentEvent::for_agent(tx.conn(), id("bender_agent"))?;
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].outcome.as_deref(), Some("suppressed"));
         Ok(())
     });
-    assert!(t.events().iter().all(|e| !matches!(e, Event::Job(job) if job.class == "Agent::EventWebhookJob")));
+    assert!(
+        t.events()
+            .iter()
+            .all(|e| !matches!(e, Event::Job(job) if job.class == "Agent::EventWebhookJob"))
+    );
 }
 
 #[test]

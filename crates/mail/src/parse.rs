@@ -21,9 +21,10 @@ pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, addre
     if blank(&domain) {
         return false;
     }
-    let Some(header) = headers.iter().find(|h| {
-        unicode::fold(strip(h.split(';').next().unwrap_or(""))) == authserv_id
-    }) else {
+    let Some(header) = headers
+        .iter()
+        .find(|h| unicode::fold(strip(h.split(';').next().unwrap_or(""))) == authserv_id)
+    else {
         return false;
     };
     static PROPERTIES: LazyLock<Regex> = LazyLock::new(|| {

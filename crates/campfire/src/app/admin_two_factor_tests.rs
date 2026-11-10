@@ -121,7 +121,9 @@ async fn self_and_unenrolled_resets_change_nothing_and_have_exact_alerts() {
         Some("http://campfire.test/account/edit")
     );
     assert!(
-        admin.boot_flash().await["message"].as_str().unwrap_or("")
+        admin.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
             .contains("Kevin doesn't have two-step sign-in enabled.")
     );
     assert_eq!(audit(&a).await, 0);
@@ -148,9 +150,12 @@ async fn reset_removes_all_auth_rows_records_actor_target_and_requires_enrollmen
         Some("http://campfire.test/account/edit")
     );
     assert!(
-        admin.boot_flash().await["message"].as_str().unwrap_or("").contains(
-            "Two-step sign-in reset for Kevin. They will set it up again at next sign-in."
-        )
+        admin.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains(
+                "Two-step sign-in reset for Kevin. They will set it up again at next sign-in."
+            )
     );
     a.db()
         .read(move |c| {
@@ -271,16 +276,37 @@ async fn account_people_json_exposes_reset_facts_only_to_administrators() {
     let kevin = rows.iter().find(|row| row["id"] == KEVIN).unwrap();
     assert_eq!(kevin["twoFactorEnabled"], true);
     assert_eq!(kevin["you"], false);
-    assert_eq!(rows.iter().find(|row| row["id"] == DAVID).unwrap()["you"], true);
+    assert_eq!(
+        rows.iter().find(|row| row["id"] == DAVID).unwrap()["you"],
+        true
+    );
     assert!(!rows.iter().any(|row| row["id"] == BENDER));
     let mut member = a.sign_in(KEVIN).await;
     let reply = member.get("/api/v1/admin/people").await;
     assert_eq!(reply.status, StatusCode::OK);
     let payload: serde_json::Value = serde_json::from_str(&reply.text()).unwrap();
-    assert!(payload["people"].as_array().unwrap().iter().all(|row| row["twoFactorEnabled"] == false));
-    a.db().write(|tx| User::find(tx.conn(), KEVIN)?.reset_two_factor(tx)).await.unwrap();
-    let payload: serde_json::Value = serde_json::from_str(&admin.get("/api/v1/admin/people").await.text()).unwrap();
-    assert_eq!(payload["people"].as_array().unwrap().iter().find(|row| row["id"] == KEVIN).unwrap()["twoFactorEnabled"], false);
+    assert!(
+        payload["people"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|row| row["twoFactorEnabled"] == false)
+    );
+    a.db()
+        .write(|tx| User::find(tx.conn(), KEVIN)?.reset_two_factor(tx))
+        .await
+        .unwrap();
+    let payload: serde_json::Value =
+        serde_json::from_str(&admin.get("/api/v1/admin/people").await.text()).unwrap();
+    assert_eq!(
+        payload["people"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == KEVIN)
+            .unwrap()["twoFactorEnabled"],
+        false
+    );
 }
 
 const RATE_ALERT: &str = "Too many attempts. Try again in a few minutes.";
@@ -332,7 +358,12 @@ async fn self_service_limited(
         assert_eq!(error["message"], RATE_ALERT);
         return true;
     }
-    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
     assert_eq!(error["_tag"], "Validation");
     false
 }

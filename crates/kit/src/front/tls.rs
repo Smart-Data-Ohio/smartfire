@@ -26,11 +26,14 @@ pub struct Tls {
 
 impl Tls {
     pub fn new(certs: Arc<CertManager>) -> Result<Self, Error> {
-        let server_config = |resolver: Arc<dyn ResolvesServerCert>, alpn: &[&[u8]]| -> Result<Arc<ServerConfig>, Error> {
-            let mut config = ServerConfig::builder_with_provider(Arc::new(ring::default_provider()))
-                .with_safe_default_protocol_versions()?
-                .with_no_client_auth()
-                .with_cert_resolver(resolver);
+        let server_config = |resolver: Arc<dyn ResolvesServerCert>,
+                             alpn: &[&[u8]]|
+         -> Result<Arc<ServerConfig>, Error> {
+            let mut config =
+                ServerConfig::builder_with_provider(Arc::new(ring::default_provider()))
+                    .with_safe_default_protocol_versions()?
+                    .with_no_client_auth()
+                    .with_cert_resolver(resolver);
             config.alpn_protocols = alpn.iter().map(|p| p.to_vec()).collect();
             Ok(Arc::new(config))
         };
@@ -43,17 +46,27 @@ impl Tls {
 
     /// Completes a handshake, obtaining the certificate first if need be. `None` for a TLS-ALPN-01
     /// validation, which ends with the handshake.
-    pub async fn accept(&self, stream: TcpStream) -> Result<Option<(TlsStream<TcpStream>, Protocol)>, Error> {
+    pub async fn accept(
+        &self,
+        stream: TcpStream,
+    ) -> Result<Option<(TlsStream<TcpStream>, Protocol)>, Error> {
         let start = LazyConfigAcceptor::new(Acceptor::default(), stream).await?;
         let hello = start.client_hello();
         let server_name = hello.server_name().map(str::to_string);
-        if hello.alpn().is_some_and(|mut protocols| protocols.any(|p| p == ACME_TLS_ALPN)) {
+        if hello
+            .alpn()
+            .is_some_and(|mut protocols| protocols.any(|p| p == ACME_TLS_ALPN))
+        {
             let _ = start.into_stream(self.challenge_config.clone()).await?;
             return Ok(None);
         }
         self.certs.certificate(server_name.as_deref()).await?;
         let stream = start.into_stream(self.config.clone()).await?;
-        let protocol = if stream.get_ref().1.alpn_protocol() == Some(b"h2") { Protocol::Http2 } else { Protocol::Http1 };
+        let protocol = if stream.get_ref().1.alpn_protocol() == Some(b"h2") {
+            Protocol::Http2
+        } else {
+            Protocol::Http1
+        };
         Ok(Some((stream, protocol)))
     }
 }
@@ -97,15 +110,24 @@ pub fn http_handler(certs: &CertManager, request: &Request<Body>) -> Response<Bo
     let path = request.uri().path();
     if path.starts_with("/.well-known/acme-challenge/") {
         if !certs.host_allowed(&host) {
-            return error(StatusCode::FORBIDDEN, &format!("acme/autocert: host {host:?} not configured in HostWhitelist"));
+            return error(
+                StatusCode::FORBIDDEN,
+                &format!("acme/autocert: host {host:?} not configured in HostWhitelist"),
+            );
         }
         return match certs.http_token(path) {
             Some(token) => {
                 let mut response = Response::new(Body::from(token));
-                response.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
+                response.headers_mut().insert(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("text/plain; charset=utf-8"),
+                );
                 response
             }
-            None => error(StatusCode::NOT_FOUND, "acme/autocert: certificate cache miss"),
+            None => error(
+                StatusCode::NOT_FOUND,
+                "acme/autocert: certificate cache miss",
+            ),
         };
     }
     redirect(certs, request, &host)
@@ -117,10 +139,17 @@ fn redirect(certs: &CertManager, request: &Request<Body>, host: &str) -> Respons
     let mut response = match to_ascii(host).filter(|host| certs.host_allowed(host)) {
         None => error(StatusCode::MISDIRECTED_REQUEST, "Misdirected Request"),
         Some(host) => {
-            let request_uri = request.uri().path_and_query().map(|p| p.as_str()).unwrap_or("/");
+            let request_uri = request
+                .uri()
+                .path_and_query()
+                .map(|p| p.as_str())
+                .unwrap_or("/");
             let url = format!("https://{host}{request_uri}");
             let body = if request.method() == Method::GET {
-                Body::from(format!("<a href=\"{}\">Moved Permanently</a>.\n\n", html_escape(&url)))
+                Body::from(format!(
+                    "<a href=\"{}\">Moved Permanently</a>.\n\n",
+                    html_escape(&url)
+                ))
             } else {
                 Body::empty()
             };
@@ -130,12 +159,17 @@ fn redirect(certs: &CertManager, request: &Request<Body>, host: &str) -> Respons
                 response.headers_mut().insert(header::LOCATION, location);
             }
             if request.method() == Method::GET || request.method() == Method::HEAD {
-                response.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/html; charset=utf-8"));
+                response.headers_mut().insert(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static("text/html; charset=utf-8"),
+                );
             }
             response
         }
     };
-    response.headers_mut().insert(header::CONNECTION, HeaderValue::from_static("close"));
+    response
+        .headers_mut()
+        .insert(header::CONNECTION, HeaderValue::from_static("close"));
     response
 }
 
@@ -157,13 +191,23 @@ fn split_host_port(host: &str) -> &str {
 fn error(status: StatusCode, message: &str) -> Response<Body> {
     let mut response = Response::new(Body::from(format!("{message}\n")));
     *response.status_mut() = status;
-    response.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
-    response.headers_mut().insert(header::X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("text/plain; charset=utf-8"),
+    );
+    response.headers_mut().insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
     response
 }
 
 fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&#34;").replace('\'', "&#39;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&#34;")
+        .replace('\'', "&#39;")
 }
 
 #[cfg(test)]
@@ -183,21 +227,41 @@ mod tests {
         })
     }
 
-    async fn get(method: Method, uri: &str, host: &str) -> (StatusCode, axum::http::HeaderMap, String) {
-        let request = Request::builder().method(method).uri(uri).header("host", host).body(Body::empty()).unwrap();
+    async fn get(
+        method: Method,
+        uri: &str,
+        host: &str,
+    ) -> (StatusCode, axum::http::HeaderMap, String) {
+        let request = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("host", host)
+            .body(Body::empty())
+            .unwrap();
         let response = http_handler(&certs(), &request);
         let (parts, body) = response.into_parts();
-        (parts.status, parts.headers, String::from_utf8(body.collect().await.unwrap().to_bytes().to_vec()).unwrap())
+        (
+            parts.status,
+            parts.headers,
+            String::from_utf8(body.collect().await.unwrap().to_bytes().to_vec()).unwrap(),
+        )
     }
 
     #[tokio::test]
     async fn redirects_configured_hosts_to_https() {
-        let (status, headers, body) = get(Method::GET, "/rooms/1?x=1&y=%3C", "Chat.Example.com:80").await;
+        let (status, headers, body) =
+            get(Method::GET, "/rooms/1?x=1&y=%3C", "Chat.Example.com:80").await;
         assert_eq!(status, StatusCode::MOVED_PERMANENTLY);
-        assert_eq!(headers[header::LOCATION], "https://chat.example.com/rooms/1?x=1&y=%3C");
+        assert_eq!(
+            headers[header::LOCATION],
+            "https://chat.example.com/rooms/1?x=1&y=%3C"
+        );
         assert_eq!(headers[header::CONNECTION], "close");
         assert_eq!(headers[header::CONTENT_TYPE], "text/html; charset=utf-8");
-        assert_eq!(body, "<a href=\"https://chat.example.com/rooms/1?x=1&amp;y=%3C\">Moved Permanently</a>.\n\n");
+        assert_eq!(
+            body,
+            "<a href=\"https://chat.example.com/rooms/1?x=1&amp;y=%3C\">Moved Permanently</a>.\n\n"
+        );
 
         let (status, headers, body) = get(Method::POST, "/session", "chat.example.com").await;
         assert_eq!(status, StatusCode::MOVED_PERMANENTLY);
@@ -216,9 +280,25 @@ mod tests {
 
     #[tokio::test]
     async fn answers_http01_challenges() {
-        let (status, _, body) = get(Method::GET, "/.well-known/acme-challenge/abc", "chat.example.com").await;
-        assert_eq!((status, body.as_str()), (StatusCode::NOT_FOUND, "acme/autocert: certificate cache miss\n"));
-        let (status, _, _) = get(Method::GET, "/.well-known/acme-challenge/abc", "chat.example.com:80").await;
+        let (status, _, body) = get(
+            Method::GET,
+            "/.well-known/acme-challenge/abc",
+            "chat.example.com",
+        )
+        .await;
+        assert_eq!(
+            (status, body.as_str()),
+            (
+                StatusCode::NOT_FOUND,
+                "acme/autocert: certificate cache miss\n"
+            )
+        );
+        let (status, _, _) = get(
+            Method::GET,
+            "/.well-known/acme-challenge/abc",
+            "chat.example.com:80",
+        )
+        .await;
         assert_eq!(status, StatusCode::FORBIDDEN);
     }
 }

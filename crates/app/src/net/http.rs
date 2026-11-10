@@ -74,7 +74,10 @@ impl HttpError {
     }
 
     fn from_io(error: io::Error) -> Self {
-        match error.get_ref().and_then(|e| e.downcast_ref::<rustls::Error>()) {
+        match error
+            .get_ref()
+            .and_then(|e| e.downcast_ref::<rustls::Error>())
+        {
             Some(tls) => HttpError::Tls(tls.to_string()),
             None => HttpError::Io(error),
         }
@@ -95,13 +98,24 @@ pub struct Endpoint {
 impl Endpoint {
     /// `Net::HTTP#addr_port`: the `Host` header when the request doesn't carry one.
     pub fn host_header(&self) -> String {
-        let host = if self.host.contains(':') && !self.host.starts_with('[') { format!("[{}]", self.host) } else { self.host.clone() };
+        let host = if self.host.contains(':') && !self.host.starts_with('[') {
+            format!("[{}]", self.host)
+        } else {
+            self.host.clone()
+        };
         let default_port = if self.https { 443 } else { 80 };
-        if self.port == default_port { host } else { format!("{host}:{}", self.port) }
+        if self.port == default_port {
+            host
+        } else {
+            format!("{host}:{}", self.port)
+        }
     }
 
     fn bare_host(&self) -> &str {
-        self.host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(&self.host)
+        self.host
+            .strip_prefix('[')
+            .and_then(|h| h.strip_suffix(']'))
+            .unwrap_or(&self.host)
     }
 }
 
@@ -113,7 +127,11 @@ pub struct Timeouts {
 
 impl Default for Timeouts {
     fn default() -> Self {
-        Self { open: NET_HTTP_DEFAULT_TIMEOUT, read: NET_HTTP_DEFAULT_TIMEOUT, write: NET_HTTP_DEFAULT_TIMEOUT }
+        Self {
+            open: NET_HTTP_DEFAULT_TIMEOUT,
+            read: NET_HTTP_DEFAULT_TIMEOUT,
+            write: NET_HTTP_DEFAULT_TIMEOUT,
+        }
     }
 }
 
@@ -132,12 +150,25 @@ impl Request {
     /// `Net::HTTP::Get.new(uri)` / `Head.new(uri)` / `Post.new(uri_or_path, headers)`: the
     /// caller's headers, then `Accept-Encoding` (decoded when the response has a body),
     /// `Accept`, `User-Agent`, and `Host` when built from a URI (`uri_host`).
-    pub fn net_http(method: hyper::Method, target: String, uri_host: Option<String>, headers: Vec<(String, String)>) -> Self {
+    pub fn net_http(
+        method: hyper::Method,
+        target: String,
+        uri_host: Option<String>,
+        headers: Vec<(String, String)>,
+    ) -> Self {
         let response_has_body = method != hyper::Method::HEAD;
-        let mut request = Self { method, target, headers, body: Vec::new(), decode_content: false };
+        let mut request = Self {
+            method,
+            target,
+            headers,
+            body: Vec::new(),
+            decode_content: false,
+        };
         if !request.has("accept-encoding") && !request.has("range") {
             request.decode_content = response_has_body;
-            request.headers.push(("Accept-Encoding".into(), NET_HTTP_ACCEPT_ENCODING.into()));
+            request
+                .headers
+                .push(("Accept-Encoding".into(), NET_HTTP_ACCEPT_ENCODING.into()));
         }
         request.default("Accept", "*/*");
         request.default("User-Agent", "Ruby");
@@ -158,7 +189,9 @@ impl Request {
     }
 
     fn has(&self, name: &str) -> bool {
-        self.headers.iter().any(|(n, _)| n.eq_ignore_ascii_case(name))
+        self.headers
+            .iter()
+            .any(|(n, _)| n.eq_ignore_ascii_case(name))
     }
 
     fn default(&mut self, name: &str, value: &str) {
@@ -182,24 +215,42 @@ struct WriteIo<T> {
 }
 
 impl<T> WriteIo<T> {
-    fn bound<U>(&mut self, cx: &mut Context<'_>, result: Poll<io::Result<U>>) -> Poll<io::Result<U>> {
+    fn bound<U>(
+        &mut self,
+        cx: &mut Context<'_>,
+        result: Poll<io::Result<U>>,
+    ) -> Poll<io::Result<U>> {
         if result.is_ready() {
             self.waiting = None;
             return result;
         }
-        let timer = self.waiting.get_or_insert_with(|| Box::pin(tokio::time::sleep(self.duration)));
-        if timer.as_mut().poll(cx).is_ready() { Poll::Ready(Err(io::Error::other(WriteExpired))) } else { Poll::Pending }
+        let timer = self
+            .waiting
+            .get_or_insert_with(|| Box::pin(tokio::time::sleep(self.duration)));
+        if timer.as_mut().poll(cx).is_ready() {
+            Poll::Ready(Err(io::Error::other(WriteExpired)))
+        } else {
+            Poll::Pending
+        }
     }
 }
 
 impl<T: AsyncRead + Unpin> AsyncRead for WriteIo<T> {
-    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<io::Result<()>> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<io::Result<()>> {
         Pin::new(&mut self.io).poll_read(cx, buf)
     }
 }
 
 impl<T: AsyncWrite + Unpin> AsyncWrite for WriteIo<T> {
-    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<io::Result<usize>> {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
         let result = Pin::new(&mut self.io).poll_write(cx, buf);
         self.bound(cx, result)
     }
@@ -215,30 +266,49 @@ impl<T: AsyncWrite + Unpin> AsyncWrite for WriteIo<T> {
 
 /// Connects (within `open`), sends the request, and returns once the response head arrives
 /// (within `read`).
-pub async fn exchange(net: &Network, endpoint: &Endpoint, request: Request, timeouts: &Timeouts) -> Result<Response, HttpError> {
-    let io = timeout(timeouts.open, connect(net, endpoint)).await.map_err(|_| HttpError::OpenTimeout)??;
+pub async fn exchange(
+    net: &Network,
+    endpoint: &Endpoint,
+    request: Request,
+    timeouts: &Timeouts,
+) -> Result<Response, HttpError> {
+    let io = timeout(timeouts.open, connect(net, endpoint))
+        .await
+        .map_err(|_| HttpError::OpenTimeout)??;
     let (mut sender, connection) = hyper::client::conn::http1::Builder::new()
         .title_case_headers(true)
-        .handshake::<_, Full<Bytes>>(TokioIo::new(WriteIo { io, duration: timeouts.write, waiting: None }))
+        .handshake::<_, Full<Bytes>>(TokioIo::new(WriteIo {
+            io,
+            duration: timeouts.write,
+            waiting: None,
+        }))
         .await
         .map_err(HttpError::from_hyper)?;
     tokio::spawn(async move {
         let _ = connection.await;
     });
 
-    let mut builder = hyper::Request::builder().method(request.method).uri(request.target);
+    let mut builder = hyper::Request::builder()
+        .method(request.method)
+        .uri(request.target);
     for (name, value) in &request.headers {
         builder = builder.header(name.as_str(), value.as_str());
     }
-    let http_request = builder.body(Full::new(Bytes::from(request.body))).map_err(|e| HttpError::Http(e.to_string()))?;
+    let http_request = builder
+        .body(Full::new(Bytes::from(request.body)))
+        .map_err(|e| HttpError::Http(e.to_string()))?;
     let response = timeout(timeouts.read, sender.send_request(http_request))
         .await
         .map_err(|_| HttpError::ReadTimeout)?
         .map_err(HttpError::from_hyper)?;
 
-    let reason = response.extensions().get::<hyper::ext::ReasonPhrase>().map(|r| String::from_utf8_lossy(r.as_bytes()).into_owned());
+    let reason = response
+        .extensions()
+        .get::<hyper::ext::ReasonPhrase>()
+        .map(|r| String::from_utf8_lossy(r.as_bytes()).into_owned());
     let (parts, body) = response.into_parts();
-    let reason = reason.unwrap_or_else(|| parts.status.canonical_reason().unwrap_or("").to_string());
+    let reason =
+        reason.unwrap_or_else(|| parts.status.canonical_reason().unwrap_or("").to_string());
     Ok(Response {
         status: parts.status.as_u16(),
         reason,
@@ -251,22 +321,37 @@ pub async fn exchange(net: &Network, endpoint: &Endpoint, request: Request, time
 
 async fn connect(net: &Network, endpoint: &Endpoint) -> Result<Box<dyn Io>, HttpError> {
     let tcp = match endpoint.pinned_ip {
-        Some(ip) => net.dialer.connect(SocketAddr::new(ip, endpoint.port)).await?,
+        Some(ip) => {
+            net.dialer
+                .connect(SocketAddr::new(ip, endpoint.port))
+                .await?
+        }
         None => connect_resolving(net, endpoint).await?,
     };
     if !endpoint.https {
         return Ok(Box::new(tcp));
     }
-    let server_name = ServerName::try_from(endpoint.bare_host().to_string()).map_err(|e| HttpError::Tls(e.to_string()))?;
-    let tls = tokio_rustls::TlsConnector::from(net.tls.clone()).connect(server_name, tcp).await.map_err(HttpError::from_io)?;
+    let server_name = ServerName::try_from(endpoint.bare_host().to_string())
+        .map_err(|e| HttpError::Tls(e.to_string()))?;
+    let tls = tokio_rustls::TlsConnector::from(net.tls.clone())
+        .connect(server_name, tcp)
+        .await
+        .map_err(HttpError::from_io)?;
     Ok(Box::new(tls))
 }
 
 /// `TCPSocket.open(host, port)`: each resolved address in turn.
-async fn connect_resolving(net: &Network, endpoint: &Endpoint) -> Result<tokio::net::TcpStream, HttpError> {
+async fn connect_resolving(
+    net: &Network,
+    endpoint: &Endpoint,
+) -> Result<tokio::net::TcpStream, HttpError> {
     let addresses = match endpoint.bare_host().parse::<IpAddr>() {
         Ok(ip) => vec![ip],
-        Err(_) => net.resolver.lookup(endpoint.bare_host()).await.map_err(|e| HttpError::Unresolvable(e.to_string()))?,
+        Err(_) => net
+            .resolver
+            .lookup(endpoint.bare_host())
+            .await
+            .map_err(|e| HttpError::Unresolvable(e.to_string()))?,
     };
     let mut last_error = None;
     for ip in addresses {
@@ -302,8 +387,17 @@ pub enum Body {
 impl Response {
     /// `response[name]`: every value of the header, joined with ", ".
     pub fn header(&self, name: &str) -> Option<String> {
-        let values: Vec<String> = self.headers.get_all(name).iter().map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned()).collect();
-        if values.is_empty() { None } else { Some(values.join(", ")) }
+        let values: Vec<String> = self
+            .headers
+            .get_all(name)
+            .iter()
+            .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned())
+            .collect();
+        if values.is_empty() {
+            None
+        } else {
+            Some(values.join(", "))
+        }
     }
 
     /// `Net::HTTPHeader#content_type`: the media type before any `;`, main and sub type each
@@ -324,7 +418,11 @@ impl Response {
         let Some(header) = self.header("content-length") else {
             return Ok(None);
         };
-        let digits: String = header.chars().skip_while(|c| !c.is_ascii_digit()).take_while(|c| c.is_ascii_digit()).collect();
+        let digits: String = header
+            .chars()
+            .skip_while(|c| !c.is_ascii_digit())
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
         if digits.is_empty() {
             return Err(HttpError::Http("wrong Content-Length format".into()));
         }
@@ -337,7 +435,9 @@ impl Response {
         let mut inflater = self.inflater();
         let mut body = Vec::new();
         loop {
-            let frame = timeout(self.read_timeout, self.body.frame()).await.map_err(|_| HttpError::ReadTimeout)?;
+            let frame = timeout(self.read_timeout, self.body.frame())
+                .await
+                .map_err(|_| HttpError::ReadTimeout)?;
             let Some(frame) = frame else { break };
             let frame = frame.map_err(HttpError::from_hyper)?;
             let Ok(chunk) = frame.into_data() else {
@@ -369,7 +469,11 @@ impl Response {
         if !self.decode_content || self.headers.contains_key("content-range") {
             return None;
         }
-        match self.header("content-encoding")?.to_ascii_lowercase().as_str() {
+        match self
+            .header("content-encoding")?
+            .to_ascii_lowercase()
+            .as_str()
+        {
             "gzip" | "x-gzip" | "deflate" => Some(Inflater::new()),
             _ => None,
         }
@@ -394,7 +498,10 @@ enum Decoder {
 
 impl Inflater {
     fn new() -> Self {
-        Self { decoder: None, pending: Vec::new() }
+        Self {
+            decoder: None,
+            pending: Vec::new(),
+        }
     }
 
     /// The chunk inflated, or `None` once the output would pass `room` bytes.
@@ -478,7 +585,11 @@ pub fn request_uri(url: &campfire_richtext::uri::Uri) -> String {
         Some(query) => format!("{path}?{query}"),
         None => path.to_string(),
     };
-    if target.starts_with('/') { target } else { format!("/{target}") }
+    if target.starts_with('/') {
+        target
+    } else {
+        format!("/{target}")
+    }
 }
 
 #[cfg(test)]
@@ -527,15 +638,35 @@ mod ws15e_tests {
         use futures_util::FutureExt;
         crate::net::test_support::with_paused_time("stalled transport write deadline", async {
             let (writer, _reader) = tokio::io::duplex(8);
-            let mut writer = WriteIo { io: writer, duration: Duration::from_millis(50), waiting: None };
+            let mut writer = WriteIo {
+                io: writer,
+                duration: Duration::from_millis(50),
+                waiting: None,
+            };
             let writing = writer.write_all(&[0; 16]);
             tokio::pin!(writing);
-            assert!(writing.as_mut().now_or_never().is_none(), "stalled write completed before its deadline");
+            assert!(
+                writing.as_mut().now_or_never().is_none(),
+                "stalled write completed before its deadline"
+            );
             tokio::time::advance(Duration::from_millis(49)).await;
-            assert!(writing.as_mut().now_or_never().is_none(), "write expired before 50 ms");
+            assert!(
+                writing.as_mut().now_or_never().is_none(),
+                "write expired before 50 ms"
+            );
             tokio::time::advance(Duration::from_millis(1)).await;
-            let error = writing.as_mut().now_or_never().expect("write ignored its 50 ms deadline").unwrap_err();
-            assert!(error.get_ref().unwrap().downcast_ref::<WriteExpired>().is_some());
+            let error = writing
+                .as_mut()
+                .now_or_never()
+                .expect("write ignored its 50 ms deadline")
+                .unwrap_err();
+            assert!(
+                error
+                    .get_ref()
+                    .unwrap()
+                    .downcast_ref::<WriteExpired>()
+                    .is_some()
+            );
         });
     }
 }

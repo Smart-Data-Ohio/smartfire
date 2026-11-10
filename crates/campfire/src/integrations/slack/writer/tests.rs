@@ -8,11 +8,11 @@ use campfire_db::ChannelThread;
 use campfire_db::Message;
 use campfire_db::Room;
 use campfire_db::User;
+use campfire_jobs::inspect;
 use indexmap::IndexMap;
 use serde_json::Value;
 use serde_json::json;
 use std::collections::HashSet;
-use campfire_jobs::inspect;
 
 #[tokio::test]
 async fn slack_ordering_mentions_keep_existing_then_rails_mapping_order() {

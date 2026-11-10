@@ -11,7 +11,8 @@ fn article(app: &TestApp, page: &str) -> String {
         "terms" => PublicPageName::Terms,
         _ => unreachable!("{page}"),
     };
-    let page = campfire_api::public_pages::public_page(name, &app.booted.app.config.public_policy).unwrap();
+    let page = campfire_api::public_pages::public_page(name, &app.booted.app.config.public_policy)
+        .unwrap();
     page.html
         .replace("href=\"/app/privacy\"", "href=\"/privacy\"")
         .replace("href=\"/app/terms\"", "href=\"/terms\"")
@@ -27,12 +28,22 @@ fn assert_rails_page(page: &str, article: &str, rails: &str) {
         "privacy" => campfire_api::public_pages::Page::Privacy,
         _ => campfire_api::public_pages::Page::Terms,
     };
-    assert!(rails.contains(&format!("<title>{}</title>", name.title())), "{page}");
     assert!(
-        rails.contains(&format!("<meta name=\"description\" content=\"{}\">", name.description())),
+        rails.contains(&format!("<title>{}</title>", name.title())),
         "{page}"
     );
-    assert_eq!(links(article), links(page_content(rails)), "{page}: public links");
+    assert!(
+        rails.contains(&format!(
+            "<meta name=\"description\" content=\"{}\">",
+            name.description()
+        )),
+        "{page}"
+    );
+    assert_eq!(
+        links(article),
+        links(page_content(rails)),
+        "{page}: public links"
+    );
     assert_eq!(
         text(article),
         text(page_content(rails)),
@@ -183,8 +194,16 @@ async fn public_policy_text_links_and_escaped_values_match_rails() {
         return;
     };
     for page in ["about", "privacy", "terms"] {
-        assert_moved(&app.anonymous().get(&format!("/{page}")).await, &format!("/{page}"), "");
-        assert_rails_page(page, &article(&app, page), vectors["pages"][0]["bodies"][page].as_str().unwrap());
+        assert_moved(
+            &app.anonymous().get(&format!("/{page}")).await,
+            &format!("/{page}"),
+            "",
+        );
+        assert_rails_page(
+            page,
+            &article(&app, page),
+            vectors["pages"][0]["bodies"][page].as_str().unwrap(),
+        );
     }
 }
 #[tokio::test]
@@ -205,7 +224,10 @@ async fn public_pages_move_permanently_to_the_spa_with_their_query() {
         for query in ["", "?ref=footer&lang=en"] {
             let target = format!("{path}{query}");
             for method in [Method::GET, Method::HEAD] {
-                let reply = app.anonymous().send(Req::new(method.clone(), &target)).await;
+                let reply = app
+                    .anonymous()
+                    .send(Req::new(method.clone(), &target))
+                    .await;
                 assert_moved(&reply, path, query);
                 if method == Method::HEAD {
                     assert!(reply.body.is_empty(), "{target}");
@@ -216,7 +238,8 @@ async fn public_pages_move_permanently_to_the_spa_with_their_query() {
             let page = browser.get(moved.location().unwrap()).await;
             assert_eq!(page.status, StatusCode::OK, "{target}: {}", page.text());
             assert!(
-                page.text().contains(r#"<script type="application/json" id="boot""#),
+                page.text()
+                    .contains(r#"<script type="application/json" id="boot""#),
                 "{target}"
             );
         }

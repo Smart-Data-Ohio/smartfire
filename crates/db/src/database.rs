@@ -1019,8 +1019,17 @@ impl Database {
     #[cfg(feature = "test-support")]
     pub fn set_reader_parameter_limit(&self, limit: i32) -> Vec<i32> {
         let readers = self.readers.idle.lock().unwrap();
-        assert!(!readers.is_empty(), "parameter-limit test needs idle readers");
-        readers.iter().map(|conn| conn.set_limit(rusqlite::limits::Limit::SQLITE_LIMIT_VARIABLE_NUMBER, limit).expect("valid SQLite limit")).collect()
+        assert!(
+            !readers.is_empty(),
+            "parameter-limit test needs idle readers"
+        );
+        readers
+            .iter()
+            .map(|conn| {
+                conn.set_limit(rusqlite::limits::Limit::SQLITE_LIMIT_VARIABLE_NUMBER, limit)
+                    .expect("valid SQLite limit")
+            })
+            .collect()
     }
 
     /// Trace the pooled readers and SELECTs issued from writer transactions.
@@ -1366,7 +1375,8 @@ mod tests {
             ..Env::default()
         };
         run_write(&conn, &env, |tx| {
-            tx.conn().execute("UPDATE state SET value=1 WHERE id=1", [])?;
+            tx.conn()
+                .execute("UPDATE state SET value=1 WHERE id=1", [])?;
             ThreadWorkChange::emit(tx, 1);
             tx.emit_after_commit(Event::PurgeBlob { blob_id: 11 });
             tx.after_commit_record_latest("tag_assignment", 1, |after| {
@@ -1378,7 +1388,8 @@ mod tests {
                     tx.emit_after_commit(Event::PurgeBlob { blob_id: 12 });
                     tx.after_commit(|after| {
                         after.write_after_commit(|tx| {
-                            tx.conn().execute("UPDATE state SET value=3 WHERE id=1", [])?;
+                            tx.conn()
+                                .execute("UPDATE state SET value=3 WHERE id=1", [])?;
                             ThreadWorkChange::emit(tx, 1);
                             Ok(())
                         })?;
@@ -1399,8 +1410,14 @@ mod tests {
                 (Event::PurgeBlob { blob_id: 11 }, None),
                 (Event::PurgeBlob { blob_id: 12 }, None),
                 (Event::PurgeBlob { blob_id: 13 }, None),
-                (Event::broadcast(&ThreadWorkChange { thread_id: 1 }), Some(3)),
-                (Event::broadcast(&ThreadWorkChange { thread_id: 2 }), Some(2)),
+                (
+                    Event::broadcast(&ThreadWorkChange { thread_id: 1 }),
+                    Some(3)
+                ),
+                (
+                    Event::broadcast(&ThreadWorkChange { thread_id: 2 }),
+                    Some(2)
+                ),
             ]
         );
     }
@@ -1500,16 +1517,20 @@ mod tests {
         })
         .unwrap();
         let result = db.write_blocking(|tx| {
-            tx.conn().execute("UPDATE state SET value=1 WHERE id=1", [])?;
+            tx.conn()
+                .execute("UPDATE state SET value=1 WHERE id=1", [])?;
             ThreadWorkChange::emit(tx, 1);
             tx.after_commit(|after| {
                 after.write_after_commit(|tx| {
-                    tx.conn().execute("UPDATE state SET value=2 WHERE id=2", [])?;
+                    tx.conn()
+                        .execute("UPDATE state SET value=2 WHERE id=2", [])?;
                     ThreadWorkChange::emit(tx, 2);
                     tx.after_commit(|after| {
                         after.write_after_commit(|tx| -> Result<()> {
-                            tx.conn().execute("UPDATE state SET value=3 WHERE id=1", [])?;
-                            tx.conn().execute("UPDATE state SET value=3 WHERE id=3", [])?;
+                            tx.conn()
+                                .execute("UPDATE state SET value=3 WHERE id=1", [])?;
+                            tx.conn()
+                                .execute("UPDATE state SET value=3 WHERE id=3", [])?;
                             ThreadWorkChange::emit(tx, 3);
                             panic!("injected follow-up transaction panic");
                         })
@@ -1523,8 +1544,14 @@ mod tests {
         assert_eq!(
             *sink.events.lock().unwrap(),
             [
-                (Event::broadcast(&ThreadWorkChange { thread_id: 1 }), Some(1)),
-                (Event::broadcast(&ThreadWorkChange { thread_id: 2 }), Some(2)),
+                (
+                    Event::broadcast(&ThreadWorkChange { thread_id: 1 }),
+                    Some(1)
+                ),
+                (
+                    Event::broadcast(&ThreadWorkChange { thread_id: 2 }),
+                    Some(2)
+                ),
             ]
         );
         assert_eq!(
@@ -1539,14 +1566,18 @@ mod tests {
             "the interrupted follow-up must roll back before broadcasts render"
         );
         db.write_blocking(|tx| {
-            tx.conn().execute("UPDATE state SET value=4 WHERE id=3", [])?;
+            tx.conn()
+                .execute("UPDATE state SET value=4 WHERE id=3", [])?;
             ThreadWorkChange::emit(tx, 3);
             Ok(())
         })
         .unwrap();
         assert_eq!(
             sink.events.lock().unwrap().last(),
-            Some(&(Event::broadcast(&ThreadWorkChange { thread_id: 3 }), Some(4)))
+            Some(&(
+                Event::broadcast(&ThreadWorkChange { thread_id: 3 }),
+                Some(4)
+            ))
         );
     }
 
@@ -1580,7 +1611,10 @@ mod tests {
             })
         }))
         .expect_err("the original callback panic must propagate");
-        assert_eq!(panic.downcast_ref::<&str>(), Some(&"injected callback panic"));
+        assert_eq!(
+            panic.downcast_ref::<&str>(),
+            Some(&"injected callback panic")
+        );
         assert!(sink.emitted.load(Ordering::SeqCst));
         assert!(conn.is_autocommit());
         run_write(&conn, &env, |_| Ok(())).unwrap();
@@ -1696,7 +1730,10 @@ mod tests {
                     Ok(())
                 },
             );
-            assert!(notified.is_multiple_of(2), "notification must observe even generation");
+            assert!(
+                notified.is_multiple_of(2),
+                "notification must observe even generation"
+            );
             assert_eq!(notified, before + 2, "completion case {case}");
             match case {
                 0 => result.unwrap(),
@@ -1763,8 +1800,13 @@ mod tests {
             assert!(write.as_mut().poll(&mut context).is_pending());
             drop(write);
             release.send(()).unwrap();
-            let disposed = dropped.recv_timeout(std::time::Duration::from_secs(10)).unwrap();
-            assert!(disposed.is_multiple_of(2), "cancelled result must be disposed after even");
+            let disposed = dropped
+                .recv_timeout(std::time::Duration::from_secs(10))
+                .unwrap();
+            assert!(
+                disposed.is_multiple_of(2),
+                "cancelled result must be disposed after even"
+            );
             assert_eq!(disposed, before + 2);
             db.write_blocking(|tx| {
                 assert!(!tx.conn().is_autocommit());

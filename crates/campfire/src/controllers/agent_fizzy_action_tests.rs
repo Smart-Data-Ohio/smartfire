@@ -18,7 +18,9 @@ async fn check(case: &Value) {
         to: "127.0.0.1:52900".parse().unwrap(),
         dialed: Default::default(),
     });
-    let clock = Arc::new(campfire_kit::FrozenClock::new("2026-03-02T16:00:00Z".parse().unwrap()));
+    let clock = Arc::new(campfire_kit::FrozenClock::new(
+        "2026-03-02T16:00:00Z".parse().unwrap(),
+    ));
     let app = TestApp::boot_with_fizzy(
         clock,
         State {
@@ -64,16 +66,34 @@ async fn check(case: &Value) {
         )
         .await;
     let name = case["name"].as_str().unwrap();
-    assert_eq!(reply.status.as_u16(), case["status"].as_u64().unwrap() as u16, "{name}: {}", reply.text());
-    assert_eq!(reply.text(), case["response_body"].as_str().unwrap(), "{name}: raw response bytes");
-    for header in ["Content-Type", "Cache-Control", "Pragma", "Retry-After", "Location"] {
+    assert_eq!(
+        reply.status.as_u16(),
+        case["status"].as_u64().unwrap() as u16,
+        "{name}: {}",
+        reply.text()
+    );
+    assert_eq!(
+        reply.text(),
+        case["response_body"].as_str().unwrap(),
+        "{name}: raw response bytes"
+    );
+    for header in [
+        "Content-Type",
+        "Cache-Control",
+        "Pragma",
+        "Retry-After",
+        "Location",
+    ] {
         assert_eq!(
             reply.header(header),
             case["response_headers"][header.to_ascii_lowercase()].as_str(),
             "{name}: {header}"
         );
     }
-    assert!(resolver.lookups().is_empty(), "requesting approval must never contact Fizzy");
+    assert!(
+        resolver.lookups().is_empty(),
+        "requesting approval must never contact Fizzy"
+    );
     assert!(dialer.dialed.lock().unwrap().is_empty());
     let (approvals,notices,reason,inbox)=app.db().read(|c| {
         let credential:i64=c.query_row("SELECT id FROM agent_credentials WHERE agent_id=?",[AGENT],|r|r.get(0))?;
@@ -87,27 +107,41 @@ async fn check(case: &Value) {
         let inbox=c.prepare("SELECT user_id,event_type FROM activity_items WHERE source_type='AgentApproval' AND source_id IN (SELECT id FROM agent_approvals WHERE agent_id=?) ORDER BY user_id")?.query_map([AGENT],|r|Ok(json!({"user":r.get::<_,i64>(0)?,"event":r.get::<_,String>(1)?})))?.collect::<rusqlite::Result<Vec<Value>>>()?;
         Ok((json!(rows),json!(notices),account.and_then(|a|a.disconnected_reason),json!(inbox)))
     }).await.unwrap();
-    assert_eq!(approvals, case["approvals"], "{name}: stored execution payload and identity");
-    assert_eq!(inbox,case["inbox"],"{name}: committed approval inbox");
+    assert_eq!(
+        approvals, case["approvals"],
+        "{name}: stored execution payload and identity"
+    );
+    assert_eq!(inbox, case["inbox"], "{name}: committed approval inbox");
     assert_eq!(notices, case["notices"], "{name}: budget notice");
     assert_eq!(json!(reason), case["reason"], "{name}: account usability");
     println!("WS11-api Fizzy approval wire case {name}: 1 passed; 0 failed");
 }
 fn cases() -> Vec<Value> {
-    serde_json::from_str::<Value>(include_str!("../../../../vectors/agent_fizzy_action_http.json")).unwrap()["cases"]
+    serde_json::from_str::<Value>(include_str!(
+        "../../../../vectors/agent_fizzy_action_http.json"
+    ))
+    .unwrap()["cases"]
         .as_array()
         .unwrap()
         .clone()
 }
 #[tokio::test]
 async fn fizzy_action_rest_wire_successes() {
-    for case in cases().into_iter().take(10).filter(|c| c["name"].as_str().unwrap().starts_with("rest_")) {
+    for case in cases()
+        .into_iter()
+        .take(10)
+        .filter(|c| c["name"].as_str().unwrap().starts_with("rest_"))
+    {
         check(&case).await;
     }
 }
 #[tokio::test]
 async fn fizzy_action_mcp_wire_successes() {
-    for case in cases().into_iter().take(10).filter(|c| c["name"].as_str().unwrap().starts_with("mcp_")) {
+    for case in cases()
+        .into_iter()
+        .take(10)
+        .filter(|c| c["name"].as_str().unwrap().starts_with("mcp_"))
+    {
         check(&case).await;
     }
 }
@@ -119,4 +153,11 @@ async fn fizzy_action_wire_errors_replays_and_coercions() {
 }
 
 #[tokio::test]
-async fn fizzy_action_replay_types() {for case in cases().into_iter().filter(|c|c["name"].as_str().unwrap().contains("replay_type_")) {check(&case).await;}}
+async fn fizzy_action_replay_types() {
+    for case in cases()
+        .into_iter()
+        .filter(|c| c["name"].as_str().unwrap().contains("replay_type_"))
+    {
+        check(&case).await;
+    }
+}

@@ -9,29 +9,65 @@ use serde_json::Value;
 pub async fn operation(c: &Ctx, agent_id: i64, op: &str, args: Value) -> Result<ServiceResult> {
     use crate::integrations::fizzy::agent_reads::{self, Read};
     let read = match op {
-        "fizzy_boards" => Some(Read::Boards { account: args["account_id"].clone() }),
-        "fizzy_board" => Some(Read::Board { account: args["account_id"].clone(), board: args["board_id"].clone() }),
-        "fizzy_search" => Some(Read::Search { account: args["account_id"].clone(), query: args["q"].clone() }),
-        "fizzy_card" => Some(Read::Card { account: args["account_id"].clone(), number: args["number"].clone() }),
+        "fizzy_boards" => Some(Read::Boards {
+            account: args["account_id"].clone(),
+        }),
+        "fizzy_board" => Some(Read::Board {
+            account: args["account_id"].clone(),
+            board: args["board_id"].clone(),
+        }),
+        "fizzy_search" => Some(Read::Search {
+            account: args["account_id"].clone(),
+            query: args["q"].clone(),
+        }),
+        "fizzy_card" => Some(Read::Card {
+            account: args["account_id"].clone(),
+            number: args["number"].clone(),
+        }),
         _ => None,
     };
     if let Some(read) = read {
         let app = c.app();
-        let result = agent_reads::read(app, &app.fizzy.network, &app.fizzy.base, agent_id, read).await.map_err(db_error)?;
-        return Ok(ServiceResult { payload: result.payload, error: result.error, status: result.status });
+        let result = agent_reads::read(app, &app.fizzy.network, &app.fizzy.base, agent_id, read)
+            .await
+            .map_err(db_error)?;
+        return Ok(ServiceResult {
+            payload: result.payload,
+            error: result.error,
+            status: result.status,
+        });
     }
     if op == "fizzy_card_action" {
         let crypto = c.app().ar_encryption.clone();
         let credential = c.current::<CurrentAgent>().map(|a| a.credential_id);
         let user = concerns::require_current_user(c)?.id;
-        return c.app().db.write(move |tx| {
-            let zone: Option<String> = tx.conn().query_row("SELECT time_zone FROM users WHERE id=?", [user], |r| r.get(0))?;
-            let zone = campfire_db::slash_commands::time_parser::zone(zone.as_deref().unwrap_or("UTC"));
-            let result = crate::integrations::fizzy::agent_requests::create(tx, &crypto, agent_id, args, credential, &zone)?;
-            Ok(ServiceResult { payload: result.payload, error: result.error, status: result.status })
-        }).await.map_err(db_error);
+        return c
+            .app()
+            .db
+            .write(move |tx| {
+                let zone: Option<String> =
+                    tx.conn()
+                        .query_row("SELECT time_zone FROM users WHERE id=?", [user], |r| {
+                            r.get(0)
+                        })?;
+                let zone = campfire_db::slash_commands::time_parser::zone(
+                    zone.as_deref().unwrap_or("UTC"),
+                );
+                let result = crate::integrations::fizzy::agent_requests::create(
+                    tx, &crypto, agent_id, args, credential, &zone,
+                )?;
+                Ok(ServiceResult {
+                    payload: result.payload,
+                    error: result.error,
+                    status: result.status,
+                })
+            })
+            .await
+            .map_err(db_error);
     }
-    Err(campfire_kit::Error::internal(anyhow::anyhow!("Unknown Fizzy operation: {op}")))
+    Err(campfire_kit::Error::internal(anyhow::anyhow!(
+        "Unknown Fizzy operation: {op}"
+    )))
 }
 async fn fizzy(c: &mut Ctx, controller: &str, action: &str, op: &str, limit: u64) -> Result {
     concerns::before_actions(c, Before::default().allow_agent_access()).await?;
@@ -50,7 +86,20 @@ async fn fizzy(c: &mut Ctx, controller: &str, action: &str, op: &str, limit: u64
     agent_api::no_store(c);
     let mut args = c.params.to_json();
     if op == "fizzy_card_action" {
-        args = action_fields(args, &["account_id", "kind", "board_id", "number", "column_id", "title", "description", "body", "external_id"]);
+        args = action_fields(
+            args,
+            &[
+                "account_id",
+                "kind",
+                "board_id",
+                "number",
+                "column_id",
+                "title",
+                "description",
+                "body",
+                "external_id",
+            ],
+        );
     }
     if op == "fizzy_board" {
         args["board_id"] = args["id"].clone();
@@ -89,5 +138,9 @@ pub async fn fizzy_action(c: &mut Ctx) -> Result {
 }
 /// Each tool and REST controller supplies exactly the fields its Rails caller constructs.
 pub(super) fn action_fields(args: Value, keys: &[&str]) -> Value {
-    Value::Object(keys.iter().map(|key| ((*key).into(), args[*key].clone())).collect())
+    Value::Object(
+        keys.iter()
+            .map(|key| ((*key).into(), args[*key].clone()))
+            .collect(),
+    )
 }

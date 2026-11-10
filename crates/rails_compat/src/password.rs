@@ -13,7 +13,9 @@ pub fn digest(password: &str) -> String {
 }
 
 pub fn digest_with_cost(password: &str, cost: u32) -> String {
-    bcrypt::hash_with_result(password, cost).expect("cost is in range").format_for_version(bcrypt::Version::TwoA)
+    bcrypt::hash_with_result(password, cost)
+        .expect("cost is in range")
+        .format_for_version(bcrypt::Version::TwoA)
 }
 
 /// `BCrypt::Password.new(digest).is_password?(password)`; `false` for a malformed digest.

@@ -21,10 +21,14 @@ fn workspace_root() -> PathBuf {
 
 static VECTORS: LazyLock<Value> = LazyLock::new(|| {
     let path = workspace_root().join("vectors/rails_compat_smartfire.json");
-    serde_json::from_str(&std::fs::read_to_string(&path).expect("vectors/rails_compat_smartfire.json")).expect("valid JSON")
+    serde_json::from_str(
+        &std::fs::read_to_string(&path).expect("vectors/rails_compat_smartfire.json"),
+    )
+    .expect("valid JSON")
 });
 
-static SECRETS: LazyLock<Secrets> = LazyLock::new(|| Secrets::new(str(&VECTORS["secret_key_base"])));
+static SECRETS: LazyLock<Secrets> =
+    LazyLock::new(|| Secrets::new(str(&VECTORS["secret_key_base"])));
 static AR: LazyLock<ArEncryption> = LazyLock::new(|| ArEncryption::new(&SECRETS));
 
 fn v(path: &str) -> &'static Value {
@@ -32,11 +36,15 @@ fn v(path: &str) -> &'static Value {
 }
 
 fn cases(path: &str) -> &'static Vec<Value> {
-    v(path).as_array().unwrap_or_else(|| panic!("{path} is an array"))
+    v(path)
+        .as_array()
+        .unwrap_or_else(|| panic!("{path} is an array"))
 }
 
 fn str(value: &Value) -> &str {
-    value.as_str().unwrap_or_else(|| panic!("expected a string, got {value}"))
+    value
+        .as_str()
+        .unwrap_or_else(|| panic!("expected a string, got {value}"))
 }
 
 fn time(value: &Value) -> Timestamp {
@@ -56,18 +64,32 @@ fn bytes(hex: &Value) -> Vec<u8> {
 }
 
 fn object(value: &Value) -> Map<String, Value> {
-    value.as_object().unwrap_or_else(|| panic!("expected an object, got {value}")).clone()
+    value
+        .as_object()
+        .unwrap_or_else(|| panic!("expected an object, got {value}"))
+        .clone()
 }
 
 // --- The app key generator ----------------------------------------------------------------------
 
 #[test]
 fn the_app_key_generator_is_pbkdf2_sha1() {
-    assert_eq!(str(v("key_generator.hash_digest_class")), "OpenSSL::Digest::SHA1");
+    assert_eq!(
+        str(v("key_generator.hash_digest_class")),
+        "OpenSSL::Digest::SHA1"
+    );
     assert_eq!(v("key_generator.iterations"), 1000);
     for case in cases("key_generator.keys") {
-        let key = SECRETS.key_generator.generate_key(str(&case["salt"]), case["length"].as_u64().unwrap() as usize);
-        assert_eq!(hex::encode(key), str(&case["key_hex"]), "salt {}", case["salt"]);
+        let key = SECRETS.key_generator.generate_key(
+            str(&case["salt"]),
+            case["length"].as_u64().unwrap() as usize,
+        );
+        assert_eq!(
+            hex::encode(key),
+            str(&case["key_hex"]),
+            "salt {}",
+            case["salt"]
+        );
     }
 }
 
@@ -76,12 +98,26 @@ fn the_app_key_generator_is_pbkdf2_sha1() {
 #[test]
 fn ar_encryption_keys_match_the_app_config() {
     let config = v("ar_encryption.config");
-    let primary = SECRETS.key_generator.generate_key(ar_encryption::PRIMARY_KEY_SALT, 32);
-    let salt = SECRETS.key_generator.generate_key(ar_encryption::KEY_DERIVATION_SALT, 32);
+    let primary = SECRETS
+        .key_generator
+        .generate_key(ar_encryption::PRIMARY_KEY_SALT, 32);
+    let salt = SECRETS
+        .key_generator
+        .generate_key(ar_encryption::KEY_DERIVATION_SALT, 32);
     assert_eq!(hex::encode(&primary), str(&config["primary_key_hex"]));
-    assert_eq!(hex::encode(SECRETS.key_generator.generate_key(ar_encryption::DETERMINISTIC_KEY_SALT, 32)), str(&config["deterministic_key_hex"]));
+    assert_eq!(
+        hex::encode(
+            SECRETS
+                .key_generator
+                .generate_key(ar_encryption::DETERMINISTIC_KEY_SALT, 32)
+        ),
+        str(&config["deterministic_key_hex"])
+    );
     assert_eq!(hex::encode(&salt), str(&config["key_derivation_salt_hex"]));
-    assert_eq!(hex::encode(ar_encryption::derive_key(&primary, &salt)), str(&config["derived_key_hex"]));
+    assert_eq!(
+        hex::encode(ar_encryption::derive_key(&primary, &salt)),
+        str(&config["derived_key_hex"])
+    );
     assert_eq!(AR.key_id(), str(&config["key_id"]));
 
     // What this port assumes about the configuration.
@@ -103,7 +139,10 @@ fn every_encrypted_column_is_known() {
     for attribute in attributes {
         let column = ENCRYPTED_COLUMNS
             .iter()
-            .find(|column| column.model == str(&attribute["model"]) && column.column == str(&attribute["attribute"]))
+            .find(|column| {
+                column.model == str(&attribute["model"])
+                    && column.column == str(&attribute["attribute"])
+            })
             .unwrap_or_else(|| panic!("{attribute} is not in ENCRYPTED_COLUMNS"));
         assert_eq!(column.table, str(&attribute["table"]));
         assert_eq!(attribute["deterministic"], false, "{attribute}");
@@ -116,7 +155,13 @@ fn every_encrypted_column_is_known() {
             .iter()
             .find(|case| case["case"] == format!("{}#{} realistic", column.model, column.column))
             .unwrap();
-        assert_eq!(column.encoding, str(&case["value_encoding"]), "{}#{}", column.model, column.column);
+        assert_eq!(
+            column.encoding,
+            str(&case["value_encoding"]),
+            "{}#{}",
+            column.model,
+            column.column
+        );
     }
 }
 
@@ -124,15 +169,38 @@ fn every_encrypted_column_is_known() {
 fn ar_encryption_decrypts_what_rails_encrypted() {
     for case in cases("ar_encryption.encryptions") {
         for ciphertext in [&case["ciphertext"], &case["fixed_iv_ciphertext"]] {
-            let decrypted = AR.decrypt_bytes(str(ciphertext)).unwrap_or_else(|error| panic!("{}: {error}", label(case)));
-            assert_eq!(decrypted.bytes, bytes(&case["value_hex"]), "{}", label(case));
-            assert_eq!(decrypted.bytes, bytes(&case["decrypted_hex"]), "{}", label(case));
-            assert_eq!(decrypted.encoding, str(&case["value_encoding"]), "{}", label(case));
+            let decrypted = AR
+                .decrypt_bytes(str(ciphertext))
+                .unwrap_or_else(|error| panic!("{}: {error}", label(case)));
+            assert_eq!(
+                decrypted.bytes,
+                bytes(&case["value_hex"]),
+                "{}",
+                label(case)
+            );
+            assert_eq!(
+                decrypted.bytes,
+                bytes(&case["decrypted_hex"]),
+                "{}",
+                label(case)
+            );
+            assert_eq!(
+                decrypted.encoding,
+                str(&case["value_encoding"]),
+                "{}",
+                label(case)
+            );
         }
     }
     for record in cases("ar_encryption.records") {
         let decrypted = AR.decrypt_bytes(str(&record["column_value"])).unwrap();
-        assert_eq!(decrypted.bytes, str(&record["read_value"]).as_bytes(), "{}#{}", record["model"], record["attribute"]);
+        assert_eq!(
+            decrypted.bytes,
+            str(&record["read_value"]).as_bytes(),
+            "{}#{}",
+            record["model"],
+            record["attribute"]
+        );
         assert_eq!(decrypted.encoding, str(&record["read_encoding"]));
     }
 }
@@ -150,15 +218,38 @@ fn ar_encryption_encrypts_byte_for_byte_given_rails_iv() {
         let iv: [u8; 12] = bytes(&case["fixed_iv_hex"]).try_into().unwrap();
         let ciphertext = AR.encrypt_with_iv(&value, str(&case["value_encoding"]), &iv);
         if case["compressed"] != true {
-            assert_eq!(ciphertext, str(&case["fixed_iv_ciphertext"]), "{}", label(case));
+            assert_eq!(
+                ciphertext,
+                str(&case["fixed_iv_ciphertext"]),
+                "{}",
+                label(case)
+            );
             continue;
         }
         compressed += 1;
-        let (ours, theirs): (Value, Value) = (serde_json::from_str(&ciphertext).unwrap(), serde_json::from_str(str(&case["fixed_iv_ciphertext"])).unwrap());
-        assert_eq!(ours["h"].as_object().unwrap().keys().collect::<Vec<_>>(), theirs["h"].as_object().unwrap().keys().collect::<Vec<_>>(), "{}", label(case));
-        assert_eq!((&ours["h"]["iv"], &ours["h"]["e"], &ours["h"]["c"]), (&theirs["h"]["iv"], &theirs["h"]["e"], &theirs["h"]["c"]), "{}", label(case));
+        let (ours, theirs): (Value, Value) = (
+            serde_json::from_str(&ciphertext).unwrap(),
+            serde_json::from_str(str(&case["fixed_iv_ciphertext"])).unwrap(),
+        );
+        assert_eq!(
+            ours["h"].as_object().unwrap().keys().collect::<Vec<_>>(),
+            theirs["h"].as_object().unwrap().keys().collect::<Vec<_>>(),
+            "{}",
+            label(case)
+        );
+        assert_eq!(
+            (&ours["h"]["iv"], &ours["h"]["e"], &ours["h"]["c"]),
+            (&theirs["h"]["iv"], &theirs["h"]["e"], &theirs["h"]["c"]),
+            "{}",
+            label(case)
+        );
         let decrypted = AR.decrypt_bytes(&ciphertext).unwrap();
-        assert_eq!((decrypted.bytes, decrypted.encoding.as_str()), (value, str(&case["value_encoding"])), "{}", label(case));
+        assert_eq!(
+            (decrypted.bytes, decrypted.encoding.as_str()),
+            (value, str(&case["value_encoding"])),
+            "{}",
+            label(case)
+        );
     }
     assert!(compressed >= 5, "the vectors cover compressed values");
 }
@@ -174,28 +265,68 @@ fn ar_encryption_decrypt_outcomes_match_rails() {
     for case in cases("ar_encryption.decrypt") {
         let result = AR.decrypt_bytes(str(&case["ciphertext"]));
         if AR_FAIL_CLOSED.contains(&str(&case["case"])) {
-            assert!(case["error"].is_null(), "{}: Rails decrypts it", label(case));
-            assert!(!ar_encryption::KNOWN_ENCODINGS.contains(&str(&case["expected_encoding"])), "{}", label(case));
-            assert_eq!(result, Err(DecryptionError::UnknownEncoding), "{}", label(case));
+            assert!(
+                case["error"].is_null(),
+                "{}: Rails decrypts it",
+                label(case)
+            );
+            assert!(
+                !ar_encryption::KNOWN_ENCODINGS.contains(&str(&case["expected_encoding"])),
+                "{}",
+                label(case)
+            );
+            assert_eq!(
+                result,
+                Err(DecryptionError::UnknownEncoding),
+                "{}",
+                label(case)
+            );
             fail_closed.push(str(&case["case"]));
             continue;
         }
         match case["error"].as_str() {
             None => {
                 let decrypted = result.unwrap_or_else(|error| panic!("{}: {error}", label(case)));
-                assert_eq!(decrypted.bytes, bytes(&case["expected_hex"]), "{}", label(case));
-                assert_eq!(decrypted.encoding, str(&case["expected_encoding"]), "{}", label(case));
+                assert_eq!(
+                    decrypted.bytes,
+                    bytes(&case["expected_hex"]),
+                    "{}",
+                    label(case)
+                );
+                assert_eq!(
+                    decrypted.encoding,
+                    str(&case["expected_encoding"]),
+                    "{}",
+                    label(case)
+                );
             }
-            Some("ActiveRecord::Encryption::Errors::Decryption") => assert_eq!(result, Err(DecryptionError::Decryption), "{}", label(case)),
-            Some("Zlib::DataError") => assert_eq!(result, Err(DecryptionError::Decompression), "{}", label(case)),
-            Some("ArgumentError") => assert_eq!(result, Err(DecryptionError::UnknownEncoding), "{}", label(case)),
+            Some("ActiveRecord::Encryption::Errors::Decryption") => {
+                assert_eq!(result, Err(DecryptionError::Decryption), "{}", label(case))
+            }
+            Some("Zlib::DataError") => assert_eq!(
+                result,
+                Err(DecryptionError::Decompression),
+                "{}",
+                label(case)
+            ),
+            Some("ArgumentError") => assert_eq!(
+                result,
+                Err(DecryptionError::UnknownEncoding),
+                "{}",
+                label(case)
+            ),
             // Ruby crashes on these (headers as a string, a numeric auth tag, a null payload); the
             // port refuses them as undecryptable.
-            Some("NoMethodError") => assert_eq!(result, Err(DecryptionError::Decryption), "{}", label(case)),
+            Some("NoMethodError") => {
+                assert_eq!(result, Err(DecryptionError::Decryption), "{}", label(case))
+            }
             Some(other) => panic!("{}: unexpected Rails error {other}", label(case)),
         }
     }
-    assert_eq!(fail_closed, AR_FAIL_CLOSED, "every fail-closed case is in the vectors");
+    assert_eq!(
+        fail_closed, AR_FAIL_CLOSED,
+        "every fail-closed case is in the vectors"
+    );
 }
 
 // --- Calendar::DisconnectCleanupJob credentials -------------------------------------------------
@@ -205,7 +336,9 @@ fn calendar_snapshot() -> calendar_credentials::Snapshot {
     calendar_credentials::Snapshot {
         access_token: snapshot["access_token"].as_str().map(str::to_string),
         refresh_token: snapshot["refresh_token"].as_str().map(str::to_string),
-        access_token_expires_at: snapshot["access_token_expires_at"].as_str().map(|s| s.parse().unwrap()),
+        access_token_expires_at: snapshot["access_token_expires_at"]
+            .as_str()
+            .map(|s| s.parse().unwrap()),
     }
 }
 
@@ -213,12 +346,23 @@ fn calendar_snapshot() -> calendar_credentials::Snapshot {
 fn calendar_credentials_encrypt_the_plaintext_rails_does() {
     let calendar = v("message_encryptors.calendar_disconnect_cleanup");
     assert_eq!(str(&calendar["purpose"]), calendar_credentials::PURPOSE);
-    assert_eq!(calendar["expires_in"], calendar_credentials::EXPIRES_IN.as_secs());
+    assert_eq!(
+        calendar["expires_in"],
+        calendar_credentials::EXPIRES_IN.as_secs()
+    );
 
     let blob = calendar_credentials::encrypt(&SECRETS, &calendar_snapshot(), now());
-    let plaintext = calendar_credentials::encryptor(&SECRETS).decrypt(&blob).unwrap();
-    assert_eq!(String::from_utf8(plaintext).unwrap(), str(&calendar["generate"]["plaintext"]));
-    assert_eq!(calendar_credentials::decrypt_snapshot(&SECRETS, str(&calendar["generate"]["blob"]), now()), Some(calendar_snapshot()));
+    let plaintext = calendar_credentials::encryptor(&SECRETS)
+        .decrypt(&blob)
+        .unwrap();
+    assert_eq!(
+        String::from_utf8(plaintext).unwrap(),
+        str(&calendar["generate"]["plaintext"])
+    );
+    assert_eq!(
+        calendar_credentials::decrypt_snapshot(&SECRETS, str(&calendar["generate"]["blob"]), now()),
+        Some(calendar_snapshot())
+    );
 }
 
 /// Cases where the port knowingly refuses a blob Rails accepts: `:json_allow_marshal` would
@@ -229,13 +373,23 @@ const CALENDAR_FAIL_CLOSED: &[&str] = &["marshal payload"];
 #[test]
 fn calendar_credentials_decrypt_like_rails() {
     for case in cases("message_encryptors.calendar_disconnect_cleanup.verify") {
-        let decrypted = calendar_credentials::decrypt(&SECRETS, str(&case["blob"]), time(&case["now"]));
+        let decrypted =
+            calendar_credentials::decrypt(&SECRETS, str(&case["blob"]), time(&case["now"]));
         if CALENDAR_FAIL_CLOSED.contains(&str(&case["case"])) {
-            assert!(!case["expected"].is_null(), "{}: Rails accepts it", label(case));
+            assert!(
+                !case["expected"].is_null(),
+                "{}: Rails accepts it",
+                label(case)
+            );
             assert_eq!(decrypted, None, "{}", label(case));
             continue;
         }
-        assert_eq!(decrypted.unwrap_or(Value::Null), case["expected"], "{}", label(case));
+        assert_eq!(
+            decrypted.unwrap_or(Value::Null),
+            case["expected"],
+            "{}",
+            label(case)
+        );
     }
 }
 
@@ -245,37 +399,76 @@ fn calendar_credentials_decrypt_like_rails() {
 fn oauth_states_match_rails() {
     assert_eq!(cases("verifiers.oauth_states").len(), OAuthState::ALL.len());
     for vectors in cases("verifiers.oauth_states") {
-        let state = OAuthState::ALL.into_iter().find(|state| state.verifier_name() == str(&vectors["name"])).unwrap();
-        assert_eq!(state.generate(&SECRETS, str(&vectors["raw_state"])), str(&vectors["message"]), "{}", vectors["name"]);
+        let state = OAuthState::ALL
+            .into_iter()
+            .find(|state| state.verifier_name() == str(&vectors["name"]))
+            .unwrap();
+        assert_eq!(
+            state.generate(&SECRETS, str(&vectors["raw_state"])),
+            str(&vectors["message"]),
+            "{}",
+            vectors["name"]
+        );
         for case in vectors["verify"].as_array().unwrap() {
             let verified = state.verified(&SECRETS, str(&case["message"]), now());
-            assert_eq!(verified.unwrap_or(Value::Null), case["expected"], "{} {}", vectors["name"], label(case));
+            assert_eq!(
+                verified.unwrap_or(Value::Null),
+                case["expected"],
+                "{} {}",
+                vectors["name"],
+                label(case)
+            );
         }
     }
 }
 
 #[test]
 fn embed_image_urls_match_rails() {
-    assert_eq!(embed_image::sign(&SECRETS, str(v("verifiers.embed_image.url"))), str(v("verifiers.embed_image.signed")));
+    assert_eq!(
+        embed_image::sign(&SECRETS, str(v("verifiers.embed_image.url"))),
+        str(v("verifiers.embed_image.signed"))
+    );
     for case in cases("verifiers.embed_image.verify") {
         let message = str(&case["message"]);
-        assert_eq!(embed_image::verified(&SECRETS, message, now()).unwrap_or(Value::Null), case["verified"], "{}", label(case));
-        assert_eq!(embed_image::verified_url(&SECRETS, message, now()).as_deref(), case["verified_url"].as_str(), "{}", label(case));
+        assert_eq!(
+            embed_image::verified(&SECRETS, message, now()).unwrap_or(Value::Null),
+            case["verified"],
+            "{}",
+            label(case)
+        );
+        assert_eq!(
+            embed_image::verified_url(&SECRETS, message, now()).as_deref(),
+            case["verified_url"].as_str(),
+            "{}",
+            label(case)
+        );
     }
 }
 
 #[test]
 fn bot_reply_tokens_match_rails() {
     let vectors = v("verifiers.bot_reply");
-    let (bot_id, room_id) = (vectors["bot_id"].as_i64().unwrap(), vectors["room_id"].as_i64().unwrap());
+    let (bot_id, room_id) = (
+        vectors["bot_id"].as_i64().unwrap(),
+        vectors["room_id"].as_i64().unwrap(),
+    );
     assert_eq!(vectors["expires_in"], bot_reply::EXPIRES_IN.as_secs());
-    assert_eq!(bot_reply::token_for(&SECRETS, bot_id, room_id, now()), str(&vectors["token"]));
+    assert_eq!(
+        bot_reply::token_for(&SECRETS, bot_id, room_id, now()),
+        str(&vectors["token"])
+    );
 
     for case in cases("verifiers.bot_reply.verify") {
-        let verified = bot_reply::verify(&SECRETS, str(&case["token"]), str(&case["room_id"]), time(&case["now"]));
+        let verified = bot_reply::verify(
+            &SECRETS,
+            str(&case["token"]),
+            str(&case["room_id"]),
+            time(&case["now"]),
+        );
         // Rails' data, then its room check; the active bot lookup is the caller's.
         let data = &case["data"];
-        let room_matches = data.is_object() && crate::metadata::ruby_to_s(data.get("room_id")) == str(&case["room_id"]);
+        let room_matches = data.is_object()
+            && crate::metadata::ruby_to_s(data.get("room_id")) == str(&case["room_id"]);
         let expected = room_matches.then(|| data["bot_id"].clone());
         assert_eq!(verified, expected, "{}", label(case));
         if let Some(authenticated) = case["authenticated_bot_id"].as_i64() {
@@ -314,7 +507,12 @@ fn signed_cookies_are_read_like_rails() {
             cookies::TWO_FACTOR_REMEMBER => cookies::read_two_factor_remember(&SECRETS, raw, now),
             name => cookies::verify_signed(&SECRETS, name, raw, now),
         };
-        assert_eq!(read.as_deref(), case["expected"].as_str(), "{}", label(case));
+        assert_eq!(
+            read.as_deref(),
+            case["expected"].as_str(),
+            "{}",
+            label(case)
+        );
     }
 }
 
@@ -324,9 +522,18 @@ fn signed_cookies_are_read_like_rails() {
 fn user_signed_ids_match_rails() {
     let vectors = v("signed_ids");
     let user_id = vectors["user_id"].as_i64().unwrap();
-    assert_eq!(vectors["transfer_expires_in"], signed_id::TRANSFER_EXPIRES_IN.as_secs());
-    assert_eq!(signed_id::transfer_id(&SECRETS, user_id, now()), str(&vectors["transfer_id"]));
-    assert_eq!(signed_id::avatar_token(&SECRETS, user_id), str(&vectors["avatar_token"]));
+    assert_eq!(
+        vectors["transfer_expires_in"],
+        signed_id::TRANSFER_EXPIRES_IN.as_secs()
+    );
+    assert_eq!(
+        signed_id::transfer_id(&SECRETS, user_id, now()),
+        str(&vectors["transfer_id"])
+    );
+    assert_eq!(
+        signed_id::avatar_token(&SECRETS, user_id),
+        str(&vectors["avatar_token"])
+    );
 
     for case in cases("signed_ids.verify") {
         let (signed, now) = (str(&case["signed_id"]), time(&case["now"]));
@@ -342,7 +549,10 @@ fn user_signed_ids_match_rails() {
 // --- LiveKit JWTs ---------------------------------------------------------------------------------
 
 fn livekit_credentials() -> (&'static str, &'static str) {
-    (str(v("jwt.livekit.api_key")), str(v("jwt.livekit.api_secret")))
+    (
+        str(v("jwt.livekit.api_key")),
+        str(v("jwt.livekit.api_secret")),
+    )
 }
 
 #[test]
@@ -352,7 +562,10 @@ fn livekit_tokens_are_minted_byte_for_byte() {
     assert_eq!(vectors["token_ttl"], livekit::TOKEN_TTL);
     assert_eq!(vectors["admin_token_ttl"], livekit::ADMIN_TOKEN_TTL);
     assert_eq!(vectors["publish_sources"], json!(livekit::PUBLISH_SOURCES));
-    assert_eq!(livekit::room_name(api_secret, vectors["room_id"].as_i64().unwrap()), str(&vectors["room_name"]));
+    assert_eq!(
+        livekit::room_name(api_secret, vectors["room_id"].as_i64().unwrap()),
+        str(&vectors["room_name"])
+    );
 
     let now = now().as_second();
     for case in cases("jwt.livekit.participant_tokens") {
@@ -363,13 +576,28 @@ fn livekit_tokens_are_minted_byte_for_byte() {
             room_name: str(&claims["video"]["room"]),
             can_publish: claims["video"]["canPublish"] == true,
         };
-        let token = livekit::participant_token_with_jti(api_key, api_secret, &participant, now, str(&claims["jti"]));
+        let token = livekit::participant_token_with_jti(
+            api_key,
+            api_secret,
+            &participant,
+            now,
+            str(&claims["jti"]),
+        );
         assert_eq!(token, str(&case["token"]), "{}", label(case));
-        assert_eq!(object(&claims["video"]), livekit::participant_video_grant(participant.room_name, participant.can_publish));
+        assert_eq!(
+            object(&claims["video"]),
+            livekit::participant_video_grant(participant.room_name, participant.can_publish)
+        );
     }
 
     let admin = &vectors["admin_token"];
-    let token = livekit::admin_token_with_jti(api_key, api_secret, &object(&admin["grant"]), now, str(&admin["claims"]["jti"]));
+    let token = livekit::admin_token_with_jti(
+        api_key,
+        api_secret,
+        &object(&admin["grant"]),
+        now,
+        str(&admin["claims"]["jti"]),
+    );
     assert_eq!(token, str(&admin["token"]));
 }
 
@@ -377,12 +605,20 @@ fn livekit_tokens_are_minted_byte_for_byte() {
 fn livekit_token_checks_match_rails() {
     let (api_key, api_secret) = livekit_credentials();
     for case in cases("jwt.livekit.verify") {
-        let result = livekit::verify(str(&case["token"]), api_key, api_secret, time(&case["now"]).as_second());
+        let result = livekit::verify(
+            str(&case["token"]),
+            api_key,
+            api_secret,
+            time(&case["now"]).as_second(),
+        );
         match &case["expected"] {
             Value::Null => assert_eq!(result, Err(livekit::Invalid), "{}", label(case)),
             expected => assert_eq!(
                 result,
-                Ok(livekit::Coordinates { identity: str(&expected["identity"]).into(), room_name: str(&expected["room_name"]).into() }),
+                Ok(livekit::Coordinates {
+                    identity: str(&expected["identity"]).into(),
+                    room_name: str(&expected["room_name"]).into()
+                }),
                 "{}",
                 label(case)
             ),
@@ -401,11 +637,17 @@ fn google_id_token_checks_match_rails() {
     let google = v("jwt.google");
     assert_eq!(google["issuers"], json!(google::ISSUERS));
     assert_eq!(google["clock_skew"], google::CLOCK_SKEW);
-    assert_eq!(google["fresh_login_max_auth_age"], google::FRESH_LOGIN_MAX_AUTH_AGE);
+    assert_eq!(
+        google["fresh_login_max_auth_age"],
+        google::FRESH_LOGIN_MAX_AUTH_AGE
+    );
 
     let allowed = google::allowed_domains(google["sign_in_domains_env"].as_str());
     assert_eq!(json!(allowed), google["allowed_domains"]);
-    let config = google::Config { client_id: google["client_id"].as_str(), allowed_domains: &allowed };
+    let config = google::Config {
+        client_id: google["client_id"].as_str(),
+        allowed_domains: &allowed,
+    };
     let jwks = google::Jwks::parse(str(&google["jwks"]).as_bytes()).unwrap();
 
     for case in cases("jwt.google.verify") {
@@ -418,16 +660,32 @@ fn google_id_token_checks_match_rails() {
             now().as_second(),
         );
         if GOOGLE_FAIL_CLOSED.contains(&str(&case["case"])) {
-            assert!(case["claims"].is_object(), "{}: Rails accepts it", label(case));
-            assert_eq!(result, Err(google::IdTokenError::Rejected(google::Rejection::BadToken)), "{}", label(case));
+            assert!(
+                case["claims"].is_object(),
+                "{}: Rails accepts it",
+                label(case)
+            );
+            assert_eq!(
+                result,
+                Err(google::IdTokenError::Rejected(google::Rejection::BadToken)),
+                "{}",
+                label(case)
+            );
             continue;
         }
         match case["rejected"].as_str() {
             Some(reason) => match result {
-                Err(google::IdTokenError::Rejected(rejection)) => assert_eq!(rejection.as_str(), reason, "{}", label(case)),
+                Err(google::IdTokenError::Rejected(rejection)) => {
+                    assert_eq!(rejection.as_str(), reason, "{}", label(case))
+                }
                 other => panic!("{}: expected {reason}, got {other:?}", label(case)),
             },
-            None => assert_eq!(result.map(Value::Object), Ok(case["claims"].clone()), "{}", label(case)),
+            None => assert_eq!(
+                result.map(Value::Object),
+                Ok(case["claims"].clone()),
+                "{}",
+                label(case)
+            ),
         }
     }
 }
@@ -440,12 +698,24 @@ fn google_id_tokens_fail_closed() {
     use google::{IdTokenError::*, Rejection::*};
     let google = v("jwt.google");
     let allowed = google::allowed_domains(google["sign_in_domains_env"].as_str());
-    let config = google::Config { client_id: google["client_id"].as_str(), allowed_domains: &allowed };
+    let config = google::Config {
+        client_id: google["client_id"].as_str(),
+        allowed_domains: &allowed,
+    };
     let jwks = google::Jwks::parse(str(&google["jwks"]).as_bytes()).unwrap();
-    let valid = cases("jwt.google.verify").iter().find(|case| case["case"] == "valid").unwrap();
-    let (token, nonce, now) = (str(&valid["token"]), str(&valid["nonce"]), now().as_second());
+    let valid = cases("jwt.google.verify")
+        .iter()
+        .find(|case| case["case"] == "valid")
+        .unwrap();
+    let (token, nonce, now) = (
+        str(&valid["token"]),
+        str(&valid["nonce"]),
+        now().as_second(),
+    );
     let exp = valid["claims"]["exp"].as_i64().unwrap();
-    let check = |token: &str, nonce: &str, config: &google::Config<'_>, now: i64| google::verify_id_token(token, nonce, None, config, |kid| jwks.key_for(kid), now);
+    let check = |token: &str, nonce: &str, config: &google::Config<'_>, now: i64| {
+        google::verify_id_token(token, nonce, None, config, |kid| jwks.key_for(kid), now)
+    };
 
     assert!(check(token, nonce, &config, now).is_ok());
     for index in 0..token.len() {
@@ -453,22 +723,75 @@ fn google_id_tokens_fail_closed() {
         tampered[index] = if tampered[index] == b'A' { b'B' } else { b'A' };
         let tampered = String::from_utf8(tampered).unwrap();
         if tampered != token {
-            assert!(check(&tampered, nonce, &config, now).is_err(), "byte {index}");
+            assert!(
+                check(&tampered, nonce, &config, now).is_err(),
+                "byte {index}"
+            );
         }
     }
     let other_key = |_: &str| jwks.key_for("kid-2");
-    assert_eq!(google::verify_id_token(token, nonce, None, &config, other_key, now), Err(Rejected(BadToken)));
-    assert_eq!(google::verify_id_token(token, nonce, None, &config, |_| Err(Unavailable), now), Err(Unavailable));
+    assert_eq!(
+        google::verify_id_token(token, nonce, None, &config, other_key, now),
+        Err(Rejected(BadToken))
+    );
+    assert_eq!(
+        google::verify_id_token(token, nonce, None, &config, |_| Err(Unavailable), now),
+        Err(Unavailable)
+    );
     assert_eq!(check(token, nonce, &config, exp - 1).map(|_| ()), Ok(()));
     assert_eq!(check(token, nonce, &config, exp), Err(Rejected(BadToken)));
-    assert_eq!(check(token, "other-nonce", &config, now), Err(Rejected(BadNonce)));
-    assert_eq!(check(token, "nonce-12", &config, now), Err(Rejected(BadNonce)));
-    let other_client = google::Config { client_id: Some("other.apps.googleusercontent.com"), ..config };
-    assert_eq!(check(token, nonce, &other_client, now), Err(Rejected(BadAudience)));
-    assert_eq!(check(token, nonce, &google::Config { client_id: None, ..config }, now), Err(Rejected(BadAudience)));
-    assert_eq!(check(token, nonce, &google::Config { allowed_domains: &[], ..config }, now), Err(Rejected(WrongDomain)));
+    assert_eq!(
+        check(token, "other-nonce", &config, now),
+        Err(Rejected(BadNonce))
+    );
+    assert_eq!(
+        check(token, "nonce-12", &config, now),
+        Err(Rejected(BadNonce))
+    );
+    let other_client = google::Config {
+        client_id: Some("other.apps.googleusercontent.com"),
+        ..config
+    };
+    assert_eq!(
+        check(token, nonce, &other_client, now),
+        Err(Rejected(BadAudience))
+    );
+    assert_eq!(
+        check(
+            token,
+            nonce,
+            &google::Config {
+                client_id: None,
+                ..config
+            },
+            now
+        ),
+        Err(Rejected(BadAudience))
+    );
+    assert_eq!(
+        check(
+            token,
+            nonce,
+            &google::Config {
+                allowed_domains: &[],
+                ..config
+            },
+            now
+        ),
+        Err(Rejected(WrongDomain))
+    );
     let auth_time = valid["claims"]["auth_time"].as_i64().unwrap();
-    let fresh = |now: i64| google::verify_id_token(token, nonce, Some(google::FRESH_LOGIN_MAX_AUTH_AGE), &config, |kid| jwks.key_for(kid), now).map(|_| ());
+    let fresh = |now: i64| {
+        google::verify_id_token(
+            token,
+            nonce,
+            Some(google::FRESH_LOGIN_MAX_AUTH_AGE),
+            &config,
+            |kid| jwks.key_for(kid),
+            now,
+        )
+        .map(|_| ())
+    };
     let stale_at = auth_time + google::FRESH_LOGIN_MAX_AUTH_AGE + google::CLOCK_SKEW;
     assert_eq!(fresh(stale_at - 1), Ok(()));
     assert_eq!(fresh(stale_at), Err(Rejected(StaleAuth)));
@@ -479,22 +802,47 @@ fn google_jwks_parse_like_the_key_store() {
     for case in cases("jwt.google.jwks_parsing") {
         let parsed = google::Jwks::parse(str(&case["body"]).as_bytes());
         if case["unavailable"] == true {
-            assert_eq!(parsed, Err(google::IdTokenError::Unavailable), "{}", label(case));
+            assert_eq!(
+                parsed,
+                Err(google::IdTokenError::Unavailable),
+                "{}",
+                label(case)
+            );
             continue;
         }
         let jwks = parsed.unwrap_or_else(|error| panic!("{}: {error}", label(case)));
-        assert_eq!(json!(jwks.kids().collect::<Vec<_>>()), case["kids"], "{}", label(case));
+        assert_eq!(
+            json!(jwks.kids().collect::<Vec<_>>()),
+            case["kids"],
+            "{}",
+            label(case)
+        );
         for (kid, modulus) in case["moduli"].as_object().unwrap() {
-            assert_eq!(hex::encode(jwks.get(kid).unwrap().modulus()), str(modulus), "{} {kid}", label(case));
+            assert_eq!(
+                hex::encode(jwks.get(kid).unwrap().modulus()),
+                str(modulus),
+                "{} {kid}",
+                label(case)
+            );
         }
-        assert_eq!(jwks.key_for("not-a-kid"), Err(google::IdTokenError::Rejected(google::Rejection::UnknownKey)));
+        assert_eq!(
+            jwks.key_for("not-a-kid"),
+            Err(google::IdTokenError::Rejected(
+                google::Rejection::UnknownKey
+            ))
+        );
     }
 }
 
 #[test]
 fn google_allowed_domains_parse_like_rails() {
     for case in cases("jwt.google.allowed_domain_parsing") {
-        assert_eq!(json!(google::allowed_domains(case["env"].as_str())), case["domains"], "env {}", case["env"]);
+        assert_eq!(
+            json!(google::allowed_domains(case["env"].as_str())),
+            case["domains"],
+            "env {}",
+            case["env"]
+        );
     }
     assert!(google::allowed_domains(None).is_empty());
 }
@@ -503,10 +851,20 @@ fn google_allowed_domains_parse_like_rails() {
 
 #[test]
 fn smartfire_webhooks_are_signed_like_rails() {
-    assert_eq!(str(v("webhooks.signature_header")), webhook::SIGNATURE_HEADER);
-    assert_eq!(str(v("webhooks.timestamp_header")), webhook::TIMESTAMP_HEADER);
+    assert_eq!(
+        str(v("webhooks.signature_header")),
+        webhook::SIGNATURE_HEADER
+    );
+    assert_eq!(
+        str(v("webhooks.timestamp_header")),
+        webhook::TIMESTAMP_HEADER
+    );
     for case in cases("webhooks.smartfire") {
-        let (secret, body, timestamp) = (str(&case["secret"]), str(&case["body"]).as_bytes(), str(&case["timestamp"]));
+        let (secret, body, timestamp) = (
+            str(&case["secret"]),
+            str(&case["body"]).as_bytes(),
+            str(&case["timestamp"]),
+        );
         let sent_at = Timestamp::from_second(timestamp.parse().unwrap()).unwrap();
         let headers = webhook::smartfire_headers(Some(secret), body, sent_at);
         assert_eq!(
@@ -514,16 +872,33 @@ fn smartfire_webhooks_are_signed_like_rails() {
             vec![
                 ("Content-Type", str(&case["content_type"]).to_string()),
                 (webhook::TIMESTAMP_HEADER, timestamp.to_string()),
-                (webhook::SIGNATURE_HEADER, str(&case["signature"]).to_string()),
+                (
+                    webhook::SIGNATURE_HEADER,
+                    str(&case["signature"]).to_string()
+                ),
             ]
         );
-        assert!(webhook::verify_smartfire_signature(secret, timestamp, body, str(&case["signature"])));
+        assert!(webhook::verify_smartfire_signature(
+            secret,
+            timestamp,
+            body,
+            str(&case["signature"])
+        ));
     }
 
     let unsigned = v("webhooks.unsigned");
     for blank in [None, Some(""), Some("  ")] {
         let headers = webhook::smartfire_headers(blank, b"{}", now());
-        assert_eq!(headers, vec![("Content-Type", "application/json".into()), (webhook::TIMESTAMP_HEADER, str(&unsigned["timestamp"]).into())]);
+        assert_eq!(
+            headers,
+            vec![
+                ("Content-Type", "application/json".into()),
+                (
+                    webhook::TIMESTAMP_HEADER,
+                    str(&unsigned["timestamp"]).into()
+                )
+            ]
+        );
         assert!(unsigned["signature"].is_null());
     }
 }
@@ -532,7 +907,11 @@ fn smartfire_webhooks_are_signed_like_rails() {
 fn github_webhook_signatures_are_checked_like_rails() {
     let secret = str(v("webhooks.github.secret"));
     for case in cases("webhooks.github.verify") {
-        let verified = webhook::verify_github_signature(secret, str(&case["body"]).as_bytes(), case["signature"].as_str());
+        let verified = webhook::verify_github_signature(
+            secret,
+            str(&case["body"]).as_bytes(),
+            case["signature"].as_str(),
+        );
         assert_eq!(verified, case["expected"] == true, "{}", label(case));
     }
 }
@@ -562,8 +941,15 @@ fn write_rust_output_for_rails_to_verify() {
         .map(|state| json!({ "name": state.verifier_name(), "raw_state": raw_state, "message": state.generate(secrets, raw_state) }))
         .collect();
 
-    let embed_urls = ["https://images.example.com/rust.png?a=1&b=<2>", "http://example.com/ü.png", "javascript:alert(1)"];
-    let embed_image: Vec<Value> = embed_urls.iter().map(|url| json!({ "url": url, "signed": embed_image::sign(secrets, url) })).collect();
+    let embed_urls = [
+        "https://images.example.com/rust.png?a=1&b=<2>",
+        "http://example.com/ü.png",
+        "javascript:alert(1)",
+    ];
+    let embed_image: Vec<Value> = embed_urls
+        .iter()
+        .map(|url| json!({ "url": url, "signed": embed_image::sign(secrets, url) }))
+        .collect();
 
     let bot_id = v("verifiers.bot_reply.bot_id").as_i64().unwrap();
     let room_id = v("verifiers.bot_reply.room_id").as_i64().unwrap();

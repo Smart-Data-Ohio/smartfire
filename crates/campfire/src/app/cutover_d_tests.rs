@@ -107,9 +107,7 @@ async fn cutover_d_gated_audit_csv_get_continues_and_returns_csv() {
     assert_eq!(gated.status, StatusCode::FOUND);
     // A download isn't a page, so it goes by the retained confirmation route.
     assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
-    let confirmed = b
-        .confirm_sudo("secret123456")
-        .await;
+    let confirmed = b.confirm_sudo("secret123456").await;
     assert_eq!(confirmed.status, StatusCode::OK);
     // The confirmation names the held GET; the SPA goes there.
     assert_eq!(
@@ -142,9 +140,7 @@ async fn sudo_at_minutes(minutes: i64) -> crate::controllers::presenters::test_s
         .await;
     load_fixtures(&a).await;
     let mut b = a.sign_in_for_tests(DAVID).await;
-    let confirmed = b
-        .confirm_sudo("secret123456")
-        .await;
+    let confirmed = b.confirm_sudo("secret123456").await;
     assert_eq!(confirmed.status, StatusCode::OK);
     assert_eq!(confirmed.json()["retry"], Value::Null);
     clock.advance(SignedDuration::from_mins(minutes));
@@ -163,7 +159,10 @@ async fn cutover_d_fourteen_minute_confirmation_allows_real_join_code_post() {
 async fn cutover_d_sixteen_minute_confirmation_gates_real_join_code_post() {
     let response = sudo_at_minutes(16).await;
     assert_eq!(response.status, StatusCode::FOUND);
-    assert_eq!(response.location(), Some("http://campfire.test/app/sudo/new"));
+    assert_eq!(
+        response.location(),
+        Some("http://campfire.test/app/sudo/new")
+    );
 }
 
 #[tokio::test]

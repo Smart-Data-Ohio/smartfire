@@ -31,7 +31,9 @@ async fn sign_in(b: &mut Browser<'_>) -> Reply {
 /// A JSON sign-in or challenge reply as its `kind`, followed by its `location` when it has one.
 fn outcome(reply: &Reply) -> String {
     let body = reply.json();
-    let kind = body["kind"].as_str().unwrap_or_else(|| panic!("{}", reply.text()));
+    let kind = body["kind"]
+        .as_str()
+        .unwrap_or_else(|| panic!("{}", reply.text()));
     match body["location"].as_str() {
         Some(location) => format!("{kind} {location}"),
         None => kind.to_owned(),
@@ -60,16 +62,22 @@ fn refusal(reply: &Reply) -> (StatusCode, String, String) {
 }
 async fn regenerations(a: &TestApp) -> i64 {
     a.db()
-        .read(|c| Ok(c.query_row(
-            "SELECT count(*) FROM audit_logs WHERE action='two_factor.backup_codes.regenerate'",
-            [],
-            |r| r.get::<_, i64>(0)
-        )?))
+        .read(|c| {
+            Ok(c.query_row(
+                "SELECT count(*) FROM audit_logs WHERE action='two_factor.backup_codes.regenerate'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
         .await
         .unwrap()
 }
 fn refused() -> (StatusCode, String, String) {
-    (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into(), REFUSED.into())
+    (
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "Validation".into(),
+        REFUSED.into(),
+    )
 }
 #[tokio::test]
 async fn challenge_first_factor_grants_no_session_and_totp_starts_verified_session() {
@@ -219,7 +227,9 @@ async fn self_service_requires_fresh_credentials_and_scopes_devices() {
         "reauthentication never consumes backups"
     );
     let retained = b
-        .write(Req::new(Method::POST, "/two_factor_backup_codes").form(&[("reauth", "secret123456")]))
+        .write(
+            Req::new(Method::POST, "/two_factor_backup_codes").form(&[("reauth", "secret123456")]),
+        )
         .await;
     assert_eq!(retained.status, StatusCode::SEE_OTHER);
     assert_eq!(
@@ -488,7 +498,11 @@ async fn remembered_cookie_is_secure_and_revocation_restores_challenge() {
         retained.location(),
         Some("http://campfire.test/app/settings/security")
     );
-    assert_eq!(remembered().await, before, "the retained profile form forgets nothing");
+    assert_eq!(
+        remembered().await,
+        before,
+        "the retained profile form forgets nothing"
+    );
     let forgotten = b
         .write(manage(Method::DELETE, DEVICES, "secret123456"))
         .await;
@@ -623,7 +637,9 @@ async fn google_step_up_seam_checks_owner_subject_freshness_and_consumes_once() 
             let mut b = a.anonymous();
             b.absorb_cookie_header(&format!("{session_cookie}; {state_cookie}"));
             b.authenticity_token().await;
-            let incorrect = b.write(manage(Method::POST, BACKUP_CODES, "incorrect")).await;
+            let incorrect = b
+                .write(manage(Method::POST, BACKUP_CODES, "incorrect"))
+                .await;
             assert_eq!(refusal(&incorrect).0, StatusCode::UNPROCESSABLE_ENTITY);
             // A blank confirmation spends the Google step-up, as the classic empty form did.
             let response = b.write(manage(Method::POST, BACKUP_CODES, "")).await;

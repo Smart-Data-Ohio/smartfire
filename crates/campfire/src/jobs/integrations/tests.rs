@@ -1,26 +1,55 @@
 use super::*;
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
+use crate::integrations::webhook;
+use crate::queue::WebhookJob;
 use campfire_db::Message;
 use campfire_db::NewMessage;
 use campfire_db::Room;
 use campfire_db::User;
-use crate::integrations::webhook;
-use crate::queue::WebhookJob;
-use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, BENDER, DAVID};
 
 #[tokio::test]
 async fn attachment_processing_root_webhook_recovers_failed_inline_video_like_rails() {
-    let test_app = TestApp::boot_frozen().await.unwrap().without_job_runner().await;
+    let test_app = TestApp::boot_frozen()
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
     let app = &test_app.booted.app;
-    let (mut client, server) = crate::controllers::messages::attachment_processing_tests::json_subscribe(&test_app).await;
-    let (room, bot, trigger) = app.db.write(|tx| {
-        tx.conn().execute("DELETE FROM background_jobs", [])?;
-        Ok((Room::find(tx.conn(), ALL_TALK)?, User::find(tx.conn(), BENDER)?,
-            Message::create(tx, NewMessage { room_id: ALL_TALK, creator_id: DAVID,
-                body: Some("Root webhook trigger".into()), ..Default::default() })?))
-    }).await.unwrap();
-    let reply = create_attachment_reply(app, &room, &bot, trigger, webhook::Attachment {
-        data: b"corrupt MOV".to_vec(), filename: "attachment.mov".into(), content_type: "video/quicktime".into(),
-    }).await.unwrap();
+    let (mut client, server) =
+        crate::controllers::messages::attachment_processing_tests::json_subscribe(&test_app).await;
+    let (room, bot, trigger) = app
+        .db
+        .write(|tx| {
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            Ok((
+                Room::find(tx.conn(), ALL_TALK)?,
+                User::find(tx.conn(), BENDER)?,
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        body: Some("Root webhook trigger".into()),
+                        ..Default::default()
+                    },
+                )?,
+            ))
+        })
+        .await
+        .unwrap();
+    let reply = create_attachment_reply(
+        app,
+        &room,
+        &bot,
+        trigger,
+        webhook::Attachment {
+            data: b"corrupt MOV".to_vec(),
+            filename: "attachment.mov".into(),
+            content_type: "video/quicktime".into(),
+        },
+    )
+    .await
+    .unwrap();
     test_app.publications().take();
     broadcast_create(app, &room, &reply).await.unwrap();
     let id = reply.id;
@@ -33,31 +62,58 @@ async fn attachment_processing_root_webhook_recovers_failed_inline_video_like_ra
     }).await.unwrap();
     let mut actual = actual;
     let event = client.until(|event| matches!(&event.payload, campfire_api_types::SyncPayload::MessageCreated(message) if message.id == id), |_| false).await;
-    let campfire_api_types::SyncPayload::MessageCreated(message) = event.payload else { unreachable!() };
-    actual["append_without_poster"] = serde_json::json!(message.attachment.is_some_and(|file| file.preview == campfire_api_types::AttachmentPreview::Video && file.thumbnail_url.is_none()));
-    let expected: serde_json::Value = serde_json::from_str(include_str!("../../../../../vectors/message_attachment_processing_failures.json")).unwrap();
-    assert_eq!(actual, expected["root_webhook"], "rendering the root reply must preserve Rails' recovery request");
+    let campfire_api_types::SyncPayload::MessageCreated(message) = event.payload else {
+        unreachable!()
+    };
+    actual["append_without_poster"] =
+        serde_json::json!(message.attachment.is_some_and(|file| file.preview
+            == campfire_api_types::AttachmentPreview::Video
+            && file.thumbnail_url.is_none()));
+    let expected: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/message_attachment_processing_failures.json"
+    ))
+    .unwrap();
+    assert_eq!(
+        actual, expected["root_webhook"],
+        "rendering the root reply must preserve Rails' recovery request"
+    );
     server.abort();
 }
 
 #[test]
 fn ws11_legacy_webhook_retry_policy_keeps_transient_sources() {
-    use campfire_jobs::JobKind;
-    use crate::net::http::HttpError;
     use crate::integrations::webhook::WebhookError;
+    use crate::net::http::HttpError;
+    use campfire_jobs::JobKind;
     let policy = WebhookJob::retry_policy();
-    let timeout = anyhow::Error::new(WebhookError::Http(HttpError::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, "write timed out"))));
+    let timeout = anyhow::Error::new(WebhookError::Http(HttpError::Io(std::io::Error::new(
+        std::io::ErrorKind::TimedOut,
+        "write timed out",
+    ))));
     assert!((policy.retry_on)(&timeout));
-    let refused = anyhow::Error::new(WebhookError::Http(HttpError::Io(std::io::Error::new(std::io::ErrorKind::ConnectionRefused, "refused"))));
+    let refused = anyhow::Error::new(WebhookError::Http(HttpError::Io(std::io::Error::new(
+        std::io::ErrorKind::ConnectionRefused,
+        "refused",
+    ))));
     assert!(!(policy.retry_on)(&refused));
-    assert!(!(policy.retry_on)(&anyhow::Error::new(WebhookError::InvalidUrl("bad URI".into()))));
-    let delays: Vec<_> = (1..=5).map(|attempt| policy.retry_delay(attempt, None, 0.0).map(|delay| delay.as_secs())).collect();
+    assert!(!(policy.retry_on)(&anyhow::Error::new(
+        WebhookError::InvalidUrl("bad URI".into())
+    )));
+    let delays: Vec<_> = (1..=5)
+        .map(|attempt| {
+            policy
+                .retry_delay(attempt, None, 0.0)
+                .map(|delay| delay.as_secs())
+        })
+        .collect();
     assert_eq!(delays, vec![Some(3), Some(18), Some(83), Some(258), None]);
 }
 
 #[tokio::test]
 async fn ws11_sync_replies_use_root_links_threads_boards_and_locking() {
-    let app = TestApp::boot().await.expect("build the default parity seed");
+    let app = TestApp::boot()
+        .await
+        .expect("build the default parity seed");
     app.db().write(|tx| {
         let attrs = || NewMessage { room_id: ALL_TALK, creator_id: DAVID, body: Some("Trigger".into()), ..Default::default() };
         let root = Message::create(tx, attrs())?;
@@ -86,19 +142,57 @@ async fn ws11_sync_replies_use_root_links_threads_boards_and_locking() {
 
 #[tokio::test]
 async fn ws11_sync_attachment_reply_is_stored_in_the_trigger_thread() {
-    let test_app = TestApp::boot().await.expect("build the default parity seed");
+    let test_app = TestApp::boot()
+        .await
+        .expect("build the default parity seed");
     let app = &test_app.booted.app;
-    let (room, bot, trigger) = app.db.write(|tx| {
-        let room = Room::find(tx.conn(), ALL_TALK)?;
-        let bot = User::find(tx.conn(), BENDER)?;
-        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread { room_id: ALL_TALK, creator_id: DAVID, name: Some("Attachment reply".into()), ..Default::default() })?;
-        let trigger = thread.post_message(tx, DAVID, NewMessage { body: Some("Attach".into()), ..Default::default() })?;
-        Ok((room, bot, trigger))
-    }).await.unwrap();
-    let reply = create_attachment_reply(app, &room, &bot, trigger.clone(), webhook::Attachment { data: b"a,b\n1,2\n".to_vec(), filename: "attachment.csv".into(), content_type: "text/csv".into() }).await.unwrap();
+    let (room, bot, trigger) = app
+        .db
+        .write(|tx| {
+            let room = Room::find(tx.conn(), ALL_TALK)?;
+            let bot = User::find(tx.conn(), BENDER)?;
+            let mut thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("Attachment reply".into()),
+                    ..Default::default()
+                },
+            )?;
+            let trigger = thread.post_message(
+                tx,
+                DAVID,
+                NewMessage {
+                    body: Some("Attach".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((room, bot, trigger))
+        })
+        .await
+        .unwrap();
+    let reply = create_attachment_reply(
+        app,
+        &room,
+        &bot,
+        trigger.clone(),
+        webhook::Attachment {
+            data: b"a,b\n1,2\n".to_vec(),
+            filename: "attachment.csv".into(),
+            content_type: "text/csv".into(),
+        },
+    )
+    .await
+    .unwrap();
     assert_eq!(reply.thread_id, trigger.thread_id);
     assert_eq!(reply.reply_to_message_id, Some(trigger.id));
-    let (_, blob) = app.db.read(move |conn| reply.attachment(conn)).await.unwrap().unwrap();
+    let (_, blob) = app
+        .db
+        .read(move |conn| reply.attachment(conn))
+        .await
+        .unwrap()
+        .unwrap();
     assert_eq!(blob.filename, "attachment.csv");
     assert_eq!(blob.byte_size, 8);
 }

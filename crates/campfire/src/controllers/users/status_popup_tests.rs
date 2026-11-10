@@ -16,7 +16,6 @@ async fn edit_is_current_user_only_and_requires_sign_in() {
     for path in ["/users/me/status/edit", "/users/149087659/status/edit"] {
         let response = app.david().get(path).await;
         assert_eq!(response.status, axum::http::StatusCode::FOUND);
-
     }
 }
 #[tokio::test]

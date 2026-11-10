@@ -661,9 +661,6 @@ async fn a_classic_vote_tells_the_spa_tabs() {
 
 /// The classic frames a run of poll changes sends to a classic tab on Designers.
 
-
-
-
 #[tokio::test]
 async fn messages_carry_their_cards() {
     let Some(a) = app(true).await else { return };
@@ -1639,12 +1636,21 @@ async fn card_followup_quote_updates_reach_room_and_thread_tabs() {
 async fn github_thread_header_updates_arrive_after_the_parent_is_deleted() {
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
-    a.db().write(|tx| {
-        tx.conn().execute("UPDATE channel_threads SET parent_message_id=? WHERE id=8", [PR_MESSAGE])?;
-        campfire_db::Message::find(tx.conn(), PR_MESSAGE)?.destroy(tx)?;
-        assert_eq!(campfire_db::ChannelThread::find(tx.conn(), 8)?.parent_message_id, None);
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE channel_threads SET parent_message_id=? WHERE id=8",
+                [PR_MESSAGE],
+            )?;
+            campfire_db::Message::find(tx.conn(), PR_MESSAGE)?.destroy(tx)?;
+            assert_eq!(
+                campfire_db::ChannelThread::find(tx.conn(), 8)?.parent_message_id,
+                None
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
     let (addr, server) = serve(&a).await;
     let david = a.sign_in(DAVID).await;
     let kevin = a.sign_in(KEVIN).await;
@@ -1652,14 +1658,28 @@ async fn github_thread_header_updates_arrive_after_the_parent_is_deleted() {
     let mut member = Sync::connect(addr, &kevin.cookie_header(), &["thread:8".into()]).await;
     owner.welcome().await;
     member.welcome().await;
-    a.db().write(|tx| {
-        tx.emit_after_commit(campfire_db::Event::broadcast(&campfire_app::integrations::github::pull_requests::CardUpdated { pull_request_id: 1 }));
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(|tx| {
+            tx.emit_after_commit(campfire_db::Event::broadcast(
+                &campfire_app::integrations::github::pull_requests::CardUpdated {
+                    pull_request_id: 1,
+                },
+            ));
+            Ok(())
+        })
+        .await
+        .unwrap();
     for socket in [&mut owner, &mut member] {
         let event = socket.until(|event| matches!(&event.payload, api::SyncPayload::ThreadGithubUpdated(change) if change.thread_id == 8), |_| false).await;
         assert_eq!(event.topic, "thread:8");
-        assert_eq!(event.payload, api::SyncPayload::ThreadGithubUpdated(api::ThreadGithubUpdated { room_id: DESIGNERS, thread_id: 8, pull_request_id: 1 }));
+        assert_eq!(
+            event.payload,
+            api::SyncPayload::ThreadGithubUpdated(api::ThreadGithubUpdated {
+                room_id: DESIGNERS,
+                thread_id: 8,
+                pull_request_id: 1
+            })
+        );
     }
     server.abort();
 }
@@ -1673,10 +1693,15 @@ async fn link_and_linkedin_refreshes_reach_room_and_thread_tabs_without_html() {
             let (topic, thread_id) = card_conversation(&a, message_id, threaded).await;
             let (addr, server) = serve(&a).await;
             let david = a.sign_in(DAVID).await;
-            let mut sync = Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+            let mut sync =
+                Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
             sync.welcome().await;
             for standalone in [false, true] {
-                let title = if standalone { "Standalone refreshed card" } else { "Batched refreshed card" };
+                let title = if standalone {
+                    "Standalone refreshed card"
+                } else {
+                    "Batched refreshed card"
+                };
                 let _embed_id = a.db().write(move |tx| {
                     let embed_id: i64 = tx.conn().query_row("SELECT link_embed_id FROM link_embed_references WHERE message_id=? LIMIT 1", [message_id], |row| row.get(0))?;
                     tx.conn().execute("UPDATE link_embeds SET title=? WHERE id=?", (title, embed_id))?;
@@ -1687,10 +1712,15 @@ async fn link_and_linkedin_refreshes_reach_room_and_thread_tabs_without_html() {
                 }).await.unwrap();
                 if standalone {
                     let state = a.booted.app.clone();
-                    a.db().read(move |conn| {
-                        let message = campfire_db::Message::find(conn, message_id)?;
-                        crate::controllers::presenters::link_embeds::broadcast_message(&state, conn, &message, linkedin)
-                    }).await.unwrap();
+                    a.db()
+                        .read(move |conn| {
+                            let message = campfire_db::Message::find(conn, message_id)?;
+                            crate::controllers::presenters::link_embeds::broadcast_message(
+                                &state, conn, &message, linkedin,
+                            )
+                        })
+                        .await
+                        .unwrap();
                 }
                 let cards = changed_cards(&mut sync, &topic, message_id, thread_id).await;
                 let actual_title = match cards.cards.as_slice() {
@@ -1711,17 +1741,28 @@ async fn wide_calendar_years_reach_the_message_socket_without_a_turbo_renderer()
     let a = a.without_job_runner().await;
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
-    let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
+    let mut sync =
+        Sync::connect(addr, &david.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
     sync.welcome().await;
-    let event_id = a.db().write(|tx| {
-        let event = campfire_db::CalendarEvent::create(tx, campfire_db::NewCalendarEvent {
-            room_id: DESIGNERS, organizer_id: DAVID, title: "Wide calendar".into(),
-            starts_at: campfire_db::Timestamp::parse_db("60310-02-02 20:30:00"),
-            ends_at: campfire_db::Timestamp::parse_db("60310-02-02 21:30:00"),
-            time_zone: "America/New_York".into(), ..Default::default()
-        })?;
-        Ok(event.id)
-    }).await.unwrap();
+    let event_id = a
+        .db()
+        .write(|tx| {
+            let event = campfire_db::CalendarEvent::create(
+                tx,
+                campfire_db::NewCalendarEvent {
+                    room_id: DESIGNERS,
+                    organizer_id: DAVID,
+                    title: "Wide calendar".into(),
+                    starts_at: campfire_db::Timestamp::parse_db("60310-02-02 20:30:00"),
+                    ends_at: campfire_db::Timestamp::parse_db("60310-02-02 21:30:00"),
+                    time_zone: "America/New_York".into(),
+                    ..Default::default()
+                },
+            )?;
+            Ok(event.id)
+        })
+        .await
+        .unwrap();
     let response = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/messages"), &json!({
         "markdownSource": format!("/rooms/{DESIGNERS}/events/{event_id}"),
         "clientMessageId": "wide-calendar-sync", "replyToMessageId": null, "replyNotifyAuthor": null,
@@ -1729,13 +1770,16 @@ async fn wide_calendar_years_reach_the_message_socket_without_a_turbo_renderer()
     assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
     let message_id = parse::<api::MessageDTO>(&response).id;
     let event = sync.until(move |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == message_id), |_| false).await;
-    let api::SyncPayload::MessageCreated(message) = event.payload else { unreachable!() };
-    let [api::MessageCard::Event(card)] = message.cards.as_slice() else { panic!("{:?}", message.cards) };
+    let api::SyncPayload::MessageCreated(message) = event.payload else {
+        unreachable!()
+    };
+    let [api::MessageCard::Event(card)] = message.cards.as_slice() else {
+        panic!("{:?}", message.cards)
+    };
     assert_eq!(card.starts_at, "+060310-02-02T20:30:00.000Z");
     assert_eq!(card.ends_at.as_deref(), Some("+060310-02-02T21:30:00.000Z"));
     server.abort();
 }
-
 
 #[tokio::test]
 async fn poll_media_images_and_emoji_round_trip_and_reject_invalid_choices() {
@@ -1747,28 +1791,54 @@ async fn poll_media_images_and_emoji_round_trip_and_reject_invalid_choices() {
     sync.welcome().await;
     let mut body = poll_body("poll-media", &["Image", "Emoji"]);
     body["optionMedia"] = json!([{ "signedId": signed }, { "emoji": "🌮" }]);
-    let reply = send(&mut b, Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/polls"), body.clone()).await;
+    let reply = send(
+        &mut b,
+        Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/polls"),
+        body.clone(),
+    )
+    .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let posted: Value = parse(&reply);
     assert_eq!(posted["poll"]["options"][0]["media"]["kind"], "image");
     assert_eq!(posted["poll"]["options"][1]["media"]["content"], "🌮");
-    let url = posted["poll"]["options"][0]["media"]["url"].as_str().unwrap();
+    let url = posted["poll"]["options"][0]["media"]["url"]
+        .as_str()
+        .unwrap();
     let image = b.send(get(url)).await;
     assert!(image.status.is_success() || image.status.is_redirection());
     let mut outsider = a.sign_in(KEVIN).await;
-    sql(&a, "DELETE FROM memberships WHERE room_id = ? AND user_id = ?", vec![DESIGNERS, KEVIN]).await;
+    sql(
+        &a,
+        "DELETE FROM memberships WHERE room_id = ? AND user_id = ?",
+        vec![DESIGNERS, KEVIN],
+    )
+    .await;
     assert_eq!(outsider.send(get(url)).await.status, StatusCode::NOT_FOUND);
     let uploaded_url = format!("/rails/active_storage/blobs/redirect/{signed}/poll.png");
-    assert_eq!(outsider.send(get(&uploaded_url)).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        outsider.send(get(&uploaded_url)).await.status,
+        StatusCode::NOT_FOUND
+    );
     let poll_id = posted["poll"]["id"].as_i64().unwrap();
     let option_id = posted["poll"]["options"][0]["id"].as_i64().unwrap();
     ok::<api::PollResults>(&vote(&mut b, DESIGNERS, poll_id, &[option_id]).await);
     let event = sync.until(poll_updated(poll_id), any_ballot).await;
-    let api::SyncPayload::PollUpdated(updated) = event.payload else { panic!("expected poll update") };
+    let api::SyncPayload::PollUpdated(updated) = event.payload else {
+        panic!("expected poll update")
+    };
     let updated = serde_json::to_value(updated.poll).unwrap();
-    assert_eq!(updated["options"][0]["media"], posted["poll"]["options"][0]["media"]);
-    assert_eq!(updated["options"][1]["media"], posted["poll"]["options"][1]["media"]);
-    let read: Value = ok(&b.send(get(&format!("/api/v1/rooms/{DESIGNERS}/polls/{poll_id}"))).await);
+    assert_eq!(
+        updated["options"][0]["media"],
+        posted["poll"]["options"][0]["media"]
+    );
+    assert_eq!(
+        updated["options"][1]["media"],
+        posted["poll"]["options"][1]["media"]
+    );
+    let read: Value = ok(&b
+        .send(get(&format!("/api/v1/rooms/{DESIGNERS}/polls/{poll_id}")))
+        .await);
     assert_eq!(read["poll"]["options"], updated["options"]);
     let both = json!([{ "signedId": signed, "emoji": "🌮" }, null]);
     let unknown = json!([{ "emoji": ":missing_poll_emoji:" }, null]);
@@ -1776,7 +1846,18 @@ async fn poll_media_images_and_emoji_round_trip_and_reject_invalid_choices() {
     for (index, media) in [both, unknown, remote].into_iter().enumerate() {
         body["clientMessageId"] = json!(format!("poll-media-invalid-{index}"));
         body["optionMedia"] = media;
-        assert_eq!(fields(&send(&mut b, Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/polls"), body.clone()).await), ["optionMedia"]);
+        assert_eq!(
+            fields(
+                &send(
+                    &mut b,
+                    Method::POST,
+                    &format!("/api/v1/rooms/{DESIGNERS}/polls"),
+                    body.clone()
+                )
+                .await
+            ),
+            ["optionMedia"]
+        );
     }
     server.abort();
 }
@@ -1785,7 +1866,12 @@ async fn poll_media_images_and_emoji_round_trip_and_reject_invalid_choices() {
 async fn poll_media_rejects_non_images_and_oversize_uploads() {
     let Some(a) = app(true).await else { return };
     let signed = super::admin_tests::upload(&a, "poll.png").await;
-    let blob_id = campfire_storage::paths::verify_signed_blob_id(&*a.booted.app.storage.verifier, &signed, a.booted.app.clock.now()).unwrap();
+    let blob_id = campfire_storage::paths::verify_signed_blob_id(
+        &*a.booted.app.storage.verifier,
+        &signed,
+        a.booted.app.clock.now(),
+    )
+    .unwrap();
     let mut b = a.sign_in(DAVID).await;
     for (index, sql_text) in [
         "UPDATE active_storage_blobs SET content_type = 'text/plain' WHERE id = ?",
@@ -1798,28 +1884,48 @@ async fn poll_media_rejects_non_images_and_oversize_uploads() {
     }
 }
 
-
 #[tokio::test]
 async fn poll_media_stills_disk_urls_and_serializers_follow_room_access_and_purge() {
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
-    let staged = a.booted.app.storage.stage_bytes(
-        include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
-        campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
-    ).unwrap();
-    let uploaded = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
-    let signed = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, uploaded.id, None);
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
+            campfire_storage::Filename::new("poll.gif"),
+            Some("image/gif"),
+        )
+        .unwrap();
+    let uploaded = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, uploaded.id, None);
     let mut author = a.sign_in(DAVID).await;
     let mut other = a.sign_in(KEVIN).await;
     let mut body = poll_body("poll-media-animated", &["Moving", "Still"]);
     body["optionMedia"] = json!([{ "signedId": signed }, { "emoji": "👩🏽‍💻" }]);
-    let reply = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_PETS}/polls"), body).await;
+    let reply = send(
+        &mut author,
+        Method::POST,
+        &format!("/api/v1/rooms/{ALL_PETS}/polls"),
+        body,
+    )
+    .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let message: Value = parse(&reply);
     let poll_id = message["poll"]["id"].as_i64().unwrap();
     let message_id = message["id"].as_i64().unwrap();
-    let original = message["poll"]["options"][0]["media"]["url"].as_str().unwrap();
-    let still = message["poll"]["options"][0]["media"]["stillUrl"].as_str().unwrap();
+    let original = message["poll"]["options"][0]["media"]["url"]
+        .as_str()
+        .unwrap();
+    let still = message["poll"]["options"][0]["media"]["stillUrl"]
+        .as_str()
+        .unwrap();
     let mut media_urls = Vec::new();
     for url in [original, still] {
         let permitted = author.send(get(url)).await;
@@ -1831,64 +1937,163 @@ async fn poll_media_stills_disk_urls_and_serializers_follow_room_access_and_purg
         let bytes = author.send(get(disk)).await;
         assert_eq!(bytes.status, StatusCode::OK);
         assert_eq!(bytes.header("cache-control"), Some("private, no-store"));
-        if url == still { assert_eq!(&bytes.body[..8], b"\x89PNG\r\n\x1a\n"); }
+        if url == still {
+            assert_eq!(&bytes.body[..8], b"\x89PNG\r\n\x1a\n");
+        }
         let proxy = url.replace("/redirect/", "/proxy/");
         assert_eq!(other.send(get(&proxy)).await.status, StatusCode::NOT_FOUND);
-        assert_eq!(author.send(get(&proxy)).await.header("cache-control"), Some("private, no-store"));
+        assert_eq!(
+            author.send(get(&proxy)).await.header("cache-control"),
+            Some("private, no-store")
+        );
     }
-    assert_eq!(other.send(get(&format!("/api/v1/rooms/{ALL_PETS}/polls/{poll_id}"))).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        other
+            .send(get(&format!("/api/v1/rooms/{ALL_PETS}/polls/{poll_id}")))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
     let blob_id = a.db().read(move |conn| {
         Ok(conn.query_row("SELECT a.blob_id FROM active_storage_attachments a JOIN poll_options o ON o.id=a.record_id WHERE a.record_type='PollOption' AND o.poll_id=? ORDER BY o.position LIMIT 1", [poll_id], |r| r.get::<_, i64>(0))?)
     }).await.unwrap();
     let variant = a.db().read(move |conn| {
         Ok(conn.query_row("SELECT a.blob_id FROM active_storage_attachments a JOIN active_storage_variant_records v ON v.id=a.record_id WHERE a.record_type='ActiveStorage::VariantRecord' AND v.blob_id=?", [blob_id], |r| r.get::<_, i64>(0))?)
     }).await.unwrap();
-    let variant_blob = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, variant).unwrap().unwrap())).await.unwrap();
-    let variant_url = campfire_storage::paths::blob_redirect_path(&*a.booted.app.storage.verifier, &variant_blob, None);
+    let variant_blob = a
+        .db()
+        .read(move |conn| {
+            Ok(campfire_storage::Blob::find(conn, variant)
+                .unwrap()
+                .unwrap())
+        })
+        .await
+        .unwrap();
+    let variant_url = campfire_storage::paths::blob_redirect_path(
+        &*a.booted.app.storage.verifier,
+        &variant_blob,
+        None,
+    );
     let variant_response = author.send(get(&variant_url)).await;
-    assert_eq!(variant_response.header("cache-control"), Some("private, no-store"));
+    assert_eq!(
+        variant_response.header("cache-control"),
+        Some("private, no-store")
+    );
     let variant_disk = variant_response.location().unwrap().to_owned();
-    media_urls.extend([original.to_owned(), still.to_owned(), variant_url.clone(), variant_disk.clone()]);
-    media_urls.extend([original, still, &variant_url].map(|url| url.replace("/redirect/", "/proxy/")));
-    assert_eq!(other.send(get(&variant_url)).await.status, StatusCode::NOT_FOUND);
+    media_urls.extend([
+        original.to_owned(),
+        still.to_owned(),
+        variant_url.clone(),
+        variant_disk.clone(),
+    ]);
+    media_urls
+        .extend([original, still, &variant_url].map(|url| url.replace("/redirect/", "/proxy/")));
+    assert_eq!(
+        other.send(get(&variant_url)).await.status,
+        StatusCode::NOT_FOUND
+    );
     let app = a.booted.app.clone();
-    let payload = a.db().read(move |conn| {
-        campfire_db::Poll::find(conn, poll_id)?.results_payload(conn, &*app.db.env().rich_text, app.db.env().now(), Some(DAVID), &*app.storage.verifier)
-    }).await.unwrap();
-    assert_eq!(payload["options"][0]["media"], message["poll"]["options"][0]["media"]);
+    let payload = a
+        .db()
+        .read(move |conn| {
+            campfire_db::Poll::find(conn, poll_id)?.results_payload(
+                conn,
+                &*app.db.env().rich_text,
+                app.db.env().now(),
+                Some(DAVID),
+                &*app.storage.verifier,
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        payload["options"][0]["media"],
+        message["poll"]["options"][0]["media"]
+    );
     assert_eq!(payload["options"][1]["media"]["content"], "👩🏽‍💻");
-    a.db().write(move |tx| campfire_db::Message::find(tx.conn(), message_id)?.destroy(tx)).await.unwrap();
-    let detached = a.db().read(move |conn| {
-        assert!(!conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)", [blob_id], |row| row.get::<_, bool>(0))?);
-        Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().unwrap())
-    }).await.unwrap();
-    assert!(a.booted.app.storage.service.path_for(&detached.key).exists(), "blob/file purge remains deferred");
+    a.db()
+        .write(move |tx| campfire_db::Message::find(tx.conn(), message_id)?.destroy(tx))
+        .await
+        .unwrap();
+    let detached = a
+        .db()
+        .read(move |conn| {
+            assert!(!conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)",
+                [blob_id],
+                |row| row.get::<_, bool>(0)
+            )?);
+            Ok(campfire_storage::Blob::find(conn, blob_id)
+                .unwrap()
+                .unwrap())
+        })
+        .await
+        .unwrap();
+    assert!(
+        a.booted
+            .app
+            .storage
+            .service
+            .path_for(&detached.key)
+            .exists(),
+        "blob/file purge remains deferred"
+    );
     let mut anonymous = a.anonymous();
     for browser in [&mut author, &mut other, &mut anonymous] {
         for url in &media_urls {
-            assert_eq!(browser.send(get(url)).await.status, StatusCode::NOT_FOUND, "deleted poll media {url}");
+            assert_eq!(
+                browser.send(get(url)).await.status,
+                StatusCode::NOT_FOUND,
+                "deleted poll media {url}"
+            );
         }
     }
     let (reached, reached_here) = tokio::sync::oneshot::channel();
     let (go, go_here) = std::sync::mpsc::channel();
     crate::active_storage::test_hooks::after_blob_lookup(detached.key, move || {
         reached.send(()).unwrap();
-        go_here.recv_timeout(std::time::Duration::from_secs(30)).unwrap();
+        go_here
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .unwrap();
     });
     // Purge commits between the URL's blob lookup and its authorization read.
     let (response, ()) = tokio::join!(author.send(get(original)), async {
         reached_here.await.unwrap();
-        crate::active_storage::purge(&a.booted.app, blob_id).await.unwrap();
+        crate::active_storage::purge(&a.booted.app, blob_id)
+            .await
+            .unwrap();
         go.send(()).unwrap();
     });
-    assert_eq!(response.status, StatusCode::NOT_FOUND, "purging a loaded blob must not make it public");
+    assert_eq!(
+        response.status,
+        StatusCode::NOT_FOUND,
+        "purging a loaded blob must not make it public"
+    );
     for url in &media_urls {
         assert_eq!(author.send(get(url)).await.status, StatusCode::NOT_FOUND);
     }
-    crate::active_storage::purge(&a.booted.app, variant).await.unwrap();
-    assert_eq!(author.send(get(&variant_url)).await.status, StatusCode::NOT_FOUND, "still URL still resolves after its purge");
-    assert_eq!(author.send(get(&variant_disk)).await.status, StatusCode::NOT_FOUND, "still disk URL still resolves after its purge");
-    let exists = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_some())).await.unwrap();
+    crate::active_storage::purge(&a.booted.app, variant)
+        .await
+        .unwrap();
+    assert_eq!(
+        author.send(get(&variant_url)).await.status,
+        StatusCode::NOT_FOUND,
+        "still URL still resolves after its purge"
+    );
+    assert_eq!(
+        author.send(get(&variant_disk)).await.status,
+        StatusCode::NOT_FOUND,
+        "still disk URL still resolves after its purge"
+    );
+    let exists = a
+        .db()
+        .read(move |conn| {
+            Ok(campfire_storage::Blob::find(conn, blob_id)
+                .unwrap()
+                .is_some())
+        })
+        .await
+        .unwrap();
     assert!(!exists);
 }
 
@@ -1897,41 +2102,80 @@ async fn poll_media_disk_urls_deny_files_after_the_blob_row_is_purged() {
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
     let signed = super::admin_tests::upload(&a, "poll.png").await;
-    let blob_id = campfire_storage::paths::verify_signed_blob_id(&*a.booted.app.storage.verifier, &signed, a.booted.app.clock.now()).unwrap();
-    let blob = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().unwrap())).await.unwrap();
+    let blob_id = campfire_storage::paths::verify_signed_blob_id(
+        &*a.booted.app.storage.verifier,
+        &signed,
+        a.booted.app.clock.now(),
+    )
+    .unwrap();
+    let blob = a
+        .db()
+        .read(move |conn| {
+            Ok(campfire_storage::Blob::find(conn, blob_id)
+                .unwrap()
+                .unwrap())
+        })
+        .await
+        .unwrap();
     let path = a.booted.app.storage.service.path_for(&blob.key);
     let mut author = a.sign_in(DAVID).await;
     let mut other = a.sign_in(KEVIN).await;
     let mut anonymous = a.anonymous();
     let mut body = poll_body("poll-media-file-purge", &["Image", "None"]);
     body["optionMedia"] = json!([{ "signedId": signed }, null]);
-    let reply = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_PETS}/polls"), body).await;
+    let reply = send(
+        &mut author,
+        Method::POST,
+        &format!("/api/v1/rooms/{ALL_PETS}/polls"),
+        body,
+    )
+    .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let message: Value = parse(&reply);
     let message_id = message["id"].as_i64().unwrap();
-    let original = message["poll"]["options"][0]["media"]["url"].as_str().unwrap();
+    let original = message["poll"]["options"][0]["media"]["url"]
+        .as_str()
+        .unwrap();
     let redirect = author.send(get(original)).await;
     let disk = redirect.location().unwrap();
     assert_eq!(author.send(get(disk)).await.status, StatusCode::OK);
-    a.db().write(move |tx| {
-        campfire_db::Message::find(tx.conn(), message_id)?.destroy(tx)
-    }).await.unwrap();
+    a.db()
+        .write(move |tx| campfire_db::Message::find(tx.conn(), message_id)?.destroy(tx))
+        .await
+        .unwrap();
     let (reached, reached_here) = tokio::sync::oneshot::channel();
     let (go, go_here) = std::sync::mpsc::channel();
     crate::active_storage::test_hooks::before_file_deletion(blob.key, move || {
         reached.send(()).unwrap();
-        go_here.recv_timeout(std::time::Duration::from_secs(30)).unwrap();
+        go_here
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .unwrap();
     });
-    let (purged, ()) = tokio::join!(crate::active_storage::purge(&a.booted.app, blob_id), async {
-        reached_here.await.unwrap();
-        assert!(path.exists(), "file deletion is still pending");
-        let exists = a.db().read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_some())).await.unwrap();
-        assert!(!exists, "the blob row's deletion has committed");
-        for browser in [&mut author, &mut other, &mut anonymous] {
-            assert_eq!(browser.send(get(disk)).await.status, StatusCode::NOT_FOUND, "a purged blob's file must not be served");
+    let (purged, ()) = tokio::join!(
+        crate::active_storage::purge(&a.booted.app, blob_id),
+        async {
+            reached_here.await.unwrap();
+            assert!(path.exists(), "file deletion is still pending");
+            let exists = a
+                .db()
+                .read(move |conn| {
+                    Ok(campfire_storage::Blob::find(conn, blob_id)
+                        .unwrap()
+                        .is_some())
+                })
+                .await
+                .unwrap();
+            assert!(!exists, "the blob row's deletion has committed");
+            for browser in [&mut author, &mut other, &mut anonymous] {
+                assert_eq!(
+                    browser.send(get(disk)).await.status,
+                    StatusCode::NOT_FOUND,
+                    "a purged blob's file must not be served"
+                );
+            }
+            go.send(()).unwrap();
         }
-        go.send(()).unwrap();
-    });
+    );
     purged.unwrap();
     assert!(!path.exists());
 }
@@ -1946,12 +2190,29 @@ async fn poll_media_accepts_workspace_emoji_by_name_and_preserves_field_order() 
     let mut b = a.sign_in(DAVID).await;
     let mut body = poll_body("poll-custom-media", &["Party", "Quiet"]);
     body["optionMedia"] = json!([{ "emoji": "poll_party" }, null]);
-    let reply = send(&mut b, Method::POST, &format!("/api/v1/rooms/{DESIGNERS}/polls"), body).await;
+    let reply = send(
+        &mut b,
+        Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/polls"),
+        body,
+    )
+    .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let message: Value = parse(&reply);
     let option = &message["poll"]["options"][0];
-    assert_eq!(option["media"], json!({ "kind": "emoji", "content": ":poll_party:" }));
-    assert_eq!(option.as_object().unwrap().keys().map(String::as_str).collect::<Vec<_>>(), ["id", "label", "votes", "voterIds", "media"]);
+    assert_eq!(
+        option["media"],
+        json!({ "kind": "emoji", "content": ":poll_party:" })
+    );
+    assert_eq!(
+        option
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["id", "label", "votes", "voterIds", "media"]
+    );
 }
 
 #[tokio::test]
@@ -1963,31 +2224,68 @@ async fn poll_media_bot_reply_tokens_cannot_cross_rooms() {
         tx.conn().execute("INSERT OR IGNORE INTO memberships (room_id,user_id,created_at,updated_at) VALUES (?,?,?,?)", rusqlite::params![ALL_PETS, BENDER, tx.now(), tx.now()])?;
         Ok(())
     }).await.unwrap();
-    let staged = a.booted.app.storage.stage_bytes(
-        include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
-        campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
-    ).unwrap();
-    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
-    let signed = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
+            campfire_storage::Filename::new("poll.gif"),
+            Some("image/gif"),
+        )
+        .unwrap();
+    let blob = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
     let mut author = a.sign_in(DAVID).await;
     let mut body = poll_body("poll-reply-token-media", &["Moving", "Quiet"]);
     body["optionMedia"] = json!([{ "signedId": signed }, null]);
-    let posted = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_PETS}/polls"), body).await;
+    let posted = send(
+        &mut author,
+        Method::POST,
+        &format!("/api/v1/rooms/{ALL_PETS}/polls"),
+        body,
+    )
+    .await;
     assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
     let posted: Value = parse(&posted);
     let now = a.booted.app.clock.now();
-    let wrong_room = encode(&rails_compat::verifiers::bot_reply::token_for(&a.booted.app.secrets, BENDER, ALL_TALK, now));
-    let right_room = encode(&rails_compat::verifiers::bot_reply::token_for(&a.booted.app.secrets, BENDER, ALL_PETS, now));
+    let wrong_room = encode(&rails_compat::verifiers::bot_reply::token_for(
+        &a.booted.app.secrets,
+        BENDER,
+        ALL_TALK,
+        now,
+    ));
+    let right_room = encode(&rails_compat::verifiers::bot_reply::token_for(
+        &a.booted.app.secrets,
+        BENDER,
+        ALL_PETS,
+        now,
+    ));
     for field in ["url", "stillUrl"] {
-        let url = posted["poll"]["options"][0]["media"][field].as_str().unwrap();
+        let url = posted["poll"]["options"][0]["media"][field]
+            .as_str()
+            .unwrap();
         let disk = author.send(get(url)).await.location().unwrap().to_owned();
         let proxy = url.replace("/redirect/", "/proxy/");
         for path in [url, &disk, &proxy] {
             let denied = format!("{path}?bot_key={wrong_room}&room_id={ALL_TALK}");
-            assert_eq!(a.anonymous().send(get(&denied)).await.status, StatusCode::NOT_FOUND, "{field}: {path}");
+            assert_eq!(
+                a.anonymous().send(get(&denied)).await.status,
+                StatusCode::NOT_FOUND,
+                "{field}: {path}"
+            );
             let permitted = format!("{path}?bot_key={right_room}&room_id={ALL_PETS}");
             let response = a.anonymous().send(get(&permitted)).await;
-            assert!(response.status.is_success() || response.status.is_redirection(), "{field}: {}", response.text());
+            assert!(
+                response.status.is_success() || response.status.is_redirection(),
+                "{field}: {}",
+                response.text()
+            );
         }
     }
 }
@@ -1995,7 +2293,9 @@ async fn poll_media_bot_reply_tokens_cannot_cross_rooms() {
 async fn follow_media_redirects(browser: &mut Browser<'_>, request: Req) -> Reply {
     let mut response = browser.send(request).await;
     for _ in 0..5 {
-        if !response.status.is_redirection() { return response; }
+        if !response.status.is_redirection() {
+            return response;
+        }
         let location = response.location().unwrap().to_owned();
         response = browser.send(get(&location)).await;
     }
@@ -2009,25 +2309,55 @@ async fn poll_media_agent_downloads_follow_poll_access() {
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
     initialize(&a).await;
-    let staged = a.booted.app.storage.stage_bytes(
-        include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
-        campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
-    ).unwrap();
-    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
-    let signed = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
+            campfire_storage::Filename::new("poll.gif"),
+            Some("image/gif"),
+        )
+        .unwrap();
+    let blob = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
     let mut author = a.sign_in(DAVID).await;
     let mut body = poll_body("poll-agent-media", &["Moving", "Quiet"]);
     body["optionMedia"] = json!([{ "signedId": signed }, null]);
-    let reply = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/polls"), body).await;
+    let reply = send(
+        &mut author,
+        Method::POST,
+        &format!("/api/v1/rooms/{ALL_TALK}/polls"),
+        body,
+    )
+    .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let posted: Value = parse(&reply);
     let poll_id = posted["poll"]["id"].as_i64().unwrap();
     for field in ["url", "stillUrl"] {
-        let url = posted["poll"]["options"][0]["media"][field].as_str().unwrap();
-        let response = follow_media_redirects(&mut a.anonymous(), get(&format!("{url}?bot_key={BENDER_KEY}"))).await;
-        assert_eq!(response.status, StatusCode::OK, "bot {field}: {}", response.text());
+        let url = posted["poll"]["options"][0]["media"][field]
+            .as_str()
+            .unwrap();
+        let response = follow_media_redirects(
+            &mut a.anonymous(),
+            get(&format!("{url}?bot_key={BENDER_KEY}")),
+        )
+        .await;
+        assert_eq!(
+            response.status,
+            StatusCode::OK,
+            "bot {field}: {}",
+            response.text()
+        );
         assert_eq!(response.header("cache-control"), Some("private, no-store"));
-        if field == "stillUrl" { assert_eq!(&response.body[..8], b"\x89PNG\r\n\x1a\n"); }
+        if field == "stillUrl" {
+            assert_eq!(&response.body[..8], b"\x89PNG\r\n\x1a\n");
+        }
     }
     let request = |url: &str| get(url).header("authorization", &format!("Bearer {SECRET}"));
     let poll_url = format!("/rooms/{ALL_TALK}/agents/polls/{poll_id}");
@@ -2040,16 +2370,33 @@ async fn poll_media_agent_downloads_follow_poll_access() {
     for field in ["url", "stillUrl"] {
         let url = media[field].as_str().unwrap().to_owned();
         let downloaded = follow_media_redirects(&mut a.anonymous(), request(&url)).await;
-        assert_eq!(downloaded.status, StatusCode::OK, "{field}: {}", downloaded.text());
-        assert_eq!(downloaded.header("cache-control"), Some("private, no-store"));
-        if field == "stillUrl" { assert_eq!(&downloaded.body[..8], b"\x89PNG\r\n\x1a\n"); }
+        assert_eq!(
+            downloaded.status,
+            StatusCode::OK,
+            "{field}: {}",
+            downloaded.text()
+        );
+        assert_eq!(
+            downloaded.header("cache-control"),
+            Some("private, no-store")
+        );
+        if field == "stillUrl" {
+            assert_eq!(&downloaded.body[..8], b"\x89PNG\r\n\x1a\n");
+        }
         let disk = author.send(get(&url)).await.location().unwrap().to_owned();
         let proxy = url.replace("/redirect/", "/proxy/");
         for path in [&disk, &proxy] {
             let response = a.anonymous().send(request(path)).await;
-            assert_eq!(response.status, StatusCode::OK, "{path}: {}", response.text());
+            assert_eq!(
+                response.status,
+                StatusCode::OK,
+                "{path}: {}",
+                response.text()
+            );
             assert_eq!(response.header("cache-control"), Some("private, no-store"));
-            if field == "stillUrl" { assert_eq!(&response.body[..8], b"\x89PNG\r\n\x1a\n"); }
+            if field == "stillUrl" {
+                assert_eq!(&response.body[..8], b"\x89PNG\r\n\x1a\n");
+            }
         }
         urls.extend([url, disk, proxy]);
     }
@@ -2057,32 +2404,73 @@ async fn poll_media_agent_downloads_follow_poll_access() {
         tx.conn().execute("INSERT INTO agent_grants(agent_id,capability,room_id,granted_by_id,created_at,updated_at) VALUES (?,'post_messages',?,?,?,?)", rusqlite::params![AGENT, ALL_PETS, DAVID, tx.now(), tx.now()])?;
         Ok(())
     }).await.unwrap();
-    assert_eq!(a.anonymous().send(request(&poll_url)).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        a.anonymous().send(request(&poll_url)).await.status,
+        StatusCode::FORBIDDEN
+    );
     for url in &urls {
-        assert_eq!(a.anonymous().send(request(url)).await.status, StatusCode::NOT_FOUND, "{url}");
+        assert_eq!(
+            a.anonymous().send(request(url)).await.status,
+            StatusCode::NOT_FOUND,
+            "{url}"
+        );
     }
-    let bot_key = a.db().write(move |tx| {
-        use sha2::{Digest, Sha256};
-        tx.conn().execute("UPDATE agent_grants SET room_id=? WHERE agent_id=?", [ALL_TALK, AGENT])?;
-        let user = campfire_db::Agent::find(tx.conn(), AGENT)?.unwrap().user_id;
-        tx.conn().execute("UPDATE users SET bot_token_digest=? WHERE id=?", rusqlite::params![format!("{:x}", Sha256::digest("poll-media-bot-key")), user])?;
-        Ok(format!("{user}-poll-media-bot-key"))
-    }).await.unwrap();
-    assert_eq!(a.anonymous().send(request(&poll_url)).await.status, StatusCode::OK);
+    let bot_key = a
+        .db()
+        .write(move |tx| {
+            use sha2::{Digest, Sha256};
+            tx.conn().execute(
+                "UPDATE agent_grants SET room_id=? WHERE agent_id=?",
+                [ALL_TALK, AGENT],
+            )?;
+            let user = campfire_db::Agent::find(tx.conn(), AGENT)?.unwrap().user_id;
+            tx.conn().execute(
+                "UPDATE users SET bot_token_digest=? WHERE id=?",
+                rusqlite::params![format!("{:x}", Sha256::digest("poll-media-bot-key")), user],
+            )?;
+            Ok(format!("{user}-poll-media-bot-key"))
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        a.anonymous().send(request(&poll_url)).await.status,
+        StatusCode::OK
+    );
     for url in &urls {
-        let bot_url = format!("{url}{}bot_key={bot_key}", if url.contains('?') { "&" } else { "?" });
+        let bot_url = format!(
+            "{url}{}bot_key={bot_key}",
+            if url.contains('?') { "&" } else { "?" }
+        );
         let response = follow_media_redirects(&mut a.anonymous(), get(&bot_url)).await;
-        assert_eq!(response.status, StatusCode::OK, "{url}: {}", response.text());
+        assert_eq!(
+            response.status,
+            StatusCode::OK,
+            "{url}: {}",
+            response.text()
+        );
         assert_eq!(response.header("cache-control"), Some("private, no-store"));
     }
-    a.db().write(move |tx| {
-        let user = campfire_db::Agent::find(tx.conn(), AGENT)?.unwrap().user_id;
-        tx.conn().execute("DELETE FROM memberships WHERE room_id=? AND user_id=?", [ALL_TALK, user])?;
-        Ok(())
-    }).await.unwrap();
-    assert_eq!(a.anonymous().send(request(&poll_url)).await.status, StatusCode::NOT_FOUND);
+    a.db()
+        .write(move |tx| {
+            let user = campfire_db::Agent::find(tx.conn(), AGENT)?.unwrap().user_id;
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+                [ALL_TALK, user],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        a.anonymous().send(request(&poll_url)).await.status,
+        StatusCode::NOT_FOUND
+    );
     for url in urls {
-        assert_eq!(a.anonymous().send(request(&url)).await.status, StatusCode::NOT_FOUND, "{url}");
+        assert_eq!(
+            a.anonymous().send(request(&url)).await.status,
+            StatusCode::NOT_FOUND,
+            "{url}"
+        );
     }
 }
 
@@ -2091,28 +2479,58 @@ async fn poll_media_bot_key_still_honours_byte_ranges() {
     use crate::controllers::presenters::test_support::{ALL_TALK, BENDER_KEY};
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
-    let staged = a.booted.app.storage.stage_bytes(
-        include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
-        campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
-    ).unwrap();
-    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
-    let signed = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
+            campfire_storage::Filename::new("poll.gif"),
+            Some("image/gif"),
+        )
+        .unwrap();
+    let blob = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
     let mut author = a.sign_in(DAVID).await;
     let mut body = poll_body("poll-bot-still-range", &["Moving", "Quiet"]);
     body["optionMedia"] = json!([{ "signedId": signed }, null]);
-    let posted = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/polls"), body).await;
+    let posted = send(
+        &mut author,
+        Method::POST,
+        &format!("/api/v1/rooms/{ALL_TALK}/polls"),
+        body,
+    )
+    .await;
     assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
     let posted: Value = parse(&posted);
-    let still = posted["poll"]["options"][0]["media"]["stillUrl"].as_str().unwrap();
+    let still = posted["poll"]["options"][0]["media"]["stillUrl"]
+        .as_str()
+        .unwrap();
     let url = format!("{still}?bot_key={BENDER_KEY}");
     let full = a.anonymous().send(get(&url)).await;
     assert_eq!(full.status, StatusCode::OK, "{}", full.text());
     let length = full.body.len();
-    let ranged = a.anonymous().send(get(&url).header("range", "bytes=0-7")).await;
-    assert_eq!(ranged.status, StatusCode::PARTIAL_CONTENT, "{}", ranged.text());
+    let ranged = a
+        .anonymous()
+        .send(get(&url).header("range", "bytes=0-7"))
+        .await;
+    assert_eq!(
+        ranged.status,
+        StatusCode::PARTIAL_CONTENT,
+        "{}",
+        ranged.text()
+    );
     assert_eq!(ranged.body.len(), 8);
     assert_eq!(&ranged.body[..], &full.body[..8]);
-    assert_eq!(ranged.header("content-range"), Some(format!("bytes 0-7/{length}").as_str()));
+    assert_eq!(
+        ranged.header("content-range"),
+        Some(format!("bytes 0-7/{length}").as_str())
+    );
     assert_eq!(ranged.header("content-length"), Some("8"));
     assert_eq!(ranged.header("cache-control"), Some("private, no-store"));
 }
@@ -2122,85 +2540,193 @@ async fn poll_media_bot_key_ranged_original_keeps_attachment_disposition() {
     use crate::controllers::presenters::test_support::{ALL_TALK, BENDER_KEY};
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
-    let staged = a.booted.app.storage.stage_bytes(
-        include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
-        campfire_storage::Filename::new("poll.gif"), Some("image/gif"),
-    ).unwrap();
-    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
-    let signed = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            include_bytes!("../../../../fixtures/files/workspace_icons/animated.gif"),
+            campfire_storage::Filename::new("poll.gif"),
+            Some("image/gif"),
+        )
+        .unwrap();
+    let blob = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
     let mut author = a.sign_in(DAVID).await;
     let mut body = poll_body("poll-bot-original-range", &["Moving", "Quiet"]);
     body["optionMedia"] = json!([{ "signedId": signed }, null]);
-    let posted = send(&mut author, Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/polls"), body).await;
+    let posted = send(
+        &mut author,
+        Method::POST,
+        &format!("/api/v1/rooms/{ALL_TALK}/polls"),
+        body,
+    )
+    .await;
     assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
     let posted: Value = parse(&posted);
-    let original = posted["poll"]["options"][0]["media"]["url"].as_str().unwrap();
+    let original = posted["poll"]["options"][0]["media"]["url"]
+        .as_str()
+        .unwrap();
     let url = format!("{original}?disposition=attachment&bot_key={BENDER_KEY}");
     let full = a.anonymous().send(get(&url)).await;
     assert_eq!(full.status, StatusCode::OK, "{}", full.text());
     let full_disposition = full.header("content-disposition").unwrap().to_owned();
-    assert!(full_disposition.starts_with("attachment") && full_disposition.contains("poll.gif"), "{full_disposition}");
-    let ranged = a.anonymous().send(get(&url).header("range", "bytes=0-7")).await;
-    assert_eq!(ranged.status, StatusCode::PARTIAL_CONTENT, "{}", ranged.text());
+    assert!(
+        full_disposition.starts_with("attachment") && full_disposition.contains("poll.gif"),
+        "{full_disposition}"
+    );
+    let ranged = a
+        .anonymous()
+        .send(get(&url).header("range", "bytes=0-7"))
+        .await;
+    assert_eq!(
+        ranged.status,
+        StatusCode::PARTIAL_CONTENT,
+        "{}",
+        ranged.text()
+    );
     assert_eq!(ranged.body.len(), 8);
     let disposition = ranged.header("content-disposition").unwrap();
-    assert!(disposition.starts_with("attachment") && disposition.contains("poll.gif"), "{disposition}");
+    assert!(
+        disposition.starts_with("attachment") && disposition.contains("poll.gif"),
+        "{disposition}"
+    );
     assert_eq!(disposition, full_disposition);
 }
 
 #[tokio::test]
 async fn private_thread_link_previews_require_access_to_both_source_and_holder() {
     let a = app(true).await.expect("restored default seed");
-    let (thread_id, public_reference, private_reference, public_holder) = a.db().write(|tx| {
-        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: DESIGNERS, creator_id: DAVID, name: Some("Hidden link title".into()),
-            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
-        })?;
-        let source = campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: DESIGNERS, creator_id: DAVID, thread_id: Some(thread.id),
-            markdown_source: Some("Hidden link content".into()), ..Default::default()
-        })?;
-        let mut references = Vec::new();
-        let mut holders = Vec::new();
-        for thread_id in [None, Some(thread.id)] {
-            let holder = campfire_db::Message::create(tx, campfire_db::NewMessage {
-                room_id: DESIGNERS, creator_id: DAVID, thread_id,
-                markdown_source: Some("A message link".into()), ..Default::default()
-            })?;
-            references.push(campfire_db::message_reference::create(tx, holder.id, source.id)?);
-            holders.push(holder.id);
-        }
-        Ok((thread.id, references[0], references[1], holders[0]))
-    }).await.unwrap();
+    let (thread_id, public_reference, private_reference, public_holder) = a
+        .db()
+        .write(|tx| {
+            let thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: DESIGNERS,
+                    creator_id: DAVID,
+                    name: Some("Hidden link title".into()),
+                    visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            let source = campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: DESIGNERS,
+                    creator_id: DAVID,
+                    thread_id: Some(thread.id),
+                    markdown_source: Some("Hidden link content".into()),
+                    ..Default::default()
+                },
+            )?;
+            let mut references = Vec::new();
+            let mut holders = Vec::new();
+            for thread_id in [None, Some(thread.id)] {
+                let holder = campfire_db::Message::create(
+                    tx,
+                    campfire_db::NewMessage {
+                        room_id: DESIGNERS,
+                        creator_id: DAVID,
+                        thread_id,
+                        markdown_source: Some("A message link".into()),
+                        ..Default::default()
+                    },
+                )?;
+                references.push(campfire_db::message_reference::create(
+                    tx, holder.id, source.id,
+                )?);
+                holders.push(holder.id);
+            }
+            Ok((thread.id, references[0], references[1], holders[0]))
+        })
+        .await
+        .unwrap();
     let mut kevin = a.sign_in(KEVIN).await;
-    assert_eq!(kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/message_links/999999999/card"))).await.status, StatusCode::NOT_FOUND);
-    assert_eq!(kevin.get(&format!("/rooms/{DESIGNERS}/message_links/999999999")).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        kevin
+            .send(get(&format!(
+                "/api/v1/rooms/{DESIGNERS}/message_links/999999999/card"
+            )))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        kevin
+            .get(&format!("/rooms/{DESIGNERS}/message_links/999999999"))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
     for visible in [false, true, false] {
         if visible {
-            a.db().write(move |tx| { campfire_db::ChannelThread::find(tx.conn(), thread_id)?.add_access_member(tx, DAVID, KEVIN)?; Ok(()) }).await.unwrap();
+            a.db()
+                .write(move |tx| {
+                    campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                        .add_access_member(tx, DAVID, KEVIN)?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
         }
-        let page: api::MessagePage = parse(&kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/messages"))).await);
-        let holder = page.messages.iter().find(|message| message.id == public_holder).unwrap();
+        let page: api::MessagePage = parse(
+            &kevin
+                .send(get(&format!("/api/v1/rooms/{DESIGNERS}/messages")))
+                .await,
+        );
+        let holder = page
+            .messages
+            .iter()
+            .find(|message| message.id == public_holder)
+            .unwrap();
         assert!(!holder.cards.iter().any(|card| matches!(card, api::MessageCard::Quote(quote) if quote.reference_id == public_reference)), "shared card metadata must not reveal a private source");
         for reference in [public_reference, private_reference] {
-            let classic = kevin.get(&format!("/rooms/{DESIGNERS}/message_links/{reference}")).await;
+            let classic = kevin
+                .get(&format!("/rooms/{DESIGNERS}/message_links/{reference}"))
+                .await;
             if visible {
                 assert!(classic.status.is_redirection(), "{}", classic.text());
             } else {
                 assert_eq!(classic.status, StatusCode::NOT_FOUND, "{}", classic.text());
             }
-            let response = kevin.send(get(&format!("/api/v1/rooms/{DESIGNERS}/message_links/{reference}/card"))).await;
+            let response = kevin
+                .send(get(&format!(
+                    "/api/v1/rooms/{DESIGNERS}/message_links/{reference}/card"
+                )))
+                .await;
             if !visible {
-                assert_eq!(response.status, StatusCode::NOT_FOUND, "{}", response.text());
+                assert_eq!(
+                    response.status,
+                    StatusCode::NOT_FOUND,
+                    "{}",
+                    response.text()
+                );
             } else {
                 assert_eq!(response.status, StatusCode::OK, "{}", response.text());
                 let result: api::QuotePreviewResult = parse(&response);
-                assert!(matches!(result, api::QuotePreviewResult::Loaded(_)), "{result:?}");
+                assert!(
+                    matches!(result, api::QuotePreviewResult::Loaded(_)),
+                    "{result:?}"
+                );
             }
-            if !visible { assert!(!response.text().contains("Hidden link")); }
+            if !visible {
+                assert!(!response.text().contains("Hidden link"));
+            }
         }
         if visible {
-            a.db().write(move |tx| campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, DAVID, KEVIN)).await.unwrap();
+            a.db()
+                .write(move |tx| {
+                    campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                        .remove_access_member(tx, DAVID, KEVIN)
+                })
+                .await
+                .unwrap();
         }
     }
 }

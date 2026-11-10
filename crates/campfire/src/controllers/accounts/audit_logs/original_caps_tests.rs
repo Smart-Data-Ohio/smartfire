@@ -55,10 +55,7 @@ async fn run(name: &str, limit: i64) {
         .unwrap();
     let mut browser = app.david();
     assert_eq!(
-        browser
-            .confirm_sudo("secret123456")
-            .await
-            .status,
+        browser.confirm_sudo("secret123456").await.status,
         StatusCode::OK
     );
     let csv = browser.get("/account/audit_log.csv").await;
@@ -75,7 +72,12 @@ async fn run(name: &str, limit: i64) {
     let rows = csv.text().lines().count() - 1;
     let actual = json!({"truncated":csv.header("content-disposition").unwrap().contains("truncated"),"filename_cap":csv.header("content-disposition").unwrap().contains(&format!("truncated-to-{limit}")),"rows":rows,"matches_table":rows as i64==count});
     assert_eq!(
-        actual, { let mut expected = case["response"].clone(); expected.as_object_mut().unwrap().remove("notice"); expected },
+        actual,
+        {
+            let mut expected = case["response"].clone();
+            expected.as_object_mut().unwrap().remove("notice");
+            expected
+        },
         "{name}: exact original reduced-cap clauses"
     );
 }

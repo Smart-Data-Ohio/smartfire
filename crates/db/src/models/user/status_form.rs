@@ -58,7 +58,9 @@ impl StatusForm {
             json!({"presence_setting":self.presence,"custom_status_emoji":self.emoji,"custom_status_text":self.text,"custom_status_expires_at":self.expiry.map(|t|t.to_db())}),
         )?;
         if changed {
-            tx.emit_after_commit(crate::Event::broadcast(&crate::broadcasts::Broadcast::UserStatus { user_id: id }));
+            tx.emit_after_commit(crate::Event::broadcast(
+                &crate::broadcasts::Broadcast::UserStatus { user_id: id },
+            ));
         }
         Ok(())
     }

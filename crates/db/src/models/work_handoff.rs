@@ -142,8 +142,14 @@ impl WorkHandoff {
             ));
         };
         let can = |capability| -> Result<bool> {
-            Ok(Agent::capabilities_for_rooms(conn, capability, &[(agent.id, Some(thread.room_id))])?
-                .get(&(agent.id, Some(thread.room_id))).copied().unwrap_or(false))
+            Ok(Agent::capabilities_for_rooms(
+                conn,
+                capability,
+                &[(agent.id, Some(thread.room_id))],
+            )?
+            .get(&(agent.id, Some(thread.room_id)))
+            .copied()
+            .unwrap_or(false))
         };
         if Membership::find_by_room_and_user(conn, thread.room_id, agent.user_id)?.is_none()
             || !can("post_messages")?
@@ -168,12 +174,20 @@ impl WorkHandoff {
         Ok(None)
     }
     pub fn receivers_for(conn: &Connection, thread: &ChannelThread) -> Result<Vec<(String, i64)>> {
-        let ids = query_all(conn, "SELECT agents.id FROM agents WHERE user_id IN (SELECT user_id FROM memberships WHERE room_id=?)", [thread.room_id], |row| row.get::<_, i64>(0))?;
+        let ids = query_all(
+            conn,
+            "SELECT agents.id FROM agents WHERE user_id IN (SELECT user_id FROM memberships WHERE room_id=?)",
+            [thread.room_id],
+            |row| row.get::<_, i64>(0),
+        )?;
         let mut receivers = Vec::new();
         for id in ids {
             let agent = Agent::find(conn, id)?.ok_or(crate::Error::RecordNotFound("Agent"))?;
             if Self::receiver_error(conn, thread, Some(&agent))?.is_none() {
-                receivers.push((User::find(conn, agent.user_id)?.display_name().to_owned(), id));
+                receivers.push((
+                    User::find(conn, agent.user_id)?.display_name().to_owned(),
+                    id,
+                ));
             }
         }
         receivers.sort_by_key(|(name, _)| rails_compat::unicode::downcase(name));

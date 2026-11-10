@@ -144,7 +144,10 @@ async fn run_case(case: &Value) -> Vec<usize> {
             }
             continue;
         }
-        if step.get("projection").is_some() && step["projection"] != "history" && step["method"] == "get" {
+        if step.get("projection").is_some()
+            && step["projection"] != "history"
+            && step["method"] == "get"
+        {
             observed += 1;
             continue;
         }
@@ -202,15 +205,32 @@ async fn run_case(case: &Value) -> Vec<usize> {
         }
         assert_eq!(
             reply.status.as_u16(),
-            if step["projection"] == "human_created" { 302 } else { gold["status"].as_u64().unwrap() as u16 },
+            if step["projection"] == "human_created" {
+                302
+            } else {
+                gold["status"].as_u64().unwrap() as u16
+            },
             "{key}: response {observed} status"
         );
         if step["projection"] == "history" {
-            assert_eq!(reply.json()["thread"]["work_history"], serde_json::from_str::<Value>(gold["response_body"].as_str().unwrap()).unwrap(), "{key}: response {observed} history");
+            assert_eq!(
+                reply.json()["thread"]["work_history"],
+                serde_json::from_str::<Value>(gold["response_body"].as_str().unwrap()).unwrap(),
+                "{key}: response {observed} history"
+            );
         } else if step["projection"] != "human_created" {
-            assert_eq!(reply.text(), gold["response_body"].as_str().unwrap(), "{key}: response {observed} bytes");
+            assert_eq!(
+                reply.text(),
+                gold["response_body"].as_str().unwrap(),
+                "{key}: response {observed} bytes"
+            );
         }
-        for (name, value) in gold["response_headers"].as_object().unwrap().iter().filter(|_| step["projection"] != "human_created") {
+        for (name, value) in gold["response_headers"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter(|_| step["projection"] != "human_created")
+        {
             assert_eq!(
                 json!(reply.header(name)),
                 *value,

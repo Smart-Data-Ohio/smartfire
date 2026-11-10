@@ -5,12 +5,12 @@ use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
 use crate::error::{Error, Result};
-use rails_compat::ar_encryption::ArEncryption;
-use rand::RngCore;
 use crate::models::{Message, Room, User};
 use crate::rich_text::RichText;
 use crate::sql::{CachedStatements, query_one};
 use crate::time::Timestamp;
+use rails_compat::ar_encryption::ArEncryption;
+use rand::RngCore;
 
 /// `Webhook::ENDPOINT_TIMEOUT`
 pub const ENDPOINT_TIMEOUT_SECONDS: u64 = 7;
@@ -100,25 +100,55 @@ impl Webhook {
 
     /// `signing_secret`: missing means an unsigned legacy delivery, without generating one.
     pub fn signing_secret(&self, encryption: &ArEncryption) -> Result<Option<String>> {
-        self.encrypted_signing_secret.as_deref().map(|value| encryption.decrypt(value).map_err(|error| Error::Other(error.to_string()))).transpose()
+        self.encrypted_signing_secret
+            .as_deref()
+            .map(|value| {
+                encryption
+                    .decrypt(value)
+                    .map_err(|error| Error::Other(error.to_string()))
+            })
+            .transpose()
     }
 
     /// `ensure_signing_secret!`: a loaded present value returns immediately. Blank
     /// instances reload under the writer transaction and adopt a first-generation winner's secret. Encryption and the row update commit together.
-    pub fn ensure_signing_secret(&mut self, tx: &Tx<'_>, encryption: &ArEncryption) -> Result<String> {
-        if let Some(secret) = self.signing_secret(encryption)?.filter(|secret| !campfire_richtext::ruby::is_blank(secret)) {
+    pub fn ensure_signing_secret(
+        &mut self,
+        tx: &Tx<'_>,
+        encryption: &ArEncryption,
+    ) -> Result<String> {
+        if let Some(secret) = self
+            .signing_secret(encryption)?
+            .filter(|secret| !campfire_richtext::ruby::is_blank(secret))
+        {
             return Ok(secret);
         }
-        *self = query_one(tx.conn(), "SELECT webhooks.* FROM webhooks WHERE id = ? LIMIT 1", [self.id], Self::from_row)?.ok_or(Error::RecordNotFound("Webhook"))?;
-        if let Some(secret) = self.signing_secret(encryption)?.filter(|secret| !campfire_richtext::ruby::is_blank(secret)) {
+        *self = query_one(
+            tx.conn(),
+            "SELECT webhooks.* FROM webhooks WHERE id = ? LIMIT 1",
+            [self.id],
+            Self::from_row,
+        )?
+        .ok_or(Error::RecordNotFound("Webhook"))?;
+        if let Some(secret) = self
+            .signing_secret(encryption)?
+            .filter(|secret| !campfire_richtext::ruby::is_blank(secret))
+        {
             return Ok(secret);
         }
         self.reset_signing_secret(tx, encryption)
     }
 
-    pub fn reset_signing_secret(&mut self, tx: &Tx<'_>, encryption: &ArEncryption) -> Result<String> {
+    pub fn reset_signing_secret(
+        &mut self,
+        tx: &Tx<'_>,
+        encryption: &ArEncryption,
+    ) -> Result<String> {
         let (secret, encrypted) = new_signing_secret(encryption);
-        tx.conn().execute_cached("UPDATE webhooks SET signing_secret = ?, updated_at = ? WHERE id = ?", params![encrypted, tx.now(), self.id])?;
+        tx.conn().execute_cached(
+            "UPDATE webhooks SET signing_secret = ?, updated_at = ? WHERE id = ?",
+            params![encrypted, tx.now(), self.id],
+        )?;
         self.encrypted_signing_secret = Some(encrypted);
         self.updated_at = tx.now();
         Ok(secret)
@@ -159,17 +189,30 @@ impl Webhook {
             json_string(&plain),
             json_string(message_path),
         );
-        if crate::sql::exists(conn, "SELECT 1 FROM agents WHERE user_id = ?", [self.user_id])? {
+        if crate::sql::exists(
+            conn,
+            "SELECT 1 FROM agents WHERE user_id = ?",
+            [self.user_id],
+        )? {
             Ok(body)
         } else {
-            Ok(format!("{},\"reply_url\":{}}}", &body[..body.len() - 1], json_string(room_bot_messages_path)))
+            Ok(format!(
+                "{},\"reply_url\":{}}}",
+                &body[..body.len() - 1],
+                json_string(room_bot_messages_path)
+            ))
         }
     }
 
     /// Agent message payload. The caller supplies the GitHub domain's pull-request payload.
     pub fn payload_for_agent(
-        &self, conn: &Connection, rich_text: &dyn RichText, message: &Message,
-        agent_id: i64, delivery_id: i64, pull_request: &serde_json::Value,
+        &self,
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        message: &Message,
+        agent_id: i64,
+        delivery_id: i64,
+        pull_request: &serde_json::Value,
     ) -> Result<String> {
         let room_path = format!("/rooms/{}", message.room_id);
         let message_path = format!("{room_path}/@{}", message.id);
@@ -179,14 +222,39 @@ impl Webhook {
             params![agent_id, self.user_id], |row| Ok((User::from_prefixed_row(row, "agent_")?.display_name().to_owned(),
                 row.get::<_, Option<i64>>("owner_id")?.map(|_| User::from_prefixed_row(row, "owner_").map(|owner| owner.display_name().to_owned())).transpose()?)),
         )?;
-        let files = crate::sql::query_all(conn, "SELECT file_id FROM drive_attachments WHERE message_id = ? ORDER BY id", [message.id], |row| row.get::<_, String>(0))?;
-        let attachments = files.into_iter().map(|file_id| format!(r#"{{"file_id":{},"url":{}}}"#, json_string(&file_id), json_string(&format!("https://drive.google.com/open?id={file_id}")))).collect::<Vec<_>>().join(",");
+        let files = crate::sql::query_all(
+            conn,
+            "SELECT file_id FROM drive_attachments WHERE message_id = ? ORDER BY id",
+            [message.id],
+            |row| row.get::<_, String>(0),
+        )?;
+        let attachments = files
+            .into_iter()
+            .map(|file_id| {
+                format!(
+                    r#"{{"file_id":{},"url":{}}}"#,
+                    json_string(&file_id),
+                    json_string(&format!("https://drive.google.com/open?id={file_id}"))
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
         // The last two braces close `message` and the outer hash; Drive data belongs to message.
         let prefix = &body[..body.len() - 2];
-        let pr = pull_request.to_string().replace('<', "\\u003c").replace('>', "\\u003e").replace('&', "\\u0026");
-        Ok(format!(r#"{prefix},"drive_attachments":[{attachments}]}},"agent":{{"id":{agent_id},"name":{},"owner":{},"delivery_id":{delivery_id}}},"pull_request":{pr}}}"#, json_string(&name), owner.as_deref().map(json_string).unwrap_or_else(|| "null".into())))
+        let pr = pull_request
+            .to_string()
+            .replace('<', "\\u003c")
+            .replace('>', "\\u003e")
+            .replace('&', "\\u0026");
+        Ok(format!(
+            r#"{prefix},"drive_attachments":[{attachments}]}},"agent":{{"id":{agent_id},"name":{},"owner":{},"delivery_id":{delivery_id}}},"pull_request":{pr}}}"#,
+            json_string(&name),
+            owner
+                .as_deref()
+                .map(json_string)
+                .unwrap_or_else(|| "null".into())
+        ))
     }
-
 }
 
 /// SecureRandom.hex(32), whose Ruby encoding is US-ASCII.
@@ -210,7 +278,10 @@ fn without_recipient_mentions(body: &str, recipient: &User) -> String {
 /// probed in the reference image).
 pub fn json_string(s: &str) -> String {
     let encoded = serde_json::to_string(s).expect("strings encode");
-    encoded.replace('<', "\\u003c").replace('>', "\\u003e").replace('&', "\\u0026")
+    encoded
+        .replace('<', "\\u003c")
+        .replace('>', "\\u003e")
+        .replace('&', "\\u0026")
 }
 
 #[cfg(test)]
@@ -220,6 +291,9 @@ mod tests {
     /// `{ a: "\u2028<>&" }.to_json` in the reference image.
     #[test]
     fn json_strings_escape_html_but_not_line_separators() {
-        assert_eq!(json_string("\u{2028}<>&\u{2029}"), "\"\u{2028}\\u003c\\u003e\\u0026\u{2029}\"");
+        assert_eq!(
+            json_string("\u{2028}<>&\u{2029}"),
+            "\"\u{2028}\\u003c\\u003e\\u0026\u{2029}\""
+        );
     }
 }

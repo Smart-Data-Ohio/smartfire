@@ -119,7 +119,9 @@ pub fn load(
             id: u.id,
             name: u.display_name().to_owned(),
             avatar_url: format!("{base_url}{}", super::avatar_path(secrets, &u)),
-            dm_url: rooms_by_user.get(&u.id).map(|id| campfire_routes::room(*id)),
+            dm_url: rooms_by_user
+                .get(&u.id)
+                .map(|id| campfire_routes::room(*id)),
             dm_room_id: rooms_by_user.get(&u.id).copied(),
         })
         .collect();

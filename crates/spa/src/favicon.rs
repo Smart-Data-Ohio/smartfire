@@ -22,10 +22,12 @@ impl Favicon {
                 escape(touch_icon)
             ),
             // Listed after the PNG, the SVG is the icon a browser that reads SVG chooses.
-            Favicon::Mark => "<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />\n\
+            Favicon::Mark => {
+                "<link rel=\"icon\" type=\"image/png\" sizes=\"32x32\" href=\"/favicon.png\" />\n\
                 <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n\
                 <link rel=\"apple-touch-icon\" href=\"/apple-touch-icon.png\" />\n"
-                .to_string(),
+                    .to_string()
+            }
         }
     }
 }

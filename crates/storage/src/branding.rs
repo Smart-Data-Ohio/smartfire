@@ -467,9 +467,15 @@ fn transform(
                 _ => None,
             };
             match (key.as_str(), dimension(0), dimension(1)) {
-                ("resize_and_pad", Some(width), Some(height)) => image.resize_and_pad(width, height)?,
+                ("resize_and_pad", Some(width), Some(height)) => {
+                    image.resize_and_pad(width, height)?
+                }
                 ("resize_to_limit", width, height) => image.resize_to_limit(width, height)?,
-                _ => return Err(crate::Error::InvalidVariation("resize_and_pad needs both dimensions".into())),
+                _ => {
+                    return Err(crate::Error::InvalidVariation(
+                        "resize_and_pad needs both dimensions".into(),
+                    ));
+                }
             }
         }
         _ => {

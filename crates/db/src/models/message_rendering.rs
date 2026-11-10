@@ -110,16 +110,19 @@ impl RenderingRecords {
             "SELECT record_id,body FROM action_text_rich_texts WHERE record_type='Message' AND name='body' AND record_id IN (SELECT value FROM json_each(?)) ORDER BY id",
             [serde_json::json!(ids).to_string()], |r| Ok((r.get(0)?,r.get(1)?)))?
             .into_iter().rev().collect();
-        Ok(Self { bodies, ..Default::default() })
+        Ok(Self {
+            bodies,
+            ..Default::default()
+        })
     }
     pub fn load(conn: &Connection, messages: &[Message]) -> Result<Self> {
-        Self::load_for(conn,messages,false)
+        Self::load_for(conn, messages, false)
     }
     /// MessagePayloadHelper needs body, reply, author, room and Drive facts only.
     pub fn load_payload(conn: &Connection, messages: &[Message]) -> Result<Self> {
-        Self::load_for(conn,messages,true)
+        Self::load_for(conn, messages, true)
     }
-    fn load_for(conn: &Connection, messages: &[Message], payload:bool) -> Result<Self> {
+    fn load_for(conn: &Connection, messages: &[Message], payload: bool) -> Result<Self> {
         let mut data = Self::default();
         if messages.is_empty() {
             return Ok(data);
@@ -148,9 +151,12 @@ impl RenderingRecords {
                     .embeds
                     .push((reference, stamp));
             }
-            for message in rows(conn,
+            for message in rows(
+                conn,
                 "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ($ids)",
-                &ids, |r| r.get(0))? {
+                &ids,
+                |r| r.get(0),
+            )? {
                 data.cache.entry(message).or_default().has_pull_requests = true;
             }
             for (message, reference, source) in rows(
@@ -221,7 +227,10 @@ impl RenderingRecords {
             &directs,
             |r| Ok((r.get(0)?, User::from_row(r)?)),
         )? {
-            data.direct_names.entry(id).or_default().push(user.display_name().to_owned());
+            data.direct_names
+                .entry(id)
+                .or_default()
+                .push(user.display_name().to_owned());
             data.direct_members.entry(id).or_default().push(user);
         }
         if !payload {
@@ -293,9 +302,22 @@ impl RenderingRecords {
             }
             for (vote, name) in rows(
                 conn,
-                &format!("SELECT poll_votes.*,{} FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_id IN ($ids) ORDER BY poll_votes.id", User::projection("users", "voter_")),
+                &format!(
+                    "SELECT poll_votes.*,{} FROM poll_votes LEFT JOIN users ON users.id=poll_votes.user_id WHERE poll_id IN ($ids) ORDER BY poll_votes.id",
+                    User::projection("users", "voter_")
+                ),
                 &poll_ids,
-                |r| Ok((PollVote::from_row(r)?, r.get::<_, Option<i64>>("voter_id")?.map(|_| User::from_prefixed_row(r, "voter_").map(|user| user.display_name().to_owned())).transpose()?)),
+                |r| {
+                    Ok((
+                        PollVote::from_row(r)?,
+                        r.get::<_, Option<i64>>("voter_id")?
+                            .map(|_| {
+                                User::from_prefixed_row(r, "voter_")
+                                    .map(|user| user.display_name().to_owned())
+                            })
+                            .transpose()?,
+                    ))
+                },
             )? {
                 data.votes
                     .entry(vote.poll_id)
@@ -310,13 +332,20 @@ impl RenderingRecords {
     pub fn scoped(&self, message: &Message) -> Self {
         let mut data = self.clone();
         data.quotes.retain(|id, _| *id == message.id);
-        let sources: HashSet<_> = message.reply_to_message_id.into_iter()
-            .chain(data.quotes.values().flatten().map(|(_, id)| *id)).collect();
+        let sources: HashSet<_> = message
+            .reply_to_message_id
+            .into_iter()
+            .chain(data.quotes.values().flatten().map(|(_, id)| *id))
+            .collect();
         data.sources.retain(|id, _| sources.contains(id));
-        let bodies: HashSet<_> = data.body_ids(std::slice::from_ref(message)).into_iter().collect();
+        let bodies: HashSet<_> = data
+            .body_ids(std::slice::from_ref(message))
+            .into_iter()
+            .collect();
         data.bodies.retain(|id, _| bodies.contains(id));
         let rooms: HashSet<_> = std::iter::once(message.room_id)
-            .chain(data.sources.values().map(|m| m.room_id)).collect();
+            .chain(data.sources.values().map(|m| m.room_id))
+            .collect();
         data.rooms.retain(|id, _| rooms.contains(id));
         data.direct_members.retain(|id, _| rooms.contains(id));
         data.boosts.retain(|id, _| *id == message.id);
@@ -369,7 +398,10 @@ pub struct ThreadRenderingRecords {
 }
 impl ThreadRenderingRecords {
     pub fn load(conn: &Connection, messages: &[Message], viewer: i64) -> Result<Self> {
-        let mut data = Self { viewer_id: viewer, ..Default::default() };
+        let mut data = Self {
+            viewer_id: viewer,
+            ..Default::default()
+        };
         if messages.is_empty() {
             return Ok(data);
         }
@@ -380,21 +412,36 @@ impl ThreadRenderingRecords {
             .collect::<HashSet<_>>()
             .into_iter()
             .collect::<Vec<_>>();
-        let access = super::channel_thread::readable_by_sql("channel_threads.id", &viewer.to_string());
+        let access =
+            super::channel_thread::readable_by_sql("channel_threads.id", &viewer.to_string());
         let threads = rows(
             conn,
-            &format!("SELECT *,{access} AS readable FROM channel_threads WHERE parent_message_id IN ($ids)"),
+            &format!(
+                "SELECT *,{access} AS readable FROM channel_threads WHERE parent_message_id IN ($ids)"
+            ),
             &message_ids,
-            |row| Ok((crate::ChannelThread::from_row(row)?, row.get::<_, bool>("readable")?)),
+            |row| {
+                Ok((
+                    crate::ChannelThread::from_row(row)?,
+                    row.get::<_, bool>("readable")?,
+                ))
+            },
         )?;
         let contexts = rows(
             conn,
             &format!("SELECT *,{access} AS readable FROM channel_threads WHERE id IN ($ids)"),
             &thread_ids,
-            |row| Ok((crate::ChannelThread::from_row(row)?, row.get::<_, bool>("readable")?)),
+            |row| {
+                Ok((
+                    crate::ChannelThread::from_row(row)?,
+                    row.get::<_, bool>("readable")?,
+                ))
+            },
         )?;
         for (thread, readable) in threads.into_iter().chain(contexts) {
-            if readable { data.readable.insert(thread.id); }
+            if readable {
+                data.readable.insert(thread.id);
+            }
             if let Some(parent) = thread.parent_message_id {
                 data.by_parent.insert(parent, thread.id);
             }

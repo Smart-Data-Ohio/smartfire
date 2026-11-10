@@ -5,7 +5,8 @@ name: Repository checks
 
 on:
   push:
-    branches: [ main ]
+    # OpenMerge tests queued batches on openmerge/queue/** before landing them.
+    branches: [ main, "openmerge/queue/**" ]
   pull_request:
     branches: [ main ]
   # Advisories are published against code that hasn't changed; catch them between pushes.

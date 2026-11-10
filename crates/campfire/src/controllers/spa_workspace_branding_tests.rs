@@ -30,9 +30,7 @@ fn gif_with_canvas(width: u16, height: u16, frames: usize) -> Vec<u8> {
     gif.extend_from_slice(b"\x80\x00\x00\x00\x00\x00\xff\xff\xff");
     gif.extend_from_slice(b"!\xff\x0bNETSCAPE2.0\x03\x01\x00\x00\x00");
     for pixel in [0x44, 0x4c].into_iter().cycle().take(frames) {
-        gif.extend_from_slice(
-            b"!\xf9\x04\x00\x0a\x00\x00\x00,\x00\x00\x00\x00",
-        );
+        gif.extend_from_slice(b"!\xf9\x04\x00\x0a\x00\x00\x00,\x00\x00\x00\x00");
         gif.extend_from_slice(&width.to_le_bytes());
         gif.extend_from_slice(&height.to_le_bytes());
         gif.extend_from_slice(b"\x00\x02\x02");

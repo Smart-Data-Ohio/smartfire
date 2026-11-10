@@ -57,8 +57,14 @@ fn string_to_i(s: &str) -> i128 {
     let mut value: i128 = 0;
     for (i, &byte) in bytes.iter().enumerate() {
         match byte {
-            b'0'..=b'9' => value = value.saturating_mul(10).saturating_add((byte - b'0') as i128),
-            b'_' if i > 0 && bytes[i - 1].is_ascii_digit() && bytes.get(i + 1).is_some_and(u8::is_ascii_digit) => {}
+            b'0'..=b'9' => {
+                value = value
+                    .saturating_mul(10)
+                    .saturating_add((byte - b'0') as i128)
+            }
+            b'_' if i > 0
+                && bytes[i - 1].is_ascii_digit()
+                && bytes.get(i + 1).is_some_and(u8::is_ascii_digit) => {}
             _ => break,
         }
     }
@@ -67,7 +73,9 @@ fn string_to_i(s: &str) -> i128 {
 
 /// `value.is_a?(Numeric) && value > threshold`, or `None` when the value isn't a number.
 pub(crate) fn numeric_gt(value: Option<&Value>, threshold: i64) -> Option<bool> {
-    let Some(Value::Number(n)) = value else { return None };
+    let Some(Value::Number(n)) = value else {
+        return None;
+    };
     Some(if let Some(i) = n.as_i64() {
         i > threshold
     } else if let Some(u) = n.as_u64() {
@@ -117,7 +125,17 @@ mod tests {
         assert_eq!(strip("\0\0a"), "a");
         assert_eq!(strip("\u{a0}a\u{a0}"), "\u{a0}a\u{a0}");
         assert_eq!(strip("\u{3000}a"), "\u{3000}a");
-        for (s, expected) in [("\u{a0}", true), ("\u{3000}", true), ("\0", false), (" \u{2028}", true), ("\u{85}", true), ("\u{180e}", false), ("\u{200b}", false), ("\u{feff}", false), ("\u{1c}", false)] {
+        for (s, expected) in [
+            ("\u{a0}", true),
+            ("\u{3000}", true),
+            ("\0", false),
+            (" \u{2028}", true),
+            ("\u{85}", true),
+            ("\u{180e}", false),
+            ("\u{200b}", false),
+            ("\u{feff}", false),
+            ("\u{1c}", false),
+        ] {
             assert_eq!(str_blank(s), expected, "{s:?}");
         }
     }

@@ -16,6 +16,8 @@
     flex-direction: column;
     gap: var(--space-2);
     min-width: 0;
+    /* Held to the body's height, so the list (not the clipped body) takes the overflow. */
+    min-height: 0;
   }
 
   .picker-field {

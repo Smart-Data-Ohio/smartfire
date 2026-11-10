@@ -3,17 +3,32 @@ use crate::models::huddle_effects::AfkMoved;
 use crate::models::huddle_grant::HuddleGrant;
 use crate::models::room_delete::HuddleConfig;
 use crate::tests::TestDb;
-use crate::{Account, Broadcast, CachedStatements, Error, Event, Membership, Room, RoomType, Session, StageRole};
+use crate::{
+    Account, Broadcast, CachedStatements, Error, Event, Membership, Room, RoomType, Session,
+    StageRole,
+};
 
 fn config() -> HuddleConfig {
-    HuddleConfig { api_secret: Some("afk-test-secret".into()), admin_configured: false }
+    HuddleConfig {
+        api_secret: Some("afk-test-secret".into()),
+        admin_configured: false,
+    }
 }
 
 fn policy(db: &TestDb, room_id: Option<i64>, minutes: i64) -> crate::Result<()> {
     db.try_write(move |tx| {
-        Account::first_in(tx)?.update(tx, None, None, Some(&[("afk_policy", &serde_json::json!({
-            "roomId": room_id, "timeoutMinutes": minutes,
-        }).to_string())]))
+        Account::first_in(tx)?.update(
+            tx,
+            None,
+            None,
+            Some(&[(
+                "afk_policy",
+                &serde_json::json!({
+                    "roomId": room_id, "timeoutMinutes": minutes,
+                })
+                .to_string(),
+            )]),
+        )
     })
 }
 
@@ -23,7 +38,11 @@ fn setup(kind: RoomType, accessible: bool) -> (TestDb, HuddleGrant, i64) {
         let david = identify("david");
         let kevin = identify("kevin");
         let source = Room::create_for(tx, kind, Some("Source"), david, &[david, kevin])?;
-        let members = if accessible { vec![david, kevin] } else { vec![david] };
+        let members = if accessible {
+            vec![david, kevin]
+        } else {
+            vec![david]
+        };
         let mut destination = Room::create_for(tx, RoomType::Voice, Some("AFK"), david, &members)?;
         destination.update_voice_user_limit(tx, Some(1))?;
         let member = Membership::find_by_room_and_user(tx.conn(), source.id, kevin)?.unwrap();
@@ -40,7 +59,9 @@ fn tick(db: &TestDb, grant_id: i64, active: bool) -> bool {
     db.travel(10);
     db.write(move |tx| {
         let mut grant = HuddleGrant::find_by_id(tx.conn(), grant_id)?.unwrap();
-        if active { grant.record_activity(tx)?; }
+        if active {
+            grant.record_activity(tx)?;
+        }
         grant.record_seen(tx)?;
         grant.move_if_idle(tx, &config())
     })
@@ -57,28 +78,61 @@ fn afk_policy_validates_rooms_and_timeouts_and_keeps_unknown_settings() {
         policy(&db, Some(destination), minutes).unwrap();
     }
     for minutes in [0, 2, 10, 61] {
-        assert!(matches!(policy(&db, Some(destination), minutes), Err(Error::RecordInvalid(_))));
+        assert!(matches!(
+            policy(&db, Some(destination), minutes),
+            Err(Error::RecordInvalid(_))
+        ));
     }
-    assert!(matches!(policy(&db, Some(-1), 5), Err(Error::RecordInvalid(_))));
-    let text_room = db.write(|tx| Room::create_for(tx, RoomType::Closed, Some("Text"), identify("david"), &[])).id;
-    assert!(matches!(policy(&db, Some(text_room), 5), Err(Error::RecordInvalid(_))));
+    assert!(matches!(
+        policy(&db, Some(-1), 5),
+        Err(Error::RecordInvalid(_))
+    ));
+    let text_room = db
+        .write(|tx| Room::create_for(tx, RoomType::Closed, Some("Text"), identify("david"), &[]))
+        .id;
+    assert!(matches!(
+        policy(&db, Some(text_room), 5),
+        Err(Error::RecordInvalid(_))
+    ));
     db.write(move |tx| {
-        Account::first_in(tx)?.update(tx, None, None, Some(&[("afk_policy", &serde_json::json!({"roomId": destination}).to_string())]))
+        Account::first_in(tx)?.update(
+            tx,
+            None,
+            None,
+            Some(&[(
+                "afk_policy",
+                &serde_json::json!({"roomId": destination}).to_string(),
+            )]),
+        )
     });
     db.read(|conn| {
         let settings = Account::first(conn)?.unwrap().settings();
         assert_eq!(settings.afk_policy().timeout_minutes, 5);
-        assert_eq!(settings.get("future_policy"), Some(&serde_json::json!({"keep": true})));
+        assert_eq!(
+            settings.get("future_policy"),
+            Some(&serde_json::json!({"keep": true}))
+        );
         Ok(())
     });
-    db.write(move |tx| { tx.conn().execute_cached("UPDATE rooms SET deleted_at=? WHERE id=?", rusqlite::params![tx.now(), destination])?; Ok(()) });
-    assert!(matches!(policy(&db, Some(destination), 5), Err(Error::RecordInvalid(_))));
+    db.write(move |tx| {
+        tx.conn().execute_cached(
+            "UPDATE rooms SET deleted_at=? WHERE id=?",
+            rusqlite::params![tx.now(), destination],
+        )?;
+        Ok(())
+    });
+    assert!(matches!(
+        policy(&db, Some(destination), 5),
+        Err(Error::RecordInvalid(_))
+    ));
 }
 
 #[test]
 fn afk_idle_move_revokes_the_source_and_notifies_once_at_the_timeout() {
     let (db, grant, destination) = setup(RoomType::Voice, true);
-    for _ in 0..5 { assert!(!tick(&db, grant.id, false)); }
+    for _ in 0..5 {
+        assert!(!tick(&db, grant.id, false));
+    }
     assert!(tick(&db, grant.id, false));
     db.read(|conn| {
         let ended = HuddleGrant::find_by_id(conn, grant.id)?.unwrap();
@@ -86,14 +140,27 @@ fn afk_idle_move_revokes_the_source_and_notifies_once_at_the_timeout() {
         assert!(!ended.authorized(conn)?);
         Ok(())
     });
-    let moves: Vec<AfkMoved> = db.events().iter().filter_map(|event| match event {
-        Event::Broadcast(request) if request.kind == AfkMoved::KIND => request.decode::<AfkMoved>().map(Result::unwrap),
-        _ => None,
-    }).collect();
+    let moves: Vec<AfkMoved> = db
+        .events()
+        .iter()
+        .filter_map(|event| match event {
+            Event::Broadcast(request) if request.kind == AfkMoved::KIND => {
+                request.decode::<AfkMoved>().map(Result::unwrap)
+            }
+            _ => None,
+        })
+        .collect();
     assert_eq!(moves.len(), 1);
-    assert_eq!((moves[0].user_id, moves[0].room_id, moves[0].timeout_minutes), (grant.user_id, destination, 1));
+    assert_eq!(
+        (moves[0].user_id, moves[0].room_id, moves[0].timeout_minutes),
+        (grant.user_id, destination, 1)
+    );
     assert_eq!(moves[0].identity, grant.identity);
-    db.write(move |tx| { let mut stale = grant; assert!(!stale.move_if_idle(tx, &config())?); Ok(()) });
+    db.write(move |tx| {
+        let mut stale = grant;
+        assert!(!stale.move_if_idle(tx, &config())?);
+        Ok(())
+    });
 }
 
 #[test]
@@ -102,14 +169,30 @@ fn afk_active_and_muted_but_active_callers_stay() {
         let (db, mut grant, _) = setup(RoomType::Voice, true);
         if muted {
             grant = db.write(move |tx| {
-                Membership::find(tx.conn(), grant.membership_id)?.set_server_muted(tx, true, &config())?;
-                let mut fresh = HuddleGrant::issue(tx, grant.session_id, grant.membership_id, grant.room_id, &config())?;
+                Membership::find(tx.conn(), grant.membership_id)?.set_server_muted(
+                    tx,
+                    true,
+                    &config(),
+                )?;
+                let mut fresh = HuddleGrant::issue(
+                    tx,
+                    grant.session_id,
+                    grant.membership_id,
+                    grant.room_id,
+                    &config(),
+                )?;
                 fresh.record_seen(tx)?;
                 Ok(fresh)
             });
         }
-        for _ in 0..12 { assert!(!tick(&db, grant.id, true)); }
-        assert!(!db.read(|conn| HuddleGrant::find_by_id(conn, grant.id)).unwrap().revoked());
+        for _ in 0..12 {
+            assert!(!tick(&db, grant.id, true));
+        }
+        assert!(
+            !db.read(|conn| HuddleGrant::find_by_id(conn, grant.id))
+                .unwrap()
+                .revoked()
+        );
     }
 }
 
@@ -117,8 +200,12 @@ fn afk_active_and_muted_but_active_callers_stay() {
 fn afk_unset_or_inaccessible_destination_moves_nobody() {
     for accessible in [false, true] {
         let (db, grant, _) = setup(RoomType::Voice, accessible);
-        if accessible { policy(&db, None, 5).unwrap(); }
-        for _ in 0..36 { assert!(!tick(&db, grant.id, false)); }
+        if accessible {
+            policy(&db, None, 5).unwrap();
+        }
+        for _ in 0..36 {
+            assert!(!tick(&db, grant.id, false));
+        }
     }
 }
 
@@ -127,22 +214,43 @@ fn afk_stage_audiences_stay_and_speakers_move() {
     for role in [StageRole::Listener, StageRole::Speaker, StageRole::Host] {
         let (db, grant, _) = setup(RoomType::Stage, true);
         let grant = db.write(move |tx| {
-            Membership::find(tx.conn(), grant.membership_id)?.change_stage_role_with_config(tx, role, &config())?;
-            let mut fresh = HuddleGrant::issue(tx, grant.session_id, grant.membership_id, grant.room_id, &config())?;
+            Membership::find(tx.conn(), grant.membership_id)?.change_stage_role_with_config(
+                tx,
+                role,
+                &config(),
+            )?;
+            let mut fresh = HuddleGrant::issue(
+                tx,
+                grant.session_id,
+                grant.membership_id,
+                grant.room_id,
+                &config(),
+            )?;
             fresh.record_seen(tx)?;
             Ok(fresh)
         });
-        for _ in 0..5 { assert!(!tick(&db, grant.id, false)); }
+        for _ in 0..5 {
+            assert!(!tick(&db, grant.id, false));
+        }
         assert_eq!(tick(&db, grant.id, false), role != StageRole::Listener);
     }
 }
 
 #[test]
 fn afk_policy_never_moves_calls_from_other_room_types() {
-    for kind in [RoomType::Direct, RoomType::Open, RoomType::Closed, RoomType::Board] {
+    for kind in [
+        RoomType::Direct,
+        RoomType::Open,
+        RoomType::Closed,
+        RoomType::Board,
+    ] {
         let (db, grant, _) = setup(kind, true);
-        for _ in 0..12 { assert!(!tick(&db, grant.id, false), "{kind:?}"); }
-        let current = db.read(|conn| HuddleGrant::find_by_id(conn, grant.id)).unwrap();
+        for _ in 0..12 {
+            assert!(!tick(&db, grant.id, false), "{kind:?}");
+        }
+        let current = db
+            .read(|conn| HuddleGrant::find_by_id(conn, grant.id))
+            .unwrap();
         assert!(!current.revoked());
         assert!(db.read(|conn| current.authorized(conn)));
     }
@@ -152,24 +260,31 @@ fn afk_policy_never_moves_calls_from_other_room_types() {
 fn afk_destination_checks_capacity_for_ordinary_joins() {
     let (db, grant, destination) = setup(RoomType::Voice, true);
     db.write(move |tx| {
-        let member = Membership::find_by_room_and_user(tx.conn(), destination, identify("david"))?.unwrap();
+        let member =
+            Membership::find_by_room_and_user(tx.conn(), destination, identify("david"))?.unwrap();
         let session = Session::start(tx, member.user_id, None, None)?;
         HuddleGrant::issue(tx, session.id, member.id, destination, &config())?.record_seen(tx)?;
         Ok(())
     });
     let result = db.try_write(move |tx| {
-        let member = Membership::find_by_room_and_user(tx.conn(), destination, grant.user_id)?.unwrap();
+        let member =
+            Membership::find_by_room_and_user(tx.conn(), destination, grant.user_id)?.unwrap();
         HuddleGrant::issue(tx, grant.session_id, member.id, destination, &config())
     });
     assert!(matches!(result, Err(Error::HuddleRoomFull)));
-    assert!(!db.read(|conn| HuddleGrant::find_by_id(conn, grant.id)).unwrap().revoked());
+    assert!(
+        !db.read(|conn| HuddleGrant::find_by_id(conn, grant.id))
+            .unwrap()
+            .revoked()
+    );
 }
 
 #[test]
 fn afk_authorized_move_ignores_its_user_limit_at_issue_and_gateway_admission() {
     let (db, grant, destination) = setup(RoomType::Voice, true);
     let occupant = db.write(move |tx| {
-        let member = Membership::find_by_room_and_user(tx.conn(), destination, identify("david"))?.unwrap();
+        let member =
+            Membership::find_by_room_and_user(tx.conn(), destination, identify("david"))?.unwrap();
         let session = Session::start(tx, member.user_id, None, None)?;
         let mut grant = HuddleGrant::issue(tx, session.id, member.id, destination, &config())?;
         grant.record_seen(tx)?;
@@ -178,7 +293,9 @@ fn afk_authorized_move_ignores_its_user_limit_at_issue_and_gateway_admission() {
     for second in 1..=6 {
         db.travel(10);
         db.write(move |tx| {
-            HuddleGrant::find_by_id(tx.conn(), occupant.id)?.unwrap().record_seen(tx)?;
+            HuddleGrant::find_by_id(tx.conn(), occupant.id)?
+                .unwrap()
+                .record_seen(tx)?;
             let mut source = HuddleGrant::find_by_id(tx.conn(), grant.id)?.unwrap();
             source.record_seen(tx)?;
             assert_eq!(source.move_if_idle(tx, &config())?, second == 6);
@@ -186,10 +303,15 @@ fn afk_authorized_move_ignores_its_user_limit_at_issue_and_gateway_admission() {
         });
     }
     db.write(move |tx| {
-        let member = Membership::find_by_room_and_user(tx.conn(), destination, grant.user_id)?.unwrap();
-        let mut moved = HuddleGrant::issue(tx, grant.session_id, member.id, destination, &config())?;
+        let member =
+            Membership::find_by_room_and_user(tx.conn(), destination, grant.user_id)?.unwrap();
+        let mut moved =
+            HuddleGrant::issue(tx, grant.session_id, member.id, destination, &config())?;
         assert!(moved.record_seen(tx)?);
-        assert_eq!(HuddleGrant::participants_for(tx.conn(), destination, tx.now())?.len(), 2);
+        assert_eq!(
+            HuddleGrant::participants_for(tx.conn(), destination, tx.now())?.len(),
+            2
+        );
         assert!(!moved.move_if_idle(tx, &config())?);
         Ok(())
     });
@@ -199,30 +321,59 @@ fn afk_authorized_move_ignores_its_user_limit_at_issue_and_gateway_admission() {
 fn afk_move_capacity_reservation_expires_or_is_released_by_leave() {
     for leave in [false, true] {
         let (db, grant, destination) = setup(RoomType::Voice, true);
-        for _ in 0..5 { assert!(!tick(&db, grant.id, false)); }
+        for _ in 0..5 {
+            assert!(!tick(&db, grant.id, false));
+        }
         assert!(tick(&db, grant.id, false));
         let pending = db.write(move |tx| {
-            let member = Membership::find_by_room_and_user(tx.conn(), destination, grant.user_id)?.unwrap();
-            let pending = HuddleGrant::issue(tx, grant.session_id, member.id, destination, &config())?;
+            let member =
+                Membership::find_by_room_and_user(tx.conn(), destination, grant.user_id)?.unwrap();
+            let pending =
+                HuddleGrant::issue(tx, grant.session_id, member.id, destination, &config())?;
             assert_eq!(pending.last_seen_at, None);
             Room::find(tx.conn(), destination)?.grant_to(tx, &[identify("jz")])?;
-            let member = Membership::find_by_room_and_user(tx.conn(), destination, identify("jz"))?.unwrap();
+            let member =
+                Membership::find_by_room_and_user(tx.conn(), destination, identify("jz"))?.unwrap();
             let session = Session::start(tx, member.user_id, None, None)?;
-            assert!(matches!(HuddleGrant::issue(tx, session.id, member.id, destination, &config()), Err(Error::HuddleRoomFull)));
+            assert!(matches!(
+                HuddleGrant::issue(tx, session.id, member.id, destination, &config()),
+                Err(Error::HuddleRoomFull)
+            ));
             Ok(pending)
         });
         if leave {
-            db.write(move |tx| HuddleGrant::find_by_id(tx.conn(), pending.id)?.unwrap().mark_out_of_call(tx, None));
+            db.write(move |tx| {
+                HuddleGrant::find_by_id(tx.conn(), pending.id)?
+                    .unwrap()
+                    .mark_out_of_call(tx, None)
+            });
         } else {
             db.travel(crate::models::huddle_grant::IN_CALL_WINDOW);
         }
         db.write(move |tx| {
-            let member = Membership::find_by_room_and_user(tx.conn(), destination, identify("david"))?.unwrap();
+            let member =
+                Membership::find_by_room_and_user(tx.conn(), destination, identify("david"))?
+                    .unwrap();
             let session = Session::start(tx, member.user_id, None, None)?;
-            HuddleGrant::issue(tx, session.id, member.id, destination, &config())?.record_seen(tx)?;
+            HuddleGrant::issue(tx, session.id, member.id, destination, &config())?
+                .record_seen(tx)?;
             Ok(())
         });
-        assert!(matches!(db.try_write(move |tx| HuddleGrant::find_by_id(tx.conn(), pending.id)?.unwrap().record_seen(tx)), Err(Error::HuddleRoomFull)));
-        assert!(matches!(db.try_write(move |tx| HuddleGrant::issue(tx, grant.session_id, pending.membership_id, destination, &config())), Err(Error::HuddleRoomFull)));
+        assert!(matches!(
+            db.try_write(move |tx| HuddleGrant::find_by_id(tx.conn(), pending.id)?
+                .unwrap()
+                .record_seen(tx)),
+            Err(Error::HuddleRoomFull)
+        ));
+        assert!(matches!(
+            db.try_write(move |tx| HuddleGrant::issue(
+                tx,
+                grant.session_id,
+                pending.membership_id,
+                destination,
+                &config()
+            )),
+            Err(Error::HuddleRoomFull)
+        ));
     }
 }

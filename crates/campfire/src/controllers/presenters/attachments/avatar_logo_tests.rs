@@ -1,11 +1,11 @@
 use super::*;
-use campfire_storage::Filename;
-use std::sync::Arc;
 use crate::controllers::presenters::test_support::*;
 use axum::http::Method;
 use base64::Engine as _;
 use campfire_kit::clock::FrozenClock;
+use campfire_storage::Filename;
 use serde_json::Value;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn avatar_bot_logo_uploads_match_pinned_rails() {

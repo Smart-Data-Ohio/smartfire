@@ -14,10 +14,12 @@ pub(crate) async fn deliver_with(
     app.db
         .read(move |conn| {
             let item = SavedItem::find(conn, id)?;
-            if !item.reminder_room_member(conn)? { return Ok(Outcome::Done); }
-            if let Some(push) = SavedItem::reminder_push_with_policy(
-                conn, &*db.env().rich_text, id, now,
-            )? {
+            if !item.reminder_room_member(conn)? {
+                return Ok(Outcome::Done);
+            }
+            if let Some(push) =
+                SavedItem::reminder_push_with_policy(conn, &*db.env().rich_text, id, now)?
+            {
                 return send(conn, push);
             }
             Ok(Outcome::Done)

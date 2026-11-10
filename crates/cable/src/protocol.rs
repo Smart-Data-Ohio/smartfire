@@ -48,17 +48,26 @@ pub fn ping(unix_seconds: i64) -> String {
 /// disconnect carried (it's `message.fetch("reconnect", true)`, unvalidated).
 pub fn disconnect(reason: Option<DisconnectReason>, reconnect: &serde_json::Value) -> String {
     let reason = reason.map_or("null".to_string(), |r| format!("\"{}\"", r.as_str()));
-    format!(r#"{{"type":"disconnect","reason":{reason},"reconnect":{}}}"#, json::encode(reconnect))
+    format!(
+        r#"{{"type":"disconnect","reason":{reason},"reconnect":{}}}"#,
+        json::encode(reconnect)
+    )
 }
 
 /// `{"identifier":...,"type":"confirm_subscription"}`
 pub fn confirmation(identifier: &str) -> String {
-    format!(r#"{{"identifier":{},"type":"confirm_subscription"}}"#, json::encode(identifier))
+    format!(
+        r#"{{"identifier":{},"type":"confirm_subscription"}}"#,
+        json::encode(identifier)
+    )
 }
 
 /// `{"identifier":...,"type":"reject_subscription"}`
 pub fn rejection(identifier: &str) -> String {
-    format!(r#"{{"identifier":{},"type":"reject_subscription"}}"#, json::encode(identifier))
+    format!(
+        r#"{{"identifier":{},"type":"reject_subscription"}}"#,
+        json::encode(identifier)
+    )
 }
 
 /// `{"identifier":...,"message":...}` where `encoded_message` is already Active Support JSON.

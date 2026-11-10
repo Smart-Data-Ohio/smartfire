@@ -4,7 +4,10 @@ use campfire_db::{Message, NewMessage};
 
 async fn app() -> TestApp {
     let mut app = TestApp::boot().await.expect("build parity seed");
-    app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    app.booted
+        .jobs
+        .stop(std::time::Duration::from_secs(1))
+        .await;
     app
 }
 
@@ -29,17 +32,60 @@ async fn message(app: &TestApp) -> Message {
 async fn ws15e_suppression_requires_membership_author_and_eligible_conversation() {
     let app = app().await;
     let message = message(&app).await;
-    let path = format!("/rooms/{ALL_TALK}/messages/{}/embed_suppression.json", message.id);
-    assert_eq!(app.anonymous().send(Req::new(Method::POST, &path)).await.status, StatusCode::FOUND);
+    let path = format!(
+        "/rooms/{ALL_TALK}/messages/{}/embed_suppression.json",
+        message.id
+    );
     assert_eq!(
-        app.sign_in(JASON).await.write(Req::new(Method::POST, &path)).await.status,
+        app.anonymous()
+            .send(Req::new(Method::POST, &path))
+            .await
+            .status,
+        StatusCode::FOUND
+    );
+    assert_eq!(
+        app.sign_in(JASON)
+            .await
+            .write(Req::new(Method::POST, &path))
+            .await
+            .status,
         StatusCode::FORBIDDEN
     );
-    let wrong = format!("/rooms/{DIRECT_KEVIN_BENDER}/messages/{}/embed_suppression.json", message.id);
-    let others=app.db().write(|tx| Message::create(tx,NewMessage { room_id:ALL_TALK,creator_id:JASON,body:Some("other author's message".into()),..Default::default() })).await.unwrap();
-    assert_eq!(app.david().write(Req::new(Method::POST,&format!("/messages/{}/embed_suppression.json",others.id))).await.status,StatusCode::FORBIDDEN,"administrator has no author override");
+    let wrong = format!(
+        "/rooms/{DIRECT_KEVIN_BENDER}/messages/{}/embed_suppression.json",
+        message.id
+    );
+    let others = app
+        .db()
+        .write(|tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: JASON,
+                    body: Some("other author's message".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
     assert_eq!(
-        app.david().write(Req::new(Method::POST, &wrong)).await.status,
+        app.david()
+            .write(Req::new(
+                Method::POST,
+                &format!("/messages/{}/embed_suppression.json", others.id)
+            ))
+            .await
+            .status,
+        StatusCode::FORBIDDEN,
+        "administrator has no author override"
+    );
+    assert_eq!(
+        app.david()
+            .write(Req::new(Method::POST, &wrong))
+            .await
+            .status,
         StatusCode::NOT_FOUND
     );
     let note = app
@@ -59,7 +105,13 @@ async fn ws15e_suppression_requires_membership_author_and_eligible_conversation(
         .await
         .unwrap();
     let path = format!("/messages/{}/embed_suppression.json", note.id);
-    assert_eq!(app.david().write(Req::new(Method::POST, &path)).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        app.david()
+            .write(Req::new(Method::POST, &path))
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
     assert!(
         !app.db()
             .read(move |conn| Message::find(conn, message.id))
@@ -80,7 +132,12 @@ async fn ws15e_http_link_jobs_and_references_roll_back_with_rejected_enqueue() {
             ("message[client_message_id]", "ws15e-atomic"),
         ]);
     let response = app.david().write(req).await;
-    assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR, "{}", response.text());
+    assert_eq!(
+        response.status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "{}",
+        response.text()
+    );
     app.db()
         .read(|conn| {
             for sql in [
@@ -124,12 +181,23 @@ async fn ws15e_suppression_retains_references_is_idempotent_and_clears_both_targ
         .unwrap();
     let path = format!("/messages/{}/embed_suppression", message.id);
     let mut browser = app.david();
-    let response = browser.write(Req::new(Method::POST, &format!("{path}.json"))).await;
+    let response = browser
+        .write(Req::new(Method::POST, &format!("{path}.json")))
+        .await;
     assert_eq!(response.status, StatusCode::OK);
     assert_eq!(response.text(), "{\"embeds_suppressed\":true}");
-    assert!(response.headers["cache-control"].to_str().unwrap().contains("no-store"));
+    assert!(
+        response.headers["cache-control"]
+            .to_str()
+            .unwrap()
+            .contains("no-store")
+    );
     let id = message.id;
-    let first = app.db().read(move |conn| Message::find(conn, id)).await.unwrap();
+    let first = app
+        .db()
+        .read(move |conn| Message::find(conn, id))
+        .await
+        .unwrap();
     assert!(first.embeds_suppressed);
     let response = browser
         .write(Req::new(Method::POST, &format!("{path}.json")))
@@ -140,18 +208,26 @@ async fn ws15e_suppression_retains_references_is_idempotent_and_clears_both_targ
         .db()
         .read(move |conn| {
             let message = Message::find(conn, id)?;
-            assert_eq!(crate::integrations::link_embed::Reference::for_message(conn, &message)?.len(), 1);
+            assert_eq!(
+                crate::integrations::link_embed::Reference::for_message(conn, &message)?.len(),
+                1
+            );
             Ok(message)
         })
         .await
         .unwrap();
-    assert_eq!(first.updated_at, second.updated_at, "repeat suppression doesn't touch");
+    assert_eq!(
+        first.updated_at, second.updated_at,
+        "repeat suppression doesn't touch"
+    );
     let response = browser
         .write(Req::new(Method::POST, &path).header("accept", "text/vnd.turbo-stream.html"))
         .await;
     assert_eq!(response.status, StatusCode::NOT_ACCEPTABLE);
     assert!(response.body.is_empty());
-    let response = browser.get(&format!("/api/v1/rooms/{ALL_TALK}/messages")).await;
+    let response = browser
+        .get(&format!("/api/v1/rooms/{ALL_TALK}/messages"))
+        .await;
     assert_eq!(response.status, StatusCode::OK);
     assert!(
         app.db()
@@ -182,50 +258,115 @@ async fn ws15e_suppression_checks_locked_threads_and_root_scoping() {
         Message::find(tx.conn(),message.id)
     }).await.unwrap();
     let mut browser = app.david();
-    let root = format!("/rooms/{ALL_TALK}/messages/{}/embed_suppression.json", message.id);
-    assert_eq!(browser.write(Req::new(Method::POST, &root)).await.status, StatusCode::NOT_FOUND);
+    let root = format!(
+        "/rooms/{ALL_TALK}/messages/{}/embed_suppression.json",
+        message.id
+    );
+    assert_eq!(
+        browser.write(Req::new(Method::POST, &root)).await.status,
+        StatusCode::NOT_FOUND
+    );
     let thread = format!(
         "/rooms/{ALL_TALK}/threads/{}/messages/{}/embed_suppression.json",
         message.thread_id.unwrap(),
         message.id
     );
-    assert_eq!(browser.write(Req::new(Method::POST, &thread)).await.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        browser.write(Req::new(Method::POST, &thread)).await.status,
+        StatusCode::FORBIDDEN
+    );
     assert_eq!(
         browser
-            .write(Req::new(Method::POST, &format!("/messages/{}/embed_suppression.json", message.id)))
+            .write(Req::new(
+                Method::POST,
+                &format!("/messages/{}/embed_suppression.json", message.id)
+            ))
             .await
             .status,
         StatusCode::FORBIDDEN
     );
-    let thread_id=message.thread_id.unwrap();
-    app.db().write(move |tx| { tx.conn().execute("UPDATE channel_threads SET locked_at=NULL WHERE id=?",[thread_id])?; Ok(()) }).await.unwrap();
-    assert_eq!(browser.write(Req::new(Method::POST,&thread)).await.status,StatusCode::OK,"unlocked author can suppress through the thread route");
+    let thread_id = message.thread_id.unwrap();
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE channel_threads SET locked_at=NULL WHERE id=?",
+                [thread_id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        browser.write(Req::new(Method::POST, &thread)).await.status,
+        StatusCode::OK,
+        "unlocked author can suppress through the thread route"
+    );
 }
 
 #[tokio::test]
 async fn nested_suppression_rechecks_private_author_access() {
     let app = app().await;
-    let (thread_id, message_id) = app.db().write(|tx| {
-        if campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, KEVIN)?.is_none() {
-            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
-        }
-        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: KEVIN,
-            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
-            ..Default::default()
-        })?;
-        let message = thread.post_message(tx, KEVIN, NewMessage { markdown_source: Some("https://example.com/private".into()), ..Default::default() })?;
-        Ok((thread.id, message.id))
-    }).await.unwrap();
-    let path = format!("/rooms/{ALL_TALK}/threads/{thread_id}/messages/{message_id}/embed_suppression.json");
+    let (thread_id, message_id) = app
+        .db()
+        .write(|tx| {
+            if campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, KEVIN)?.is_none()
+            {
+                campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            }
+            let mut thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: KEVIN,
+                    visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            let message = thread.post_message(
+                tx,
+                KEVIN,
+                NewMessage {
+                    markdown_source: Some("https://example.com/private".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((thread.id, message.id))
+        })
+        .await
+        .unwrap();
+    let path = format!(
+        "/rooms/{ALL_TALK}/threads/{thread_id}/messages/{message_id}/embed_suppression.json"
+    );
     let mut browser = app.sign_in(KEVIN).await;
-    assert_eq!(browser.write(Req::new(Method::POST, &path)).await.status, StatusCode::OK);
-    app.db().write(move |tx| {
-        tx.conn().execute("UPDATE messages SET embeds_suppressed=0 WHERE id=?", [message_id])?;
-        campfire_db::ChannelThread::find(tx.conn(), thread_id)?.remove_access_member(tx, KEVIN, KEVIN)
-    }).await.unwrap();
-    for path in [path, format!("/messages/{message_id}/embed_suppression.json")] {
-        assert_eq!(browser.write(Req::new(Method::POST, &path)).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        browser.write(Req::new(Method::POST, &path)).await.status,
+        StatusCode::OK
+    );
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE messages SET embeds_suppressed=0 WHERE id=?",
+                [message_id],
+            )?;
+            campfire_db::ChannelThread::find(tx.conn(), thread_id)?
+                .remove_access_member(tx, KEVIN, KEVIN)
+        })
+        .await
+        .unwrap();
+    for path in [
+        path,
+        format!("/messages/{message_id}/embed_suppression.json"),
+    ] {
+        assert_eq!(
+            browser.write(Req::new(Method::POST, &path)).await.status,
+            StatusCode::NOT_FOUND
+        );
     }
-    assert!(!app.db().read(move |conn| Message::find(conn, message_id)).await.unwrap().embeds_suppressed);
+    assert!(
+        !app.db()
+            .read(move |conn| Message::find(conn, message_id))
+            .await
+            .unwrap()
+            .embeds_suppressed
+    );
 }

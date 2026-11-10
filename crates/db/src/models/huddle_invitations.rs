@@ -6,7 +6,10 @@ use crate::models::{
     huddle_notices::{self, PushInvitationJob},
 };
 use crate::sql::query_all;
-use crate::{ActivityItem, CachedStatements, Connection, Event, Job, NotificationKind, NotificationPolicy, Result, Room, Timestamp, Tx, User, UserStatusSettings};
+use crate::{
+    ActivityItem, CachedStatements, Connection, Event, Job, NotificationKind, NotificationPolicy,
+    Result, Room, Timestamp, Tx, User, UserStatusSettings,
+};
 use jiff::SignedDuration;
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
@@ -31,24 +34,41 @@ impl Job for RingRequest {
 /// Acknowledge new synchronous emissions; safely drain persisted pre-upgrade
 /// requests using their authoritative row, never a worker's cached arguments.
 pub fn publish_queued_ring(tx: &mut Tx<'_>, id: i64) -> Result<()> {
-    let arguments: Option<serde_json::Value> = tx.conn().query_row_cached(
-        "SELECT arguments FROM background_jobs WHERE id=? AND job_class=?",
-        params![id, RingRequest::CLASS], |row| row.get(0),
-    ).optional()?;
-    let Some(arguments) = arguments else { return Ok(()); };
-    if arguments["delivered"] == 1 || arguments["cancelled"] == 1 || arguments["superseded"] == 1 { return Ok(()); }
-    let request = serde_json::from_value(arguments).map_err(|error| crate::Error::Other(error.to_string()))?;
+    let arguments: Option<serde_json::Value> = tx
+        .conn()
+        .query_row_cached(
+            "SELECT arguments FROM background_jobs WHERE id=? AND job_class=?",
+            params![id, RingRequest::CLASS],
+            |row| row.get(0),
+        )
+        .optional()?;
+    let Some(arguments) = arguments else {
+        return Ok(());
+    };
+    if arguments["delivered"] == 1 || arguments["cancelled"] == 1 || arguments["superseded"] == 1 {
+        return Ok(());
+    }
+    let request = serde_json::from_value(arguments)
+        .map_err(|error| crate::Error::Other(error.to_string()))?;
     publish_ring_with_policy(tx, &request, None)
 }
 
 /// The next callback supersedes legacy pending frames for this caller/room,
 /// across banner and item forms. Dedupe never calls this function.
 fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
-    if request.invitation["eventType"] == "huddle_started" && request.invitation["state"] == "unread" {
-        let room = request.invitation["roomId"].as_i64().ok_or_else(|| crate::Error::Other("huddle invitation has no room".into()))?;
-        if !invitation_allowed(tx.conn(), request.recipient_id, room, tx.now())? { return Ok(()); }
+    if request.invitation["eventType"] == "huddle_started"
+        && request.invitation["state"] == "unread"
+    {
+        let room = request.invitation["roomId"]
+            .as_i64()
+            .ok_or_else(|| crate::Error::Other("huddle invitation has no room".into()))?;
+        if !invitation_allowed(tx.conn(), request.recipient_id, room, tx.now())? {
+            return Ok(());
+        }
     }
-    let item = request.invitation["activityItemId"].as_i64().unwrap_or_default();
+    let item = request.invitation["activityItemId"]
+        .as_i64()
+        .unwrap_or_default();
     tx.conn().execute_cached(
         "UPDATE background_jobs SET arguments=json_set(arguments,'$.superseded',1) WHERE job_class=? AND json_extract(arguments,'$.recipient_id')=? AND json_extract(arguments,'$.invitation.roomId')=? AND (json_extract(arguments,'$.invitation.activityItemId')=? AND ?!=0 OR json_extract(arguments,'$.sender_id')=?)",
         params![RingRequest::CLASS, request.recipient_id, request.invitation["roomId"].as_i64(), item, item, request.sender_id],
@@ -57,29 +77,51 @@ fn enqueue_ring(tx: &mut Tx<'_>, request: &RingRequest) -> Result<()> {
     // huddle_grant.rb:562). Retain an acknowledged queue envelope for compatibility
     // with older workers; it must never deliver the same frame a second time.
     let mut event = Event::job(request);
-    if let Event::Job(job) = &mut event { job.arguments["delivered"] = serde_json::json!(1); }
+    if let Event::Job(job) = &mut event {
+        job.arguments["delivered"] = serde_json::json!(1);
+    }
     tx.emit_after_commit(event);
-    let sound = !UserStatusSettings::find(tx.conn(), request.recipient_id)?.notification_preferences.muted(ring_room(tx.conn(), request)?, tx.now()) && ring_allowed(tx.conn(), request.recipient_id, Some(request.sender_id), tx.now(), None)?;
+    let sound = !UserStatusSettings::find(tx.conn(), request.recipient_id)?
+        .notification_preferences
+        .muted(ring_room(tx.conn(), request)?, tx.now())
+        && ring_allowed(
+            tx.conn(),
+            request.recipient_id,
+            Some(request.sender_id),
+            tx.now(),
+            None,
+        )?;
     publish_current_ring(tx, request, sound)?;
     Ok(())
 }
 
-fn invitation_allowed(conn: &Connection, recipient: i64, room: i64, now: Timestamp) -> Result<bool> {
+fn invitation_allowed(
+    conn: &Connection,
+    recipient: i64,
+    room: i64,
+    now: Timestamp,
+) -> Result<bool> {
     let Some(member) = crate::Membership::find_by_room_and_user(conn, room, recipient)? else {
         return Ok(false);
     };
     let preferences = super::notification_policy::NotificationPreferences::load(conn, recipient)?;
-    Ok(!preferences.muted(room, now) && !matches!(
-        preferences.involvement(room, member.involvement),
-        Some(crate::Involvement::Nothing | crate::Involvement::Invisible)
-    ))
+    Ok(!preferences.muted(room, now)
+        && !matches!(
+            preferences.involvement(room, member.involvement),
+            Some(crate::Involvement::Nothing | crate::Involvement::Invisible)
+        ))
 }
 
 fn ring_room(conn: &Connection, request: &RingRequest) -> Result<i64> {
     if let Some(id) = request.grant_id {
-        return Ok(HuddleGrant::find_by_id(conn, id)?.ok_or(crate::Error::RecordNotFound("HuddleGrant"))?.room_id);
+        return Ok(HuddleGrant::find_by_id(conn, id)?
+            .ok_or(crate::Error::RecordNotFound("HuddleGrant"))?
+            .room_id);
     }
-    request.invitation.get("roomId").and_then(serde_json::Value::as_i64)
+    request
+        .invitation
+        .get("roomId")
+        .and_then(serde_json::Value::as_i64)
         .ok_or_else(|| crate::Error::Other("huddle invitation has no room".into()))
 }
 
@@ -96,7 +138,8 @@ pub fn ring_allowed(
     if let Some(check) = quiet_check {
         return Ok(!check(&recipient));
     }
-    let exceptions = super::notification_policy::dnd_exceptions_for(conn, &[recipient_id], caller_id)?;
+    let exceptions =
+        super::notification_policy::dnd_exceptions_for(conn, &[recipient_id], caller_id)?;
     Ok(NotificationPolicy {
         room_id: None,
         recipient: Some(&recipient),
@@ -108,7 +151,8 @@ pub fn ring_allowed(
         keyword_matched: false,
         dnd_exception: exceptions.contains(&recipient_id),
         now,
-    }.sound())
+    }
+    .sound())
 }
 
 pub fn publish_ring_with_policy(
@@ -116,8 +160,19 @@ pub fn publish_ring_with_policy(
     request: &RingRequest,
     quiet_check: Option<&dyn Fn(&UserStatusSettings) -> bool>,
 ) -> Result<()> {
-    let Some(current) = current_ring(tx, request)? else { return Ok(()); };
-    let sound = !UserStatusSettings::find(tx.conn(), current.recipient_id)?.notification_preferences.muted(ring_room(tx.conn(), &current)?, tx.now()) && ring_allowed(tx.conn(), current.recipient_id, Some(current.sender_id), tx.now(), quiet_check)?;
+    let Some(current) = current_ring(tx, request)? else {
+        return Ok(());
+    };
+    let sound = !UserStatusSettings::find(tx.conn(), current.recipient_id)?
+        .notification_preferences
+        .muted(ring_room(tx.conn(), &current)?, tx.now())
+        && ring_allowed(
+            tx.conn(),
+            current.recipient_id,
+            Some(current.sender_id),
+            tx.now(),
+            quiet_check,
+        )?;
     publish_current_ring(tx, &current, sound)?;
     Ok(())
 }
@@ -133,9 +188,12 @@ pub fn publish_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: bool)
 
 fn publish_current_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: bool) -> Result<()> {
     let mut invitation = request.invitation.clone();
-    let ignored = super::ignore_policy::ignored(tx.conn(), request.recipient_id, request.sender_id)?;
+    let ignored =
+        super::ignore_policy::ignored(tx.conn(), request.recipient_id, request.sender_id)?;
     invitation["silent"] = serde_json::Value::Bool(!sound_allowed || ignored);
-    if ignored { invitation["unchanged"] = serde_json::Value::Bool(true); }
+    if ignored {
+        invitation["unchanged"] = serde_json::Value::Bool(true);
+    }
     tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
         stream: format!("user_{}_activity", request.recipient_id),
         payload: serde_json::json!({"activityItemId":invitation["activityItemId"], "huddleInvitation":invitation}),
@@ -146,35 +204,80 @@ fn publish_current_ring(tx: &mut Tx<'_>, request: &RingRequest, sound_allowed: b
 /// Legacy queued jobs recover the current row after access removal, item resolution, or call end.
 /// Synchronous ActivityItem callbacks instead use their saved instance below.
 fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest>> {
-    let Some(viewer) = User::find_by_id(tx.conn(), request.recipient_id)?.filter(|u| u.is_active() && !u.is_bot()) else { return Ok(None); };
-    let item_id = request.invitation["activityItemId"].as_i64().unwrap_or_default();
+    let Some(viewer) =
+        User::find_by_id(tx.conn(), request.recipient_id)?.filter(|u| u.is_active() && !u.is_bot())
+    else {
+        return Ok(None);
+    };
+    let item_id = request.invitation["activityItemId"]
+        .as_i64()
+        .unwrap_or_default();
     let current = if item_id != 0 {
         let item = match ActivityItem::find(tx.conn(), item_id) {
             Ok(item) if item.user_id == viewer.id => item,
             Ok(_) | Err(crate::Error::RecordNotFound(_)) => return Ok(None),
             Err(error) => return Err(error),
         };
-        if request.grant_id.is_some_and(|id| id != item.source_id) { return Ok(None); }
-        if request.invited_at != Some(item.created_at.as_microsecond()) { return Ok(None); }
-        let Some(current) = item_ring_request(tx, &item)? else { return Ok(None); };
+        if request.grant_id.is_some_and(|id| id != item.source_id) {
+            return Ok(None);
+        }
+        if request.invited_at != Some(item.created_at.as_microsecond()) {
+            return Ok(None);
+        }
+        let Some(current) = item_ring_request(tx, &item)? else {
+            return Ok(None);
+        };
         if request.invitation["eventType"] != current.invitation["eventType"]
-            || request.invitation["state"] != current.invitation["state"] { return Ok(None); }
+            || request.invitation["state"] != current.invitation["state"]
+        {
+            return Ok(None);
+        }
         current
     } else {
-        let Some(grant) = request.grant_id.map(|id| HuddleGrant::find_by_id(tx.conn(), id)).transpose()?.flatten() else { return Ok(None); };
-        if grant.user_id != request.sender_id { return Ok(None); }
-        if request.invited_at.is_none() { return Ok(None); }
-        let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
-        let Some(caller) = User::find_by_id(tx.conn(), grant.user_id)? else { return Ok(None); };
-        RingRequest { recipient_id:viewer.id, sender_id:caller.id, grant_id:Some(grant.id), invited_at:request.invited_at,
-            invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":room.direct_display_name(tx.conn(),Some(&viewer),None)?,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),"readPath":"","handledPath":""}) }
+        let Some(grant) = request
+            .grant_id
+            .map(|id| HuddleGrant::find_by_id(tx.conn(), id))
+            .transpose()?
+            .flatten()
+        else {
+            return Ok(None);
+        };
+        if grant.user_id != request.sender_id {
+            return Ok(None);
+        }
+        if request.invited_at.is_none() {
+            return Ok(None);
+        }
+        let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else {
+            return Ok(None);
+        };
+        let Some(caller) = User::find_by_id(tx.conn(), grant.user_id)? else {
+            return Ok(None);
+        };
+        RingRequest {
+            recipient_id: viewer.id,
+            sender_id: caller.id,
+            grant_id: Some(grant.id),
+            invited_at: request.invited_at,
+            invitation: serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":room.direct_display_name(tx.conn(),Some(&viewer),None)?,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),"readPath":"","handledPath":""}),
+        }
     };
     let grant = HuddleGrant::find_by_id(tx.conn(), current.grant_id.unwrap())?.unwrap();
-    let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
-    if crate::Membership::find_by_room_and_user(tx.conn(), room.id, viewer.id)?.is_none() { return Ok(None); }
-    if current.invitation["eventType"] == "huddle_started" && current.invitation["state"] == "unread" {
-        if room.deleted_at.is_some() { return Ok(None); }
-        if !invitation_allowed(tx.conn(), viewer.id, room.id, tx.now())? { return Ok(None); }
+    let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else {
+        return Ok(None);
+    };
+    if crate::Membership::find_by_room_and_user(tx.conn(), room.id, viewer.id)?.is_none() {
+        return Ok(None);
+    }
+    if current.invitation["eventType"] == "huddle_started"
+        && current.invitation["state"] == "unread"
+    {
+        if room.deleted_at.is_some() {
+            return Ok(None);
+        }
+        if !invitation_allowed(tx.conn(), viewer.id, room.id, tx.now())? {
+            return Ok(None);
+        }
         // Group rings belong to the call: another live participant keeps them
         // going after the starter leaves (HuddleGrant#others_in_call?).
         if grant.revoked() && !tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND revoked_at IS NULL AND last_seen_at>?)",params![room.id,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))? { return Ok(None); }
@@ -215,8 +318,11 @@ fn item_ring_request(tx: &Tx<'_>, item: &ActivityItem) -> Result<Option<RingRequ
         room.name.clone()
     };
     Ok(Some(RingRequest {
-        recipient_id:viewer.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:Some(item.created_at.as_microsecond()),
-        invitation:serde_json::json!({
+        recipient_id: viewer.id,
+        sender_id: caller.id,
+        grant_id: Some(grant.id),
+        invited_at: Some(item.created_at.as_microsecond()),
+        invitation: serde_json::json!({
             "activityItemId":item.id,"eventType":item.event_type,
             "state":if item.handled_at.is_some(){"handled"}else if item.read_at.is_some(){"read"}else{"unread"},
             "roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),
@@ -228,7 +334,9 @@ fn item_ring_request(tx: &Tx<'_>, item: &ActivityItem) -> Result<Option<RingRequ
 
 /// Returning false preserves ordinary activity frames for other source/event types.
 pub(crate) fn enqueue_item_ring(tx: &mut Tx<'_>, item: &ActivityItem) -> Result<bool> {
-    let Some(request) = item_ring_request(tx, item)? else { return Ok(false); };
+    let Some(request) = item_ring_request(tx, item)? else {
+        return Ok(false);
+    };
     enqueue_ring(tx, &request)?;
     Ok(true)
 }
@@ -261,7 +369,9 @@ pub(crate) fn after_issued(
     let involvement = super::notification_policy::involvement_sql("m", "u.inbox_preferences");
     let recipients = query_all(
         tx.conn(),
-        &format!("SELECT u.* FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id!=? AND u.status=0 AND u.role!=2 AND ({involvement} IS NULL OR {involvement} NOT IN ('nothing','invisible')) ORDER BY u.id"),
+        &format!(
+            "SELECT u.* FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id!=? AND u.status=0 AND u.role!=2 AND ({involvement} IS NULL OR {involvement} NOT IN ('nothing','invisible')) ORDER BY u.id"
+        ),
         params![room.id, grant.user_id],
         User::from_row,
     )?;
@@ -291,15 +401,20 @@ fn invite_recipient(
     if !huddle_notices::invitations_enabled(tx.conn(), recipient.id)? {
         let caller = User::find(tx.conn(), grant.user_id)?;
         let name = room.direct_display_name(tx.conn(), Some(recipient), None)?;
-        enqueue_ring(tx, &RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invited_at:Some(tx.now().as_microsecond()),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),"readPath":"","handledPath":""})})?;
+        enqueue_ring(
+            tx,
+            &RingRequest {
+                recipient_id: recipient.id,
+                sender_id: caller.id,
+                grant_id: Some(grant.id),
+                invited_at: Some(tx.now().as_microsecond()),
+                invitation: serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.display_name(),"readPath":"","handledPath":""}),
+            },
+        )?;
         return Ok(());
     }
-    let owned = ActivityItem::find_by_user_and_source(
-        tx.conn(),
-        recipient.id,
-        "HuddleGrant",
-        grant.id,
-    )?;
+    let owned =
+        ActivityItem::find_by_user_and_source(tx.conn(), recipient.id, "HuddleGrant", grant.id)?;
     let item = if let Some(item) = owned {
         if item.handled_at.is_none()
             && item.event_type == "huddle_started"

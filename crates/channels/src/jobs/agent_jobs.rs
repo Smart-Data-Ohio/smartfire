@@ -149,7 +149,9 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
     let prepared = app
         .db
         .write(move |tx| {
-            if domain::suppress_if_paused(tx, e.id)? { return Ok(None) }
+            if domain::suppress_if_paused(tx, e.id)? {
+                return Ok(None);
+            }
             let user_id: i64 =
                 tx.conn()
                     .query_row("SELECT user_id FROM agents WHERE id=?", [id], |r| r.get(0))?;
@@ -176,7 +178,11 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
             };
             let body = match &sync_message {
                 Some(message) => campfire_runtime::presenters::stickers::webhook_payload(
-                    tx.conn(), &storage, message, base.as_deref(), body,
+                    tx.conn(),
+                    &storage,
+                    message,
+                    base.as_deref(),
+                    body,
                 )?,
                 None => body,
             };
@@ -208,17 +214,19 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
     let (webhook, secret, payload, bot, sync) = prepared;
-    let response = match webhook::post_payload(
-        net,
-        webhook.url.as_deref().unwrap_or(""),
-        payload,
-        |body| Ok(rails_compat::webhook::smartfire_headers(Some(&secret), body, app.clock.now())),
-    )
-    .await
-    {
-        Ok(v) => v,
-        Err(error) => return classify_error(error),
-    };
+    let response =
+        match webhook::post_payload(net, webhook.url.as_deref().unwrap_or(""), payload, |body| {
+            Ok(rails_compat::webhook::smartfire_headers(
+                Some(&secret),
+                body,
+                app.clock.now(),
+            ))
+        })
+        .await
+        {
+            Ok(v) => v,
+            Err(error) => return classify_error(error),
+        };
     let result = classify_response(
         response.status,
         response
@@ -231,7 +239,8 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
         && let Some((room, message)) = sync
     {
         // Rails suppresses every sync-reply extraction/storage/broadcast error after a successful Agent POST.
-        if let Err(error) = receive_sync_reply(app, event_id, &bot, &room, message, response).await {
+        if let Err(error) = receive_sync_reply(app, event_id, &bot, &room, message, response).await
+        {
             tracing::warn!(%error,"Agent webhook sync reply failed");
         }
     }
@@ -251,7 +260,15 @@ async fn receive_sync_reply(
             jobs::create_text_reply(app, room, bot, Some(message), text, Some(event_id)).await?
         }
         webhook::WebhookReply::Attachment(attachment) => {
-            jobs::create_attachment_reply_for_event(app, room, bot, message, attachment, Some(event_id)).await?
+            jobs::create_attachment_reply_for_event(
+                app,
+                room,
+                bot,
+                message,
+                attachment,
+                Some(event_id),
+            )
+            .await?
         }
     };
     jobs::broadcast_create(app, room, &reply).await
@@ -348,4 +365,3 @@ fn ws11_retry_after_and_response_policy_match_rails_vectors() {
         assert_eq!(case["delay"].as_f64(), Some(wait.as_secs_f64()));
     }
 }
-

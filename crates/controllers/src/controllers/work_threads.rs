@@ -1,10 +1,7 @@
 //! Human workspace work and handoff endpoints; use the shared WS12 model writers.
 use crate::app::AppCtx;
 use crate::concerns::{Before, before_actions, head, require_current_user};
-use crate::controllers::{
-    messages,
-    presenters::page::db_error,
-};
+use crate::controllers::{messages, presenters::page::db_error};
 use campfire_db::{Agent, ChannelThread, HandoffPackage, Room, User, WorkHandoff};
 use campfire_kit::{Ctx, Param, Result, StatusCode, format, halt};
 use rusqlite::OptionalExtension;
@@ -104,18 +101,19 @@ pub async fn index(c: &mut Ctx) -> Result {
         .read(move |conn| ChannelThread::visible_work_threads(conn, &viewer, &filter))
         .await
         .map_err(db_error)?;
-    c.no_store(); c.set_header("pragma", "no-cache");
+    c.no_store();
+    c.set_header("pragma", "no-cache");
     let viewer = require_current_user(c)?.clone();
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         let base = c.url_for("");
         let payload = messages::present(c, move |p| {
             Ok(json!({"threads": messages::payload::work_threads(p, &threads, &viewer, &base)?}))
-        }).await?;
+        })
+        .await?;
         return super::channel_threads::render_json(c, StatusCode::OK, &payload);
     }
     campfire_runtime::navigation::redirect(c).await
 }
-
 
 /// The controller's ordered before-actions: thread, human room access, tracking, sender rights.
 pub(super) async fn scope(c: &mut Ctx, manager: bool) -> Result<(Room, ChannelThread)> {
@@ -180,7 +178,9 @@ pub async fn create_handoff(c: &mut Ctx) -> Result {
                 Ok(handoff) => Ok(Ok((
                     thread,
                     handoff,
-                    User::find(tx.conn(), receiver.user_id)?.display_name().to_owned(),
+                    User::find(tx.conn(), receiver.user_id)?
+                        .display_name()
+                        .to_owned(),
                 ))),
                 Err(campfire_db::Error::RecordInvalid(errors)) => Ok(Err(
                     campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and "),

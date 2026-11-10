@@ -10,7 +10,6 @@ use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
 
-
 #[tokio::test]
 async fn ws15e_fizzy_message_creation_http_matrix() {
     if let Ok(case) = std::env::var("WS15E_FIZZY_MESSAGE_CASE") {
@@ -31,8 +30,12 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
         "no_connection",
         "direct_bots",
     ] {
-        let output = ws15e_http_case("WS15E_FIZZY_MESSAGE_CASE", case,
-            "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix").await;
+        let output = ws15e_http_case(
+            "WS15E_FIZZY_MESSAGE_CASE",
+            case,
+            "controllers::fizzy_message_cards::tests::ws15e_fizzy_message_creation_http_matrix",
+        )
+        .await;
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             output.status.success(),
@@ -146,7 +149,9 @@ async fn run(case: &str) {
             }
             Ok(bot.id)
         }).await.unwrap())
-    } else { None };
+    } else {
+        None
+    };
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
@@ -281,10 +286,16 @@ async fn run(case: &str) {
     }
     if case == "direct_bots" {
         let jobs = app.db().read(campfire_jobs::inspect::all).await.unwrap();
-        let jobs: Vec<_> = jobs.iter().filter(|j| j.class == "Bot::WebhookJob").collect();
+        let jobs: Vec<_> = jobs
+            .iter()
+            .filter(|j| j.class == "Bot::WebhookJob")
+            .collect();
         assert_eq!(jobs.len(), 1);
         assert_eq!(jobs[0].arguments["bot_id"], legacy_bot.unwrap());
-        assert!(jobs.iter().all(|j| j.arguments["bot_id"] != BENDER), "agent-backed bot bypassed its ledger");
+        assert!(
+            jobs.iter().all(|j| j.arguments["bot_id"] != BENDER),
+            "agent-backed bot bypassed its ledger"
+        );
     }
     if case == "enqueue_rollback" {
         app.db().read(|c| {assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_references WHERE message_id NOT IN (SELECT id FROM messages)",[],|r|r.get::<_,i64>(0))?,0);assert_eq!(c.query_row("SELECT COUNT(*) FROM fizzy_card_caches",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();

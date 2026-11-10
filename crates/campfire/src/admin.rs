@@ -50,9 +50,11 @@ fn execute(args: &[String]) -> Result<String, (i32, String)> {
         ["db-check", database] => check(Path::new(database), false).map_err(fail),
         ["db-check", "--immutable", database] => check(Path::new(database), true).map_err(fail),
         ["db-migrate", database] => migrate(Path::new(database)).map_err(fail),
-        ["db-migrate", "--preserve-existing-foreign-key-violations", database] => {
-            migrate_database(Path::new(database), true).map_err(fail)
-        }
+        [
+            "db-migrate",
+            "--preserve-existing-foreign-key-violations",
+            database,
+        ] => migrate_database(Path::new(database), true).map_err(fail),
         ["verify-additive-sqlite-migration", before, after] => {
             additive::verify(Path::new(before), Path::new(after)).map_err(|error| {
                 let status = if matches!(error, additive::Error::Mismatch(_)) {
@@ -294,22 +296,34 @@ mod tests {
         let before = std::fs::read(&database).unwrap();
         let args = ["db-migrate".into(), database.display().to_string()];
         assert_eq!(execute(&args).unwrap(), "MIGRATIONS: 0 applied\n");
-        assert_eq!(std::fs::read(&database).unwrap(), before, "nothing pending, nothing written");
+        assert_eq!(
+            std::fs::read(&database).unwrap(),
+            before,
+            "nothing pending, nothing written"
+        );
         assert!(!dir.path().join("production.sqlite3-wal").exists());
 
         Connection::open(&database)
             .unwrap()
-            .execute("INSERT INTO schema_migrations VALUES ('29990101000000')", [])
+            .execute(
+                "INSERT INTO schema_migrations VALUES ('29990101000000')",
+                [],
+            )
             .unwrap();
         let (status, message) = execute(&args).unwrap_err();
         assert_eq!(status, 2);
-        assert!(message.contains("unknown migrations 29990101000000"), "{message}");
+        assert!(
+            message.contains("unknown migrations 29990101000000"),
+            "{message}"
+        );
 
         let missing = dir.path().join("missing.sqlite3");
         assert!(migrate(&missing).is_err());
         assert!(!missing.exists());
         assert_eq!(
-            execute(&["db-migrate".into(), "a".into(), "b".into()]).unwrap_err().0,
+            execute(&["db-migrate".into(), "a".into(), "b".into()])
+                .unwrap_err()
+                .0,
             2
         );
     }

@@ -1,12 +1,12 @@
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use crate::app::App;
+use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
+use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use campfire_db::Message;
 use campfire_db::Room;
 use campfire_db::User;
 use campfire_db::models::agent_delivery as domain;
 use campfire_db::models::agent_delivery::AgentEvent;
-use crate::app::App;
-use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
@@ -23,11 +23,11 @@ async fn pending(app: &App) -> AgentEvent {
                     ..Default::default()
                 },
             )?;
-            let agent_id = tx.conn().query_row(
-                "SELECT id FROM agents WHERE user_id=?",
-                [BENDER],
-                |r| r.get(0),
-            )?;
+            let agent_id =
+                tx.conn()
+                    .query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| {
+                        r.get(0)
+                    })?;
             let e = AgentEvent::create(
                 tx,
                 domain::NewEvent {
@@ -283,12 +283,20 @@ async fn ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox() {
         .await;
     let approval = db
         .write(|tx| {
-            let agent_id = tx.conn().query_row(
-                "SELECT id FROM agents WHERE user_id=?",
-                [BENDER],
-                |r| r.get(0),
+            let agent_id =
+                tx.conn()
+                    .query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |r| {
+                        r.get(0)
+                    })?;
+            campfire_db::AgentGrant::create(
+                tx,
+                campfire_db::NewGrant {
+                    agent_id,
+                    capability: "external_action".into(),
+                    granted_by_id: DAVID,
+                    ..Default::default()
+                },
             )?;
-            campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id,capability:"external_action".into(),granted_by_id:DAVID,..Default::default()})?;
             AgentApproval::create(
                 tx,
                 NewApproval {
@@ -417,22 +425,33 @@ async fn ws11_work_delete_queue_failure_rolls_back_thread_and_ledger() {
     }).await.unwrap();
 }
 
-
 #[tokio::test]
 async fn pause_regression_repository_await_rechecks_before_post() {
     struct PauseDuringResolution(campfire_db::Database);
     impl crate::integrations::agent_repositories::RepositoryReader for PauseDuringResolution {
-        fn readable(&self, _: crate::integrations::agent_repositories::RepositoryRequest) -> crate::net::BoxFuture<'_, campfire_db::Result<bool>> {
+        fn readable(
+            &self,
+            _: crate::integrations::agent_repositories::RepositoryRequest,
+        ) -> crate::net::BoxFuture<'_, campfire_db::Result<bool>> {
             Box::pin(async {
-                self.0.write(|tx| {
-                    tx.conn().execute("UPDATE agents SET paused_at=? WHERE user_id=?", rusqlite::params![tx.now(), BENDER])?;
-                    Ok(())
-                }).await?;
+                self.0
+                    .write(|tx| {
+                        tx.conn().execute(
+                            "UPDATE agents SET paused_at=? WHERE user_id=?",
+                            rusqlite::params![tx.now(), BENDER],
+                        )?;
+                        Ok(())
+                    })
+                    .await?;
                 Ok(true)
             })
         }
     }
-    let (app, _dir) = TestApp::boot().await.expect("default seed").stop_jobs().await;
+    let (app, _dir) = TestApp::boot()
+        .await
+        .expect("default seed")
+        .stop_jobs()
+        .await;
     let event = pending(&app).await;
     let (id, message) = (event.agent_id, event.message_id.unwrap());
     let crypto = app.ar_encryption.clone();
@@ -445,41 +464,105 @@ async fn pause_regression_repository_await_rechecks_before_post() {
         tx.conn().execute("INSERT INTO github_pull_request_threads(github_pull_request_id,room_id,channel_thread_id,created_at,updated_at) VALUES (900140009,?,?,?,?)",rusqlite::params![ALL_TALK,thread.id,tx.now(),tx.now()])?;
         Ok(())
     }).await.unwrap();
-    app.agent_repositories.install(Arc::new(PauseDuringResolution(app.db.clone())));
-    let server=FakeServer::start(vec![Route::new("POST","*","/hook",200)]).await;
-    let net=network(Arc::new(FakeResolver::new([("bots.example",vec!["93.184.216.34"])])),Arc::new(MappingDialer{public:HashSet::from(["93.184.216.34".parse().unwrap()]),to:server.addr,dialed:Mutex::new(vec![])}));
-    post_with_network(&app, domain::EventWebhookJob{event_id:event.id,attempt:Some(0)}, &net).await.unwrap();
-    assert!(server.received().is_empty(), "POST sent after repository lookup paused the agent");
-    app.db.read(move |conn| {
-        let saved=AgentEvent::find(conn,event.id)?.unwrap();
-        assert_eq!(saved.outcome.as_deref(),Some("suppressed"));
-        assert_eq!(saved.webhook_status,"none");
-        Ok(())
-    }).await.unwrap();
+    app.agent_repositories
+        .install(Arc::new(PauseDuringResolution(app.db.clone())));
+    let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 200)]).await;
+    let net = network(
+        Arc::new(FakeResolver::new([("bots.example", vec!["93.184.216.34"])])),
+        Arc::new(MappingDialer {
+            public: HashSet::from(["93.184.216.34".parse().unwrap()]),
+            to: server.addr,
+            dialed: Mutex::new(vec![]),
+        }),
+    );
+    post_with_network(
+        &app,
+        domain::EventWebhookJob {
+            event_id: event.id,
+            attempt: Some(0),
+        },
+        &net,
+    )
+    .await
+    .unwrap();
+    assert!(
+        server.received().is_empty(),
+        "POST sent after repository lookup paused the agent"
+    );
+    app.db
+        .read(move |conn| {
+            let saved = AgentEvent::find(conn, event.id)?.unwrap();
+            assert_eq!(saved.outcome.as_deref(), Some("suppressed"));
+            assert_eq!(saved.webhook_status, "none");
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn pause_regression_late_sync_reply_is_rejected_transactionally() {
     for personal in [false, true] {
-        let (app, _dir)=TestApp::boot().await.expect("default seed").stop_jobs().await;
-        let event=pending(&app).await;
-        app.db.write(move |tx| {
-            Room::find(tx.conn(),ALL_TALK)?.grant_to(tx,&[BENDER])?;
-            tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[event.agent_id])?;
-            if personal {
-                tx.conn().execute("UPDATE agents SET kind='personal',owner_id=? WHERE id=?",rusqlite::params![DAVID,event.agent_id])?;
-                for capability in ["read_messages","post_messages"] {
-                    campfire_db::AgentGrant::create(tx,campfire_db::NewGrant{agent_id:event.agent_id,capability:capability.into(),room_id:Some(ALL_TALK),granted_by_id:DAVID,..Default::default()})?;
+        let (app, _dir) = TestApp::boot()
+            .await
+            .expect("default seed")
+            .stop_jobs()
+            .await;
+        let event = pending(&app).await;
+        app.db
+            .write(move |tx| {
+                Room::find(tx.conn(), ALL_TALK)?.grant_to(tx, &[BENDER])?;
+                tx.conn().execute(
+                    "DELETE FROM agent_grants WHERE agent_id=?",
+                    [event.agent_id],
+                )?;
+                if personal {
+                    tx.conn().execute(
+                        "UPDATE agents SET kind='personal',owner_id=? WHERE id=?",
+                        rusqlite::params![DAVID, event.agent_id],
+                    )?;
+                    for capability in ["read_messages", "post_messages"] {
+                        campfire_db::AgentGrant::create(
+                            tx,
+                            campfire_db::NewGrant {
+                                agent_id: event.agent_id,
+                                capability: capability.into(),
+                                room_id: Some(ALL_TALK),
+                                granted_by_id: DAVID,
+                                ..Default::default()
+                            },
+                        )?;
+                    }
                 }
-            }
-            tx.conn().execute("UPDATE agents SET paused_at=? WHERE id=?",rusqlite::params![tx.now(),event.agent_id])?;
-            Ok(())
-        }).await.unwrap();
-        for attachment in [false,true] {
-            let result=app.db.write(move |tx| {
-                crate::jobs::integrations::create_reply(tx,None,campfire_db::NewMessage{room_id:ALL_TALK,creator_id:BENDER,body:(!attachment).then(||"Late reply".into()),attachment_blob_id:attachment.then_some(1),..Default::default()})
-            }).await;
-            assert!(matches!(result,Err(campfire_db::Error::Other(ref error)) if error=="agent_paused"), "late sync reply must fail with agent_paused: {result:?}");
+                tx.conn().execute(
+                    "UPDATE agents SET paused_at=? WHERE id=?",
+                    rusqlite::params![tx.now(), event.agent_id],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        for attachment in [false, true] {
+            let result = app
+                .db
+                .write(move |tx| {
+                    crate::jobs::integrations::create_reply(
+                        tx,
+                        None,
+                        campfire_db::NewMessage {
+                            room_id: ALL_TALK,
+                            creator_id: BENDER,
+                            body: (!attachment).then(|| "Late reply".into()),
+                            attachment_blob_id: attachment.then_some(1),
+                            ..Default::default()
+                        },
+                    )
+                })
+                .await;
+            assert!(
+                matches!(result,Err(campfire_db::Error::Other(ref error)) if error=="agent_paused"),
+                "late sync reply must fail with agent_paused: {result:?}"
+            );
         }
     }
 }
@@ -487,34 +570,88 @@ async fn pause_regression_late_sync_reply_is_rejected_transactionally() {
 #[tokio::test]
 async fn pause_regression_http_response_after_pause_cannot_post_reply() {
     use crate::integrations::test_support::ResponseGate;
-    for (resume, attachment) in [(false,false),(true,false),(false,true),(true,true)] {
-    let (app, _dir)=TestApp::boot().await.expect("default seed").stop_jobs().await;
-    let event=pending(&app).await;
-    let gate=Arc::new(ResponseGate::default());
-    let mut route=Route::new("POST","*","/hook",200).header("Content-Type",if attachment {"text/csv"} else {"text/plain"}).body("Late reply");
-    route.response_gate=Some(gate.clone());
-    let server=FakeServer::start(vec![route]).await;
-    let net=network(Arc::new(FakeResolver::new([("bots.example",vec!["93.184.216.34"])])),Arc::new(MappingDialer{public:HashSet::from(["93.184.216.34".parse().unwrap()]),to:server.addr,dialed:Mutex::new(vec![])}));
-    let before=app.db.read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-    let change=async {
-        gate.entered.notified().await;
-        app.db.write(move |tx| {
-            let mut agent=campfire_db::Agent::find(tx.conn(),event.agent_id)?.unwrap();
-            agent.update(tx,campfire_db::AgentChanges{paused_at:Some(Some(tx.now())),..Default::default()})?;
-            if resume { agent.update(tx,campfire_db::AgentChanges{paused_at:Some(None),..Default::default()})?; }
-            Ok(())
-        }).await.unwrap();
-        gate.released.notify_one();
-    };
-    let (result,())=tokio::join!(post_with_network(&app,domain::EventWebhookJob{event_id:event.id,attempt:Some(0)},&net),change);
-    result.unwrap();
-    assert_eq!(server.received().len(),1);
-    app.db.read(move |c| {
-        assert_eq!(c.query_row("SELECT COUNT(*) FROM messages",[],|r|r.get::<_,i64>(0))?,before,"late HTTP reply persisted while paused");
-        let saved=AgentEvent::find(c,event.id)?.unwrap();
-        assert_eq!(saved.outcome.as_deref(),Some("suppressed"));
-        assert_eq!(saved.webhook_status,"none");
-        Ok(())
-    }).await.unwrap();
-}
+    for (resume, attachment) in [(false, false), (true, false), (false, true), (true, true)] {
+        let (app, _dir) = TestApp::boot()
+            .await
+            .expect("default seed")
+            .stop_jobs()
+            .await;
+        let event = pending(&app).await;
+        let gate = Arc::new(ResponseGate::default());
+        let mut route = Route::new("POST", "*", "/hook", 200)
+            .header(
+                "Content-Type",
+                if attachment { "text/csv" } else { "text/plain" },
+            )
+            .body("Late reply");
+        route.response_gate = Some(gate.clone());
+        let server = FakeServer::start(vec![route]).await;
+        let net = network(
+            Arc::new(FakeResolver::new([("bots.example", vec!["93.184.216.34"])])),
+            Arc::new(MappingDialer {
+                public: HashSet::from(["93.184.216.34".parse().unwrap()]),
+                to: server.addr,
+                dialed: Mutex::new(vec![]),
+            }),
+        );
+        let before = app
+            .db
+            .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
+            .await
+            .unwrap();
+        let change = async {
+            gate.entered.notified().await;
+            app.db
+                .write(move |tx| {
+                    let mut agent = campfire_db::Agent::find(tx.conn(), event.agent_id)?.unwrap();
+                    agent.update(
+                        tx,
+                        campfire_db::AgentChanges {
+                            paused_at: Some(Some(tx.now())),
+                            ..Default::default()
+                        },
+                    )?;
+                    if resume {
+                        agent.update(
+                            tx,
+                            campfire_db::AgentChanges {
+                                paused_at: Some(None),
+                                ..Default::default()
+                            },
+                        )?;
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            gate.released.notify_one();
+        };
+        let (result, ()) = tokio::join!(
+            post_with_network(
+                &app,
+                domain::EventWebhookJob {
+                    event_id: event.id,
+                    attempt: Some(0)
+                },
+                &net
+            ),
+            change
+        );
+        result.unwrap();
+        assert_eq!(server.received().len(), 1);
+        app.db
+            .read(move |c| {
+                assert_eq!(
+                    c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?,
+                    before,
+                    "late HTTP reply persisted while paused"
+                );
+                let saved = AgentEvent::find(c, event.id)?.unwrap();
+                assert_eq!(saved.outcome.as_deref(), Some("suppressed"));
+                assert_eq!(saved.webhook_status, "none");
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
 }

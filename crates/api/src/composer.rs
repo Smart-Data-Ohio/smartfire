@@ -4,7 +4,6 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_runtime::presenters::icons;
 use campfire_db::{
     ChannelThread, Message, NewScheduledMessage, Room, ScheduledMessage, UserStatusSettings,
     autocomplete_users, command_suggestions, slash_commands,
@@ -14,7 +13,11 @@ use campfire_messages::controllers::message_features as features;
 use campfire_messages::controllers::messages as classic;
 use campfire_runtime::concerns;
 use campfire_runtime::context::{self as page, db_error};
-use campfire_runtime::presenters::{Presenter, attachments::{self, Assignment}};
+use campfire_runtime::presenters::icons;
+use campfire_runtime::presenters::{
+    Presenter,
+    attachments::{self, Assignment},
+};
 
 use crate::dto;
 use crate::endpoints::{before_actions, body, now, set_room};
@@ -258,7 +261,9 @@ async fn room_thread(c: &Ctx, room: &Room, thread_id: Option<i64>) -> Result<Opt
     c.app()
         .db
         .read(move |conn| match ChannelThread::find_by_id(conn, id)? {
-            Some(thread) if thread.room_id == room_id && thread.readable_by(conn, viewer_id)? => Ok(Some(thread.id)),
+            Some(thread) if thread.room_id == room_id && thread.readable_by(conn, viewer_id)? => {
+                Ok(Some(thread.id))
+            }
             _ => Err(campfire_db::Error::RecordNotFound("ChannelThread")),
         })
         .await
@@ -315,7 +320,10 @@ async fn create_slash_command(c: &mut Ctx) -> Result {
             move || page::enter_time_zone(zone),
             move |tx| {
                 let result = slash_commands::dispatch_with_options(
-                    tx, &context, &text, input.options.as_ref(),
+                    tx,
+                    &context,
+                    &text,
+                    input.options.as_ref(),
                 )?;
                 if let Some(id) = result.message_id {
                     let message = Message::find(tx.conn(), id)?;
@@ -485,16 +493,28 @@ pub(crate) fn scheduled_rows(
                 row.attachments(conn)?
             };
             let presenter = Presenter::new(conn, app, None);
-            let attachments = files.into_iter().map(|(file, blob)| {
-                let blob = campfire_storage::Blob::find(conn, blob.id).map_err(attachments::storage_error)?
-                    .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
-                let mut view = presenter.attachment_file(&blob)?;
-                view.spoiler = file.spoiler;
-                Ok(api::ScheduledAttachment {
-                    attachment: dto::attachment(view, blob.content_type.as_deref(), blob.byte_size),
-                    signed_id: campfire_storage::paths::signed_blob_id(&*app.storage.verifier, blob.id, None),
+            let attachments = files
+                .into_iter()
+                .map(|(file, blob)| {
+                    let blob = campfire_storage::Blob::find(conn, blob.id)
+                        .map_err(attachments::storage_error)?
+                        .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+                    let mut view = presenter.attachment_file(&blob)?;
+                    view.spoiler = file.spoiler;
+                    Ok(api::ScheduledAttachment {
+                        attachment: dto::attachment(
+                            view,
+                            blob.content_type.as_deref(),
+                            blob.byte_size,
+                        ),
+                        signed_id: campfire_storage::paths::signed_blob_id(
+                            &*app.storage.verifier,
+                            blob.id,
+                            None,
+                        ),
+                    })
                 })
-            }).collect::<campfire_db::Result<Vec<_>>>()?;
+                .collect::<campfire_db::Result<Vec<_>>>()?;
             Ok(scheduled(
                 row,
                 sendable.contains(&row.id),
@@ -612,14 +632,25 @@ async fn create_scheduled(c: &mut Ctx) -> Result {
     let (room_id, reply_id) = (room.id, input.reply_to_message_id);
     // A thread that isn't this room's is a 404, as `rooms/slash_commands#thread_id` makes it.
     let thread_id = room_thread(c, &room, input.thread_id).await?;
-    let files = scheduled_uploads(c, input.attachment_signed_id, input.attachment_signed_ids.unwrap_or_default()).await?;
+    let files = scheduled_uploads(
+        c,
+        input.attachment_signed_id,
+        input.attachment_signed_ids.unwrap_or_default(),
+    )
+    .await?;
     let flags = crate::endpoints::file_spoilers(c, input.attachment_spoilers, files.len())?;
     let markdown_source = input.markdown_source;
     let row = c
         .app()
         .db
         .write(move |tx| {
-            let blob_ids = scheduled_blob_ids(tx, files, classic::AttachmentPolicy::OwnedUpload { uploader_id: user_id })?;
+            let blob_ids = scheduled_blob_ids(
+                tx,
+                files,
+                classic::AttachmentPolicy::OwnedUpload {
+                    uploader_id: user_id,
+                },
+            )?;
             let mut row = ScheduledMessage::create_with_attachments(
                 tx,
                 NewScheduledMessage {
@@ -665,17 +696,32 @@ async fn update_scheduled_message(c: &mut Ctx) -> Result {
     let source = input.markdown_source;
     let reply_to = input.reply_to_message_id;
     let files = if input.attachment_signed_ids.is_some() || input.attachment_signed_id.is_some() {
-        Some(scheduled_uploads(c, input.attachment_signed_id, input.attachment_signed_ids.unwrap_or_default()).await?)
+        Some(
+            scheduled_uploads(
+                c,
+                input.attachment_signed_id,
+                input.attachment_signed_ids.unwrap_or_default(),
+            )
+            .await?,
+        )
     } else {
         None
     };
     let flags = if let Some(flags) = input.attachment_spoilers {
-        let count = if let Some(files) = &files { files.len() } else {
+        let count = if let Some(files) = &files {
+            files.len()
+        } else {
             let id = initial.id;
-            c.app().db.read(move |conn| Ok(ScheduledMessage::find(conn, id)?.attachments(conn)?.len())).await.map_err(db_error)?
+            c.app()
+                .db
+                .read(move |conn| Ok(ScheduledMessage::find(conn, id)?.attachments(conn)?.len()))
+                .await
+                .map_err(db_error)?
         };
         Some(crate::endpoints::file_spoilers(c, Some(flags), count)?)
-    } else { None };
+    } else {
+        None
+    };
     let change = c
         .app()
         .db
@@ -687,9 +733,22 @@ async fn update_scheduled_message(c: &mut Ctx) -> Result {
             let source = source.unwrap_or_else(|| row.markdown_source.clone());
             let send_at = send_at.unwrap_or(row.send_at);
             let reply_to = reply_to.unwrap_or(row.reply_to_message_id);
-            let blob_ids = files.map(|files| scheduled_blob_ids(tx, files, classic::AttachmentPolicy::ScheduledUpload { uploader_id: user_id, scheduled_id: row.id })).transpose()?;
+            let blob_ids = files
+                .map(|files| {
+                    scheduled_blob_ids(
+                        tx,
+                        files,
+                        classic::AttachmentPolicy::ScheduledUpload {
+                            uploader_id: user_id,
+                            scheduled_id: row.id,
+                        },
+                    )
+                })
+                .transpose()?;
             row.update_with_attachments(tx, &source, send_at, reply_to, blob_ids.as_deref())?;
-            if let Some(flags) = flags { row.set_attachment_spoilers(tx, &flags)?; }
+            if let Some(flags) = flags {
+                row.set_attachment_spoilers(tx, &flags)?;
+            }
             Ok(Change::Saved(Box::new(row)))
         })
         .await
@@ -703,21 +762,37 @@ async fn update_scheduled_message(c: &mut Ctx) -> Result {
     }
 }
 
-async fn scheduled_uploads(c: &mut Ctx, single: Option<String>, ids: Vec<String>) -> Result<Vec<Assignment<campfire_storage::Staged>>> {
+async fn scheduled_uploads(
+    c: &mut Ctx,
+    single: Option<String>,
+    ids: Vec<String>,
+) -> Result<Vec<Assignment<campfire_storage::Staged>>> {
     let single = single.filter(|id| !id.is_empty());
     let mut ids = crate::endpoints::grouped_signed_ids(c, single.as_deref(), ids)?;
     ids.extend(single);
     crate::endpoints::require_grouped_uploads(c, &ids).await?;
-    attachments::stage_many(c.app(), ids.into_iter().map(Assignment::Signed).collect(), concerns::require_current_user(c)?.id).await
+    attachments::stage_many(
+        c.app(),
+        ids.into_iter().map(Assignment::Signed).collect(),
+        concerns::require_current_user(c)?.id,
+    )
+    .await
 }
 
-fn scheduled_blob_ids(tx: &mut campfire_db::Tx<'_>, files: Vec<Assignment<campfire_storage::Staged>>, policy: classic::AttachmentPolicy) -> campfire_db::Result<Vec<i64>> {
-    files.into_iter().map(|file| {
-        let blob = classic::attachment_blob(tx, file, policy, "attachment_signed_ids")?
-            .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
-        attachments::enqueue_analysis(tx, &blob);
-        Ok(blob.id)
-    }).collect()
+fn scheduled_blob_ids(
+    tx: &mut campfire_db::Tx<'_>,
+    files: Vec<Assignment<campfire_storage::Staged>>,
+    policy: classic::AttachmentPolicy,
+) -> campfire_db::Result<Vec<i64>> {
+    files
+        .into_iter()
+        .map(|file| {
+            let blob = classic::attachment_blob(tx, file, policy, "attachment_signed_ids")?
+                .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+            attachments::enqueue_analysis(tx, &blob);
+            Ok(blob.id)
+        })
+        .collect()
 }
 
 fn busy(c: &mut Ctx) -> Error {

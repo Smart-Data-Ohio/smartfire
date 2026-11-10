@@ -12,9 +12,7 @@ pub struct ForwarderCopier {
 impl ForwarderCopier {
     #[allow(dead_code, reason = "WS8b supplies this adapter to its forward action")]
     pub fn new(storage: Arc<Storage>) -> Self {
-        Self {
-            storage,
-        }
+        Self { storage }
     }
 }
 impl campfire_db::models::forwarder::BlobCopier for ForwarderCopier {
@@ -44,7 +42,10 @@ impl campfire_db::models::forwarder::BlobCopier for ForwarderCopier {
         }
     }
     fn process(&self, tx: &mut Tx<'_>, message: &campfire_db::Message) -> Result<()> {
-        if let Some(blob) = campfire_storage::Blob::attached(tx.conn(), "Message", message.id, "attachment").map_err(|e| campfire_db::Error::Other(e.to_string()))? {
+        if let Some(blob) =
+            campfire_storage::Blob::attached(tx.conn(), "Message", message.id, "attachment")
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?
+        {
             crate::controllers::presenters::attachments::enqueue_analysis(tx, &blob);
         }
         campfire_db::models::message_attachment_processing::schedule_message(tx, message)

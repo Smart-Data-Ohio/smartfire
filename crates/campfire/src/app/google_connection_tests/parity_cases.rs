@@ -109,7 +109,9 @@ async fn google_connection_producers_and_disconnect_isolation_match_pinned_rails
             .unwrap();
         actual["flash"] = cookie["flash"]["flashes"].clone();
         let mut expected = row["result"].clone();
-        if name.starts_with("callback") && expected["location"] == "http://campfire.test/users/me/profile" {
+        if name.starts_with("callback")
+            && expected["location"] == "http://campfire.test/users/me/profile"
+        {
             expected["location"] = json!("http://campfire.test/app/settings/integrations");
         }
         assert_eq!(actual, expected, "pinned Rails {name}");

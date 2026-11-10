@@ -56,7 +56,10 @@ async fn compare(names: &[&str]) {
         if let Some(token) = case["token"].as_str() {
             header_values.push(("Authorization".into(), format!("Bearer {token}")));
         }
-        let headers: Vec<_> = header_values.iter().map(|(key, value)| (key.as_str(), value.as_str())).collect();
+        let headers: Vec<_> = header_values
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .collect();
         let response = browser
             .request(Method::GET, case["path"].as_str().unwrap(), &headers, None)
             .await;

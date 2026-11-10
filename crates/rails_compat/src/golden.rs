@@ -18,21 +18,27 @@ fn workspace_root() -> PathBuf {
 
 static VECTORS: LazyLock<Value> = LazyLock::new(|| {
     let path = workspace_root().join("vectors/rails_compat.json");
-    serde_json::from_str(&std::fs::read_to_string(&path).expect("vectors/rails_compat.json")).expect("valid JSON")
+    serde_json::from_str(&std::fs::read_to_string(&path).expect("vectors/rails_compat.json"))
+        .expect("valid JSON")
 });
 
-static SECRETS: LazyLock<Secrets> = LazyLock::new(|| Secrets::new(str(&VECTORS["secret_key_base"])));
+static SECRETS: LazyLock<Secrets> =
+    LazyLock::new(|| Secrets::new(str(&VECTORS["secret_key_base"])));
 
 fn v(path: &str) -> &'static Value {
     path.split('.').fold(&*VECTORS, |value, key| &value[key])
 }
 
 fn cases(path: &str) -> &'static Vec<Value> {
-    v(path).as_array().unwrap_or_else(|| panic!("{path} is an array"))
+    v(path)
+        .as_array()
+        .unwrap_or_else(|| panic!("{path} is an array"))
 }
 
 fn str(value: &Value) -> &str {
-    value.as_str().unwrap_or_else(|| panic!("expected a string, got {value}"))
+    value
+        .as_str()
+        .unwrap_or_else(|| panic!("expected a string, got {value}"))
 }
 
 fn opt_str(value: &Value) -> Option<&str> {
@@ -58,8 +64,16 @@ fn label(case: &Value) -> String {
 #[test]
 fn key_generator() {
     for case in cases("key_generator") {
-        let key = SECRETS.key_generator.generate_key(str(&case["salt"]), case["length"].as_u64().unwrap() as usize);
-        assert_eq!(hex::encode(key), str(&case["key_hex"]), "salt {}", case["salt"]);
+        let key = SECRETS.key_generator.generate_key(
+            str(&case["salt"]),
+            case["length"].as_u64().unwrap() as usize,
+        );
+        assert_eq!(
+            hex::encode(key),
+            str(&case["key_hex"]),
+            "salt {}",
+            case["salt"]
+        );
     }
 }
 
@@ -69,16 +83,32 @@ fn cookie_escaping() {
         if let Some(raw) = opt_str(&case["raw"]) {
             assert_eq!(cookies::escape(raw), str(&case["wire"]), "escape {raw:?}");
         }
-        assert_eq!(cookies::unescape(str(&case["wire"])), str(&case["parsed"]), "unescape {}", case["wire"]);
+        assert_eq!(
+            cookies::unescape(str(&case["wire"])),
+            str(&case["parsed"]),
+            "unescape {}",
+            case["wire"]
+        );
     }
 }
 
 #[test]
 fn signed_cookies_are_generated_byte_for_byte() {
     for case in cases("signed_cookies.generate") {
-        let raw = cookies::sign(&SECRETS, str(&case["name"]), str(&case["value"]), opt_time(&case["expires_at"]));
+        let raw = cookies::sign(
+            &SECRETS,
+            str(&case["name"]),
+            str(&case["value"]),
+            opt_time(&case["expires_at"]),
+        );
         assert_eq!(raw, str(&case["raw"]), "value {}", case["value"]);
-        let wire = str(&case["set_cookie"]).split(';').next().unwrap().split_once('=').unwrap().1;
+        let wire = str(&case["set_cookie"])
+            .split(';')
+            .next()
+            .unwrap()
+            .split_once('=')
+            .unwrap()
+            .1;
         assert_eq!(cookies::escape(&raw), wire);
     }
 }
@@ -86,24 +116,57 @@ fn signed_cookies_are_generated_byte_for_byte() {
 #[test]
 fn permanent_cookies_expire_in_twenty_years() {
     let session_token = &cases("signed_cookies.generate")[0];
-    assert_eq!(cookies::permanent_expires_at(now()), time(&session_token["expires_at"]));
+    assert_eq!(
+        cookies::permanent_expires_at(now()),
+        time(&session_token["expires_at"])
+    );
 }
 
 #[test]
 fn signed_cookies_verify_like_rails() {
     for case in cases("signed_cookies.verify") {
-        let value = cookies::verify_signed_value(&SECRETS, str(&case["name"]), str(&case["raw"]), time(&case["now"]));
-        assert_eq!(value.unwrap_or(Value::Null), case["expected"], "{}", label(case));
-        let string = cookies::verify_signed(&SECRETS, str(&case["name"]), str(&case["raw"]), time(&case["now"]));
-        assert_eq!(string.as_deref(), case["expected"].as_str(), "{}", label(case));
+        let value = cookies::verify_signed_value(
+            &SECRETS,
+            str(&case["name"]),
+            str(&case["raw"]),
+            time(&case["now"]),
+        );
+        assert_eq!(
+            value.unwrap_or(Value::Null),
+            case["expected"],
+            "{}",
+            label(case)
+        );
+        let string = cookies::verify_signed(
+            &SECRETS,
+            str(&case["name"]),
+            str(&case["raw"]),
+            time(&case["now"]),
+        );
+        assert_eq!(
+            string.as_deref(),
+            case["expected"].as_str(),
+            "{}",
+            label(case)
+        );
     }
 }
 
 #[test]
 fn encrypted_cookies_decrypt_like_rails() {
     for case in cases("encrypted_cookies.verify") {
-        let value = cookies::decrypt(&SECRETS, str(&case["name"]), str(&case["raw"]), time(&case["now"]));
-        assert_eq!(value.unwrap_or(Value::Null), case["expected"], "{}", label(case));
+        let value = cookies::decrypt(
+            &SECRETS,
+            str(&case["name"]),
+            str(&case["raw"]),
+            time(&case["now"]),
+        );
+        assert_eq!(
+            value.unwrap_or(Value::Null),
+            case["expected"],
+            "{}",
+            label(case)
+        );
     }
 }
 
@@ -112,7 +175,10 @@ fn encrypted_cookie_plaintext_matches_rails() {
     let encryptor = cookies::encrypted_cookie_encryptor(&SECRETS);
     for case in cases("encrypted_cookies.generate") {
         let plaintext = encryptor.decrypt(str(&case["raw"])).expect("decrypts");
-        assert_eq!(String::from_utf8(plaintext).unwrap(), str(&case["plaintext"]));
+        assert_eq!(
+            String::from_utf8(plaintext).unwrap(),
+            str(&case["plaintext"])
+        );
 
         // With serde_json's preserve_order (on workspace-wide), Rust's plaintext is byte-identical.
         let ours = metadata::serialize_with_metadata(
@@ -123,8 +189,16 @@ fn encrypted_cookie_plaintext_matches_rails() {
         );
         assert_eq!(String::from_utf8(ours).unwrap(), str(&case["plaintext"]));
 
-        let raw = cookies::encrypt(&SECRETS, str(&case["name"]), &case["value"], opt_time(&case["expires_at"]));
-        assert_eq!(cookies::decrypt(&SECRETS, str(&case["name"]), &raw, now()), Some(case["value"].clone()));
+        let raw = cookies::encrypt(
+            &SECRETS,
+            str(&case["name"]),
+            &case["value"],
+            opt_time(&case["expires_at"]),
+        );
+        assert_eq!(
+            cookies::decrypt(&SECRETS, str(&case["name"]), &raw, now()),
+            Some(case["value"].clone())
+        );
     }
 }
 
@@ -134,12 +208,32 @@ fn rails_session_and_its_forms_are_accepted() {
     assert_eq!(session["post_with_form_token_status"], 302);
     assert_eq!(session["post_with_bad_token_status"], 422);
 
-    let hash = cookies::decrypt(&SECRETS, "_campfire_session", str(&session["session_cookie_raw"]), now()).unwrap();
+    let hash = cookies::decrypt(
+        &SECRETS,
+        "_campfire_session",
+        str(&session["session_cookie_raw"]),
+        now(),
+    )
+    .unwrap();
     assert_eq!(hash, session["session"]);
 
     let token = str(&session["session_token_value"]);
-    assert_eq!(cookies::verify_signed(&SECRETS, "session_token", str(&session["session_token_raw"]), now()).as_deref(), Some(token));
-    let ours = cookies::sign(&SECRETS, "session_token", token, Some(cookies::permanent_expires_at(now())));
+    assert_eq!(
+        cookies::verify_signed(
+            &SECRETS,
+            "session_token",
+            str(&session["session_token_raw"]),
+            now()
+        )
+        .as_deref(),
+        Some(token)
+    );
+    let ours = cookies::sign(
+        &SECRETS,
+        "session_token",
+        token,
+        Some(cookies::permanent_expires_at(now())),
+    );
     assert_eq!(ours, str(&session["session_token_raw"]));
 }
 
@@ -147,11 +241,29 @@ fn rails_session_and_its_forms_are_accepted() {
 fn signed_ids() {
     for case in cases("signed_ids.generate") {
         let model = str(&case["model"]);
-        let generated = signed_id::generate(&SECRETS, model, case["id"].as_i64().unwrap(), opt_str(&case["purpose"]), opt_time(&case["expires_at"]));
-        assert_eq!(generated, str(&case["signed_id"]), "{model} {} {}", case["id"], case["purpose"]);
+        let generated = signed_id::generate(
+            &SECRETS,
+            model,
+            case["id"].as_i64().unwrap(),
+            opt_str(&case["purpose"]),
+            opt_time(&case["expires_at"]),
+        );
+        assert_eq!(
+            generated,
+            str(&case["signed_id"]),
+            "{model} {} {}",
+            case["id"],
+            case["purpose"]
+        );
     }
     for case in cases("signed_ids.verify") {
-        let id = signed_id::verify(&SECRETS, str(&case["model"]), str(&case["signed_id"]), opt_str(&case["purpose"]), time(&case["now"]));
+        let id = signed_id::verify(
+            &SECRETS,
+            str(&case["model"]),
+            str(&case["signed_id"]),
+            opt_str(&case["purpose"]),
+            time(&case["now"]),
+        );
         let expected = match &case["expected"] {
             Value::String(s) => Some(s.parse().unwrap()),
             other => other.as_i64(),
@@ -164,7 +276,10 @@ fn signed_ids() {
 fn global_ids() {
     for case in cases("global_ids") {
         let gid = GlobalId::parse(str(&case["gid"])).unwrap();
-        assert_eq!(gid, GlobalId::new(str(&case["model_name"]), str(&case["id"])));
+        assert_eq!(
+            gid,
+            GlobalId::new(str(&case["model_name"]), str(&case["id"]))
+        );
         assert_eq!(gid.to_string(), str(&case["gid"]));
         assert_eq!(gid.to_param(), str(&case["param"]));
     }
@@ -180,13 +295,33 @@ fn sgids() {
             assert_eq!(str(&case["purpose"]), global_id::ATTACHABLE_PURPOSE);
             global_id::attachable_sgid(&SECRETS, &gid)
         } else {
-            global_id::sgid(&SECRETS, &gid, str(&case["purpose"]), opt_time(&case["expires_at"]))
+            global_id::sgid(
+                &SECRETS,
+                &gid,
+                str(&case["purpose"]),
+                opt_time(&case["expires_at"]),
+            )
         };
-        assert_eq!(generated, str(&case["sgid"]), "{data} for {}", case["purpose"]);
+        assert_eq!(
+            generated,
+            str(&case["sgid"]),
+            "{data} for {}",
+            case["purpose"]
+        );
     }
     for case in cases("sgids.verify") {
-        let located = global_id::locate_signed(&SECRETS, str(&case["sgid"]), str(&case["purpose"]), time(&case["now"]));
-        assert_eq!(located, opt_str(&case["expected"]).and_then(GlobalId::parse), "{}", label(case));
+        let located = global_id::locate_signed(
+            &SECRETS,
+            str(&case["sgid"]),
+            str(&case["purpose"]),
+            time(&case["now"]),
+        );
+        assert_eq!(
+            located,
+            opt_str(&case["expected"]).and_then(GlobalId::parse),
+            "{}",
+            label(case)
+        );
     }
 }
 
@@ -196,15 +331,28 @@ fn unverified_sgids_only_yield_users() {
     for case in cases("unverified_sgids") {
         let result = global_id::unverified_attachable_user(opt_str(&case["sgid"]));
         // Rails also looks the user up; a missing one is nil.
-        let found = result.clone().map(|gid| gid.filter(|gid| existing_user_ids.contains(&gid.id.as_str())));
+        let found = result
+            .clone()
+            .map(|gid| gid.filter(|gid| existing_user_ids.contains(&gid.id.as_str())));
         match &case["expected"] {
             Value::Null => assert_eq!(found, Ok(None), "{}", label(case)),
             Value::String(gid) => {
                 let expected = GlobalId::parse(gid).unwrap();
-                let found = found.unwrap().unwrap_or_else(|| panic!("{} found nothing", label(case)));
-                assert_eq!((found.model_name, found.id), (expected.model_name, expected.id), "{}", label(case));
+                let found = found
+                    .unwrap()
+                    .unwrap_or_else(|| panic!("{} found nothing", label(case)));
+                assert_eq!(
+                    (found.model_name, found.id),
+                    (expected.model_name, expected.id),
+                    "{}",
+                    label(case)
+                );
             }
-            raises => assert!(result.is_err(), "{} should fail like Rails ({raises})", label(case)),
+            raises => assert!(
+                result.is_err(),
+                "{} should fail like Rails ({raises})",
+                label(case)
+            ),
         }
     }
 }
@@ -212,11 +360,27 @@ fn unverified_sgids_only_yield_users() {
 #[test]
 fn tampered_sgids_for_other_models_are_rejected() {
     // Independent of the oracle: the signature-ignoring fallback must never yield a non-User.
-    for model in ["Rooms::Open", "Account", "Message", "Rooms::Direct", "Session"] {
+    for model in [
+        "Rooms::Open",
+        "Account",
+        "Message",
+        "Rooms::Direct",
+        "Session",
+    ] {
         let gid = GlobalId::new(model, 1);
-        let forged = global_id::verifier(&Secrets::new("attacker")).generate(&Value::String(gid.to_string()), Some("attachable"), None);
-        assert_eq!(global_id::unverified_attachable_user(Some(&forged)), Ok(None));
-        assert_eq!(global_id::locate_signed(&SECRETS, &forged, "attachable", now()), None);
+        let forged = global_id::verifier(&Secrets::new("attacker")).generate(
+            &Value::String(gid.to_string()),
+            Some("attachable"),
+            None,
+        );
+        assert_eq!(
+            global_id::unverified_attachable_user(Some(&forged)),
+            Ok(None)
+        );
+        assert_eq!(
+            global_id::locate_signed(&SECRETS, &forged, "attachable", now()),
+            None
+        );
     }
 }
 
@@ -224,13 +388,34 @@ fn tampered_sgids_for_other_models_are_rejected() {
 fn app_verifiers() {
     for case in cases("app_verifiers.generate") {
         let verifier = crate::app_verifier(&SECRETS, str(&case["name"]));
-        let message = verifier.generate_raw(str(&case["data_json"]), opt_str(&case["purpose"]), opt_time(&case["expires_at"]));
-        assert_eq!(message, str(&case["message"]), "{} {}", case["name"], case["data_json"]);
+        let message = verifier.generate_raw(
+            str(&case["data_json"]),
+            opt_str(&case["purpose"]),
+            opt_time(&case["expires_at"]),
+        );
+        assert_eq!(
+            message,
+            str(&case["message"]),
+            "{} {}",
+            case["name"],
+            case["data_json"]
+        );
     }
     for case in cases("app_verifiers.verify") {
         let verifier = crate::app_verifier(&SECRETS, str(&case["name"]));
-        let data = verifier.verify_raw(str(&case["message"]), opt_str(&case["purpose"]), time(&case["now"])).ok();
-        assert_eq!(data.as_deref(), opt_str(&case["expected_json"]), "{}", label(case));
+        let data = verifier
+            .verify_raw(
+                str(&case["message"]),
+                opt_str(&case["purpose"]),
+                time(&case["now"]),
+            )
+            .ok();
+        assert_eq!(
+            data.as_deref(),
+            opt_str(&case["expected_json"]),
+            "{}",
+            label(case)
+        );
     }
 }
 
@@ -245,11 +430,20 @@ fn passwords() {
         for case in cases("passwords.checks") {
             scope.spawn(move || {
                 let ok = password::verify(str(&case["password"]), str(&case["digest"]));
-                assert_eq!(Value::Bool(ok), case["expected"], "{:?} against {}", case["password"], case["digest"]);
+                assert_eq!(
+                    Value::Bool(ok),
+                    case["expected"],
+                    "{:?} against {}",
+                    case["password"],
+                    case["digest"]
+                );
             });
         }
     });
-    assert!(password::verify("secret123456", str(v("passwords.seeded_user_digest"))));
+    assert!(password::verify(
+        "secret123456",
+        str(v("passwords.seeded_user_digest"))
+    ));
     let ours = password::digest_with_cost("pässwörd ☃", password::MIN_COST);
     assert!(ours.starts_with("$2a$04$") && password::verify("pässwörd ☃", &ours));
     assert!(!password::verify("anything", "not a digest"));
@@ -280,13 +474,17 @@ fn write_rust_output_for_rails_to_verify() {
 
     let session_token = "RustMadeSessionToken1234";
 
-    let four_hours = now.checked_add(jiff::SignedDuration::from_hours(4)).unwrap();
+    let four_hours = now
+        .checked_add(jiff::SignedDuration::from_hours(4))
+        .unwrap();
     let signed_ids: Vec<Value> = [(1, Some("avatar"), None), (2, Some("transfer"), Some(four_hours)), (12345, None, None), (9_007_199_254_740_993, Some("avatar"), None)]
         .iter()
         .map(|(id, purpose, expires_at)| json!({ "model": "User", "id": id, "purpose": purpose, "signed_id": signed_id::generate(secrets, "User", *id, *purpose, *expires_at) }))
         .collect();
 
-    let an_hour = now.checked_add(jiff::SignedDuration::from_hours(1)).unwrap();
+    let an_hour = now
+        .checked_add(jiff::SignedDuration::from_hours(1))
+        .unwrap();
     let sgids = vec![
         json!({ "sgid": global_id::attachable_sgid(secrets, &GlobalId::new("User", 1)), "purpose": "attachable", "expected": "gid://campfire/User/1?expires_in" }),
         json!({ "sgid": global_id::attachable_sgid(secrets, &GlobalId::new("User", 2)), "purpose": "attachable", "expected": "gid://campfire/User/2?expires_in" }),
@@ -294,10 +492,14 @@ fn write_rust_output_for_rails_to_verify() {
         json!({ "sgid": global_id::sgid(secrets, &GlobalId::new("Rooms::Open", 1), "default", None), "purpose": "attachable", "expected": null }),
     ];
 
-    let passwords: Vec<Value> = [("secret123456", password::COST), ("pässwörd ☃", password::MIN_COST), (&"a".repeat(80), password::MIN_COST)]
-        .iter()
-        .map(|(pw, cost)| json!({ "password": pw, "digest": password::digest_with_cost(pw, *cost) }))
-        .collect();
+    let passwords: Vec<Value> = [
+        ("secret123456", password::COST),
+        ("pässwörd ☃", password::MIN_COST),
+        (&"a".repeat(80), password::MIN_COST),
+    ]
+    .iter()
+    .map(|(pw, cost)| json!({ "password": pw, "digest": password::digest_with_cost(pw, *cost) }))
+    .collect();
 
     let app_verifiers: Vec<Value> = [
         (r#"{"key":"k1","disposition":"inline; filename=\"a\u0026b.png\"","content_type":"image/png","service_name":"local"}"#, Some("blob_key"), Some(four_hours)),

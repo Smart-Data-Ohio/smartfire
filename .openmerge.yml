@@ -1,0 +1,21 @@
+# OpenMerge merge queue: https://github.com/CanadaApollo6/openmerge
+# Comment `@openmerge queue` on a PR instead of merging it. OpenMerge tests
+# batches on openmerge/queue/** branches and lands passing PRs on main in order.
+version: 1
+queues:
+  - name: default
+    enter_when:
+      - "-draft"
+    # Same checks the "main: reviewed, checked, protected" ruleset requires.
+    merge_when:
+      - check-success = GitHub Actions audit
+      - check-success = Huddle authorization gateway
+      - check-success = Dependency audit
+      - check-success = Rust port
+      - check-success = Ops scripts
+      - check-success = Frontend
+    merge_method: squash
+    checks:
+      retry_failed: 1
+    batch:
+      max_size: 2

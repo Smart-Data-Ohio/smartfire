@@ -1,10 +1,10 @@
 use super::*;
+use crate::controllers::presenters::test_support::{DAVID, KEVIN, TestApp};
 use campfire_db::ChannelThread;
 use campfire_db::User;
+use campfire_db::{Agent, NewAgent, NewChannelThread, Room, RoomType};
 use campfire_runtime::presenters::Presenter;
 use serde_json::Value;
-use crate::controllers::presenters::test_support::{DAVID, KEVIN, TestApp};
-use campfire_db::{Agent, NewAgent, NewChannelThread, Room, RoomType};
 
 #[tokio::test]
 async fn unicode_parity_thread_payload_sorts_human_and_agent_owner_options() {
@@ -29,7 +29,7 @@ async fn unicode_parity_thread_payload_sorts_human_and_agent_owner_options() {
                     tx,
                     NewAgent {
                         user_id: user.id,
-                        kind:campfire_db::AgentKind::Workspace,
+                        kind: campfire_db::AgentKind::Workspace,
                         owner_id: Some(DAVID),
                         ..Default::default()
                     },

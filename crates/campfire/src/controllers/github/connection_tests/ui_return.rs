@@ -1,7 +1,8 @@
 use super::*;
 
 #[tokio::test]
-async fn github_callback_returns_to_the_spa_integrations_whatever_was_chosen_in_every_handled_outcome() {
+async fn github_callback_returns_to_the_spa_integrations_whatever_was_chosen_in_every_handled_outcome()
+ {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     for enabled in [false, true] {
         for preference in [UiPreference::Classic, UiPreference::Next] {
@@ -48,8 +49,7 @@ async fn github_callback_returns_to_the_spa_integrations_whatever_was_chosen_in_
                     request(&fresh, "GET", &path, Value::Null, session).await;
                 assert_eq!(status, 302, "{outcome}");
                 assert_eq!(
-                    headers["location"],
-                    "http://example.org/app/settings/integrations",
+                    headers["location"], "http://example.org/app/settings/integrations",
                     "{outcome}"
                 );
                 let session = response_session(&fresh, &headers);

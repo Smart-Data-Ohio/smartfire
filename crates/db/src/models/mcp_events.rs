@@ -209,7 +209,9 @@ pub fn subscribe(
     grant: Grant,
     encryption: &rails_compat::ar_encryption::ArEncryption,
 ) -> Result<GrantResult> {
-    if Agent::find(tx.conn(), grant.agent)?.is_some_and(|a| a.paused()) { return Ok(GrantResult::Paused); }
+    if Agent::find(tx.conn(), grant.agent)?.is_some_and(|a| a.paused()) {
+        return Ok(GrantResult::Paused);
+    }
     let id = subscription_id(grant.credential, &grant.url, &grant.name, &grant.arguments);
     if !can_subscribe(tx.conn(), grant.agent, &grant.arguments)?
         || !principal_live(
@@ -372,7 +374,9 @@ fn enqueue(tx: &mut Tx<'_>, subscription: &str, event: i64) -> Result<()> {
     Ok(())
 }
 pub fn fan_out(tx: &mut Tx<'_>, event: &super::agent_delivery::AgentEvent) -> Result<()> {
-    if super::agent_delivery::suppress_if_paused(tx, event.id)? { return Ok(()); }
+    if super::agent_delivery::suppress_if_paused(tx, event.id)? {
+        return Ok(());
+    }
     let ids = query_all(
         tx.conn(),
         "SELECT id,arguments FROM mcp_event_subscriptions WHERE agent_id=? AND name=? AND refresh_before>? AND verified_at IS NOT NULL",

@@ -159,12 +159,20 @@ impl AgentEvent {
     }
     fn create_record(tx: &Tx<'_>, mut a: NewEvent, captured_agent: bool) -> Result<Self> {
         suppress_new_event_if_paused(tx, &mut a)?;
-        let thread_id = a.metadata.get("thread_id").and_then(Value::as_i64).or(
-            a.message_id.map(|id| crate::Message::find_by_id(tx.conn(), id)).transpose()?.flatten().and_then(|message| message.thread_id)
-        );
+        let thread_id = a.metadata.get("thread_id").and_then(Value::as_i64).or(a
+            .message_id
+            .map(|id| crate::Message::find_by_id(tx.conn(), id))
+            .transpose()?
+            .flatten()
+            .and_then(|message| message.thread_id));
         if let Some(thread_id) = thread_id
-            && crate::ChannelThread::find_by_id(tx.conn(), thread_id)?.is_some_and(|thread| thread.visibility == super::channel_thread::ThreadVisibility::Private) {
-            if !a.metadata.is_object() { a.metadata = serde_json::json!({}); }
+            && crate::ChannelThread::find_by_id(tx.conn(), thread_id)?.is_some_and(|thread| {
+                thread.visibility == super::channel_thread::ThreadVisibility::Private
+            })
+        {
+            if !a.metadata.is_object() {
+                a.metadata = serde_json::json!({});
+            }
             a.metadata["thread_id"] = serde_json::json!(thread_id);
             a.metadata["thread_visibility"] = serde_json::json!("private");
         }
@@ -310,8 +318,12 @@ pub fn suppress_new_event_if_paused(tx: &Tx<'_>, event: &mut NewEvent) -> Result
 
 /// Re-read after external awaits. A suppressed occurrence can never be revived.
 pub fn suppress_if_paused(tx: &Tx<'_>, event_id: i64) -> Result<bool> {
-    let Some(event) = AgentEvent::find(tx.conn(), event_id)? else { return Ok(false) };
-    if event.outcome.as_deref() == Some("suppressed") { return Ok(true) }
+    let Some(event) = AgentEvent::find(tx.conn(), event_id)? else {
+        return Ok(false);
+    };
+    if event.outcome.as_deref() == Some("suppressed") {
+        return Ok(true);
+    }
     if !crate::Agent::find(tx.conn(), event.agent_id)?.is_some_and(|agent| agent.paused()) {
         return Ok(false);
     }
@@ -392,7 +404,8 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     let mut metadata = json!({"hop":hop,"thread_id":message.thread_id});
     if let Some(thread_id) = message.thread_id
         && crate::ChannelThread::find(tx.conn(), thread_id)?.visibility
-            == crate::channel_thread::ThreadVisibility::Private {
+            == crate::channel_thread::ThreadVisibility::Private
+    {
         metadata["thread_visibility"] = json!("private");
     }
     if let Some(agent_id) = sender {
@@ -460,7 +473,9 @@ pub fn enqueue_for_message(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
             continue;
         }
         if let Some(thread_id) = message.thread_id
-            && !crate::ChannelThread::find(tx.conn(), thread_id)?.readable_by(tx.conn(), agent.user_id)? {
+            && !crate::ChannelThread::find(tx.conn(), thread_id)?
+                .readable_by(tx.conn(), agent.user_id)?
+        {
             continue;
         }
         let (kind, outcome, detail) = if hop >= 3 {
@@ -516,10 +531,17 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
     if !MESSAGE_TYPES.contains(&e.event_type.as_str()) {
         return Ok(());
     }
-    if suppress_if_paused(tx, e.id)? { return Ok(()) }
+    if suppress_if_paused(tx, e.id)? {
+        return Ok(());
+    }
     if e.outcome.as_deref() == Some("acknowledged") {
         if has_webhook(tx,e.agent_id)? && super::agent_event_access::delivery_authorized(tx.conn(),e.id)? && tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND outcome='acknowledged' AND webhook_status='none'",params![tx.now(),e.id])?==1 {enqueue_webhook(tx,&e,Duration::ZERO);}
-        if super::agent_event_access::delivery_authorized(tx.conn(),e.id)? && e.hop()<3 && !rate_limited(tx,e.agent_id,e.room_id.unwrap_or(0),Some(e.id))? {super::mcp_events::fan_out(tx,&e)?;}
+        if super::agent_event_access::delivery_authorized(tx.conn(), e.id)?
+            && e.hop() < 3
+            && !rate_limited(tx, e.agent_id, e.room_id.unwrap_or(0), Some(e.id))?
+        {
+            super::mcp_events::fan_out(tx, &e)?;
+        }
         return Ok(());
     }
     if e.outcome.as_deref() != Some("pending") {
@@ -583,7 +605,9 @@ pub fn claim_webhook(tx: &Tx<'_>, job: &EventWebhookJob) -> Result<Option<AgentE
     let Some(e) = AgentEvent::find(tx.conn(), job.event_id)? else {
         return Ok(None);
     };
-    if suppress_if_paused(tx, e.id)? { return Ok(None) }
+    if suppress_if_paused(tx, e.id)? {
+        return Ok(None);
+    }
     if e.webhook_status == "delivered" {
         return Ok(None);
     }
@@ -604,7 +628,9 @@ pub enum AttemptOutcome {
     Retry(String, Option<Duration>),
 }
 pub fn finish_webhook(tx: &mut Tx<'_>, e: &AgentEvent, result: AttemptOutcome) -> Result<()> {
-    if suppress_if_paused(tx, e.id)? { return Ok(()) }
+    if suppress_if_paused(tx, e.id)? {
+        return Ok(());
+    }
     let (status, attempts, error, next, wait) = match result {
         AttemptOutcome::Delivered => (
             "delivered",

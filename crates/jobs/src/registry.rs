@@ -10,7 +10,11 @@ use serde::de::DeserializeOwned;
 use crate::kind::{Execution, JobError, JobKind, JobResult, RetryPolicy};
 
 type Exhausted<C> = Arc<dyn Fn(C, serde_json::Value, u32, &anyhow::Error) + Send + Sync>;
-type ExhaustedIn<C> = Arc<dyn Fn(&mut campfire_db::Tx<'_>, C, serde_json::Value, u32) -> campfire_db::Result<()> + Send + Sync>;
+type ExhaustedIn<C> = Arc<
+    dyn Fn(&mut campfire_db::Tx<'_>, C, serde_json::Value, u32) -> campfire_db::Result<()>
+        + Send
+        + Sync,
+>;
 
 /// A registered job class, its type erased.
 pub(crate) struct Kind<C> {
@@ -126,14 +130,21 @@ impl<C: Send + 'static> Registry<C> {
         J: JobKind + DeserializeOwned,
         F: Fn(&mut campfire_db::Tx<'_>, C, J) -> campfire_db::Result<()> + Send + Sync + 'static,
     {
-        let kind = self.kinds.get_mut(J::CLASS).expect("register the job before its exhaustion block");
-        assert!(kind.exhausted_in.is_none(), "{} has two durable exhaustion blocks", J::CLASS);
-        kind.exhausted_in = Some(Arc::new(move |tx, context, arguments, version| {
-            match decode::<J>(arguments, version) {
+        let kind = self
+            .kinds
+            .get_mut(J::CLASS)
+            .expect("register the job before its exhaustion block");
+        assert!(
+            kind.exhausted_in.is_none(),
+            "{} has two durable exhaustion blocks",
+            J::CLASS
+        );
+        kind.exhausted_in = Some(Arc::new(
+            move |tx, context, arguments, version| match decode::<J>(arguments, version) {
                 Ok(job) => callback(tx, context, job),
                 Err(_) => Ok(()),
-            }
-        }));
+            },
+        ));
         self
     }
 

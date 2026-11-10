@@ -8,7 +8,8 @@ use std::collections::BTreeMap;
 use campfire_richtext::dom::Dom;
 use campfire_richtext::sanitizer::SafeList;
 use campfire_richtext::{
-    AttachableResolver, GidLookup, MentionUser, Presentation, RenderContext, SignedLookup, mentioned_users, present_message, to_plain_text,
+    AttachableResolver, GidLookup, MentionUser, Presentation, RenderContext, SignedLookup,
+    mentioned_users, present_message, to_plain_text,
 };
 use serde_json::Value;
 
@@ -19,10 +20,13 @@ struct Corpus {
 impl Corpus {
     fn load() -> Corpus {
         // RICHTEXT_CORPUS points at another corpus in the same format
-        let path = std::env::var("RICHTEXT_CORPUS")
-            .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/tests/corpus/expected.json").to_string());
+        let path = std::env::var("RICHTEXT_CORPUS").unwrap_or_else(|_| {
+            concat!(env!("CARGO_MANIFEST_DIR"), "/tests/corpus/expected.json").to_string()
+        });
         let text = std::fs::read_to_string(&path).expect("read the richtext corpus");
-        Corpus { json: serde_json::from_str(&text).unwrap() }
+        Corpus {
+            json: serde_json::from_str(&text).unwrap(),
+        }
     }
 
     fn users(&self) -> Vec<MentionUser> {
@@ -53,7 +57,12 @@ impl TestResolver {
         TestResolver {
             users: corpus.users(),
             images: serde_json::from_value(corpus.json["embed_images"].clone()).unwrap(),
-            rooms: corpus.json["rooms"].as_array().unwrap().iter().map(|r| r.as_i64().unwrap()).collect(),
+            rooms: corpus.json["rooms"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|r| r.as_i64().unwrap())
+                .collect(),
             signed: corpus.json["signed"]
                 .as_array()
                 .unwrap()
@@ -74,14 +83,22 @@ impl TestResolver {
 impl AttachableResolver for TestResolver {
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
         match self.signed.iter().find(|(s, ..)| s == sgid) {
-            Some((_, model, id, true)) if model == "User" => SignedLookup::User(self.users.iter().find(|u| u.id == *id).unwrap().clone()),
-            Some((_, model, _, _)) => SignedLookup::MissingRecord { model_name: model.clone() },
+            Some((_, model, id, true)) if model == "User" => {
+                SignedLookup::User(self.users.iter().find(|u| u.id == *id).unwrap().clone())
+            }
+            Some((_, model, _, _)) => SignedLookup::MissingRecord {
+                model_name: model.clone(),
+            },
             None => SignedLookup::Invalid,
         }
     }
 
     fn embed_image_path(&self, url: &str) -> Result<String, campfire_richtext::Error> {
-        Ok(self.images.get(url).expect("generated image signature").clone())
+        Ok(self
+            .images
+            .get(url)
+            .expect("generated image signature")
+            .clone())
     }
 
     fn find_gid(&self, gid: &str) -> GidLookup {
@@ -103,7 +120,12 @@ impl AttachableResolver for TestResolver {
             return GidLookup::NotFound;
         };
         match model {
-            "User" => self.users.iter().find(|u| u.id == id).cloned().map_or(GidLookup::NotFound, GidLookup::User),
+            "User" => self
+                .users
+                .iter()
+                .find(|u| u.id == id)
+                .cloned()
+                .map_or(GidLookup::NotFound, GidLookup::User),
             "Room" if self.rooms.contains(&id) => GidLookup::OtherModel,
             _ => GidLookup::NotFound,
         }
@@ -166,20 +188,53 @@ const DANGEROUS_ELEMENTS: &[&str] = &[
     "noembed",
 ];
 
-const URL_ATTRIBUTES: &[&str] = &["href", "src", "action", "formaction", "poster", "cite", "background", "xlink:href", "srcset", "data"];
+const URL_ATTRIBUTES: &[&str] = &[
+    "href",
+    "src",
+    "action",
+    "formaction",
+    "poster",
+    "cite",
+    "background",
+    "xlink:href",
+    "srcset",
+    "data",
+];
 
 fn dangerous_url(value: &str) -> bool {
     // What a browser would see: control characters and whitespace ignored, case folded
-    let cleaned: String = value.chars().filter(|c| !c.is_control() && !c.is_whitespace()).collect::<String>().to_lowercase();
-    if cleaned.starts_with("javascript:") || cleaned.starts_with("vbscript:") || cleaned.starts_with("livescript:") {
+    let cleaned: String = value
+        .chars()
+        .filter(|c| !c.is_control() && !c.is_whitespace())
+        .collect::<String>()
+        .to_lowercase();
+    if cleaned.starts_with("javascript:")
+        || cleaned.starts_with("vbscript:")
+        || cleaned.starts_with("livescript:")
+    {
         return true;
     }
     // A data: URL is only dangerous as markup or script; an unparseable media type is text/plain
     if let Some(rest) = cleaned.strip_prefix("data:") {
-        let mediatype = rest.split(',').next().unwrap_or("").split(';').next().unwrap_or("");
-        let token = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || "!#$%&'*+-.^_`|~".contains(c));
-        let valid = mediatype.split_once('/').is_some_and(|(t, sub)| token(t) && token(sub));
-        return valid && ["html", "xml", "svg", "script", "ecmascript"].iter().any(|kind| mediatype.contains(kind));
+        let mediatype = rest
+            .split(',')
+            .next()
+            .unwrap_or("")
+            .split(';')
+            .next()
+            .unwrap_or("");
+        let token = |s: &str| {
+            !s.is_empty()
+                && s.chars()
+                    .all(|c| c.is_ascii_alphanumeric() || "!#$%&'*+-.^_`|~".contains(c))
+        };
+        let valid = mediatype
+            .split_once('/')
+            .is_some_and(|(t, sub)| token(t) && token(sub));
+        return valid
+            && ["html", "xml", "svg", "script", "ecmascript"]
+                .iter()
+                .any(|kind| mediatype.contains(kind));
     }
     false
 }
@@ -204,7 +259,10 @@ fn security_violations(html: &str, allow_style: bool) -> Vec<String> {
             violations.push(format!("<{name}> not in the allowlist"));
         }
         for (attr, value) in dom.attrs(node) {
-            if !allowed.attributes.contains(&attr.as_str()) && attr != "target" && !(attr == "style" && allow_style) {
+            if !allowed.attributes.contains(&attr.as_str())
+                && attr != "target"
+                && !(attr == "style" && allow_style)
+            {
                 violations.push(format!("{attr} on <{name}> not in the allowlist"));
             }
             let lower = attr.to_lowercase();
@@ -243,9 +301,13 @@ impl Tally {
             self.exact += 1;
         } else if normalized_dom(expected) == normalized_dom(actual) {
             self.dom_equal += 1;
-            self.mismatched.push(format!("{label} (DOM-equal)\n  expected: {expected:?}\n  actual:   {actual:?}"));
+            self.mismatched.push(format!(
+                "{label} (DOM-equal)\n  expected: {expected:?}\n  actual:   {actual:?}"
+            ));
         } else {
-            self.mismatched.push(format!("{label}\n  expected: {expected:?}\n  actual:   {actual:?}"));
+            self.mismatched.push(format!(
+                "{label}\n  expected: {expected:?}\n  actual:   {actual:?}"
+            ));
         }
     }
 }
@@ -273,7 +335,10 @@ fn corpus_matches_rails() {
     for case in cases {
         let name = case["name"].as_str().unwrap();
         let body = case["body"].as_str().unwrap();
-        let ctx = RenderContext { resolver: &resolver, request_host: case["host"].as_str().map(str::to_string) };
+        let ctx = RenderContext {
+            resolver: &resolver,
+            request_host: case["host"].as_str().map(str::to_string),
+        };
 
         // presentation
         let expected = match outcome_str(&case["presentation"]) {
@@ -286,8 +351,15 @@ fn corpus_matches_rails() {
         }
         let label = format!("[presentation] {name}");
         match (&expected, &actual) {
-            (Presentation::Html(e), Presentation::Html(a)) => tallies.entry("presentation").or_default().record(label, e, a),
-            _ => tallies.entry("presentation").or_default().record(label, &format!("{expected:?}"), &format!("{actual:?}")),
+            (Presentation::Html(e), Presentation::Html(a)) => tallies
+                .entry("presentation")
+                .or_default()
+                .record(label, e, a),
+            _ => tallies.entry("presentation").or_default().record(
+                label,
+                &format!("{expected:?}"),
+                &format!("{actual:?}"),
+            ),
         }
         if let Presentation::Html(html) = &actual {
             for v in security_violations(html, false) {
@@ -299,32 +371,64 @@ fn corpus_matches_rails() {
         let actual = to_plain_text(body, &ctx);
         let label = format!("[plain_text] {name}");
         match (outcome_str(&case["plain_text"]), &actual) {
-            (Ok(e), Ok(a)) => tallies.entry("plain_text").or_default().record(label, &e.unwrap_or_default(), a),
+            (Ok(e), Ok(a)) => {
+                tallies
+                    .entry("plain_text")
+                    .or_default()
+                    .record(label, &e.unwrap_or_default(), a)
+            }
             (Err(_), Err(_)) => tallies.entry("plain_text").or_default().exact += 1,
-            (e, _) => tallies.entry("plain_text").or_default().record(label, &format!("{e:?}"), &render(&actual)),
+            (e, _) => tallies.entry("plain_text").or_default().record(
+                label,
+                &format!("{e:?}"),
+                &render(&actual),
+            ),
         }
 
         // editable value
-        let actual =
-            campfire_richtext::Content::load(body, &ctx).and_then(|c| campfire_richtext::legacy_markdown::render(&c.to_html(), &ctx));
+        let actual = campfire_richtext::Content::load(body, &ctx)
+            .and_then(|c| campfire_richtext::legacy_markdown::render(&c.to_html(), &ctx));
         let label = format!("[editable] {name}");
         match (outcome_str(&case["editable"]), &actual) {
-            (Ok(e), Ok(a)) => tallies.entry("editable").or_default().record(label, &e.unwrap_or_default(), a),
+            (Ok(e), Ok(a)) => {
+                tallies
+                    .entry("editable")
+                    .or_default()
+                    .record(label, &e.unwrap_or_default(), a)
+            }
             (Err(_), Err(_)) => tallies.entry("editable").or_default().exact += 1,
-            (e, _) => tallies.entry("editable").or_default().record(label, &format!("{e:?}"), &render(&actual)),
+            (e, _) => tallies.entry("editable").or_default().record(
+                label,
+                &format!("{e:?}"),
+                &render(&actual),
+            ),
         }
 
         // mentioned users
-        let actual = mentioned_users(body, &ctx).map(|users| users.iter().map(|u| u.id).collect::<Vec<_>>());
+        let actual =
+            mentioned_users(body, &ctx).map(|users| users.iter().map(|u| u.id).collect::<Vec<_>>());
         let expected = match case["mentioned"].get("ok") {
-            Some(ids) => Ok(ids.as_array().unwrap().iter().map(|i| i.as_i64().unwrap()).collect::<Vec<_>>()),
+            Some(ids) => Ok(ids
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|i| i.as_i64().unwrap())
+                .collect::<Vec<_>>()),
             None => Err(()),
         };
         let label = format!("[mentioned] {name}");
         match (&expected, &actual) {
-            (Ok(e), Ok(a)) => tallies.entry("mentioned").or_default().record(label, &format!("{e:?}"), &format!("{a:?}")),
+            (Ok(e), Ok(a)) => tallies.entry("mentioned").or_default().record(
+                label,
+                &format!("{e:?}"),
+                &format!("{a:?}"),
+            ),
             (Err(_), Err(_)) => tallies.entry("mentioned").or_default().exact += 1,
-            _ => tallies.entry("mentioned").or_default().record(label, &format!("{expected:?}"), &format!("{actual:?}")),
+            _ => tallies.entry("mentioned").or_default().record(
+                label,
+                &format!("{expected:?}"),
+                &format!("{actual:?}"),
+            ),
         }
     }
 
@@ -335,9 +439,17 @@ fn corpus_matches_rails() {
         let actual = campfire_richtext::attachables::web_url(Some(value), host);
         let label = format!("[web_url] {value:?}");
         match (outcome_str(&url["result"]), &actual) {
-            (Ok(e), Ok(a)) => tallies.entry("web_url").or_default().record(label, &format!("{e:?}"), &format!("{a:?}")),
+            (Ok(e), Ok(a)) => tallies.entry("web_url").or_default().record(
+                label,
+                &format!("{e:?}"),
+                &format!("{a:?}"),
+            ),
             (Err(_), Err(_)) => tallies.entry("web_url").or_default().exact += 1,
-            (e, _) => tallies.entry("web_url").or_default().record(label, &format!("{e:?}"), &render(&actual)),
+            (e, _) => tallies.entry("web_url").or_default().record(
+                label,
+                &format!("{e:?}"),
+                &render(&actual),
+            ),
         }
     }
 
@@ -367,7 +479,11 @@ fn corpus_matches_rails() {
             failed = true;
         }
     }
-    println!("security: {} outputs checked, {} violations", cases.len(), security.len());
+    println!(
+        "security: {} outputs checked, {} violations",
+        cases.len(),
+        security.len()
+    );
     for v in &security {
         println!("  VIOLATION {v}");
     }
@@ -405,10 +521,22 @@ fn security_assertions_catch_planted_defects() {
         ("<span style=\"color: red\">x</span>", "style attribute"),
         ("<svg><a xlink:href=\"javascript:1\">x</a></svg>", "svg"),
         ("<span data-controller=\"x\">x</span>", "data attribute"),
-        ("<p title=\"a\" _blank\"=\"\">x</p>", "attribute outside the allowlist"),
+        (
+            "<p title=\"a\" _blank\"=\"\">x</p>",
+            "attribute outside the allowlist",
+        ),
         ("<details>x</details>", "element outside the allowlist"),
     ] {
-        assert!(!security_violations(html, false).is_empty(), "missed {what} in {html}");
+        assert!(
+            !security_violations(html, false).is_empty(),
+            "missed {what} in {html}"
+        );
     }
-    assert!(security_violations("<p><a href=\"https://example.com\">x</a><img src=\"/a.png\"></p>", false).is_empty());
+    assert!(
+        security_violations(
+            "<p><a href=\"https://example.com\">x</a><img src=\"/a.png\"></p>",
+            false
+        )
+        .is_empty()
+    );
 }

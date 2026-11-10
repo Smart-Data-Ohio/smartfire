@@ -1,5 +1,5 @@
 use super::*;
-use crate::models::agent::{AgentSyncChange};
+use crate::models::agent::AgentSyncChange;
 use crate::{Agent, AgentChanges, AgentGrant, AgentKind, NewAgent, NewGrant, Timestamp, User};
 use rusqlite::params;
 use serde_json::{Value, json};
@@ -214,7 +214,10 @@ fn ws11_agent_descriptions_summaries_and_suspension_revoke_live_grants() {
         assert_eq!(json!(agent.grants_summary(tx.conn())?), v["grants"]);
         AgentGrant::revoke_for_agent(tx, agent.id)?;
         assert_eq!(json!(agent.grants_summary(tx.conn())?), v["revoked"]);
-        tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=? AND room_id IS NULL",[agent.id])?;
+        tx.conn().execute(
+            "DELETE FROM agent_grants WHERE agent_id=? AND room_id IS NULL",
+            [agent.id],
+        )?;
         for (kind, key) in [
             (AgentKind::Personal, "personal"),
             (AgentKind::Workspace, "workspace"),
@@ -348,8 +351,23 @@ fn ws11_agent_status_stamp_and_broadcast_requests_match_rails_targets() {
             Ok(agent)
         });
         let changes = t.events()[from..].iter().filter(|event| matches!(event, Event::Broadcast(request) if request.decode::<AgentSyncChange>().is_some())).count();
-        assert_eq!(changes, usize::from(!gold()["status"][key]["broadcasts"].as_array().unwrap().is_empty()));
-        assert_eq!(json!(agent.status_changed_at.map(crate::models::agent_payloads::json_time)), gold()["status"][key]["changed_at"]);
+        assert_eq!(
+            changes,
+            usize::from(
+                !gold()["status"][key]["broadcasts"]
+                    .as_array()
+                    .unwrap()
+                    .is_empty()
+            )
+        );
+        assert_eq!(
+            json!(
+                agent
+                    .status_changed_at
+                    .map(crate::models::agent_payloads::json_time)
+            ),
+            gold()["status"][key]["changed_at"]
+        );
     }
 }
 

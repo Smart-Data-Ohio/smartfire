@@ -52,7 +52,9 @@ pub fn broadcast_updates(app: &App, post_id: i64) -> anyhow::Result<()> {
         loop {
             let messages = message_batches::next(conn, Reference::TwitterPost(post_id), after)?;
             app.broadcasts.sync_message_cards(conn, &messages);
-            if messages.len() < message_batches::SIZE { break; }
+            if messages.len() < message_batches::SIZE {
+                break;
+            }
             after = messages.last().map(|message| message.id);
         }
         Ok(())

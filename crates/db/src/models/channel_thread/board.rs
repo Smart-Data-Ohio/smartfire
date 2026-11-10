@@ -25,7 +25,10 @@ impl WorkOwners {
     }
     fn load(conn: &Connection, pairs: &[(i64, i64)]) -> Result<Self> {
         if pairs.is_empty() {
-            return Ok(Self {users: HashMap::new(), available: HashMap::new()});
+            return Ok(Self {
+                users: HashMap::new(),
+                available: HashMap::new(),
+            });
         }
         // Read associations together; the subsequent public capability query still
         // resolves current agent/user/grant/room policy rather than trusting these rows.
@@ -41,14 +44,23 @@ impl WorkOwners {
         let mut members = HashSet::new();
         let mut agents = HashMap::new();
         for (user, room, member, agent) in rows {
-            if member { members.insert((room,user.id)); }
-            if user.is_active() && user.is_bot() && let Some(agent) = agent {
-                agents.insert(user.id,agent);
+            if member {
+                members.insert((room, user.id));
             }
-            users.insert(user.id,user);
+            if user.is_active()
+                && user.is_bot()
+                && let Some(agent) = agent
+            {
+                agents.insert(user.id, agent);
+            }
+            users.insert(user.id, user);
         }
-        let requests = pairs.iter().filter_map(|&(room,user)| agents.get(&user).map(|&id|(id,Some(room))))
-            .collect::<HashSet<_>>().into_iter().collect::<Vec<_>>();
+        let requests = pairs
+            .iter()
+            .filter_map(|&(room, user)| agents.get(&user).map(|&id| (id, Some(room))))
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
         let capabilities = crate::Agent::capabilities_for_rooms(conn, "post_messages", &requests)?;
         let available = pairs
             .iter()
@@ -115,7 +127,10 @@ impl ChannelThread {
         let mut sql = "SELECT channel_threads.* FROM channel_threads WHERE room_id=?".to_string();
         let mut values = vec![Value::Integer(room_id)];
         if let Some(viewer) = viewer_id {
-            sql.push_str(&format!(" AND {}", super::readable_by_sql("channel_threads.id", &viewer.to_string())));
+            sql.push_str(&format!(
+                " AND {}",
+                super::readable_by_sql("channel_threads.id", &viewer.to_string())
+            ));
         } else {
             sql.push_str(" AND visibility='public'");
         }
@@ -145,7 +160,8 @@ impl ChannelThread {
             );
         }
         if !campfire_richtext::ruby::is_blank(tag) {
-            let names = ThreadTag::matching_names(conn, room_id, campfire_richtext::ruby::strip(tag))?;
+            let names =
+                ThreadTag::matching_names(conn, room_id, campfire_richtext::ruby::strip(tag))?;
             sql.push_str(" AND id IN (SELECT channel_thread_id FROM thread_tags WHERE name IN (SELECT value FROM json_each(?)))");
             values.push(Value::Text(serde_json::json!(names).to_string()));
         }
@@ -161,11 +177,20 @@ impl ChannelThread {
         )
     }
 
-    pub fn board_tag_counts(conn: &Connection, room_id: i64, viewer_id: Option<i64>) -> Result<Vec<(String, i64)>> {
-        let readable = viewer_id.map_or_else(|| "channel_threads.visibility='public'".into(), |viewer| super::readable_by_sql("channel_threads.id", &viewer.to_string()));
+    pub fn board_tag_counts(
+        conn: &Connection,
+        room_id: i64,
+        viewer_id: Option<i64>,
+    ) -> Result<Vec<(String, i64)>> {
+        let readable = viewer_id.map_or_else(
+            || "channel_threads.visibility='public'".into(),
+            |viewer| super::readable_by_sql("channel_threads.id", &viewer.to_string()),
+        );
         query_all(
             conn,
-            &format!("SELECT name, COUNT(*) FROM thread_tags WHERE channel_thread_id IN (SELECT id FROM channel_threads WHERE room_id=? AND {readable}) GROUP BY name ORDER BY name"),
+            &format!(
+                "SELECT name, COUNT(*) FROM thread_tags WHERE channel_thread_id IN (SELECT id FROM channel_threads WHERE room_id=? AND {readable}) GROUP BY name ORDER BY name"
+            ),
             [room_id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
@@ -173,7 +198,10 @@ impl ChannelThread {
 
     pub fn board_has_posts(conn: &Connection, room_id: i64, viewer_id: i64) -> Result<bool> {
         Ok(conn.query_row(
-            &format!("SELECT EXISTS(SELECT 1 FROM channel_threads WHERE room_id=? AND {})", super::readable_by_sql("channel_threads.id", &viewer_id.to_string())),
+            &format!(
+                "SELECT EXISTS(SELECT 1 FROM channel_threads WHERE room_id=? AND {})",
+                super::readable_by_sql("channel_threads.id", &viewer_id.to_string())
+            ),
             [room_id],
             |row| row.get(0),
         )?)
@@ -288,7 +316,13 @@ impl ChannelThread {
         });
     }
 
-    pub(super) fn register_board_update(&self, tx: &mut Tx<'_>, room: &Room, row_changed: bool, _status_changed: bool) -> Result<()> {
+    pub(super) fn register_board_update(
+        &self,
+        tx: &mut Tx<'_>,
+        room: &Room,
+        row_changed: bool,
+        _status_changed: bool,
+    ) -> Result<()> {
         if room.board() && !tx.has_commit_record("board_post_creation", self.id) && row_changed {
             ThreadWorkChange::emit(tx, self.id);
         }
@@ -300,15 +334,16 @@ impl ChannelThread {
         if room.board() && self.visibility != super::ThreadVisibility::Private {
             let thread_id = self.id;
             tx.after_commit_record("channel_threads", thread_id, move |tx| {
-                tx.emit_after_commit(Event::broadcast(&Broadcast::ThreadRemoved { thread_id, room_id: room.id }));
+                tx.emit_after_commit(Event::broadcast(&Broadcast::ThreadRemoved {
+                    thread_id,
+                    room_id: room.id,
+                }));
                 Ok(())
             });
         }
         Ok(())
     }
 }
-
-
 
 fn board_counts(
     conn: &Connection,

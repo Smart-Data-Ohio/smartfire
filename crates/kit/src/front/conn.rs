@@ -33,7 +33,11 @@ use super::handler::ConnInfo;
 pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 
 /// What serves the requests of a connection.
-pub type Service = Arc<dyn Fn(Request<Body>, ConnInfo) -> Pin<Box<dyn Future<Output = Response<Body>> + Send>> + Send + Sync>;
+pub type Service = Arc<
+    dyn Fn(Request<Body>, ConnInfo) -> Pin<Box<dyn Future<Output = Response<Body>> + Send>>
+        + Send
+        + Sync,
+>;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Options {
@@ -69,7 +73,10 @@ pub struct Shutdown {
 
 impl Shutdown {
     pub fn new(closing: watch::Receiver<bool>) -> Self {
-        Self { closing, active: Arc::new((AtomicUsize::new(0), Notify::new())) }
+        Self {
+            closing,
+            active: Arc::new((AtomicUsize::new(0), Notify::new())),
+        }
     }
 
     /// Closes when `signal` resolves.
@@ -157,8 +164,14 @@ where
 }
 
 /// Serves one connection until it closes, goes idle, or the server shuts down.
-pub async fn serve_connection<I>(io: I, info: ConnInfo, protocol: Protocol, service: Service, options: Options, shutdown: Shutdown)
-where
+pub async fn serve_connection<I>(
+    io: I,
+    info: ConnInfo,
+    protocol: Protocol,
+    service: Service,
+    options: Options,
+    shutdown: Shutdown,
+) where
     I: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     let activity = Arc::new(Activity::default());
@@ -170,24 +183,40 @@ where
             let started = Instant::now();
             let read_deadline = options.read_timeout.map(|t| started + t);
             let write_deadline = options.write_timeout.map(|t| started + t);
-            let mut request = request.map(|body| Body::new(Deadline::new(body, read_deadline, "read")));
+            let mut request =
+                request.map(|body| Body::new(Deadline::new(body, read_deadline, "read")));
             if let Some(end) = write_deadline {
-                request.extensions_mut().insert(WriteDeadline { started, end });
+                request
+                    .extensions_mut()
+                    .insert(WriteDeadline { started, end });
             }
             async move {
                 let response = service(request, info);
-                let response = match write_deadline {
-                    Some(deadline) => tokio::time::timeout_at(deadline, response).await.map_err(|_| std::io::Error::new(std::io::ErrorKind::TimedOut, "write timeout"))?,
-                    None => response.await,
-                };
+                let response =
+                    match write_deadline {
+                        Some(deadline) => tokio::time::timeout_at(deadline, response)
+                            .await
+                            .map_err(|_| {
+                                std::io::Error::new(std::io::ErrorKind::TimedOut, "write timeout")
+                            })?,
+                        None => response.await,
+                    };
                 let mut response = response;
                 if options.date {
-                    response.headers_mut().entry(header::DATE).or_insert_with(http_date);
+                    response
+                        .headers_mut()
+                        .entry(header::DATE)
+                        .or_insert_with(http_date);
                 }
                 if response.status() == StatusCode::SWITCHING_PROTOCOLS {
                     return Ok::<_, std::io::Error>(response);
                 }
-                Ok(response.map(|body| Body::new(InFlight { inner: Deadline::new(body, write_deadline, "write"), _in_flight: in_flight })))
+                Ok(response.map(|body| {
+                    Body::new(InFlight {
+                        inner: Deadline::new(body, write_deadline, "write"),
+                        _in_flight: in_flight,
+                    })
+                }))
             }
         })
     };
@@ -219,7 +248,10 @@ where
     match protocol {
         Protocol::Http1 => {
             let mut builder = hyper::server::conn::http1::Builder::new();
-            builder.timer(TokioTimer::new()).header_read_timeout(options.read_timeout).auto_date_header(false);
+            builder
+                .timer(TokioTimer::new())
+                .header_read_timeout(options.read_timeout)
+                .auto_date_header(false);
             drive!(builder.serve_connection(io, hyper_service).with_upgrades())
         }
         Protocol::Http2 => {
@@ -229,8 +261,15 @@ where
         }
         Protocol::Auto => {
             let mut builder = Builder::new(TokioExecutor::new());
-            builder.http1().timer(TokioTimer::new()).header_read_timeout(options.read_timeout).auto_date_header(false);
-            builder.http2().timer(TokioTimer::new()).auto_date_header(false);
+            builder
+                .http1()
+                .timer(TokioTimer::new())
+                .header_read_timeout(options.read_timeout)
+                .auto_date_header(false);
+            builder
+                .http2()
+                .timer(TokioTimer::new())
+                .auto_date_header(false);
             drive!(builder.serve_connection_with_upgrades(io, hyper_service))
         }
     }
@@ -245,15 +284,26 @@ where
 /// Without libfaketime the two clocks are the same.
 fn http_date() -> HeaderValue {
     let printer = jiff::fmt::rfc2822::DateTimePrinter::new();
-    let date = printer.timestamp_to_rfc9110_string(&wall_clock()).unwrap_or_default();
+    let date = printer
+        .timestamp_to_rfc9110_string(&wall_clock())
+        .unwrap_or_default();
     HeaderValue::from_str(&date).unwrap_or_else(|_| HeaderValue::from_static(""))
 }
 
 #[cfg(target_os = "linux")]
 fn wall_clock() -> jiff::Timestamp {
-    let mut now = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+    let mut now = libc::timespec {
+        tv_sec: 0,
+        tv_nsec: 0,
+    };
     // SAFETY: clock_gettime(2) writes one `timespec` through a valid pointer.
-    let status = unsafe { libc::syscall(libc::SYS_clock_gettime, libc::CLOCK_REALTIME, &mut now as *mut libc::timespec) };
+    let status = unsafe {
+        libc::syscall(
+            libc::SYS_clock_gettime,
+            libc::CLOCK_REALTIME,
+            &mut now as *mut libc::timespec,
+        )
+    };
     match status {
         0 => jiff::Timestamp::new(now.tv_sec, 0).unwrap_or_else(|_| jiff::Timestamp::now()),
         _ => jiff::Timestamp::now(),
@@ -274,7 +324,11 @@ struct Activity {
 
 impl Default for Activity {
     fn default() -> Self {
-        Self { in_flight: AtomicUsize::new(0), last_active: Mutex::new(Instant::now()), ended: Notify::new() }
+        Self {
+            in_flight: AtomicUsize::new(0),
+            last_active: Mutex::new(Instant::now()),
+            ended: Notify::new(),
+        }
     }
 }
 
@@ -326,7 +380,10 @@ impl<B: hyper::body::Body<Data = Bytes> + Unpin> hyper::body::Body for InFlight<
     type Data = Bytes;
     type Error = B::Error;
 
-    fn poll_frame(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Frame<Bytes>, B::Error>>> {
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Bytes>, B::Error>>> {
         Pin::new(&mut self.inner).poll_frame(cx)
     }
 
@@ -348,7 +405,11 @@ struct Deadline<B> {
 
 impl<B> Deadline<B> {
     fn new(inner: B, deadline: Option<Instant>, what: &'static str) -> Self {
-        Self { inner, sleep: deadline.map(|d| Box::pin(tokio::time::sleep_until(d))), what }
+        Self {
+            inner,
+            sleep: deadline.map(|d| Box::pin(tokio::time::sleep_until(d))),
+            what,
+        }
     }
 }
 
@@ -360,15 +421,23 @@ where
     type Data = Bytes;
     type Error = axum::Error;
 
-    fn poll_frame(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Frame<Bytes>, axum::Error>>> {
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Bytes>, axum::Error>>> {
         if let Some(sleep) = self.sleep.as_mut()
             && sleep.as_mut().poll(cx).is_ready()
             && !self.inner.is_end_stream()
         {
-            let error = std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{} timeout", self.what));
+            let error = std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                format!("{} timeout", self.what),
+            );
             return Poll::Ready(Some(Err(axum::Error::new(error))));
         }
-        Pin::new(&mut self.inner).poll_frame(cx).map_err(axum::Error::new)
+        Pin::new(&mut self.inner)
+            .poll_frame(cx)
+            .map_err(axum::Error::new)
     }
 
     fn is_end_stream(&self) -> bool {

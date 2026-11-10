@@ -3,7 +3,9 @@
 //! with Google's events list answered by the payload their WebMock stub returned.
 use super::google_api_tests::{self as google, Recorded};
 use crate::{
-    controllers::presenters::test_support::{DAVID, DIRECT_DAVID_JASON, JASON, Req, SEED_NOW, TestApp},
+    controllers::presenters::test_support::{
+        DAVID, DIRECT_DAVID_JASON, JASON, Req, SEED_NOW, TestApp,
+    },
     integrations::google::meeting_refresh,
 };
 use axum::http::Method;
@@ -65,31 +67,69 @@ async fn ws14g_269_opting_in_shows_in_a_meeting_for_a_busy_interval_then_clears_
     let app = boot(clock.clone()).await;
     let recorded = Recorded::new(vec![]);
     google::install(&app, recorded.clone()).await;
-    google::grant(&app, DAVID, Timestamp::from_jiff(now).since(SignedDuration::from_hours(1)), false).await;
+    google::grant(
+        &app,
+        DAVID,
+        Timestamp::from_jiff(now).since(SignedDuration::from_hours(1)),
+        false,
+    )
+    .await;
     let minutes = |m: i64| now + SignedDuration::from_mins(m);
     let mut transparent = item(minutes(-6), minutes(-4));
     transparent["transparency"] = json!("transparent");
-    recorded.answer(200, json!({"items": [item(minutes(-5), minutes(5)), transparent]}));
+    recorded.answer(
+        200,
+        json!({"items": [item(minutes(-5), minutes(5)), transparent]}),
+    );
 
     let mut david = app.sign_in(DAVID).await;
     let reply = david
-        .write(Req::new(Method::PATCH, "/users/me/status").form(&[("user[meeting_status_enabled]", "1")]))
+        .write(
+            Req::new(Method::PATCH, "/users/me/status")
+                .form(&[("user[meeting_status_enabled]", "1")]),
+        )
         .await;
-    assert!(reply.status.is_redirection() || reply.status.is_success(), "{}", reply.status);
+    assert!(
+        reply.status.is_redirection() || reply.status.is_success(),
+        "{}",
+        reply.status
+    );
     let enabled: bool = app
         .db()
-        .read(|c| Ok(c.query_row("SELECT meeting_status_enabled FROM users WHERE id=?", [DAVID], |r| r.get(0))?))
+        .read(|c| {
+            Ok(c.query_row(
+                "SELECT meeting_status_enabled FROM users WHERE id=?",
+                [DAVID],
+                |r| r.get(0),
+            )?)
+        })
         .await
         .unwrap();
     assert!(enabled, "meeting status was not enabled");
 
-    assert!(refresh_jobs(&app).await > 0, "opting in enqueues the refresh the test performs");
-    let result = meeting_refresh::refresh(&app.booted.app, DAVID, Timestamp::from_jiff(now)).await.unwrap();
-    assert!(matches!(result, meeting_refresh::Result::Ok), "the refresh fetched and cached");
+    assert!(
+        refresh_jobs(&app).await > 0,
+        "opting in enqueues the refresh the test performs"
+    );
+    let result = meeting_refresh::refresh(&app.booted.app, DAVID, Timestamp::from_jiff(now))
+        .await
+        .unwrap();
+    assert!(
+        matches!(result, meeting_refresh::Result::Ok),
+        "the refresh fetched and cached"
+    );
     let calls = recorded.calls.lock().unwrap().clone();
     assert_eq!(calls.len(), 1, "one events.list call: {calls:?}");
-    assert!(calls[0]["path"].as_str().unwrap().contains("singleEvents=true"), "{calls:?}");
-    dispatch_meetings(app.db(), Timestamp::from_jiff(now)).await.unwrap();
+    assert!(
+        calls[0]["path"]
+            .as_str()
+            .unwrap()
+            .contains("singleEvents=true"),
+        "{calls:?}"
+    );
+    dispatch_meetings(app.db(), Timestamp::from_jiff(now))
+        .await
+        .unwrap();
 
     let profile = david.get(&format!("/api/v1/people/{DAVID}")).await;
     assert_eq!(profile.status, 200);
@@ -97,7 +137,9 @@ async fn ws14g_269_opting_in_shows_in_a_meeting_for_a_busy_interval_then_clears_
 
     // travel_to 6.minutes.from_now
     clock.advance(SignedDuration::from_mins(6));
-    dispatch_meetings(app.db(), Timestamp::from_jiff(minutes(6))).await.unwrap();
+    dispatch_meetings(app.db(), Timestamp::from_jiff(minutes(6)))
+        .await
+        .unwrap();
     let profile = david.get(&format!("/api/v1/people/{DAVID}")).await;
     assert_eq!(profile.status, 200);
     assert_eq!(
@@ -111,7 +153,11 @@ async fn ws14g_271_out_of_office_badge_and_dm_notice_show_for_another_user_then_
     let now: jiff::Timestamp = SEED_NOW.parse().unwrap();
     let app = boot(Arc::new(FrozenClock::new(now))).await;
     let manual_ooo = || async {
-        let settings = app.db().read(|c| campfire_db::UserStatusSettings::find(c, DAVID)).await.unwrap();
+        let settings = app
+            .db()
+            .read(|c| campfire_db::UserStatusSettings::find(c, DAVID))
+            .await
+            .unwrap();
         settings.manual_ooo_active(Timestamp::from_jiff(now))
     };
     let mut david = app.sign_in(DAVID).await;

@@ -113,13 +113,17 @@ pub(crate) fn enabled(conn: &Connection) -> campfire_db::Result<()> {
 }
 pub(crate) fn saved_error(error: campfire_db::Error) -> Error {
     match &error {
-        campfire_db::Error::Other(message) if message == DISABLED => refuse(api::ApiError::Forbidden {
-            message: DISABLED_MESSAGE.into(),
-        }),
-        campfire_db::Error::Other(message) if message == LIMIT => refuse(api::ApiError::Validation {
-            message: "Personal agent limit reached".into(),
-            fields: [("base".to_string(), vec![LIMIT_MESSAGE.to_string()])].into(),
-        }),
+        campfire_db::Error::Other(message) if message == DISABLED => {
+            refuse(api::ApiError::Forbidden {
+                message: DISABLED_MESSAGE.into(),
+            })
+        }
+        campfire_db::Error::Other(message) if message == LIMIT => {
+            refuse(api::ApiError::Validation {
+                message: "Personal agent limit reached".into(),
+                fields: [("base".to_string(), vec![LIMIT_MESSAGE.to_string()])].into(),
+            })
+        }
         _ => Error::internal(error),
     }
 }
@@ -264,8 +268,13 @@ pub(crate) fn present(
             campfire_db::WakePolicy::Anyone => api::WakePolicy::Anyone,
         },
         paused_at: agent.paused_at.filter(|_| paused).map(time),
-        paused_by: agent.paused_by_id.filter(|_| paused)
-            .map(|id| User::find_by_id(conn, id)).transpose()?.flatten().map(|u| u.name),
+        paused_by: agent
+            .paused_by_id
+            .filter(|_| paused)
+            .map(|id| User::find_by_id(conn, id))
+            .transpose()?
+            .flatten()
+            .map(|u| u.name),
         room_ids,
         capabilities,
         last_used_at: credentials
@@ -374,7 +383,12 @@ async fn reply_agent(c: &mut Ctx, id: i64, owner_id: i64) -> Result {
         .app()
         .db
         .read(move |conn| {
-            present(conn, &secrets, personal_agents::owned(conn, owner_id, id)?, now)
+            present(
+                conn,
+                &secrets,
+                personal_agents::owned(conn, owner_id, id)?,
+                now,
+            )
         })
         .await
         .map_err(saved_error)?;
@@ -505,7 +519,11 @@ async fn update_agent(c: &mut Ctx) -> Result {
             )?;
             let mut changes = serde_json::Map::new();
             for (field, before, after) in [
-                ("wake_policy", json!(before_agent.wake_policy), json!(agent.wake_policy)),
+                (
+                    "wake_policy",
+                    json!(before_agent.wake_policy),
+                    json!(agent.wake_policy),
+                ),
                 ("name", json!(before_bot.name), json!(bot.name)),
                 (
                     "icon_name",

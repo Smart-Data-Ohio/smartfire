@@ -20,21 +20,36 @@ use sha2::{Digest, Sha256};
 
 /// Huddles need the camera, microphone and screen sharing (`notifications` isn't a directive;
 /// browsers ignore it).
-pub const PERMISSIONS_POLICY: &str = "camera=(self), display-capture=(self), microphone=(self), notifications=(self)";
+pub const PERMISSIONS_POLICY: &str =
+    "camera=(self), display-capture=(self), microphone=(self), notifications=(self)";
 
 /// `action_dispatch.default_headers` with `security_headers.rb`'s `merge!`: the Rails 7.1 set, and
 /// `Permissions-Policy` last.
 pub fn default_headers() -> Vec<(HeaderName, HeaderValue)> {
     let mut headers = campfire_kit::app::rails_default_headers();
-    headers.push((HeaderName::from_static("permissions-policy"), HeaderValue::from_static(PERMISSIONS_POLICY)));
+    headers.push((
+        HeaderName::from_static("permissions-policy"),
+        HeaderValue::from_static(PERMISSIONS_POLICY),
+    ));
     headers
 }
 
 // --- Content Security Policy ---------------------------------------------------------------------
 
-const GOOGLE_SCRIPTS: &[&str] = &["https://accounts.google.com/gsi/", "https://apis.google.com"];
-const GOOGLE_CONNECT: &[&str] = &["https://accounts.google.com", "https://www.googleapis.com", "https://content.googleapis.com"];
-const GOOGLE_FRAMES: &[&str] = &["https://docs.google.com", "https://drive.google.com", "https://accounts.google.com"];
+const GOOGLE_SCRIPTS: &[&str] = &[
+    "https://accounts.google.com/gsi/",
+    "https://apis.google.com",
+];
+const GOOGLE_CONNECT: &[&str] = &[
+    "https://accounts.google.com",
+    "https://www.googleapis.com",
+    "https://content.googleapis.com",
+];
+const GOOGLE_FRAMES: &[&str] = &[
+    "https://docs.google.com",
+    "https://drive.google.com",
+    "https://accounts.google.com",
+];
 const LINKEDIN_FRAMES: &[&str] = &["https://www.linkedin.com"];
 const GOOGLE_STYLES: &[&str] = &["https://accounts.google.com/gsi/style"];
 const GOOGLE_FORMS: &[&str] = &["https://accounts.google.com"];
@@ -46,24 +61,45 @@ const GOOGLE_FONTS: &[&str] = &["https://fonts.gstatic.com"];
 /// on `script-src`. `livekit_url` is `LIVEKIT_URL`, which Rails reads for each response.
 pub fn content_security_policy(livekit_url: Option<String>) -> ContentSecurityPolicy {
     let sources = |keywords: &[&str], hosts: &[&[&str]]| -> Vec<Source> {
-        keywords.iter().chain(hosts.iter().flat_map(|hosts| hosts.iter())).map(|source| Source::from(*source)).collect()
+        keywords
+            .iter()
+            .chain(hosts.iter().flat_map(|hosts| hosts.iter()))
+            .map(|source| Source::from(*source))
+            .collect()
     };
     let mut connect = sources(&["'self'"], &[GOOGLE_CONNECT]);
-    connect.push(Source::Dynamic(Arc::new(move || livekit_sources(livekit_url.as_deref()))));
+    connect.push(Source::Dynamic(Arc::new(move || {
+        livekit_sources(livekit_url.as_deref())
+    })));
     ContentSecurityPolicy::new()
         .directive("default-src", sources(&["'self'"], &[]))
         .directive("base-uri", sources(&["'self'"], &[]))
         .directive("object-src", sources(&["'none'"], &[]))
-        .directive("script-src", sources(&["'self'", "'wasm-unsafe-eval'"], &[GOOGLE_SCRIPTS]))
-        .directive("style-src", sources(&["'self'", "'unsafe-inline'"], &[GOOGLE_STYLES]))
-        .directive("img-src", sources(&["'self'", "data:", "blob:", "https:"], &[GOOGLE_IMAGES]))
+        .directive(
+            "script-src",
+            sources(&["'self'", "'wasm-unsafe-eval'"], &[GOOGLE_SCRIPTS]),
+        )
+        .directive(
+            "style-src",
+            sources(&["'self'", "'unsafe-inline'"], &[GOOGLE_STYLES]),
+        )
+        .directive(
+            "img-src",
+            sources(&["'self'", "data:", "blob:", "https:"], &[GOOGLE_IMAGES]),
+        )
         .directive("font-src", sources(&["'self'", "data:"], &[GOOGLE_FONTS]))
         .directive("media-src", sources(&["'self'", "data:", "blob:"], &[]))
         .directive("connect-src", connect)
-        .directive("frame-src", sources(&["'self'"], &[GOOGLE_FRAMES, LINKEDIN_FRAMES]))
+        .directive(
+            "frame-src",
+            sources(&["'self'"], &[GOOGLE_FRAMES, LINKEDIN_FRAMES]),
+        )
         .directive("worker-src", sources(&["'self'", "blob:"], &[]))
         .directive("manifest-src", sources(&["'self'"], &[]))
-        .directive("form-action", sources(&["'self'"], &[GOOGLE_FORMS, GITHUB_FORMS]))
+        .directive(
+            "form-action",
+            sources(&["'self'"], &[GOOGLE_FORMS, GITHUB_FORMS]),
+        )
         .directive("report-uri", sources(&["/csp_reports"], &[]))
         .nonce(Arc::new(csp_nonce), &["script-src"])
         .report_only(false)
@@ -94,8 +130,13 @@ pub fn csp_nonce(session_id: Option<&str>) -> String {
 /// `ContentSecurityPolicySources.livekit`: the LiveKit origin in its WebSocket and HTTP forms, or
 /// nothing when `LIVEKIT_URL` is unset or not an absolute ws/wss/http/https URL.
 pub fn livekit_sources(url: Option<&str>) -> Vec<String> {
-    let Some(uri) = ruby_uri::parse(url.unwrap_or("")) else { return vec![] };
-    let (Some(scheme), Some(host)) = (uri.scheme.as_deref(), uri.host.as_deref().filter(|host| !host.is_empty())) else {
+    let Some(uri) = ruby_uri::parse(url.unwrap_or("")) else {
+        return vec![];
+    };
+    let (Some(scheme), Some(host)) = (
+        uri.scheme.as_deref(),
+        uri.host.as_deref().filter(|host| !host.is_empty()),
+    ) else {
         return vec![];
     };
     let pair = match scheme {
@@ -105,8 +146,14 @@ pub fn livekit_sources(url: Option<&str>) -> Vec<String> {
         "http" => "ws",
         _ => return vec![],
     };
-    let port = uri.non_default_port().map(|port| format!(":{port}")).unwrap_or_default();
-    [scheme, pair].iter().map(|scheme| format!("{scheme}://{host}{port}")).collect()
+    let port = uri
+        .non_default_port()
+        .map(|port| format!(":{port}"))
+        .unwrap_or_default();
+    [scheme, pair]
+        .iter()
+        .map(|scheme| format!("{scheme}://{host}{port}"))
+        .collect()
 }
 
 // --- CSP reports -----------------------------------------------------------------------------------
@@ -114,19 +161,41 @@ pub fn livekit_sources(url: Option<&str>) -> Vec<String> {
 /// `ContentSecurityPolicyReportsController#describe`: the directive, the blocked and source
 /// origins (or keywords), the document's path and the line, never a query string.
 pub fn describe_csp_violation(report: &serde_json::Map<String, serde_json::Value>) -> String {
-    let field = |names: &[&str]| names.iter().find_map(|name| report.get(*name).filter(|value| !value.is_null()));
-    let directive = field(&["effective-directive", "effectiveDirective", "violated-directive"]);
+    let field = |names: &[&str]| {
+        names
+            .iter()
+            .find_map(|name| report.get(*name).filter(|value| !value.is_null()))
+    };
+    let directive = field(&[
+        "effective-directive",
+        "effectiveDirective",
+        "violated-directive",
+    ]);
     let blocked = field(&["blocked-uri", "blockedURL"]);
     let document = field(&["document-uri", "documentURL"]);
     let source = field(&["source-file", "sourceFile"]);
     let line = field(&["line-number", "lineNumber"]);
 
-    let line = line.map(ruby_to_s).filter(|line| (1..=7).contains(&line.len()) && line.bytes().all(|b| b.is_ascii_digit()));
+    let line = line
+        .map(ruby_to_s)
+        .filter(|line| (1..=7).contains(&line.len()) && line.bytes().all(|b| b.is_ascii_digit()));
     [
-        ("directive", directive.and_then(|value| clean(&ruby_to_s(value), 60))),
-        ("blocked", blocked.and_then(|value| origin_or_keyword(&ruby_to_s(value)))),
-        ("document", document.and_then(|value| path_only(&ruby_to_s(value)))),
-        ("source", source.and_then(|value| origin_or_keyword(&ruby_to_s(value)))),
+        (
+            "directive",
+            directive.and_then(|value| clean(&ruby_to_s(value), 60)),
+        ),
+        (
+            "blocked",
+            blocked.and_then(|value| origin_or_keyword(&ruby_to_s(value))),
+        ),
+        (
+            "document",
+            document.and_then(|value| path_only(&ruby_to_s(value))),
+        ),
+        (
+            "source",
+            source.and_then(|value| origin_or_keyword(&ruby_to_s(value))),
+        ),
         ("line", line),
     ]
     .into_iter()
@@ -151,8 +220,15 @@ fn origin_or_keyword(value: &str) -> Option<String> {
     }
     match ruby_uri::parse(value) {
         Some(uri) if uri.host.is_some() => {
-            let port = uri.non_default_port().map(|port| format!(":{port}")).unwrap_or_default();
-            Some(format!("{}://{}{port}", uri.scheme.unwrap_or_default(), uri.host.unwrap_or_default()))
+            let port = uri
+                .non_default_port()
+                .map(|port| format!(":{port}"))
+                .unwrap_or_default();
+            Some(format!(
+                "{}://{}{port}",
+                uri.scheme.unwrap_or_default(),
+                uri.host.unwrap_or_default()
+            ))
         }
         _ => clean(value, 40),
     }
@@ -165,7 +241,12 @@ fn path_only(value: &str) -> Option<String> {
 
 /// `value.gsub(/[^\w\-.:\/@' ]/, "").truncate(limit).presence`
 fn clean(value: &str, limit: usize) -> Option<String> {
-    let kept: String = value.chars().filter(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | ':' | '/' | '@' | '\'' | ' ')).collect();
+    let kept: String = value
+        .chars()
+        .filter(|c| {
+            c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | ':' | '/' | '@' | '\'' | ' ')
+        })
+        .collect();
     let truncated = if kept.chars().count() > limit {
         let mut out: String = kept.chars().take(limit - 3).collect();
         out.push_str("...");
@@ -180,8 +261,22 @@ fn clean(value: &str, limit: usize) -> Option<String> {
 
 /// `config.filter_parameters` (`filter_parameter_logging.rb`).
 const FILTER_PARAMETERS: &[&str] = &[
-    "passw", "email", "secret", "token", "_key", "crypt", "salt", "certificate", "otp", "ssn", "cvv", "cvc", "endpoint",
-    "message.body", "code", "reauth",
+    "passw",
+    "email",
+    "secret",
+    "token",
+    "_key",
+    "crypt",
+    "salt",
+    "certificate",
+    "otp",
+    "ssn",
+    "cvv",
+    "cvc",
+    "endpoint",
+    "message.body",
+    "code",
+    "reauth",
 ];
 
 /// Each model's `encrypts` attributes, in load order: Active Record Encryption adds
@@ -189,7 +284,10 @@ const FILTER_PARAMETERS: &[&str] = &[
 const ENCRYPTED_ATTRIBUTES: &[(&str, &[&str])] = &[
     ("agent", &["webhook_signing_secret"]),
     ("fizzy_connected_account", &["access_token"]),
-    ("github_connected_account", &["access_token", "refresh_token"]),
+    (
+        "github_connected_account",
+        &["access_token", "refresh_token"],
+    ),
     ("google_account", &["refresh_token", "access_token"]),
     ("slack_connection", &["access_token"]),
     ("slack_workspace", &["client_secret"]),
@@ -201,10 +299,17 @@ const ENCRYPTED_ATTRIBUTES: &[(&str, &[&str])] = &[
 
 /// `Rails.application.config.filter_parameters` as the app has it after boot.
 pub fn filter_parameters() -> Vec<String> {
-    let mut filters: Vec<String> = FILTER_PARAMETERS.iter().map(|filter| filter.to_string()).collect();
+    let mut filters: Vec<String> = FILTER_PARAMETERS
+        .iter()
+        .map(|filter| filter.to_string())
+        .collect();
     for (model, attributes) in ENCRYPTED_ATTRIBUTES {
-        let (first, rest) = attributes.split_first().expect("each model encrypts something");
-        let names = std::iter::once(*first).chain(FILTER_PARAMETERS.iter().copied()).chain(rest.iter().copied());
+        let (first, rest) = attributes
+            .split_first()
+            .expect("each model encrypts something");
+        let names = std::iter::once(*first)
+            .chain(FILTER_PARAMETERS.iter().copied())
+            .chain(rest.iter().copied());
         for name in names {
             let filter = format!("{model}.{name}");
             if !filters.contains(&filter) {
@@ -223,12 +328,14 @@ pub fn parameter_filter() -> ParameterFilter {
 
 /// `LogScrubbingFormatter::BOT_KEY_IN_PATH`: a bot key (`<id>-<token>`) or a signed reply token
 /// (`...--<hex>`) as the segment after `/rooms/:id/`.
-static BOT_KEY_IN_PATH: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"(/rooms/\d+/)(?:\d+-[A-Za-z0-9]+|[^/\s"<>]*--[0-9a-f]+)"#).unwrap());
+static BOT_KEY_IN_PATH: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(/rooms/\d+/)(?:\d+-[A-Za-z0-9]+|[^/\s"<>]*--[0-9a-f]+)"#).unwrap()
+});
 
 /// The invite token as the segment after `/invite/`. The database keeps only its digest, but the
 /// raw token in a request path is still a credential, so it never reaches the log.
-static INVITE_TOKEN_IN_PATH: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"(/invite/)[^/\s"?#<>]+"#).unwrap());
+static INVITE_TOKEN_IN_PATH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(/invite/)[^/\s"?#<>]+"#).unwrap());
 
 /// The incoming webhook token after `/api/webhooks/:id/`, keeping the id visible.
 static WEBHOOK_TOKEN_IN_PATH: LazyLock<Regex> =
@@ -238,7 +345,11 @@ static WEBHOOK_TOKEN_IN_PATH: LazyLock<Regex> =
 pub fn scrub_log_line(line: &str) -> Cow<'_, str> {
     let scrubbed = BOT_KEY_IN_PATH.replace_all(line, "${1}[FILTERED]");
     let scrubbed = INVITE_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]");
-    Cow::Owned(WEBHOOK_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]").into_owned())
+    Cow::Owned(
+        WEBHOOK_TOKEN_IN_PATH
+            .replace_all(&scrubbed, "${1}[FILTERED]")
+            .into_owned(),
+    )
 }
 
 /// `LogScrubbingFormatter` for the tracing subscriber: every formatted event goes through
@@ -315,13 +426,20 @@ pub mod ruby_uri {
         };
         let rest = rest.split(['?', '#']).next().unwrap_or("");
         let Some(hierarchical) = rest.strip_prefix("//") else {
-            return Some(Uri { scheme, host: None, port: None, path: rest.to_string() });
+            return Some(Uri {
+                scheme,
+                host: None,
+                port: None,
+                path: rest.to_string(),
+            });
         };
         let (authority, path) = match hierarchical.find('/') {
             Some(i) => (&hierarchical[..i], &hierarchical[i..]),
             None => (hierarchical, ""),
         };
-        let host_port = authority.rsplit_once('@').map_or(authority, |(_, host_port)| host_port);
+        let host_port = authority
+            .rsplit_once('@')
+            .map_or(authority, |(_, host_port)| host_port);
         let (host, port) = if host_port.starts_with('[') {
             let end = host_port.find(']')?;
             let port = &host_port[end + 1..];
@@ -337,12 +455,18 @@ pub mod ruby_uri {
             Some(port) if port.bytes().all(|b| b.is_ascii_digit()) => Some(port.parse().ok()?),
             Some(_) => return None,
         };
-        Some(Uri { scheme, host: Some(host.to_string()), port, path: path.to_string() })
+        Some(Uri {
+            scheme,
+            host: Some(host.to_string()),
+            port,
+            path: path.to_string(),
+        })
     }
 
     fn is_scheme(s: &str) -> bool {
         let mut chars = s.chars();
-        chars.next().is_some_and(|c| c.is_ascii_alphabetic()) && chars.all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c))
+        chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+            && chars.all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c))
     }
 }
 
@@ -363,8 +487,16 @@ mod tests {
             let sources: Vec<String> = serde_json::from_value(case["sources"].clone()).unwrap();
             assert_eq!(livekit_sources(url.as_deref()), sources, "{url:?}");
             let policy = content_security_policy(url.clone());
-            assert_eq!(policy.build(Some("NONCE")), case["header"].as_str().unwrap(), "{url:?}");
-            assert_eq!(policy.build(None), case["without_nonce"].as_str().unwrap(), "{url:?}");
+            assert_eq!(
+                policy.build(Some("NONCE")),
+                case["header"].as_str().unwrap(),
+                "{url:?}"
+            );
+            assert_eq!(
+                policy.build(None),
+                case["without_nonce"].as_str().unwrap(),
+                "{url:?}"
+            );
             assert_eq!(policy.header_name(), "content-security-policy");
         }
         assert_eq!(vectors["csp"]["nonce_directives"], json!(["script-src"]));
@@ -375,7 +507,10 @@ mod tests {
     fn nonces_hash_the_session_id_or_are_random() {
         let vectors = vectors();
         for case in vectors["csp"]["nonces"].as_array().unwrap() {
-            assert_eq!(csp_nonce(case["session_id"].as_str()), case["nonce"].as_str().unwrap());
+            assert_eq!(
+                csp_nonce(case["session_id"].as_str()),
+                case["nonce"].as_str().unwrap()
+            );
         }
         let example = vectors["csp"]["random_nonce_example"].as_str().unwrap();
         let (a, b) = (csp_nonce(None), csp_nonce(Some("")));
@@ -390,10 +525,17 @@ mod tests {
             .as_object()
             .unwrap()
             .iter()
-            .map(|(name, value)| (name.to_ascii_lowercase(), value.as_str().unwrap().to_string()))
+            .map(|(name, value)| {
+                (
+                    name.to_ascii_lowercase(),
+                    value.as_str().unwrap().to_string(),
+                )
+            })
             .collect();
-        let actual: Vec<(String, String)> =
-            default_headers().iter().map(|(name, value)| (name.to_string(), value.to_str().unwrap().to_string())).collect();
+        let actual: Vec<(String, String)> = default_headers()
+            .iter()
+            .map(|(name, value)| (name.to_string(), value.to_str().unwrap().to_string()))
+            .collect();
         assert_eq!(actual, expected);
     }
 
@@ -409,7 +551,12 @@ mod tests {
             .collect();
         assert_eq!(filter.sources(), sources);
         for case in vectors["parameter_filter"]["params"].as_array().unwrap() {
-            assert_eq!(filter.filter(&case["params"]), case["filtered"], "{}", case["params"]);
+            assert_eq!(
+                filter.filter(&case["params"]),
+                case["filtered"],
+                "{}",
+                case["params"]
+            );
         }
         for case in vectors["parameter_filter"]["paths"].as_array().unwrap() {
             let path = case["path"].as_str().unwrap();
@@ -417,51 +564,114 @@ mod tests {
                 Some((path, query)) => (path, Some(query)),
                 None => (path, None),
             };
-            assert_eq!(filter.filtered_path(path_only, query), case["filtered"].as_str().unwrap(), "{path}");
+            assert_eq!(
+                filter.filtered_path(path_only, query),
+                case["filtered"].as_str().unwrap(),
+                "{path}"
+            );
         }
     }
 
     #[test]
     fn log_lines_are_scrubbed_like_the_reference() {
         let vectors = vectors();
-        assert_eq!(BOT_KEY_IN_PATH.as_str(), vectors["log_scrubbing"]["pattern"].as_str().unwrap());
+        assert_eq!(
+            BOT_KEY_IN_PATH.as_str(),
+            vectors["log_scrubbing"]["pattern"].as_str().unwrap()
+        );
         for case in vectors["log_scrubbing"]["lines"].as_array().unwrap() {
-            assert_eq!(scrub_log_line(case["line"].as_str().unwrap()), case["scrubbed"].as_str().unwrap());
+            assert_eq!(
+                scrub_log_line(case["line"].as_str().unwrap()),
+                case["scrubbed"].as_str().unwrap()
+            );
         }
         let mut out = Vec::new();
-        ScrubbingWriter(&mut out).write_all(b"GET /rooms/1/12-AbC/messages\n").unwrap();
+        ScrubbingWriter(&mut out)
+            .write_all(b"GET /rooms/1/12-AbC/messages\n")
+            .unwrap();
         assert_eq!(out, b"GET /rooms/1/[FILTERED]/messages\n");
     }
 
     #[test]
     fn invite_tokens_are_scrubbed_from_log_lines() {
-        assert_eq!(scrub_log_line("GET /invite/abc123"), "GET /invite/[FILTERED]");
-        assert_eq!(scrub_log_line("GET /invite/abc123 HTTP/1.1"), "GET /invite/[FILTERED] HTTP/1.1");
-        assert_eq!(scrub_log_line("GET /invite/abc123?x=1"), "GET /invite/[FILTERED]?x=1");
-        assert_eq!(scrub_log_line("POST /invite/abc123/accept"), "POST /invite/[FILTERED]/accept");
-        assert_eq!(scrub_log_line("request failed path=\"/invite/abc123\""), "request failed path=\"/invite/[FILTERED]\"");
+        assert_eq!(
+            scrub_log_line("GET /invite/abc123"),
+            "GET /invite/[FILTERED]"
+        );
+        assert_eq!(
+            scrub_log_line("GET /invite/abc123 HTTP/1.1"),
+            "GET /invite/[FILTERED] HTTP/1.1"
+        );
+        assert_eq!(
+            scrub_log_line("GET /invite/abc123?x=1"),
+            "GET /invite/[FILTERED]?x=1"
+        );
+        assert_eq!(
+            scrub_log_line("POST /invite/abc123/accept"),
+            "POST /invite/[FILTERED]/accept"
+        );
+        assert_eq!(
+            scrub_log_line("request failed path=\"/invite/abc123\""),
+            "request failed path=\"/invite/[FILTERED]\""
+        );
         // The SPA's invite page and its JSON contract (slice 46) keep the token in the same segment.
-        assert_eq!(scrub_log_line("GET /app/invite/abc123"), "GET /app/invite/[FILTERED]");
-        assert_eq!(scrub_log_line("POST /api/v1/invite/abc123"), "POST /api/v1/invite/[FILTERED]");
+        assert_eq!(
+            scrub_log_line("GET /app/invite/abc123"),
+            "GET /app/invite/[FILTERED]"
+        );
+        assert_eq!(
+            scrub_log_line("POST /api/v1/invite/abc123"),
+            "POST /api/v1/invite/[FILTERED]"
+        );
         assert_eq!(scrub_log_line("GET /invites"), "GET /invites");
         assert_eq!(scrub_log_line("GET /api/invites/12"), "GET /api/invites/12");
-        assert_eq!(scrub_log_line("GET /rooms/1/12-AbC/messages"), "GET /rooms/1/[FILTERED]/messages");
+        assert_eq!(
+            scrub_log_line("GET /rooms/1/12-AbC/messages"),
+            "GET /rooms/1/[FILTERED]/messages"
+        );
     }
 
     #[test]
     fn webhook_tokens_are_scrubbed_from_log_lines() {
         for (line, expected) in [
-            ("POST /api/webhooks/12/abc-_123", "POST /api/webhooks/12/[FILTERED]"),
-            ("POST /api/webhooks/12/abc123 HTTP/1.1", "POST /api/webhooks/12/[FILTERED] HTTP/1.1"),
-            ("POST /api/webhooks/12/abc123?wait=true", "POST /api/webhooks/12/[FILTERED]?wait=true"),
-            ("POST /api/webhooks/12/abc123#fragment", "POST /api/webhooks/12/[FILTERED]#fragment"),
-            ("POST /api/webhooks/12/abc123/messages", "POST /api/webhooks/12/[FILTERED]/messages"),
-            ("request failed path=\"/api/webhooks/12/abc123\"", "request failed path=\"/api/webhooks/12/[FILTERED]\""),
-            ("url=https://campfire.test/api/webhooks/12/abc123", "url=https://campfire.test/api/webhooks/12/[FILTERED]"),
-            ("POST /api/webhooks/nope/abc123", "POST /api/webhooks/nope/[FILTERED]"),
+            (
+                "POST /api/webhooks/12/abc-_123",
+                "POST /api/webhooks/12/[FILTERED]",
+            ),
+            (
+                "POST /api/webhooks/12/abc123 HTTP/1.1",
+                "POST /api/webhooks/12/[FILTERED] HTTP/1.1",
+            ),
+            (
+                "POST /api/webhooks/12/abc123?wait=true",
+                "POST /api/webhooks/12/[FILTERED]?wait=true",
+            ),
+            (
+                "POST /api/webhooks/12/abc123#fragment",
+                "POST /api/webhooks/12/[FILTERED]#fragment",
+            ),
+            (
+                "POST /api/webhooks/12/abc123/messages",
+                "POST /api/webhooks/12/[FILTERED]/messages",
+            ),
+            (
+                "request failed path=\"/api/webhooks/12/abc123\"",
+                "request failed path=\"/api/webhooks/12/[FILTERED]\"",
+            ),
+            (
+                "url=https://campfire.test/api/webhooks/12/abc123",
+                "url=https://campfire.test/api/webhooks/12/[FILTERED]",
+            ),
+            (
+                "POST /api/webhooks/nope/abc123",
+                "POST /api/webhooks/nope/[FILTERED]",
+            ),
             ("GET /api/webhooks/12", "GET /api/webhooks/12"),
             ("POST /api/webhooks/12/", "POST /api/webhooks/12/"),
-            ("GET /api/v1/rooms/1/webhooks/12", "GET /api/v1/rooms/1/webhooks/12"),
+            (
+                "GET /api/v1/rooms/1/webhooks/12",
+                "GET /api/v1/rooms/1/webhooks/12",
+            ),
         ] {
             assert_eq!(scrub_log_line(line), expected, "{line}");
         }
@@ -488,11 +698,17 @@ mod tests {
             "directive=script-src-elem blocked=https://evil.test:8443 document=/rooms/1 source=https://campfire.test line=12"
         );
         let keywords = json!({ "effectiveDirective": "script-src", "blockedURL": "inline", "documentURL": "not a url", "lineNumber": "12345678" });
-        assert_eq!(describe_csp_violation(keywords.as_object().unwrap()), "directive=script-src blocked=inline");
+        assert_eq!(
+            describe_csp_violation(keywords.as_object().unwrap()),
+            "directive=script-src blocked=inline"
+        );
         let long = json!({ "violated-directive": "x".repeat(70), "blocked-uri": "data", "source-file": "https://a.test:443/x" });
         assert_eq!(
             describe_csp_violation(long.as_object().unwrap()),
-            format!("directive={}... blocked=data source=https://a.test", "x".repeat(57))
+            format!(
+                "directive={}... blocked=data source=https://a.test",
+                "x".repeat(57)
+            )
         );
     }
 }

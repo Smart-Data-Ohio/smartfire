@@ -23,9 +23,7 @@ async fn ws11ui_review_inbox_preloads_message_sources_once_for_every_format() {
         .find(|case| case["name"] == "pagination ")
         .unwrap();
     let mut failures = Vec::new();
-    for accept in [
-        "application/json",
-    ] {
+    for accept in ["application/json"] {
         for size in [1, 100] {
             let t = TestApp::boot_frozen()
                 .await

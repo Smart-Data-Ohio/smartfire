@@ -8,8 +8,16 @@ use super::opengraph::fetch::{self, FetchOptions};
 
 pub const MAX_BODY_SIZE: usize = 5 * 1024 * 1024;
 const MAX_REQUESTS: usize = 10;
-const ALLOWED_CONTENT_TYPES: &[&str] =
-    &["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/bmp", "image/x-icon", "image/vnd.microsoft.icon"];
+const ALLOWED_CONTENT_TYPES: &[&str] = &[
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/avif",
+    "image/bmp",
+    "image/x-icon",
+    "image/vnd.microsoft.icon",
+];
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProxyError {
@@ -27,7 +35,10 @@ pub enum ProxyError {
 
 impl ProxyError {
     pub fn denied(&self) -> bool {
-        matches!(self, Self::Denied | Self::Guard(_) | Self::Fetch(fetch::FetchError::Guard(_)))
+        matches!(
+            self,
+            Self::Denied | Self::Guard(_) | Self::Fetch(fetch::FetchError::Guard(_))
+        )
     }
 }
 
@@ -53,9 +64,14 @@ pub async fn fetch(net: &Network, url: &str) -> Result<Image, ProxyError> {
     let ip = guard::resolve(net.resolver.as_ref(), url.host.as_deref().unwrap_or("")).await?;
     // ImageProxy's MAX_REDIRECTS.times is ten requests, unlike OpenGraph's
     // (max_redirects + 1).times. Share only the transport and redirect guard.
-    let options = FetchOptions { max_redirects: MAX_REQUESTS - 1, deadline: None };
+    let options = FetchOptions {
+        max_redirects: MAX_REQUESTS - 1,
+        deadline: None,
+    };
     let response = fetch::request(net, url, ip, Method::GET, options).await?;
-    let content_type = response.content_type().ok_or(ProxyError::UnusableResponse)?;
+    let content_type = response
+        .content_type()
+        .ok_or(ProxyError::UnusableResponse)?;
     if response.status != 200
         || !ALLOWED_CONTENT_TYPES.contains(&content_type.as_str())
         || response.content_length()?.unwrap_or(0) > MAX_BODY_SIZE as u64

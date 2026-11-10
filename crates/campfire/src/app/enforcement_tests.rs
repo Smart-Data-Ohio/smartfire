@@ -104,7 +104,9 @@ async fn enrollment_exemptions_allow_setup_static_challenge_and_sign_out_only() 
         Some("http://campfire.test/app/two_factor/setup")
     );
     let api = b
-        .send(Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"))
+        .send(
+            Req::new(Method::GET, "/api/v1/two_factor/setup").header("accept", "application/json"),
+        )
         .await;
     assert_eq!(api.status, StatusCode::OK, "{}", api.text());
     assert_eq!(api.json()["kind"], "ready");
@@ -238,7 +240,10 @@ async fn verified_sessions_browse_even_without_a_credential() {
     let a = app().await;
     unenroll(&a).await;
     let mut b = a.sign_in(DAVID).await;
-    assert_eq!(b.get("/api/v1/settings/account").await.status, StatusCode::OK);
+    assert_eq!(
+        b.get("/api/v1/settings/account").await.status,
+        StatusCode::OK
+    );
     assert_ne!(
         b.get("/").await.location(),
         Some("http://campfire.test/app/two_factor/setup?required=true")
@@ -316,7 +321,10 @@ async fn admin_idle_expiry_is_strict_configurable_and_does_not_expire_members() 
             })
             .await
             .unwrap();
-        assert_eq!(member.get("/api/v1/settings/account").await.status, StatusCode::OK);
+        assert_eq!(
+            member.get("/api/v1/settings/account").await.status,
+            StatusCode::OK
+        );
     }
 }
 

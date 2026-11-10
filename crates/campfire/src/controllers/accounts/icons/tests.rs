@@ -1,11 +1,11 @@
+use crate::controllers::presenters::attachments;
+use crate::controllers::presenters::attachments::Assignment;
+use crate::controllers::presenters::test_support::*;
+use axum::http::Method;
 use campfire_db::models::workspace_icon::ImageFacts;
 use campfire_db::models::workspace_icon::NewIcon;
 use campfire_db::models::workspace_icon::WorkspaceIcon;
 use campfire_kit::StatusCode;
-use crate::controllers::presenters::attachments::Assignment;
-use crate::controllers::presenters::attachments;
-use crate::controllers::presenters::test_support::*;
-use axum::http::Method;
 use serde_json::Value;
 fn vectors() -> Value {
     serde_json::from_str(include_str!("../../../../../../vectors/users_icons.json")).unwrap()
@@ -124,9 +124,20 @@ async fn upload_normalizes_attaches_and_records_one_creation_audit() {
 #[tokio::test]
 async fn invalid_and_duplicate_uploads_return_inline_errors_without_rows_or_audits() {
     let app = TestApp::boot_frozen().await.expect("seed required");
-    let before=app.db().read(|c|Ok(WorkspaceIcon::ordered(c)?.len())).await.unwrap();
+    let before = app
+        .db()
+        .read(|c| Ok(WorkspaceIcon::ordered(c)?.len()))
+        .await
+        .unwrap();
     let bad = upload(&app, "openai", "", "script.svg").await;
-    assert_eq!(app.db().read(|c|Ok(WorkspaceIcon::ordered(c)?.len())).await.unwrap(),before,"original invalid icon row count");
+    assert_eq!(
+        app.db()
+            .read(|c| Ok(WorkspaceIcon::ordered(c)?.len()))
+            .await
+            .unwrap(),
+        before,
+        "original invalid icon row count"
+    );
     assert_eq!(bad.status, StatusCode::UNPROCESSABLE_ENTITY);
     upload(&app, "acme", "Acme Corp", "clean.svg").await;
     let duplicate = upload(&app, "ACME", "Acme Corp", "clean.svg").await;
@@ -158,7 +169,13 @@ async fn members_cannot_list_upload_or_delete_icons() {
         .unwrap();
     let mut member = app.sign_in(KEVIN).await;
     assert_eq!(
-        member.send(Req::new(Method::GET, "/account/icons").header("x-requested-with", "XMLHttpRequest")).await.status,
+        member
+            .send(
+                Req::new(Method::GET, "/account/icons")
+                    .header("x-requested-with", "XMLHttpRequest")
+            )
+            .await
+            .status,
         StatusCode::FORBIDDEN
     );
     assert_eq!(
@@ -196,11 +213,27 @@ async fn destroy_removes_attachment_and_blob_and_records_one_snapshot_audit() {
         })
         .await
         .unwrap();
-    let (before_icons,before_blobs)=app.db().read(|c|Ok((WorkspaceIcon::ordered(c)?.len(),c.query_row("SELECT COUNT(*) FROM active_storage_blobs",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
-    let removed = app.david()
-        .write(Req::new(Method::DELETE, &format!("/account/icons/{id}"))).await;
+    let (before_icons, before_blobs) = app
+        .db()
+        .read(|c| {
+            Ok((
+                WorkspaceIcon::ordered(c)?.len(),
+                c.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |r| {
+                    r.get::<_, i64>(0)
+                })?,
+            ))
+        })
+        .await
+        .unwrap();
+    let removed = app
+        .david()
+        .write(Req::new(Method::DELETE, &format!("/account/icons/{id}")))
+        .await;
     assert_eq!(removed.status, StatusCode::FOUND);
-    assert_eq!(removed.location(), Some("http://campfire.test/account/icons"));
+    assert_eq!(
+        removed.location(),
+        Some("http://campfire.test/account/icons")
+    );
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     loop {
         let exists = app
@@ -237,26 +270,57 @@ async fn serving_svg_and_png_uses_private_bytes_and_checksum_conditionals() {
         let response = app.sign_in(773523953).await.get(&path).await;
         assert_eq!(response.status, StatusCode::OK);
         assert_eq!(response.body, bytes(file));
-        assert_eq!(response.content_type().unwrap().split(';').next().unwrap(),mime);
+        assert_eq!(
+            response.content_type().unwrap().split(';').next().unwrap(),
+            mime
+        );
         assert_eq!(
             response.header("cache-control"),
             Some("max-age=3600, private")
         );
         assert_eq!(response.header("x-content-type-options"), Some("nosniff"));
-        assert_eq!(response.header("content-disposition").unwrap().split(';').next(),Some("inline"));
-        let key=name.to_string();
-        let checksum=app.db().read(move|c|{let icon=WorkspaceIcon::find_by_name(c,&key)?.unwrap();Ok(attachments::attached_blob(c,"WorkspaceIcon",icon.id,"image")?.unwrap().checksum.unwrap())}).await.unwrap();
-        assert_eq!(response.header("etag"),Some(format!("\"{checksum}\"").as_str()));
+        assert_eq!(
+            response
+                .header("content-disposition")
+                .unwrap()
+                .split(';')
+                .next(),
+            Some("inline")
+        );
+        let key = name.to_string();
+        let checksum = app
+            .db()
+            .read(move |c| {
+                let icon = WorkspaceIcon::find_by_name(c, &key)?.unwrap();
+                Ok(
+                    attachments::attached_blob(c, "WorkspaceIcon", icon.id, "image")?
+                        .unwrap()
+                        .checksum
+                        .unwrap(),
+                )
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            response.header("etag"),
+            Some(format!("\"{checksum}\"").as_str())
+        );
         if name == "acme" {
             assert_eq!(
                 response.header("content-security-policy"),
                 Some("default-src 'none'; style-src 'unsafe-inline'")
             );
         } else {
-            assert!(response.header("content-security-policy").unwrap().contains("script-src 'self'"));
+            assert!(
+                response
+                    .header("content-security-policy")
+                    .unwrap()
+                    .contains("script-src 'self'")
+            );
         }
         let cached = app
-            .sign_in(773523953).await
+            .sign_in(773523953)
+            .await
             .send(
                 Req::new(Method::GET, &path)
                     .header("if-none-match", response.header("etag").unwrap()),

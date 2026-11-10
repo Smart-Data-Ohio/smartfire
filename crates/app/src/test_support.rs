@@ -34,7 +34,9 @@ pub type ServerStartup = tokio::sync::oneshot::Receiver<Result<(), String>>;
 
 /// Retain a startup reporter outside the server future: an early error or panic must not
 /// disappear when the ready callback is dropped.
-pub fn spawn_server<F, Fut>(serve: F) -> (tokio::task::JoinHandle<std::io::Result<()>>, ServerStartup)
+pub fn spawn_server<F, Fut>(
+    serve: F,
+) -> (tokio::task::JoinHandle<std::io::Result<()>>, ServerStartup)
 where
     F: FnOnce(Box<dyn FnOnce() + Send>) -> Fut + Send + 'static,
     Fut: Future<Output = std::io::Result<()>> + Send + 'static,
@@ -60,7 +62,9 @@ where
                 Ok(Ok(())) => "server exited before reporting readiness".to_string(),
                 Ok(Err(error)) => format!("server startup failed: {error} ({:?})", error.kind()),
                 Err(panic) => {
-                    let message = panic.downcast_ref::<&str>().copied()
+                    let message = panic
+                        .downcast_ref::<&str>()
+                        .copied()
                         .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
                         .unwrap_or("non-string panic");
                     format!("server panicked before reporting readiness: {message}")
@@ -83,9 +87,20 @@ async fn server_startup_panics_reach_the_reporter_and_join_handle() {
             panic!("intentional startup panic probe");
         })
     });
-    let report = wait("startup panic report", started).await.unwrap().unwrap_err();
-    assert_eq!(report, "server panicked before reporting readiness: intentional startup panic probe");
-    assert!(wait("panicking server task to finish", server).await.unwrap_err().is_panic());
+    let report = wait("startup panic report", started)
+        .await
+        .unwrap()
+        .unwrap_err();
+    assert_eq!(
+        report,
+        "server panicked before reporting readiness: intentional startup panic probe"
+    );
+    assert!(
+        wait("panicking server task to finish", server)
+            .await
+            .unwrap_err()
+            .is_panic()
+    );
 }
 
 // Serialize listener selection within this process. Front fixtures transfer the owned
@@ -158,7 +173,10 @@ pub fn oauth_entropy() -> Option<[u8; 64]> {
 tokio::task_local! {
     static AUTH_INPUTS: Arc<campfire_db::FixtureAuthInputs>;
 }
-pub async fn with_auth_inputs<T>(inputs: campfire_db::FixtureAuthInputs, future: impl Future<Output = T>) -> T {
+pub async fn with_auth_inputs<T>(
+    inputs: campfire_db::FixtureAuthInputs,
+    future: impl Future<Output = T>,
+) -> T {
     AUTH_INPUTS.scope(Arc::new(inputs), future).await
 }
 pub fn auth_inputs() -> Option<Arc<campfire_db::FixtureAuthInputs>> {

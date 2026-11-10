@@ -18,10 +18,7 @@ impl LoadedPreferences {
         campfire_presentation::time::Zone::for_user(self.preferences.time_zone.as_deref())
     }
 
-    pub fn from_row(
-        row: &rusqlite::Row<'_>,
-        now: jiff::Timestamp,
-    ) -> rusqlite::Result<Self> {
+    pub fn from_row(row: &rusqlite::Row<'_>, now: jiff::Timestamp) -> rusqlite::Result<Self> {
         let dnd: bool = row.get("dnd_enabled")?;
         let dnd_until: Option<Timestamp> = row.get("dnd_until")?;
         let presence: String = row.get("presence_setting")?;
@@ -116,11 +113,7 @@ impl LoadedPreferences {
     }
 }
 
-pub fn for_user(
-    conn: &Connection,
-    user_id: i64,
-    now: jiff::Timestamp,
-) -> Result<UserPreferences> {
+pub fn for_user(conn: &Connection, user_id: i64, now: jiff::Timestamp) -> Result<UserPreferences> {
     let loaded = conn.query_row("SELECT * FROM users WHERE id=?", [user_id], |row| {
         LoadedPreferences::from_row(row, now)
     })?;

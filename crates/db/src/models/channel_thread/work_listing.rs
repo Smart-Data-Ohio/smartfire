@@ -169,7 +169,8 @@ impl ChannelThread {
             conn,
             &format!(
                 "SELECT channel_threads.* FROM channel_threads WHERE work_status IS NOT NULL AND room_id IN (SELECT room_id FROM memberships WHERE user_id=?){predicate} AND {thread_access} ORDER BY updated_at DESC,id DESC",
-                thread_access = super::readable_by_sql("channel_threads.id", &viewer.id.to_string())
+                thread_access =
+                    super::readable_by_sql("channel_threads.id", &viewer.id.to_string())
             ),
             [viewer.id],
             Self::from_row,

@@ -26,7 +26,11 @@ pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
     enroll_for_device(c, user_id, None).await
 }
 
-pub async fn enroll_for_device(c: &mut Ctx, user_id: i64, device_class: Option<DeviceClass>) -> Result {
+pub async fn enroll_for_device(
+    c: &mut Ctx,
+    user_id: i64,
+    device_class: Option<DeviceClass>,
+) -> Result {
     let params = push_subscription_params(c)?;
 
     let network = c.app().subscription_network.clone();
@@ -44,9 +48,7 @@ pub async fn enroll_for_device(c: &mut Ctx, user_id: i64, device_class: Option<D
             if validate(&subscription, &network).await.is_empty() {
                 c.app()
                     .db
-                    .write(move |tx| {
-                        subscription.touch_for_device(tx, device_class)
-                    })
+                    .write(move |tx| subscription.touch_for_device(tx, device_class))
                     .await
                     .map_err(Error::internal)?;
                 Ok(c.head(StatusCode::OK))

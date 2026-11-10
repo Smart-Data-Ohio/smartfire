@@ -3,7 +3,6 @@ use super::presenters::test_support::{Req, TestApp, with_fixed_render_secrets};
 use campfire_kit::Method;
 use serde_json::{Value, json};
 
-
 fn all(
     conn: &campfire_db::Connection,
     sql: &str,
@@ -133,7 +132,13 @@ async fn compare(key: &str) -> Vec<usize> {
         let mut jason = app.sign_in(super::presenters::test_support::JASON).await;
         let mut counts = Vec::new();
         for (index, step) in row["steps"].as_array().unwrap().iter().enumerate() {
-            if step["method"] == "get" && !step["headers"]["content-type"].as_str().is_some_and(|value| value.starts_with("application/json")) { continue; }
+            if step["method"] == "get"
+                && !step["headers"]["content-type"]
+                    .as_str()
+                    .is_some_and(|value| value.starts_with("application/json"))
+            {
+                continue;
+            }
 
             if let Some(sql) = step["sql"].as_array() {
                 let sql = sql.clone();
@@ -188,30 +193,37 @@ async fn compare(key: &str) -> Vec<usize> {
             let response = with_fixed_render_secrets(browser.write(request)).await;
             app.db().stop_capturing_queries();
             counts.push(queries.lock().unwrap().len());
-            if step["body"].as_str().is_some_and(|body| body.starts_with("<turbo-stream")) {
+            if step["body"]
+                .as_str()
+                .is_some_and(|body| body.starts_with("<turbo-stream"))
+            {
                 assert_eq!(response.status.as_u16(), 302, "{key} step {index}");
                 assert!(response.text().is_empty());
             } else {
-            assert_eq!(
-                response.status.as_u16() as u64,
-                step["status"].as_u64().unwrap(),
-                "{key} step {index}: status {}",
-                response.text()
-            );
-            if step["headers"]["content-type"].as_str().is_some_and(|value| value.starts_with("application/json")) && response.text() != step["body"].as_str().unwrap() {
-                super::presenters::test_support::rails_mismatch(
-                    &response.text(),
-                    step["body"].as_str().unwrap(),
-                    &format!("{key} step {index}: complete Rails response bytes"),
-                );
-            }
-            for header in ["content-type", "cache-control", "location"] {
                 assert_eq!(
-                    response.header(header),
-                    step["headers"][header].as_str(),
-                    "{key} step {index}: {header}"
+                    response.status.as_u16() as u64,
+                    step["status"].as_u64().unwrap(),
+                    "{key} step {index}: status {}",
+                    response.text()
                 );
-            }
+                if step["headers"]["content-type"]
+                    .as_str()
+                    .is_some_and(|value| value.starts_with("application/json"))
+                    && response.text() != step["body"].as_str().unwrap()
+                {
+                    super::presenters::test_support::rails_mismatch(
+                        &response.text(),
+                        step["body"].as_str().unwrap(),
+                        &format!("{key} step {index}: complete Rails response bytes"),
+                    );
+                }
+                for header in ["content-type", "cache-control", "location"] {
+                    assert_eq!(
+                        response.header(header),
+                        step["headers"][header].as_str(),
+                        "{key} step {index}: {header}"
+                    );
+                }
             }
 
             assert_eq!(
@@ -219,7 +231,6 @@ async fn compare(key: &str) -> Vec<usize> {
                 step["facts"],
                 "{key} step {index}: complete persisted original facts"
             );
-
         }
         println!("WS12_WORK_NAMED {key} unrelated_users={size} SELECTs={counts:?}");
         measured.push(counts);

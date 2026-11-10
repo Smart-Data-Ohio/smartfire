@@ -39,8 +39,11 @@ pub struct MultipartFileLimits(pub Vec<(String, u64)>);
 
 impl MultipartFileLimits {
     fn for_field(&self, name: &str) -> Option<u64> {
-        self.0.iter().filter(|(field, _)| name == field || name.ends_with(&format!("[{field}]")))
-            .map(|(_, limit)| *limit).min()
+        self.0
+            .iter()
+            .filter(|(field, _)| name == field || name.ends_with(&format!("[{field}]")))
+            .map(|(_, limit)| *limit)
+            .min()
     }
 }
 
@@ -53,7 +56,10 @@ pub struct ParsedBody {
 
 impl ParsedBody {
     pub fn empty() -> Self {
-        Self { raw: Bytes::new(), params: Ok(ParamMap::new()) }
+        Self {
+            raw: Bytes::new(),
+            params: Ok(ParamMap::new()),
+        }
     }
 }
 
@@ -87,7 +93,14 @@ pub async fn parse(
     body: Body,
     limit: Option<usize>,
 ) -> Result<ParsedBody, BodyError> {
-    parse_with_file_limits(original_method, headers, body, limit, &MultipartFileLimits::default()).await
+    parse_with_file_limits(
+        original_method,
+        headers,
+        body,
+        limit,
+        &MultipartFileLimits::default(),
+    )
+    .await
 }
 
 pub(crate) async fn parse_with_file_limits(
@@ -97,25 +110,42 @@ pub(crate) async fn parse_with_file_limits(
     limit: Option<usize>,
     file_limits: &MultipartFileLimits,
 ) -> Result<ParsedBody, BodyError> {
-    let content_type = headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).filter(|ct| !ct.is_empty());
+    let content_type = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .filter(|ct| !ct.is_empty());
     let media = media_type(content_type);
 
-    if matches!(media.as_deref(), Some("multipart/form-data" | "multipart/related" | "multipart/mixed"))
-        && let Some(boundary) = content_type.and_then(|ct| multer::parse_boundary(ct).ok()) {
-            return parse_multipart(body, boundary, limit, MultipartPolicy::Buffered, file_limits).await;
-        }
+    if matches!(
+        media.as_deref(),
+        Some("multipart/form-data" | "multipart/related" | "multipart/mixed")
+    ) && let Some(boundary) = content_type.and_then(|ct| multer::parse_boundary(ct).ok())
+    {
+        return parse_multipart(
+            body,
+            boundary,
+            limit,
+            MultipartPolicy::Buffered,
+            file_limits,
+        )
+        .await;
+    }
 
     // Everything but multipart (whose files spool to disk) is read into memory, so it's bounded
     // while it's read, whatever the configured limit.
     let raw = axum::body::to_bytes(body, limit.unwrap_or(usize::MAX).min(MAX_BUFFERED_BODY))
-        .await.map_err(|error| read_error(&error))?;
+        .await
+        .map_err(|error| read_error(&error))?;
 
     let is_json = format::content_mime_type(content_type).ok().flatten() == Some(&format::JSON);
     let params = if is_json && !raw.is_empty() {
         params::from_json_body(&raw)
     } else if media.as_deref() == Some("application/x-www-form-urlencoded")
         || (content_type.is_none() && *original_method == Method::POST)
-        || matches!(media.as_deref(), Some("multipart/form-data" | "multipart/related" | "multipart/mixed"))
+        || matches!(
+            media.as_deref(),
+            Some("multipart/form-data" | "multipart/related" | "multipart/mixed")
+        )
     {
         params::form_pairs(&raw).and_then(params::from_pairs)
     } else {
@@ -139,8 +169,16 @@ impl MultipartPolicy {
     }
 }
 
-async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, policy: MultipartPolicy, file_limits: &MultipartFileLimits) -> Result<ParsedBody, BodyError> {
-    let limit = limit.unwrap_or(usize::MAX).min(usize::try_from(MULTIPART_BYTESIZE_LIMIT).unwrap_or(usize::MAX));
+async fn parse_multipart(
+    body: Body,
+    boundary: String,
+    limit: Option<usize>,
+    policy: MultipartPolicy,
+    file_limits: &MultipartFileLimits,
+) -> Result<ParsedBody, BodyError> {
+    let limit = limit
+        .unwrap_or(usize::MAX)
+        .min(usize::try_from(MULTIPART_BYTESIZE_LIMIT).unwrap_or(usize::MAX));
     // Multer stops at the MIME boundary, which may precede the HTTP body's end. Keep the
     // limited stream here so even bytes multer buffers or leaves unread count toward the cap.
     let mut stream = Body::new(http_body_util::Limited::new(body, limit)).into_data_stream();
@@ -165,7 +203,9 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
             let file_limit = file_limits.for_field(&part.name());
             // Rack's Collector counts a filename="" TempfilePart before get_data drops it.
             // Preserve the ordinary parser's pre-existing limits outside disk PUTs.
-            if part.filename.is_some() && (policy == MultipartPolicy::Disk || part.filename.as_deref() != Some("")) {
+            if part.filename.is_some()
+                && (policy == MultipartPolicy::Disk || part.filename.as_deref() != Some(""))
+            {
                 files += 1;
                 if policy.exceeds(files, MULTIPART_FILE_LIMIT) {
                     return Err(ParamError::Limit("too many files".into()).into());
@@ -178,12 +218,20 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
                     let mut size = 0;
                     while let Some(chunk) = field.chunk().await? {
                         size += chunk.len() as u64;
-                        if file_limit.is_some_and(|limit| size > limit) { return Err(Stop::TooLarge); }
+                        if file_limit.is_some_and(|limit| size > limit) {
+                            return Err(Stop::TooLarge);
+                        }
                     }
                 }
                 Some(filename) => {
                     let (size, path) = spool(&mut field, file_limit).await?;
-                    let upload = UploadedFile::new(filename.to_string(), part.content_type.clone(), part.head.clone(), size, path);
+                    let upload = UploadedFile::new(
+                        filename.to_string(),
+                        part.content_type.clone(),
+                        part.head.clone(),
+                        size,
+                        path,
+                    );
                     pairs.push(RawPair::file(&part.name(), upload));
                 }
                 None => {
@@ -210,7 +258,14 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
         Err(Stop::TooLarge) => return Err(BodyError::TooLarge),
         Err(Stop::Read(error)) => return Err(error),
         Err(Stop::Params(error)) => Err(error),
-        Ok(()) => params::from_pairs_with_depth_limit(pairs, if policy == MultipartPolicy::Disk { 32 } else { params::DEPTH_LIMIT }),
+        Ok(()) => params::from_pairs_with_depth_limit(
+            pairs,
+            if policy == MultipartPolicy::Disk {
+                32
+            } else {
+                params::DEPTH_LIMIT
+            },
+        ),
     };
     drop(multipart);
     // Validate the epilogue before exposing params to an action. Discard each chunk instead of
@@ -220,7 +275,10 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
             chunk.map_err(|error| read_error(&error))?;
         }
     }
-    Ok(ParsedBody { raw: Bytes::new(), params })
+    Ok(ParsedBody {
+        raw: Bytes::new(),
+        params,
+    })
 }
 
 /// Multer 3.1 looks for the first boundary, polls the stream again if it isn't buffered yet, and
@@ -228,7 +286,9 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
 /// poll appended. Whether a body's last bytes and its end land in one poll depends on timing (a
 /// spooled file's blocking reads, a client's packets), so the same body could parse or be a 400.
 /// Pausing after each chunk keeps a chunk and the end of the stream out of a single poll.
-fn one_chunk_per_poll<S: futures_util::Stream + Unpin>(mut stream: S) -> impl futures_util::Stream<Item = S::Item> {
+fn one_chunk_per_poll<S: futures_util::Stream + Unpin>(
+    mut stream: S,
+) -> impl futures_util::Stream<Item = S::Item> {
     let mut paused = false;
     futures_util::stream::poll_fn(move |cx| {
         if std::mem::take(&mut paused) {
@@ -244,7 +304,10 @@ fn one_chunk_per_poll<S: futures_util::Stream + Unpin>(mut stream: S) -> impl fu
 /// Read an unparsed body's entire stream before entering the action, as Puma does. Spool it
 /// to an anonymous temporary file so raw uploads need only one chunk in memory. A handler that
 /// never reads its body must not bypass its size limit.
-pub(crate) async fn validate_unparsed(body: Body, limit: Option<usize>) -> Result<Option<tokio::fs::File>, BodyError> {
+pub(crate) async fn validate_unparsed(
+    body: Body,
+    limit: Option<usize>,
+) -> Result<Option<tokio::fs::File>, BodyError> {
     if body.is_end_stream() {
         return Ok(None);
     }
@@ -252,7 +315,9 @@ pub(crate) async fn validate_unparsed(body: Body, limit: Option<usize>) -> Resul
         Some(limit) => Body::new(http_body_util::Limited::new(body, limit)),
         None => body,
     };
-    let file = tokio::task::spawn_blocking(tempfile::tempfile).await.map_err(std::io::Error::other)??;
+    let file = tokio::task::spawn_blocking(tempfile::tempfile)
+        .await
+        .map_err(std::io::Error::other)??;
     let mut file = tokio::fs::File::from_std(file);
     while let Some(frame) = body.frame().await {
         let frame = frame.map_err(|error| read_error(&error))?;
@@ -303,18 +368,24 @@ impl From<multer::Error> for Stop {
 
 /// Writes a file part to a temp file (`RackMultipart...`, as Rack names them) without blocking
 /// the runtime on a slow disk, and returns its size and path.
-async fn spool(field: &mut multer::Field<'_>, limit: Option<u64>) -> Result<(u64, tempfile::TempPath), Stop> {
+async fn spool(
+    field: &mut multer::Field<'_>,
+    limit: Option<u64>,
+) -> Result<(u64, tempfile::TempPath), Stop> {
     let io_error = |e: std::io::Error| Stop::Params(ParamError::Invalid(e.to_string()));
-    let temp = tokio::task::spawn_blocking(|| tempfile::Builder::new().prefix("RackMultipart").tempfile())
-        .await
-        .map_err(|e| io_error(std::io::Error::other(e)))?
-        .map_err(io_error)?;
+    let temp =
+        tokio::task::spawn_blocking(|| tempfile::Builder::new().prefix("RackMultipart").tempfile())
+            .await
+            .map_err(|e| io_error(std::io::Error::other(e)))?
+            .map_err(io_error)?;
     let (file, path) = temp.into_parts();
     let mut file = tokio::fs::File::from_std(file);
     let mut size = 0u64;
     while let Some(chunk) = field.chunk().await? {
         size += chunk.len() as u64;
-        if limit.is_some_and(|limit| size > limit) { return Err(Stop::TooLarge); }
+        if limit.is_some_and(|limit| size > limit) {
+            return Err(Stop::TooLarge);
+        }
         file.write_all(&chunk).await.map_err(io_error)?;
     }
     file.flush().await.map_err(io_error)?;
@@ -335,13 +406,25 @@ impl Part {
     fn from_headers(headers: &HeaderMap) -> Self {
         let head: String = headers
             .iter()
-            .map(|(k, v)| format!("{}: {}\r\n", k.as_str(), String::from_utf8_lossy(v.as_bytes())))
+            .map(|(k, v)| {
+                format!(
+                    "{}: {}\r\n",
+                    k.as_str(),
+                    String::from_utf8_lossy(v.as_bytes())
+                )
+            })
             .collect();
-        let content_type = headers.get(header::CONTENT_TYPE).map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned());
+        let content_type = headers
+            .get(header::CONTENT_TYPE)
+            .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned());
         let mut part = match headers.get(header::CONTENT_DISPOSITION) {
-            Some(disposition) => parse_disposition(&String::from_utf8_lossy(disposition.as_bytes())),
+            Some(disposition) => {
+                parse_disposition(&String::from_utf8_lossy(disposition.as_bytes()))
+            }
             None => Part {
-                name: headers.get("content-id").map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned()),
+                name: headers
+                    .get("content-id")
+                    .map(|v| String::from_utf8_lossy(v.as_bytes()).into_owned()),
                 ..Part::default()
             },
         };
@@ -354,10 +437,9 @@ impl Part {
     fn name(&self) -> String {
         match self.name.as_deref() {
             Some(name) if !name.is_empty() => name.to_string(),
-            _ => self
-                .filename
-                .clone()
-                .unwrap_or_else(|| format!("{}[]", self.content_type.as_deref().unwrap_or("text/plain"))),
+            _ => self.filename.clone().unwrap_or_else(|| {
+                format!("{}[]", self.content_type.as_deref().unwrap_or("text/plain"))
+            }),
         }
     }
 }
@@ -425,9 +507,14 @@ fn normalize_filename(filename: &str) -> String {
         .iter()
         .enumerate()
         .filter(|(_, b)| **b == b'%')
-        .all(|(i, _)| bytes.get(i + 1..i + 3).is_some_and(|h| h.iter().all(u8::is_ascii_hexdigit)));
+        .all(|(i, _)| {
+            bytes
+                .get(i + 1..i + 3)
+                .is_some_and(|h| h.iter().all(u8::is_ascii_hexdigit))
+        });
     let unescaped = if all_valid {
-        String::from_utf8_lossy(&percent_encoding::percent_decode(bytes).collect::<Vec<u8>>()).into_owned()
+        String::from_utf8_lossy(&percent_encoding::percent_decode(bytes).collect::<Vec<u8>>())
+            .into_owned()
     } else {
         filename.to_string()
     };
@@ -435,7 +522,11 @@ fn normalize_filename(filename: &str) -> String {
         return unescaped;
     }
     // Ruby String#split drops trailing empty fields before Rack takes .last.
-    unescaped.rsplit(['/', '\\']).find(|part| !part.is_empty()).unwrap_or("").to_string()
+    unescaped
+        .rsplit(['/', '\\'])
+        .find(|part| !part.is_empty())
+        .unwrap_or("")
+        .to_string()
 }
 
 #[cfg(test)]
@@ -444,7 +535,9 @@ mod tests {
 
     #[test]
     fn dispositions() {
-        let part = parse_disposition(r#"form-data; name="message[attachment]"; filename="C:\Users\me\cat.png""#);
+        let part = parse_disposition(
+            r#"form-data; name="message[attachment]"; filename="C:\Users\me\cat.png""#,
+        );
         assert_eq!(part.name.as_deref(), Some("message[attachment]"));
         assert_eq!(part.filename.as_deref(), Some("cat.png"));
 
@@ -462,7 +555,10 @@ mod tests {
     fn multipart_body(boundary: &str, parts: &[(&str, &str)]) -> Vec<u8> {
         let mut body = Vec::new();
         for (disposition_and_headers, content) in parts {
-            body.extend_from_slice(format!("--{boundary}\r\n{disposition_and_headers}\r\n\r\n{content}\r\n").as_bytes());
+            body.extend_from_slice(
+                format!("--{boundary}\r\n{disposition_and_headers}\r\n\r\n{content}\r\n")
+                    .as_bytes(),
+            );
         }
         body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
         body
@@ -480,14 +576,24 @@ mod tests {
                     "Content-Disposition: form-data; name=\"user[avatar]\"; filename=\"me.png\"\r\nContent-Type: image/png",
                     "PNGDATA",
                 ),
-                (r#"Content-Disposition: form-data; name="user[empty]"; filename="""#, ""),
+                (
+                    r#"Content-Disposition: form-data; name="user[empty]"; filename="""#,
+                    "",
+                ),
                 (r#"Content-Disposition: form-data; name="tags[]""#, "a"),
                 (r#"Content-Disposition: form-data; name="tags[]""#, "b"),
             ],
         );
         let mut headers = HeaderMap::new();
-        headers.insert(header::CONTENT_TYPE, format!("multipart/form-data; boundary={boundary}").parse().unwrap());
-        let parsed = parse(&Method::POST, &headers, Body::from(body), None).await.unwrap();
+        headers.insert(
+            header::CONTENT_TYPE,
+            format!("multipart/form-data; boundary={boundary}")
+                .parse()
+                .unwrap(),
+        );
+        let parsed = parse(&Method::POST, &headers, Body::from(body), None)
+            .await
+            .unwrap();
         let params = parsed.params.unwrap();
         assert_eq!(params.str("_method"), Some("patch"));
         let user = params.get("user").unwrap();
@@ -519,22 +625,49 @@ mod tests {
     async fn multipart_parses_a_body_that_arrives_whole_after_a_pending_poll() {
         let body = multipart_body("B", &[(r#"Content-Disposition: form-data; name="a""#, "x")]);
         let mut headers = HeaderMap::new();
-        headers.insert(header::CONTENT_TYPE, "multipart/form-data; boundary=B".parse().unwrap());
-        let parsed = parse(&Method::POST, &headers, late_body(body), None).await.unwrap();
+        headers.insert(
+            header::CONTENT_TYPE,
+            "multipart/form-data; boundary=B".parse().unwrap(),
+        );
+        let parsed = parse(&Method::POST, &headers, late_body(body), None)
+            .await
+            .unwrap();
         assert_eq!(parsed.params.unwrap().str("a"), Some("x"));
 
         // DiskController's file-count limit stays a limit, not a parse error.
-        let part = "--B\r\nContent-Disposition: form-data; name=\"a[]\"; filename=\"\"\r\n\r\nx\r\n";
+        let part =
+            "--B\r\nContent-Disposition: form-data; name=\"a[]\"; filename=\"\"\r\n\r\nx\r\n";
         let body = format!("{}--B--\r\n", part.repeat(MULTIPART_FILE_LIMIT + 1)).into_bytes();
-        let parsed = parse_multipart(late_body(body), "B".into(), None, MultipartPolicy::Disk, &MultipartFileLimits::default()).await.unwrap();
-        assert!(matches!(parsed.params, Err(ParamError::Limit(_))), "{:?}", parsed.params);
+        let parsed = parse_multipart(
+            late_body(body),
+            "B".into(),
+            None,
+            MultipartPolicy::Disk,
+            &MultipartFileLimits::default(),
+        )
+        .await
+        .unwrap();
+        assert!(
+            matches!(parsed.params, Err(ParamError::Limit(_))),
+            "{:?}",
+            parsed.params
+        );
     }
 
     #[tokio::test]
     async fn multipart_size_limit() {
-        let body = multipart_body("B", &[(r#"Content-Disposition: form-data; name="f"; filename="x""#, &"x".repeat(1000))]);
+        let body = multipart_body(
+            "B",
+            &[(
+                r#"Content-Disposition: form-data; name="f"; filename="x""#,
+                &"x".repeat(1000),
+            )],
+        );
         let mut headers = HeaderMap::new();
-        headers.insert(header::CONTENT_TYPE, "multipart/form-data; boundary=B".parse().unwrap());
+        headers.insert(
+            header::CONTENT_TYPE,
+            "multipart/form-data; boundary=B".parse().unwrap(),
+        );
         let result = parse(&Method::POST, &headers, Body::from(body), Some(100)).await;
         assert!(matches!(result, Err(BodyError::TooLarge)));
     }
@@ -543,12 +676,21 @@ mod tests {
     async fn multipart_text_fields_are_capped_together() {
         let half = "x".repeat(MULTIPART_TEXT_LIMIT / 2);
         let mut headers = HeaderMap::new();
-        headers.insert(header::CONTENT_TYPE, "multipart/form-data; boundary=B".parse().unwrap());
+        headers.insert(
+            header::CONTENT_TYPE,
+            "multipart/form-data; boundary=B".parse().unwrap(),
+        );
         let field = r#"Content-Disposition: form-data; name="a[]""#;
         let file = r#"Content-Disposition: form-data; name="f"; filename="x""#;
 
         let fits = multipart_body("B", &[(field, &half), (field, &half), (file, &half)]);
-        assert!(parse(&Method::POST, &headers, Body::from(fits), None).await.unwrap().params.is_ok());
+        assert!(
+            parse(&Method::POST, &headers, Body::from(fits), None)
+                .await
+                .unwrap()
+                .params
+                .is_ok()
+        );
         let over = multipart_body("B", &[(field, &half), (field, &half), (field, "x")]);
         let result = parse(&Method::POST, &headers, Body::from(over), None).await;
         assert!(matches!(result, Err(BodyError::TooLarge)));
@@ -557,27 +699,55 @@ mod tests {
     #[tokio::test]
     async fn forms_json_and_raw_bodies() {
         let mut headers = HeaderMap::new();
-        headers.insert(header::CONTENT_TYPE, "application/x-www-form-urlencoded".parse().unwrap());
-        let parsed = parse(&Method::POST, &headers, Body::from("a[b]=1&c=2"), None).await.unwrap();
-        assert_eq!(parsed.params.unwrap().to_json(), serde_json::json!({"a": {"b": "1"}, "c": "2"}));
+        headers.insert(
+            header::CONTENT_TYPE,
+            "application/x-www-form-urlencoded".parse().unwrap(),
+        );
+        let parsed = parse(&Method::POST, &headers, Body::from("a[b]=1&c=2"), None)
+            .await
+            .unwrap();
+        assert_eq!(
+            parsed.params.unwrap().to_json(),
+            serde_json::json!({"a": {"b": "1"}, "c": "2"})
+        );
         assert_eq!(parsed.raw.as_ref(), b"a[b]=1&c=2");
 
         headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
-        let parsed = parse(&Method::POST, &headers, Body::from(r#"{"url":"x"}"#), None).await.unwrap();
-        assert_eq!(parsed.params.unwrap().to_json(), serde_json::json!({"url": "x"}));
+        let parsed = parse(&Method::POST, &headers, Body::from(r#"{"url":"x"}"#), None)
+            .await
+            .unwrap();
+        assert_eq!(
+            parsed.params.unwrap().to_json(),
+            serde_json::json!({"url": "x"})
+        );
 
         headers.insert(header::CONTENT_TYPE, "text/plain".parse().unwrap());
-        let parsed = parse(&Method::POST, &headers, Body::from("Hello!"), None).await.unwrap();
+        let parsed = parse(&Method::POST, &headers, Body::from("Hello!"), None)
+            .await
+            .unwrap();
         assert!(parsed.params.unwrap().is_empty());
         assert_eq!(parsed.raw.as_ref(), b"Hello!");
 
         // A POST without a content type is parsed as a form (Rack's form_data?).
-        let parsed = parse(&Method::POST, &HeaderMap::new(), Body::from("Hello!"), None).await.unwrap();
-        assert_eq!(parsed.params.unwrap().to_json(), serde_json::json!({"Hello!": null}));
-        let parsed = parse(&Method::PUT, &HeaderMap::new(), Body::from("Hello!"), None).await.unwrap();
+        let parsed = parse(&Method::POST, &HeaderMap::new(), Body::from("Hello!"), None)
+            .await
+            .unwrap();
+        assert_eq!(
+            parsed.params.unwrap().to_json(),
+            serde_json::json!({"Hello!": null})
+        );
+        let parsed = parse(&Method::PUT, &HeaderMap::new(), Body::from("Hello!"), None)
+            .await
+            .unwrap();
         assert!(parsed.params.unwrap().is_empty());
 
-        let result = parse(&Method::POST, &HeaderMap::new(), Body::from("x".repeat(20)), Some(10)).await;
+        let result = parse(
+            &Method::POST,
+            &HeaderMap::new(),
+            Body::from("x".repeat(20)),
+            Some(10),
+        )
+        .await;
         assert!(matches!(result, Err(BodyError::TooLarge)));
     }
 }

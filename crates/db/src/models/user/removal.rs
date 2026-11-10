@@ -19,11 +19,20 @@ impl User {
             use crate::callbacks::Phase;
             let phases: &[Phase] = match phase {
                 DependencyPhase::BeforeDestroy => &[Phase::UserHuddles],
-                DependencyPhase::Connections => &[Phase::UserGoogleAccount, Phase::UserCalendarMeetingCache,
-                    Phase::UserGoogleIdentity, Phase::UserGithubAccount, Phase::UserFizzyAccount,
-                    Phase::UserSlackConnection, Phase::UserSlackImports, Phase::UserEventCalendarEntries],
+                DependencyPhase::Connections => &[
+                    Phase::UserGoogleAccount,
+                    Phase::UserCalendarMeetingCache,
+                    Phase::UserGoogleIdentity,
+                    Phase::UserGithubAccount,
+                    Phase::UserFizzyAccount,
+                    Phase::UserSlackConnection,
+                    Phase::UserSlackImports,
+                    Phase::UserEventCalendarEntries,
+                ],
             };
-            for &phase in phases { tx.model_callback(phase, user.id)?; }
+            for &phase in phases {
+                tx.model_callback(phase, user.id)?;
+            }
             Ok(())
         })
     }

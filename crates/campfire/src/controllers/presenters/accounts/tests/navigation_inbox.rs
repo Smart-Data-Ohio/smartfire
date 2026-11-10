@@ -84,7 +84,14 @@ async fn inbox_reader_excludes_other_owners_and_revoked_message_sources() {
     );
     let mut member = test.browser("198.51.100.142");
     member.sign_in(&test.label("emails.kevin")).await;
-    let inbox = member.request(axum::http::Method::GET, "/activity?type=agents", &[("accept", "application/json")], None).await;
+    let inbox = member
+        .request(
+            axum::http::Method::GET,
+            "/activity?type=agents",
+            &[("accept", "application/json")],
+            None,
+        )
+        .await;
     assert_eq!(inbox.status, StatusCode::OK, "{}", inbox.text());
     assert_eq!(inbox.header("cache-control"), Some("no-store"));
     assert_eq!(inbox.header("pragma"), Some("no-cache"));

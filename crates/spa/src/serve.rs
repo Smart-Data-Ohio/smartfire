@@ -38,7 +38,10 @@ pub fn file(path: &str, accept_encoding: Option<&str>) -> Option<Served> {
 }
 
 pub(crate) fn find(files: &'static [File], path: &str) -> Option<&'static File> {
-    files.binary_search_by(|file| file.path.cmp(path)).ok().map(|index| &files[index])
+    files
+        .binary_search_by(|file| file.path.cmp(path))
+        .ok()
+        .map(|index| &files[index])
 }
 
 /// Brotli, then gzip, then the file itself; a client's higher q-value wins over that order.
@@ -46,14 +49,24 @@ pub(crate) fn negotiate(file: &'static File, accept_encoding: Option<&str>) -> S
     let accepted = parse(accept_encoding.unwrap_or(""));
     let mut best: Option<(f32, &'static str, &'static [u8])> = None;
     for (coding, body) in [("br", file.br), ("gzip", file.gz)] {
-        let (Some(body), q) = (body, quality(&accepted, coding)) else { continue };
+        let (Some(body), q) = (body, quality(&accepted, coding)) else {
+            continue;
+        };
         if q > 0.0 && best.is_none_or(|(best_q, _, _)| q > best_q) {
             best = Some((q, coding, body));
         }
     }
     match best {
-        Some((_, coding, body)) => Served { file, content_encoding: Some(coding), body },
-        None => Served { file, content_encoding: None, body: file.identity },
+        Some((_, coding, body)) => Served {
+            file,
+            content_encoding: Some(coding),
+            body,
+        },
+        None => Served {
+            file,
+            content_encoding: None,
+            body: file.identity,
+        },
     }
 }
 
@@ -70,11 +83,18 @@ fn parse(header: &str) -> Vec<(String, f32)> {
             let q = parts
                 .filter_map(|param| {
                     let (name, value) = param.split_once('=')?;
-                    name.trim().eq_ignore_ascii_case("q").then(|| value.trim().parse::<f32>().ok()).flatten()
+                    name.trim()
+                        .eq_ignore_ascii_case("q")
+                        .then(|| value.trim().parse::<f32>().ok())
+                        .flatten()
                 })
                 .next()
                 .unwrap_or(1.0);
-            let coding = if coding == "x-gzip" { "gzip".to_string() } else { coding };
+            let coding = if coding == "x-gzip" {
+                "gzip".to_string()
+            } else {
+                coding
+            };
             Some((coding, q))
         })
         .collect()

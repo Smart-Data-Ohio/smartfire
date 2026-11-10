@@ -216,7 +216,9 @@ async fn google_connection_without_calendar_stores_grant_without_audit_or_jobs()
     );
     callback(&mut b, &state).await;
     assert!(
-        b.boot_flash().await["message"].as_str().unwrap_or("")
+        b.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
             .contains("Calendar permission was not granted. Reconnect to publish events.")
     );
     assert!(
@@ -454,7 +456,9 @@ async fn google_connection_failed_exchanges_and_invalid_id_tokens_never_store_gr
         Some("http://campfire.test/app/settings/integrations")
     );
     assert!(
-        b.boot_flash().await["message"].as_str().unwrap_or("")
+        b.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
             .contains("Google connection expired. Try again.")
     );
     callback(&mut b, &state).await;
@@ -489,7 +493,9 @@ async fn google_connection_failed_exchanges_and_invalid_id_tokens_never_store_gr
             Some("http://campfire.test/app/settings/integrations")
         );
         assert!(
-            b.boot_flash().await["message"].as_str().unwrap_or("")
+            b.boot_flash().await["message"]
+                .as_str()
+                .unwrap_or("")
                 .contains("Could not connect Google Calendar. Try again."),
             "rejection assertion: {case}"
         );
@@ -515,7 +521,9 @@ async fn google_connection_failed_exchanges_and_invalid_id_tokens_never_store_gr
         Some("http://campfire.test/app/settings/integrations")
     );
     assert!(
-        b.boot_flash().await["message"].as_str().unwrap_or("")
+        b.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
             .contains("Google Calendar connection was not approved.")
     );
     assert_eq!(r.calls.lock().unwrap().len(), before);
@@ -555,7 +563,9 @@ async fn google_connection_scope_retention_and_reconnect_clear_disconnected_reas
     assert!(!account.drive());
     assert!(account.access_token_expires_at.is_some());
     assert!(
-        b.boot_flash().await["message"].as_str().unwrap_or("")
+        b.boot_flash().await["message"]
+            .as_str()
+            .unwrap_or("")
             .contains("Google Calendar connected.")
     );
     let scopes = format!(
@@ -662,7 +672,9 @@ async fn google_connection_unreadable_disconnect_drops_cache_preserves_flags_and
             Some("http://campfire.test/users/me/profile")
         );
         assert!(
-            b.boot_flash().await["message"].as_str().unwrap_or("")
+            b.boot_flash().await["message"]
+                .as_str()
+                .unwrap_or("")
                 .contains("Google Calendar disconnected.")
         );
     }

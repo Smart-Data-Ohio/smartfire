@@ -15,9 +15,13 @@
 use std::sync::{Arc, LazyLock};
 
 use campfire_db::CachedStatements;
-use campfire_kit::{Ctx, Error, ExpiresIn, Freshness, Response, Result, SendOptions, StatusCode, halt, http::header};
+use campfire_kit::{
+    Ctx, Error, ExpiresIn, Freshness, Response, Result, SendOptions, StatusCode, halt, http::header,
+};
 use campfire_storage::file_server::{self, BodyPart};
-use campfire_storage::{Blob, Filename, Json, Staged, Storage, Variation, content_types, disk, paths};
+use campfire_storage::{
+    Blob, Filename, Json, Staged, Storage, Variation, content_types, disk, paths,
+};
 use rusqlite::params;
 use tokio::sync::Semaphore;
 
@@ -30,7 +34,8 @@ const SERVICE_URLS_EXPIRE_IN: i64 = 5 * 60;
 const HUNDRED_YEARS: u64 = 3_155_695_200;
 /// The most image and video jobs (variants, previews, analysis) that run at once.
 const MAX_MEDIA_JOBS: usize = 4;
-static MEDIA_PERMITS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(media_capacity())));
+static MEDIA_PERMITS: LazyLock<Arc<Semaphore>> =
+    LazyLock::new(|| Arc::new(Semaphore::new(media_capacity())));
 
 // Codec calls may not observe cancellation. Keep branding from occupying attachment slots.
 const MAX_BRANDING_JOBS: usize = 1;
@@ -65,7 +70,10 @@ pub mod test_hooks {
 
     /// Pause a request after loading its blob, before the authorization read.
     pub fn after_blob_lookup(key: String, hook: impl FnOnce() + Send + 'static) {
-        AFTER_BLOB_LOOKUP.lock().unwrap().push((key, Box::new(hook)));
+        AFTER_BLOB_LOOKUP
+            .lock()
+            .unwrap()
+            .push((key, Box::new(hook)));
     }
 
     pub(super) fn reached_blob_lookup(key: &str) {
@@ -81,7 +89,10 @@ pub mod test_hooks {
 
     /// Pause purge after its database commit, while the blob's file still exists.
     pub fn before_file_deletion(key: String, hook: impl FnOnce() + Send + 'static) {
-        BEFORE_FILE_DELETION.lock().unwrap().push((key, Box::new(hook)));
+        BEFORE_FILE_DELETION
+            .lock()
+            .unwrap()
+            .push((key, Box::new(hook)));
     }
 
     pub(super) fn reached_file_deletion(key: &str) {
@@ -98,7 +109,10 @@ pub mod test_hooks {
     /// Run `hook` once on the reader, after analysis loads blob `blob_id` and before it decides
     /// whether the blob is branding.
     pub fn between_analysis_reads(blob_id: i64, hook: impl FnOnce() + Send + 'static) {
-        BETWEEN_ANALYSIS_READS.lock().unwrap().push((blob_id, Box::new(hook)));
+        BETWEEN_ANALYSIS_READS
+            .lock()
+            .unwrap()
+            .push((blob_id, Box::new(hook)));
     }
 
     pub(super) fn reached_analysis_classification(blob_id: i64) {
@@ -121,15 +135,26 @@ pub async fn blobs_redirect(c: &mut Ctx) -> Result {
     c.verify_authenticity_token()?;
     let blob = set_blob(c).await?;
     if matches!(blob.metadata.get("private_media"), Some(Json::Bool(true)))
-        && crate::concerns::authenticated_by(c).skips_forgery_protection() {
+        && crate::concerns::authenticated_by(c).skips_forgery_protection()
+    {
         return proxy_blob(c, &blob);
     }
     c.expires_in(SERVICE_URLS_EXPIRE_IN as u64, ExpiresIn::default());
     let disposition = c.param_str("disposition").map(str::to_string);
     let url = blob_url(c, &blob, disposition.as_deref());
     let restricted = matches!(blob.metadata.get("private_media"), Some(Json::Bool(true)));
-    let response = c.redirect_to_with(&url, campfire_kit::Redirect { allow_other_host: true, ..Default::default() })?;
-    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
+    let response = c.redirect_to_with(
+        &url,
+        campfire_kit::Redirect {
+            allow_other_host: true,
+            ..Default::default()
+        },
+    )?;
+    Ok(if restricted {
+        response.header(header::CACHE_CONTROL, "private, no-store")
+    } else {
+        response
+    })
 }
 
 /// `ActiveStorage::Blobs::ProxyController#show`
@@ -141,16 +166,32 @@ pub async fn blobs_proxy(c: &mut Ctx) -> Result {
 
 fn proxy_blob(c: &mut Ctx, blob: &Blob) -> Result {
     let disposition = c.param_str("disposition").map(str::to_string);
-    if let Some(range) = c.request.header("range").filter(|r| !r.trim().is_empty()).map(str::to_string) {
+    if let Some(range) = c
+        .request
+        .header("range")
+        .filter(|r| !r.trim().is_empty())
+        .map(str::to_string)
+    {
         let response = send_blob_byte_range_data(c, blob, &range, disposition.as_deref())?;
-        return Ok(if matches!(blob.metadata.get("private_media"), Some(Json::Bool(true))) { response.header(header::CACHE_CONTROL, "private, no-store") } else { response });
+        return Ok(
+            if matches!(blob.metadata.get("private_media"), Some(Json::Bool(true))) {
+                response.header(header::CACHE_CONTROL, "private, no-store")
+            } else {
+                response
+            },
+        );
     }
     let restricted = matches!(blob.metadata.get("private_media"), Some(Json::Bool(true)));
     if !restricted && let Some(not_modified) = http_cache_forever(c) {
         return Ok(not_modified);
     }
-    let response = send_blob_stream(c, blob, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes");
-    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
+    let response =
+        send_blob_stream(c, blob, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes");
+    Ok(if restricted {
+        response.header(header::CACHE_CONTROL, "private, no-store")
+    } else {
+        response
+    })
 }
 
 // --- Representations -------------------------------------------------------------------------------
@@ -163,18 +204,34 @@ pub async fn representations_redirect(c: &mut Ctx) -> Result {
     let image = set_representation(c, blob).await?;
     if restricted && crate::concerns::authenticated_by(c).skips_forgery_protection() {
         let disposition = c.param_str("disposition").map(str::to_string);
-        let range = c.request.header("range").filter(|r| !r.trim().is_empty()).map(str::to_string);
+        let range = c
+            .request
+            .header("range")
+            .filter(|r| !r.trim().is_empty())
+            .map(str::to_string);
         let response = match range {
-            Some(range) => send_blob_byte_range_data(c, &image, &range, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes"),
-            None => send_blob_stream(c, &image, disposition.as_deref())?.header(header::ACCEPT_RANGES, "bytes"),
+            Some(range) => send_blob_byte_range_data(c, &image, &range, disposition.as_deref())?
+                .header(header::ACCEPT_RANGES, "bytes"),
+            None => send_blob_stream(c, &image, disposition.as_deref())?
+                .header(header::ACCEPT_RANGES, "bytes"),
         };
         return Ok(response.header(header::CACHE_CONTROL, "private, no-store"));
     }
     c.expires_in(SERVICE_URLS_EXPIRE_IN as u64, ExpiresIn::default());
     let disposition = c.param_str("disposition").map(str::to_string);
     let url = blob_url(c, &image, disposition.as_deref());
-    let response = c.redirect_to_with(&url, campfire_kit::Redirect { allow_other_host: true, ..Default::default() })?;
-    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
+    let response = c.redirect_to_with(
+        &url,
+        campfire_kit::Redirect {
+            allow_other_host: true,
+            ..Default::default()
+        },
+    )?;
+    Ok(if restricted {
+        response.header(header::CACHE_CONTROL, "private, no-store")
+    } else {
+        response
+    })
 }
 
 /// `ActiveStorage::Representations::ProxyController#show`
@@ -188,18 +245,28 @@ pub async fn representations_proxy(c: &mut Ctx) -> Result {
     }
     let disposition = c.param_str("disposition").map(str::to_string);
     let response = send_blob_stream(c, &image, disposition.as_deref())?;
-    Ok(if restricted { response.header(header::CACHE_CONTROL, "private, no-store") } else { response })
+    Ok(if restricted {
+        response.header(header::CACHE_CONTROL, "private, no-store")
+    } else {
+        response
+    })
 }
 
 /// `ActiveStorage::SetBlob#set_blob`: `Blob.find_signed!(params[:signed_blob_id] || params[:signed_id])`.
 /// A bad signature is `head :not_found`; a valid one for a missing blob is `RecordNotFound`.
 async fn set_blob(c: &mut Ctx) -> Result<Blob> {
-    let signed_id = c.param_str("signed_blob_id").or_else(|| c.param_str("signed_id")).unwrap_or("").to_string();
+    let signed_id = c
+        .param_str("signed_blob_id")
+        .or_else(|| c.param_str("signed_id"))
+        .unwrap_or("")
+        .to_string();
     let storage = c.app().storage.clone();
-    let Some(blob_id) = paths::verify_signed_blob_id(&*storage.verifier, &signed_id, c.now()) else {
+    let Some(blob_id) = paths::verify_signed_blob_id(&*storage.verifier, &signed_id, c.now())
+    else {
         return halt(head(StatusCode::NOT_FOUND));
     };
-    let mut blob = c.app()
+    let mut blob = c
+        .app()
         .db
         .read(move |conn| {
             let blob = Blob::find(conn, blob_id).map_err(storage_error)?;
@@ -269,42 +336,78 @@ pub async fn authorize_private_media(c: &mut Ctx, blob_id: i64) -> Result<bool> 
         }
         Ok(Some((restricted, unpublished, rooms, schedulers)))
     }).await.map_err(Error::internal)?.ok_or(Error::NotFound)?;
-    if !restricted && schedulers.is_empty() { return Ok(unpublished); }
+    if !restricted && schedulers.is_empty() {
+        return Ok(unpublished);
+    }
     let (user_id, verified) = if let Some(session) = find_session_by_cookie(c).await? {
         (session.user_id, session.two_factor_verified())
     } else if crate::concerns::bot_authentication(c).await?
-        || crate::concerns::agent_authentication(c).await? {
+        || crate::concerns::agent_authentication(c).await?
+    {
         (crate::concerns::require_current_user(c)?.id, true)
     } else {
         return Err(Error::NotFound);
     };
-    let room_scope = if crate::concerns::authenticated_by(c) == crate::concerns::AuthenticatedBy::BotReply {
-        Some(c.param_str("room_id").and_then(|room| room.parse::<i64>().ok()).ok_or(Error::NotFound)?)
-    } else {
-        None
-    };
-    let allowed = c.app().db.read_snapshot(move |conn| {
-        let user = campfire_db::User::find(conn, user_id)?;
-        if !user.is_active() || (!verified && user.requires_two_factor()) { return Ok(false); }
-        if schedulers.iter().any(|scheduler| *scheduler != user_id) { return Ok(false); }
-        if !restricted { return Ok(true); }
-        for (room, thread) in rooms {
-            let (thread_readable, private) = match thread {
-                Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
-                    Some(thread) => (thread.readable_by(conn, user_id)?, thread.visibility == campfire_db::channel_thread::ThreadVisibility::Private),
-                    None => (false, false),
-                },
-                None => (true, false),
-            };
-            if thread_readable && room_scope.is_none_or(|scope| scope == room)
-                && campfire_db::Room::find_for_user(conn, user_id, room)?.is_some()
-                && campfire_db::models::agent_access::capability_for_user(conn, user_id, if private { "read_messages" } else { "post_messages" }, room)? != Some(false) {
+    let room_scope =
+        if crate::concerns::authenticated_by(c) == crate::concerns::AuthenticatedBy::BotReply {
+            Some(
+                c.param_str("room_id")
+                    .and_then(|room| room.parse::<i64>().ok())
+                    .ok_or(Error::NotFound)?,
+            )
+        } else {
+            None
+        };
+    let allowed = c
+        .app()
+        .db
+        .read_snapshot(move |conn| {
+            let user = campfire_db::User::find(conn, user_id)?;
+            if !user.is_active() || (!verified && user.requires_two_factor()) {
+                return Ok(false);
+            }
+            if schedulers.iter().any(|scheduler| *scheduler != user_id) {
+                return Ok(false);
+            }
+            if !restricted {
                 return Ok(true);
             }
-        }
-        Ok(false)
-    }).await.map_err(Error::internal)?;
-    if !allowed { return Err(Error::NotFound); }
+            for (room, thread) in rooms {
+                let (thread_readable, private) = match thread {
+                    Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
+                        Some(thread) => (
+                            thread.readable_by(conn, user_id)?,
+                            thread.visibility
+                                == campfire_db::channel_thread::ThreadVisibility::Private,
+                        ),
+                        None => (false, false),
+                    },
+                    None => (true, false),
+                };
+                if thread_readable
+                    && room_scope.is_none_or(|scope| scope == room)
+                    && campfire_db::Room::find_for_user(conn, user_id, room)?.is_some()
+                    && campfire_db::models::agent_access::capability_for_user(
+                        conn,
+                        user_id,
+                        if private {
+                            "read_messages"
+                        } else {
+                            "post_messages"
+                        },
+                        room,
+                    )? != Some(false)
+                {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        })
+        .await
+        .map_err(Error::internal)?;
+    if !allowed {
+        return Err(Error::NotFound);
+    }
     Ok(true)
 }
 
@@ -327,10 +430,15 @@ pub async fn processed_representation(app: &App, blob: Blob, variation: Variatio
     if blob.is_previewable() {
         processed_preview(app, blob, variation).await
     } else if blob.is_variable() {
-        let variation = app.storage.variation_for(&blob, &variation).map_err(Error::internal)?;
+        let variation = app
+            .storage
+            .variation_for(&blob, &variation)
+            .map_err(Error::internal)?;
         processed_variant(app, blob, variation).await
     } else {
-        Err(Error::internal(campfire_storage::Error::Unrepresentable(blob.content_type().to_string())))
+        Err(Error::internal(campfire_storage::Error::Unrepresentable(
+            blob.content_type().to_string(),
+        )))
     }
 }
 
@@ -341,14 +449,20 @@ pub async fn processed_preview(app: &App, blob: Blob, transformations: Variation
     if transformations.is_empty() {
         return Ok(image);
     }
-    let variation = app.storage.variation_for(&image, &transformations).map_err(Error::internal)?;
+    let variation = app
+        .storage
+        .variation_for(&image, &transformations)
+        .map_err(Error::internal)?;
     processed_variant(app, image, variation).await
 }
 
 /// `VariantWithRecord#processed` for an already-defaulted variation: the existing variant, or
 /// one transformed off the writer and then recorded.
 async fn processed_variant(app: &App, blob: Blob, variation: Variation) -> Result<Blob> {
-    processed_variant_with(app, blob, variation, |storage, blob, variation| storage.transform_variant(blob, variation)).await
+    processed_variant_with(app, blob, variation, |storage, blob, variation| {
+        storage.transform_variant(blob, variation)
+    })
+    .await
 }
 
 pub async fn processed_variant_with(
@@ -459,13 +573,18 @@ async fn processed_variant_using<F: std::future::Future<Output = Result<Staged>>
                 .map_err(storage_db_error)?
                 .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
             let branding = !defer_analysis || branding_blob(conn, marker, &source)?;
-            match storage.record_variant(conn, &blob, &variation, &image, tx.now().jiff()).map_err(storage_error)? {
+            match storage
+                .record_variant(conn, &blob, &variation, &image, tx.now().jiff())
+                .map_err(storage_error)?
+            {
                 Some(mut recorded) => {
                     if branding {
                         mark_branding_blob(conn, marker, &mut recorded)?;
                     }
                     if defer_analysis {
-                        crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
+                        crate::controllers::presenters::attachments::enqueue_analysis(
+                            tx, &recorded,
+                        );
                     }
                     keep_after_commit(tx, image);
                     Ok(recorded)
@@ -493,26 +612,41 @@ async fn processed_variant_using<F: std::future::Future<Output = Result<Staged>>
 async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
     let storage = app.storage.clone();
     let source = blob.clone();
-    let existing = app.db.read(move |conn| storage.existing_preview_image(conn, &source).map_err(storage_error)).await;
+    let existing = app
+        .db
+        .read(move |conn| {
+            storage
+                .existing_preview_image(conn, &source)
+                .map_err(storage_error)
+        })
+        .await;
     if let Some(image) = existing.map_err(Error::internal)? {
         return Ok(image);
     }
 
     let storage = app.storage.clone();
     let source = blob.clone();
-    let image = process_media(move || storage.draw_preview_image(&source)).await?.defer_analysis();
+    let image = process_media(move || storage.draw_preview_image(&source))
+        .await?
+        .defer_analysis();
 
     let storage = app.storage.clone();
     app.db
         .write(move |tx| {
             let conn = tx.conn();
-            match storage.record_preview_image(conn, &blob, &image, tx.now().jiff()).map_err(storage_error)? {
+            match storage
+                .record_preview_image(conn, &blob, &image, tx.now().jiff())
+                .map_err(storage_error)?
+            {
                 Some(recorded) => {
                     crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
                     keep_after_commit(tx, image);
                     Ok(recorded)
                 }
-                None => storage.existing_preview_image(conn, &blob).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob")),
+                None => storage
+                    .existing_preview_image(conn, &blob)
+                    .map_err(storage_error)?
+                    .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob")),
             }
         })
         .await
@@ -537,24 +671,25 @@ async fn analyze_with(
     skip_analyzed: bool,
 ) -> anyhow::Result<Option<Blob>> {
     let marker = rails_compat::blob_branding::Marker::new(&app.secrets);
-    let classified = app
-        .db
-        .read(move |conn| {
-            let blob = Blob::find(conn, blob_id).map_err(storage_db_error)?;
-            #[cfg(feature = "test-support")]
-            test_hooks::reached_analysis_classification(blob_id);
-            Ok(match blob {
-                Some(blob) if skip_analyzed && blob.is_analyzed() => Some((blob, false)),
-                // A row purged since `find` stops analysis, as Rails discards a purged blob's job:
-                // its file may not be deleted yet, so nothing may open it.
-                Some(blob) => {
-                    branding_classification(conn, marker, &blob)?.map(|branding| (blob, branding))
-                }
-                None => None,
+    let classified =
+        app.db
+            .read(move |conn| {
+                let blob = Blob::find(conn, blob_id).map_err(storage_db_error)?;
+                #[cfg(feature = "test-support")]
+                test_hooks::reached_analysis_classification(blob_id);
+                Ok(match blob {
+                    Some(blob) if skip_analyzed && blob.is_analyzed() => Some((blob, false)),
+                    // A row purged since `find` stops analysis, as Rails discards a purged blob's job:
+                    // its file may not be deleted yet, so nothing may open it.
+                    Some(blob) => branding_classification(conn, marker, &blob)?
+                        .map(|branding| (blob, branding)),
+                    None => None,
+                })
             })
-        })
-        .await?;
-    let Some((blob, branding)) = classified else { return Ok(None) };
+            .await?;
+    let Some((blob, branding)) = classified else {
+        return Ok(None);
+    };
     if skip_analyzed && blob.is_analyzed() {
         return Ok(Some(blob));
     }
@@ -703,7 +838,9 @@ pub(crate) fn touch_attachment_records(
     {
         match record_type.as_str() {
             "Message" => campfire_db::Message::find(tx.conn(), record_id)?.touch(tx)?,
-            "ScheduledMessage" => campfire_db::ScheduledMessage::find(tx.conn(), record_id)?.touch(tx)?,
+            "ScheduledMessage" => {
+                campfire_db::ScheduledMessage::find(tx.conn(), record_id)?.touch(tx)?
+            }
             "User" => crate::controllers::presenters::accounts::touch(
                 tx.conn(),
                 "users",
@@ -733,18 +870,27 @@ fn storage_db_error(error: campfire_storage::Error) -> campfire_db::Error {
 }
 
 /// Uploads a file to storage for a blob whose row the caller saves next (see [`keep_after_commit`]).
-pub async fn stage_file(app: &App, path: std::path::PathBuf, filename: Filename, content_type: Option<String>) -> Result<Staged> {
+pub async fn stage_file(
+    app: &App,
+    path: std::path::PathBuf,
+    filename: Filename,
+    content_type: Option<String>,
+) -> Result<Staged> {
     let storage = app.storage.clone();
-    tokio::task::spawn_blocking(move || storage.stage_file(&path, filename, content_type.as_deref()))
-        .await
-        .map_err(Error::internal)?
-        .map_err(Error::internal)
+    tokio::task::spawn_blocking(move || {
+        storage.stage_file(&path, filename, content_type.as_deref())
+    })
+    .await
+    .map_err(Error::internal)?
+    .map_err(Error::internal)
 }
 
 /// Keeps a staged file once the write saving its row commits; a rollback drops it instead,
 /// which deletes the file. Ownership is finalized before fallible model callbacks.
 pub fn keep_after_commit(tx: &mut campfire_db::Tx<'_>, staged: Staged) {
-    tx.on_commit_success(move || { staged.keep(); });
+    tx.on_commit_success(move || {
+        staged.keep();
+    });
 }
 
 /// Runs libvips, ffmpeg or ffprobe work on the blocking pool, a few jobs at a time: each can take
@@ -818,7 +964,9 @@ async fn process_blocking_work<T: Send + 'static>(
 fn blob_url(c: &Ctx, blob: &Blob, disposition: Option<&str>) -> String {
     let storage = &c.app().storage;
     let content_type = content_types::for_serving(blob.content_type());
-    let disposition = content_types::forced_disposition(blob.content_type()).or(disposition).unwrap_or("inline");
+    let disposition = content_types::forced_disposition(blob.content_type())
+        .or(disposition)
+        .unwrap_or("inline");
     let expires_at = c.now() + jiff::SignedDuration::from_secs(SERVICE_URLS_EXPIRE_IN);
     let path = storage.service.url_path(
         &*storage.verifier,
@@ -834,7 +982,14 @@ fn blob_url(c: &Ctx, blob: &Blob, disposition: Option<&str>) -> String {
 /// `http_cache_forever(public: true)`: cache for 100 years, ETag on the full path, and a fixed
 /// Last-Modified. `Some(304)` when the client's copy is fresh.
 fn http_cache_forever(c: &mut Ctx) -> Option<Response> {
-    c.expires_in(HUNDRED_YEARS, ExpiresIn { public: true, immutable: true, ..ExpiresIn::default() });
+    c.expires_in(
+        HUNDRED_YEARS,
+        ExpiresIn {
+            public: true,
+            immutable: true,
+            ..ExpiresIn::default()
+        },
+    );
     let last_modified: jiff::Timestamp = "2011-01-01T00:00:00Z".parse().expect("valid timestamp");
     c.fresh_when(Freshness {
         etag: Some(c.request.fullpath()),
@@ -849,18 +1004,23 @@ fn http_cache_forever(c: &mut Ctx) -> Option<Response> {
 fn send_blob_stream(c: &mut Ctx, blob: &Blob, disposition: Option<&str>) -> Result {
     let storage = c.app().storage.clone();
     let path = storage.path_for(blob);
-    let disposition = content_types::forced_disposition(blob.content_type()).or(disposition).unwrap_or("inline");
+    let disposition = content_types::forced_disposition(blob.content_type())
+        .or(disposition)
+        .unwrap_or("inline");
     let mut response = if !path.is_file() {
         // `rescue ActiveStorage::FileNotFoundError`: expires_now, head :not_found.
         // send_stream sets image headers before download raises in Rails.
         c.expires_now();
-        c.send_data(bytes::Bytes::new(), SendOptions {
-            filename: Some(blob.filename.sanitized()),
-            content_type: Some(content_types::for_serving(blob.content_type()).to_string()),
-            disposition: Some(disposition.to_string()),
-            status: StatusCode::NOT_FOUND,
-            ..SendOptions::default()
-        })
+        c.send_data(
+            bytes::Bytes::new(),
+            SendOptions {
+                filename: Some(blob.filename.sanitized()),
+                content_type: Some(content_types::for_serving(blob.content_type()).to_string()),
+                disposition: Some(disposition.to_string()),
+                status: StatusCode::NOT_FOUND,
+                ..SendOptions::default()
+            },
+        )
     } else {
         c.send_file(
             &path,
@@ -879,7 +1039,12 @@ fn send_blob_stream(c: &mut Ctx, blob: &Blob, disposition: Option<&str>) -> Resu
 }
 
 /// `send_blob_byte_range_data(blob, range_header)`, with the same disposition as `send_blob_stream`.
-fn send_blob_byte_range_data(c: &mut Ctx, blob: &Blob, range: &str, disposition: Option<&str>) -> Result {
+fn send_blob_byte_range_data(
+    c: &mut Ctx,
+    blob: &Blob,
+    range: &str,
+    disposition: Option<&str>,
+) -> Result {
     let storage = c.app().storage.clone();
     let size = blob.byte_size.max(0) as u64;
     let ranges = match file_server::byte_ranges(Some(range), size) {
@@ -892,19 +1057,37 @@ fn send_blob_byte_range_data(c: &mut Ctx, blob: &Blob, range: &str, disposition:
     }
     let content_type_for_serving = content_types::for_serving(blob.content_type()).to_string();
     let (content_type, parts, content_range) = if let [(start, end)] = ranges[..] {
-        (content_type_for_serving, vec![BodyPart::File { path, start, end }], Some(format!("bytes {start}-{end}/{size}")))
+        (
+            content_type_for_serving,
+            vec![BodyPart::File { path, start, end }],
+            Some(format!("bytes {start}-{end}/{size}")),
+        )
     } else {
         let boundary = random_hex(16);
         let mut parts = Vec::new();
         for &(start, end) in &ranges {
-            let heading = format!("\r\n--{boundary}\r\nContent-Type: {content_type_for_serving}\r\nContent-Range: bytes {start}-{end}/{size}\r\n\r\n");
+            let heading = format!(
+                "\r\n--{boundary}\r\nContent-Type: {content_type_for_serving}\r\nContent-Range: bytes {start}-{end}/{size}\r\n\r\n"
+            );
             parts.push(BodyPart::Bytes(heading.into_bytes()));
-            parts.push(BodyPart::File { path: path.clone(), start, end });
+            parts.push(BodyPart::File {
+                path: path.clone(),
+                start,
+                end,
+            });
         }
-        parts.push(BodyPart::Bytes(format!("\r\n--{boundary}--\r\n").into_bytes()));
-        (format!("multipart/byteranges; boundary={boundary}"), parts, None)
+        parts.push(BodyPart::Bytes(
+            format!("\r\n--{boundary}--\r\n").into_bytes(),
+        ));
+        (
+            format!("multipart/byteranges; boundary={boundary}"),
+            parts,
+            None,
+        )
     };
-    let disposition = content_types::forced_disposition(blob.content_type()).or(disposition).unwrap_or("inline");
+    let disposition = content_types::forced_disposition(blob.content_type())
+        .or(disposition)
+        .unwrap_or("inline");
     let mut response = c.send_data(
         bytes::Bytes::new(),
         SendOptions {
@@ -931,11 +1114,17 @@ fn send_blob_byte_range_data(c: &mut Ctx, blob: &Blob, range: &str, disposition:
 fn parts_body(parts: Vec<BodyPart>) -> campfire_kit::Body {
     match <[BodyPart; 1]>::try_from(parts) {
         Ok([BodyPart::File { path, start, end }]) => {
-            campfire_kit::Body::File(campfire_kit::response::FileBody { path, offset: start, len: end - start + 1 })
+            campfire_kit::Body::File(campfire_kit::response::FileBody {
+                path,
+                offset: start,
+                len: end - start + 1,
+            })
         }
         Ok([BodyPart::Bytes(bytes)]) => campfire_kit::Body::Bytes(bytes.into()),
         Err(parts) if parts.is_empty() => campfire_kit::Body::Empty,
-        Err(parts) => campfire_kit::Body::Stream(axum::body::Body::from_stream(stream_parts(parts))),
+        Err(parts) => {
+            campfire_kit::Body::Stream(axum::body::Body::from_stream(stream_parts(parts)))
+        }
     }
 }
 
@@ -950,7 +1139,9 @@ fn parts_len(parts: &[BodyPart]) -> u64 {
 }
 
 /// Reads each part in turn, a chunk at a time.
-fn stream_parts(parts: Vec<BodyPart>) -> impl futures_util::Stream<Item = std::io::Result<bytes::Bytes>> + Send + 'static {
+fn stream_parts(
+    parts: Vec<BodyPart>,
+) -> impl futures_util::Stream<Item = std::io::Result<bytes::Bytes>> + Send + 'static {
     use tokio::io::{AsyncReadExt, AsyncSeekExt};
     const CHUNK: usize = 64 * 1024;
     let state = (parts.into_iter(), None::<tokio::io::Take<tokio::fs::File>>);
@@ -966,7 +1157,9 @@ fn stream_parts(parts: Vec<BodyPart>) -> impl futures_util::Stream<Item = std::i
             }
             match parts.next() {
                 None => return Ok(None),
-                Some(BodyPart::Bytes(bytes)) => return Ok(Some((bytes::Bytes::from(bytes), (parts, None)))),
+                Some(BodyPart::Bytes(bytes)) => {
+                    return Ok(Some((bytes::Bytes::from(bytes), (parts, None))));
+                }
                 Some(BodyPart::File { path, start, end }) => {
                     let mut file = tokio::fs::File::open(&path).await?;
                     file.seek(std::io::SeekFrom::Start(start)).await?;
@@ -982,14 +1175,35 @@ fn stream_parts(parts: Vec<BodyPart>) -> impl futures_util::Stream<Item = std::i
 /// `ActiveStorage::DiskController#show`, plus the initializer's `after_action` cache header.
 pub async fn disk_show(c: &mut Ctx) -> Result {
     let encoded = c.param_str("encoded_key").unwrap_or("");
-    let Some(key) = disk::decode_verified_key(&*c.app().storage.verifier, encoded, c.now()) else { return Ok(c.head(StatusCode::NOT_FOUND)); };
-    let blob_id = c.app().db.read(move |conn| {
-        use rusqlite::OptionalExtension;
-        Ok(conn.query_row("SELECT id FROM active_storage_blobs WHERE key=?", [key.key], |r| r.get::<_, i64>(0)).optional()?)
-    }).await.map_err(Error::internal)?.ok_or(Error::NotFound)?;
+    let Some(key) = disk::decode_verified_key(&*c.app().storage.verifier, encoded, c.now()) else {
+        return Ok(c.head(StatusCode::NOT_FOUND));
+    };
+    let blob_id = c
+        .app()
+        .db
+        .read(move |conn| {
+            use rusqlite::OptionalExtension;
+            Ok(conn
+                .query_row(
+                    "SELECT id FROM active_storage_blobs WHERE key=?",
+                    [key.key],
+                    |r| r.get::<_, i64>(0),
+                )
+                .optional()?)
+        })
+        .await
+        .map_err(Error::internal)?
+        .ok_or(Error::NotFound)?;
     let restricted = authorize_private_media(c, blob_id).await?;
     let response = disk_serve(c)?;
-    Ok(response.header(header::CACHE_CONTROL, if restricted { "private, no-store" } else { "max-age=3600, public" }))
+    Ok(response.header(
+        header::CACHE_CONTROL,
+        if restricted {
+            "private, no-store"
+        } else {
+            "max-age=3600, public"
+        },
+    ))
 }
 
 fn disk_serve(c: &mut Ctx) -> Result {
@@ -1003,7 +1217,12 @@ fn disk_serve(c: &mut Ctx) -> Result {
         range: c.request.header("range"),
         if_modified_since: c.request.header("if-modified-since"),
     };
-    let served = match file_server::serve_file(&request, &storage.service.path_for(&key.key), key.content_type.as_deref(), Some(&key.disposition)) {
+    let served = match file_server::serve_file(
+        &request,
+        &storage.service.path_for(&key.key),
+        key.content_type.as_deref(),
+        Some(&key.disposition),
+    ) {
         Ok(served) => served,
         Err(campfire_storage::Error::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => {
             return Ok(c.head(StatusCode::NOT_FOUND));
@@ -1058,9 +1277,10 @@ fn acceptable_content(c: &Ctx, token: &disk::DiskToken, body_length: u64) -> boo
     let content_length = if c.request.header("transfer-encoding").is_some() {
         i64::try_from(body_length).ok()
     } else {
-        c.request
-            .header("content-length")
-            .map_or_else(|| i64::try_from(body_length).ok(), |length| length.trim().parse::<i64>().ok())
+        c.request.header("content-length").map_or_else(
+            || i64::try_from(body_length).ok(),
+            |length| length.trim().parse::<i64>().ok(),
+        )
     };
     token.content_type.as_deref().map(str::to_ascii_lowercase)
         == media_type.map(|m| m.to_ascii_lowercase())
@@ -1074,7 +1294,12 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
     c.verify_authenticity_token()?;
     require_active_storage_authentication(c).await?;
     // `params.expect(blob: [:filename, :byte_size, :checksum, :content_type, metadata: {}])`
-    let blob_params = c.params.require("blob")?.as_hash().cloned().ok_or_else(|| Error::ParameterMissing("blob".into()))?;
+    let blob_params = c
+        .params
+        .require("blob")?
+        .as_hash()
+        .cloned()
+        .ok_or_else(|| Error::ParameterMissing("blob".into()))?;
     // Strings, and numbers as their text: Active Storage's JavaScript sends `byte_size` as a number.
     let text = |key: &str| {
         blob_params.get(key).and_then(|p| match p {
@@ -1083,7 +1308,10 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
             _ => None,
         })
     };
-    let (Some(filename), Some(checksum)) = (text("filename").filter(|f| !f.is_empty()), text("checksum").filter(|c| !c.is_empty())) else {
+    let (Some(filename), Some(checksum)) = (
+        text("filename").filter(|f| !f.is_empty()),
+        text("checksum").filter(|c| !c.is_empty()),
+    ) else {
         return Err(Error::Status(StatusCode::UNPROCESSABLE_ENTITY));
     };
     let Some(byte_size) = text("byte_size").and_then(|s| crate::concerns::cast_integer(&s)) else {
@@ -1095,9 +1323,22 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
         None => Json::object(),
     };
 
-    let upload = create_direct_upload(c, filename, byte_size, checksum, content_type.clone(), metadata).await?;
+    let upload = create_direct_upload(
+        c,
+        filename,
+        byte_size,
+        checksum,
+        content_type.clone(),
+        metadata,
+    )
+    .await?;
     let url = c.url_for(&upload.path);
-    let json = direct_upload_json(&upload.blob, &upload.signed_id, &url, content_type.as_deref());
+    let json = direct_upload_json(
+        &upload.blob,
+        &upload.signed_id,
+        &url,
+        content_type.as_deref(),
+    );
     Ok(c.render_as(StatusCode::OK, campfire_kit::response::JSON_UTF8, json))
 }
 
@@ -1120,15 +1361,21 @@ pub async fn create_direct_upload(
 ) -> Result<DirectUpload> {
     let uploader_id = match crate::concerns::current_user(c) {
         Some(user) => user.id,
-        None => find_session_by_cookie(c).await?
-            .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?.user_id,
+        None => {
+            find_session_by_cookie(c)
+                .await?
+                .ok_or(Error::Status(StatusCode::UNAUTHORIZED))?
+                .user_id
+        }
     };
     let limit = upload_limit_bytes(c.app()).await?;
     if byte_size > limit {
         return halt(upload_limit_response(c, limit)?);
     }
     if let Json::Object(entries) = &mut metadata {
-        entries.retain(|(key, _)| !key.starts_with("branding") && !key.starts_with("emoji_") && !key.starts_with("klipy_"));
+        entries.retain(|(key, _)| {
+            !key.starts_with("branding") && !key.starts_with("emoji_") && !key.starts_with("klipy_")
+        });
     }
     metadata.set("uploader_id", Json::Int(uploader_id));
     let storage = c.app().storage.clone();
@@ -1159,12 +1406,15 @@ pub async fn create_direct_upload(
         &checksum,
     );
     let signed_id = paths::signed_blob_id(&*storage.verifier, blob.id, None);
-    Ok(DirectUpload { blob, signed_id, path })
+    Ok(DirectUpload {
+        blob,
+        signed_id,
+        path,
+    })
 }
 
 pub async fn upload_limit_bytes(app: &App) -> Result<i64> {
-    app
-        .db
+    app.db
         .read(|conn| {
             Ok(campfire_db::Account::first(conn)?.map_or(
                 campfire_db::models::account::DEFAULT_UPLOAD_LIMIT_BYTES,
@@ -1182,29 +1432,59 @@ pub async fn limit_multipart_uploads(
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     if request.method() == axum::http::Method::POST
-        && let Some(encoded) = request.uri().path().strip_prefix("/rails/active_storage/disk/") {
-        let encoded = percent_encoding::percent_decode_str(encoded.split('.').next().unwrap_or("")).decode_utf8_lossy();
-        if let Some(token) = disk::decode_verified_token(&*app.storage.verifier, &encoded, app.clock.now())
-            && let Ok(limit) = usize::try_from(token.content_length) {
-            request.extensions_mut().insert(campfire_kit::body::RequestBodyLimit(limit));
+        && let Some(encoded) = request
+            .uri()
+            .path()
+            .strip_prefix("/rails/active_storage/disk/")
+    {
+        let encoded = percent_encoding::percent_decode_str(encoded.split('.').next().unwrap_or(""))
+            .decode_utf8_lossy();
+        if let Some(token) =
+            disk::decode_verified_token(&*app.storage.verifier, &encoded, app.clock.now())
+            && let Ok(limit) = usize::try_from(token.content_length)
+        {
+            request
+                .extensions_mut()
+                .insert(campfire_kit::body::RequestBodyLimit(limit));
         }
     }
-    let media = campfire_kit::request::media_type(request.headers().get(header::CONTENT_TYPE).and_then(|value| value.to_str().ok()));
-    if matches!(media.as_deref(), Some("multipart/form-data" | "multipart/related" | "multipart/mixed"))
-        && !request.uri().path().starts_with("/rails/active_storage/disk/") {
+    let media = campfire_kit::request::media_type(
+        request
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok()),
+    );
+    if matches!(
+        media.as_deref(),
+        Some("multipart/form-data" | "multipart/related" | "multipart/mixed")
+    ) && !request
+        .uri()
+        .path()
+        .starts_with("/rails/active_storage/disk/")
+    {
         let limit = match upload_limit_bytes(&app).await {
             Ok(limit) => limit as u64,
             Err(error) => {
                 tracing::error!(%error, "reading multipart upload limit");
-                return axum::response::IntoResponse::into_response(StatusCode::INTERNAL_SERVER_ERROR);
+                return axum::response::IntoResponse::into_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                );
             }
         };
-        request.extensions_mut().insert(campfire_kit::body::MultipartFileLimits(vec![
-            ("attachment".into(), limit),
-            ("workspace_icon[image]".into(), 256 * 1024),
-            ("account[logo]".into(), campfire_storage::branding::MAX_BYTES),
-            ("account[banner]".into(), campfire_storage::branding::MAX_BYTES),
-        ]));
+        request
+            .extensions_mut()
+            .insert(campfire_kit::body::MultipartFileLimits(vec![
+                ("attachment".into(), limit),
+                ("workspace_icon[image]".into(), 256 * 1024),
+                (
+                    "account[logo]".into(),
+                    campfire_storage::branding::MAX_BYTES,
+                ),
+                (
+                    "account[banner]".into(),
+                    campfire_storage::branding::MAX_BYTES,
+                ),
+            ]));
     }
     next.run(request).await
 }
@@ -1217,13 +1497,21 @@ fn upload_limit_response(c: &mut Ctx, limit: i64) -> Result<Response> {
         format!("{limit} bytes")
     };
     let message = format!("File exceeds the {size} upload limit.");
-    c.json(StatusCode::UNPROCESSABLE_ENTITY, &serde_json::json!({
-        "error": {"_tag": "Validation", "message": message, "fields": {"byteSize": [message]}}
-    }))
+    c.json(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        &serde_json::json!({
+            "error": {"_tag": "Validation", "message": message, "fields": {"byteSize": [message]}}
+        }),
+    )
 }
 
 /// `blob.as_json(root: false, methods: :signed_id).merge(direct_upload: { url:, headers: })`
-fn direct_upload_json(blob: &Blob, signed_id: &str, url: &str, content_type: Option<&str>) -> String {
+fn direct_upload_json(
+    blob: &Blob,
+    signed_id: &str,
+    url: &str,
+    content_type: Option<&str>,
+) -> String {
     let text = |s: Option<&str>| s.map_or(Json::Null, Json::from);
     Json::Object(vec![
         ("id".into(), Json::Int(blob.id)),
@@ -1234,13 +1522,19 @@ fn direct_upload_json(blob: &Blob, signed_id: &str, url: &str, content_type: Opt
         ("service_name".into(), blob.service_name.as_str().into()),
         ("byte_size".into(), Json::Int(blob.byte_size)),
         ("checksum".into(), text(blob.checksum.as_deref())),
-        ("created_at".into(), Json::String(json_time(&blob.created_at))),
+        (
+            "created_at".into(),
+            Json::String(json_time(&blob.created_at)),
+        ),
         ("signed_id".into(), signed_id.into()),
         (
             "direct_upload".into(),
             Json::Object(vec![
                 ("url".into(), url.into()),
-                ("headers".into(), Json::Object(vec![("Content-Type".into(), text(content_type))])),
+                (
+                    "headers".into(),
+                    Json::Object(vec![("Content-Type".into(), text(content_type))]),
+                ),
             ]),
         ),
     ])
@@ -1266,9 +1560,12 @@ async fn require_active_storage_authentication(c: &mut Ctx) -> Result<()> {
             return Ok(());
         }
         let user_id = session.user_id;
-        let allowed = c.app().db.read(move |conn| {
-            Ok(campfire_db::User::find(conn, user_id)?.requires_two_factor())
-        }).await.map_err(Error::internal)?;
+        let allowed = c
+            .app()
+            .db
+            .read(move |conn| Ok(campfire_db::User::find(conn, user_id)?.requires_two_factor()))
+            .await
+            .map_err(Error::internal)?;
         if !allowed {
             return Ok(());
         }
@@ -1347,12 +1644,18 @@ async fn delete_files(storage: Arc<Storage>, blob: Blob) -> anyhow::Result<()> {
         #[cfg(feature = "test-support")]
         test_hooks::reached_file_deletion(&blob.key);
         storage.delete_files(&blob)
-    }).await??;
+    })
+    .await??;
     Ok(())
 }
 
 /// Deletes the attachment row, returning its blob id.
-fn destroy_attachment(conn: &rusqlite::Connection, record_type: &str, record_id: i64, name: &str) -> campfire_db::Result<Option<i64>> {
+fn destroy_attachment(
+    conn: &rusqlite::Connection,
+    record_type: &str,
+    record_id: i64,
+    name: &str,
+) -> campfire_db::Result<Option<i64>> {
     let attachment: Option<(i64, i64)> = conn
         .query_row_cached(
             "SELECT id, blob_id FROM active_storage_attachments WHERE record_type = ?1 AND record_id = ?2 AND name = ?3 LIMIT 1",
@@ -1361,14 +1664,18 @@ fn destroy_attachment(conn: &rusqlite::Connection, record_type: &str, record_id:
         )
         .map(Some)
         .or_else(|error| if error == rusqlite::Error::QueryReturnedNoRows { Ok(None) } else { Err(error) })?;
-    let Some((id, blob_id)) = attachment else { return Ok(None) };
+    let Some((id, blob_id)) = attachment else {
+        return Ok(None);
+    };
     conn.execute_cached("DELETE FROM active_storage_attachments WHERE id = ?1", [id])?;
     Ok(Some(blob_id))
 }
 
 fn query_ids(conn: &rusqlite::Connection, sql: &str, id: i64) -> campfire_db::Result<Vec<i64>> {
     let mut statement = conn.prepare_cached(sql)?;
-    let ids = statement.query_map([id], |row| row.get(0))?.collect::<rusqlite::Result<Vec<i64>>>()?;
+    let ids = statement
+        .query_map([id], |row| row.get(0))?
+        .collect::<rusqlite::Result<Vec<i64>>>()?;
     Ok(ids)
 }
 
@@ -1386,7 +1693,9 @@ fn storage_error_to_kit(error: campfire_storage::Error) -> Error {
 fn random_hex(bytes: usize) -> String {
     use rand::Rng;
     let mut rng = rand::rng();
-    (0..bytes).map(|_| format!("{:02x}", rng.random::<u8>())).collect()
+    (0..bytes)
+        .map(|_| format!("{:02x}", rng.random::<u8>()))
+        .collect()
 }
 
 #[cfg(test)]
@@ -1400,22 +1709,45 @@ mod tests {
         let conn = campfire_db::Connection::open_in_memory().unwrap();
         conn.execute_batch(campfire_db::schema::SCHEMA_SQL).unwrap();
         let now = jiff::Timestamp::now();
-        let mut blob = campfire_storage::NewBlob::unfurl(b"image", Filename::new("image.gif"), Some("image/gif"), "local", false).insert(&conn, now).unwrap();
-        blob.metadata.set("klipy_id", Json::String("anything".into()));
+        let mut blob = campfire_storage::NewBlob::unfurl(
+            b"image",
+            Filename::new("image.gif"),
+            Some("image/gif"),
+            "local",
+            false,
+        )
+        .insert(&conn, now)
+        .unwrap();
+        blob.metadata
+            .set("klipy_id", Json::String("anything".into()));
         assert!(!verified_image_import(&verifier, &blob, now));
         blob.metadata.set(MARK_KEY, Json::String("forged".into()));
         assert!(!verified_image_import(&verifier, &blob, now));
-        let wrong_purpose = campfire_storage::Verifier::generate(&verifier, &Json::String(blob.key.clone()).encode(), "blob_key", None);
+        let wrong_purpose = campfire_storage::Verifier::generate(
+            &verifier,
+            &Json::String(blob.key.clone()).encode(),
+            "blob_key",
+            None,
+        );
         blob.metadata.set(MARK_KEY, Json::String(wrong_purpose));
         assert!(!verified_image_import(&verifier, &blob, now));
-        blob.metadata.set(MARK_KEY, Json::String(import_mark(&verifier, "another-blob")));
+        blob.metadata.set(
+            MARK_KEY,
+            Json::String(import_mark(&verifier, "another-blob")),
+        );
         assert!(!verified_image_import(&verifier, &blob, now));
-        blob.metadata.set(MARK_KEY, Json::String(import_mark(&verifier, &blob.key)));
+        blob.metadata
+            .set(MARK_KEY, Json::String(import_mark(&verifier, &blob.key)));
         for content_type in ["image/gif", "image/webp"] {
             blob.content_type = Some(content_type.into());
             assert!(verified_image_import(&verifier, &blob, now));
         }
-        for content_type in ["image/png", "image/jpeg", "video/mp4", "application/octet-stream"] {
+        for content_type in [
+            "image/png",
+            "image/jpeg",
+            "video/mp4",
+            "application/octet-stream",
+        ] {
             blob.content_type = Some(content_type.into());
             assert!(!verified_image_import(&verifier, &blob, now));
         }
@@ -1472,16 +1804,31 @@ mod tests {
         let marker =
             rails_compat::blob_branding::Marker::new(&rails_compat::Secrets::new("test-secret"));
         let new_blob = |name: &str, content_type: &str| {
-            NewBlob::unfurl(b"bytes", Filename::new(name), Some(content_type), "local", false)
-                .insert(&conn, now)
-                .unwrap()
+            NewBlob::unfurl(
+                b"bytes",
+                Filename::new(name),
+                Some(content_type),
+                "local",
+                false,
+            )
+            .insert(&conn, now)
+            .unwrap()
         };
         let original = new_blob("banner.mp4", "video/mp4");
         let preview = new_blob("banner.png", "image/png");
         let preview_variant = new_blob("banner.webp", "image/webp");
-        insert_attachment(&conn, "preview_image", "ActiveStorage::Blob", original.id, preview.id, now)
+        insert_attachment(
+            &conn,
+            "preview_image",
+            "ActiveStorage::Blob",
+            original.id,
+            preview.id,
+            now,
+        )
+        .unwrap();
+        let record = insert_variant_record(&conn, preview.id, "digest")
+            .unwrap()
             .unwrap();
-        let record = insert_variant_record(&conn, preview.id, "digest").unwrap().unwrap();
         insert_attachment(
             &conn,
             "image",
@@ -1497,13 +1844,22 @@ mod tests {
 
         insert_attachment(&conn, "banner", "Account", 1, original.id, now).unwrap();
         for blob in [&original, &preview, &preview_variant] {
-            assert_eq!(branding_classification(&conn, marker, blob).unwrap(), Some(true));
+            assert_eq!(
+                branding_classification(&conn, marker, blob).unwrap(),
+                Some(true)
+            );
         }
 
         let purged = new_blob("purged.png", "image/png");
-        conn.execute("DELETE FROM active_storage_blobs WHERE id = ?1", [purged.id])
-            .unwrap();
-        assert_eq!(branding_classification(&conn, marker, &purged).unwrap(), None);
+        conn.execute(
+            "DELETE FROM active_storage_blobs WHERE id = ?1",
+            [purged.id],
+        )
+        .unwrap();
+        assert_eq!(
+            branding_classification(&conn, marker, &purged).unwrap(),
+            None
+        );
     }
 
     #[test]
@@ -1606,27 +1962,54 @@ mod tests {
     #[tokio::test]
     async fn byte_ranges_are_not_read_into_memory() {
         let file = tempfile::NamedTempFile::new().unwrap();
-        std::fs::write(file.path(), (0..=255u8).cycle().take(200_000).collect::<Vec<u8>>()).unwrap();
+        std::fs::write(
+            file.path(),
+            (0..=255u8).cycle().take(200_000).collect::<Vec<u8>>(),
+        )
+        .unwrap();
         let path = file.path().to_path_buf();
-        let range = |start, end| BodyPart::File { path: path.clone(), start, end };
+        let range = |start, end| BodyPart::File {
+            path: path.clone(),
+            start,
+            end,
+        };
 
         match parts_body(vec![range(10, 199_999)]) {
             campfire_kit::Body::File(body) => assert_eq!((body.offset, body.len), (10, 199_990)),
             other => panic!("a single range should be a file body, got {other:?}"),
         }
 
-        let parts = vec![BodyPart::Bytes(b"<".to_vec()), range(0, 2), BodyPart::Bytes(b">".to_vec()), range(100_000, 170_000)];
+        let parts = vec![
+            BodyPart::Bytes(b"<".to_vec()),
+            range(0, 2),
+            BodyPart::Bytes(b">".to_vec()),
+            range(100_000, 170_000),
+        ];
         let length = parts_len(&parts);
-        let campfire_kit::Body::Stream(stream) = parts_body(parts) else { panic!("several ranges should stream") };
+        let campfire_kit::Body::Stream(stream) = parts_body(parts) else {
+            panic!("several ranges should stream")
+        };
         let streamed = axum::body::to_bytes(stream, usize::MAX).await.unwrap();
         let contents = std::fs::read(file.path()).unwrap();
-        assert_eq!(streamed, [b"<".as_slice(), &contents[0..3], b">", &contents[100_000..=170_000]].concat());
+        assert_eq!(
+            streamed,
+            [
+                b"<".as_slice(),
+                &contents[0..3],
+                b">",
+                &contents[100_000..=170_000]
+            ]
+            .concat()
+        );
         assert_eq!(streamed.len() as u64, length);
     }
 
     #[test]
     fn json_times_have_milliseconds() {
-        assert_eq!(json_time("2026-03-02 16:00:00.123456"), "2026-03-02T16:00:00.123Z");
+        assert_eq!(
+            json_time("2026-03-02 16:00:00.123456"),
+            "2026-03-02T16:00:00.123Z"
+        );
         assert_eq!(json_time("2026-03-02 16:00:00"), "2026-03-02T16:00:00.000Z");
     }
 }

@@ -9,16 +9,29 @@ use base64::Engine;
 use serde_json::Value;
 
 use super::*;
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, gzip_bomb, network, trickling_server_with_ready};
+use crate::integrations::test_support::{
+    FakeResolver, FakeServer, MappingDialer, Route, gzip_bomb, network, trickling_server_with_ready,
+};
 
 fn route(spec: &Value) -> Route {
     let s = |key: &str| spec[key].as_str().unwrap_or_default().to_string();
-    let mut route = Route::new(&s("method"), &s("host"), &s("path"), spec["status"].as_u64().unwrap() as u16);
+    let mut route = Route::new(
+        &s("method"),
+        &s("host"),
+        &s("path"),
+        spec["status"].as_u64().unwrap() as u16,
+    );
     route.headers = serde_json::from_value(spec["headers"].clone()).unwrap();
     let mut body = if let Some(b64) = spec["body_b64"].as_str() {
-        base64::engine::general_purpose::STANDARD.decode(b64).unwrap()
+        base64::engine::general_purpose::STANDARD
+            .decode(b64)
+            .unwrap()
     } else if let Some(repeat) = spec["body_repeat"].as_array() {
-        repeat[0].as_str().unwrap().repeat(repeat[1].as_u64().unwrap() as usize).into_bytes()
+        repeat[0]
+            .as_str()
+            .unwrap()
+            .repeat(repeat[1].as_u64().unwrap() as usize)
+            .into_bytes()
     } else {
         s("body").into_bytes()
     };
@@ -35,27 +48,56 @@ fn answers(spec: &Value) -> Vec<Vec<std::net::IpAddr>> {
     spec.as_array()
         .unwrap()
         .iter()
-        .map(|list| list.as_array().unwrap().iter().map(|ip| ip.as_str().unwrap().parse().unwrap()).collect())
+        .map(|list| {
+            list.as_array()
+                .unwrap()
+                .iter()
+                .map(|ip| ip.as_str().unwrap().parse().unwrap())
+                .collect()
+        })
         .collect()
 }
 
 #[tokio::test(flavor = "multi_thread")]
 async fn unfurls_like_the_reference() {
-    let spec: Value = serde_json::from_str(include_str!("../testdata/opengraph_cases.json")).unwrap();
-    let expected: Value = serde_json::from_str(include_str!("../testdata/opengraph_expected.json")).unwrap();
-    let server = FakeServer::start(spec["routes"].as_array().unwrap().iter().map(route).collect()).await;
-    let public: HashSet<std::net::IpAddr> =
-        spec["public_ips"].as_array().unwrap().iter().map(|ip| ip.as_str().unwrap().parse().unwrap()).collect();
+    let spec: Value =
+        serde_json::from_str(include_str!("../testdata/opengraph_cases.json")).unwrap();
+    let expected: Value =
+        serde_json::from_str(include_str!("../testdata/opengraph_expected.json")).unwrap();
+    let server = FakeServer::start(
+        spec["routes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(route)
+            .collect(),
+    )
+    .await;
+    let public: HashSet<std::net::IpAddr> = spec["public_ips"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|ip| ip.as_str().unwrap().parse().unwrap())
+        .collect();
 
     let mut failures = Vec::new();
-    for (case, expected) in spec["cases"].as_array().unwrap().iter().zip(expected.as_array().unwrap()) {
+    for (case, expected) in spec["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .zip(expected.as_array().unwrap())
+    {
         let name = case["name"].as_str().unwrap();
         assert_eq!(name, expected["name"].as_str().unwrap());
         let resolver = Arc::new(FakeResolver::default());
         for (host, list) in spec["hosts"].as_object().unwrap() {
             resolver.set(host, answers(list));
         }
-        let dialer = Arc::new(MappingDialer { public: public.clone(), to: server.addr, dialed: Mutex::new(Vec::new()) });
+        let dialer = Arc::new(MappingDialer {
+            public: public.clone(),
+            to: server.addr,
+            dialed: Mutex::new(Vec::new()),
+        });
         let net = network(resolver.clone(), dialer);
         let before = server.received().len();
 
@@ -78,8 +120,7 @@ async fn unfurls_like_the_reference() {
             })
             .collect();
         let actual = serde_json::json!({ "response": response, "lookups": resolver.lookups(), "requests": requests });
-        let wanted =
-            serde_json::json!({ "response": expected["response"], "lookups": expected["lookups"], "requests": expected["requests"] });
+        let wanted = serde_json::json!({ "response": expected["response"], "lookups": expected["lookups"], "requests": expected["requests"] });
         if actual != wanted {
             failures.push(format!("{name}:\n  expected {wanted}\n  actual   {actual}"));
         }
@@ -99,33 +140,65 @@ async fn unfurls_like_the_reference() {
 async fn unfurls_over_https() {
     let page = "<html><head><meta property=\"og:url\" content=\"https://example.com\"><meta property=\"og:title\" content=\"Hey!\"><meta property=\"og:description\" content=\"desc..\"><meta property=\"og:image\" content=\"https://example.com/image.png\"></head></html>";
     let server = FakeServer::start_tls(vec![
-        Route::new("GET", "www.example.com", "/", 200).header("Content-Type", "text/html").body(page),
+        Route::new("GET", "www.example.com", "/", 200)
+            .header("Content-Type", "text/html")
+            .body(page),
         Route::new("HEAD", "example.com", "/image.png", 200).header("Content-Type", "image/png"),
     ])
     .await;
-    let resolver = Arc::new(FakeResolver::new([("www.example.com", vec!["93.184.216.34"]), ("example.com", vec!["93.184.216.35"])]));
-    let public = HashSet::from(["93.184.216.34".parse().unwrap(), "93.184.216.35".parse().unwrap()]);
-    let dialer = Arc::new(MappingDialer { public, to: server.addr, dialed: Mutex::new(Vec::new()) });
+    let resolver = Arc::new(FakeResolver::new([
+        ("www.example.com", vec!["93.184.216.34"]),
+        ("example.com", vec!["93.184.216.35"]),
+    ]));
+    let public = HashSet::from([
+        "93.184.216.34".parse().unwrap(),
+        "93.184.216.35".parse().unwrap(),
+    ]);
+    let dialer = Arc::new(MappingDialer {
+        public,
+        to: server.addr,
+        dialed: Mutex::new(Vec::new()),
+    });
     let net = network(resolver, dialer.clone());
 
-    let Unfurl::Json(body) = unfurl(&net, "https://www.example.com").await.unwrap() else { panic!("no content") };
+    let Unfurl::Json(body) = unfurl(&net, "https://www.example.com").await.unwrap() else {
+        panic!("no content")
+    };
     assert_eq!(
         body,
         r#"{"title":"Hey!","url":"https://example.com","image":"https://example.com/image.png","description":"desc..","context_for_validation":{"context":null},"errors":{}}"#
     );
-    let dialed: Vec<String> = dialer.dialed.lock().unwrap().iter().map(|a| a.to_string()).collect();
+    let dialed: Vec<String> = dialer
+        .dialed
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|a| a.to_string())
+        .collect();
     assert_eq!(dialed, ["93.184.216.34:443", "93.184.216.35:443"]);
 
     // A certificate that doesn't verify is a failed fetch.
-    let untrusted = Network { tls: crate::net::tls_config(rustls::RootCertStore::empty()), ..net };
-    assert_eq!(unfurl(&untrusted, "https://www.example.com").await, Ok(Unfurl::NoContent));
+    let untrusted = Network {
+        tls: crate::net::tls_config(rustls::RootCertStore::empty()),
+        ..net
+    };
+    assert_eq!(
+        unfurl(&untrusted, "https://www.example.com").await,
+        Ok(Unfurl::NoContent)
+    );
 }
 
 /// www.example.com, at a fake public address that connects to `server`.
 fn network_to(server: std::net::SocketAddr) -> Network {
-    let resolver = Arc::new(FakeResolver::new([("www.example.com", vec!["93.184.216.34"])]));
-    let dialer =
-        Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server, dialed: Mutex::new(Vec::new()) });
+    let resolver = Arc::new(FakeResolver::new([(
+        "www.example.com",
+        vec!["93.184.216.34"],
+    )]));
+    let dialer = Arc::new(MappingDialer {
+        public: HashSet::from(["93.184.216.34".parse().unwrap()]),
+        to: server,
+        dialed: Mutex::new(Vec::new()),
+    });
     network(resolver, dialer)
 }
 
@@ -248,19 +321,33 @@ fn gives_up_on_a_trickling_page() {
 async fn ws15e_follows_relative_redirects() {
     let server = FakeServer::start_ws15e(vec![
         Route::new("GET", "www.example.com", "/start", 302).header("Location", "/final"),
-        Route::new("GET", "www.example.com", "/final", 200).header("Content-Type", "text/html").body("ok"),
+        Route::new("GET", "www.example.com", "/final", 200)
+            .header("Content-Type", "text/html")
+            .body("ok"),
     ])
     .await;
     let url = campfire_richtext::uri::parse("http://www.example.com/start").unwrap();
     assert_eq!(
-        fetch::fetch_document(&network_to(server.addr), &url, "93.184.216.34".parse().unwrap()).await.unwrap(),
+        fetch::fetch_document(
+            &network_to(server.addr),
+            &url,
+            "93.184.216.34".parse().unwrap()
+        )
+        .await
+        .unwrap(),
         Some(b"ok".to_vec())
     );
 }
 
 #[tokio::test]
 async fn ws15e_denies_missing_and_invalid_redirect_locations() {
-    for location in [None, Some(""), Some(" "), Some("http://bad host/"), Some("javascript:alert(1)")] {
+    for location in [
+        None,
+        Some(""),
+        Some(" "),
+        Some("http://bad host/"),
+        Some("javascript:alert(1)"),
+    ] {
         let mut route = Route::new("GET", "www.example.com", "/", 302);
         if let Some(location) = location {
             route = route.header("Location", location);
@@ -269,7 +356,12 @@ async fn ws15e_denies_missing_and_invalid_redirect_locations() {
         let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
         assert!(
             matches!(
-                fetch::fetch_document(&network_to(server.addr), &url, "93.184.216.34".parse().unwrap()).await,
+                fetch::fetch_document(
+                    &network_to(server.addr),
+                    &url,
+                    "93.184.216.34".parse().unwrap()
+                )
+                .await,
                 Err(fetch::FetchError::RedirectDenied)
             ),
             "{location:?}"
@@ -282,9 +374,12 @@ async fn ws15e_honors_zero_and_three_redirect_budgets() {
     let routes = (0..=4)
         .map(|i| {
             if i == 3 {
-                Route::new("GET", "www.example.com", &format!("/{i}"), 200).header("Content-Type", "text/html").body("ok")
+                Route::new("GET", "www.example.com", &format!("/{i}"), 200)
+                    .header("Content-Type", "text/html")
+                    .body("ok")
             } else {
-                Route::new("GET", "www.example.com", &format!("/{i}"), 302).header("Location", &format!("http://www.example.com/{}", i + 1))
+                Route::new("GET", "www.example.com", &format!("/{i}"), 302)
+                    .header("Location", &format!("http://www.example.com/{}", i + 1))
             }
         })
         .collect();
@@ -292,11 +387,25 @@ async fn ws15e_honors_zero_and_three_redirect_budgets() {
     let net = network_to(server.addr);
     let ip = "93.184.216.34".parse().unwrap();
     let start = campfire_richtext::uri::parse("http://www.example.com/0").unwrap();
-    let options = fetch::FetchOptions { max_redirects: 0, deadline: None };
-    assert!(matches!(fetch::fetch_document_with(&net, &start, ip, options).await, Err(fetch::FetchError::TooManyRedirects)));
+    let options = fetch::FetchOptions {
+        max_redirects: 0,
+        deadline: None,
+    };
+    assert!(matches!(
+        fetch::fetch_document_with(&net, &start, ip, options).await,
+        Err(fetch::FetchError::TooManyRedirects)
+    ));
     assert_eq!(server.received().len(), 1);
-    let options = fetch::FetchOptions { max_redirects: 3, deadline: None };
-    assert_eq!(fetch::fetch_document_with(&net, &start, ip, options).await.unwrap(), Some(b"ok".to_vec()));
+    let options = fetch::FetchOptions {
+        max_redirects: 3,
+        deadline: None,
+    };
+    assert_eq!(
+        fetch::fetch_document_with(&net, &start, ip, options)
+            .await
+            .unwrap(),
+        Some(b"ok".to_vec())
+    );
     assert_eq!(server.received().len(), 5);
 }
 
@@ -307,26 +416,44 @@ fn ws15e_deadline_covers_body_reads() {
     crate::integrations::test_support::with_paused_time("OpenGraph body-read deadline", async {
         let (server, ready) = trickling_server_with_ready(
             "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n",
-        ).await;
+        )
+        .await;
         let net = network_to(server);
         let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
         let deadline = Duration::from_millis(150);
-        let options = fetch::FetchOptions { max_redirects: 3, deadline: Some(deadline) };
+        let options = fetch::FetchOptions {
+            max_redirects: 3,
+            deadline: Some(deadline),
+        };
         let started = tokio::time::Instant::now();
-        let fetching = fetch::fetch_document_with(&net, &url, "93.184.216.34".parse().unwrap(), options);
+        let fetching =
+            fetch::fetch_document_with(&net, &url, "93.184.216.34".parse().unwrap(), options);
         tokio::pin!(fetching);
         tokio::select! {
             biased;
             outcome = &mut fetching => panic!("trickling body fetch finished before its deadline: {outcome:?}"),
             ready = ready => ready.expect("trickling server must send its first response byte"),
         }
-        assert_eq!(started.elapsed(), Duration::ZERO, "clock advanced during TCP setup");
+        assert_eq!(
+            started.elapsed(),
+            Duration::ZERO,
+            "clock advanced during TCP setup"
+        );
         tokio::time::advance(deadline - Duration::from_millis(1)).await;
         tokio::time::sleep_until(started + deadline - Duration::from_millis(1)).await;
-        assert!(fetching.as_mut().now_or_never().is_none(), "body fetch finished before 150 ms");
+        assert!(
+            fetching.as_mut().now_or_never().is_none(),
+            "body fetch finished before 150 ms"
+        );
         tokio::time::advance(Duration::from_millis(1)).await;
         tokio::time::sleep_until(started + deadline).await;
-        assert!(matches!(fetching.as_mut().now_or_never(), Some(Err(fetch::FetchError::Deadline))), "body fetch ignored its 150 ms deadline");
+        assert!(
+            matches!(
+                fetching.as_mut().now_or_never(),
+                Some(Err(fetch::FetchError::Deadline))
+            ),
+            "body fetch ignored its 150 ms deadline"
+        );
         assert_eq!(started.elapsed(), deadline);
     });
 }
@@ -334,40 +461,78 @@ fn ws15e_deadline_covers_body_reads() {
 #[tokio::test]
 async fn ws15e_pins_each_redirect_and_refuses_private_targets() {
     let server = FakeServer::start_ws15e(vec![
-        Route::new("GET", "www.example.com", "/", 302).header("Location", "http://cdn.example.com/image"),
-        Route::new("GET", "cdn.example.com", "/image", 200).header("Content-Type", "text/html").body("ok"),
-        Route::new("GET", "www.example.com", "/private", 302).header("Location", "http://2130706433/secret"),
-        Route::new("GET", "127.0.0.1", "/secret", 200).header("Content-Type", "text/html").body("secret"),
+        Route::new("GET", "www.example.com", "/", 302)
+            .header("Location", "http://cdn.example.com/image"),
+        Route::new("GET", "cdn.example.com", "/image", 200)
+            .header("Content-Type", "text/html")
+            .body("ok"),
+        Route::new("GET", "www.example.com", "/private", 302)
+            .header("Location", "http://2130706433/secret"),
+        Route::new("GET", "127.0.0.1", "/secret", 200)
+            .header("Content-Type", "text/html")
+            .body("secret"),
     ])
     .await;
-    let resolver = Arc::new(FakeResolver::new([("www.example.com", vec!["93.184.216.34"])]));
-    resolver.set("cdn.example.com", vec![vec!["93.184.216.35".parse().unwrap()], vec!["127.0.0.1".parse().unwrap()]]);
+    let resolver = Arc::new(FakeResolver::new([(
+        "www.example.com",
+        vec!["93.184.216.34"],
+    )]));
+    resolver.set(
+        "cdn.example.com",
+        vec![
+            vec!["93.184.216.35".parse().unwrap()],
+            vec!["127.0.0.1".parse().unwrap()],
+        ],
+    );
     let dialer = Arc::new(MappingDialer {
-        public: HashSet::from(["93.184.216.34".parse().unwrap(), "93.184.216.35".parse().unwrap()]),
+        public: HashSet::from([
+            "93.184.216.34".parse().unwrap(),
+            "93.184.216.35".parse().unwrap(),
+        ]),
         to: server.addr,
         dialed: Mutex::new(Vec::new()),
     });
     let net = network(resolver.clone(), dialer.clone());
     let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
-    assert_eq!(fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()).await.unwrap(), Some(b"ok".to_vec()));
+    assert_eq!(
+        fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap())
+            .await
+            .unwrap(),
+        Some(b"ok".to_vec())
+    );
     assert_eq!(resolver.lookups(), ["cdn.example.com"]);
-    let dialed: Vec<String> = dialer.dialed.lock().unwrap().iter().map(ToString::to_string).collect();
+    let dialed: Vec<String> = dialer
+        .dialed
+        .lock()
+        .unwrap()
+        .iter()
+        .map(ToString::to_string)
+        .collect();
     assert_eq!(dialed, ["93.184.216.34:80", "93.184.216.35:80"]);
     let url = campfire_richtext::uri::parse("http://www.example.com/private").unwrap();
-    assert!(matches!(fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()).await, Err(fetch::FetchError::Guard(_))));
+    assert!(matches!(
+        fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()).await,
+        Err(fetch::FetchError::Guard(_))
+    ));
     assert_eq!(server.received().len(), 3);
 }
 
 #[tokio::test]
 async fn ws15e_rejects_private_redirect_before_dialing() {
     let server = FakeServer::start_ws15e(vec![
-        Route::new("GET", "www.example.com", "/", 302).header("Location", "http://2130706433/secret"),
-        Route::new("GET", "2130706433", "/secret", 200).header("Content-Type", "text/html").body("secret"),
+        Route::new("GET", "www.example.com", "/", 302)
+            .header("Location", "http://2130706433/secret"),
+        Route::new("GET", "2130706433", "/secret", 200)
+            .header("Content-Type", "text/html")
+            .body("secret"),
     ])
     .await;
     let net = network_to(server.addr);
     let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
-    assert!(matches!(fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()).await, Err(fetch::FetchError::Guard(_))));
+    assert!(matches!(
+        fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()).await,
+        Err(fetch::FetchError::Guard(_))
+    ));
     assert_eq!(server.received().len(), 1);
 }
 
@@ -392,8 +557,17 @@ fn ws15e_retries_header_eof_once_unless_a_deadline_is_armed() {
                 }
             });
             let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
-            let options = fetch::FetchOptions { max_redirects: 3, deadline };
-            let result = fetch::fetch_document_with(&network_to(address), &url, "93.184.216.34".parse().unwrap(), options).await;
+            let options = fetch::FetchOptions {
+                max_redirects: 3,
+                deadline,
+            };
+            let result = fetch::fetch_document_with(
+                &network_to(address),
+                &url,
+                "93.184.216.34".parse().unwrap(),
+                options,
+            )
+            .await;
             if deadline.is_some() {
                 assert!(result.is_err());
                 assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 1);
@@ -410,18 +584,28 @@ fn ws15e_retries_header_eof_once_unless_a_deadline_is_armed() {
 async fn ws15e_composer_skips_github_and_fizzy_cards_without_dns() {
     let page = r#"<meta property="og:title" content="Title"><meta property="og:description" content="Description">"#;
     let server = FakeServer::start_ws15e(vec![
-        Route::new("GET", "github.com", "/acme/repo/pull/12", 200).header("Content-Type", "text/html").body(page),
-        Route::new("GET", "app.fizzy.do", "/account/cards/12", 200).header("Content-Type", "text/html").body(page),
+        Route::new("GET", "github.com", "/acme/repo/pull/12", 200)
+            .header("Content-Type", "text/html")
+            .body(page),
+        Route::new("GET", "app.fizzy.do", "/account/cards/12", 200)
+            .header("Content-Type", "text/html")
+            .body(page),
     ])
     .await;
-    let resolver = Arc::new(FakeResolver::new([("github.com", vec!["93.184.216.34"]), ("app.fizzy.do", vec!["93.184.216.34"])]));
+    let resolver = Arc::new(FakeResolver::new([
+        ("github.com", vec!["93.184.216.34"]),
+        ("app.fizzy.do", vec!["93.184.216.34"]),
+    ]));
     let dialer = Arc::new(MappingDialer {
         public: HashSet::from(["93.184.216.34".parse().unwrap()]),
         to: server.addr,
         dialed: Mutex::new(Vec::new()),
     });
     let net = network(resolver.clone(), dialer);
-    for url in ["https://github.com/acme/repo/pull/12", "https://app.fizzy.do/account/cards/12"] {
+    for url in [
+        "https://github.com/acme/repo/pull/12",
+        "https://app.fizzy.do/account/cards/12",
+    ] {
         // Plain transport to the fake server suffices to prove the skip; a TLS failure
         // would also return no content, but would still resolve and connect.
         assert_eq!(unfurl(&net, url).await.unwrap(), Unfurl::NoContent);

@@ -1,8 +1,5 @@
 //! Real bounded fetch jobs: TLS/HTTP, old root/reply frames, stale sibling claims and rollbacks.
-use super::{
-    comparison_support::{embed_groups},
-    quote_integration_tests::app_rows,
-};
+use super::{comparison_support::embed_groups, quote_integration_tests::app_rows};
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{
@@ -37,18 +34,13 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
 
         for path in [
             format!("/api/v1/rooms/{QUIET_CORNER}/messages"),
-            format!(
-                "/api/v1/threads/{}/messages",
-                group["thread_id"]
-            ),
+            format!("/api/v1/threads/{}/messages", group["thread_id"]),
         ] {
             let response = app.david().get(&path).await;
             assert_eq!(response.status, axum::http::StatusCode::OK);
             for id in group["old_ids"].as_array().unwrap() {
                 assert!(
-                    !response
-                        .text()
-                        .contains(&format!("\"id\":{id}")),
+                    !response.text().contains(&format!("\"id\":{id}")),
                     "old reference in {path}"
                 );
             }
@@ -262,7 +254,6 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                 .await
                 .unwrap();
         }
-
     }
     println!(
         "WS8bm2 older-embed jobs Rust: 20 real network jobs; 200 exact Rails frames; 20 deduplicated same-provider sibling jobs; 8 silent outer/savepoint rollbacks; flat consumer reads; no external network"

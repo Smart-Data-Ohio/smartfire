@@ -10,8 +10,8 @@ use campfire_db::models::activity_item::ActivityQuery;
 use campfire_db::{ActivityItem, Connection, Timestamp, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_runtime::concerns;
-use campfire_runtime::presenters::activity as presenter;
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::activity as presenter;
 
 use crate::dto;
 use crate::endpoints::{before_actions, body, now};
@@ -148,7 +148,9 @@ pub(crate) fn changed(
         Some(row) => items(conn, app, viewer, std::slice::from_ref(&row))?.pop(),
         None => None,
     };
-    if item.is_none() { return Ok(None); }
+    if item.is_none() {
+        return Ok(None);
+    }
     let unread = ActivityItem::unread_snapshot(conn, viewer.id, app.db.env().now())?;
     Ok(Some(api::ActivityItemChanged {
         item,

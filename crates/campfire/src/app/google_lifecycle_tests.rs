@@ -193,8 +193,6 @@ async fn google_lifecycle_matches_pinned_rails_state_jobs_and_remote_stop_order(
     println!("Pinned Rails Google lifecycle: 8 exercised; 0 skipped");
 }
 
-
-
 #[tokio::test]
 async fn google_user_deactivation_and_its_cleanup_jobs_rollback_on_late_enqueue_failure() {
     let v = vectors();
@@ -257,8 +255,12 @@ async fn google_user_deactivation_and_its_cleanup_jobs_rollback_on_late_enqueue_
 #[tokio::test]
 async fn google_disconnect_queue_rejection_rolls_back_entries_cache_links_and_snapshot() {
     let v = vectors();
-    let case = v["cases"].as_array().unwrap().iter()
-        .find(|case| case["spec"]["name"] == "disconnect_meeting").unwrap();
+    let case = v["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["spec"]["name"] == "disconnect_meeting")
+        .unwrap();
     let (a, client) = fixture(case).await;
     a.db().write(|tx| {
         tx.conn().execute("UPDATE events SET meet_link_requested=1,meet_link='https://meet.google.com/fixture-link' WHERE organizer_id=?", [DAVID])?;
@@ -303,8 +305,17 @@ async fn google_disconnect_queue_rejection_rolls_back_entries_cache_links_and_sn
     let before = snapshot(&a).await;
     assert_eq!(before["entries"].as_array().unwrap().len(), 2);
     assert!(!before["cache"].as_array().unwrap().is_empty());
-    let reply = b.write(Req::new(Method::DELETE, "/google/connection")).await;
+    let reply = b
+        .write(Req::new(Method::DELETE, "/google/connection"))
+        .await;
     assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(snapshot(&a).await, before, "rejected durable cleanup must roll back every source change");
-    assert!(client.calls.lock().unwrap().is_empty(), "remote stop follows the successful source transaction");
+    assert_eq!(
+        snapshot(&a).await,
+        before,
+        "rejected durable cleanup must roll back every source change"
+    );
+    assert!(
+        client.calls.lock().unwrap().is_empty(),
+        "remote stop follows the successful source transaction"
+    );
 }

@@ -10,64 +10,131 @@ fn blob_id(a: &TestApp, file: &api::DirectUpload) -> i64 {
 }
 
 async fn legacy_attachment_edit(thread: bool, grouped: bool) {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let file = upload(&mut david, "current.txt").await;
     let file_id = blob_id(&a, &file);
-    let message = a.db().write(move |tx| {
-        let thread_id = if thread {
-            Some(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-                room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
-            })?.id)
-        } else { None };
-        campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, thread_id,
-            markdown_source: Some("Original".into()),
-            attachment_blob_id: (!grouped).then_some(file_id),
-            attachment_blob_ids: if grouped { vec![file_id] } else { Vec::new() },
-            ..Default::default()
+    let message = a
+        .db()
+        .write(move |tx| {
+            let thread_id = if thread {
+                Some(
+                    campfire_db::ChannelThread::create(
+                        tx,
+                        campfire_db::NewChannelThread {
+                            room_id: ALL_TALK,
+                            creator_id: DAVID,
+                            ..Default::default()
+                        },
+                    )?
+                    .id,
+                )
+            } else {
+                None
+            };
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    thread_id,
+                    markdown_source: Some("Original".into()),
+                    attachment_blob_id: (!grouped).then_some(file_id),
+                    attachment_blob_ids: if grouped { vec![file_id] } else { Vec::new() },
+                    ..Default::default()
+                },
+            )
         })
-    }).await.unwrap();
+        .await
+        .unwrap();
     let base = message.thread_id.map_or_else(
         || format!("/rooms/{ALL_TALK}/messages"),
         |id| format!("/rooms/{ALL_TALK}/threads/{id}/messages"),
     );
     let path = format!("{base}/{}.json", message.id);
-    let reply = david.write(json_body(Method::PATCH, &path,
-        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed"}}))).await;
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed"}}),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
-    a.db().read(move |conn| {
-        let saved = campfire_db::Message::find(conn, message.id)?;
-        assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
-        assert_eq!(saved.attachments(conn)?.len(), 1);
-        assert!(saved.attachments(conn)?.iter().all(|(_, blob)| blob.id == file_id));
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            let saved = campfire_db::Message::find(conn, message.id)?;
+            assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
+            assert_eq!(saved.attachments(conn)?.len(), 1);
+            assert!(
+                saved
+                    .attachments(conn)?
+                    .iter()
+                    .all(|(_, blob)| blob.id == file_id)
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 
     a.db().write(move |tx| {
         tx.conn().execute("UPDATE active_storage_blobs SET metadata=json_set(metadata,'$.uploader_id',?) WHERE id=?", [KEVIN, file_id])?;
         Ok(())
     }).await.unwrap();
-    let reply = david.write(json_body(Method::PATCH, &path,
-        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed"}}))).await;
-    assert_eq!(reply.status, StatusCode::OK, "a current attachment keeps its original uploader: {}", reply.text());
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed"}}),
+        ))
+        .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::OK,
+        "a current attachment keeps its original uploader: {}",
+        reply.text()
+    );
 
-    a.db().write(move |tx| {
-        campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, attachment_blob_id: Some(file_id),
-            ..Default::default()
-        })?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    attachment_blob_id: Some(file_id),
+                    ..Default::default()
+                },
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let before = write_counts(&a).await;
-    let reply = david.write(json_body(Method::PATCH, &path,
-        &json!({"message": {"attachment": file.signed_id, "markdown_source": "Shared"}}))).await;
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"message": {"attachment": file.signed_id, "markdown_source": "Shared"}}),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     assert_eq!(write_counts(&a).await, before);
-    a.db().read(move |conn| {
-        assert_eq!(campfire_db::Message::find(conn, message.id)?.markdown_source.as_deref(), Some("Shared"));
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            assert_eq!(
+                campfire_db::Message::find(conn, message.id)?
+                    .markdown_source
+                    .as_deref(),
+                Some("Shared")
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -87,11 +154,19 @@ async fn grouped_files_round4_legacy_edit_accepts_current_grouped_attachment() {
 
 #[tokio::test]
 async fn grouped_files_round5_legacy_edit_retains_ten_grouped_files_and_text() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let mut files = Vec::new();
     for index in 0..10 {
-        files.push(upload(&mut david, &format!("retain-{index}.txt")).await.signed_id);
+        files.push(
+            upload(&mut david, &format!("retain-{index}.txt"))
+                .await
+                .signed_id,
+        );
     }
     let created = david.write(json_body(Method::POST,
         &format!("/api/v1/rooms/{ALL_TALK}/messages"),
@@ -99,29 +174,44 @@ async fn grouped_files_round5_legacy_edit_retains_ten_grouped_files_and_text() {
     assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
     let message: api::MessageDTO = parse(&created);
     let id = message.id;
-    let original = a.db().read(move |conn| campfire_db::Message::find(conn, id)?.attachments(conn)).await.unwrap();
+    let original = a
+        .db()
+        .read(move |conn| campfire_db::Message::find(conn, id)?.attachments(conn))
+        .await
+        .unwrap();
     let before = write_counts(&a).await;
-    let reply = david.write(json_body(Method::PATCH,
-        &format!("/rooms/{ALL_TALK}/messages/{id}.json"),
-        &json!({"message": {"attachment": files[0], "markdown_source": "Changed"}}))).await;
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/rooms/{ALL_TALK}/messages/{id}.json"),
+            &json!({"message": {"attachment": files[0], "markdown_source": "Changed"}}),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     assert_eq!(write_counts(&a).await, before);
     let read: api::MessageRead = parse(&david.send(get(&format!("/api/v1/messages/{id}"))).await);
     assert_eq!(read.message.markdown_source.as_deref(), Some("Changed"));
     assert_eq!(read.message.attachments, message.attachments);
-    a.db().read(move |conn| {
-        let saved = campfire_db::Message::find(conn, id)?;
-        assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
-        assert!(saved.edited_at.is_some());
-        assert_eq!(saved.attachments(conn)?, original);
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            let saved = campfire_db::Message::find(conn, id)?;
+            assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
+            assert!(saved.edited_at.is_some());
+            assert_eq!(saved.attachments(conn)?, original);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn grouped_files_round4_bot_edit_keeps_current_attachment() {
     use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let file = upload(&mut a.sign_in(DAVID).await, "bot-current.txt").await;
     let file_id = blob_id(&a, &file);
     let id = a.db().write(move |tx| {
@@ -131,21 +221,33 @@ async fn grouped_files_round4_bot_edit_keeps_current_attachment() {
             ..Default::default()
         })?.id)
     }).await.unwrap();
-    let reply = a.anonymous().send(json_body(Method::PATCH,
-        &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}"),
-        &json!({"attachment": file.signed_id}))).await;
+    let reply = a
+        .anonymous()
+        .send(json_body(
+            Method::PATCH,
+            &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}"),
+            &json!({"attachment": file.signed_id}),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    a.db().read(move |conn| {
-        let files = campfire_db::Message::find(conn, id)?.attachments(conn)?;
-        assert_eq!(files.len(), 1);
-        assert_eq!(files[0].1.id, file_id);
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            let files = campfire_db::Message::find(conn, id)?.attachments(conn)?;
+            assert_eq!(files.len(), 1);
+            assert_eq!(files[0].1.id, file_id);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 async fn legacy_attachment_edit_limit(thread: bool, bot: bool) {
     use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let mut files = Vec::new();
     for index in 0..10 {
@@ -155,10 +257,25 @@ async fn legacy_attachment_edit_limit(thread: bool, bot: bool) {
     let extra_id = blob_id(&a, &extra);
     let creator = if bot { BENDER } else { DAVID };
     let thread_id = if thread {
-        Some(a.db().write(|tx| Ok(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
-        })?.id)).await.unwrap())
-    } else { None };
+        Some(
+            a.db()
+                .write(|tx| {
+                    Ok(campfire_db::ChannelThread::create(
+                        tx,
+                        campfire_db::NewChannelThread {
+                            room_id: ALL_TALK,
+                            creator_id: DAVID,
+                            ..Default::default()
+                        },
+                    )?
+                    .id)
+                })
+                .await
+                .unwrap(),
+        )
+    } else {
+        None
+    };
     let create_path = thread_id.map_or_else(
         || format!("/api/v1/rooms/{ALL_TALK}/messages"),
         |id| format!("/api/v1/threads/{id}/messages"),
@@ -174,15 +291,31 @@ async fn legacy_attachment_edit_limit(thread: bool, bot: bool) {
             Ok(())
         }).await.unwrap();
     }
-    let path = if bot { format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}") }
-        else if let Some(thread_id) = thread_id { format!("/rooms/{ALL_TALK}/threads/{thread_id}/messages/{id}.json") }
-        else { format!("/rooms/{ALL_TALK}/messages/{id}.json") };
+    let path = if bot {
+        format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{id}")
+    } else if let Some(thread_id) = thread_id {
+        format!("/rooms/{ALL_TALK}/threads/{thread_id}/messages/{id}.json")
+    } else {
+        format!("/rooms/{ALL_TALK}/messages/{id}.json")
+    };
     let before = write_counts(&a).await;
-    let input = if bot { json!({"attachment": extra.signed_id}) }
-        else { json!({"message": {"attachment": extra.signed_id, "markdown_source": "Rejected"}}) };
+    let input = if bot {
+        json!({"attachment": extra.signed_id})
+    } else {
+        json!({"message": {"attachment": extra.signed_id, "markdown_source": "Rejected"}})
+    };
     let request = json_body(Method::PATCH, &path, &input);
-    let reply = if bot { a.anonymous().send(request).await } else { david.write(request).await };
-    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{path}: {}", reply.text());
+    let reply = if bot {
+        a.anonymous().send(request).await
+    } else {
+        david.write(request).await
+    };
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{path}: {}",
+        reply.text()
+    );
     assert!(reply.text().contains("10"), "{}", reply.text());
     assert_eq!(write_counts(&a).await, before);
     let read = david.send(get(&format!("/api/v1/messages/{id}"))).await;
@@ -190,24 +323,49 @@ async fn legacy_attachment_edit_limit(thread: bool, bot: bool) {
     let read: Value = parse(&read);
     assert_eq!(read["message"]["attachments"].as_array().unwrap().len(), 10);
     assert_eq!(read["message"]["markdownSource"], "Original");
-    a.db().read(move |conn| {
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [extra_id], |row| row.get::<_, i64>(0))?, 0);
-        Ok(())
-    }).await.unwrap();
-    a.db().write(move |tx| {
-        let files = campfire_db::Message::find(tx.conn(), id)?.attachments(tx.conn())?;
-        files.last().unwrap().0.delete(tx)
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?",
+                    [extra_id],
+                    |row| row.get::<_, i64>(0)
+                )?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    a.db()
+        .write(move |tx| {
+            let files = campfire_db::Message::find(tx.conn(), id)?.attachments(tx.conn())?;
+            files.last().unwrap().0.delete(tx)
+        })
+        .await
+        .unwrap();
     for _ in 0..2 {
         let request = json_body(Method::PATCH, &path, &input);
-        let reply = if bot { a.anonymous().send(request).await } else { david.write(request).await };
-        assert_eq!(reply.status, StatusCode::OK, "nine grouped files plus the legacy file: {}", reply.text());
-        a.db().read(move |conn| {
-            let files = campfire_db::Message::find(conn, id)?.attachments(conn)?;
-            assert_eq!(files.len(), 10);
-            assert_eq!(files.last().unwrap().1.id, extra_id);
-            Ok(())
-        }).await.unwrap();
+        let reply = if bot {
+            a.anonymous().send(request).await
+        } else {
+            david.write(request).await
+        };
+        assert_eq!(
+            reply.status,
+            StatusCode::OK,
+            "nine grouped files plus the legacy file: {}",
+            reply.text()
+        );
+        a.db()
+            .read(move |conn| {
+                let files = campfire_db::Message::find(conn, id)?.attachments(conn)?;
+                assert_eq!(files.len(), 10);
+                assert_eq!(files.last().unwrap().1.id, extra_id);
+                Ok(())
+            })
+            .await
+            .unwrap();
     }
 }
 
@@ -227,33 +385,66 @@ async fn grouped_files_round4_bot_edit_enforces_total_limit() {
 }
 
 async fn legacy_attachment_reuse(thread: bool, edit: bool) {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let foreign = upload(&mut a.sign_in(KEVIN).await, "foreign.txt").await;
     let used = upload(&mut david, "used.txt").await;
     let owned = upload(&mut david, "owned.txt").await;
     let used_id = blob_id(&a, &used);
-    let (thread_id, message_id) = a.db().write(move |tx| {
-        campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, attachment_blob_id: Some(used_id),
-            ..Default::default()
-        })?;
-        let thread_id = if thread {
-            Some(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-                room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
-            })?.id)
-        } else { None };
-        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, thread_id,
-            markdown_source: Some("Keep me".into()), ..Default::default()
-        })?;
-        Ok((thread_id, message.id))
-    }).await.unwrap();
+    let (thread_id, message_id) = a
+        .db()
+        .write(move |tx| {
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    attachment_blob_id: Some(used_id),
+                    ..Default::default()
+                },
+            )?;
+            let thread_id = if thread {
+                Some(
+                    campfire_db::ChannelThread::create(
+                        tx,
+                        campfire_db::NewChannelThread {
+                            room_id: ALL_TALK,
+                            creator_id: DAVID,
+                            ..Default::default()
+                        },
+                    )?
+                    .id,
+                )
+            } else {
+                None
+            };
+            let message = campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    thread_id,
+                    markdown_source: Some("Keep me".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((thread_id, message.id))
+        })
+        .await
+        .unwrap();
     let base = thread_id.map_or_else(
         || format!("/rooms/{ALL_TALK}/messages"),
         |id| format!("/rooms/{ALL_TALK}/threads/{id}/messages"),
     );
-    let path = if edit { format!("{base}/{message_id}") } else { base };
+    let path = if edit {
+        format!("{base}/{message_id}")
+    } else {
+        base
+    };
     let method = if edit { Method::PATCH } else { Method::POST };
     for file in [&foreign, &used] {
         let file_id = blob_id(&a, file);
@@ -262,25 +453,62 @@ async fn legacy_attachment_reuse(thread: bool, edit: bool) {
             .header("accept", if !edit && !thread { "text/vnd.turbo-stream.html" } else { "application/json" })
             .header("content-type", "application/json")
             .body(json!({"message": {"attachment": file.signed_id, "markdown_source": "Changed", "client_message_id": client}}).to_string())).await;
-        assert_eq!(reply.status, if !edit { StatusCode::CREATED } else { StatusCode::OK }, "{path}: {}", reply.text());
-        a.db().read(move |conn| {
-            let saved = campfire_db::Message::find_duplicate(conn, ALL_TALK, DAVID, &client)?.unwrap();
-            assert_eq!(saved.attachment(conn)?.unwrap().1.id, file_id);
-            assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
-            assert_eq!(saved.thread_id, thread_id);
-            if edit { assert_eq!(saved.id, message_id); }
-            Ok(())
-        }).await.unwrap();
+        assert_eq!(
+            reply.status,
+            if !edit {
+                StatusCode::CREATED
+            } else {
+                StatusCode::OK
+            },
+            "{path}: {}",
+            reply.text()
+        );
+        a.db()
+            .read(move |conn| {
+                let saved =
+                    campfire_db::Message::find_duplicate(conn, ALL_TALK, DAVID, &client)?.unwrap();
+                assert_eq!(saved.attachment(conn)?.unwrap().1.id, file_id);
+                assert_eq!(saved.markdown_source.as_deref(), Some("Changed"));
+                assert_eq!(saved.thread_id, thread_id);
+                if edit {
+                    assert_eq!(saved.id, message_id);
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
     }
-    let reply = david.write(Req::new(method, &path)
-        .header("accept", if !edit && !thread { "text/vnd.turbo-stream.html" } else { "application/json" })
-        .header("content-type", "application/json")
-        .body(json!({"message": {"attachment": owned.signed_id, "markdown_source": "Owned"}}).to_string())).await;
+    let reply = david
+        .write(
+            Req::new(method, &path)
+                .header(
+                    "accept",
+                    if !edit && !thread {
+                        "text/vnd.turbo-stream.html"
+                    } else {
+                        "application/json"
+                    },
+                )
+                .header("content-type", "application/json")
+                .body(
+                    json!({"message": {"attachment": owned.signed_id, "markdown_source": "Owned"}})
+                        .to_string(),
+                ),
+        )
+        .await;
     assert!(reply.status.is_success(), "{}", reply.text());
     let owned_id = blob_id(&a, &owned);
-    assert_eq!(a.db().read(move |conn| Ok(conn.query_row(
-        "SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [owned_id], |row| row.get::<_, i64>(0)
-    )?)).await.unwrap(), 1);
+    assert_eq!(
+        a.db()
+            .read(move |conn| Ok(conn.query_row(
+                "SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?",
+                [owned_id],
+                |row| row.get::<_, i64>(0)
+            )?))
+            .await
+            .unwrap(),
+        1
+    );
 }
 
 #[tokio::test]
@@ -306,7 +534,11 @@ async fn grouped_files_round3_legacy_thread_edits_reuse_signed_blobs() {
 async fn agent_attachment_reuse(bot_key: bool, thread: bool) {
     use crate::controllers::agent_http_tests::{AGENT, SECRET, initialize};
     use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     initialize(&a).await;
     a.db().write(|tx| {
         tx.conn().execute("INSERT INTO agent_grants(agent_id,capability,granted_by_id,created_at,updated_at) VALUES(?,'post_messages',?,?,?)",
@@ -322,22 +554,50 @@ async fn agent_attachment_reuse(bot_key: bool, thread: bool) {
             [BENDER, owned_id])?;
         Ok(())
     }).await.unwrap();
-    let path = if bot_key { format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages") }
-        else { format!("/rooms/{ALL_TALK}/agents/messages") };
+    let path = if bot_key {
+        format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages")
+    } else {
+        format!("/rooms/{ALL_TALK}/agents/messages")
+    };
     let thread_id = if thread {
-        Some(a.db().write(|tx| Ok(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
-        })?.id)).await.unwrap())
-    } else { None };
+        Some(
+            a.db()
+                .write(|tx| {
+                    Ok(campfire_db::ChannelThread::create(
+                        tx,
+                        campfire_db::NewChannelThread {
+                            room_id: ALL_TALK,
+                            creator_id: DAVID,
+                            ..Default::default()
+                        },
+                    )?
+                    .id)
+                })
+                .await
+                .unwrap(),
+        )
+    } else {
+        None
+    };
     let mut client = a.anonymous();
     for file in [&foreign, &owned, &owned] {
         let before = write_counts(&a).await;
-        let body = if bot_key { json!({"attachment": file.signed_id}) }
-            else { json!({"thread_id": thread_id, "message": {"attachment": file.signed_id}}) };
+        let body = if bot_key {
+            json!({"attachment": file.signed_id})
+        } else {
+            json!({"thread_id": thread_id, "message": {"attachment": file.signed_id}})
+        };
         let mut request = json_body(Method::POST, &path, &body);
-        if !bot_key { request = request.header("authorization", &format!("Bearer {SECRET}")); }
+        if !bot_key {
+            request = request.header("authorization", &format!("Bearer {SECRET}"));
+        }
         let reply = client.send(request).await;
-        assert_eq!(reply.status, StatusCode::CREATED, "{path}: {}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::CREATED,
+            "{path}: {}",
+            reply.text()
+        );
         let after = write_counts(&a).await;
         assert_eq!(after, (before.0 + 1, before.1, before.2 + 1));
     }
@@ -361,40 +621,82 @@ async fn grouped_files_round3_agent_token_thread_posts_reuse_signed_blobs() {
 #[tokio::test]
 async fn grouped_files_round3_bot_edits_reuse_signed_blobs() {
     use crate::controllers::presenters::test_support::{BENDER, BENDER_KEY};
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let file = upload(&mut david, "foreign.txt").await;
-    let message = a.db().write(|tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
-        room_id: ALL_TALK, creator_id: BENDER, body: Some("Keep me".into()), ..Default::default()
-    })).await.unwrap();
+    let message = a
+        .db()
+        .write(|tx| {
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: BENDER,
+                    body: Some("Keep me".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
     let before = write_counts(&a).await;
-    let reply = a.anonymous().send(json_body(Method::PATCH,
-        &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{}", message.id),
-        &json!({"attachment": file.signed_id}))).await;
+    let reply = a
+        .anonymous()
+        .send(json_body(
+            Method::PATCH,
+            &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{}", message.id),
+            &json!({"attachment": file.signed_id}),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     assert_eq!(write_counts(&a).await, (before.0, before.1, before.2 + 1));
     let file_id = blob_id(&a, &file);
-    a.db().read(move |conn| {
-        assert_eq!(campfire_db::Message::find(conn, message.id)?.attachment(conn)?.unwrap().1.id, file_id);
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            assert_eq!(
+                campfire_db::Message::find(conn, message.id)?
+                    .attachment(conn)?
+                    .unwrap()
+                    .1
+                    .id,
+                file_id
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn grouped_files_round3_legacy_thread_openers_accept_signed_blobs() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let file = upload(&mut a.sign_in(KEVIN).await, "foreign.txt").await;
     let before = write_counts(&a).await;
     let reply = a.sign_in(DAVID).await.write(json_body(Method::POST,
         &format!("/rooms/{ALL_TALK}/threads"),
         &json!({"channel_thread": {"name": "Files"}, "message": {"attachment": file.signed_id}}))).await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
-    assert_eq!(write_counts(&a).await, (before.0 + 1, before.1 + 1, before.2 + 1));
+    assert_eq!(
+        write_counts(&a).await,
+        (before.0 + 1, before.1 + 1, before.2 + 1)
+    );
 }
 
 #[tokio::test]
 async fn grouped_files_round3_forwards_copy_visible_foreign_owned_files() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut kevin = a.sign_in(KEVIN).await;
     let file = upload(&mut kevin, "kevin.txt").await;
     let source = kevin.write(json_body(Method::POST, &format!("/api/v1/rooms/{HQ}/messages"),
@@ -407,18 +709,27 @@ async fn grouped_files_round3_forwards_copy_visible_foreign_owned_files() {
     let forward = david.write(json_body(Method::POST, &path, &body)).await;
     assert_eq!(forward.status, StatusCode::CREATED, "{}", forward.text());
     let copy_id = parse::<api::ForwardResult>(&forward).forwards[0].id;
-    a.db().read(move |conn| {
-        let source = campfire_db::Message::find(conn, source_id)?.attachments(conn)?;
-        let copied = campfire_db::Message::find(conn, copy_id)?.attachments(conn)?;
-        assert_ne!(source[0].1.id, copied[0].1.id);
-        assert_ne!(source[0].1.key, copied[0].1.key);
-        assert_eq!(copied[0].1.filename, source[0].1.filename);
-        Ok(())
-    }).await.unwrap();
-    a.db().write(|tx| {
-        tx.conn().execute("DELETE FROM memberships WHERE room_id=? AND user_id=?", [HQ, DAVID])?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            let source = campfire_db::Message::find(conn, source_id)?.attachments(conn)?;
+            let copied = campfire_db::Message::find(conn, copy_id)?.attachments(conn)?;
+            assert_ne!(source[0].1.id, copied[0].1.id);
+            assert_ne!(source[0].1.key, copied[0].1.key);
+            assert_eq!(copied[0].1.filename, source[0].1.filename);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+                [HQ, DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let before = write_counts(&a).await;
     let denied = david.write(json_body(Method::POST, &path, &body)).await;
     assert_eq!(denied.status, StatusCode::NOT_FOUND);
@@ -427,22 +738,56 @@ async fn grouped_files_round3_forwards_copy_visible_foreign_owned_files() {
 
 #[tokio::test]
 async fn scheduled_files_reject_foreign_uploads_and_mixed_slots() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let file = upload(&mut a.sign_in(KEVIN).await, "foreign.txt").await;
     let file_id = blob_id(&a, &file);
-    let scheduled = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
-        &json!({"markdownSource": "Text only", "sendAt": "2026-03-03T16:00:00Z",
-            "attachmentSignedId": file.signed_id, "attachmentSignedIds": [file.signed_id]}))).await;
-    assert_eq!(scheduled.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", scheduled.text());
-    let scheduled = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
-        &json!({"markdownSource": "Foreign", "sendAt": "2026-03-03T16:00:00Z",
-            "attachmentSignedIds": [file.signed_id]}))).await;
-    assert_eq!(scheduled.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", scheduled.text());
-    a.db().read(move |conn| {
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [file_id], |row| row.get::<_, i64>(0))?, 0);
-        Ok(())
-    }).await.unwrap();
+    let scheduled = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+            &json!({"markdownSource": "Text only", "sendAt": "2026-03-03T16:00:00Z",
+            "attachmentSignedId": file.signed_id, "attachmentSignedIds": [file.signed_id]}),
+        ))
+        .await;
+    assert_eq!(
+        scheduled.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        scheduled.text()
+    );
+    let scheduled = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
+            &json!({"markdownSource": "Foreign", "sendAt": "2026-03-03T16:00:00Z",
+            "attachmentSignedIds": [file.signed_id]}),
+        ))
+        .await;
+    assert_eq!(
+        scheduled.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        scheduled.text()
+    );
+    a.db()
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?",
+                    [file_id],
+                    |row| row.get::<_, i64>(0)
+                )?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 pub(super) async fn upload(b: &mut Browser<'_>, filename: &str) -> api::DirectUpload {
@@ -502,48 +847,112 @@ async fn write_counts(a: &TestApp) -> (i64, i64, i64) {
 #[tokio::test]
 async fn grouped_files_round6_enforce_current_per_file_limit_before_any_write() {
     const MB: usize = 1024 * 1024;
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let small = upload(&mut david, "small.txt").await;
     let bytes = vec![0; 2 * MB];
-    let created = david.write(json_body(Method::POST, "/api/v1/uploads", &json!({
-        "filename": "large.bin", "byteSize": bytes.len(),
-        "checksum": campfire_storage::key::checksum(&bytes),
-        "contentType": "application/octet-stream",
-    }))).await;
+    let created = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/uploads",
+            &json!({
+                "filename": "large.bin", "byteSize": bytes.len(),
+                "checksum": campfire_storage::key::checksum(&bytes),
+                "contentType": "application/octet-stream",
+            }),
+        ))
+        .await;
     assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
     let large: api::DirectUpload = parse(&created);
-    let received = david.send(Req::new(Method::PUT, &large.upload_url)
-        .header("content-type", "application/octet-stream")
-        .header("content-length", &bytes.len().to_string())
-        .body(bytes)).await;
-    assert_eq!(received.status, StatusCode::NO_CONTENT, "{}", received.text());
-    let lowered = david.write(json_body(Method::PATCH, "/api/v1/admin/workspace",
-        &json!({"uploadLimitBytes": MB}))).await;
+    let received = david
+        .send(
+            Req::new(Method::PUT, &large.upload_url)
+                .header("content-type", "application/octet-stream")
+                .header("content-length", &bytes.len().to_string())
+                .body(bytes),
+        )
+        .await;
+    assert_eq!(
+        received.status,
+        StatusCode::NO_CONTENT,
+        "{}",
+        received.text()
+    );
+    let lowered = david
+        .write(json_body(
+            Method::PATCH,
+            "/api/v1/admin/workspace",
+            &json!({"uploadLimitBytes": MB}),
+        ))
+        .await;
     assert_eq!(lowered.status, StatusCode::OK, "{}", lowered.text());
     let before = write_counts(&a).await;
     let path = format!("/api/v1/rooms/{ALL_TALK}/messages");
-    let single = david.write(json_body(Method::POST, &path, &json!({
-        "clientMessageId": "size-limit-single", "attachmentSignedId": large.signed_id,
-    }))).await;
-    assert_eq!(single.status, StatusCode::PAYLOAD_TOO_LARGE, "{}", single.text());
+    let single = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &json!({
+                "clientMessageId": "size-limit-single", "attachmentSignedId": large.signed_id,
+            }),
+        ))
+        .await;
+    assert_eq!(
+        single.status,
+        StatusCode::PAYLOAD_TOO_LARGE,
+        "{}",
+        single.text()
+    );
     assert_eq!(write_counts(&a).await, before);
-    for (path, body) in file_posts("size-limit-grouped", json!({
-        "attachmentSignedIds": [small.signed_id, large.signed_id],
-    })) {
+    for (path, body) in file_posts(
+        "size-limit-grouped",
+        json!({
+            "attachmentSignedIds": [small.signed_id, large.signed_id],
+        }),
+    ) {
         let reply = david.write(json_body(Method::POST, &path, &body)).await;
-        assert_eq!(reply.status, StatusCode::PAYLOAD_TOO_LARGE, "{path}: {}", reply.text());
-        assert_eq!(write_counts(&a).await, before, "{path} must not claim either upload");
+        assert_eq!(
+            reply.status,
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "{path}: {}",
+            reply.text()
+        );
+        assert_eq!(
+            write_counts(&a).await,
+            before,
+            "{path} must not claim either upload"
+        );
     }
-    let raised = david.write(json_body(Method::PATCH, "/api/v1/admin/workspace",
-        &json!({"uploadLimitBytes": 2 * MB}))).await;
+    let raised = david
+        .write(json_body(
+            Method::PATCH,
+            "/api/v1/admin/workspace",
+            &json!({"uploadLimitBytes": 2 * MB}),
+        ))
+        .await;
     assert_eq!(raised.status, StatusCode::OK, "{}", raised.text());
-    let accepted = david.write(json_body(Method::POST, &path, &json!({
-        "clientMessageId": "size-limit-grouped",
-        "attachmentSignedIds": [small.signed_id, large.signed_id],
-    }))).await;
+    let accepted = david
+        .write(json_body(
+            Method::POST,
+            &path,
+            &json!({
+                "clientMessageId": "size-limit-grouped",
+                "attachmentSignedIds": [small.signed_id, large.signed_id],
+            }),
+        ))
+        .await;
     assert_eq!(accepted.status, StatusCode::CREATED, "{}", accepted.text());
-    assert_eq!(parse::<api::MessageDTO>(&accepted).attachments.unwrap().len(), 2);
+    assert_eq!(
+        parse::<api::MessageDTO>(&accepted)
+            .attachments
+            .unwrap()
+            .len(),
+        2
+    );
 }
 
 #[tokio::test]
@@ -567,7 +976,11 @@ async fn grouped_files_reject_other_uploaders_without_claiming_owned_files() {
                 reply.text()
             );
             assert_eq!(tag(&reply), "Validation");
-            let field = if files.get("attachmentSignedId").is_some() { "attachmentSignedId" } else { "attachmentSignedIds" };
+            let field = if files.get("attachmentSignedId").is_some() {
+                "attachmentSignedId"
+            } else {
+                "attachmentSignedIds"
+            };
             assert!(parse::<Value>(&reply)["error"]["fields"][field].is_array());
             assert_eq!(write_counts(&a).await, before, "{path} must roll back");
         }
@@ -622,7 +1035,11 @@ async fn grouped_files_reject_already_attached_uploads_in_both_slots() {
                     reply.text()
                 );
                 assert_eq!(tag(&reply), "Validation");
-                assert!(reply.text().contains("already attached"), "{}", reply.text());
+                assert!(
+                    reply.text().contains("already attached"),
+                    "{}",
+                    reply.text()
+                );
                 assert_eq!(write_counts(&a).await, before, "{path} must roll back");
             }
         }
@@ -634,30 +1051,56 @@ async fn grouped_files_reject_already_attached_uploads_in_both_slots() {
 
 #[tokio::test]
 async fn grouped_files_round7_legacy_signed_blobs_remain_shareable() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let file = upload(&mut david, "legacy.txt").await;
     let file_id = blob_id(&a, &file);
-    let original_id = a.db().write(move |tx| {
-        tx.conn().execute("UPDATE active_storage_blobs SET metadata='{}' WHERE id=?", [file_id])?;
-        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, attachment_blob_id: Some(file_id),
-            ..Default::default()
-        })?;
-        Ok(message.attachments(tx.conn())?[0].0.id)
-    }).await.unwrap();
-    let reply = david.write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages"))
-        .header("accept", "text/vnd.turbo-stream.html")
-        .header("content-type", "application/json")
-        .body(json!({"message": {"attachment": file.signed_id}}).to_string())).await;
+    let original_id = a
+        .db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE active_storage_blobs SET metadata='{}' WHERE id=?",
+                [file_id],
+            )?;
+            let message = campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    attachment_blob_id: Some(file_id),
+                    ..Default::default()
+                },
+            )?;
+            Ok(message.attachments(tx.conn())?[0].0.id)
+        })
+        .await
+        .unwrap();
+    let reply = david
+        .write(
+            Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages"))
+                .header("accept", "text/vnd.turbo-stream.html")
+                .header("content-type", "application/json")
+                .body(json!({"message": {"attachment": file.signed_id}}).to_string()),
+        )
+        .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
-    a.db().read(move |conn| {
-        let mut query = conn.prepare("SELECT id FROM active_storage_attachments WHERE blob_id=? ORDER BY id")?;
-        let ids = query.query_map([file_id], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
-        assert_eq!(ids.len(), 2);
-        assert_eq!(ids[0], original_id);
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            let mut query = conn
+                .prepare("SELECT id FROM active_storage_attachments WHERE blob_id=? ORDER BY id")?;
+            let ids = query
+                .query_map([file_id], |row| row.get::<_, i64>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            assert_eq!(ids.len(), 2);
+            assert_eq!(ids[0], original_id);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -688,7 +1131,12 @@ async fn grouped_files_require_recorded_upload_ownership() {
     ] {
         for (path, body) in file_posts("unowned", files.clone()) {
             let reply = b.write(json_body(Method::POST, &path, &body)).await;
-            assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{path}: {}", reply.text());
+            assert_eq!(
+                reply.status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{path}: {}",
+                reply.text()
+            );
             assert_eq!(write_counts(&a).await, before);
         }
     }
@@ -717,14 +1165,26 @@ async fn grouped_files_record_authenticated_upload_owner_over_client_metadata() 
         .await
         .unwrap();
     assert_eq!(owner, Some(KEVIN));
-    let reply = b.send(Req::new(Method::PUT, file["direct_upload"]["url"].as_str().unwrap())
-        .header("content-type", "text/plain").header("content-length", "5").body("hello")).await;
+    let reply = b
+        .send(
+            Req::new(Method::PUT, file["direct_upload"]["url"].as_str().unwrap())
+                .header("content-type", "text/plain")
+                .header("content-length", "5")
+                .body("hello"),
+        )
+        .await;
     assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
-    let body = json!({"clientMessageId": "metadata-owner", "attachmentSignedIds": [file["signed_id"]]});
+    let body =
+        json!({"clientMessageId": "metadata-owner", "attachmentSignedIds": [file["signed_id"]]});
     let path = format!("/api/v1/rooms/{HQ}/messages");
     let mut david = a.sign_in(DAVID).await;
     let reply = david.write(json_body(Method::POST, &path, &body)).await;
-    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
     let reply = b.write(json_body(Method::POST, &path, &body)).await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
 }
@@ -964,7 +1424,11 @@ async fn grouped_files_are_kept_by_thread_and_board_openers() {
 
 #[tokio::test]
 async fn grouped_files_followups_files_pins_saved_and_search_keep_every_file() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let first = upload(&mut david, "first-grouped.txt").await;
     let second = upload(&mut david, "second-grouped.txt").await;
@@ -973,14 +1437,34 @@ async fn grouped_files_followups_files_pins_saved_and_search_keep_every_file() {
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let message: api::MessageDTO = parse(&reply);
     let id = message.id;
-    let files: api::FileList = parse(&david.send(get(&format!("/api/v1/rooms/{ALL_TALK}/files"))).await);
-    let mut names = files.files.iter().filter(|file| file.message_id == id)
-        .map(|file| file.attachment.filename.as_str()).collect::<Vec<_>>();
+    let files: api::FileList = parse(
+        &david
+            .send(get(&format!("/api/v1/rooms/{ALL_TALK}/files")))
+            .await,
+    );
+    let mut names = files
+        .files
+        .iter()
+        .filter(|file| file.message_id == id)
+        .map(|file| file.attachment.filename.as_str())
+        .collect::<Vec<_>>();
     names.sort_unstable();
     assert_eq!(names, ["first-grouped.txt", "second-grouped.txt"]);
-    let pinned = david.write(json_body(Method::POST, &format!("/api/v1/messages/{id}/pin"), &json!({}))).await;
+    let pinned = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{id}/pin"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(pinned.status, StatusCode::CREATED, "{}", pinned.text());
-    let saved = david.write(json_body(Method::POST, "/api/v1/saved", &json!({"messageId": id}))).await;
+    let saved = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/saved",
+            &json!({"messageId": id}),
+        ))
+        .await;
     assert_eq!(saved.status, StatusCode::CREATED, "{}", saved.text());
     let saved_id = parse::<api::SavedItem>(&saved).id;
     let activity_id = a.db().write(move |tx| {
@@ -988,35 +1472,70 @@ async fn grouped_files_followups_files_pins_saved_and_search_keep_every_file() {
             rusqlite::params![DAVID, id, tx.now(), tx.now()], |row| row.get::<_, i64>(0))?)
     }).await.unwrap();
     let activity: api::ActivityList = parse(&david.send(get("/api/v1/activity")).await);
-    assert_eq!(activity.items.iter().find(|item| item.id == activity_id).unwrap().source.body,
-        "second-grouped.txt, first-grouped.txt");
-    for path in [format!("/api/v1/rooms/{ALL_TALK}/pins"), "/api/v1/saved".into(),
+    assert_eq!(
+        activity
+            .items
+            .iter()
+            .find(|item| item.id == activity_id)
+            .unwrap()
+            .source
+            .body,
+        "second-grouped.txt, first-grouped.txt"
+    );
+    for path in [
+        format!("/api/v1/rooms/{ALL_TALK}/pins"),
+        "/api/v1/saved".into(),
         format!("/api/v1/search?q=has:file%20in_id:{ALL_TALK}"),
-        format!("/api/v1/search?q=first-grouped%20in_id:{ALL_TALK}")] {
+        format!("/api/v1/search?q=first-grouped%20in_id:{ALL_TALK}"),
+    ] {
         let reply = david.send(get(&path)).await;
         assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
         let page: Value = parse(&reply);
-        let row = page["messages"].as_array().unwrap().iter().find(|row| row["id"] == id)
+        let row = page["messages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == id)
             .unwrap_or_else(|| panic!("grouped message missing from {path}: {page}"));
-        assert_eq!(row["attachments"], serde_json::to_value(&message.attachments).unwrap(), "{path}");
+        assert_eq!(
+            row["attachments"],
+            serde_json::to_value(&message.attachments).unwrap(),
+            "{path}"
+        );
     }
     let rich_text = a.booted.app.db.env().rich_text.clone();
-    a.db().read(move |conn| {
-        let message = campfire_db::Message::find(conn, id)?;
-        assert_eq!(message.plain_text_body(conn, &*rich_text)?, "second-grouped.txt, first-grouped.txt");
-        let room = campfire_db::Room::find(conn, ALL_TALK)?;
-        let push = campfire_db::PushSubscription::payload_for(conn, &*rich_text, &room, &message)?;
-        assert_eq!(push.body, "David: second-grouped.txt, first-grouped.txt");
-        let reminder = campfire_db::SavedItem::reminder_push(conn, &*rich_text, saved_id, &|_| true)?.unwrap();
-        assert_eq!(reminder.payload.body, "Reminder: second-grouped.txt, first-grouped.txt");
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            let message = campfire_db::Message::find(conn, id)?;
+            assert_eq!(
+                message.plain_text_body(conn, &*rich_text)?,
+                "second-grouped.txt, first-grouped.txt"
+            );
+            let room = campfire_db::Room::find(conn, ALL_TALK)?;
+            let push =
+                campfire_db::PushSubscription::payload_for(conn, &*rich_text, &room, &message)?;
+            assert_eq!(push.body, "David: second-grouped.txt, first-grouped.txt");
+            let reminder =
+                campfire_db::SavedItem::reminder_push(conn, &*rich_text, saved_id, &|_| true)?
+                    .unwrap();
+            assert_eq!(
+                reminder.payload.body,
+                "Reminder: second-grouped.txt, first-grouped.txt"
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn grouped_files_followups_bot_json_keeps_every_file_and_appends_fields() {
     use crate::controllers::presenters::test_support::BENDER_KEY;
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let first = upload(&mut david, "first-bot.txt").await;
     let second = upload(&mut david, "second-bot.txt").await;
@@ -1024,77 +1543,172 @@ async fn grouped_files_followups_bot_json_keeps_every_file_and_appends_fields() 
         &json!({"clientMessageId": "grouped-bot-json", "attachmentSignedIds": [second.signed_id, first.signed_id]}))).await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let id = parse::<api::MessageDTO>(&reply).id;
-    for path in [format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages"),
-        format!("/rooms/{ALL_TALK}/messages/{id}.json")] {
+    for path in [
+        format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages"),
+        format!("/rooms/{ALL_TALK}/messages/{id}.json"),
+    ] {
         let reply = if path.ends_with(".json") {
-            david.write(json_body(Method::PATCH, &path, &json!({"message": {"markdown_source": ""}}))).await
-        }
-            else { a.anonymous().send(get(&path)).await };
+            david
+                .write(json_body(
+                    Method::PATCH,
+                    &path,
+                    &json!({"message": {"markdown_source": ""}}),
+                ))
+                .await
+        } else {
+            a.anonymous().send(get(&path)).await
+        };
         assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
         let data: Value = parse(&reply);
-        let message = if path.ends_with(".json") { &data }
-            else { data.as_array().unwrap().iter().find(|row| row["id"] == id).unwrap() };
-        assert_eq!(message["body"]["plain_text"], "second-bot.txt, first-bot.txt");
+        let message = if path.ends_with(".json") {
+            &data
+        } else {
+            data.as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["id"] == id)
+                .unwrap()
+        };
+        assert_eq!(
+            message["body"]["plain_text"],
+            "second-bot.txt, first-bot.txt"
+        );
         assert_eq!(message["attachments"].as_array().unwrap().len(), 2);
         assert_eq!(message["attachments"][0]["filename"], "second-bot.txt");
         assert_eq!(message["attachments"][1]["filename"], "first-bot.txt");
         for file in message["attachments"].as_array().unwrap() {
             assert_eq!(file["content_type"], "text/plain");
             assert_eq!(file["byte_size"], 5);
-            assert!(file["url"].as_str().unwrap().contains("/rails/active_storage/blobs/redirect/"));
-            assert!(file["download_url"].as_str().unwrap().ends_with("?disposition=attachment"));
+            assert!(
+                file["url"]
+                    .as_str()
+                    .unwrap()
+                    .contains("/rails/active_storage/blobs/redirect/")
+            );
+            assert!(
+                file["download_url"]
+                    .as_str()
+                    .unwrap()
+                    .ends_with("?disposition=attachment")
+            );
         }
-        assert_eq!(message.as_object().unwrap().keys().next_back().map(String::as_str), Some("attachments"));
+        assert_eq!(
+            message
+                .as_object()
+                .unwrap()
+                .keys()
+                .next_back()
+                .map(String::as_str),
+            Some("attachments")
+        );
     }
     let app = a.booted.app.clone();
-    a.db().read(move |conn| {
-        let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
-        presenter.current_user_id = Some(DAVID);
-        presenter.cache_base_url = Some("https://payload.test".into());
-        let message = campfire_db::Message::find(conn, id)?;
-        let preloaded = presenter.preload_payload(std::slice::from_ref(&message))?;
-        let single = presenter.agent_message_payload(&message)?;
-        assert_eq!(preloaded.agent_message_payload(&message)?, single);
-        assert_eq!(preloaded.attachment(&message)?.unwrap().filename, "second-bot.txt");
-        assert_eq!(presenter.preload_plain_text(std::slice::from_ref(&message))?.plain_text_body(&message)?,
-            "second-bot.txt, first-bot.txt");
-        Ok(())
-    }).await.unwrap();
-    let captioned = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"),
-        &json!({"markdownSource": "A caption"}))).await;
+    a.db()
+        .read(move |conn| {
+            let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+            presenter.current_user_id = Some(DAVID);
+            presenter.cache_base_url = Some("https://payload.test".into());
+            let message = campfire_db::Message::find(conn, id)?;
+            let preloaded = presenter.preload_payload(std::slice::from_ref(&message))?;
+            let single = presenter.agent_message_payload(&message)?;
+            assert_eq!(preloaded.agent_message_payload(&message)?, single);
+            assert_eq!(
+                preloaded.attachment(&message)?.unwrap().filename,
+                "second-bot.txt"
+            );
+            assert_eq!(
+                presenter
+                    .preload_plain_text(std::slice::from_ref(&message))?
+                    .plain_text_body(&message)?,
+                "second-bot.txt, first-bot.txt"
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let captioned = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{id}"),
+            &json!({"markdownSource": "A caption"}),
+        ))
+        .await;
     assert_eq!(captioned.status, StatusCode::OK, "{}", captioned.text());
     let app = a.booted.app.clone();
-    a.db().read(move |conn| {
-        let presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
-        let message = campfire_db::Message::find(conn, id)?;
-        assert_eq!(message.plain_text_body(conn, &*app.db.env().rich_text)?, "A caption");
-        assert_eq!(presenter.plain_text_body(&message)?, "A caption");
-        assert_eq!(presenter.preload_plain_text(std::slice::from_ref(&message))?.plain_text_body(&message)?, "A caption");
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .read(move |conn| {
+            let presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+            let message = campfire_db::Message::find(conn, id)?;
+            assert_eq!(
+                message.plain_text_body(conn, &*app.db.env().rich_text)?,
+                "A caption"
+            );
+            assert_eq!(presenter.plain_text_body(&message)?, "A caption");
+            assert_eq!(
+                presenter
+                    .preload_plain_text(std::slice::from_ref(&message))?
+                    .plain_text_body(&message)?,
+                "A caption"
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn grouped_files_followups_delete_purges_every_file_and_cleans_readers() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let first = upload(&mut david, "purge-first.txt").await;
     let second = upload(&mut david, "purge-second.txt").await;
     let file_ids = [blob_id(&a, &first), blob_id(&a, &second)];
-    let file_keys = a.db().read(move |conn| {
-        file_ids.iter().map(|id| campfire_db::Blob::find(conn, *id).map(|blob| blob.key))
-            .collect::<campfire_db::Result<Vec<_>>>()
-    }).await.unwrap();
-    assert!(file_keys.iter().all(|key| a.booted.app.storage.service.exist(key)));
+    let file_keys = a
+        .db()
+        .read(move |conn| {
+            file_ids
+                .iter()
+                .map(|id| campfire_db::Blob::find(conn, *id).map(|blob| blob.key))
+                .collect::<campfire_db::Result<Vec<_>>>()
+        })
+        .await
+        .unwrap();
+    assert!(
+        file_keys
+            .iter()
+            .all(|key| a.booted.app.storage.service.exist(key))
+    );
     let reply = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
         &json!({"clientMessageId": "grouped-purge", "attachmentSignedIds": [first.signed_id, second.signed_id]}))).await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let id = parse::<api::MessageDTO>(&reply).id;
-    let pinned = david.write(json_body(Method::POST, &format!("/api/v1/messages/{id}/pin"), &json!({}))).await;
+    let pinned = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{id}/pin"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(pinned.status, StatusCode::CREATED, "{}", pinned.text());
-    let saved = david.write(json_body(Method::POST, "/api/v1/saved", &json!({"messageId": id}))).await;
+    let saved = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/saved",
+            &json!({"messageId": id}),
+        ))
+        .await;
     assert_eq!(saved.status, StatusCode::CREATED, "{}", saved.text());
-    let deleted = david.write(json_body(Method::DELETE, &format!("/api/v1/messages/{id}"), &json!({}))).await;
+    let deleted = david
+        .write(json_body(
+            Method::DELETE,
+            &format!("/api/v1/messages/{id}"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(deleted.status, StatusCode::NO_CONTENT, "{}", deleted.text());
     a.db().read(move |conn| {
         for table in ["message_pins", "saved_items"] {
@@ -1108,16 +1722,35 @@ async fn grouped_files_followups_delete_purges_every_file_and_cleans_readers() {
         Ok(())
     }).await.unwrap();
     for file_id in file_ids {
-        crate::active_storage::purge(&a.booted.app, file_id).await.unwrap();
+        crate::active_storage::purge(&a.booted.app, file_id)
+            .await
+            .unwrap();
     }
-    assert!(file_keys.iter().all(|key| !a.booted.app.storage.service.exist(key)));
-    a.db().read(move |conn| {
-        for file_id in file_ids {
-            assert!(campfire_storage::Blob::find(conn, file_id).unwrap().is_none());
-        }
-        Ok(())
-    }).await.unwrap();
-    let files: api::FileList = parse(&david.send(get(&format!("/api/v1/rooms/{ALL_TALK}/files?filename=purge"))).await);
+    assert!(
+        file_keys
+            .iter()
+            .all(|key| !a.booted.app.storage.service.exist(key))
+    );
+    a.db()
+        .read(move |conn| {
+            for file_id in file_ids {
+                assert!(
+                    campfire_storage::Blob::find(conn, file_id)
+                        .unwrap()
+                        .is_none()
+                );
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let files: api::FileList = parse(
+        &david
+            .send(get(&format!(
+                "/api/v1/rooms/{ALL_TALK}/files?filename=purge"
+            )))
+            .await,
+    );
     assert!(files.files.is_empty());
 }
 
@@ -1372,13 +2005,29 @@ async fn grouped_files_keep_room_thread_and_delete_permissions() {
 
 #[tokio::test]
 async fn scheduled_files_dispatch_in_order_with_reply_and_survive_history_deletion() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut b = a.sign_in(DAVID).await;
     let first = upload(&mut b, "first.txt").await;
     let second = upload(&mut b, "second.txt").await;
-    let target = a.db().write(|tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
-        room_id: ALL_TALK, creator_id: KEVIN, markdown_source: Some("Target".into()), ..Default::default()
-    })).await.unwrap();
+    let target = a
+        .db()
+        .write(|tx| {
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: KEVIN,
+                    markdown_source: Some("Target".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
     let (addr, server) = serve(&a).await;
     let mut sync = Sync::connect(addr, &b.cookie_header(), &[format!("room:{ALL_TALK}")]).await;
     sync.welcome().await;
@@ -1387,16 +2036,39 @@ async fn scheduled_files_dispatch_in_order_with_reply_and_survive_history_deleti
             "attachmentSignedIds": [second.signed_id, first.signed_id]}))).await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let row: Value = parse(&reply);
-    assert_eq!(row["attachments"][0]["attachment"]["filename"], "second.txt");
+    assert_eq!(
+        row["attachments"][0]["attachment"]["filename"],
+        "second.txt"
+    );
     let id = row["id"].as_i64().unwrap();
-    let sent = b.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{id}/send_now"), &json!({}))).await;
+    let sent = b
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/scheduled_messages/{id}/send_now"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(sent.status, StatusCode::OK, "{}", sent.text());
-    a.db().write(move |tx| campfire_db::ScheduledMessage::find(tx.conn(), id)?.destroy(tx)).await.unwrap();
-    let message_id = parse::<api::ScheduledMessage>(&sent).sent_message_id.unwrap();
+    a.db()
+        .write(move |tx| campfire_db::ScheduledMessage::find(tx.conn(), id)?.destroy(tx))
+        .await
+        .unwrap();
+    let message_id = parse::<api::ScheduledMessage>(&sent)
+        .sent_message_id
+        .unwrap();
     let event = sync.until(created_in(ALL_TALK), |_| false).await;
-    let api::SyncPayload::MessageCreated(live) = event.payload else { unreachable!() };
+    let api::SyncPayload::MessageCreated(live) = event.payload else {
+        unreachable!()
+    };
     assert_eq!(live.reply_to_message_id, Some(target.id));
-    assert_eq!(live.attachments.unwrap().iter().map(|file| file.filename.as_str()).collect::<Vec<_>>(), ["second.txt", "first.txt"]);
+    assert_eq!(
+        live.attachments
+            .unwrap()
+            .iter()
+            .map(|file| file.filename.as_str())
+            .collect::<Vec<_>>(),
+        ["second.txt", "first.txt"]
+    );
     a.db().read(move |conn| {
         let message = campfire_db::Message::find(conn, message_id)?;
         assert_eq!(message.reply_to_message_id, Some(target.id));
@@ -1411,7 +2083,11 @@ async fn scheduled_files_dispatch_in_order_with_reply_and_survive_history_deleti
 
 #[tokio::test]
 async fn scheduled_files_cancel_purges_and_failure_retains_for_retry() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut b = a.sign_in(DAVID).await;
     let file = upload(&mut b, "retry.txt").await;
     let file_id = blob_id(&a, &file);
@@ -1423,29 +2099,53 @@ async fn scheduled_files_cancel_purges_and_failure_retains_for_retry() {
         tx.conn().execute_batch("CREATE TRIGGER reject_scheduled_file BEFORE INSERT ON messages BEGIN SELECT RAISE(ABORT, 'injected failure'); END")?;
         Ok(())
     }).await.unwrap();
-    assert!(a.db().write(move |tx| campfire_db::ScheduledMessage::dispatch(tx, id, tx.now(), true)).await.is_err());
+    assert!(
+        a.db()
+            .write(move |tx| campfire_db::ScheduledMessage::dispatch(tx, id, tx.now(), true))
+            .await
+            .is_err()
+    );
     a.db().read(move |conn| {
         assert_eq!(campfire_db::ScheduledMessage::find(conn, id)?.claimed_at, None);
         assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE record_type='ScheduledMessage' AND record_id=? AND blob_id=?", [id, file_id], |row| row.get::<_, i64>(0))?, 1);
         Ok(())
     }).await.unwrap();
-    let cancelled = b.write(json_body(Method::DELETE, &format!("/api/v1/scheduled_messages/{id}"), &json!({}))).await;
+    let cancelled = b
+        .write(json_body(
+            Method::DELETE,
+            &format!("/api/v1/scheduled_messages/{id}"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(cancelled.status, StatusCode::NO_CONTENT);
     a.db().read(move |conn| {
         assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [file_id], |row| row.get::<_, i64>(0))?, 0);
         assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='ActiveStorage::PurgeJob'", [], |row| row.get::<_, i64>(0))?, 1);
         Ok(())
     }).await.unwrap();
-    crate::active_storage::purge(&a.booted.app, file_id).await.unwrap();
-    a.db().read(move |conn| {
-        assert!(campfire_storage::Blob::find(conn, file_id).unwrap().is_none());
-        Ok(())
-    }).await.unwrap();
+    crate::active_storage::purge(&a.booted.app, file_id)
+        .await
+        .unwrap();
+    a.db()
+        .read(move |conn| {
+            assert!(
+                campfire_storage::Blob::find(conn, file_id)
+                    .unwrap()
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn scheduled_files_edit_add_remove_reorder_and_reject_over_limit() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut b = a.sign_in(DAVID).await;
     let first = upload(&mut b, "first.txt").await;
     let second = upload(&mut b, "second.txt").await;
@@ -1455,34 +2155,75 @@ async fn scheduled_files_edit_add_remove_reorder_and_reject_over_limit() {
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let id = parse::<api::ScheduledMessage>(&reply).id;
     let path = format!("/api/v1/scheduled_messages/{id}");
-    let edit = b.write(json_body(Method::PATCH, &path,
-        &json!({"attachmentSignedIds": [second.signed_id, third.signed_id]}))).await;
+    let edit = b
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"attachmentSignedIds": [second.signed_id, third.signed_id]}),
+        ))
+        .await;
     assert_eq!(edit.status, StatusCode::OK, "{}", edit.text());
     let saved: Value = parse(&edit);
-    assert_eq!(saved["attachments"][0]["attachment"]["filename"], "second.txt");
-    assert_eq!(saved["attachments"][1]["attachment"]["filename"], "third.txt");
-    let denied = b.write(json_body(Method::PATCH, &path, &json!({"attachmentSignedIds": vec![third.signed_id; 11]}))).await;
+    assert_eq!(
+        saved["attachments"][0]["attachment"]["filename"],
+        "second.txt"
+    );
+    assert_eq!(
+        saved["attachments"][1]["attachment"]["filename"],
+        "third.txt"
+    );
+    let denied = b
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"attachmentSignedIds": vec![third.signed_id; 11]}),
+        ))
+        .await;
     assert_eq!(denied.status, StatusCode::UNPROCESSABLE_ENTITY);
-    let clear = b.write(json_body(Method::PATCH, &path, &json!({"attachmentSignedIds": []}))).await;
+    let clear = b
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"attachmentSignedIds": []}),
+        ))
+        .await;
     assert_eq!(clear.status, StatusCode::OK, "{}", clear.text());
     assert_eq!(parse::<Value>(&clear)["attachments"], json!([]));
 }
 
 #[tokio::test]
 async fn scheduled_files_due_thread_dispatch_retries_without_losing_files_or_reply() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut b = a.sign_in(DAVID).await;
     let first = upload(&mut b, "thread-first.txt").await;
     let second = upload(&mut b, "thread-second.txt").await;
-    let (thread_id, target_id) = a.db().write(|tx| {
-        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, ..Default::default()
-        })?;
-        let target = thread.post_message(tx, DAVID, campfire_db::NewMessage {
-            markdown_source: Some("Thread target".into()), ..Default::default()
-        })?;
-        Ok((thread.id, target.id))
-    }).await.unwrap();
+    let (thread_id, target_id) = a
+        .db()
+        .write(|tx| {
+            let mut thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    ..Default::default()
+                },
+            )?;
+            let target = thread.post_message(
+                tx,
+                DAVID,
+                campfire_db::NewMessage {
+                    markdown_source: Some("Thread target".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((thread.id, target.id))
+        })
+        .await
+        .unwrap();
     let reply = b.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
         &json!({"markdownSource": "Thread files", "threadId": thread_id, "replyToMessageId": target_id,
             "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": [second.signed_id, first.signed_id]}))).await;
@@ -1492,32 +2233,81 @@ async fn scheduled_files_due_thread_dispatch_retries_without_losing_files_or_rep
         tx.conn().execute_batch("CREATE TRIGGER reject_file_attachment BEFORE INSERT ON active_storage_attachments WHEN NEW.record_type='Message' BEGIN SELECT RAISE(ABORT, 'attachment failure'); END")?;
         Ok(())
     }).await.unwrap();
-    let due = a.booted.app.db.env().now().since(jiff::SignedDuration::from_secs(172800));
+    let due = a
+        .booted
+        .app
+        .db
+        .env()
+        .now()
+        .since(jiff::SignedDuration::from_secs(172800));
     let db = a.db().clone();
-    assert!(!tokio::task::spawn_blocking(move || campfire_db::ScheduledMessage::dispatch_due(&db, due)).await.unwrap().unwrap().contains(&id));
-    a.db().read(move |conn| {
-        let row = campfire_db::ScheduledMessage::find(conn, id)?;
-        assert!(row.pending());
-        assert_eq!(row.claimed_at, None);
-        assert_eq!(row.attachments(conn)?.len(), 2);
-        Ok(())
-    }).await.unwrap();
-    a.db().write(|tx| { tx.conn().execute_batch("DROP TRIGGER reject_file_attachment")?; Ok(()) }).await.unwrap();
+    assert!(
+        !tokio::task::spawn_blocking(move || campfire_db::ScheduledMessage::dispatch_due(&db, due))
+            .await
+            .unwrap()
+            .unwrap()
+            .contains(&id)
+    );
+    a.db()
+        .read(move |conn| {
+            let row = campfire_db::ScheduledMessage::find(conn, id)?;
+            assert!(row.pending());
+            assert_eq!(row.claimed_at, None);
+            assert_eq!(row.attachments(conn)?.len(), 2);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute_batch("DROP TRIGGER reject_file_attachment")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let db = a.db().clone();
-    assert!(tokio::task::spawn_blocking(move || campfire_db::ScheduledMessage::dispatch_due(&db, due)).await.unwrap().unwrap().contains(&id));
-    a.db().read(move |conn| {
-        let row = campfire_db::ScheduledMessage::find(conn, id)?;
-        let message = campfire_db::Message::find(conn, row.sent_message_id.unwrap())?;
-        assert_eq!((message.room_id, message.thread_id, message.reply_to_message_id), (ALL_TALK, Some(thread_id), Some(target_id)));
-        assert_eq!(message.attachments(conn)?.iter().map(|(_, blob)| blob.filename.as_str()).collect::<Vec<_>>(), ["thread-second.txt", "thread-first.txt"]);
-        assert!(row.attachments(conn)?.is_empty());
-        Ok(())
-    }).await.unwrap();
+    assert!(
+        tokio::task::spawn_blocking(move || campfire_db::ScheduledMessage::dispatch_due(&db, due))
+            .await
+            .unwrap()
+            .unwrap()
+            .contains(&id)
+    );
+    a.db()
+        .read(move |conn| {
+            let row = campfire_db::ScheduledMessage::find(conn, id)?;
+            let message = campfire_db::Message::find(conn, row.sent_message_id.unwrap())?;
+            assert_eq!(
+                (
+                    message.room_id,
+                    message.thread_id,
+                    message.reply_to_message_id
+                ),
+                (ALL_TALK, Some(thread_id), Some(target_id))
+            );
+            assert_eq!(
+                message
+                    .attachments(conn)?
+                    .iter()
+                    .map(|(_, blob)| blob.filename.as_str())
+                    .collect::<Vec<_>>(),
+                ["thread-second.txt", "thread-first.txt"]
+            );
+            assert!(row.attachments(conn)?.is_empty());
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn scheduled_files_validate_unfinished_invalid_and_current_size_limit_before_claiming() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut b = a.sign_in(DAVID).await;
     let file = upload(&mut b, "large.txt").await;
     let file_id = blob_id(&a, &file);
@@ -1526,29 +2316,64 @@ async fn scheduled_files_validate_unfinished_invalid_and_current_size_limit_befo
     }))).await;
     let unfinished = parse::<api::DirectUpload>(&unfinished);
     let path = format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages");
-    for ids in [vec!["invalid".to_string()], vec![unfinished.signed_id], vec![file.signed_id.clone(); 11], vec![file.signed_id.clone(); 2]] {
+    for ids in [
+        vec!["invalid".to_string()],
+        vec![unfinished.signed_id],
+        vec![file.signed_id.clone(); 11],
+        vec![file.signed_id.clone(); 2],
+    ] {
         let reply = b.write(json_body(Method::POST, &path, &json!({
             "markdownSource": "Files", "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": ids
         }))).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
     }
-    a.db().write(move |tx| {
-        tx.conn().execute("UPDATE active_storage_blobs SET byte_size=104857601 WHERE id=?", [file_id])?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE active_storage_blobs SET byte_size=104857601 WHERE id=?",
+                [file_id],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let reply = b.write(json_body(Method::POST, &path, &json!({
         "markdownSource": "Large", "sendAt": "2026-03-03T16:00:00Z", "attachmentSignedIds": [file.signed_id]
     }))).await;
-    assert_eq!(reply.status, StatusCode::PAYLOAD_TOO_LARGE, "{}", reply.text());
-    a.db().read(move |conn| {
-        assert_eq!(conn.query_row("SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?", [file_id], |row| row.get::<_, i64>(0))?, 0);
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(
+        reply.status,
+        StatusCode::PAYLOAD_TOO_LARGE,
+        "{}",
+        reply.text()
+    );
+    a.db()
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM active_storage_attachments WHERE blob_id=?",
+                    [file_id],
+                    |row| row.get::<_, i64>(0)
+                )?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn file_spoilers_legacy_payloads_omit_public_single_files_and_keep_spa_flags() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let first = upload(&mut david, "first-public.txt").await;
     let second = upload(&mut david, "second-public.txt").await;
@@ -1558,45 +2383,92 @@ async fn file_spoilers_legacy_payloads_omit_public_single_files_and_keep_spa_fla
         ("fileless", None, vec![], vec![], None),
         ("legacy-single", Some(first_id), vec![], vec![], None),
         ("grouped-single", None, vec![first_id], vec![], None),
-        ("spoiler-single", Some(first_id), vec![], vec![true], Some(vec![true])),
-        ("grouped-public", None, vec![first_id, second_id], vec![], Some(vec![false, false])),
+        (
+            "spoiler-single",
+            Some(first_id),
+            vec![],
+            vec![true],
+            Some(vec![true]),
+        ),
+        (
+            "grouped-public",
+            None,
+            vec![first_id, second_id],
+            vec![],
+            Some(vec![false, false]),
+        ),
     ] {
-        let message = a.db().write(move |tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some(name.into()),
-            attachment_blob_id: single, attachment_blob_ids: grouped, attachment_spoilers: flags,
-            ..Default::default()
-        })).await.unwrap();
+        let message = a
+            .db()
+            .write(move |tx| {
+                campfire_db::Message::create(
+                    tx,
+                    campfire_db::NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        markdown_source: Some(name.into()),
+                        attachment_blob_id: single,
+                        attachment_blob_ids: grouped,
+                        attachment_spoilers: flags,
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
         let id = message.id;
         let app = a.booted.app.clone();
-        let (payload, preloaded) = a.db().read(move |conn| {
-            let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
-            presenter.current_user_id = Some(DAVID);
-            presenter.cache_base_url = Some("https://payload.test".into());
-            let payload = presenter.agent_message_payload(&message)?;
-            let preloaded = presenter.preload_payload(std::slice::from_ref(&message))?.agent_message_payload(&message)?;
-            Ok((payload, preloaded))
-        }).await.unwrap();
-        let actual = payload.get("attachments").map(|files| files.as_array().unwrap().iter()
-            .map(|file| file["spoiler"].as_bool().unwrap()).collect::<Vec<_>>());
+        let (payload, preloaded) = a
+            .db()
+            .read(move |conn| {
+                let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+                presenter.current_user_id = Some(DAVID);
+                presenter.cache_base_url = Some("https://payload.test".into());
+                let payload = presenter.agent_message_payload(&message)?;
+                let preloaded = presenter
+                    .preload_payload(std::slice::from_ref(&message))?
+                    .agent_message_payload(&message)?;
+                Ok((payload, preloaded))
+            })
+            .await
+            .unwrap();
+        let actual = payload.get("attachments").map(|files| {
+            files
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|file| file["spoiler"].as_bool().unwrap())
+                .collect::<Vec<_>>()
+        });
         assert_eq!(actual, legacy_flags, "{name}");
         assert_eq!(preloaded, payload, "{name}");
         let read = david.send(get(&format!("/api/v1/messages/{id}"))).await;
         assert_eq!(read.status, StatusCode::OK, "{name}: {}", read.text());
         let message = parse::<api::MessageRead>(&read).message;
-        let files = message.attachments.unwrap_or_else(|| message.attachment.into_iter().collect());
+        let files = message
+            .attachments
+            .unwrap_or_else(|| message.attachment.into_iter().collect());
         let expected = match name {
             "fileless" => vec![],
             "spoiler-single" => vec![true],
             "grouped-public" => vec![false, false],
             _ => vec![false],
         };
-        assert_eq!(files.iter().map(|file| file.spoiler).collect::<Vec<_>>(), expected, "{name}");
+        assert_eq!(
+            files.iter().map(|file| file.spoiler).collect::<Vec<_>>(),
+            expected,
+            "{name}"
+        );
     }
 }
 
 #[tokio::test]
 async fn file_spoilers_mixed_flags_dtos_edits_payloads_and_previews() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let first = upload(&mut david, "secret.png").await;
     let second = upload(&mut david, "public.txt").await;
@@ -1616,41 +2488,107 @@ async fn file_spoilers_mixed_flags_dtos_edits_payloads_and_previews() {
     assert!(!files[1].spoiler);
     assert_eq!(files[0].preview, api::AttachmentPreview::Image);
     assert!(files[0].url.contains("/blobs/redirect/"));
-    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"), &json!({"markdownSource":"Edited caption"}))).await;
+    let edited = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{id}"),
+            &json!({"markdownSource":"Edited caption"}),
+        ))
+        .await;
     assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
-    assert_eq!(parse::<api::MessageDTO>(&edited).attachments, message.attachments);
-    let pinned = david.write(json_body(Method::POST, &format!("/api/v1/messages/{id}/pin"), &json!({}))).await;
+    assert_eq!(
+        parse::<api::MessageDTO>(&edited).attachments,
+        message.attachments
+    );
+    let pinned = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{id}/pin"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(pinned.status, StatusCode::CREATED, "{}", pinned.text());
-    for path in [format!("/api/v1/rooms/{ALL_TALK}/messages"), format!("/api/v1/rooms/{ALL_TALK}/pins"), format!("/api/v1/rooms/{ALL_TALK}/files"), "/api/v1/search?q=Edited".into()] {
+    for path in [
+        format!("/api/v1/rooms/{ALL_TALK}/messages"),
+        format!("/api/v1/rooms/{ALL_TALK}/pins"),
+        format!("/api/v1/rooms/{ALL_TALK}/files"),
+        "/api/v1/search?q=Edited".into(),
+    ] {
         let reply = david.send(get(&path)).await;
         assert_eq!(reply.status, StatusCode::OK, "{path}: {}", reply.text());
-        assert!(reply.text().contains("\"spoiler\":true"), "{path}: {}", reply.text());
+        assert!(
+            reply.text().contains("\"spoiler\":true"),
+            "{path}: {}",
+            reply.text()
+        );
     }
     let app = a.booted.app.clone();
-    a.db().read(move |conn| {
-        let message = campfire_db::Message::find(conn, id)?;
-        let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
-        presenter.current_user_id = Some(DAVID);
-        presenter.cache_base_url = Some("https://payload.test".into());
-        assert!(presenter.attachment(&message)?.unwrap().spoiler);
-        let payload = presenter.agent_message_payload(&message)?;
-        assert_eq!(payload["attachments"][0]["spoiler"], true);
-        assert_eq!(payload["attachments"][1]["spoiler"], false);
-        assert_eq!(presenter.preload_payload(std::slice::from_ref(&message))?.agent_message_payload(&message)?, payload);
-        let push = campfire_db::PushSubscription::payload_for(conn, &*app.db.env().rich_text, &campfire_db::Room::find(conn, ALL_TALK)?, &message)?;
-        assert!(serde_json::to_value(push).unwrap().get("image").is_none());
-        Ok(())
-    }).await.unwrap();
-    let edited = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"), &json!({"markdownSource":"Edited caption", "attachmentSpoilers":[false,true]}))).await;
+    a.db()
+        .read(move |conn| {
+            let message = campfire_db::Message::find(conn, id)?;
+            let mut presenter = campfire_runtime::presenters::Presenter::new(conn, &app, None);
+            presenter.current_user_id = Some(DAVID);
+            presenter.cache_base_url = Some("https://payload.test".into());
+            assert!(presenter.attachment(&message)?.unwrap().spoiler);
+            let payload = presenter.agent_message_payload(&message)?;
+            assert_eq!(payload["attachments"][0]["spoiler"], true);
+            assert_eq!(payload["attachments"][1]["spoiler"], false);
+            assert_eq!(
+                presenter
+                    .preload_payload(std::slice::from_ref(&message))?
+                    .agent_message_payload(&message)?,
+                payload
+            );
+            let push = campfire_db::PushSubscription::payload_for(
+                conn,
+                &*app.db.env().rich_text,
+                &campfire_db::Room::find(conn, ALL_TALK)?,
+                &message,
+            )?;
+            assert!(serde_json::to_value(push).unwrap().get("image").is_none());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let edited = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{id}"),
+            &json!({"markdownSource":"Edited caption", "attachmentSpoilers":[false,true]}),
+        ))
+        .await;
     assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
-    assert_eq!(parse::<api::MessageDTO>(&edited).attachments.unwrap().iter().map(|file|file.spoiler).collect::<Vec<_>>(), [false,true]);
-    let invalid = david.write(json_body(Method::PATCH, &format!("/api/v1/messages/{id}"), &json!({"markdownSource":"Edited caption", "attachmentSpoilers":[]}))).await;
-    assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", invalid.text());
+    assert_eq!(
+        parse::<api::MessageDTO>(&edited)
+            .attachments
+            .unwrap()
+            .iter()
+            .map(|file| file.spoiler)
+            .collect::<Vec<_>>(),
+        [false, true]
+    );
+    let invalid = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{id}"),
+            &json!({"markdownSource":"Edited caption", "attachmentSpoilers":[]}),
+        ))
+        .await;
+    assert_eq!(
+        invalid.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        invalid.text()
+    );
 }
 
 #[tokio::test]
 async fn file_spoilers_single_and_scheduled_files_preserve_flags_on_reorder_and_dispatch() {
-    let a = app(true).await.expect("restored default seed").without_job_runner().await;
+    let a = app(true)
+        .await
+        .expect("restored default seed")
+        .without_job_runner()
+        .await;
     let mut david = a.sign_in(DAVID).await;
     let single = upload(&mut david, "single.txt").await;
     let created = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"),
@@ -1660,17 +2598,38 @@ async fn file_spoilers_single_and_scheduled_files_preserve_flags_on_reorder_and_
     let single_attachment = single_created.attachment.unwrap();
     assert!(single_attachment.spoiler);
     let shared_blob = blob_id(&a, &single);
-    let public = a.db().write(move |tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
-        room_id: ALL_TALK, creator_id: DAVID, attachment_blob_id: Some(shared_blob),
-        ..Default::default()
-    })).await.unwrap();
-    let read = david.send(get(&format!("/api/v1/messages/{}", public.id))).await;
+    let public = a
+        .db()
+        .write(move |tx| {
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    attachment_blob_id: Some(shared_blob),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let read = david
+        .send(get(&format!("/api/v1/messages/{}", public.id)))
+        .await;
     assert_eq!(read.status, StatusCode::OK, "{}", read.text());
     let public_attachment = parse::<api::MessageRead>(&read).message.attachment.unwrap();
     assert_eq!(public_attachment.url, single_attachment.url);
     assert!(!public_attachment.spoiler);
-    let original = david.send(get(&format!("/api/v1/messages/{}", single_created.id))).await;
-    assert!(parse::<api::MessageRead>(&original).message.attachment.unwrap().spoiler);
+    let original = david
+        .send(get(&format!("/api/v1/messages/{}", single_created.id)))
+        .await;
+    assert!(
+        parse::<api::MessageRead>(&original)
+            .message
+            .attachment
+            .unwrap()
+            .spoiler
+    );
     let first = upload(&mut david, "scheduled-secret.txt").await;
     let second = upload(&mut david, "scheduled-public.txt").await;
     let created = david.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/scheduled_messages"),
@@ -1681,31 +2640,86 @@ async fn file_spoilers_single_and_scheduled_files_preserve_flags_on_reorder_and_
     let edit = david.write(json_body(Method::PATCH, &format!("/api/v1/scheduled_messages/{id}"),
         &json!({"markdownSource":"Scheduled caption", "attachmentSignedIds":[second.signed_id,first.signed_id]}))).await;
     assert_eq!(edit.status, StatusCode::OK, "{}", edit.text());
-    assert_eq!(parse::<api::ScheduledMessage>(&edit).attachments.iter().map(|file|file.attachment.spoiler).collect::<Vec<_>>(), [false,true]);
-    let sent = david.write(json_body(Method::POST, &format!("/api/v1/scheduled_messages/{id}/send_now"), &json!({}))).await;
+    assert_eq!(
+        parse::<api::ScheduledMessage>(&edit)
+            .attachments
+            .iter()
+            .map(|file| file.attachment.spoiler)
+            .collect::<Vec<_>>(),
+        [false, true]
+    );
+    let sent = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/scheduled_messages/{id}/send_now"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(sent.status, StatusCode::OK, "{}", sent.text());
     let sent: api::ScheduledMessage = parse(&sent);
-    assert_eq!(sent.attachments.iter().map(|file|file.attachment.spoiler).collect::<Vec<_>>(), [false,true]);
-    a.db().read(move |conn| {
-        let message = campfire_db::Message::find(conn, sent.sent_message_id.unwrap())?;
-        assert_eq!(message.attachments(conn)?.iter().map(|(file,_)|file.spoiler).collect::<Vec<_>>(), [false,true]);
-        Ok(())
-    }).await.unwrap();
+    assert_eq!(
+        sent.attachments
+            .iter()
+            .map(|file| file.attachment.spoiler)
+            .collect::<Vec<_>>(),
+        [false, true]
+    );
+    a.db()
+        .read(move |conn| {
+            let message = campfire_db::Message::find(conn, sent.sent_message_id.unwrap())?;
+            assert_eq!(
+                message
+                    .attachments(conn)?
+                    .iter()
+                    .map(|(file, _)| file.spoiler)
+                    .collect::<Vec<_>>(),
+                [false, true]
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn file_spoilers_thread_and_board_openers_store_the_per_file_flag() {
     for index in 1..3 {
-        let a = app(true).await.expect("restored default seed").without_job_runner().await;
+        let a = app(true)
+            .await
+            .expect("restored default seed")
+            .without_job_runner()
+            .await;
         let mut david = a.sign_in(DAVID).await;
         let file = upload(&mut david, "opener.txt").await;
-        let (path, body) = file_posts("spoiler-opener", json!({"attachmentSignedId":file.signed_id, "attachmentSpoilers":[true]}))[index].clone();
+        let (path, body) = file_posts(
+            "spoiler-opener",
+            json!({"attachmentSignedId":file.signed_id, "attachmentSpoilers":[true]}),
+        )[index]
+            .clone();
         let reply = david.write(json_body(Method::POST, &path, &body)).await;
-        assert_eq!(reply.status, StatusCode::CREATED, "{path}: {}", reply.text());
-        a.db().read(|conn| {
-            let id = conn.query_row("SELECT id FROM messages WHERE client_message_id='spoiler-opener'", [], |row| row.get(0))?;
-            assert!(campfire_db::Message::find(conn, id)?.attachment(conn)?.unwrap().0.spoiler);
-            Ok(())
-        }).await.unwrap();
+        assert_eq!(
+            reply.status,
+            StatusCode::CREATED,
+            "{path}: {}",
+            reply.text()
+        );
+        a.db()
+            .read(|conn| {
+                let id = conn.query_row(
+                    "SELECT id FROM messages WHERE client_message_id='spoiler-opener'",
+                    [],
+                    |row| row.get(0),
+                )?;
+                assert!(
+                    campfire_db::Message::find(conn, id)?
+                        .attachment(conn)?
+                        .unwrap()
+                        .0
+                        .spoiler
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
     }
 }

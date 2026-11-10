@@ -18,7 +18,13 @@ const STALE_WHILE_REVALIDATE: u64 = 7 * 24 * 60 * 60;
 /// `allow_unauthenticated_access only: :show`
 pub async fn show(c: &mut Ctx) -> Result {
     c.use_live_response(); // `include ActiveStorage::Streaming`
-    concerns::before_actions(c, Before::default().allow_unauthenticated_access().skip_allow_browser()).await?;
+    concerns::before_actions(
+        c,
+        Before::default()
+            .allow_unauthenticated_access()
+            .skip_allow_browser(),
+    )
+    .await?;
     if c.param_str("animated") == Some("1")
         || c.param_str("still") == Some("1")
         || c.param_str("blob").is_some()
@@ -27,7 +33,10 @@ pub async fn show(c: &mut Ctx) -> Result {
     }
     let (variation, small) = match c.param_str("size") {
         Some("small") => (Variation::resize_to_limit(192, 192, Some("png")), true),
-        Some("touch") => (Variation::resize_and_pad(TOUCH_ICON_SIZE, TOUCH_ICON_SIZE), true),
+        Some("touch") => (
+            Variation::resize_and_pad(TOUCH_ICON_SIZE, TOUCH_ICON_SIZE),
+            true,
+        ),
         _ => (Variation::resize_to_limit(512, 512, Some("png")), false),
     };
     send_logo(c, variation, |c| stock_icon(c, small)).await
@@ -38,13 +47,25 @@ const TOUCH_ICON_SIZE: i64 = 180;
 
 /// The attached logo as the PNG `variation` makes, with `show`'s caching. `fallback` answers when
 /// there's no logo or it can't be resized.
-pub async fn send_logo(c: &mut Ctx, variation: Variation, fallback: impl FnOnce(&mut Ctx) -> Result) -> Result {
-    let account = c.app().db.read(Account::first).await.map_err(Error::internal)?;
+pub async fn send_logo(
+    c: &mut Ctx,
+    variation: Variation,
+    fallback: impl FnOnce(&mut Ctx) -> Result,
+) -> Result {
+    let account = c
+        .app()
+        .db
+        .read(Account::first)
+        .await
+        .map_err(Error::internal)?;
     let blob = match &account {
         Some(account) => {
             let id = account.id;
-            c.app().db.read(move |conn| attachments::attached_blob(conn, "Account", id, "logo"))
-                .await.map_err(Error::internal)?
+            c.app()
+                .db
+                .read(move |conn| attachments::attached_blob(conn, "Account", id, "logo"))
+                .await
+                .map_err(Error::internal)?
         }
         None => None,
     };
@@ -55,13 +76,22 @@ pub async fn send_logo(c: &mut Ctx, variation: Variation, fallback: impl FnOnce(
 
     // `stale?(etag: Current.account)`; there's no accounts/logos/show template to digest.
     let freshness = Freshness {
-        etag: account.as_ref().map(|account| cache_key_with_version("accounts", account.id, account.updated_at.jiff())),
+        etag: account.as_ref().map(|account| {
+            cache_key_with_version("accounts", account.id, account.updated_at.jiff())
+        }),
         ..Freshness::default()
     };
     if !private && let Some(not_modified) = c.fresh_when(freshness) {
         return Ok(not_modified);
     }
-    c.expires_in(MAX_AGE, ExpiresIn { public: true, stale_while_revalidate: Some(STALE_WHILE_REVALIDATE), ..ExpiresIn::default() });
+    c.expires_in(
+        MAX_AGE,
+        ExpiresIn {
+            public: true,
+            stale_while_revalidate: Some(STALE_WHILE_REVALIDATE),
+            ..ExpiresIn::default()
+        },
+    );
 
     let variant = match blob.filter(|blob| blob.is_variable()) {
         // `logo.variant(size).processed if logo.variable?`
@@ -94,7 +124,11 @@ pub async fn send_logo(c: &mut Ctx, variation: Variation, fallback: impl FnOnce(
         }
         None => fallback(c),
     }?;
-    Ok(if private { response.header("cache-control", "private, no-store") } else { response })
+    Ok(if private {
+        response.header("cache-control", "private, no-store")
+    } else {
+        response
+    })
 }
 
 pub(super) fn stock_icon(c: &mut Ctx, small: bool) -> Result {
@@ -124,7 +158,11 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     // Rails destroys the attachment before its separate audit write.
-    c.app().db.write(move |tx| crate::account_security::logo_removed(tx, &account, &audit)).await.map_err(Error::internal)?;
+    c.app()
+        .db
+        .write(move |tx| crate::account_security::logo_removed(tx, &account, &audit))
+        .await
+        .map_err(Error::internal)?;
     crate::controllers::presenters::workspace_branding::publish(c.app()).await;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)

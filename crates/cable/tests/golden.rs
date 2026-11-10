@@ -75,7 +75,6 @@ fn script(tokens: &BTreeMap<String, String>) -> Vec<(&'static str, Vec<(String, 
     let closed_room = identifier(json!({ "channel": "RoomChannel", "room_id": closed_room_id }));
     let typing = identifier(json!({ "channel": "TypingNotificationsChannel", "room_id": room_id }));
 
-
     let step = |name: &str, step: Step| (name.to_string(), step);
     vec![
         (
@@ -414,7 +413,9 @@ fn dechunk(body: &str) -> String {
 async fn replays_reference_frames() {
     let mut golden: Recording =
         serde_json::from_str(&std::fs::read_to_string(GOLDEN).unwrap()).unwrap();
-    for steps in golden.sessions.values_mut() { steps.retain(|step| !step.step.contains("turbo")); }
+    for steps in golden.sessions.values_mut() {
+        steps.retain(|step| !step.step.contains("turbo"));
+    }
     let target = start_campfire_like_server(&golden.tokens).await;
     let sessions = run_script(&target, &golden.tokens).await;
     for (session, expected) in &golden.sessions {

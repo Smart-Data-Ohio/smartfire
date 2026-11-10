@@ -1,14 +1,4 @@
 use super::*;
-use campfire_db::{Broadcast, Result};
-use campfire_app::integrations::github::accounts::Account;
-use campfire_app::integrations::github::accounts::Accounts;
-use campfire_db::Event;
-use campfire_db::Timestamp;
-use campfire_db::Tx;
-use rusqlite::params;
-use rusqlite::types::Value as SqlValue;
-use serde_json::Value;
-use serde_json::json;
 use crate::integrations::{
     github::{
         subscriptions::{self, RepositorySubscription},
@@ -16,9 +6,19 @@ use crate::integrations::{
     },
     test_support::TestDb,
 };
+use campfire_app::integrations::github::accounts::Account;
+use campfire_app::integrations::github::accounts::Accounts;
+use campfire_db::Event;
+use campfire_db::Timestamp;
+use campfire_db::Tx;
+use campfire_db::{Broadcast, Result};
 use campfire_db::{
     ChannelThread, Env, Message, NewChannelThread, NewMessage, RecordingSink, TestClock, fixtures,
 };
+use rusqlite::params;
+use rusqlite::types::Value as SqlValue;
+use serde_json::Value;
+use serde_json::json;
 use std::sync::Arc;
 fn vectors() -> Value {
     serde_json::from_str(include_str!("../../../../../../vectors/github_domain.json")).unwrap()
@@ -570,7 +570,10 @@ async fn github_pr_agent_payload_security_hides_private_and_unknown_details_with
         .unwrap();
     assert_eq!(p["title"], "Secret title");
     assert!(server.received().is_empty());
-    assert_eq!(p,json!({"url":"https://github.com/rails/rails/pull/12","owner":"rails","repo":"rails","number":12,"title":"Secret title","state":"open","head_branch":"shiny","base_branch":"main","review_decision":"approved","checks_state":"passing"}));
+    assert_eq!(
+        p,
+        json!({"url":"https://github.com/rails/rails/pull/12","owner":"rails","repo":"rails","number":12,"title":"Secret title","state":"open","head_branch":"shiny","base_branch":"main","review_decision":"approved","checks_state":"passing"})
+    );
     let encryption = crypto();
     fixture
         .db
@@ -605,20 +608,78 @@ async fn github_pr_agent_payload_security_hides_private_and_unknown_details_with
             .unwrap()
             .is_none()
     );
-    let ordinary=fixture.db.write(|tx|{let mut t=thread(tx,fixtures::identify("designers"),"Ordinary")?;t.post_message(tx,fixtures::identify("david"),NewMessage {markdown_source:Some("hello".into()),..Default::default()})}).await.unwrap();
-    assert!(payload_for_message(&fixture.db,&accounts,&ordinary,None).await.unwrap().is_none());
+    let ordinary = fixture
+        .db
+        .write(|tx| {
+            let mut t = thread(tx, fixtures::identify("designers"), "Ordinary")?;
+            t.post_message(
+                tx,
+                fixtures::identify("david"),
+                NewMessage {
+                    markdown_source: Some("hello".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    assert!(
+        payload_for_message(&fixture.db, &accounts, &ordinary, None)
+            .await
+            .unwrap()
+            .is_none()
+    );
     assert_eq!(server.received().len(), 1);
 }
 
 #[tokio::test]
 async fn github_pr_commit_callbacks_coalesce_and_refresh_queue_failure_rolls_back_save() {
-    let (fixture,_,sink)=database().await;
-    fixture.db.write(|tx| {let pr=PullRequest::for_reference(tx,"o","r",1)?;update(tx,pr.id,&[("title",SqlValue::Text("First".into()))])?;update(tx,pr.id,&[("title",SqlValue::Text("Last".into()))])?;Ok(())}).await.unwrap();
-    assert_eq!(sink.take().iter().filter(|e|matches!(e,Event::Broadcast(b) if b.kind==CardUpdated::KIND)).count(),1);
-    let (app,_dir)=super::super::references::tests::application().await;
+    let (fixture, _, sink) = database().await;
+    fixture
+        .db
+        .write(|tx| {
+            let pr = PullRequest::for_reference(tx, "o", "r", 1)?;
+            update(tx, pr.id, &[("title", SqlValue::Text("First".into()))])?;
+            update(tx, pr.id, &[("title", SqlValue::Text("Last".into()))])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        sink.take()
+            .iter()
+            .filter(|e| matches!(e,Event::Broadcast(b) if b.kind==CardUpdated::KIND))
+            .count(),
+        1
+    );
+    let (app, _dir) = super::super::references::tests::application().await;
     let pr=app.db.write(|tx|{let m=message(tx,fixtures::identify("designers"),"https://github.com/o/r/pull/2")?;let pr=PullRequest::for_message(tx.conn(),m.id)?.remove(0);tx.conn().execute("UPDATE github_pull_requests SET fetch_requested_at=NULL WHERE id=?",[pr.id])?;tx.conn().execute_batch("CREATE TRIGGER reject_card_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue down'); END;")?;Ok(pr)}).await.unwrap();
-    app.db.write(move|tx|update(tx,pr.id,&[("private",SqlValue::Integer(0)),("title",SqlValue::Text("Rejected with failed render refresh".into()))])).await.unwrap_err();
-    app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert!(stored.fetch_requested_at.is_none());assert_eq!(stored.title,None);assert_eq!(stored.private,None);Ok(())}).await.unwrap();
+    app.db
+        .write(move |tx| {
+            update(
+                tx,
+                pr.id,
+                &[
+                    ("private", SqlValue::Integer(0)),
+                    (
+                        "title",
+                        SqlValue::Text("Rejected with failed render refresh".into()),
+                    ),
+                ],
+            )
+        })
+        .await
+        .unwrap_err();
+    app.db
+        .read(move |conn| {
+            let stored = PullRequest::find(conn, pr.id)?;
+            assert!(stored.fetch_requested_at.is_none());
+            assert_eq!(stored.title, None);
+            assert_eq!(stored.private, None);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -664,11 +725,9 @@ async fn github_pr_thread_concurrent_losers_leave_one_mapping_and_one_thread() {
         .unwrap();
 }
 
-
-
 #[tokio::test]
 async fn review_refresh_queue_is_atomic_with_triggering_save() {
-    let (app,_dir)=super::super::references::tests::application().await;
+    let (app, _dir) = super::super::references::tests::application().await;
     let pr=app.db.write(|tx| {
         let m=message(tx,fixtures::identify("designers"),"https://github.com/review/atomic/pull/2")?;
         let pr=PullRequest::for_message(tx.conn(),m.id)?.remove(0);
@@ -677,7 +736,27 @@ async fn review_refresh_queue_is_atomic_with_triggering_save() {
         super::super::tests::enqueue_retention_job(tx)?;
         Ok(pr)
     }).await.unwrap();
-    let result=app.db.write(move|tx|update(tx,pr.id,&[("title",SqlValue::Text("After".into()))])).await;
-    assert!(result.is_err(),"queue insertion failure must roll back the triggering PR save");
-    app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert_eq!(stored.title.as_deref(),Some("Before"));assert!(stored.fetch_requested_at.is_none());let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class GLOB 'Github::*'",[],|r|r.get(0))?;assert_eq!(jobs,0);Ok(())}).await.unwrap();
+    let result = app
+        .db
+        .write(move |tx| update(tx, pr.id, &[("title", SqlValue::Text("After".into()))]))
+        .await;
+    assert!(
+        result.is_err(),
+        "queue insertion failure must roll back the triggering PR save"
+    );
+    app.db
+        .read(move |conn| {
+            let stored = PullRequest::find(conn, pr.id)?;
+            assert_eq!(stored.title.as_deref(), Some("Before"));
+            assert!(stored.fetch_requested_at.is_none());
+            let jobs: i64 = conn.query_row(
+                "SELECT COUNT(*) FROM background_jobs WHERE job_class GLOB 'Github::*'",
+                [],
+                |r| r.get(0),
+            )?;
+            assert_eq!(jobs, 0);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }

@@ -73,17 +73,34 @@ impl SavedItem {
     }
 
     pub fn find_by_id(conn: &Connection, id: i64) -> Result<Option<Self>> {
-        query_one(conn, r#"SELECT "saved_items".* FROM "saved_items" WHERE "saved_items"."id" = ? LIMIT 1"#, [id], Self::from_row)
+        query_one(
+            conn,
+            r#"SELECT "saved_items".* FROM "saved_items" WHERE "saved_items"."id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )
     }
     /// `activity_items.preload(:source)` for saved-message reminders.
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
-        if ids.is_empty() { return Ok(Vec::new()); }
-        query_all(conn,
-            &format!("SELECT * FROM saved_items WHERE id IN ({})", sql::placeholders(ids.len())),
-            rusqlite::params_from_iter(ids), Self::from_row)
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM saved_items WHERE id IN ({})",
+                sql::placeholders(ids.len())
+            ),
+            rusqlite::params_from_iter(ids),
+            Self::from_row,
+        )
     }
 
-    pub fn find_by_user_and_message(conn: &Connection, user_id: i64, message_id: i64) -> Result<Option<Self>> {
+    pub fn find_by_user_and_message(
+        conn: &Connection,
+        user_id: i64,
+        message_id: i64,
+    ) -> Result<Option<Self>> {
         query_one(
             conn,
             r#"SELECT "saved_items".* FROM "saved_items" WHERE "saved_items"."user_id" = ? AND "saved_items"."message_id" = ? LIMIT 1"#,
@@ -110,13 +127,21 @@ impl SavedItem {
     /// they're still a member of (re-checked at view time, so regaining access shows an item
     /// again).
     pub fn accessible_to(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
-        let Some(user) = User::find_by_id(conn, user_id)? else { return Ok(Vec::new()) };
+        let Some(user) = User::find_by_id(conn, user_id)? else {
+            return Ok(Vec::new());
+        };
         if !user.is_active() || user.is_bot() {
             return Ok(Vec::new());
         }
         query_all(
             conn,
-            &format!(r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ? WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ? AND (messages.thread_id IS NULL OR {thread_access}) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC"#, thread_access = super::channel_thread::readable_by_sql("messages.thread_id", &user_id.to_string())),
+            &format!(
+                r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ? WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ? AND (messages.thread_id IS NULL OR {thread_access}) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC"#,
+                thread_access = super::channel_thread::readable_by_sql(
+                    "messages.thread_id",
+                    &user_id.to_string()
+                )
+            ),
             params![user_id, user_id],
             Self::from_row,
         )
@@ -132,33 +157,71 @@ impl SavedItem {
         after: Option<(Timestamp, i64)>,
         limit: usize,
     ) -> Result<Vec<Self>> {
-        let Some(user) = User::find_by_id(conn, user_id)? else { return Ok(Vec::new()) };
+        let Some(user) = User::find_by_id(conn, user_id)? else {
+            return Ok(Vec::new());
+        };
         if !user.is_active() || user.is_bot() {
             return Ok(Vec::new());
         }
         let (after_at, after_id) = after.map_or((None, None), |(at, id)| (Some(at), Some(id)));
         query_all(
             conn,
-            &format!(r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ?1 WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ?1 AND (?2 IS NULL OR "saved_items"."status" = ?2) AND (?3 IS NULL OR "saved_items"."created_at" < ?3 OR ("saved_items"."created_at" = ?3 AND "saved_items"."id" < ?4)) AND (messages.thread_id IS NULL OR {thread_access}) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC LIMIT ?5"#, thread_access = super::channel_thread::readable_by_sql("messages.thread_id", &user_id.to_string())),
-            params![user_id, status, after_at, after_id, i64::try_from(limit).unwrap_or(i64::MAX)],
+            &format!(
+                r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ?1 WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ?1 AND (?2 IS NULL OR "saved_items"."status" = ?2) AND (?3 IS NULL OR "saved_items"."created_at" < ?3 OR ("saved_items"."created_at" = ?3 AND "saved_items"."id" < ?4)) AND (messages.thread_id IS NULL OR {thread_access}) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC LIMIT ?5"#,
+                thread_access = super::channel_thread::readable_by_sql(
+                    "messages.thread_id",
+                    &user_id.to_string()
+                )
+            ),
+            params![
+                user_id,
+                status,
+                after_at,
+                after_id,
+                i64::try_from(limit).unwrap_or(i64::MAX)
+            ],
             Self::from_row,
         )
     }
 
     /// `SavedItem.due_reminders(now)`: pending reminders whose time has come.
     pub fn due_reminders(conn: &Connection, now: Timestamp) -> Result<Vec<Self>> {
-        query_all(conn, &format!(r#"{SELECT_DUE} ORDER BY "saved_items"."id" ASC"#), [now], Self::from_row)
+        query_all(
+            conn,
+            &format!(r#"{SELECT_DUE} ORDER BY "saved_items"."id" ASC"#),
+            [now],
+            Self::from_row,
+        )
     }
 
     /// `Current.user.saved_items.find_or_initialize_by(message:)`, `remind_at =`, `save!`: saving
     /// is idempotent per user and message, and re-saving sets the reminder.
-    pub fn save_for(tx: &mut Tx<'_>, user_id: i64, message_id: i64, remind_at: Option<Timestamp>) -> Result<Self> {
+    pub fn save_for(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        message_id: i64,
+        remind_at: Option<Timestamp>,
+    ) -> Result<Self> {
         match Self::find_by_user_and_message(tx.conn(), user_id, message_id)? {
             Some(mut item) => {
-                item.update(tx, SavedItemChanges { remind_at: Some(remind_at), status: None })?;
+                item.update(
+                    tx,
+                    SavedItemChanges {
+                        remind_at: Some(remind_at),
+                        status: None,
+                    },
+                )?;
                 Ok(item)
             }
-            None => Self::create(tx, NewSavedItem { user_id, message_id, remind_at, status: None }),
+            None => Self::create(
+                tx,
+                NewSavedItem {
+                    user_id,
+                    message_id,
+                    remind_at,
+                    status: None,
+                },
+            ),
         }
     }
 
@@ -174,7 +237,9 @@ impl SavedItem {
             errors.add("message", "must exist");
         }
         Self::validate_status(&mut errors, &status);
-        if Self::find_by_user_and_message(tx.conn(), attributes.user_id, attributes.message_id)?.is_some() {
+        if Self::find_by_user_and_message(tx.conn(), attributes.user_id, attributes.message_id)?
+            .is_some()
+        {
             errors.add("message_id", "has already been taken");
         }
         // `if: :will_save_change_to_remind_at?`: a new nil isn't a change.
@@ -266,7 +331,10 @@ impl SavedItem {
         } else {
             ActivityItem::destroy_for_source(tx, SOURCE_TYPE, self.id)?;
         }
-        tx.conn().execute_cached(r#"DELETE FROM "saved_items" WHERE "saved_items"."id" = ?"#, [self.id])?;
+        tx.conn().execute_cached(
+            r#"DELETE FROM "saved_items" WHERE "saved_items"."id" = ?"#,
+            [self.id],
+        )?;
         Ok(())
     }
 
@@ -297,7 +365,10 @@ impl SavedItem {
     fn room_member(conn: &Connection, message_id: i64, user_id: i64) -> Result<bool> {
         sql::exists(
             conn,
-            &format!(r#"SELECT 1 FROM messages JOIN memberships ON memberships.room_id=messages.room_id JOIN rooms ON rooms.id=messages.room_id WHERE messages.id=? AND memberships.user_id=? AND rooms.deleted_at IS NULL AND (messages.thread_id IS NULL OR {})"#, super::channel_thread::readable_by_sql("messages.thread_id", &user_id.to_string())),
+            &format!(
+                r#"SELECT 1 FROM messages JOIN memberships ON memberships.room_id=messages.room_id JOIN rooms ON rooms.id=messages.room_id WHERE messages.id=? AND memberships.user_id=? AND rooms.deleted_at IS NULL AND (messages.thread_id IS NULL OR {})"#,
+                super::channel_thread::readable_by_sql("messages.thread_id", &user_id.to_string())
+            ),
             params![message_id, user_id],
         )
     }
@@ -334,7 +405,9 @@ impl SavedItem {
     /// claimed without notice; a reminder moved or cleared since selection is left for its new
     /// time. Returns whether it notified.
     pub fn dispatch_reminder(tx: &mut Tx<'_>, id: i64, now: Timestamp) -> Result<bool> {
-        let Some(item) = Self::find_by_id(tx.conn(), id)? else { return Ok(false) };
+        let Some(item) = Self::find_by_id(tx.conn(), id)? else {
+            return Ok(false);
+        };
         if item.reminded_at.is_some() {
             return Ok(false);
         }
@@ -351,7 +424,9 @@ impl SavedItem {
             params![now, tx.now(), item.id],
         )?;
         if member {
-            tx.emit_after_commit(Event::job(&ReminderPushJob { saved_item_id: item.id }));
+            tx.emit_after_commit(Event::job(&ReminderPushJob {
+                saved_item_id: item.id,
+            }));
         }
         Ok(member)
     }
@@ -368,7 +443,9 @@ impl SavedItem {
         id: i64,
         policy: &dyn Fn(&User) -> bool,
     ) -> Result<Option<ReminderPush>> {
-        let Some(item) = Self::find_by_id(conn, id)? else { return Ok(None) };
+        let Some(item) = Self::find_by_id(conn, id)? else {
+            return Ok(None);
+        };
         if !Self::room_member(conn, item.message_id, item.user_id)? {
             return Ok(None);
         }
@@ -377,7 +454,11 @@ impl SavedItem {
         }
         let message = Message::find(conn, item.message_id)?;
         let room = Room::find(conn, message.room_id)?;
-        let title = if room.direct() { message.creator(conn)?.name } else { room.name.clone().unwrap_or_default() };
+        let title = if room.direct() {
+            message.creator(conn)?.name
+        } else {
+            room.name.clone().unwrap_or_default()
+        };
         let text = if super::ignore_policy::ignored(conn, item.user_id, message.creator_id)? {
             "a saved message".to_owned()
         } else {
@@ -389,22 +470,43 @@ impl SavedItem {
         };
         Ok(Some(ReminderPush {
             user_id: item.user_id,
-            payload: PushPayload::new(title, format!("Reminder: {text}"), message_path(&message), Some(format!("saved-{}", item.id))),
+            payload: PushPayload::new(
+                title,
+                format!("Reminder: {text}"),
+                message_path(&message),
+                Some(format!("saved-{}", item.id)),
+            ),
             tag: format!("saved-{}", item.id),
             subscriptions: PushSubscription::for_user(conn, item.user_id)?,
         }))
     }
 
-    pub fn reminder_push_with_policy(conn: &Connection, rich_text: &dyn RichText, id: i64, now: Timestamp) -> Result<Option<ReminderPush>> {
-        let Some(item) = Self::find_by_id(conn, id)? else { return Ok(None) };
+    pub fn reminder_push_with_policy(
+        conn: &Connection,
+        rich_text: &dyn RichText,
+        id: i64,
+        now: Timestamp,
+    ) -> Result<Option<ReminderPush>> {
+        let Some(item) = Self::find_by_id(conn, id)? else {
+            return Ok(None);
+        };
         let users = crate::UserStatusSettings::for_ids(conn, &[item.user_id])?;
         let room_id = Message::find(conn, item.message_id)?.room_id;
-        Self::reminder_push(conn, rich_text, id, &|user| crate::NotificationPolicy {
-            room_id: Some(room_id),
-            recipient: users.get(&user.id), kind: crate::NotificationKind::Reminder,
-            room_involvement: None, thread_involvement: None, mentioned: false, reply_to_recipient: false,
-            keyword_matched: false, dnd_exception: false, now,
-        }.push())
+        Self::reminder_push(conn, rich_text, id, &|user| {
+            crate::NotificationPolicy {
+                room_id: Some(room_id),
+                recipient: users.get(&user.id),
+                kind: crate::NotificationKind::Reminder,
+                room_involvement: None,
+                thread_involvement: None,
+                mentioned: false,
+                reply_to_recipient: false,
+                keyword_matched: false,
+                dnd_exception: false,
+                now,
+            }
+            .push()
+        })
     }
 }
 

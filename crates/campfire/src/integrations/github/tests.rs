@@ -17,7 +17,11 @@ pub(crate) fn enqueue_retention_job(tx: &mut campfire_db::Tx<'_>) -> campfire_db
     tx.emit_after_commit(campfire_db::Event::job(
         &campfire_db::models::retention::PruneJob {},
     ));
-    assert_eq!(count(tx)?, before + 1, "the recurring job must be persisted");
+    assert_eq!(
+        count(tx)?,
+        before + 1,
+        "the recurring job must be persisted"
+    );
     Ok(())
 }
 
@@ -138,7 +142,9 @@ pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
     // Allow workers merging this fixture to stay within their reserved port range.
     let (first_port, last_port) = std::env::var("GITHUB_TEST_PORT_RANGE")
         .map(|range| {
-            let (first, last) = range.split_once('-').expect("GITHUB_TEST_PORT_RANGE must be FIRST-LAST");
+            let (first, last) = range
+                .split_once('-')
+                .expect("GITHUB_TEST_PORT_RANGE must be FIRST-LAST");
             let first: u16 = first.parse().expect("invalid first GitHub test port");
             let last: u16 = last.parse().expect("invalid last GitHub test port");
             assert!(first > 0 && first <= last, "invalid GitHub test port range");
@@ -591,8 +597,7 @@ async fn test_database() -> TestDb {
 }
 async fn test_database_with_clock(clock: Arc<campfire_db::TestClock>) -> TestDb {
     tokio::task::spawn_blocking(move || {
-        let dir =
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+        let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         TestDb::in_dir(clock, &dir)
     })
     .await
@@ -734,8 +739,10 @@ async fn rust_account_rows_are_exported_for_rails_rollback_verification() {
     assert_eq!(stored_token(&test, id, "refresh_token"), "fixture-refresh");
     if let Ok(path) = std::env::var("GITHUB_RUST_OUTPUT") {
         let row: Value = test.db.read_blocking(|conn| Ok(conn.query_row("SELECT access_token, refresh_token, github_login, token_source, token_expires_at, created_at, updated_at FROM github_connected_accounts WHERE id = ?", [id], |r| Ok(json!({"access_token":r.get::<_,String>(0)?,"refresh_token":r.get::<_,String>(1)?,"github_login":r.get::<_,String>(2)?,"token_source":r.get::<_,String>(3)?,"token_expires_at":r.get::<_,String>(4)?,"created_at":r.get::<_,String>(5)?,"updated_at":r.get::<_,String>(6)?})))?)).unwrap();
-        let path=std::path::Path::new(&path);
-        if let Some(parent)=path.parent().filter(|p|!p.as_os_str().is_empty()){std::fs::create_dir_all(parent).unwrap();}
+        let path = std::path::Path::new(&path);
+        if let Some(parent) = path.parent().filter(|p| !p.as_os_str().is_empty()) {
+            std::fs::create_dir_all(parent).unwrap();
+        }
         std::fs::write(path, json!({"row":row,"plaintext":{"access_token":"fixture-access","refresh_token":"fixture-refresh"},"signed_state":oauth::sign_state(&Secrets::new(vectors()["secret_key_base"].as_str().unwrap()),"fixture-session-state")}).to_string()).unwrap();
     }
 }
@@ -1436,10 +1443,17 @@ async fn agent_identity_checks_unreadable_owner_pat_before_falling_back() {
 
 #[tokio::test]
 async fn boot_installs_owner_repository_reader_and_reuses_its_permission_cache() {
+    use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
     use campfire_db::{Agent, ChannelThread, NewChannelThread};
-    use crate::controllers::presenters::test_support::{TestApp, BENDER, DAVID, ALL_TALK};
-    let (server, network) = fake(vec![Route::new("GET", "api.github.com", "/repos/mixed/repo", 200).body("{}").header("content-type", "application/json")]).await;
-    let test = TestApp::boot_with_network(network).await.expect("default seed");
+    let (server, network) = fake(vec![
+        Route::new("GET", "api.github.com", "/repos/mixed/repo", 200)
+            .body("{}")
+            .header("content-type", "application/json"),
+    ])
+    .await;
+    let test = TestApp::boot_with_network(network)
+        .await
+        .expect("default seed");
     let crypto = test.booted.app.ar_encryption.clone();
     let (agent,thread) = test.booted.app.db.write(move |tx| {
         let agent=Agent::for_user(tx.conn(),BENDER)?.unwrap();
@@ -1453,13 +1467,43 @@ async fn boot_installs_owner_repository_reader_and_reuses_its_permission_cache()
         Ok((agent.id,thread.id))
     }).await.unwrap();
     for _ in 0..2 {
-        let access=test.booted.app.agent_repositories.resolve_threads(&test.booted.app.db,agent,vec![thread]).await.unwrap();
-        assert!(access.contains(&(DAVID,"mixed".into(),"repo".into())));
+        let access = test
+            .booted
+            .app
+            .agent_repositories
+            .resolve_threads(&test.booted.app.db, agent, vec![thread])
+            .await
+            .unwrap();
+        assert!(access.contains(&(DAVID, "mixed".into(), "repo".into())));
     }
-    assert_eq!(server.received.lock().unwrap().len(),1,"the owner's ten-minute cache must survive callers");
-    let requests=server.received.lock().unwrap().clone();
-    assert_eq!(requests[0].header("authorization"),Some(format!("Bearer {}", "owner-repository-fixture-token").as_str()));
-    test.booted.app.db.write(move |tx| {tx.conn().execute("UPDATE agents SET owner_id=NULL WHERE id=?",[agent])?;Ok(())}).await.unwrap();
-    assert!(test.booted.app.agent_repositories.resolve_threads(&test.booted.app.db,agent,vec![thread]).await.unwrap().is_empty());
-    assert_eq!(server.received.lock().unwrap().len(),1);
+    assert_eq!(
+        server.received.lock().unwrap().len(),
+        1,
+        "the owner's ten-minute cache must survive callers"
+    );
+    let requests = server.received.lock().unwrap().clone();
+    assert_eq!(
+        requests[0].header("authorization"),
+        Some(format!("Bearer {}", "owner-repository-fixture-token").as_str())
+    );
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            tx.conn()
+                .execute("UPDATE agents SET owner_id=NULL WHERE id=?", [agent])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        test.booted
+            .app
+            .agent_repositories
+            .resolve_threads(&test.booted.app.db, agent, vec![thread])
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(server.received.lock().unwrap().len(), 1);
 }

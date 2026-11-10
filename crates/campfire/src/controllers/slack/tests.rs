@@ -231,11 +231,26 @@ async fn slack_connections_http_persistence_audits_and_requests_match_rails() {
         assert_eq!(status, case["status"], "{}: {html}", case["name"]);
         assert_eq!(
             headers.get("location").and_then(|h| h.to_str().ok()),
-            case["location"].as_str().map(|location| if method == "GET" { match location {
-                "http://example.org/account/slack_import" => "http://example.org/app/admin/slack".into(),
-                "http://example.org/slack/imports" => "http://example.org/app/settings/slack".into(),
-                location => crate::controllers::presenters::test_support::spa_auth_location(location),
-            } } else { crate::controllers::presenters::test_support::spa_auth_location(location) }).as_deref(),
+            case["location"]
+                .as_str()
+                .map(|location| if method == "GET" {
+                    match location {
+                        "http://example.org/account/slack_import" => {
+                            "http://example.org/app/admin/slack".into()
+                        }
+                        "http://example.org/slack/imports" => {
+                            "http://example.org/app/settings/slack".into()
+                        }
+                        location => {
+                            crate::controllers::presenters::test_support::spa_auth_location(
+                                location,
+                            )
+                        }
+                    }
+                } else {
+                    crate::controllers::presenters::test_support::spa_auth_location(location)
+                })
+                .as_deref(),
             "{}",
             case["name"]
         );
@@ -391,7 +406,12 @@ async fn slack_oauth_replay_unique_constraint_and_setup_csrf_are_rejected() {
             .0,
         302
     );
-    assert_eq!(request(&member, "GET", "/api/v1/admin/slack", Value::Null, sudo()).await.0, 403);
+    assert_eq!(
+        request(&member, "GET", "/api/v1/admin/slack", Value::Null, sudo())
+            .await
+            .0,
+        403
+    );
     let filtered=crate::security::parameter_filter().filter(&json!({"code":"fixture-code","access_token":"fixture-user-grant","client_secret":"fixture-secret"}));
     assert_eq!(
         filtered,

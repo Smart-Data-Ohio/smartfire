@@ -258,9 +258,18 @@ pub async fn record(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     concerns::keep_waiting_flash(c);
     if campfire_runtime::navigation::alias_navigation(c)? {
-        let query: Vec<_> = c.request.query_string().split('&').filter(|pair| {
-            !pair.is_empty() && !matches!(pair.split('=').next(), Some("classic" | "message_id" | "thread_id" | "m"))
-        }).collect();
+        let query: Vec<_> = c
+            .request
+            .query_string()
+            .split('&')
+            .filter(|pair| {
+                !pair.is_empty()
+                    && !matches!(
+                        pair.split('=').next(),
+                        Some("classic" | "message_id" | "thread_id" | "m")
+                    )
+            })
+            .collect();
         if !query.is_empty() {
             location.push(if location.contains('?') { '&' } else { '?' });
             location.push_str(&query.join("&"));
@@ -276,8 +285,9 @@ pub async fn room_index(c: &mut Ctx) -> Result {
         .is_some_and(|kind| kind == &format::HTML || kind == &format::ALL)
     {
         concerns::keep_waiting_flash(c);
-        let path = campfire_spa::screens::spa_url("welcome#show", "/", Some(c.request.query_string()))
-            .ok_or(Error::NotFound)?;
+        let path =
+            campfire_spa::screens::spa_url("welcome#show", "/", Some(c.request.query_string()))
+                .ok_or(Error::NotFound)?;
         return campfire_runtime::navigation::redirect_alias(c, &path);
     }
     if c.current::<MatchedRoute>().ok_or(Error::NotFound)?.endpoint != "rooms#index" {

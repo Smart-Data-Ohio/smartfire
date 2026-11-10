@@ -5,11 +5,11 @@ use campfire_app::app::AppCtx;
 use campfire_app::integrations::github::{
     jobs::FetchPullRequestJob, pull_requests::PullRequest, references,
 };
-use campfire_runtime::presenters::work_links::resolve_drive_title;
 use campfire_db::{CalendarEvent, ChannelThread, Event, NewWorkThreadLink, User, WorkThreadLink};
 use campfire_kit::{Ctx, Result, StatusCode};
 use campfire_runtime::concerns;
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::work_links::resolve_drive_title;
 
 use crate::agents::human;
 use crate::endpoints::{before_actions, body, now};
@@ -148,7 +148,10 @@ async fn create_link(c: &mut Ctx) -> Result {
                         c,
                         validation(
                             "pullRequestUrl",
-                            &campfire_presentation::helpers::to_sentence(&errors.full_messages(), " and "),
+                            &campfire_presentation::helpers::to_sentence(
+                                &errors.full_messages(),
+                                " and ",
+                            ),
                         ),
                     ));
                 }

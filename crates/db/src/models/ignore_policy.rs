@@ -37,9 +37,18 @@ pub fn blockers_of(conn: &Connection, author: i64) -> Result<Vec<i64>> {
     )
 }
 
-pub fn visible_recipients(conn: &Connection, author: i64, recipients: Vec<i64>) -> Result<Vec<i64>> {
-    let blockers = blockers_of(conn, author)?.into_iter().collect::<BTreeSet<_>>();
-    Ok(recipients.into_iter().filter(|id| !blockers.contains(id)).collect())
+pub fn visible_recipients(
+    conn: &Connection,
+    author: i64,
+    recipients: Vec<i64>,
+) -> Result<Vec<i64>> {
+    let blockers = blockers_of(conn, author)?
+        .into_iter()
+        .collect::<BTreeSet<_>>();
+    Ok(recipients
+        .into_iter()
+        .filter(|id| !blockers.contains(id))
+        .collect())
 }
 
 pub fn blockers_for_authors(

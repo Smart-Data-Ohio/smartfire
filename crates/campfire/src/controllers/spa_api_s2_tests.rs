@@ -561,18 +561,28 @@ async fn a_forwarded_spoiler_stays_hidden_after_an_edit() {
     let mut david = a.sign_in(DAVID).await;
     let body = json!({"clientMessageId": "0199b3c4-spoiler-1", "markdownSource": "before ||SECRET||", "replyToMessageId": null, "replyNotifyAuthor": null});
     let reply = david
-        .write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &body))
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+            &body,
+        ))
         .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let source: api::MessageDTO = parse(&reply);
 
     let body = json!({"note": null, "destinations": [{"roomId": HQ, "threadId": null}]});
     let reply = david
-        .write(json_body(Method::POST, &format!("/api/v1/messages/{}/forwards", source.id), &body))
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{}/forwards", source.id),
+            &body,
+        ))
         .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let result: api::ForwardResult = parse(&reply);
-    let [copy] = result.forwards.as_slice() else { panic!("{result:?}") };
+    let [copy] = result.forwards.as_slice() else {
+        panic!("{result:?}")
+    };
 
     // The copy has HTML and no Markdown: the edit box gets Markdown made from the HTML.
     let path = format!("/api/v1/messages/{}", copy.id);
@@ -581,12 +591,18 @@ async fn a_forwarded_spoiler_stays_hidden_after_an_edit() {
 
     let edit = editable.markdown_source.replace("before", "after");
     let reply = david
-        .write(json_body(Method::PATCH, &path, &json!({"markdownSource": edit})))
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"markdownSource": edit}),
+        ))
         .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     let edited: api::MessageDTO = parse(&reply);
     assert!(
-        edited.body_html.contains("after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span>"),
+        edited
+            .body_html
+            .contains("after <span class=\"spoiler\" data-spoiler=\"\">SECRET</span>"),
         "{}",
         edited.body_html
     );
@@ -598,15 +614,36 @@ async fn a_bot_spoiler_reads_the_same_in_the_app_and_every_excerpt() {
     let mut david = a.sign_in(DAVID).await;
     let rich_text = a.booted.app.db.env().rich_text.clone();
     for (html, spoiler) in [
-        (r#"<p>before <span class="spoiler">SECRET</span> after</p>"#, true),
-        (r#"<p>before <span data-spoiler="">SECRET</span> after</p>"#, true),
-        (r#"<p>before <span class="loud spoiler" data-spoiler="no">SECRET</span> after</p>"#, true),
-        (r#"<p>before <b class="spoiler">SECRET</b> after</p>"#, false),
-        (r#"<p>before <a href="https://example.com/x" data-spoiler="">SECRET</a></p>"#, false),
+        (
+            r#"<p>before <span class="spoiler">SECRET</span> after</p>"#,
+            true,
+        ),
+        (
+            r#"<p>before <span data-spoiler="">SECRET</span> after</p>"#,
+            true,
+        ),
+        (
+            r#"<p>before <span class="loud spoiler" data-spoiler="no">SECRET</span> after</p>"#,
+            true,
+        ),
+        (
+            r#"<p>before <b class="spoiler">SECRET</b> after</p>"#,
+            false,
+        ),
+        (
+            r#"<p>before <a href="https://example.com/x" data-spoiler="">SECRET</a></p>"#,
+            false,
+        ),
     ] {
         let mut bot = a.anonymous();
         let reply = bot
-            .send(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages")).body(html))
+            .send(
+                Req::new(
+                    Method::POST,
+                    &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages"),
+                )
+                .body(html),
+            )
             .await;
         assert!(reply.status.is_success(), "{html}: {}", reply.text());
         let id: i64 = a
@@ -617,24 +654,36 @@ async fn a_bot_spoiler_reads_the_same_in_the_app_and_every_excerpt() {
         let rich_text = rich_text.clone();
         let excerpt = a
             .db()
-            .read(move |conn| campfire_db::Message::find(conn, id)?.plain_text_body(conn, &*rich_text))
+            .read(move |conn| {
+                campfire_db::Message::find(conn, id)?.plain_text_body(conn, &*rich_text)
+            })
             .await
             .unwrap();
         assert_eq!(!excerpt.contains("SECRET"), spoiler, "{html}: {excerpt}");
 
-        let read: api::MessageRead = parse(&david.send(get(&format!("/api/v1/messages/{id}"))).await);
+        let read: api::MessageRead =
+            parse(&david.send(get(&format!("/api/v1/messages/{id}"))).await);
         let shown = read.message.body_html;
         let mut dom = campfire_richtext::dom::Dom::new();
         let root = dom.parse_fragment(&shown).unwrap();
-        let spoiler_class =
-            |node| dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
-        let canonical =
-            |node| dom.local_name(node) == Some("span") && dom.attr(node, "data-spoiler") == Some("") && spoiler_class(node);
+        let spoiler_class = |node| {
+            dom.attr(node, "class")
+                .is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"))
+        };
+        let canonical = |node| {
+            dom.local_name(node) == Some("span")
+                && dom.attr(node, "data-spoiler") == Some("")
+                && spoiler_class(node)
+        };
         for node in dom.descendants(root) {
             let marked = dom.has_attr(node, "data-spoiler") || spoiler_class(node);
             assert!(!marked || (spoiler && canonical(node)), "{html}: {shown}");
             if dom.text(node).is_some_and(|text| text.contains("SECRET")) {
-                assert_eq!(dom.ancestors(node).iter().any(|&up| canonical(up)), spoiler, "{html}: {shown}");
+                assert_eq!(
+                    dom.ancestors(node).iter().any(|&up| canonical(up)),
+                    spoiler,
+                    "{html}: {shown}"
+                );
             }
         }
     }
@@ -976,10 +1025,13 @@ async fn an_edit_read_before_a_delete_cannot_publish_its_preview_last() {
     // The canonical activity-removal slot also refreshes the room, even without a personal
     // item (I1). Repeated current rows are harmless; none may restore the deleted preview.
     let later = remaining_row_events(&a, &mut sync, room).await;
-    assert!(later.iter().all(|payload| matches!(payload,
-        api::SyncPayload::SidebarRowUpserted(row)
-            if row.last_message.as_ref().map(|last| last.excerpt.as_str()) == Some("First one")
-    )), "no stale row after the database's: {later:?}");
+    assert!(
+        later.iter().all(|payload| matches!(payload,
+            api::SyncPayload::SidebarRowUpserted(row)
+                if row.last_message.as_ref().map(|last| last.excerpt.as_str()) == Some("First one")
+        )),
+        "no stale row after the database's: {later:?}"
+    );
     let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
     let row = sidebar.rows.iter().find(|row| row.room.id == room).unwrap();
     assert_eq!(
@@ -1151,9 +1203,12 @@ async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
     .await;
     let after = remaining_row_events(&a, &mut sync, room).await;
     // The inbox's canonical access-loss refresh may repeat the removal, but cannot upsert.
-    assert!(after.iter().all(|payload| matches!(payload,
-        api::SyncPayload::SidebarRowRemoved(gone) if gone.room_id == room
-    )), "the row stays gone: {after:?}");
+    assert!(
+        after.iter().all(|payload| matches!(payload,
+            api::SyncPayload::SidebarRowRemoved(gone) if gone.room_id == room
+        )),
+        "the row stays gone: {after:?}"
+    );
     let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
     assert!(sidebar.rows.iter().all(|row| row.room.id != room));
     server.abort();
@@ -1268,7 +1323,8 @@ async fn a_revocation_disconnects_at_once_while_a_row_of_the_room_is_paused() {
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let room = parse::<api::SidebarRow>(&reply).room.id;
 
-    let mut remaining_viewer = Sync::connect(addr, &david.cookie_header(), &[format!("room:{room}")]).await;
+    let mut remaining_viewer =
+        Sync::connect(addr, &david.cookie_header(), &[format!("room:{room}")]).await;
     remaining_viewer.welcome().await;
 
     // Kevin follows the room on a sync socket past its hello, and on a classic subscription.
@@ -1869,117 +1925,246 @@ async fn row_publications_waiting_on_a_room_hold_no_readers() {
     server.abort();
 }
 
-
 #[tokio::test]
 async fn deleting_reply_sources_publishes_root_and_thread_tombstones() {
     for threaded in [false, true] {
-        let Some(a) = super::admin_tests::app().await else { return };
-        let (source_id, reply_id, thread_id) = a.db().write(move |tx| {
-            let thread_id = if threaded {
-                Some(campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-                    room_id: ALL_TALK, creator_id: DAVID, name: Some("Tombstones".into()), ..Default::default()
-                })?.id)
-            } else { None };
-            let source = campfire_db::Message::create(tx, campfire_db::NewMessage {
-                room_id: ALL_TALK, creator_id: DAVID, thread_id,
-                markdown_source: Some("Source to remove".into()), ..Default::default()
-            })?;
-            let reply = campfire_db::Message::create(tx, campfire_db::NewMessage {
-                room_id: ALL_TALK, creator_id: DAVID, thread_id,
-                markdown_source: Some("Reply remains".into()), reply_to_message_id: Some(source.id), ..Default::default()
-            })?;
-            Ok((source.id, reply.id, thread_id))
-        }).await.unwrap();
-        let topic = thread_id.map_or_else(|| format!("room:{ALL_TALK}"), |id| format!("thread:{id}"));
+        let Some(a) = super::admin_tests::app().await else {
+            return;
+        };
+        let (source_id, reply_id, thread_id) = a
+            .db()
+            .write(move |tx| {
+                let thread_id = if threaded {
+                    Some(
+                        campfire_db::ChannelThread::create(
+                            tx,
+                            campfire_db::NewChannelThread {
+                                room_id: ALL_TALK,
+                                creator_id: DAVID,
+                                name: Some("Tombstones".into()),
+                                ..Default::default()
+                            },
+                        )?
+                        .id,
+                    )
+                } else {
+                    None
+                };
+                let source = campfire_db::Message::create(
+                    tx,
+                    campfire_db::NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        thread_id,
+                        markdown_source: Some("Source to remove".into()),
+                        ..Default::default()
+                    },
+                )?;
+                let reply = campfire_db::Message::create(
+                    tx,
+                    campfire_db::NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        thread_id,
+                        markdown_source: Some("Reply remains".into()),
+                        reply_to_message_id: Some(source.id),
+                        ..Default::default()
+                    },
+                )?;
+                Ok((source.id, reply.id, thread_id))
+            })
+            .await
+            .unwrap();
+        let topic =
+            thread_id.map_or_else(|| format!("room:{ALL_TALK}"), |id| format!("thread:{id}"));
         let (addr, server) = serve(&a).await;
         let mut david = a.sign_in(DAVID).await;
-        let mut sync = Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+        let mut sync =
+            Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
         sync.welcome().await;
         let path = if threaded {
-            format!("/rooms/{ALL_TALK}/threads/{}/messages/{source_id}.turbo_stream", thread_id.unwrap())
-        } else { format!("/api/v1/messages/{source_id}") };
-        let reply = david.write(Req::new(Method::DELETE, &path).header("accept", "application/json")).await;
+            format!(
+                "/rooms/{ALL_TALK}/threads/{}/messages/{source_id}.turbo_stream",
+                thread_id.unwrap()
+            )
+        } else {
+            format!("/api/v1/messages/{source_id}")
+        };
+        let reply = david
+            .write(Req::new(Method::DELETE, &path).header("accept", "application/json"))
+            .await;
         assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
         sync.until(removed(source_id), |_| false).await;
         let event = sync.until(updated(reply_id), |_| false).await;
         assert_eq!(event.topic, topic);
-        let api::SyncPayload::MessageUpdated(reply) = event.payload else { unreachable!() };
+        let api::SyncPayload::MessageUpdated(reply) = event.payload else {
+            unreachable!()
+        };
         assert_eq!(reply.reply_to_message_id, None);
-        assert_eq!(reply.reply_target_deleted_at.as_deref(), Some("2026-03-02T16:00:00.000Z"));
+        assert_eq!(
+            reply.reply_target_deleted_at.as_deref(),
+            Some("2026-03-02T16:00:00.000Z")
+        );
         assert_eq!(reply.markdown_source.as_deref(), Some("Reply remains"));
         server.abort();
     }
 }
 
-
 #[tokio::test]
 async fn failed_json_publication_keeps_bot_webhooks_held_without_subscribers() {
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
-    let (room_id, message_id) = a.db().write(|tx| {
-        let bot = campfire_db::User::create_integration_bot(tx, "Publication bot")?;
-        campfire_db::Webhook::create(tx, bot.id, Some("https://example.test/bot"))?;
-        let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Direct, None, DAVID, &[DAVID, bot.id])?;
-        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: room.id, creator_id: DAVID, markdown_source: Some("Publish before bots".into()), ..Default::default()
-        })?;
-        crate::controllers::messages::deliver_webhooks_to_bots(tx, &room, &message)?;
-        tx.conn().execute_batch("ALTER TABLE boosts RENAME TO unavailable_boosts")?;
-        Ok((room.id, message.id))
-    }).await.unwrap();
-    let before = a.db().read(|conn| Ok(conn.query_row("SELECT run_at FROM background_jobs WHERE job_class='Bot::WebhookJob'", [], |row| row.get::<_, campfire_db::Timestamp>(0))?)).await.unwrap();
+    let (room_id, message_id) = a
+        .db()
+        .write(|tx| {
+            let bot = campfire_db::User::create_integration_bot(tx, "Publication bot")?;
+            campfire_db::Webhook::create(tx, bot.id, Some("https://example.test/bot"))?;
+            let room = campfire_db::Room::create_for(
+                tx,
+                campfire_db::RoomType::Direct,
+                None,
+                DAVID,
+                &[DAVID, bot.id],
+            )?;
+            let message = campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: room.id,
+                    creator_id: DAVID,
+                    markdown_source: Some("Publish before bots".into()),
+                    ..Default::default()
+                },
+            )?;
+            crate::controllers::messages::deliver_webhooks_to_bots(tx, &room, &message)?;
+            tx.conn()
+                .execute_batch("ALTER TABLE boosts RENAME TO unavailable_boosts")?;
+            Ok((room.id, message.id))
+        })
+        .await
+        .unwrap();
+    let before = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT run_at FROM background_jobs WHERE job_class='Bot::WebhookJob'",
+                [],
+                |row| row.get::<_, campfire_db::Timestamp>(0),
+            )?)
+        })
+        .await
+        .unwrap();
     let state = a.booted.app.clone();
-    let failed = a.db().read(move |conn| {
-        let room = campfire_db::Room::find(conn, room_id)?;
-        let message = campfire_db::Message::find(conn, message_id)?;
-        state.broadcasts.message_create(conn, &room, &message, &*state.db.env().rich_text)
-    }).await;
+    let failed = a
+        .db()
+        .read(move |conn| {
+            let room = campfire_db::Room::find(conn, room_id)?;
+            let message = campfire_db::Message::find(conn, message_id)?;
+            state
+                .broadcasts
+                .message_create(conn, &room, &message, &*state.db.env().rich_text)
+        })
+        .await;
     assert!(failed.is_err());
-    assert_eq!(a.db().read(|conn| Ok(conn.query_row("SELECT run_at FROM background_jobs WHERE job_class='Bot::WebhookJob'", [], |row| row.get::<_, campfire_db::Timestamp>(0))?)).await.unwrap(), before);
-    assert!(before > a.db().env().now(), "publication did not acknowledge the held webhook");
+    assert_eq!(
+        a.db()
+            .read(|conn| Ok(conn.query_row(
+                "SELECT run_at FROM background_jobs WHERE job_class='Bot::WebhookJob'",
+                [],
+                |row| row.get::<_, campfire_db::Timestamp>(0)
+            )?))
+            .await
+            .unwrap(),
+        before
+    );
+    assert!(
+        before > a.db().env().now(),
+        "publication did not acknowledge the held webhook"
+    );
 }
 
 #[tokio::test]
 async fn private_pins_use_viewer_counts_and_revoked_socket_replay_drops_private_ids() {
     let Some(a) = app(true).await else { return };
-    let (thread_id, message_id) = a.db().write(|tx| {
-        tx.conn().execute("DELETE FROM message_pins WHERE room_id=?", [ALL_TALK])?;
-        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
-        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, name: Some("Private pin replay".into()),
-            visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
-            ..Default::default()
-        })?;
-        thread.add_access_member(tx, DAVID, KEVIN)?;
-        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, thread_id: Some(thread.id), creator_id: DAVID,
-            markdown_source: Some("Private pinned content".into()), ..Default::default()
-        })?;
-        Ok((thread.id, message.id))
-    }).await.unwrap();
+    let (thread_id, message_id) = a
+        .db()
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM message_pins WHERE room_id=?", [ALL_TALK])?;
+            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            let thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("Private pin replay".into()),
+                    visibility: campfire_db::models::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            thread.add_access_member(tx, DAVID, KEVIN)?;
+            let message = campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    thread_id: Some(thread.id),
+                    creator_id: DAVID,
+                    markdown_source: Some("Private pinned content".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok((thread.id, message.id))
+        })
+        .await
+        .unwrap();
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
     let mut kevin = a.sign_in(KEVIN).await;
     let topics = [format!("room:{ALL_TALK}")];
     let cookie = kevin.cookie_header();
     let mut sync = Sync::connect(addr, &cookie, &topics).await;
-    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else { panic!("welcome"); };
-    let reply = david.write(json_body(Method::POST, &format!("/api/v1/messages/{message_id}/pin"), &json!({}))).await;
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+        panic!("welcome");
+    };
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{message_id}/pin"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let event = sync.until(|event| matches!(&event.payload, api::SyncPayload::MessagePinned(state) if state.message_id == message_id), |_| false).await;
-    let api::SyncPayload::MessagePinned(state) = event.payload else { unreachable!(); };
+    let api::SyncPayload::MessagePinned(state) = event.payload else {
+        unreachable!();
+    };
     assert_eq!(state.pin_count, 1);
     drop(sync);
     // Remove only the access row so the retained ring still holds the pre-revocation pin.
-    a.db().write(move |tx| {
-        tx.conn().execute("DELETE FROM thread_access_memberships WHERE thread_id=? AND user_id=?", [thread_id, KEVIN])?;
-        Ok(())
-    }).await.unwrap();
-    let detail: api::RoomDetail = parse(&kevin.send(get(&format!("/api/v1/rooms/{ALL_TALK}"))).await);
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "DELETE FROM thread_access_memberships WHERE thread_id=? AND user_id=?",
+                [thread_id, KEVIN],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let detail: api::RoomDetail =
+        parse(&kevin.send(get(&format!("/api/v1/rooms/{ALL_TALK}"))).await);
     assert_eq!(detail.pins_count, 0);
     let mut sync = Sync::open(addr, &cookie, &topics, json!({"epoch":epoch,"seq":seq})).await;
-    assert!(matches!(sync.next().await, Some(api::ServerFrame::Welcome { resumed: true, .. })));
-    let reply = david.write(json_body(Method::POST, &format!("/api/v1/messages/{DAVIDS}/pin"), &json!({}))).await;
+    assert!(matches!(
+        sync.next().await,
+        Some(api::ServerFrame::Welcome { resumed: true, .. })
+    ));
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/messages/{DAVIDS}/pin"),
+            &json!({}),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let event = sync.until(
         |event| matches!(&event.payload, api::SyncPayload::MessagePinned(state) if state.message_id == DAVIDS),
@@ -1989,40 +2174,68 @@ async fn private_pins_use_viewer_counts_and_revoked_socket_replay_drops_private_
             _ => false,
         },
     ).await;
-    let api::SyncPayload::MessagePinned(state) = event.payload else { unreachable!(); };
-    assert_eq!(state.pin_count, 1, "public pin event excludes the retained private pin");
+    let api::SyncPayload::MessagePinned(state) = event.payload else {
+        unreachable!();
+    };
+    assert_eq!(
+        state.pin_count, 1,
+        "public pin event excludes the retained private pin"
+    );
     server.abort();
 }
-
 
 #[tokio::test]
 async fn classic_pin_responses_count_only_the_viewers_readable_pins() {
     let Some(a) = app(true).await else { return };
-    let private_id = a.db().write(|tx| {
-        tx.conn().execute("DELETE FROM message_pins WHERE room_id=?", [ALL_TALK])?;
-        campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
-        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
-            room_id: ALL_TALK, creator_id: DAVID, name: Some("Hidden classic pin".into()),
-            visibility: campfire_db::channel_thread::ThreadVisibility::Private, ..Default::default()
-        })?;
-        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
-            room_id: ALL_TALK, thread_id: Some(thread.id), creator_id: DAVID,
-            markdown_source: Some("Hidden pin".into()), ..Default::default()
-        })?;
-        campfire_db::MessagePin::create(tx, &message, ALL_TALK, DAVID)?;
-        Ok(thread.id)
-    }).await.unwrap();
+    let private_id = a
+        .db()
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM message_pins WHERE room_id=?", [ALL_TALK])?;
+            campfire_db::Membership::create_default(tx, ALL_TALK, KEVIN)?;
+            let thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("Hidden classic pin".into()),
+                    visibility: campfire_db::channel_thread::ThreadVisibility::Private,
+                    ..Default::default()
+                },
+            )?;
+            let message = campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    thread_id: Some(thread.id),
+                    creator_id: DAVID,
+                    markdown_source: Some("Hidden pin".into()),
+                    ..Default::default()
+                },
+            )?;
+            campfire_db::MessagePin::create(tx, &message, ALL_TALK, DAVID)?;
+            Ok(thread.id)
+        })
+        .await
+        .unwrap();
     let mut kevin = a.sign_in(KEVIN).await;
     let path = format!("/messages/{DAVIDS}/pin.json");
-    for (method, status, count) in [(Method::POST, StatusCode::CREATED, 1), (Method::DELETE, StatusCode::OK, 0)] {
+    for (method, status, count) in [
+        (Method::POST, StatusCode::CREATED, 1),
+        (Method::DELETE, StatusCode::OK, 0),
+    ] {
         let response = kevin.write(Req::new(method, &path)).await;
         assert_eq!(response.status, status, "{}", response.text());
         assert_eq!(response.json()["pin_count"], count);
     }
-    a.db().write(move |tx| {
-        campfire_db::ChannelThread::find(tx.conn(), private_id)?.add_access_member(tx, DAVID, KEVIN)?;
-        Ok(())
-    }).await.unwrap();
+    a.db()
+        .write(move |tx| {
+            campfire_db::ChannelThread::find(tx.conn(), private_id)?
+                .add_access_member(tx, DAVID, KEVIN)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
     let response = kevin.write(Req::new(Method::POST, &path)).await;
     assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
     assert_eq!(response.json()["pin_count"], 2);

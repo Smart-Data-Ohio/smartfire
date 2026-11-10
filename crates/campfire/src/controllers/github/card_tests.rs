@@ -295,7 +295,10 @@ async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() 
     )
     .unwrap();
     let payload: Value = serde_json::from_str(&html).unwrap();
-    assert_eq!(payload["messages"][0]["cards"][0]["data"]["pullRequestId"], 816);
+    assert_eq!(
+        payload["messages"][0]["cards"][0]["data"]["pullRequestId"],
+        816
+    );
     fresh
         .app
         .db
@@ -358,10 +361,18 @@ async fn review_refreshes_use_real_message_broadcast_and_refresh_callers() {
                     .await
                     .unwrap();
                 let payload: Value = serde_json::from_slice(&bytes).unwrap();
-                assert_eq!(payload["message"]["cards"][0]["data"]["pullRequestId"], 816, "{path}");
+                assert_eq!(
+                    payload["message"]["cards"][0]["data"]["pullRequestId"], 816,
+                    "{path}"
+                );
             } else {
                 assert_eq!(response.status().as_u16(), 302, "{path}");
-                assert!(response.headers()["location"].to_str().unwrap().ends_with("/rooms/815"));
+                assert!(
+                    response.headers()["location"]
+                        .to_str()
+                        .unwrap()
+                        .ends_with("/rooms/815")
+                );
             }
         }
     }));
@@ -456,8 +467,13 @@ async fn deleting_a_reply_source_retains_idle_pr_fetches_for_its_tombstones() {
         Ok(())
     }).await.unwrap();
     let (status, _, body) = super::test_support::request(
-        &fresh, "DELETE", "/rooms/815/messages/818", json!({}), json!({}),
-    ).await;
+        &fresh,
+        "DELETE",
+        "/rooms/815/messages/818",
+        json!({}),
+        json!({}),
+    )
+    .await;
     assert_eq!(status, 204, "{body}");
     fresh.app.db.read(|conn| {
         for id in [819, 829] {

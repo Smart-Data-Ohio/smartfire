@@ -10,7 +10,10 @@ use std::sync::Arc;
 async fn huddle_items_disabled_still_records_the_neighboring_message_mention() {
     let fixture: Value =
         serde_json::from_str(include_str!("huddle_neighbor_mention.json")).unwrap();
-    assert_eq!(fixture["reference_pin"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
+    assert_eq!(
+        fixture["reference_pin"],
+        &include_str!("../../../../parity/reference.sha").trim()[..8]
+    );
     let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
         jiff::Timestamp::from_second(fixture["now"].as_i64().unwrap()).unwrap(),
     ));

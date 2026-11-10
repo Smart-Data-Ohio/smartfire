@@ -1,9 +1,9 @@
 //! Bot configuration facts shared by the API and credential adapters.
-use campfire_presentation::accounts;
-use campfire_db::User;
-use campfire_kit::{Ctx, Error, Result};
 use crate::app::AppCtx;
 use crate::{concerns, presenters};
+use campfire_db::User;
+use campfire_kit::{Ctx, Error, Result};
+use campfire_presentation::accounts;
 
 pub async fn edit_form(c: &Ctx, bot: &User) -> Result<accounts::BotForm> {
     let viewer_id = concerns::require_current_user(c)?.id;

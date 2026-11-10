@@ -79,7 +79,9 @@ pub struct AfkPolicy {
     pub timeout_minutes: i64,
 }
 
-fn default_afk_timeout() -> i64 { 5 }
+fn default_afk_timeout() -> i64 {
+    5
+}
 
 /// `PUT /api/v1/admin/workspace/logo`: a blob uploaded with `POST /api/v1/uploads` becomes the
 /// logo. `DELETE` removes it. `POST /api/v1/admin/workspace/join_code` makes a new join link

@@ -5,11 +5,13 @@ use ts_rs::TS;
 
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
-    ApprovalUpdated, BoardAutomationsChanged, CustomStyles, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
-    HuddleAfkMoved, HuddleSoundboardPlayed, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
-    RoomCategory, RoomCategoryRemoved, RoomFilesChanged, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
-    ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
-    ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
+    ApprovalUpdated, BoardAutomationsChanged, CustomStyles, EventsChanged, HuddleAfkMoved,
+    HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged, HuddleSoundboardPlayed,
+    MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
+    RoomCategory, RoomCategoryRemoved, RoomFilesChanged, RoomRead, RoomUnread, SavedChanged,
+    ScheduledMessage, ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState,
+    StageStreamStopped, Thread, ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread,
+    UserPresence,
 };
 
 /// A frame the client sends.

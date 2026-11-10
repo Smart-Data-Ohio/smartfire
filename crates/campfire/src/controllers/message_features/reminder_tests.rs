@@ -196,13 +196,28 @@ async fn real_runner_completes_allowed_pushes_when_web_push_is_unconfigured() {
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);
     loop {
         let rows = app.db().read(campfire_jobs::inspect::all).await.unwrap();
-        let Some(row) = rows.iter().find(|row| row.class == "SavedItem::ReminderPushJob") else {
-            assert!(app.booted.app.web_push.is_none(), "this case exercises disabled transport");
-            assert!(app.db().read(move |conn| SavedItem::find(conn,id)).await.is_ok(), "delivery never removes the saved item");
+        let Some(row) = rows
+            .iter()
+            .find(|row| row.class == "SavedItem::ReminderPushJob")
+        else {
+            assert!(
+                app.booted.app.web_push.is_none(),
+                "this case exercises disabled transport"
+            );
+            assert!(
+                app.db()
+                    .read(move |conn| SavedItem::find(conn, id))
+                    .await
+                    .is_ok(),
+                "delivery never removes the saved item"
+            );
             break;
         };
         assert_ne!(row.status, "failed", "{row:?}");
-        assert!(tokio::time::Instant::now() < deadline, "disabled transport did not finish: {row:?}");
+        assert!(
+            tokio::time::Instant::now() < deadline,
+            "disabled transport did not finish: {row:?}"
+        );
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
 }

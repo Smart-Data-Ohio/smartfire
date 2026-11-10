@@ -47,15 +47,24 @@ async fn check(case: &Value) {
             &app.booted.app.secrets,
             394959859,
             case["setup"]["reply_room"].as_i64().unwrap_or(486777696),
-            if case["setup"]["reply_expired"].as_bool() == Some(true) { now.checked_sub(jiff::SignedDuration::from_mins(20)).unwrap() } else { now },
+            if case["setup"]["reply_expired"].as_bool() == Some(true) {
+                now.checked_sub(jiff::SignedDuration::from_mins(20))
+                    .unwrap()
+            } else {
+                now
+            },
         )
     } else if case["setup"]["agent_token"].as_bool() == Some(true) {
         "credential-route".into()
     } else {
         BENDER_KEY.to_owned()
     };
-    if case["setup"]["reply_tampered"].as_bool() == Some(true) { key.push('x'); }
-    if let Some(value) = case["setup"]["key"].as_str() { key=value.to_owned(); }
+    if case["setup"]["reply_tampered"].as_bool() == Some(true) {
+        key.push('x');
+    }
+    if let Some(value) = case["setup"]["key"].as_str() {
+        key = value.to_owned();
+    }
     let path = case["path"].as_str().unwrap().replace("{key}", &key);
     let mut req = Req::new(
         Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
@@ -93,9 +102,25 @@ async fn check(case: &Value) {
         case["response"],
         "{name}"
     );
-    assert_eq!(reply.text(),case["response_body"].as_str().unwrap(),"{name}: raw response bytes");
-    for key in ["Content-Type","Cache-Control","Pragma","X-Total-Count","Link","Location","Retry-After"] {
-        assert_eq!(reply.header(key),case["response_headers"][key.to_ascii_lowercase()].as_str(),"{name}: {key}");
+    assert_eq!(
+        reply.text(),
+        case["response_body"].as_str().unwrap(),
+        "{name}: raw response bytes"
+    );
+    for key in [
+        "Content-Type",
+        "Cache-Control",
+        "Pragma",
+        "X-Total-Count",
+        "Link",
+        "Location",
+        "Retry-After",
+    ] {
+        assert_eq!(
+            reply.header(key),
+            case["response_headers"][key.to_ascii_lowercase()].as_str(),
+            "{name}: {key}"
+        );
     }
     let after = app.db().read(counts).await.unwrap();
     assert_eq!(
@@ -174,5 +199,10 @@ async fn bot_http_nonmember_is_hidden() {
 
 #[tokio::test]
 async fn bot_http_reply_invalid_scope() {
-    group(&["bot_reply_stale", "bot_reply_tampered", "bot_reply_wrong_room"]).await;
+    group(&[
+        "bot_reply_stale",
+        "bot_reply_tampered",
+        "bot_reply_wrong_room",
+    ])
+    .await;
 }

@@ -17,7 +17,11 @@ impl Default for State {
                 .ok()
                 .is_some_and(|v| !super::api::blank(&v))
         };
-        Self::new(present("GOOGLE_CLIENT_ID") && present("GOOGLE_PICKER_API_KEY") && present("GOOGLE_CLOUD_PROJECT_NUMBER"))
+        Self::new(
+            present("GOOGLE_CLIENT_ID")
+                && present("GOOGLE_PICKER_API_KEY")
+                && present("GOOGLE_CLOUD_PROJECT_NUMBER"),
+        )
     }
 }
 impl State {

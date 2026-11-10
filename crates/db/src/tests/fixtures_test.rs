@@ -94,7 +94,9 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
             .iter()
             .enumerate()
             .filter(|(i, name)| {
-                if matches!(table, "push_subscriptions" | "workspace_presence_leases") && name.as_str() == "device_class" {
+                if matches!(table, "push_subscriptions" | "workspace_presence_leases")
+                    && name.as_str() == "device_class"
+                {
                     assert_eq!(row.get::<_, Option<String>>(*i).unwrap(), None);
                     return false;
                 }
@@ -113,20 +115,42 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
             })
             .filter(|(_, name)| {
                 !(table == "rooms"
-                    && matches!(name.as_str(), "workspace_category_id" | "workspace_position"))
+                    && matches!(
+                        name.as_str(),
+                        "workspace_category_id" | "workspace_position"
+                    ))
             })
             // Port-only user preferences and activity counter that Rails doesn't have.
             .filter(|(_, name)| {
                 !(table == "users"
-                    && matches!(name.as_str(), "activity_revision" | "appearance_preferences" | "pronouns" | "nickname"))
-                    && !(table == "rooms" && matches!(name.as_str(), "tags_required" | "default_board_tag_id"))
+                    && matches!(
+                        name.as_str(),
+                        "activity_revision" | "appearance_preferences" | "pronouns" | "nickname"
+                    ))
+                    && !(table == "rooms"
+                        && matches!(name.as_str(), "tags_required" | "default_board_tag_id"))
             })
-            .filter(|(_, name)| !(table == "rooms" && matches!(name.as_str(), "topic" | "announcement" | "voice_bitrate" | "voice_user_limit")))
-            .filter(|(_, name)| !(table == "messages" && matches!(name.as_str(), "sticker_id" | "sticker_name")))
-            .filter(|(_, name)| !(table == "active_storage_attachments" && name.as_str() == "spoiler"))
+            .filter(|(_, name)| {
+                !(table == "rooms"
+                    && matches!(
+                        name.as_str(),
+                        "topic" | "announcement" | "voice_bitrate" | "voice_user_limit"
+                    ))
+            })
+            .filter(|(_, name)| {
+                !(table == "messages" && matches!(name.as_str(), "sticker_id" | "sticker_name"))
+            })
+            .filter(|(_, name)| {
+                !(table == "active_storage_attachments" && name.as_str() == "spoiler")
+            })
             .filter(|(_, name)| !(table == "channel_threads" && name.as_str() == "visibility"))
-            .filter(|(_, name)| !(table == "agent_slash_commands" && name.as_str() == "option_schema"))
-            .filter(|(_, name)| !(table == "agents" && matches!(name.as_str(), "wake_policy" | "paused_at" | "paused_by_id")))
+            .filter(|(_, name)| {
+                !(table == "agent_slash_commands" && name.as_str() == "option_schema")
+            })
+            .filter(|(_, name)| {
+                !(table == "agents"
+                    && matches!(name.as_str(), "wake_policy" | "paused_at" | "paused_by_id"))
+            })
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
                 let rendered = match (name.as_str(), value) {
@@ -219,7 +243,8 @@ fn fixtures_match_frozen_rails_rows() {
     let t = TestDb::with_clock(crate::TestClock::frozen_at(now), 12);
     t.read(|conn| {
         for table in ["mcp_event_subscriptions", "mcp_event_deliveries"] {
-            let count: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))?;
+            let count: i64 =
+                conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))?;
             assert_eq!(count, 0, "MCP tables have no Rails fixtures");
         }
         Ok(())

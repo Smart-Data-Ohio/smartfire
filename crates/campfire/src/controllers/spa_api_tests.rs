@@ -111,7 +111,6 @@ async fn play_chat_sound_messages_match_the_classic_catalog() {
                 presentation,
             })
         );
-
     }
     let unknown: api::MessageDTO =
         parse(&post(&mut b, HQ, "unknown-play-sound", "/play unknown").await);
@@ -414,7 +413,9 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
         |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.id == created.id),
         |_| false,
     ).await;
-    let api::SyncPayload::MessageCreated(message) = received.payload else { panic!("message.created") };
+    let api::SyncPayload::MessageCreated(message) = received.payload else {
+        panic!("message.created")
+    };
     assert_eq!(message.body_html, created.body_html);
     assert_eq!(message.client_message_id, "0199b3c4-api-1");
 
@@ -580,15 +581,26 @@ async fn messages_carry_reactions_boosts_pins_saves_threads_and_forwards() {
 async fn posting_attaches_a_direct_upload() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(DAVID).await;
-    let reply = b.write(json_body(Method::POST, "/api/v1/uploads", &json!({
-        "filename": "notes.txt", "byteSize": 13, "contentType": "text/plain",
-        "checksum": campfire_storage::key::checksum(b"meeting notes"),
-    }))).await;
+    let reply = b
+        .write(json_body(
+            Method::POST,
+            "/api/v1/uploads",
+            &json!({
+                "filename": "notes.txt", "byteSize": 13, "contentType": "text/plain",
+                "checksum": campfire_storage::key::checksum(b"meeting notes"),
+            }),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let upload: api::DirectUpload = parse(&reply);
-    let reply = b.send(Req::new(Method::PUT, &upload.upload_url)
-        .header("content-type", "text/plain").header("content-length", "13")
-        .body("meeting notes")).await;
+    let reply = b
+        .send(
+            Req::new(Method::PUT, &upload.upload_url)
+                .header("content-type", "text/plain")
+                .header("content-length", "13")
+                .body("meeting notes"),
+        )
+        .await;
     assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
     let signed_id = upload.signed_id;
     let body = |client_message_id: &str, signed_id: Option<&str>| json!({"clientMessageId": client_message_id, "markdownSource": "", "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id});

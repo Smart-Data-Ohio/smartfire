@@ -315,7 +315,10 @@ fn migration_authorizer(ctx: AuthContext<'_>) -> Authorization {
         // SQL must not commit behind the runner's back, reach other databases, change connection
         // settings (foreign keys, writable_schema) or tamper with its version ledger.
         // SQLite validates ADD COLUMN CHECK with a read-only quick_check.
-        AuthAction::Pragma { pragma_name: "quick_check", .. } => Authorization::Allow,
+        AuthAction::Pragma {
+            pragma_name: "quick_check",
+            ..
+        } => Authorization::Allow,
         AuthAction::Transaction { .. }
         | AuthAction::Savepoint { .. }
         | AuthAction::Attach { .. }

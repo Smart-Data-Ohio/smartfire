@@ -1,7 +1,7 @@
 use super::*;
+use crate::integrations::test_support::TestDb;
 use campfire_db::Database;
 use campfire_db::Timestamp;
-use crate::integrations::test_support::TestDb;
 use campfire_db::{BasicRichText, Env, Event, EventSink, TestClock, Tx};
 use campfire_jobs::{JobQueue, QueueConfig, Registry, RunnerConfig};
 use serde_json::{Value, json};
@@ -33,8 +33,7 @@ async fn database() -> TestDb {
         bcrypt_cost: 4,
         ..Env::default()
     };
-    let directory =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
+    let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     tokio::task::spawn_blocking(move || TestDb::with_env(env, &directory))
         .await
         .unwrap()
@@ -280,13 +279,34 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         .await
         .unwrap();
         seed(db, integration, 960, false).await;
-        let mut periodic = crate::jobs::periodic::periodic(crate::jobs::periodic::PeriodicIntervals {
-            reminders: SWEEP_INTERVAL,
-            retention: std::time::Duration::from_secs(86400),
-        });
+        let mut periodic =
+            crate::jobs::periodic::periodic(crate::jobs::periodic::PeriodicIntervals {
+                reminders: SWEEP_INTERVAL,
+                retention: std::time::Duration::from_secs(86400),
+            });
         assert_eq!(
             periodic.tick(booted.app.clone(), db.env().now()).await,
-            ["clear plaintext bot tokens", "OAuth sweep", "stranded agent webhooks", "event reminders", "saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "calendar push channels", "stuck GitHub claims", "stuck Fizzy claims", "slack imports", "retention prune", "presence leases", "meeting status", "out of office", "board sla nudges", "board stale digests", "streaming messages"]
+            [
+                "clear plaintext bot tokens",
+                "OAuth sweep",
+                "stranded agent webhooks",
+                "event reminders",
+                "saved item reminders",
+                "scheduled messages",
+                "poll closing",
+                "stuck rooms",
+                "calendar push channels",
+                "stuck GitHub claims",
+                "stuck Fizzy claims",
+                "slack imports",
+                "retention prune",
+                "presence leases",
+                "meeting status",
+                "out of office",
+                "board sla nudges",
+                "board stale digests",
+                "streaming messages"
+            ]
         );
         assert_eq!(snapshot(db).await["metadata"]["status"], "failed");
         clock.advance(jiff::SignedDuration::from_secs(29));
@@ -299,7 +319,17 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         clock.advance(jiff::SignedDuration::from_secs(1));
         assert_eq!(
             periodic.tick(booted.app.clone(), db.env().now()).await,
-            ["stranded agent webhooks", "event reminders", "saved item reminders", "scheduled messages", "poll closing", "stuck GitHub claims", "stuck Fizzy claims", "slack imports", "streaming messages"]
+            [
+                "stranded agent webhooks",
+                "event reminders",
+                "saved item reminders",
+                "scheduled messages",
+                "poll closing",
+                "stuck GitHub claims",
+                "stuck Fizzy claims",
+                "slack imports",
+                "streaming messages"
+            ]
         );
         assert_eq!(snapshot(db).await["audits"], 1);
     }

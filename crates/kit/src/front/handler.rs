@@ -42,11 +42,17 @@ impl Handler {
     pub fn new(config: &FrontConfig, app: Router) -> Self {
         Self {
             app,
-            cache: Arc::new(MemoryCache::new(config.cache_size, config.max_cache_item_size)),
+            cache: Arc::new(MemoryCache::new(
+                config.cache_size,
+                config.max_cache_item_size,
+            )),
             max_cacheable_body: config.max_cache_item_size.max(0) as usize,
-            compression: config
-                .gzip_compression_enabled
-                .then(|| Compression::new(config.gzip_compression_jitter, config.gzip_compression_disable_on_auth)),
+            compression: config.gzip_compression_enabled.then(|| {
+                Compression::new(
+                    config.gzip_compression_jitter,
+                    config.gzip_compression_disable_on_auth,
+                )
+            }),
             max_request_body: config.max_request_body.max(0) as u64,
             forward_headers: config.forward_headers,
             log_requests: config.log_requests,
@@ -68,17 +74,25 @@ impl Handler {
         set_request_start(&mut request);
         let (response, merge) = self.cached(request, conn).await;
         match (&self.compression, negotiation) {
-            (Some(compression), Some(negotiation)) => compression.apply(negotiation, response, merge).await,
+            (Some(compression), Some(negotiation)) => {
+                compression.apply(negotiation, response, merge).await
+            }
             _ => response,
         }
     }
 
     /// `CacheHandler.ServeHTTP`, except that requests the cache can't serve bypass it before the
     /// lookup (Thruster looks them up first, so a range request could get a whole cached body).
-    async fn cached(&self, request: Request<Body>, conn: ConnInfo) -> (Response<Body>, HeaderMerge) {
+    async fn cached(
+        &self,
+        request: Request<Body>,
+        conn: ConnInfo,
+    ) -> (Response<Body>, HeaderMerge) {
         if !cache::should_cache_request(&request) {
             let mut response = self.proxy(request, conn).await;
-            response.headers_mut().insert("x-cache", HeaderValue::from_static("bypass"));
+            response
+                .headers_mut()
+                .insert("x-cache", HeaderValue::from_static("bypass"));
             return (response, HeaderMerge::Append);
         }
 
@@ -103,21 +117,40 @@ impl Handler {
         if lifetime.is_some() {
             response.headers_mut().remove(header::SET_COOKIE);
         }
-        response.headers_mut().insert("x-cache", HeaderValue::from_static("miss"));
-        let Some(lifetime) = lifetime else { return (response, HeaderMerge::Replace) };
+        response
+            .headers_mut()
+            .insert("x-cache", HeaderValue::from_static("miss"));
+        let Some(lifetime) = lifetime else {
+            return (response, HeaderMerge::Replace);
+        };
 
         variant.set_response_headers(response.headers());
         let (status, mut headers) = (response.status(), response.headers().clone());
         headers.remove("x-cache");
         let (cache, variant) = (self.cache.clone(), variant.variant_headers());
-        let store = move |body: Bytes| cache.set(key, CachedResponse { status, headers, body, variant }, now + lifetime, now);
+        let store = move |body: Bytes| {
+            cache.set(
+                key,
+                CachedResponse {
+                    status,
+                    headers,
+                    body,
+                    variant,
+                },
+                now + lifetime,
+                now,
+            )
+        };
         if head || hyper::body::Body::is_end_stream(response.body()) {
             // A HEAD response has no body to record (the connection never reads one), and neither
             // has an empty one (it's never polled).
             store(Bytes::new());
             return (response, HeaderMerge::Replace);
         }
-        let declared = response.headers().get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()?.parse().ok());
+        let declared = response
+            .headers()
+            .get(header::CONTENT_LENGTH)
+            .and_then(|v| v.to_str().ok()?.parse().ok());
         let (parts, body) = response.into_parts();
         let body = RecordingBody {
             inner: body,
@@ -128,7 +161,10 @@ impl Handler {
             overflowed: false,
             store: Some(Box::new(store)),
         };
-        (Response::from_parts(parts, Body::new(body)), HeaderMerge::Replace)
+        (
+            Response::from_parts(parts, Body::new(body)),
+            HeaderMerge::Replace,
+        )
     }
 
     /// The proxy (`internal/proxy_handler.go`): the request size limit Thruster's
@@ -136,7 +172,9 @@ impl Handler {
     /// sees the part past the limit), the `X-Forwarded-*` headers `httputil.ReverseProxy` sets,
     /// then the app.
     async fn proxy(&self, request: Request<Body>, conn: ConnInfo) -> Response<Body> {
-        let Ok((mut request, limit)) = within_limit(request, self.max_request_body) else { return too_large() };
+        let Ok((mut request, limit)) = within_limit(request, self.max_request_body) else {
+            return too_large();
+        };
         as_proxied_http1(&mut request);
         set_forwarded_headers(&mut request, &conn, self.forward_headers);
         request.extensions_mut().insert(ConnectInfo(conn.remote));
@@ -153,7 +191,11 @@ impl Handler {
 fn suppress_bodiless_headers(response: &mut Response<Body>) {
     let status = response.status().as_u16();
     let suppressed: &[header::HeaderName] = match status {
-        304 => &[header::CONTENT_TYPE, header::CONTENT_LENGTH, header::TRANSFER_ENCODING],
+        304 => &[
+            header::CONTENT_TYPE,
+            header::CONTENT_LENGTH,
+            header::TRANSFER_ENCODING,
+        ],
         100..=199 | 204 => &[header::CONTENT_LENGTH, header::TRANSFER_ENCODING],
         _ => &[],
     };
@@ -166,10 +208,20 @@ fn suppress_bodiless_headers(response: &mut Response<Body>) {
 /// has it.
 fn hit(cached: &CachedResponse, request: &Request<Body>) -> Response<Body> {
     let not_modified = cache::was_not_modified(cached, request);
-    let mut response = Response::new(if not_modified { Body::empty() } else { Body::from(cached.body.clone()) });
-    *response.status_mut() = if not_modified { StatusCode::NOT_MODIFIED } else { cached.status };
+    let mut response = Response::new(if not_modified {
+        Body::empty()
+    } else {
+        Body::from(cached.body.clone())
+    });
+    *response.status_mut() = if not_modified {
+        StatusCode::NOT_MODIFIED
+    } else {
+        cached.status
+    };
     *response.headers_mut() = cached.headers.clone();
-    response.headers_mut().insert("x-cache", HeaderValue::from_static("hit"));
+    response
+        .headers_mut()
+        .insert("x-cache", HeaderValue::from_static("hit"));
     response
 }
 
@@ -202,7 +254,10 @@ impl hyper::body::Body for RecordingBody {
     type Data = Bytes;
     type Error = axum::Error;
 
-    fn poll_frame(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Frame<Bytes>, axum::Error>>> {
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Bytes>, axum::Error>>> {
         let this = &mut *self;
         match Pin::new(&mut this.inner).poll_frame(cx) {
             Poll::Ready(Some(Ok(frame))) => {
@@ -242,9 +297,19 @@ impl hyper::body::Body for RecordingBody {
 
 /// `NewRequestStartHandler`
 fn set_request_start(request: &mut Request<Body>) {
-    if request.headers().get("x-request-start").is_none_or(|v| v.is_empty()) {
-        let millis = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
-        request.headers_mut().insert("x-request-start", HeaderValue::from_str(&format!("t={millis}")).unwrap());
+    if request
+        .headers()
+        .get("x-request-start")
+        .is_none_or(|v| v.is_empty())
+    {
+        let millis = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+        request.headers_mut().insert(
+            "x-request-start",
+            HeaderValue::from_str(&format!("t={millis}")).unwrap(),
+        );
     }
 }
 
@@ -257,14 +322,27 @@ fn as_proxied_http1(request: &mut Request<Body>) {
     }
     *request.version_mut() = axum::http::Version::HTTP_11;
     if !request.headers().contains_key(header::HOST)
-        && let Some(authority) = request.uri().authority().and_then(|a| HeaderValue::from_str(a.as_str()).ok())
+        && let Some(authority) = request
+            .uri()
+            .authority()
+            .and_then(|a| HeaderValue::from_str(a.as_str()).ok())
     {
         request.headers_mut().insert(header::HOST, authority);
     }
-    if let Some(path) = request.uri().path_and_query().and_then(|p| p.as_str().parse().ok()) {
+    if let Some(path) = request
+        .uri()
+        .path_and_query()
+        .and_then(|p| p.as_str().parse().ok())
+    {
         *request.uri_mut() = path;
     }
-    let cookies: Vec<String> = request.headers().get_all(header::COOKIE).iter().filter_map(|v| v.to_str().ok()).map(str::to_string).collect();
+    let cookies: Vec<String> = request
+        .headers()
+        .get_all(header::COOKIE)
+        .iter()
+        .filter_map(|v| v.to_str().ok())
+        .map(str::to_string)
+        .collect();
     if cookies.len() > 1
         && let Ok(joined) = HeaderValue::from_str(&cookies.join("; "))
     {
@@ -278,14 +356,40 @@ fn as_proxied_http1(request: &mut Request<Body>) {
 /// without it they're replaced. `Forwarded` never reaches the app (`Rewrite` drops it).
 fn set_forwarded_headers(request: &mut Request<Body>, conn: &ConnInfo, forward_headers: bool) {
     let headers = request.headers();
-    let join = |name| headers.get_all(name).iter().filter_map(|v| v.to_str().ok()).collect::<Vec<_>>().join(", ");
-    let prior_for = if forward_headers { join("x-forwarded-for") } else { String::new() };
-    let incoming_host = headers.get("x-forwarded-host").filter(|v| !v.is_empty()).cloned();
-    let incoming_proto = headers.get("x-forwarded-proto").filter(|v| !v.is_empty()).cloned();
-    let host = headers.get(header::HOST).cloned().or_else(|| request.uri().authority().and_then(|a| HeaderValue::from_str(a.as_str()).ok()));
+    let join = |name| {
+        headers
+            .get_all(name)
+            .iter()
+            .filter_map(|v| v.to_str().ok())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let prior_for = if forward_headers {
+        join("x-forwarded-for")
+    } else {
+        String::new()
+    };
+    let incoming_host = headers
+        .get("x-forwarded-host")
+        .filter(|v| !v.is_empty())
+        .cloned();
+    let incoming_proto = headers
+        .get("x-forwarded-proto")
+        .filter(|v| !v.is_empty())
+        .cloned();
+    let host = headers.get(header::HOST).cloned().or_else(|| {
+        request
+            .uri()
+            .authority()
+            .and_then(|a| HeaderValue::from_str(a.as_str()).ok())
+    });
 
     let client = conn.remote.ip().to_canonical().to_string();
-    let forwarded_for = if prior_for.is_empty() { client } else { format!("{prior_for}, {client}") };
+    let forwarded_for = if prior_for.is_empty() {
+        client
+    } else {
+        format!("{prior_for}, {client}")
+    };
     let headers = request.headers_mut();
     headers.remove(header::FORWARDED);
     if let Ok(value) = HeaderValue::from_str(&forwarded_for) {
@@ -295,7 +399,10 @@ fn set_forwarded_headers(request: &mut Request<Body>, conn: &ConnInfo, forward_h
         Some(host) => headers.insert("x-forwarded-host", host),
         None => headers.insert("x-forwarded-host", HeaderValue::from_static("")),
     };
-    headers.insert("x-forwarded-proto", HeaderValue::from_static(if conn.tls { "https" } else { "http" }));
+    headers.insert(
+        "x-forwarded-proto",
+        HeaderValue::from_static(if conn.tls { "https" } else { "http" }),
+    );
     if forward_headers {
         if let Some(host) = incoming_host {
             headers.insert("x-forwarded-host", host);
@@ -309,18 +416,31 @@ fn set_forwarded_headers(request: &mut Request<Body>, conn: &ConnInfo, forward_h
 /// MAX_REQUEST_BODY, 0 for none: the request with its body limited, and what tells whether the
 /// body crossed the limit while the app read it. A body that declares more than the limit fails
 /// here, before the app sees it.
-pub(super) fn within_limit(request: Request<Body>, limit: u64) -> Result<(Request<Body>, BodyLimit), ()> {
+pub(super) fn within_limit(
+    request: Request<Body>,
+    limit: u64,
+) -> Result<(Request<Body>, BodyLimit), ()> {
     if limit == 0 {
         return Ok((request, BodyLimit(None)));
     }
-    let declared = request.headers().get(header::CONTENT_LENGTH).and_then(|v| v.to_str().ok()).and_then(|v| v.parse::<u64>().ok());
+    let declared = request
+        .headers()
+        .get(header::CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<u64>().ok());
     if declared.is_some_and(|length| length > limit) {
         return Err(());
     }
     let crossed = Arc::new(AtomicBool::new(false));
     let (parts, body) = request.into_parts();
-    let body = LimitedBody { inner: http_body_util::Limited::new(body, usize::try_from(limit).unwrap_or(usize::MAX)), crossed: crossed.clone() };
-    Ok((Request::from_parts(parts, Body::new(body)), BodyLimit(Some(crossed))))
+    let body = LimitedBody {
+        inner: http_body_util::Limited::new(body, usize::try_from(limit).unwrap_or(usize::MAX)),
+        crossed: crossed.clone(),
+    };
+    Ok((
+        Request::from_parts(parts, Body::new(body)),
+        BodyLimit(Some(crossed)),
+    ))
 }
 
 /// Whether a request's body crossed MAX_REQUEST_BODY.
@@ -358,7 +478,10 @@ impl hyper::body::Body for LimitedBody {
     type Data = Bytes;
     type Error = axum::BoxError;
 
-    fn poll_frame(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Frame<Bytes>, Self::Error>>> {
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Bytes>, Self::Error>>> {
         let polled = Pin::new(&mut self.inner).poll_frame(cx);
         if let Poll::Ready(Some(Err(error))) = &polled
             && error.is::<http_body_util::LengthLimitError>()
@@ -392,33 +515,74 @@ struct RequestLog {
 
 impl RequestLog {
     fn new(request: &Request<Body>, conn: &ConnInfo) -> Self {
-        let header = |name| request.headers().get(name).and_then(|v: &HeaderValue| v.to_str().ok()).unwrap_or("").to_string();
+        let header = |name| {
+            request
+                .headers()
+                .get(name)
+                .and_then(|v: &HeaderValue| v.to_str().ok())
+                .unwrap_or("")
+                .to_string()
+        };
         let forwarded_for = header("x-forwarded-for");
         Self {
             started: Instant::now(),
             path: request.uri().path().to_string(),
             // Thruster logs the raw query; Rails' own request log filters it (`filtered_path`),
             // and here this is the only request log there is.
-            query: crate::param_filter::global().filtered_query(request.uri().query().unwrap_or("")),
+            query: crate::param_filter::global()
+                .filtered_query(request.uri().query().unwrap_or("")),
             method: request.method().to_string(),
             proto: match request.version() {
                 axum::http::Version::HTTP_2 => "HTTP/2.0",
                 axum::http::Version::HTTP_10 => "HTTP/1.0",
                 _ => "HTTP/1.1",
             },
-            req_content_length: header("content-length").parse().unwrap_or(if request.body().is_end_stream() { 0 } else { -1 }),
+            req_content_length: header("content-length").parse().unwrap_or(
+                if request.body().is_end_stream() {
+                    0
+                } else {
+                    -1
+                },
+            ),
             req_content_type: header("content-type"),
-            remote_addr: if forwarded_for.is_empty() { conn.remote.to_string() } else { forwarded_for },
+            remote_addr: if forwarded_for.is_empty() {
+                conn.remote.to_string()
+            } else {
+                forwarded_for
+            },
             user_agent: header("user-agent"),
         }
     }
 
     fn attach(self, response: Response<Body>) -> Response<Body> {
-        let status = if response.status() == StatusCode::SWITCHING_PROTOCOLS { 101 } else { response.status().as_u16() };
-        let header = |name| response.headers().get(name).and_then(|v: &HeaderValue| v.to_str().ok()).unwrap_or("").to_string();
-        let entry = LogEntry { request: self, status, resp_content_type: header("content-type"), cache: header("x-cache"), bytes: 0 };
+        let status = if response.status() == StatusCode::SWITCHING_PROTOCOLS {
+            101
+        } else {
+            response.status().as_u16()
+        };
+        let header = |name| {
+            response
+                .headers()
+                .get(name)
+                .and_then(|v: &HeaderValue| v.to_str().ok())
+                .unwrap_or("")
+                .to_string()
+        };
+        let entry = LogEntry {
+            request: self,
+            status,
+            resp_content_type: header("content-type"),
+            cache: header("x-cache"),
+            bytes: 0,
+        };
         let (parts, body) = response.into_parts();
-        Response::from_parts(parts, Body::new(LoggedBody { inner: body, entry: Some(entry) }))
+        Response::from_parts(
+            parts,
+            Body::new(LoggedBody {
+                inner: body,
+                entry: Some(entry),
+            }),
+        )
     }
 }
 
@@ -454,7 +618,10 @@ impl hyper::body::Body for LoggedBody {
     type Data = Bytes;
     type Error = axum::Error;
 
-    fn poll_frame(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Result<Frame<Bytes>, axum::Error>>> {
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Bytes>, axum::Error>>> {
         let polled = Pin::new(&mut self.inner).poll_frame(cx);
         if let Poll::Ready(Some(Ok(frame))) = &polled
             && let (Some(data), Some(entry)) = (frame.data_ref(), self.entry.as_mut())

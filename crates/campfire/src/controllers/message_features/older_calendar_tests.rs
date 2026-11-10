@@ -1,5 +1,5 @@
 //! Real Event callbacks on both old-message streams; pinned Rails bytes and total SQL.
-use super::quote_integration_tests::{app_rows};
+use super::quote_integration_tests::app_rows;
 use crate::controllers::presenters::test_support::*;
 use campfire_db::{CalendarEvent, models::calendar_event::changes::EventChanges};
 use serde_json::{Value, json};
@@ -28,18 +28,20 @@ async fn callbacks(check_reads: bool) {
         let app = app_rows(group["rows"].clone()).await;
         for path in [
             format!("/api/v1/rooms/{QUIET_CORNER}/messages"),
-            format!(
-                "/api/v1/threads/{}/messages",
-                group["thread_id"]
-            ),
+            format!("/api/v1/threads/{}/messages", group["thread_id"]),
         ] {
             let response = app.david().get(&path).await;
             assert_eq!(response.status, axum::http::StatusCode::OK);
             for id in group["old_ids"].as_array().unwrap() {
-                assert!(!response.json()["messages"].as_array().unwrap().iter().any(|message| message["id"] == *id));
+                assert!(
+                    !response.json()["messages"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|message| message["id"] == *id)
+                );
             }
         }
-
 
         let id = group["event_id"].as_i64().unwrap();
         for step in group["steps"].as_array().unwrap() {
@@ -101,7 +103,6 @@ async fn callbacks(check_reads: bool) {
                 }
             }
             frame_count += step["frames"].as_array().unwrap().len();
-
         }
         let result: campfire_db::Result<()> = app
             .db()
@@ -126,7 +127,6 @@ async fn callbacks(check_reads: bool) {
             })
             .await
             .unwrap();
-
     }
     println!(
         "WS8bm2 older-calendar Rust: 4 groups; {frame_count} exact Rails frames; 4 silent rollbacks; post-commit reference snapshots"
@@ -140,7 +140,6 @@ async fn older_calendar_callback_bytes_match_rails_after_reference_removal() {
 async fn older_calendar_callback_total_reads_are_flat() {
     callbacks(true).await;
 }
-
 
 #[tokio::test]
 async fn older_calendar_meet_jobs_match_rails_frames_and_retry_or_noop_outcomes() {
@@ -192,7 +191,6 @@ async fn older_calendar_meet_jobs_match_rails_frames_and_retry_or_noop_outcomes(
             }
             support::install(&app, recorded.clone()).await;
 
-
             let mut drain = QueueDrain::install(&app).await;
             let mut registry = crate::queue::Registry::new();
             crate::integrations::google::calendar_sync::register(&mut registry);
@@ -237,7 +235,6 @@ async fn older_calendar_meet_jobs_match_rails_frames_and_retry_or_noop_outcomes(
                 .await
                 .unwrap();
             assert_eq!(json!(link), case["meet_link"], "job {name}");
-
         }
     }
     println!(

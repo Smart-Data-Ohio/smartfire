@@ -14,7 +14,10 @@ use serde::Deserialize;
 
 use super::*;
 use crate::models::active_storage::Blob;
-use crate::{Boost, Message, MessageChanges, MessagePin, NewMessage, NewSavedItem, Room, RoomType, SavedItem, Timestamp};
+use crate::{
+    Boost, Message, MessageChanges, MessagePin, NewMessage, NewSavedItem, Room, RoomType,
+    SavedItem, Timestamp,
+};
 
 const RUBY: &str = include_str!("message_save_touches.json");
 const ACTIONS: [&str; 16] = [
@@ -74,29 +77,79 @@ fn act(tx: &mut Tx<'_>, message_id: i64, action: &str) -> Result<()> {
         "boost_create" => Boost::create(tx, message_id, id("jason"), "hi").map(|_| ()),
         "boost_destroy" => message.boosts(tx.conn())?[0].destroy(tx),
         "destroy" => message.destroy(tx),
-        "markdown_new" => message.update(tx, MessageChanges { markdown_source: Some("rewritten".into()), ..Default::default() }),
-        "embeds_suppress" => message.update(tx, MessageChanges { embeds_suppressed: Some(true), ..Default::default() }),
-        "forward_note" => message.update(tx, MessageChanges { forward_note: Some(Some("note".into())), ..Default::default() }),
+        "markdown_new" => message.update(
+            tx,
+            MessageChanges {
+                markdown_source: Some("rewritten".into()),
+                ..Default::default()
+            },
+        ),
+        "embeds_suppress" => message.update(
+            tx,
+            MessageChanges {
+                embeds_suppressed: Some(true),
+                ..Default::default()
+            },
+        ),
+        "forward_note" => message.update(
+            tx,
+            MessageChanges {
+                forward_note: Some(Some("note".into())),
+                ..Default::default()
+            },
+        ),
         "drive_add" => {
             let ids = vec!["1AbcDefGhIjKlMnOpQrSt".to_string()];
-            message.update(tx, MessageChanges { drive_file_ids: Some(ids), ..Default::default() })
+            message.update(
+                tx,
+                MessageChanges {
+                    drive_file_ids: Some(ids),
+                    ..Default::default()
+                },
+            )
         }
-        "pin" => MessagePin::pin(tx, &message, id("jason"))?.map(drop).map_err(|e| crate::Error::Other(e.0)),
-        "unpin" => MessagePin::find_by_message(tx.conn(), message.id)?.expect("pinned in setup").unpin(tx),
+        "pin" => MessagePin::pin(tx, &message, id("jason"))?
+            .map(drop)
+            .map_err(|e| crate::Error::Other(e.0)),
+        "unpin" => MessagePin::find_by_message(tx.conn(), message.id)?
+            .expect("pinned in setup")
+            .unpin(tx),
         "save_item" => {
             let remind_at = Some(tx.now().since(jiff::SignedDuration::from_hours(1)));
-            SavedItem::create(tx, NewSavedItem { user_id: id("jason"), message_id: message.id, remind_at, status: None }).map(drop)
+            SavedItem::create(
+                tx,
+                NewSavedItem {
+                    user_id: id("jason"),
+                    message_id: message.id,
+                    remind_at,
+                    status: None,
+                },
+            )
+            .map(drop)
         }
-        "schedule" => crate::ScheduledMessage::create(tx, crate::NewScheduledMessage {
-            user_id: id("jason"), room_id: message.room_id, thread_id: None,
-            reply_to_message_id: Some(message.id), markdown_source: "Later".into(),
-            send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
-        }).map(drop),
+        "schedule" => crate::ScheduledMessage::create(
+            tx,
+            crate::NewScheduledMessage {
+                user_id: id("jason"),
+                room_id: message.room_id,
+                thread_id: None,
+                reply_to_message_id: Some(message.id),
+                markdown_source: "Later".into(),
+                send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
+            },
+        )
+        .map(drop),
         other => unreachable!("{other}"),
     }
 }
 
-fn run_case(t: &TestDb, t0: Timestamp, streaming: bool, attached: bool, action: &'static str) -> Outcome {
+fn run_case(
+    t: &TestDb,
+    t0: Timestamp,
+    streaming: bool,
+    attached: bool,
+    action: &'static str,
+) -> Outcome {
     let name = format!(
         "{}/{}/{action}",
         if streaming { "streaming" } else { "finished" },
@@ -106,7 +159,11 @@ fn run_case(t: &TestDb, t0: Timestamp, streaming: bool, attached: bool, action: 
     let room_name = name.clone();
     let (room_id, message_id) = t.write(move |tx| {
         let room = Room::create(tx, RoomType::Open, Some(&room_name), id("david"))?;
-        let attachment_blob_id = if attached { Some(blob(tx, "old")?) } else { None };
+        let attachment_blob_id = if attached {
+            Some(blob(tx, "old")?)
+        } else {
+            None
+        };
         let message = Message::create(
             tx,
             NewMessage {
@@ -133,7 +190,10 @@ fn run_case(t: &TestDb, t0: Timestamp, streaming: bool, attached: bool, action: 
     let message = t.read(|c| Message::find_by_id(c, message_id));
     Outcome {
         message_updated_at: message.as_ref().map(|m| offset(m.updated_at)),
-        streaming_updated_at: message.as_ref().and_then(|m| m.streaming_updated_at).map(offset),
+        streaming_updated_at: message
+            .as_ref()
+            .and_then(|m| m.streaming_updated_at)
+            .map(offset),
         room_updated_at: Some(offset(t.read(|c| Room::find(c, room_id)).updated_at)),
         attached: message.is_some_and(|m| t.read(|c| m.attachment(c)).is_some()),
     }
@@ -164,5 +224,8 @@ fn message_saves_touch_what_rails_touches() {
         .map(|(name, outcome)| format!("{name}: ruby {outcome:?}, rust {:?}", rust.get(name)))
         .collect();
     assert!(differing.is_empty(), "{}", differing.join("\n"));
-    assert_eq!(ruby.keys().collect::<Vec<_>>(), rust.keys().collect::<Vec<_>>());
+    assert_eq!(
+        ruby.keys().collect::<Vec<_>>(),
+        rust.keys().collect::<Vec<_>>()
+    );
 }

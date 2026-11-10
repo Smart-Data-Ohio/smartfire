@@ -40,7 +40,12 @@ impl Facts {
             conn,
             "SELECT s.room_id AS live_room_id,u.* FROM streams s JOIN users u ON u.id=s.user_id WHERE s.ended_at IS NULL AND s.room_id IN (SELECT value FROM json_each(?)) ORDER BY s.id",
             [encoded_venues],
-            |r| Ok((r.get::<_, i64>("live_room_id")?, User::from_row(r)?.display_name().to_owned())),
+            |r| {
+                Ok((
+                    r.get::<_, i64>("live_room_id")?,
+                    User::from_row(r)?.display_name().to_owned(),
+                ))
+            },
         )? {
             live_names.entry(rid).or_insert(name);
         }
@@ -78,7 +83,11 @@ impl Facts {
                     r.get::<_, i64>(0)?,
                     r.get::<_, i64>(1)?,
                     r.get::<_, String>(2)?,
-                    if r.get::<_, Option<i64>>("id")?.is_some() { Some(User::from_row(r)?.display_name().to_owned()) } else { None },
+                    if r.get::<_, Option<i64>>("id")?.is_some() {
+                        Some(User::from_row(r)?.display_name().to_owned())
+                    } else {
+                        None
+                    },
                 ))
             },
         )? {
@@ -197,12 +206,7 @@ impl Facts {
         })
     }
 }
-pub fn load(
-    conn: &Connection,
-    room: &Room,
-    user: &User,
-    now: Timestamp,
-) -> Result<IndexView> {
+pub fn load(conn: &Connection, room: &Room, user: &User, now: Timestamp) -> Result<IndexView> {
     let events = CalendarEvent::for_room(conn, room.id)?;
     let facts = Facts::load(conn, room, user, &events)?;
     let upcoming: Vec<_> = events

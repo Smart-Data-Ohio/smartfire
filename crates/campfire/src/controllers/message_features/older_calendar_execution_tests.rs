@@ -1,5 +1,5 @@
 //! Execute the real Calendar consumers and their durable children against pinned Rails exchanges.
-use super::quote_integration_tests::{insert_rows};
+use super::quote_integration_tests::insert_rows;
 use crate::{
     app::{
         google_api_tests::{self as support, Recorded},
@@ -86,7 +86,6 @@ async fn run_matrix(fatal_only: bool) {
             let entry = group["entry_id"].as_i64().unwrap();
             let name = case["name"].as_str().unwrap().to_owned();
             let setup = name.clone();
-
 
             let crypto = rails_compat::ar_encryption::ArEncryption::new(&app.booted.app.secrets);
             app.db().write(move|tx|{
@@ -263,7 +262,6 @@ async fn run_matrix(fatal_only: bool) {
             if let Some(previous) = counts.insert(name.clone(), count) {
                 assert_eq!(count, previous, "{name}: read growth");
             }
-
         }
     }
     println!(

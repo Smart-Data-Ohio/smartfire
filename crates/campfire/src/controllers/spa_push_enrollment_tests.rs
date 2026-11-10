@@ -116,7 +116,6 @@ async fn public_key_is_the_classic_presented_key_and_missing_or_invalid_config_i
             key.public_key.is_some(),
             vars.iter().any(|(_, value)| *value == PUBLIC_KEY)
         );
-
     }
 }
 
@@ -459,7 +458,10 @@ async fn saved_tuples(app: &TestApp) -> usize {
 
 /// A classic post and an SPA post for one subscription, overlapping as two tabs would: both
 /// miss the row, the first commits its insert, and only then does the second resolve and write.
-async fn overlapping_enrollments(second: Option<&'static str>, device_class: Option<&'static str>) -> Option<Overlap> {
+async fn overlapping_enrollments(
+    second: Option<&'static str>,
+    device_class: Option<&'static str>,
+) -> Option<Overlap> {
     let log = Arc::new(std::sync::Mutex::new(vec![]));
     let writer = log.clone();
     let subscriber = tracing_subscriber::fmt()
@@ -495,7 +497,9 @@ async fn overlapping_enrollments(second: Option<&'static str>, device_class: Opt
                         create(&mut classic, true, ENDPOINT, "p256", "auth"),
                         async {
                             let mut input = body(ENDPOINT, "p256", "auth");
-                            if let Some(class) = device_class { input["deviceClass"] = json!(class); }
+                            if let Some(class) = device_class {
+                                input["deviceClass"] = json!(class);
+                            }
                             spa.write(json_body(Method::POST, PATH, input)).await
                         },
                     )
@@ -517,9 +521,16 @@ async fn overlapping_enrollments(second: Option<&'static str>, device_class: Opt
     Some(Overlap {
         statuses,
         saved: saved_tuples(&app).await,
-        device_class: app.db().read(|conn| {
-            Ok(campfire_db::PushSubscription::find_for_user_by_keys(conn, DAVID, ENDPOINT, "p256", "auth")?.and_then(|s| s.device_class))
-        }).await.unwrap(),
+        device_class: app
+            .db()
+            .read(|conn| {
+                Ok(campfire_db::PushSubscription::find_for_user_by_keys(
+                    conn, DAVID, ENDPOINT, "p256", "auth",
+                )?
+                .and_then(|s| s.device_class))
+            })
+            .await
+            .unwrap(),
         log,
     })
 }
@@ -575,17 +586,31 @@ async fn an_overlapping_enrollment_that_fails_its_own_validation_is_refused() {
 
 #[tokio::test]
 async fn push_device_class_updates_on_enrollment_without_changing_subscription_identity() {
-    let Some((app, _, _)) = app(&[]).await else { return; };
+    let Some((app, _, _)) = app(&[]).await else {
+        return;
+    };
     let mut browser = app.sign_in(DAVID).await;
     for reported in [Some("mobile"), None, Some("desktop"), Some("unknown")] {
         let mut input = body(ENDPOINT, "p256", "auth");
-        if let Some(class) = reported { input["deviceClass"] = json!(class); }
+        if let Some(class) = reported {
+            input["deviceClass"] = json!(class);
+        }
         let reply = browser.write(json_body(Method::POST, PATH, input)).await;
         assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-        let saved = app.db().read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID)).await.unwrap();
-        let saved: Vec<_> = saved.iter().filter(|s| s.endpoint.as_deref() == Some(ENDPOINT)).collect();
+        let saved = app
+            .db()
+            .read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID))
+            .await
+            .unwrap();
+        let saved: Vec<_> = saved
+            .iter()
+            .filter(|s| s.endpoint.as_deref() == Some(ENDPOINT))
+            .collect();
         assert_eq!(saved.len(), 1);
-        assert_eq!(saved[0].device_class.unwrap().name(), reported.unwrap_or("mobile"));
+        assert_eq!(
+            saved[0].device_class.unwrap().name(),
+            reported.unwrap_or("mobile")
+        );
     }
     let reply = browser.write(json_body(Method::POST, PATH,
         json!({"endpoint": ENDPOINT, "p256dhKey": "p256", "authKey": "auth", "deviceClass": "watch"}))).await;
@@ -596,7 +621,9 @@ async fn push_device_class_updates_on_enrollment_without_changing_subscription_i
 
 #[tokio::test]
 async fn push_device_class_survives_overlapping_classic_and_explicit_enrollment() {
-    let Some(overlap) = overlapping_enrollments(Some(PUBLIC), Some("mobile")).await else { return; };
+    let Some(overlap) = overlapping_enrollments(Some(PUBLIC), Some("mobile")).await else {
+        return;
+    };
     assert_eq!(overlap.statuses, [StatusCode::OK, StatusCode::OK]);
     assert_eq!(overlap.saved, 1);
     assert_eq!(overlap.device_class, Some(campfire_db::DeviceClass::Mobile));
@@ -604,7 +631,9 @@ async fn push_device_class_survives_overlapping_classic_and_explicit_enrollment(
 
 #[tokio::test]
 async fn push_device_class_refresh_reclassifies_existing_subscription_and_skips_unchanged_writes() {
-    let Some((app, clock, _)) = app(&[]).await else { return; };
+    let Some((app, clock, _)) = app(&[]).await else {
+        return;
+    };
     let mut browser = app.sign_in(DAVID).await;
     let mut saved = Vec::new();
     for class in ["desktop", "mobile", "mobile"] {
@@ -613,8 +642,15 @@ async fn push_device_class_refresh_reclassifies_existing_subscription_and_skips_
         input["deviceClass"] = json!(class);
         let reply = browser.write(json_body(Method::POST, PATH, input)).await;
         assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-        let rows = app.db().read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID)).await.unwrap();
-        let rows: Vec<_> = rows.into_iter().filter(|row| row.endpoint.as_deref() == Some(ENDPOINT)).collect();
+        let rows = app
+            .db()
+            .read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID))
+            .await
+            .unwrap();
+        let rows: Vec<_> = rows
+            .into_iter()
+            .filter(|row| row.endpoint.as_deref() == Some(ENDPOINT))
+            .collect();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].device_class.unwrap().name(), class);
         saved.push(rows.into_iter().next().unwrap());

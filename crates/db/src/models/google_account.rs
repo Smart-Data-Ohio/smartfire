@@ -196,8 +196,12 @@ impl GoogleAccount {
         let old = Self::for_user(tx.conn(), grant.user_id)?;
         if old.is_none() {
             let mut grant = grant;
-            grant.refresh_token = grant.refresh_token.filter(|s| !campfire_richtext::ruby::is_blank(s));
-            grant.scopes = grant.scopes.filter(|s| !campfire_richtext::ruby::is_blank(s));
+            grant.refresh_token = grant
+                .refresh_token
+                .filter(|s| !campfire_richtext::ruby::is_blank(s));
+            grant.scopes = grant
+                .scopes
+                .filter(|s| !campfire_richtext::ruby::is_blank(s));
             return Self::create(tx, enc, grant);
         }
         if let Some(account) = old.as_ref() {

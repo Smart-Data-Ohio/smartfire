@@ -31,7 +31,10 @@ fn settings() -> Settings {
             theme: Theme::Dark,
             text_size: TextSize::Default,
             time_zone: Some("Europe/London".into()),
-            time_zones: vec![TimeZoneChoice { label: "(GMT+00:00) London".into(), value: "Europe/London".into() }],
+            time_zones: vec![TimeZoneChoice {
+                label: "(GMT+00:00) London".into(),
+                value: "Europe/London".into(),
+            }],
             appearance_preferences: None,
         },
         notifications: NotificationSettings {
@@ -44,7 +47,10 @@ fn settings() -> Settings {
             quiet_hours_end: Some("07:30".into()),
             meeting_dnd_enabled: false,
             ooo_notify_enabled: true,
-            allowed_people: vec![DndAllowedPerson { user_id: 8, name: "Grace Hopper".into() }],
+            allowed_people: vec![DndAllowedPerson {
+                user_id: 8,
+                name: "Grace Hopper".into(),
+            }],
             keyword_alerts: vec!["deploy freeze".into()],
             inbox: vec![InboxSwitch {
                 key: "github_review_requests".into(),
@@ -66,7 +72,10 @@ fn settings() -> Settings {
             ooo_note: Some("Back Friday".into()),
             calendar_error: None,
         },
-        calls: CallSettings { voice_mode: VoiceMode::PushToTalk, push_to_talk_key: Some("`".into()) },
+        calls: CallSettings {
+            voice_mode: VoiceMode::PushToTalk,
+            push_to_talk_key: Some("`".into()),
+        },
         integrations: IntegrationSettings {
             google: GoogleIntegration {
                 sign_in_configured: true,
@@ -77,9 +86,15 @@ fn settings() -> Settings {
                 drive: false,
                 email: Some("ada@example.com".into()),
             },
-            github: Connection::Connected { name: "ada".into(), workspace: None, app_token: false },
+            github: Connection::Connected {
+                name: "ada".into(),
+                workspace: None,
+                app_token: false,
+            },
             github_app_configured: false,
-            fizzy: Connection::Rejected { reason: Some("The token was revoked.".into()) },
+            fizzy: Connection::Rejected {
+                reason: Some("The token was revoked.".into()),
+            },
             manage_path: "/users/me/profile".into(),
             slack_import_path: "/slack/imports".into(),
         },
@@ -173,7 +188,11 @@ fn settings_wire() {
 #[test]
 fn settings_writes_wire() {
     assert_wire(
-        &UpdateProfile { name: Some("Ada".into()), current_password: Some("secret".into()), ..UpdateProfile::default() },
+        &UpdateProfile {
+            name: Some("Ada".into()),
+            current_password: Some("secret".into()),
+            ..UpdateProfile::default()
+        },
         json!({
             "name": "Ada",
             "emailAddress": null,
@@ -185,10 +204,25 @@ fn settings_writes_wire() {
             "nickname": null
         }),
     );
-    assert_wire(&UpdateAvatar { signed_id: "eyJf--1".into() }, json!({ "signedId": "eyJf--1" }));
-    assert_wire(&UpdateProfileBanner { signed_id: "eyJf--2".into() }, json!({ "signedId": "eyJf--2" }));
     assert_wire(
-        &UpdateAppearance { theme: Some(Theme::System), text_size: None, time_zone: Some(String::new()), appearance_preferences: None },
+        &UpdateAvatar {
+            signed_id: "eyJf--1".into(),
+        },
+        json!({ "signedId": "eyJf--1" }),
+    );
+    assert_wire(
+        &UpdateProfileBanner {
+            signed_id: "eyJf--2".into(),
+        },
+        json!({ "signedId": "eyJf--2" }),
+    );
+    assert_wire(
+        &UpdateAppearance {
+            theme: Some(Theme::System),
+            text_size: None,
+            time_zone: Some(String::new()),
+            appearance_preferences: None,
+        },
         json!({ "theme": "system", "textSize": null, "timeZone": "", "appearancePreferences": null }),
     );
     assert_wire(
@@ -245,7 +279,10 @@ fn settings_writes_wire() {
         assert_wire(&expiry, json!(wire));
     }
     assert_wire(
-        &UpdateCalls { voice_mode: Some(VoiceMode::VoiceActivity), push_to_talk_key: None },
+        &UpdateCalls {
+            voice_mode: Some(VoiceMode::VoiceActivity),
+            push_to_talk_key: None,
+        },
         json!({ "voiceMode": "voice_activity", "pushToTalkKey": null }),
     );
 }
@@ -301,7 +338,9 @@ fn sessions_and_push_subscriptions_wire() {
 #[test]
 fn integration_changes_wire() {
     assert_wire(
-        &IntegrationToken { access_token: "personal-token".into() },
+        &IntegrationToken {
+            access_token: "personal-token".into(),
+        },
         json!({ "accessToken": "personal-token" }),
     );
     assert_wire(
@@ -334,21 +373,41 @@ fn integration_changes_wire() {
 #[test]
 fn account_settings_and_two_factor_wire() {
     let room = RoomMembershipRow {
-        room_id: 12, name: "Everyone".into(), involvement: Some(Involvement::Everything), direct: false,
+        room_id: 12,
+        name: "Everyone".into(),
+        involvement: Some(Involvement::Everything),
+        direct: false,
     };
-    let room_wire = json!({"roomId": 12, "name": "Everyone", "involvement": "everything", "direct": false});
+    let room_wire =
+        json!({"roomId": 12, "name": "Everyone", "involvement": "everything", "direct": false});
     assert_wire(&room, room_wire.clone());
-    assert_wire(&RoomMembershipRow {
-        room_id: 14, name: "Old room".into(), involvement: None, direct: false,
-    }, json!({"roomId": 14, "name": "Old room", "involvement": null, "direct": false}));
+    assert_wire(
+        &RoomMembershipRow {
+            room_id: 14,
+            name: "Old room".into(),
+            involvement: None,
+            direct: false,
+        },
+        json!({"roomId": 14, "name": "Old room", "involvement": null, "direct": false}),
+    );
     let device = RememberedDevice {
-        id: 6, description: "Unknown browser".into(), ip_address: None, last_used_at: None,
+        id: 6,
+        description: "Unknown browser".into(),
+        ip_address: None,
+        last_used_at: None,
     };
-    assert_wire(&device, json!({"id": 6, "description": "Unknown browser", "ipAddress": null, "lastUsedAt": null}));
+    assert_wire(
+        &device,
+        json!({"id": 6, "description": "Unknown browser", "ipAddress": null, "lastUsedAt": null}),
+    );
     let two_factor = TwoFactorSettings {
-        confirmed_at: Some("2026-10-07T10:00:00.000Z".into()), google: true,
-        has_password: false, devices: vec![RememberedDevice {
-            id: 7, description: "Firefox".into(), ip_address: Some("203.0.113.9".into()),
+        confirmed_at: Some("2026-10-07T10:00:00.000Z".into()),
+        google: true,
+        has_password: false,
+        devices: vec![RememberedDevice {
+            id: 7,
+            description: "Firefox".into(),
+            ip_address: Some("203.0.113.9".into()),
             last_used_at: Some("2026-10-07T11:00:00.000Z".into()),
         }],
     };
@@ -357,24 +416,58 @@ fn account_settings_and_two_factor_wire() {
         "devices": [{"id": 7, "description": "Firefox", "ipAddress": "203.0.113.9", "lastUsedAt": "2026-10-07T11:00:00.000Z"}]
     });
     assert_wire(&two_factor, panel_wire.clone());
-    assert_wire(&TwoFactorSettings {
-        confirmed_at: None, google: false, has_password: true, devices: vec![],
-    }, json!({"confirmedAt": null, "google": false, "hasPassword": true, "devices": []}));
-    assert_wire(&AccountSettings {
-        shared_rooms: vec![room], direct_rooms: vec![RoomMembershipRow {
-            room_id: 13, name: "Grace".into(), involvement: Some(Involvement::Mentions), direct: true,
-        }], two_factor: two_factor.clone(), transfer_url: "https://chat.example/session/transfers/signed".into(),
-        transfer_qr_svg: "<svg/>".into(),
-    }, json!({
-        "sharedRooms": [room_wire],
-        "directRooms": [{"roomId": 13, "name": "Grace", "involvement": "mentions", "direct": true}],
-        "twoFactor": panel_wire, "transferUrl": "https://chat.example/session/transfers/signed",
-        "transferQrSvg": "<svg/>"
-    }));
-    assert_wire(&Reauthentication { reauth: "123456".into() }, json!({"reauth": "123456"}));
-    assert_wire(&Reauthentication { reauth: String::new() }, json!({"reauth": ""}));
-    assert_wire(&BackupCodes { codes: vec!["1234-5678".into()] }, json!({"codes": ["1234-5678"]}));
-    assert_wire(&TwoFactorChange {
-        notice: "Device forgotten. It will ask for a code at next sign-in.".into(), two_factor,
-    }, json!({"notice": "Device forgotten. It will ask for a code at next sign-in.", "twoFactor": panel_wire}));
+    assert_wire(
+        &TwoFactorSettings {
+            confirmed_at: None,
+            google: false,
+            has_password: true,
+            devices: vec![],
+        },
+        json!({"confirmedAt": null, "google": false, "hasPassword": true, "devices": []}),
+    );
+    assert_wire(
+        &AccountSettings {
+            shared_rooms: vec![room],
+            direct_rooms: vec![RoomMembershipRow {
+                room_id: 13,
+                name: "Grace".into(),
+                involvement: Some(Involvement::Mentions),
+                direct: true,
+            }],
+            two_factor: two_factor.clone(),
+            transfer_url: "https://chat.example/session/transfers/signed".into(),
+            transfer_qr_svg: "<svg/>".into(),
+        },
+        json!({
+            "sharedRooms": [room_wire],
+            "directRooms": [{"roomId": 13, "name": "Grace", "involvement": "mentions", "direct": true}],
+            "twoFactor": panel_wire, "transferUrl": "https://chat.example/session/transfers/signed",
+            "transferQrSvg": "<svg/>"
+        }),
+    );
+    assert_wire(
+        &Reauthentication {
+            reauth: "123456".into(),
+        },
+        json!({"reauth": "123456"}),
+    );
+    assert_wire(
+        &Reauthentication {
+            reauth: String::new(),
+        },
+        json!({"reauth": ""}),
+    );
+    assert_wire(
+        &BackupCodes {
+            codes: vec!["1234-5678".into()],
+        },
+        json!({"codes": ["1234-5678"]}),
+    );
+    assert_wire(
+        &TwoFactorChange {
+            notice: "Device forgotten. It will ask for a code at next sign-in.".into(),
+            two_factor,
+        },
+        json!({"notice": "Device forgotten. It will ask for a code at next sign-in.", "twoFactor": panel_wire}),
+    );
 }

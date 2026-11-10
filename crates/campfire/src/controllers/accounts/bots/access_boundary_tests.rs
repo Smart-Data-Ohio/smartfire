@@ -4,9 +4,7 @@ use axum::http::{Method, StatusCode};
 
 async fn admin(t: &TestApp) -> crate::controllers::presenters::test_support::Browser<'_> {
     let mut browser = t.david();
-    let response = browser
-        .confirm_sudo("secret123456")
-        .await;
+    let response = browser.confirm_sudo("secret123456").await;
     assert_eq!(response.status, StatusCode::OK);
     browser
 }

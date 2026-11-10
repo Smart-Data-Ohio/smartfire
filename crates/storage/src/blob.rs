@@ -56,30 +56,71 @@ impl NewBlob {
     /// `build_after_unfurling(io:, filename:, content_type:, identify:)`: generates the key,
     /// computes the checksum, identifies the content type with Marcel (unless a declared type
     /// is given with `identify: false`) and marks the blob `identified`.
-    pub fn unfurl(data: &[u8], filename: Filename, declared_type: Option<&str>, service_name: &str, identify: bool) -> NewBlob {
+    pub fn unfurl(
+        data: &[u8],
+        filename: Filename,
+        declared_type: Option<&str>,
+        service_name: &str,
+        identify: bool,
+    ) -> NewBlob {
         let content_type = Self::content_type(data, &filename, declared_type, identify);
-        Self::build(filename, content_type, service_name, data.len() as u64, checksum(data))
+        Self::build(
+            filename,
+            content_type,
+            service_name,
+            data.len() as u64,
+            checksum(data),
+        )
     }
 
     /// [`NewBlob::unfurl`] for a file, reading only as much of it as identification needs, and
     /// streaming it through the checksum.
-    pub fn unfurl_file(path: &Path, filename: Filename, declared_type: Option<&str>, service_name: &str, identify: bool) -> Result<NewBlob> {
+    pub fn unfurl_file(
+        path: &Path,
+        filename: Filename,
+        declared_type: Option<&str>,
+        service_name: &str,
+        identify: bool,
+    ) -> Result<NewBlob> {
         let mut head = Vec::new();
-        std::fs::File::open(path)?.take(marcel::magic_prefix_len() as u64).read_to_end(&mut head)?;
+        std::fs::File::open(path)?
+            .take(marcel::magic_prefix_len() as u64)
+            .read_to_end(&mut head)?;
         let content_type = Self::content_type(&head, &filename, declared_type, identify);
         let byte_size = std::fs::metadata(path)?.len();
-        Ok(Self::build(filename, content_type, service_name, byte_size, checksum_file(path)?))
+        Ok(Self::build(
+            filename,
+            content_type,
+            service_name,
+            byte_size,
+            checksum_file(path)?,
+        ))
     }
 
-    fn content_type(head: &[u8], filename: &Filename, declared_type: Option<&str>, identify: bool) -> Option<String> {
+    fn content_type(
+        head: &[u8],
+        filename: &Filename,
+        declared_type: Option<&str>,
+        identify: bool,
+    ) -> Option<String> {
         if declared_type.is_none() || identify {
-            Some(marcel::identify(head, Some(&filename.sanitized()), declared_type))
+            Some(marcel::identify(
+                head,
+                Some(&filename.sanitized()),
+                declared_type,
+            ))
         } else {
             declared_type.map(str::to_string)
         }
     }
 
-    fn build(filename: Filename, content_type: Option<String>, service_name: &str, byte_size: u64, checksum: String) -> NewBlob {
+    fn build(
+        filename: Filename,
+        content_type: Option<String>,
+        service_name: &str,
+        byte_size: u64,
+        checksum: String,
+    ) -> NewBlob {
         NewBlob {
             key: generate_key(),
             filename,
@@ -121,7 +162,8 @@ impl NewBlob {
     }
 }
 
-const BLOB_COLUMNS: &str = "id, key, filename, content_type, metadata, service_name, byte_size, checksum, created_at";
+const BLOB_COLUMNS: &str =
+    "id, key, filename, content_type, metadata, service_name, byte_size, checksum, created_at";
 
 impl Blob {
     fn from_row(row: &Row) -> rusqlite::Result<Blob> {
@@ -131,7 +173,9 @@ impl Blob {
             key: row.get(1)?,
             filename: Filename::new(row.get::<_, String>(2)?),
             content_type: row.get(3)?,
-            metadata: metadata.and_then(|m| Json::parse(&m).ok()).unwrap_or_else(Json::object),
+            metadata: metadata
+                .and_then(|m| Json::parse(&m).ok())
+                .unwrap_or_else(Json::object),
             service_name: row.get(5)?,
             byte_size: row.get(6)?,
             checksum: row.get(7)?,
@@ -140,45 +184,95 @@ impl Blob {
     }
 
     pub fn find(conn: &Connection, id: i64) -> Result<Option<Blob>> {
-        static SQL: LazyLock<String> = LazyLock::new(|| format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE id = ?1"));
-        Ok(conn.prepare_cached(&SQL)?.query_row([id], Blob::from_row).optional()?)
+        static SQL: LazyLock<String> = LazyLock::new(|| {
+            format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE id = ?1")
+        });
+        Ok(conn
+            .prepare_cached(&SQL)?
+            .query_row([id], Blob::from_row)
+            .optional()?)
     }
 
     /// WS8bm2 room Files: one blob read for the bounded upload window, including duplicates.
-    pub fn find_many(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, Blob>> {
-        if ids.is_empty() { return Ok(std::collections::HashMap::new()); }
-        let sql = format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE id IN ({})", vec!["?"; ids.len()].join(","));
+    pub fn find_many(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, Blob>> {
+        if ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let sql = format!(
+            "SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE id IN ({})",
+            vec!["?"; ids.len()].join(",")
+        );
         let mut statement = conn.prepare(&sql)?;
         let blobs = statement.query_map(rusqlite::params_from_iter(ids), Self::from_row)?;
-        Ok(blobs.map(|blob| blob.map(|b| (b.id, b))).collect::<rusqlite::Result<_>>()?)
+        Ok(blobs
+            .map(|blob| blob.map(|b| (b.id, b)))
+            .collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn find_by_key(conn: &Connection, key: &str) -> Result<Option<Blob>> {
-        static SQL: LazyLock<String> = LazyLock::new(|| format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE key = ?1"));
-        Ok(conn.prepare_cached(&SQL)?.query_row([key], Blob::from_row).optional()?)
+        static SQL: LazyLock<String> = LazyLock::new(|| {
+            format!("SELECT {BLOB_COLUMNS} FROM active_storage_blobs WHERE key = ?1")
+        });
+        Ok(conn
+            .prepare_cached(&SQL)?
+            .query_row([key], Blob::from_row)
+            .optional()?)
     }
 
     /// The blob attached to `record` under `name` (`has_one_attached`).
-    pub fn attached(conn: &Connection, record_type: &str, record_id: i64, name: &str) -> Result<Option<Blob>> {
+    pub fn attached(
+        conn: &Connection,
+        record_type: &str,
+        record_id: i64,
+        name: &str,
+    ) -> Result<Option<Blob>> {
         static SQL: LazyLock<String> = LazyLock::new(|| {
             format!(
                 "SELECT {} FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id = b.id \
                  WHERE a.record_type = ?1 AND a.record_id = ?2 AND a.name = ?3 ORDER BY a.id LIMIT 1",
-                BLOB_COLUMNS.split(", ").map(|c| format!("b.{c}")).collect::<Vec<_>>().join(", ")
+                BLOB_COLUMNS
+                    .split(", ")
+                    .map(|c| format!("b.{c}"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )
         });
-        Ok(conn.prepare_cached(&SQL)?.query_row(params![record_type, record_id, name], Blob::from_row).optional()?)
+        Ok(conn
+            .prepare_cached(&SQL)?
+            .query_row(params![record_type, record_id, name], Blob::from_row)
+            .optional()?)
     }
 
     /// Both message file slots, in attachment-id order, for a bounded message window.
-    pub fn attached_messages(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashMap<i64, MessageAttachments>> {
+    pub fn attached_messages(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, MessageAttachments>> {
         let mut files = std::collections::HashMap::<i64, MessageAttachments>::new();
-        if ids.is_empty() { return Ok(files); }
-        let columns = BLOB_COLUMNS.split(", ").map(|column| format!("b.{column}")).collect::<Vec<_>>().join(", ");
-        let sql = format!("SELECT {columns},a.record_id,a.name,a.spoiler FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND a.record_id IN (SELECT value FROM json_each(?)) ORDER BY a.id");
+        if ids.is_empty() {
+            return Ok(files);
+        }
+        let columns = BLOB_COLUMNS
+            .split(", ")
+            .map(|column| format!("b.{column}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let sql = format!(
+            "SELECT {columns},a.record_id,a.name,a.spoiler FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.name IN ('attachment','attachments') AND a.record_id IN (SELECT value FROM json_each(?)) ORDER BY a.id"
+        );
         let mut statement = conn.prepare(&sql)?;
         let rows = statement.query_map([serde_json::json!(ids).to_string()], |row| {
-            Ok((row.get::<_, i64>(9)?, row.get::<_, String>(10)?, MessageFile { blob: Self::from_row(row)?, spoiler: row.get(11)? }))
+            Ok((
+                row.get::<_, i64>(9)?,
+                row.get::<_, String>(10)?,
+                MessageFile {
+                    blob: Self::from_row(row)?,
+                    spoiler: row.get(11)?,
+                },
+            ))
         })?;
         for row in rows {
             let (message_id, name, blob) = row?;
@@ -217,8 +311,13 @@ impl Blob {
     }
 
     /// `preview_image.attached?` for a preloaded message page, with one bounded read.
-    pub fn previewed_blob_ids(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashSet<i64>> {
-        if ids.is_empty() { return Ok(Default::default()); }
+    pub fn previewed_blob_ids(
+        conn: &Connection,
+        ids: &[i64],
+    ) -> Result<std::collections::HashSet<i64>> {
+        if ids.is_empty() {
+            return Ok(Default::default());
+        }
         let ids = serde_json::to_string(ids).expect("blob IDs serialize");
         Ok(conn.prepare_cached("SELECT record_id FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND name='preview_image' AND record_id IN (SELECT value FROM json_each(?))")?
             .query_map([ids], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?)
@@ -230,11 +329,15 @@ impl Blob {
     }
 
     pub fn is_identified(&self) -> bool {
-        self.metadata.get("identified").is_some_and(|v| !matches!(v, Json::Null | Json::Bool(false)))
+        self.metadata
+            .get("identified")
+            .is_some_and(|v| !matches!(v, Json::Null | Json::Bool(false)))
     }
 
     pub fn is_analyzed(&self) -> bool {
-        self.metadata.get("analyzed").is_some_and(|v| !matches!(v, Json::Null | Json::Bool(false)))
+        self.metadata
+            .get("analyzed")
+            .is_some_and(|v| !matches!(v, Json::Null | Json::Bool(false)))
     }
 
     /// `metadata[:width]`/`[:height]` as the views read them.
@@ -248,14 +351,21 @@ impl Blob {
 
     /// `update!(metadata:)`.
     pub fn update_metadata(&mut self, conn: &Connection, metadata: Json) -> Result<()> {
-        conn.execute("UPDATE active_storage_blobs SET metadata = ?1 WHERE id = ?2", params![metadata.encode(), self.id])?;
+        conn.execute(
+            "UPDATE active_storage_blobs SET metadata = ?1 WHERE id = ?2",
+            params![metadata.encode(), self.id],
+        )?;
         self.metadata = metadata;
         Ok(())
     }
 
     /// `default_variant_format`: web images keep their format, everything else becomes PNG.
     pub fn default_variant_format(&self) -> String {
-        if content_types::is_web_image(self.content_type()) { self.format().unwrap_or_else(|| "png".into()) } else { "png".into() }
+        if content_types::is_web_image(self.content_type()) {
+            self.format().unwrap_or_else(|| "png".into())
+        } else {
+            "png".into()
+        }
     }
 
     /// `Representable#format`: the filename's extension when Marcel agrees it names the
@@ -265,7 +375,9 @@ impl Blob {
         if !extension.is_empty() && marcel::for_extension(extension) == self.content_type() {
             Some(extension.to_string())
         } else {
-            marcel::extensions(self.content_type()).first().map(|e| e.to_string())
+            marcel::extensions(self.content_type())
+                .first()
+                .map(|e| e.to_string())
         }
     }
 
@@ -305,7 +417,11 @@ pub fn attachment_records(conn: &Connection, blob_id: i64) -> Result<Vec<(String
 }
 
 /// `blob.variant_records.find_by(variation_digest:)`.
-pub fn find_variant_record(conn: &Connection, blob_id: i64, variation_digest: &str) -> Result<Option<i64>> {
+pub fn find_variant_record(
+    conn: &Connection,
+    blob_id: i64,
+    variation_digest: &str,
+) -> Result<Option<i64>> {
     Ok(conn
         .prepare_cached("SELECT id FROM active_storage_variant_records WHERE blob_id = ?1 AND variation_digest = ?2")?
         .query_row(params![blob_id, variation_digest], |row| row.get(0))
@@ -313,13 +429,21 @@ pub fn find_variant_record(conn: &Connection, blob_id: i64, variation_digest: &s
 }
 
 /// `INSERT` half of `create_or_find_by!`: `None` when another writer created it first.
-pub fn insert_variant_record(conn: &Connection, blob_id: i64, variation_digest: &str) -> Result<Option<i64>> {
+pub fn insert_variant_record(
+    conn: &Connection,
+    blob_id: i64,
+    variation_digest: &str,
+) -> Result<Option<i64>> {
     match conn.execute(
         "INSERT INTO active_storage_variant_records (blob_id, variation_digest) VALUES (?1, ?2)",
         params![blob_id, variation_digest],
     ) {
         Ok(_) => Ok(Some(conn.last_insert_rowid())),
-        Err(rusqlite::Error::SqliteFailure(e, _)) if e.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE => Ok(None),
+        Err(rusqlite::Error::SqliteFailure(e, _))
+            if e.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE =>
+        {
+            Ok(None)
+        }
         Err(e) => Err(e.into()),
     }
 }
@@ -329,5 +453,9 @@ pub fn format_timestamp(t: jiff::Timestamp) -> String {
     let t = jiff::Timestamp::from_microsecond(t.as_microsecond()).unwrap_or(t);
     let micros = t.subsec_microsecond();
     let base = t.strftime("%Y-%m-%d %H:%M:%S").to_string();
-    if micros == 0 { base } else { format!("{base}.{micros:06}") }
+    if micros == 0 {
+        base
+    } else {
+        format!("{base}.{micros:06}")
+    }
 }

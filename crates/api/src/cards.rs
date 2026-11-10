@@ -26,8 +26,8 @@ use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_messages::controllers::message_features as features;
 use campfire_messages::controllers::messages as posting;
 use campfire_runtime::concerns::{self, cast_integer};
-use campfire_runtime::presenters::{self, Presenter};
 use campfire_runtime::context::db_error;
+use campfire_runtime::presenters::{self, Presenter};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::Value;
 
@@ -160,10 +160,16 @@ pub(crate) fn polls(
         conn,
         r#"SELECT * FROM "poll_options" WHERE "poll_id" IN ({}) ORDER BY "poll_id", "position", "id""#,
         &poll_ids,
-        |row| Ok(campfire_db::PollOption {
-            id: row.get("id")?, poll_id: row.get("poll_id")?, label: row.get("label")?,
-            position: row.get("position")?, created_at: row.get("created_at")?, updated_at: row.get("updated_at")?,
-        }),
+        |row| {
+            Ok(campfire_db::PollOption {
+                id: row.get("id")?,
+                poll_id: row.get("poll_id")?,
+                label: row.get("label")?,
+                position: row.get("position")?,
+                created_at: row.get("created_at")?,
+                updated_at: row.get("updated_at")?,
+            })
+        },
     )?;
     let votes: Vec<(i64, i64, i64)> = ids_query(
         conn,
@@ -172,8 +178,7 @@ pub(crate) fn polls(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
     let as_of = dto::time(now);
-    rows
-        .into_iter()
+    rows.into_iter()
         .map(|poll| {
             let poll_votes: Vec<&(i64, i64, i64)> =
                 votes.iter().filter(|vote| vote.0 == poll.id).collect();
@@ -197,7 +202,11 @@ pub(crate) fn polls(
                         label: option.label.clone(),
                         votes,
                         voter_ids,
-                        media: option.media(conn, verifier)?.map(serde_json::from_value).transpose().map_err(|e| campfire_db::Error::Other(e.to_string()))?,
+                        media: option
+                            .media(conn, verifier)?
+                            .map(serde_json::from_value)
+                            .transpose()
+                            .map_err(|e| campfire_db::Error::Other(e.to_string()))?,
                     })
                 })
                 .collect::<campfire_db::Result<_>>()?;
@@ -468,10 +477,15 @@ pub(crate) fn cards(
             // Anyone who sees this message sees a source in its own room; another room's
             // source is fetched per viewer.
             let public_source = match source.thread_id {
-                Some(id) => campfire_db::ChannelThread::find(conn, id)?.visibility == campfire_db::channel_thread::ThreadVisibility::Public,
+                Some(id) => {
+                    campfire_db::ChannelThread::find(conn, id)?.visibility
+                        == campfire_db::channel_thread::ThreadVisibility::Public
+                }
                 None => true,
             };
-            if !public_source { continue; }
+            if !public_source {
+                continue;
+            }
             let preview = if source.room_id == message.room_id && public_source {
                 let room = source_rooms
                     .get(&source.room_id)
@@ -555,7 +569,11 @@ fn quote_preview(
         } else {
             room.name.clone().unwrap_or_default()
         },
-        excerpt: campfire_presentation::helpers::truncate(&presenter.plain_text_body(source)?, 200, "..."),
+        excerpt: campfire_presentation::helpers::truncate(
+            &presenter.plain_text_body(source)?,
+            200,
+            "...",
+        ),
         created_at: dto::time(source.created_at),
     })
 }
@@ -673,27 +691,51 @@ enum PreparedPollMedia {
 
 fn valid_poll_emoji(conn: &Connection, emoji: &str) -> campfire_db::Result<bool> {
     if emoji.is_ascii() {
-        let name = emoji.strip_prefix(':').and_then(|s| s.strip_suffix(':')).unwrap_or(emoji);
-        return Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM workspace_icons WHERE name=?)", [name], |r| r.get(0))?);
+        let name = emoji
+            .strip_prefix(':')
+            .and_then(|s| s.strip_suffix(':'))
+            .unwrap_or(emoji);
+        return Ok(conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM workspace_icons WHERE name=?)",
+            [name],
+            |r| r.get(0),
+        )?);
     }
     // One Unicode emoji sequence, including joined families, flags, skin tones and keycaps.
-    static EMOJI: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| regex::Regex::new(r"\A(?:(?:\p{Regional_Indicator}{2})|[0-9#*]\x{FE0F}?\x{20E3}|(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\x{FE0F}?\p{Emoji_Modifier}?(?:[\x{E0020}-\x{E007E}]+\x{E007F})?(?:\x{200D}(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\x{FE0F}?\p{Emoji_Modifier}?)*)\z").unwrap());
+    static EMOJI: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"\A(?:(?:\p{Regional_Indicator}{2})|[0-9#*]\x{FE0F}?\x{20E3}|(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\x{FE0F}?\p{Emoji_Modifier}?(?:[\x{E0020}-\x{E007E}]+\x{E007F})?(?:\x{200D}(?:\p{Emoji_Presentation}|\p{Extended_Pictographic})\x{FE0F}?\p{Emoji_Modifier}?)*)\z").unwrap()
+    });
     Ok(EMOJI.is_match(emoji))
 }
 
-fn save_poll_media(tx: &mut campfire_db::Tx<'_>, storage: &campfire_storage::Storage, option: &campfire_db::PollOption, media: PreparedPollMedia) -> campfire_db::Result<()> {
+fn save_poll_media(
+    tx: &mut campfire_db::Tx<'_>,
+    storage: &campfire_storage::Storage,
+    option: &campfire_db::PollOption,
+    media: PreparedPollMedia,
+) -> campfire_db::Result<()> {
     use campfire_runtime::presenters::attachments::storage_error;
     match media {
         PreparedPollMedia::None => Ok(()),
         PreparedPollMedia::Emoji(content) => option.attach_emoji(tx, &content),
         PreparedPollMedia::Image(prepared) => {
             let campfire_storage::branding::Prepared { mut blob, still } = *prepared;
-            blob.metadata.set("poll_media", campfire_storage::Json::Bool(true));
-            tx.conn().execute("UPDATE active_storage_blobs SET metadata=?, content_type=? WHERE id=?", rusqlite::params![blob.metadata.encode(), blob.content_type, blob.id])?;
+            blob.metadata
+                .set("poll_media", campfire_storage::Json::Bool(true));
+            tx.conn().execute(
+                "UPDATE active_storage_blobs SET metadata=?, content_type=? WHERE id=?",
+                rusqlite::params![blob.metadata.encode(), blob.content_type, blob.id],
+            )?;
             if let Some((variation, still)) = still {
-                blob.metadata.set("poll_still", campfire_storage::Json::Bool(true));
-                blob.update_metadata(tx.conn(), blob.metadata.clone()).map_err(storage_error)?;
-                if storage.record_variant(tx.conn(), &blob, &variation, &still, tx.now().jiff()).map_err(storage_error)?.is_some() {
+                blob.metadata
+                    .set("poll_still", campfire_storage::Json::Bool(true));
+                blob.update_metadata(tx.conn(), blob.metadata.clone())
+                    .map_err(storage_error)?;
+                if storage
+                    .record_variant(tx.conn(), &blob, &variation, &still, tx.now().jiff())
+                    .map_err(storage_error)?
+                    .is_some()
+                {
                     campfire_runtime::active_storage::keep_after_commit(tx, still);
                 }
             }
@@ -706,17 +748,48 @@ async fn poll_image(c: &mut Ctx, signed: &str) -> Result<campfire_storage::brand
     use campfire_runtime::presenters::attachments::Assignment;
     use campfire_storage::branding::{self, Kind};
     let limit = campfire_runtime::active_storage::upload_limit_bytes(c.app()).await? as u64;
-    let assignment = Assignment::Signed(signed.to_owned()).stage_with_limit(c.app(), limit).await
-        .map_err(|_| fail(c, validation("optionMedia", "isn't a valid upload or exceeds the workspace upload limit")))?;
-    let Assignment::Existing(blob) = assignment else { return Err(fail(c, validation("optionMedia", "isn't an uploaded image"))); };
-    if !matches!(blob.content_type(), "image/png" | "image/jpeg" | "image/gif" | "image/webp") {
-        return Err(fail(c, validation("optionMedia", "must be a PNG, JPEG, GIF or WebP image")));
+    let assignment = Assignment::Signed(signed.to_owned())
+        .stage_with_limit(c.app(), limit)
+        .await
+        .map_err(|_| {
+            fail(
+                c,
+                validation(
+                    "optionMedia",
+                    "isn't a valid upload or exceeds the workspace upload limit",
+                ),
+            )
+        })?;
+    let Assignment::Existing(blob) = assignment else {
+        return Err(fail(
+            c,
+            validation("optionMedia", "isn't an uploaded image"),
+        ));
+    };
+    if !matches!(
+        blob.content_type(),
+        "image/png" | "image/jpeg" | "image/gif" | "image/webp"
+    ) {
+        return Err(fail(
+            c,
+            validation("optionMedia", "must be a PNG, JPEG, GIF or WebP image"),
+        ));
     }
     let storage = c.app().storage.clone();
     let prepared = campfire_runtime::active_storage::process_branding_with_deadline(
         branding::processing_timeout(&blob),
-        move |cancel| Ok(branding::prepare_with_limit(&storage, blob, Kind::Logo, &cancel, limit)),
-    ).await.map_err(|_| fail(c, validation("optionMedia", "couldn't be read as an image")))?;
+        move |cancel| {
+            Ok(branding::prepare_with_limit(
+                &storage,
+                blob,
+                Kind::Logo,
+                &cancel,
+                limit,
+            ))
+        },
+    )
+    .await
+    .map_err(|_| fail(c, validation("optionMedia", "couldn't be read as an image")))?;
     prepared.map_err(|invalid| {
         let message = match invalid {
             branding::Invalid::Size => "exceeds the workspace upload limit",
@@ -796,7 +869,10 @@ async fn post_poll(c: &mut Ctx) -> Result {
     }
     let media_inputs = input.option_media.unwrap_or_default();
     if !media_inputs.is_empty() && media_inputs.len() != input.options.len() {
-        return Err(fail(c, validation("optionMedia", "must match the option labels")));
+        return Err(fail(
+            c,
+            validation("optionMedia", "must match the option labels"),
+        ));
     }
     let mut media = Vec::new();
     for (index, label) in input.options.iter().enumerate() {
@@ -812,8 +888,17 @@ async fn post_poll(c: &mut Ctx) -> Result {
             Some(choice) => match (&choice.signed_id, &choice.emoji) {
                 (Some(signed), None) => {
                     let mut prepared = poll_image(c, signed).await?;
-                    if prepared.blob.metadata.get("uploader_id").and_then(campfire_storage::Json::as_i64).is_some_and(|id| id != creator_id) {
-                        return Err(fail(c, validation("optionMedia", "must be your uploaded image")));
+                    if prepared
+                        .blob
+                        .metadata
+                        .get("uploader_id")
+                        .and_then(campfire_storage::Json::as_i64)
+                        .is_some_and(|id| id != creator_id)
+                    {
+                        return Err(fail(
+                            c,
+                            validation("optionMedia", "must be your uploaded image"),
+                        ));
                     }
                     // PNG can contain APNG animation even though its MIME type says PNG.
                     if prepared.still.is_none() {
@@ -821,7 +906,13 @@ async fn post_poll(c: &mut Ctx) -> Result {
                         let blob = prepared.blob.clone();
                         let variation = campfire_storage::branding::Kind::Logo.still_variation();
                         let transform = variation.clone();
-                        let still = campfire_runtime::active_storage::process_media(move || storage.transform_variant(&blob, &transform)).await.map_err(|_| fail(c, validation("optionMedia", "couldn't be read as an image")))?;
+                        let still = campfire_runtime::active_storage::process_media(move || {
+                            storage.transform_variant(&blob, &transform)
+                        })
+                        .await
+                        .map_err(|_| {
+                            fail(c, validation("optionMedia", "couldn't be read as an image"))
+                        })?;
                         prepared.still = Some((variation, still));
                     }
                     PreparedPollMedia::Image(Box::new(prepared))
@@ -829,12 +920,32 @@ async fn post_poll(c: &mut Ctx) -> Result {
                 (None, Some(emoji)) => {
                     let mut emoji = emoji.trim().to_string();
                     let value = emoji.clone();
-                    let valid = c.app().db.read(move |conn| valid_poll_emoji(conn, &value)).await.map_err(db_error)?;
-                    if !valid { return Err(fail(c, validation("optionMedia", "must be a Unicode emoji or an existing workspace emoji"))); }
-                    if emoji.is_ascii() && !emoji.starts_with(':') { emoji = format!(":{emoji}:"); }
+                    let valid = c
+                        .app()
+                        .db
+                        .read(move |conn| valid_poll_emoji(conn, &value))
+                        .await
+                        .map_err(db_error)?;
+                    if !valid {
+                        return Err(fail(
+                            c,
+                            validation(
+                                "optionMedia",
+                                "must be a Unicode emoji or an existing workspace emoji",
+                            ),
+                        ));
+                    }
+                    if emoji.is_ascii() && !emoji.starts_with(':') {
+                        emoji = format!(":{emoji}:");
+                    }
                     PreparedPollMedia::Emoji(emoji)
                 }
-                _ => return Err(fail(c, validation("optionMedia", "choose one image or emoji"))),
+                _ => {
+                    return Err(fail(
+                        c,
+                        validation("optionMedia", "choose one image or emoji"),
+                    ));
+                }
             },
         };
         media.push(prepared);
@@ -878,12 +989,33 @@ async fn post_poll(c: &mut Ctx) -> Result {
             // Claim only fresh uploads. Reusing a room's attachment would share its signed URL.
             for image in &media {
                 if let PreparedPollMedia::Image(prepared) = image {
-                    if !campfire_db::Blob::reusable_by(tx.conn(), prepared.blob.id, creator_id, "PollOption")? {
-                        return Ok(Err(validation("optionMedia", "must be an accessible uploaded image")));
+                    if !campfire_db::Blob::reusable_by(
+                        tx.conn(),
+                        prepared.blob.id,
+                        creator_id,
+                        "PollOption",
+                    )? {
+                        return Ok(Err(validation(
+                            "optionMedia",
+                            "must be an accessible uploaded image",
+                        )));
                     }
-                    let attached: bool = tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)", [prepared.blob.id], |r| r.get(0))?;
-                    if attached || !campfire_runtime::presenters::attachments::scheduled_upload_owners(tx.conn(), prepared.blob.id)?.is_empty() {
-                        return Ok(Err(validation("optionMedia", "must be a new uploaded image")));
+                    let attached: bool = tx.conn().query_row(
+                        "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE blob_id=?)",
+                        [prepared.blob.id],
+                        |r| r.get(0),
+                    )?;
+                    if attached
+                        || !campfire_runtime::presenters::attachments::scheduled_upload_owners(
+                            tx.conn(),
+                            prepared.blob.id,
+                        )?
+                        .is_empty()
+                    {
+                        return Ok(Err(validation(
+                            "optionMedia",
+                            "must be a new uploaded image",
+                        )));
                     }
                 }
             }
@@ -957,12 +1089,18 @@ async fn set_poll(c: &mut Ctx) -> Result<(Room, i64, i64)> {
     let poll_id = path_id(c, "poll_id")?;
     let viewer_id = concerns::require_current_user(c)?.id;
     let room_id = room.id;
-    c.app().db.read(move |conn| {
-        let poll = Poll::find_in_room(conn, room_id, poll_id)?;
-        let message = Message::find(conn, poll.message_id)?;
-        if !message_quote::visible(conn, &message, viewer_id)? { return Err(campfire_db::Error::RecordNotFound("Poll")); }
-        Ok(())
-    }).await.map_err(db_error)?;
+    c.app()
+        .db
+        .read(move |conn| {
+            let poll = Poll::find_in_room(conn, room_id, poll_id)?;
+            let message = Message::find(conn, poll.message_id)?;
+            if !message_quote::visible(conn, &message, viewer_id)? {
+                return Err(campfire_db::Error::RecordNotFound("Poll"));
+            }
+            Ok(())
+        })
+        .await
+        .map_err(db_error)?;
     Ok((room, poll_id, viewer_id))
 }
 
@@ -974,7 +1112,13 @@ async fn show_poll(c: &mut Ctx) -> Result {
         .db
         .read(move |conn| {
             let poll = Poll::find_in_room(conn, room.id, poll_id)?;
-            poll_results(conn, &poll, viewer_id, app.db.env().now(), &*app.storage.verifier)
+            poll_results(
+                conn,
+                &poll,
+                viewer_id,
+                app.db.env().now(),
+                &*app.storage.verifier,
+            )
         })
         .await
         .map_err(db_error)?;
@@ -991,37 +1135,35 @@ async fn post_vote(c: &mut Ctx) -> Result {
     let outcome = c
         .app()
         .db
-        .write(
-            move |tx| {
-                // Votes on a poll take turns in the writer: each reads the poll it changes.
-                let mut poll = Poll::find_in_room(tx.conn(), room_id, poll_id)?;
-                if poll.closed(tx.now()) {
-                    return Ok(Err(validation("poll", "is closed")));
+        .write(move |tx| {
+            // Votes on a poll take turns in the writer: each reads the poll it changes.
+            let mut poll = Poll::find_in_room(tx.conn(), room_id, poll_id)?;
+            if poll.closed(tx.now()) {
+                return Ok(Err(validation("poll", "is closed")));
+            }
+            let mut ids: Vec<i64> = Vec::new();
+            for id in option_ids {
+                if !ids.contains(&id) {
+                    ids.push(id);
                 }
-                let mut ids: Vec<i64> = Vec::new();
-                for id in option_ids {
-                    if !ids.contains(&id) {
-                        ids.push(id);
-                    }
-                }
-                let options: Vec<i64> = poll
-                    .options(tx.conn())?
-                    .into_iter()
-                    .map(|option| option.id)
-                    .collect();
-                if ids.iter().any(|id| !options.contains(id)) {
-                    return Ok(Err(validation(
-                        "optionIds",
-                        "aren't all options of this poll",
-                    )));
-                }
-                if poll.single() && ids.len() > 1 {
-                    return Ok(Err(validation("optionIds", "can name only one option")));
-                }
-                poll.cast_vote(tx, viewer_id, &ids)?;
-                poll_results(tx.conn(), &poll, viewer_id, tx.now(), &*verifier).map(Ok)
-            },
-        )
+            }
+            let options: Vec<i64> = poll
+                .options(tx.conn())?
+                .into_iter()
+                .map(|option| option.id)
+                .collect();
+            if ids.iter().any(|id| !options.contains(id)) {
+                return Ok(Err(validation(
+                    "optionIds",
+                    "aren't all options of this poll",
+                )));
+            }
+            if poll.single() && ids.len() > 1 {
+                return Ok(Err(validation("optionIds", "can name only one option")));
+            }
+            poll.cast_vote(tx, viewer_id, &ids)?;
+            poll_results(tx.conn(), &poll, viewer_id, tx.now(), &*verifier).map(Ok)
+        })
         .await
         .map_err(db_error)?;
     match outcome {
@@ -1036,21 +1178,18 @@ async fn post_end_poll(c: &mut Ctx) -> Result {
     let outcome = c
         .app()
         .db
-        .write(
-            move |tx| {
-                let mut poll = Poll::find_in_room(tx.conn(), room.id, poll_id)?;
-                let message = Message::find(tx.conn(), poll.message_id)?;
-                let viewer = User::find(tx.conn(), viewer_id)?;
-                if message.creator_id != viewer_id && !viewer.is_administrator() {
-                    return Ok(Err(api::ApiError::Forbidden {
-                        message: "Only the poll author or an administrator can end this poll"
-                            .into(),
-                    }));
-                }
-                poll.close(tx, tx.now())?;
-                poll_results(tx.conn(), &poll, viewer_id, tx.now(), &*verifier).map(Ok)
-            },
-        )
+        .write(move |tx| {
+            let mut poll = Poll::find_in_room(tx.conn(), room.id, poll_id)?;
+            let message = Message::find(tx.conn(), poll.message_id)?;
+            let viewer = User::find(tx.conn(), viewer_id)?;
+            if message.creator_id != viewer_id && !viewer.is_administrator() {
+                return Ok(Err(api::ApiError::Forbidden {
+                    message: "Only the poll author or an administrator can end this poll".into(),
+                }));
+            }
+            poll.close(tx, tx.now())?;
+            poll_results(tx.conn(), &poll, viewer_id, tx.now(), &*verifier).map(Ok)
+        })
         .await
         .map_err(db_error)?;
     match outcome {
@@ -1197,9 +1336,15 @@ async fn show_github_card(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            if let Some(message_id) = message_id { Message::find_reachable(conn, scope_viewer, message_id)?; }
+            if let Some(message_id) = message_id {
+                Message::find_reachable(conn, scope_viewer, message_id)?;
+            }
             if let Some(thread_id) = thread_id
-                && !campfire_db::ChannelThread::find(conn, thread_id)?.readable_by(conn, scope_viewer)? { return Err(campfire_db::Error::RecordNotFound("ChannelThread")); }
+                && !campfire_db::ChannelThread::find(conn, thread_id)?
+                    .readable_by(conn, scope_viewer)?
+            {
+                return Err(campfire_db::Error::RecordNotFound("ChannelThread"));
+            }
             pull_requests::viewer_card_context(conn, room_id, id, message_id, thread_id)
         })
         .await
@@ -1232,7 +1377,10 @@ async fn show_github_card(c: &mut Ctx) -> Result {
 }
 
 /// `campfire_presentation::github::card`'s states: a failed fetch, a fetched title, or still loading.
-fn github_card_of(card: campfire_presentation::github::Card, thread: bool) -> api::GithubPullRequestCard {
+fn github_card_of(
+    card: campfire_presentation::github::Card,
+    thread: bool,
+) -> api::GithubPullRequestCard {
     if let Some(message) = present(card.fetch_error.as_deref()) {
         return api::GithubPullRequestCard::Failed { message };
     }
@@ -1491,7 +1639,9 @@ async fn show_quote_card(c: &mut Ctx) -> Result {
                 return Ok(api::QuotePreviewResult::Hidden);
             }
             let source_room = Room::find(conn, source.room_id)?;
-            let author = User::find(conn, source.creator_id)?.display_name().to_owned();
+            let author = User::find(conn, source.creator_id)?
+                .display_name()
+                .to_owned();
             let presenter = Presenter::new(conn, &app, None);
             Ok(api::QuotePreviewResult::Loaded(quote_preview(
                 &presenter,
@@ -1525,7 +1675,11 @@ mod tests {
             fetched_at: None,
             fetch_error: fetch_error.map(str::to_owned),
         };
-        fizzy_preview(&card, Some(&cache), &campfire_presentation::time::Zone::utc())
+        fizzy_preview(
+            &card,
+            Some(&cache),
+            &campfire_presentation::time::Zone::utc(),
+        )
     }
 
     #[test]
@@ -1614,7 +1768,10 @@ mod tests {
         }
     }
 
-    fn github(card: campfire_presentation::github::Card, thread: bool) -> api::GithubPullRequestCard {
+    fn github(
+        card: campfire_presentation::github::Card,
+        thread: bool,
+    ) -> api::GithubPullRequestCard {
         github_card_of(
             campfire_presentation::github::Card {
                 owner: "smart-data-ohio".into(),

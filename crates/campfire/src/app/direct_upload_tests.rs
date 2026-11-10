@@ -25,21 +25,85 @@ async fn direct_upload_authentication_precedes_disk_params_without_changing_meta
     for case in oracle()["cases"].as_array().unwrap() {
         if case["kind"] == "authentication" {
             let content_type = case["content_type"].as_str().unwrap();
-            let blob = browser.write(metadata(case["byte_size"].as_i64().unwrap(),
-                case["checksum"].as_str().unwrap(), content_type.split(';').next().unwrap())).await.json();
-            let reply = anonymous.send(Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
-                .header("content-type", content_type)
-                .header("content-length", &case["byte_size"].to_string())
-                .body(base64::engine::general_purpose::STANDARD.decode(case["body_base64"].as_str().unwrap()).unwrap())).await;
+            let blob = browser
+                .write(metadata(
+                    case["byte_size"].as_i64().unwrap(),
+                    case["checksum"].as_str().unwrap(),
+                    content_type.split(';').next().unwrap(),
+                ))
+                .await
+                .json();
+            let reply = anonymous
+                .send(
+                    Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
+                        .header("content-type", content_type)
+                        .header("content-length", &case["byte_size"].to_string())
+                        .body(
+                            base64::engine::general_purpose::STANDARD
+                                .decode(case["body_base64"].as_str().unwrap())
+                                .unwrap(),
+                        ),
+                )
+                .await;
             // Smartfire authenticates before receiving or parsing any upload bytes.
-            assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}: {}", case["name"], reply.text());
-            assert_eq!(a.booted.app.storage.service.exist(blob["key"].as_str().unwrap()), case["file_exists"], "{}", case["name"]);
+            assert_eq!(
+                reply.status,
+                StatusCode::UNAUTHORIZED,
+                "{}: {}",
+                case["name"],
+                reply.text()
+            );
+            assert_eq!(
+                a.booted
+                    .app
+                    .storage
+                    .service
+                    .exist(blob["key"].as_str().unwrap()),
+                case["file_exists"],
+                "{}",
+                case["name"]
+            );
         } else if case["kind"] == "metadata_authentication" {
-            let before: i64 = a.booted.app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| row.get(0))?)).await.unwrap();
-            let reply = anonymous.send(Req::new(Method::POST, "/rails/active_storage/direct_uploads")
-                .header("content-type", "application/json").body(case["body"].as_str().unwrap())).await;
-            assert_eq!(reply.status.as_u16(), case["status"], "{}: {}", case["name"], reply.text());
-            let after: i64 = a.booted.app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| row.get(0))?)).await.unwrap();
+            let before: i64 = a
+                .booted
+                .app
+                .db
+                .read(|conn| {
+                    Ok(
+                        conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| {
+                            row.get(0)
+                        })?,
+                    )
+                })
+                .await
+                .unwrap();
+            let reply = anonymous
+                .send(
+                    Req::new(Method::POST, "/rails/active_storage/direct_uploads")
+                        .header("content-type", "application/json")
+                        .body(case["body"].as_str().unwrap()),
+                )
+                .await;
+            assert_eq!(
+                reply.status.as_u16(),
+                case["status"],
+                "{}: {}",
+                case["name"],
+                reply.text()
+            );
+            let after: i64 = a
+                .booted
+                .app
+                .db
+                .read(|conn| {
+                    Ok(
+                        conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| {
+                            row.get(0)
+                        })?,
+                    )
+                })
+                .await
+                .unwrap();
             assert_eq!(after - before, case["allocated_blobs"], "{}", case["name"]);
         }
     }
@@ -270,7 +334,13 @@ async fn direct_upload_body_parsers_match_pinned_rails_and_store_the_full_body()
         // Keep the Rails parser outcomes, but verify/store the complete body rather than
         // the suffix left behind by Rack's form parser.
         let expected = match case["put_status"].as_u64().unwrap() {
-            204 | 422 => if full_body_checksum == case["checksum"].as_str().unwrap() { 204 } else { 422 },
+            204 | 422 => {
+                if full_body_checksum == case["checksum"].as_str().unwrap() {
+                    204
+                } else {
+                    422
+                }
+            }
             other => other as u16,
         };
         assert_eq!(
@@ -288,10 +358,7 @@ async fn direct_upload_body_parsers_match_pinned_rails_and_store_the_full_body()
             .path_for(blob["key"].as_str().unwrap());
         assert_eq!(path.exists(), expected == 204, "{}", case["name"]);
         if path.exists() {
-            assert_eq!(
-                std::fs::metadata(&path).unwrap().len(),
-                case["byte_size"]
-            );
+            assert_eq!(std::fs::metadata(&path).unwrap().len(), case["byte_size"]);
             assert_eq!(
                 campfire_storage::key::checksum_file(&path).unwrap(),
                 case["checksum"]
@@ -381,8 +448,7 @@ async fn direct_uploads_over_16_mib_match_rails_metadata_put_and_integrity() {
             .as_str()
             .unwrap_or("application/octet-stream");
         let bytes = if let Some(fixture) = case["fixture"].as_str() {
-            let mut bytes =
-                std::fs::read(campfire_db::fixtures::reference_path(fixture)).unwrap();
+            let mut bytes = std::fs::read(campfire_db::fixtures::reference_path(fixture)).unwrap();
             bytes.resize(size as usize, 0);
             bytes
         } else {
@@ -489,9 +555,9 @@ async fn composer_accepts_a_100_mb_video_and_retains_the_rails_bytes() {
         .iter()
         .find(|case| case["name"] == "composer_video")
         .unwrap();
-    let mut bytes = std::fs::read(
-        campfire_db::fixtures::reference_path(case["fixture"].as_str().unwrap()),
-    )
+    let mut bytes = std::fs::read(campfire_db::fixtures::reference_path(
+        case["fixture"].as_str().unwrap(),
+    ))
     .unwrap();
     bytes.resize(case["byte_size"].as_u64().unwrap() as usize, 0);
     let reply = browser

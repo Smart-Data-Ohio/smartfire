@@ -10,27 +10,84 @@ const DESIGNERS: i64 = 654632876;
 async fn a_member_can_rename_the_group_and_everyone_sees_the_compact_system_note() {
     let app = setup().await;
     let id = group(&app, &[DAVID, JASON, KEVIN], DAVID).await;
-    let reply = app.david().write(Req::new(Method::PATCH, &format!("/rooms/directs/{id}")).form(&[("room[name]", "Weekend Plans")])).await;
+    let reply = app
+        .david()
+        .write(
+            Req::new(Method::PATCH, &format!("/rooms/directs/{id}"))
+                .form(&[("room[name]", "Weekend Plans")]),
+        )
+        .await;
     assert_eq!(reply.status, StatusCode::FOUND);
     assert_eq!(note(&app, id).await, "renamed the group to Weekend Plans");
 }
-
 
 #[tokio::test]
 async fn group_dm_notes_cannot_be_edited_or_deleted() {
     let app = setup().await;
     let id = group(&app, &[DAVID, JASON, KEVIN], DAVID).await;
-    app.db().write(move |tx| Room::find(tx.conn(), id)?.rename_direct(tx, "Weekend Plans", DAVID)).await.unwrap();
-    let note = app.db().read(move |conn| Ok(Message::for_room(conn, id)?.into_iter().filter(|m| m.system_note).max_by_key(|m| m.id).unwrap())).await.unwrap();
+    app.db()
+        .write(move |tx| Room::find(tx.conn(), id)?.rename_direct(tx, "Weekend Plans", DAVID))
+        .await
+        .unwrap();
+    let note = app
+        .db()
+        .read(move |conn| {
+            Ok(Message::for_room(conn, id)?
+                .into_iter()
+                .filter(|m| m.system_note)
+                .max_by_key(|m| m.id)
+                .unwrap())
+        })
+        .await
+        .unwrap();
     let note_id = note.id;
-    let body_before = app.db().read(move |conn| Message::find(conn, note_id)?.body_html(conn)).await.unwrap();
-    let count_before = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?)).await.unwrap();
-    let reply = app.david().write(Req::new(Method::PATCH, &format!("/rooms/{id}/messages/{note_id}.json")).form(&[("message[markdown_source]", "Edited")])).await;
+    let body_before = app
+        .db()
+        .read(move |conn| Message::find(conn, note_id)?.body_html(conn))
+        .await
+        .unwrap();
+    let count_before = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?)
+        })
+        .await
+        .unwrap();
+    let reply = app
+        .david()
+        .write(
+            Req::new(
+                Method::PATCH,
+                &format!("/rooms/{id}/messages/{note_id}.json"),
+            )
+            .form(&[("message[markdown_source]", "Edited")]),
+        )
+        .await;
     assert_eq!(reply.status, StatusCode::FORBIDDEN);
-    let reply = app.david().write(Req::new(Method::DELETE, &format!("/rooms/{id}/messages/{note_id}.turbo_stream"))).await;
+    let reply = app
+        .david()
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/rooms/{id}/messages/{note_id}.turbo_stream"),
+        ))
+        .await;
     assert_eq!(reply.status, StatusCode::FORBIDDEN);
-    assert_eq!(app.db().read(move |conn| Message::find(conn, note_id)?.body_html(conn)).await.unwrap(), body_before);
-    assert_eq!(app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?)).await.unwrap(), count_before);
+    assert_eq!(
+        app.db()
+            .read(move |conn| Message::find(conn, note_id)?.body_html(conn))
+            .await
+            .unwrap(),
+        body_before
+    );
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(
+                conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?
+            ))
+            .await
+            .unwrap(),
+        count_before
+    );
 }
 async fn setup() -> TestApp {
     TestApp::boot_frozen().await.expect("seed required")

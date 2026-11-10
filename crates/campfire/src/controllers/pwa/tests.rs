@@ -8,14 +8,19 @@ async fn unreleased_spa_manifest_redirects_to_single_root_identity() {
         };
         let response = app.anonymous().get("/app/manifest.webmanifest").await;
         assert_eq!(response.status, StatusCode::FOUND);
-        assert_eq!(response.header("location"), Some("http://campfire.test/webmanifest.json"));
+        assert_eq!(
+            response.header("location"),
+            Some("http://campfire.test/webmanifest.json")
+        );
     }
 }
 
 #[tokio::test]
 async fn pwa_http_bodies_preserve_installed_identity_and_current_worker() {
     for seed in ["default", "first_run"] {
-        let Some(app) = TestApp::boot_seed_with_env(seed, seed_clock(), &[]).await else { return; };
+        let Some(app) = TestApp::boot_seed_with_env(seed, seed_clock(), &[]).await else {
+            return;
+        };
         let mut browser = app.anonymous();
         let manifest = browser.get("/webmanifest.json").await;
         assert_eq!(manifest.status, StatusCode::OK);
@@ -24,8 +29,13 @@ async fn pwa_http_bodies_preserve_installed_identity_and_current_worker() {
         for path in ["service-worker.js", "offline.html"] {
             let response = browser.get(&format!("/{path}")).await;
             assert_eq!(response.status, StatusCode::OK);
-            assert_eq!(response.body, campfire_spa::pwa::file(path, None).unwrap().body);
-            if path == "offline.html" { assert_eq!(response.header("set-cookie"), None); }
+            assert_eq!(
+                response.body,
+                campfire_spa::pwa::file(path, None).unwrap().body
+            );
+            if path == "offline.html" {
+                assert_eq!(response.header("set-cookie"), None);
+            }
         }
     }
 }
@@ -47,9 +57,7 @@ async fn ws17_service_worker_is_served_byte_identical_to_rails() {
     assert_eq!(offline.status, StatusCode::OK);
     assert_eq!(
         offline.body,
-        campfire_spa::pwa::file("offline.html", None)
-            .unwrap()
-            .body
+        campfire_spa::pwa::file("offline.html", None).unwrap().body
     );
 }
 #[tokio::test]
@@ -131,9 +139,7 @@ async fn pwa_three_stable_urls_keep_identity_whatever_the_old_switches_and_choic
         assert_eq!(offline.header("set-cookie"), None);
         assert_eq!(
             offline.body,
-            campfire_spa::pwa::file("offline.html", None)
-                .unwrap()
-                .body
+            campfire_spa::pwa::file("offline.html", None).unwrap().body
         );
         let alias_worker = browser.get("/app/service-worker.js").await;
         let alias_offline = browser.get("/app/offline.html").await;
@@ -184,12 +190,8 @@ async fn pwa_three_stable_urls_keep_identity_whatever_the_old_switches_and_choic
 async fn old_notification_paths_use_server_aliases_and_ignore_a_classic_choice() {
     use crate::controllers::presenters::test_support::DAVID;
     use campfire_db::models::user::ui_preference::{self, UiPreference};
-    let Some(app) = TestApp::boot_seed_with_env(
-        "default",
-        seed_clock(),
-        &[("SPA_ENABLED", "1")],
-    )
-    .await
+    let Some(app) =
+        TestApp::boot_seed_with_env("default", seed_clock(), &[("SPA_ENABLED", "1")]).await
     else {
         return;
     };
@@ -220,7 +222,9 @@ async fn old_notification_paths_use_server_aliases_and_ignore_a_classic_choice()
 
 #[tokio::test]
 async fn pwa_icons_are_never_masked_so_the_whole_workspace_logo_shows() {
-    let Some(app) = TestApp::boot_seed_with_env("default", seed_clock(), &[]).await else { return; };
+    let Some(app) = TestApp::boot_seed_with_env("default", seed_clock(), &[]).await else {
+        return;
+    };
     let manifest = app.anonymous().get("/webmanifest.json").await.json();
     let purposes: Vec<_> = manifest["icons"]
         .as_array()

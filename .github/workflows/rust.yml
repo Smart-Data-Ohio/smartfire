@@ -14,7 +14,8 @@ name: Rust
 
 on:
   push:
-    branches: [ main ]
+    # OpenMerge tests queued batches on openmerge/queue/** before landing them.
+    branches: [ main, "openmerge/queue/**" ]
   # Every pull request gets a "Rust port" result, so it can be a required check; the
   # changes job decides whether the PR touched anything the Rust gates read.
   pull_request:

@@ -13,7 +13,9 @@ use serde_json::{Value, json};
 use crate::controllers::presenters::test_support::{
     ALL_TALK, Browser, DAVID, HQ, JASON, Reply, Req, TestApp, seed_clock,
 };
-use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, ResponseGate, Route};
+use crate::integrations::test_support::{
+    FakeResolver, FakeServer, MappingDialer, ResponseGate, Route,
+};
 
 const KEY: &str = "test-klipy-key";
 const GIF_BYTES: &[u8] =
@@ -570,18 +572,42 @@ async fn gif_validation_selection_before_any_provider_download() {
     let mut b = app.sign_in(DAVID).await;
     let mut uploads = Vec::new();
     for index in 0..10 {
-        uploads.push(super::admin_tests::owned_upload(&app, &format!("gif-limit-{index}.png"), DAVID).await);
+        uploads.push(
+            super::admin_tests::owned_upload(&app, &format!("gif-limit-{index}.png"), DAVID).await,
+        );
     }
     let before = blob_count(&app).await;
     for (id, extra, field, expected) in [
-        ("too-many", json!({"gifSlug":"hello-hi-662", "attachmentSignedIds":uploads}), "attachmentSignedIds", "has too many files (maximum is 10)"),
-        ("single", json!({"gifSlug":"hello-hi-662", "attachmentSignedId":uploads[0]}), "gifSlug", "cannot be combined with attachmentSignedId"),
-        ("bad-slug", json!({"gifSlug":"hello,other"}), "gifSlug", "is not a valid GIF slug"),
+        (
+            "too-many",
+            json!({"gifSlug":"hello-hi-662", "attachmentSignedIds":uploads}),
+            "attachmentSignedIds",
+            "has too many files (maximum is 10)",
+        ),
+        (
+            "single",
+            json!({"gifSlug":"hello-hi-662", "attachmentSignedId":uploads[0]}),
+            "gifSlug",
+            "cannot be combined with attachmentSignedId",
+        ),
+        (
+            "bad-slug",
+            json!({"gifSlug":"hello,other"}),
+            "gifSlug",
+            "is not a valid GIF slug",
+        ),
     ] {
         let mut body = json!({"clientMessageId":id, "markdownSource":"GIF validation"});
-        body.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
         let reply = post_json(&mut b, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &body).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
         let error: Value = parse(&reply);
         assert_eq!(error["error"]["fields"], json!({field:[expected]}));
         assert_eq!(blob_count(&app).await, before);
@@ -785,18 +811,39 @@ async fn gif_validation_actual_size_and_file_format_before_blob_insertion() {
     let before = blob_count(&app).await;
     let files_before = storage_files(&app);
     for (id, bytes, expected) in [
-        ("oversized-gif", vec![0; 20 * 1024 * 1024 + 1], "is too large to attach"),
-        ("wrong-format-gif", GIF_BYTES.to_vec(), "has an unexpected file format"),
+        (
+            "oversized-gif",
+            vec![0; 20 * 1024 * 1024 + 1],
+            "is too large to attach",
+        ),
+        (
+            "wrong-format-gif",
+            GIF_BYTES.to_vec(),
+            "has an unexpected file format",
+        ),
     ] {
         let calls = server.received().len();
         server.replace_routes(send_routes(&app, "image/webp", bytes));
         let reply = post_json(&mut b, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &json!({"clientMessageId":id,"markdownSource":"GIF validation","gifSlug":"hello-hi-662"})).await;
-        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", reply.text());
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
         let error: Value = parse(&reply);
         assert_eq!(error["error"]["fields"], json!({"gifSlug":[expected]}));
         let requests = server.received();
-        assert_eq!(requests.len(), calls + 2, "lookup and media download occurred");
-        assert!(requests[calls].target.contains("/gifs/items?slugs=hello-hi-662"));
+        assert_eq!(
+            requests.len(),
+            calls + 2,
+            "lookup and media download occurred"
+        );
+        assert!(
+            requests[calls]
+                .target
+                .contains("/gifs/items?slugs=hello-hi-662")
+        );
         assert_eq!(requests[calls].header("host"), Some("api.klipy.com"));
         assert_eq!(requests[calls + 1].target, "/ii/x/sm.webp");
         assert_eq!(requests[calls + 1].header("host"), Some("static.klipy.com"));
@@ -891,70 +938,138 @@ async fn assert_gif_access_rechecked(path_kind: &str) {
                 let created = post_json(&mut b, "/api/v1/rooms/654632876/threads", &json!({"parentMessageId":935962057,"message":{"clientMessageId":"revoke-target","markdownSource":"Start"}})).await;
                 assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
                 let thread_id = parse::<api::ThreadCreated>(&created).detail.thread.id;
-                (654632876, format!("/api/v1/threads/{thread_id}/messages"), gif)
-            },
-            "thread" => (654632876, "/api/v1/rooms/654632876/threads".into(), json!({"parentMessageId":935962057,"message":gif})),
-            "board" => (699448332, "/api/v1/rooms/699448332/posts".into(), json!({"name":"Revoked GIF","status":"planned","tags":[],"message":gif})),
+                (
+                    654632876,
+                    format!("/api/v1/threads/{thread_id}/messages"),
+                    gif,
+                )
+            }
+            "thread" => (
+                654632876,
+                "/api/v1/rooms/654632876/threads".into(),
+                json!({"parentMessageId":935962057,"message":gif}),
+            ),
+            "board" => (
+                699448332,
+                "/api/v1/rooms/699448332/posts".into(),
+                json!({"name":"Revoked GIF","status":"planned","tags":[],"message":gif}),
+            ),
             _ => unreachable!(),
         };
         b.authenticity_token().await;
         let before = blob_count(&app).await;
         let files_before = storage_files(&app);
-        let rows_before: (i64, i64) = app.db().read(|conn| Ok((
-            conn.query_row("SELECT count(*) FROM messages", [], |row| row.get(0))?,
-            conn.query_row("SELECT count(*) FROM channel_threads", [], |row| row.get(0))?,
-        ))).await.unwrap();
+        let rows_before: (i64, i64) = app
+            .db()
+            .read(|conn| {
+                Ok((
+                    conn.query_row("SELECT count(*) FROM messages", [], |row| row.get(0))?,
+                    conn.query_row("SELECT count(*) FROM channel_threads", [], |row| row.get(0))?,
+                ))
+            })
+            .await
+            .unwrap();
         let gate = Arc::new(ResponseGate::default());
         let mut routes = send_routes(&app, "image/webp", WEBP_BYTES.to_vec());
         routes[1].response_gate = Some(gate.clone());
         server.replace_routes(routes);
         let revoke = async {
-            tokio::time::timeout(std::time::Duration::from_secs(5), gate.entered.notified()).await.expect("media download started");
-            let result = app.db().write(move |tx| {
-                match revoked {
-                    "membership" => { tx.conn().execute("DELETE FROM memberships WHERE room_id=? AND user_id=?", [room_id, DAVID])?; },
-                    "banned" => { tx.conn().execute("UPDATE users SET status=2 WHERE id=?", [DAVID])?; },
-                    "deleted-room" => { tx.conn().execute("UPDATE rooms SET deleted_at='2026-03-02 16:01:00' WHERE id=?", [room_id])?; },
-                    _ => unreachable!(),
-                }
-                Ok(())
-            }).await;
+            tokio::time::timeout(std::time::Duration::from_secs(5), gate.entered.notified())
+                .await
+                .expect("media download started");
+            let result = app
+                .db()
+                .write(move |tx| {
+                    match revoked {
+                        "membership" => {
+                            tx.conn().execute(
+                                "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+                                [room_id, DAVID],
+                            )?;
+                        }
+                        "banned" => {
+                            tx.conn()
+                                .execute("UPDATE users SET status=2 WHERE id=?", [DAVID])?;
+                        }
+                        "deleted-room" => {
+                            tx.conn().execute(
+                                "UPDATE rooms SET deleted_at='2026-03-02 16:01:00' WHERE id=?",
+                                [room_id],
+                            )?;
+                        }
+                        _ => unreachable!(),
+                    }
+                    Ok(())
+                })
+                .await;
             gate.released.notify_one();
             result.unwrap();
         };
         let (reply, ()) = tokio::join!(post_json(&mut b, &path, &body), revoke);
-        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path_kind}/{revoked}: {}", reply.text());
-        assert_eq!(server.received().len(), 2, "lookup and media download occurred");
+        assert_eq!(
+            reply.status,
+            StatusCode::NOT_FOUND,
+            "{path_kind}/{revoked}: {}",
+            reply.text()
+        );
+        assert_eq!(
+            server.received().len(),
+            2,
+            "lookup and media download occurred"
+        );
         assert_eq!(blob_count(&app).await, before);
-        assert_eq!(storage_files(&app), files_before, "rejected staged file was deleted");
-        let rows_after: (i64, i64) = app.db().read(|conn| Ok((
-            conn.query_row("SELECT count(*) FROM messages", [], |row| row.get(0))?,
-            conn.query_row("SELECT count(*) FROM channel_threads", [], |row| row.get(0))?,
-        ))).await.unwrap();
+        assert_eq!(
+            storage_files(&app),
+            files_before,
+            "rejected staged file was deleted"
+        );
+        let rows_after: (i64, i64) = app
+            .db()
+            .read(|conn| {
+                Ok((
+                    conn.query_row("SELECT count(*) FROM messages", [], |row| row.get(0))?,
+                    conn.query_row("SELECT count(*) FROM channel_threads", [], |row| row.get(0))?,
+                ))
+            })
+            .await
+            .unwrap();
         assert_eq!(rows_after, rows_before, "no message or opener was inserted");
     }
 }
 
 #[tokio::test]
-async fn gifs_recheck_root_access_after_download() { assert_gif_access_rechecked("root").await; }
+async fn gifs_recheck_root_access_after_download() {
+    assert_gif_access_rechecked("root").await;
+}
 
 #[tokio::test]
-async fn gifs_recheck_reply_access_after_download() { assert_gif_access_rechecked("reply").await; }
+async fn gifs_recheck_reply_access_after_download() {
+    assert_gif_access_rechecked("reply").await;
+}
 
 #[tokio::test]
-async fn gifs_recheck_thread_opener_access_after_download() { assert_gif_access_rechecked("thread").await; }
+async fn gifs_recheck_thread_opener_access_after_download() {
+    assert_gif_access_rechecked("thread").await;
+}
 
 #[tokio::test]
-async fn gifs_recheck_board_brief_access_after_download() { assert_gif_access_rechecked("board").await; }
+async fn gifs_recheck_board_brief_access_after_download() {
+    assert_gif_access_rechecked("board").await;
+}
 
 #[tokio::test]
 async fn gifs_image_previews_use_animated_originals() {
-    for (format, content_type, bytes) in [("gif", "image/gif", GIF_BYTES), ("webp", "image/webp", WEBP_BYTES)] {
+    for (format, content_type, bytes) in [
+        ("gif", "image/gif", GIF_BYTES),
+        ("webp", "image/webp", WEBP_BYTES),
+    ] {
         let (app, server) = klipy_app().await;
         let mut item = item_json();
         item["file"] = json!({"sm":{format:{"url":format!("https://static.klipy.com/ii/x/sm.{format}"),"width":220,"height":220,"size":400}}});
         let mut routes = send_routes(&app, content_type, bytes.to_vec());
-        routes[0].body = json!({"result":true,"data":{"data":[item]}}).to_string().into_bytes();
+        routes[0].body = json!({"result":true,"data":{"data":[item]}})
+            .to_string()
+            .into_bytes();
         routes[1].path = format!("/ii/x/sm.{format}");
         server.replace_routes(routes);
         let mut b = app.sign_in(DAVID).await;
@@ -962,7 +1077,11 @@ async fn gifs_image_previews_use_animated_originals() {
         assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
         let message: api::MessageDTO = parse(&reply);
         let attachment = &message.attachments.as_ref().unwrap()[0];
-        assert_eq!(attachment.thumbnail_url.as_deref(), Some(attachment.url.as_str()), "the renderer's preferred preview must use the animated original");
+        assert_eq!(
+            attachment.thumbnail_url.as_deref(),
+            Some(attachment.url.as_str()),
+            "the renderer's preferred preview must use the animated original"
+        );
         let redirect = get(&mut b, &attachment.url).await;
         assert_eq!(redirect.status, StatusCode::FOUND, "{}", redirect.text());
         let file = get(&mut b, redirect.header("location").unwrap()).await;
@@ -970,7 +1089,6 @@ async fn gifs_image_previews_use_animated_originals() {
         assert_eq!(file.body, bytes);
     }
 }
-
 
 #[tokio::test]
 async fn gifs_forwarded_imports_keep_animated_original_previews() {
@@ -986,7 +1104,8 @@ async fn gifs_forwarded_imports_keep_animated_original_previews() {
         }}});
         let mut routes = send_routes(&app, content_type, bytes.to_vec());
         routes[0].body = json!({"result": true, "data": {"data": [item]}})
-            .to_string().into_bytes();
+            .to_string()
+            .into_bytes();
         routes[1].path = format!("/ii/x/sm.{format}");
         server.replace_routes(routes);
         let mut b = app.sign_in(DAVID).await;
@@ -996,41 +1115,73 @@ async fn gifs_forwarded_imports_keep_animated_original_previews() {
         let mut source: api::MessageDTO = parse(&reply);
 
         for destination in [HQ, ALL_TALK] {
-            let reply = post_json(&mut b, &format!("/api/v1/messages/{}/forwards", source.id),
-                &json!({"destinations": [{"roomId": destination}]})).await;
+            let reply = post_json(
+                &mut b,
+                &format!("/api/v1/messages/{}/forwards", source.id),
+                &json!({"destinations": [{"roomId": destination}]}),
+            )
+            .await;
             assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
             let result: api::ForwardResult = parse(&reply);
-            let reply = get(&mut b, &format!("/api/v1/messages/{}", result.forwards[0].id)).await;
+            let reply = get(
+                &mut b,
+                &format!("/api/v1/messages/{}", result.forwards[0].id),
+            )
+            .await;
             assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
             let forwarded = parse::<api::MessageRead>(&reply).message;
-            let attachment = forwarded.attachment.as_ref()
-                .or_else(|| forwarded.attachments.as_ref().and_then(|files| files.first()))
+            let attachment = forwarded
+                .attachment
+                .as_ref()
+                .or_else(|| {
+                    forwarded
+                        .attachments
+                        .as_ref()
+                        .and_then(|files| files.first())
+                })
                 .expect("the forwarded import");
             let redirect = get(&mut b, attachment.thumbnail_url.as_deref().unwrap()).await;
             assert_eq!(redirect.status, StatusCode::FOUND, "{}", redirect.text());
             let file = get(&mut b, redirect.header("location").unwrap()).await;
             assert_eq!(file.status, StatusCode::OK, "{}", file.text());
-            assert!(file.body == bytes,
+            assert!(
+                file.body == bytes,
                 "forwarded {format} preview must serve the original animated bytes; got {} bytes of {:?}, expected {} bytes",
-                file.body.len(), file.header("content-type"), bytes.len());
-            assert_eq!(attachment.thumbnail_url.as_deref(), Some(attachment.url.as_str()));
+                file.body.len(),
+                file.header("content-type"),
+                bytes.len()
+            );
+            assert_eq!(
+                attachment.thumbnail_url.as_deref(),
+                Some(attachment.url.as_str())
+            );
 
             let (source_id, forwarded_id) = (source.id, forwarded.id);
-            app.db().read(move |conn| {
-                let source = campfire_db::Message::find(conn, source_id)?.attachments(conn)?;
-                let copied = campfire_db::Message::find(conn, forwarded_id)?.attachments(conn)?;
-                assert_ne!(source[0].1.key, copied[0].1.key);
-                let source_metadata: Value = serde_json::from_str(source[0].1.metadata.as_deref().unwrap()).unwrap();
-                let copied_metadata: Value = serde_json::from_str(copied[0].1.metadata.as_deref().unwrap()).unwrap();
-                assert_ne!(source_metadata["klipy_mark"], copied_metadata["klipy_mark"]);
-                for key in ["klipy_id", "klipy_slug", "klipy_title", "klipy_attribution"] {
-                    assert_eq!(source_metadata[key], copied_metadata[key], "{key}");
-                }
-                Ok(())
-            }).await.unwrap();
+            app.db()
+                .read(move |conn| {
+                    let source = campfire_db::Message::find(conn, source_id)?.attachments(conn)?;
+                    let copied =
+                        campfire_db::Message::find(conn, forwarded_id)?.attachments(conn)?;
+                    assert_ne!(source[0].1.key, copied[0].1.key);
+                    let source_metadata: Value =
+                        serde_json::from_str(source[0].1.metadata.as_deref().unwrap()).unwrap();
+                    let copied_metadata: Value =
+                        serde_json::from_str(copied[0].1.metadata.as_deref().unwrap()).unwrap();
+                    assert_ne!(source_metadata["klipy_mark"], copied_metadata["klipy_mark"]);
+                    for key in ["klipy_id", "klipy_slug", "klipy_title", "klipy_attribution"] {
+                        assert_eq!(source_metadata[key], copied_metadata[key], "{key}");
+                    }
+                    Ok(())
+                })
+                .await
+                .unwrap();
             source = forwarded;
         }
-        assert_eq!(server.received().len(), 2, "forwarding uses the stored attachment");
+        assert_eq!(
+            server.received().len(),
+            2,
+            "forwarding uses the stored attachment"
+        );
     }
 }
 
@@ -1045,27 +1196,63 @@ async fn gifs_client_upload_metadata_cannot_forge_animated_previews() {
             let created = post_json(&mut b, "/rails/active_storage/direct_uploads", &json!({"blob":{"filename":"ordinary.gif","byte_size":GIF_BYTES.len(),"checksum":checksum,"content_type":"image/gif","metadata":metadata}})).await;
             assert_eq!(created.status, StatusCode::OK, "{}", created.text());
             let upload: Value = parse(&created);
-            (upload["signed_id"].as_str().unwrap().to_owned(), upload["direct_upload"]["url"].as_str().unwrap().to_owned())
+            (
+                upload["signed_id"].as_str().unwrap().to_owned(),
+                upload["direct_upload"]["url"].as_str().unwrap().to_owned(),
+            )
         } else {
             let created = post_json(&mut b, "/api/v1/uploads", &json!({"filename":"ordinary.gif","byteSize":GIF_BYTES.len(),"checksum":checksum,"contentType":"image/gif","metadata":metadata})).await;
             assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
             let upload: api::DirectUpload = parse(&created);
             (upload.signed_id, upload.upload_url)
         };
-        let put = b.send(Req::new(Method::PUT, &upload_url).header("content-type", "image/gif").header("content-length", &GIF_BYTES.len().to_string()).body(GIF_BYTES)).await;
+        let put = b
+            .send(
+                Req::new(Method::PUT, &upload_url)
+                    .header("content-type", "image/gif")
+                    .header("content-length", &GIF_BYTES.len().to_string())
+                    .body(GIF_BYTES),
+            )
+            .await;
         assert_eq!(put.status, StatusCode::NO_CONTENT, "{}", put.text());
         let reply = post_json(&mut b, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &json!({"clientMessageId":"ordinary-upload","markdownSource":"Uploaded GIF","attachmentSignedId":signed_id})).await;
         assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
         let message: api::MessageDTO = parse(&reply);
-        let attachment = message.attachment.as_ref().or_else(|| message.attachments.as_ref().and_then(|files| files.first())).expect("the ordinary uploaded GIF");
-        assert_ne!(attachment.thumbnail_url.as_deref(), Some(attachment.url.as_str()), "client metadata must not opt ordinary uploads into animated originals");
-        assert!(attachment.thumbnail_url.as_ref().unwrap().contains("/representations/redirect/"));
+        let attachment = message
+            .attachment
+            .as_ref()
+            .or_else(|| message.attachments.as_ref().and_then(|files| files.first()))
+            .expect("the ordinary uploaded GIF");
+        assert_ne!(
+            attachment.thumbnail_url.as_deref(),
+            Some(attachment.url.as_str()),
+            "client metadata must not opt ordinary uploads into animated originals"
+        );
+        assert!(
+            attachment
+                .thumbnail_url
+                .as_ref()
+                .unwrap()
+                .contains("/representations/redirect/")
+        );
         let id = message.id;
         let stored: String = app.db().read(move |conn| Ok(conn.query_row("SELECT b.metadata FROM active_storage_blobs b JOIN active_storage_attachments a ON a.blob_id=b.id WHERE a.record_type='Message' AND a.record_id=? LIMIT 1", [id], |row| row.get(0))?)).await.unwrap();
         let stored: Value = serde_json::from_str(&stored).unwrap();
-        assert!(stored.as_object().unwrap().keys().all(|key| !key.starts_with("klipy_")), "{stored}");
+        assert!(
+            stored
+                .as_object()
+                .unwrap()
+                .keys()
+                .all(|key| !key.starts_with("klipy_")),
+            "{stored}"
+        );
         assert_eq!(stored["uploader_id"], DAVID);
-        if classic { assert_eq!(stored["client_note"], "keep me"); }
-        assert!(server.received().is_empty(), "ordinary uploads do not contact KLIPY");
+        if classic {
+            assert_eq!(stored["client_note"], "keep me");
+        }
+        assert!(
+            server.received().is_empty(),
+            "ordinary uploads do not contact KLIPY"
+        );
     }
 }

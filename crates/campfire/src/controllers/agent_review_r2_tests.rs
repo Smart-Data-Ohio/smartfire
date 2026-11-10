@@ -150,7 +150,10 @@ async fn measure(app: &TestApp, reader: &AllowRepository, mcp: bool, size: usize
 fn print_query_difference(measurements: &[Vec<String>]) {
     let mut frequencies = BTreeMap::<&str, [usize; 2]>::new();
     for (index, (size, statements)) in [5, 50].into_iter().zip(measurements).enumerate() {
-        eprintln!("PR192_R2_PRIVATE SQL size={size} SELECTs={}", statements.len());
+        eprintln!(
+            "PR192_R2_PRIVATE SQL size={size} SELECTs={}",
+            statements.len()
+        );
         // SQLITE_TRACE_STMT supplies statement text, not expanded bind values.
         for (number, sql) in statements.iter().enumerate() {
             eprintln!("  {}: {sql}", number + 1);
@@ -342,7 +345,9 @@ async fn pr192_r2_fresh_jpeg_approved_status_and_committed_state() {
     for (key, value) in case["approved"]["headers"].as_object().unwrap() {
         assert_eq!(reply.header(key), value.as_str());
     }
-    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
+    super::messages::attachment_processing_tests::perform_queued(&app, 1)
+        .await
+        .unwrap();
     let state = case["state"].clone();
     let storage = app.booted.app.storage.clone();
     let actual=app.db().read(move |conn| {
