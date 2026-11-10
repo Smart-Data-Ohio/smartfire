@@ -449,6 +449,19 @@ pub async fn heal_plaintext_bot_token(
 pub async fn stranded_agent_webhooks(db: &Database) -> anyhow::Result<()> {
     use campfire_db::models::agent_delivery as domain;
     let now = db.env().now();
+    let mcp = db
+        .read(move |c| campfire_db::models::mcp_events::recovery_candidates(c, now))
+        .await?;
+    db.write(|tx| campfire_db::models::mcp_events::cleanup(tx))
+        .await?;
+    for job in mcp {
+        if let Err(error) = db
+            .write(move |tx| campfire_db::models::mcp_events::recover(tx, job))
+            .await
+        {
+            tracing::error!(%error,"Stranded MCP delivery recovery failed");
+        }
+    }
     let candidates = db
         .read(move |c| domain::recovery_candidates(c, now))
         .await?;

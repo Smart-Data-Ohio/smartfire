@@ -116,6 +116,7 @@ pub struct Route {
     pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
     pub chunked: bool,
+    pub echo_body: bool,
     pub gzip: bool,
     /// Wait this long before answering.
     pub delay: std::time::Duration,
@@ -133,6 +134,7 @@ impl Route {
             headers: Vec::new(),
             body: Vec::new(),
             chunked: false,
+            echo_body: false,
             gzip: false,
             delay: std::time::Duration::ZERO,
             response_gate: None,
@@ -475,7 +477,7 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(
         method: method.clone(),
         target: target.clone(),
         headers,
-        body,
+        body: body.clone(),
     });
 
     let not_found = Route::new(&method, &host, &target, 404)
@@ -490,7 +492,11 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(
         gate.released.notified().await;
     }
     tokio::time::sleep(route.delay).await;
-    let mut body = route.body.clone();
+    let mut body = if route.echo_body {
+        body
+    } else {
+        route.body.clone()
+    };
     if route.gzip {
         use std::io::Write;
         let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());

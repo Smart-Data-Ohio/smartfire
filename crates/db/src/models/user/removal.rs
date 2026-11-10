@@ -64,6 +64,7 @@ impl User {
             // Do not call Agent::destroy: Rails deletes the Agent row and preserves its rows.
             tx.conn()
                 .execute("DELETE FROM webhooks WHERE user_id=?", [self.id])?;
+            tx.conn().execute("DELETE FROM mcp_event_subscriptions WHERE agent_id IN (SELECT id FROM agents WHERE user_id=?)", [self.id])?;
             tx.conn()
                 .execute("DELETE FROM agents WHERE user_id=?", [self.id])?;
             tx.conn().execute(

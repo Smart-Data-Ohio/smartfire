@@ -1184,7 +1184,8 @@
           "capabilities": {
             "tools": {
               "listChanged": false
-            }
+            },
+            "events": {}
           },
           "serverInfo": {
             "name": "smartfire",
@@ -1193,7 +1194,7 @@
           "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2026-07-28\",\"capabilities\":{\"tools\":{\"listChanged\":false}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2026-07-28\",\"capabilities\":{\"tools\":{\"listChanged\":false},\"events\":{}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
@@ -1243,7 +1244,8 @@
           "capabilities": {
             "tools": {
               "listChanged": false
-            }
+            },
+            "events": {}
           },
           "serverInfo": {
             "name": "smartfire",
@@ -1252,7 +1254,7 @@
           "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{\"tools\":{\"listChanged\":false}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{\"tools\":{\"listChanged\":false},\"events\":{}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
@@ -1299,7 +1301,8 @@
           "capabilities": {
             "tools": {
               "listChanged": false
-            }
+            },
+            "events": {}
           },
           "serverInfo": {
             "name": "smartfire",
@@ -1308,7 +1311,7 @@
           "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{\"tools\":{\"listChanged\":false}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2025-06-18\",\"capabilities\":{\"tools\":{\"listChanged\":false},\"events\":{}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
@@ -1355,7 +1358,8 @@
           "capabilities": {
             "tools": {
               "listChanged": false
-            }
+            },
+            "events": {}
           },
           "serverInfo": {
             "name": "smartfire",
@@ -1364,7 +1368,7 @@
           "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2025-03-26\",\"capabilities\":{\"tools\":{\"listChanged\":false}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"protocolVersion\":\"2025-03-26\",\"capabilities\":{\"tools\":{\"listChanged\":false},\"events\":{}},\"serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
@@ -1417,7 +1421,11 @@
             "2025-03-26"
           ],
           "capabilities": {
-            "tools": {}
+            "tools": {},
+            "events": {},
+            "extensions": {
+              "io.modelcontextprotocol/events": {}
+            }
           },
           "_meta": {
             "io.modelcontextprotocol/serverInfo": {
@@ -1429,7 +1437,7 @@
           "resultType": "complete"
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"supportedVersions\":[\"2026-07-28\",\"2025-11-25\",\"2025-06-18\",\"2025-03-26\"],\"capabilities\":{\"tools\":{}},\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"}},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\",\"resultType\":\"complete\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"supportedVersions\":[\"2026-07-28\",\"2025-11-25\",\"2025-06-18\",\"2025-03-26\"],\"capabilities\":{\"tools\":{},\"events\":{},\"extensions\":{\"io.modelcontextprotocol/events\":{}}},\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"}},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\",\"resultType\":\"complete\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
@@ -1456,7 +1464,8 @@
             "2025-03-26"
           ],
           "capabilities": {
-            "tools": {}
+            "tools": {},
+            "events": {}
           },
           "_meta": {
             "io.modelcontextprotocol/serverInfo": {
@@ -1467,7 +1476,7 @@
           "instructions": "Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history."
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"supportedVersions\":[\"2026-07-28\",\"2025-11-25\",\"2025-06-18\",\"2025-03-26\"],\"capabilities\":{\"tools\":{}},\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"}},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"supportedVersions\":[\"2026-07-28\",\"2025-11-25\",\"2025-06-18\",\"2025-03-26\"],\"capabilities\":{\"tools\":{},\"events\":{}},\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"smartfire\",\"version\":\"1.0.0\"}},\"instructions\":\"Smartfire workspace tools for an AI agent acting as itself. Read rooms and threads before posting, keep replies in the thread that mentioned the agent, request human approval before external actions, and prefer get_context over guessing at history.\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",
@@ -2964,16 +2973,26 @@
         "MCP-Protocol-Version": "2026-07-28",
         "Mcp-Method": "tools/call"
       },
-      "status": 400,
+      "status": 200,
       "response": {
         "jsonrpc": "2.0",
         "id": 7,
-        "error": {
-          "code": -32020,
-          "message": "Header mismatch: Mcp-Name header is required"
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"events\":[],\"next_since\":0}"
+            }
+          ],
+          "structuredContent": {
+            "events": [],
+            "next_since": 0
+          },
+          "isError": false,
+          "resultType": "complete"
         }
       },
-      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32020,\"message\":\"Header mismatch: Mcp-Name header is required\"}}",
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"events\\\":[],\\\"next_since\\\":0}\"}],\"structuredContent\":{\"events\":[],\"next_since\":0},\"isError\":false,\"resultType\":\"complete\"}}",
       "response_headers": {
         "Content-Type": "application/json; charset=utf-8",
         "Cache-Control": "no-store",

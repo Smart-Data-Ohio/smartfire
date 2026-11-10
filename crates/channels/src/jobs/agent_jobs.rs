@@ -35,6 +35,7 @@ impl JobKind for EventWebhook {
     }
 }
 pub(super) fn register(r: &mut Registry) {
+    super::mcp_events::register(r);
     r.register(deliver);
     r.register(post);
 }
@@ -209,18 +210,19 @@ pub async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutc
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
     let (webhook, secret, payload, bot, sync) = prepared;
-    let response = match webhook::post_payload(
-        net,
-        webhook.url.as_deref().unwrap_or(""),
-        payload,
-        Some(&secret),
-        || app.clock.now(),
-    )
-    .await
-    {
-        Ok(v) => v,
-        Err(error) => return classify_error(error),
-    };
+    let response =
+        match webhook::post_payload(net, webhook.url.as_deref().unwrap_or(""), payload, |body| {
+            Ok(rails_compat::webhook::smartfire_headers(
+                Some(&secret),
+                body,
+                app.clock.now(),
+            ))
+        })
+        .await
+        {
+            Ok(v) => v,
+            Err(error) => return classify_error(error),
+        };
     let result = classify_response(
         response.status,
         response

@@ -67,6 +67,8 @@ async fn personal(c: &Ctx, agent_id: i64) -> Result<bool> {
         .map_err(super::super::presenters::page::db_error)
 }
 
+mod events;
+
 const MODERN: &str = "2026-07-28";
 const VERSION_KEY: &str = "io.modelcontextprotocol/protocolVersion";
 
@@ -177,7 +179,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         );
     }
     let modern = version == MODERN;
-    if modern && let Some(message) = header_mismatch(c, method, &params) {
+    if let Some(message) = header_mismatch(c, method, &params, modern) {
         return Ok(rpc_error(
             c,
             id,
@@ -191,13 +193,13 @@ pub async fn create(c: &mut Ctx) -> Result {
         "initialize" => Ok(rpc_result(
             c,
             id,
-            json!({"protocolVersion":version,"capabilities":{"tools":{"listChanged":false}},"serverInfo":{"name":METADATA["server_name"],"version":METADATA["server_version"]},"instructions":METADATA["instructions"]}),
+            json!({"protocolVersion":version,"capabilities":{"tools":{"listChanged":false},"events":{}},"serverInfo":{"name":METADATA["server_name"],"version":METADATA["server_version"]},"instructions":METADATA["instructions"]}),
         )),
         "server/discover" => Ok(rpc_result(
             c,
             id,
             modern_result(
-                json!({"supportedVersions":METADATA["versions"],"capabilities":{"tools":{}},"_meta":{"io.modelcontextprotocol/serverInfo":{"name":METADATA["server_name"],"version":METADATA["server_version"]}},"instructions":METADATA["instructions"]}),
+                json!({"supportedVersions":METADATA["versions"],"capabilities":if modern {json!({"tools":{},"events":{},"extensions":{"io.modelcontextprotocol/events":{}}})} else {json!({"tools":{},"events":{}})},"_meta":{"io.modelcontextprotocol/serverInfo":{"name":METADATA["server_name"],"version":METADATA["server_version"]}},"instructions":METADATA["instructions"]}),
                 modern,
             ),
         )),
@@ -209,6 +211,9 @@ pub async fn create(c: &mut Ctx) -> Result {
                 id,
                 modern_result(json!({"tools":tools}), modern),
             ))
+        }
+        method if method.starts_with("events/") => {
+            events::dispatch(c, id, method, &params, identity, modern).await
         }
         "tools/call" => call_tool(c, id, &params, identity.agent_id, modern).await,
         "ping" => Ok(rpc_result(c, id, modern_result(json!({}), modern))),
@@ -314,7 +319,14 @@ fn version(c: &Ctx, method: &str, params: &Value) -> std::result::Result<Value, 
     Ok(requested)
 }
 
-fn header_mismatch(c: &Ctx, method: &str, params: &Value) -> Option<String> {
+fn header_mismatch(c: &Ctx, method: &str, params: &Value, modern: bool) -> Option<String> {
+    if modern && let Some(message) = method_header_mismatch(c, method) {
+        return Some(message);
+    }
+    name_header_mismatch(c, method, params)
+}
+
+fn method_header_mismatch(c: &Ctx, method: &str) -> Option<String> {
     let Some(header) = c
         .request
         .header("mcp-method")
@@ -329,16 +341,17 @@ fn header_mismatch(c: &Ctx, method: &str, params: &Value) -> Option<String> {
             inspect(&json!(method))
         ));
     }
-    if method != "tools/call" {
+    None
+}
+
+fn name_header_mismatch(c: &Ctx, method: &str, params: &Value) -> Option<String> {
+    if !matches!(
+        method,
+        "tools/call" | "events/subscribe" | "events/unsubscribe"
+    ) {
         return None;
     }
-    let Some(name) = c
-        .request
-        .header("mcp-name")
-        .filter(|s| !s.chars().all(char::is_whitespace))
-    else {
-        return Some("Header mismatch: Mcp-Name header is required".into());
-    };
+    let name = c.request.header("mcp-name")?;
     let decoded = decode_header(name);
     let Some(decoded) = decoded else {
         return Some("Header mismatch: Mcp-Name header value is malformed".into());

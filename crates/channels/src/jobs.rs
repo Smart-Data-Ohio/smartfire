@@ -44,6 +44,7 @@ pub mod agent_jobs;
 pub mod attachment_processing;
 pub mod huddle;
 pub mod integrations;
+pub mod mcp_events;
 mod notifications;
 
 use crate::queue::{

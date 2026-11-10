@@ -94,7 +94,15 @@ pub async fn deliver_signed<F: Fn() -> jiff::Timestamp + Send + Sync>(
     now: F,
     agent: bool,
 ) -> Result<WebhookDelivery, WebhookError> {
-    match post_payload(net, url, payload, secret, now).await {
+    match post_payload(net, url, payload, |body| {
+        Ok(rails_compat::webhook::smartfire_headers(
+            secret,
+            body,
+            now(),
+        ))
+    })
+    .await
+    {
         Ok(response) => Ok(WebhookDelivery {
             status: Some(response.status),
             reply: reply(response.status, response.content_type, response.body)?,
@@ -121,13 +129,28 @@ pub struct Posted {
 }
 
 /// `post(payload)` over `Net::HTTP.new(uri.host, uri.port)`: the status, content type and body.
-pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(
+pub async fn post_payload<F>(
     net: &Network,
     url: &str,
     payload: String,
-    secret: Option<&str>,
-    now: F,
-) -> Result<Posted, WebhookError> {
+    headers: F,
+) -> Result<Posted, WebhookError>
+where
+    F: FnOnce(&[u8]) -> Result<Vec<(&'static str, String)>, WebhookError> + Send,
+{
+    post_payload_limited(net, url, payload, headers, usize::MAX).await
+}
+
+pub async fn post_payload_limited<F>(
+    net: &Network,
+    url: &str,
+    payload: String,
+    headers: F,
+    response_limit: usize,
+) -> Result<Posted, WebhookError>
+where
+    F: FnOnce(&[u8]) -> Result<Vec<(&'static str, String)>, WebhookError> + Send,
+{
     let uri = uri::parse(url)
         .map_err(|_| WebhookError::InvalidUrl(format!("bad URI (is not URI?): {url:?}")))?;
     if !uri.is_http() {
@@ -163,8 +186,7 @@ pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(
     } else {
         format!("{hostname}:{port}")
     };
-    let now = now();
-    let headers = rails_compat::webhook::smartfire_headers(secret, payload.as_bytes(), now)
+    let headers = headers(payload.as_bytes())?
         .into_iter()
         .map(|(name, value)| (name.to_string(), value))
         .collect();
@@ -188,12 +210,16 @@ pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(
     let (status, content_type) = (response.status, response.content_type());
     let headers = response.headers.clone();
     let body = match response
-        .read_body(usize::MAX)
+        .read_body(response_limit)
         .await
         .map_err(WebhookError::Http)?
     {
         Body::Complete(body) => body,
-        Body::TooLarge => unreachable!("a Vec cannot exceed usize::MAX"),
+        Body::TooLarge => {
+            return Err(WebhookError::Http(HttpError::Http(
+                "response body too large".into(),
+            )));
+        }
     };
     Ok(Posted {
         status,
@@ -607,8 +633,13 @@ mod tests {
                 &net,
                 "http://bots.example:8080/hook",
                 case["body"].as_str().unwrap().into(),
-                Some(case["secret"].as_str().unwrap()),
-                || vectors["now"].as_str().unwrap().parse().unwrap(),
+                |body| {
+                    Ok(rails_compat::webhook::smartfire_headers(
+                        Some(case["secret"].as_str().unwrap()),
+                        body,
+                        vectors["now"].as_str().unwrap().parse().unwrap(),
+                    ))
+                },
             )
             .await
             .unwrap();

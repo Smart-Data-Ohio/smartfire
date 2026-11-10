@@ -197,3 +197,5 @@ pub use workspace_category::WorkspaceCategory;
 
 pub mod soundboard;
 pub mod sticker;
+
+pub mod mcp_events;

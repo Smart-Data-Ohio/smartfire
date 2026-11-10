@@ -170,7 +170,7 @@ fn tables(conn: &Connection) -> Vec<String> {
     // These port-only tables have no table in the frozen Rails schema.
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'user_blocks', 'workspace_categories', 'workspace_invites', 'channel_webhooks', 'channel_webhook_messages', 'announcement_follows', 'announcement_publications', 'announcement_deliveries', 'soundboard_sounds', 'stickers', 'thread_access_memberships', 'oauth_clients', 'oauth_connections', 'oauth_authorizations', 'oauth_tokens', 'oauth_assertion_jtis', 'bot_avatars') ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'board_tags', 'user_blocks', 'workspace_categories', 'workspace_invites', 'channel_webhooks', 'channel_webhook_messages', 'announcement_follows', 'announcement_publications', 'announcement_deliveries', 'soundboard_sounds', 'stickers', 'thread_access_memberships', 'oauth_clients', 'oauth_connections', 'oauth_authorizations', 'oauth_tokens', 'oauth_assertion_jtis', 'bot_avatars', 'mcp_event_subscriptions', 'mcp_event_deliveries') ORDER BY name",
         [],
         |r| r.get(0),
     )
@@ -237,6 +237,14 @@ fn fixtures_match_frozen_rails_rows() {
     let now = crate::Timestamp::parse_db(FROZEN_FIXTURES_NOW).unwrap();
     // bcrypt-ruby's default cost, which the fixtures' `BCrypt::Password.create` uses.
     let t = TestDb::with_clock(crate::TestClock::frozen_at(now), 12);
+    t.read(|conn| {
+        for table in ["mcp_event_subscriptions", "mcp_event_deliveries"] {
+            let count: i64 =
+                conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))?;
+            assert_eq!(count, 0, "MCP tables have no Rails fixtures");
+        }
+        Ok(())
+    });
     let rows = t.read(|c| {
         Ok(tables(c)
             .into_iter()
