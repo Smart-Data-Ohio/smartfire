@@ -498,7 +498,12 @@ pub fn perform_delivery(tx: &mut Tx<'_>, event_id: i64) -> Result<()> {
     }
     if e.outcome.as_deref() == Some("acknowledged") {
         if has_webhook(tx,e.agent_id)? && super::agent_event_access::delivery_authorized(tx.conn(),e.id)? && tx.conn().execute("UPDATE agent_events SET webhook_status='pending',webhook_next_attempt_at=? WHERE id=? AND outcome='acknowledged' AND webhook_status='none'",params![tx.now(),e.id])?==1 {enqueue_webhook(tx,&e,Duration::ZERO);}
-        if super::agent_event_access::delivery_authorized(tx.conn(),e.id)? && e.hop()<3 && !rate_limited(tx,e.agent_id,e.room_id.unwrap_or(0),Some(e.id))? {super::mcp_events::fan_out(tx,&e)?;}
+        if super::agent_event_access::delivery_authorized(tx.conn(), e.id)?
+            && e.hop() < 3
+            && !rate_limited(tx, e.agent_id, e.room_id.unwrap_or(0), Some(e.id))?
+        {
+            super::mcp_events::fan_out(tx, &e)?;
+        }
         return Ok(());
     }
     if e.outcome.as_deref() != Some("pending") {

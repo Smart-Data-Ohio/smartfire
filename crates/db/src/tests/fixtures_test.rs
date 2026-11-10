@@ -239,7 +239,8 @@ fn fixtures_match_frozen_rails_rows() {
     let t = TestDb::with_clock(crate::TestClock::frozen_at(now), 12);
     t.read(|conn| {
         for table in ["mcp_event_subscriptions", "mcp_event_deliveries"] {
-            let count: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))?;
+            let count: i64 =
+                conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))?;
             assert_eq!(count, 0, "MCP tables have no Rails fixtures");
         }
         Ok(())

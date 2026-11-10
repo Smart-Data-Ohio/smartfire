@@ -42,7 +42,11 @@ async fn setup_with_runner(run_jobs: bool) -> (TestApp, FakeServer, Arc<FrozenCl
     )
     .await
     .unwrap();
-    let app = if run_jobs { app } else { app.without_job_runner().await };
+    let app = if run_jobs {
+        app
+    } else {
+        app.without_job_runner().await
+    };
     initialize(&app).await;
     app.db()
         .write(|tx| {

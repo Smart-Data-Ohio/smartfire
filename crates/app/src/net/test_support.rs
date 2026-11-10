@@ -492,7 +492,11 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(
         gate.released.notified().await;
     }
     tokio::time::sleep(route.delay).await;
-    let mut body = if route.echo_body { body } else { route.body.clone() };
+    let mut body = if route.echo_body {
+        body
+    } else {
+        route.body.clone()
+    };
     if route.gzip {
         use std::io::Write;
         let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());

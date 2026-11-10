@@ -67,7 +67,9 @@ pub fn verify_smartfire_signature(
 /// Standard Webhooks uses the decoded whsec_ key, not its printable representation.
 pub fn standard_key(secret: &str) -> Option<Vec<u8>> {
     use base64::Engine;
-    let key = base64::engine::general_purpose::STANDARD.decode(secret.strip_prefix("whsec_")?).ok()?;
+    let key = base64::engine::general_purpose::STANDARD
+        .decode(secret.strip_prefix("whsec_")?)
+        .ok()?;
     (24..=64).contains(&key.len()).then_some(key)
 }
 
@@ -77,23 +79,47 @@ pub fn standard_signature(secret: &str, id: &str, timestamp: &str, body: &[u8]) 
     for part in [id.as_bytes(), b".", timestamp.as_bytes(), b".", body] {
         mac.update(part);
     }
-    Some(format!("v1,{}", base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes())))
+    Some(format!(
+        "v1,{}",
+        base64::engine::general_purpose::STANDARD.encode(mac.finalize().into_bytes())
+    ))
 }
 
-pub fn standard_headers(secret: &str, previous: Option<&str>, id: &str, body: &[u8], now: Timestamp) -> Option<Vec<(&'static str, String)>> {
+pub fn standard_headers(
+    secret: &str,
+    previous: Option<&str>,
+    id: &str,
+    body: &[u8],
+    now: Timestamp,
+) -> Option<Vec<(&'static str, String)>> {
     let timestamp = now.as_second().to_string();
     let mut signature = standard_signature(secret, id, &timestamp, body)?;
     if let Some(previous) = previous {
         signature.push(' ');
         signature.push_str(&standard_signature(previous, id, &timestamp, body)?);
     }
-    Some(vec![("Content-Type", "application/json".into()), ("webhook-id", id.into()), ("webhook-timestamp", timestamp), ("webhook-signature", signature)])
+    Some(vec![
+        ("Content-Type", "application/json".into()),
+        ("webhook-id", id.into()),
+        ("webhook-timestamp", timestamp),
+        ("webhook-signature", signature),
+    ])
 }
 
 /// Receivers must also enforce their timestamp tolerance and deduplicate webhook-id.
-pub fn verify_standard_signature(secret: &str, id: &str, timestamp: &str, body: &[u8], signature: &str) -> bool {
-    let Some(expected) = standard_signature(secret, id, timestamp, body) else { return false };
-    signature.split(' ').fold(false, |valid, value| valid | bool::from(value.as_bytes().ct_eq(expected.as_bytes())))
+pub fn verify_standard_signature(
+    secret: &str,
+    id: &str,
+    timestamp: &str,
+    body: &[u8],
+    signature: &str,
+) -> bool {
+    let Some(expected) = standard_signature(secret, id, timestamp, body) else {
+        return false;
+    };
+    signature.split(' ').fold(false, |valid, value| {
+        valid | bool::from(value.as_bytes().ct_eq(expected.as_bytes()))
+    })
 }
 
 /// `valid_signature?(secret)`: the `X-Hub-Signature-256` header (missing is `""`) starts with
@@ -118,11 +144,38 @@ mod tests {
         let id = "msg_p5jXN8AQM9LWM0D4loKWxJek";
         let body = br#"{"test": 2432232314}"#;
         let signature = "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=";
-        assert_eq!(standard_signature(secret, id, "1614265330", body).as_deref(), Some(signature));
-        assert!(verify_standard_signature(secret, id, "1614265330", body, signature));
-        assert!(!verify_standard_signature(secret, id, "1614265331", body, signature));
-        assert!(!verify_standard_signature(secret, "other", "1614265330", body, signature));
-        assert!(!verify_standard_signature(secret, id, "1614265330", b"{}", signature));
+        assert_eq!(
+            standard_signature(secret, id, "1614265330", body).as_deref(),
+            Some(signature)
+        );
+        assert!(verify_standard_signature(
+            secret,
+            id,
+            "1614265330",
+            body,
+            signature
+        ));
+        assert!(!verify_standard_signature(
+            secret,
+            id,
+            "1614265331",
+            body,
+            signature
+        ));
+        assert!(!verify_standard_signature(
+            secret,
+            "other",
+            "1614265330",
+            body,
+            signature
+        ));
+        assert!(!verify_standard_signature(
+            secret,
+            id,
+            "1614265330",
+            b"{}",
+            signature
+        ));
     }
 
     #[test]
