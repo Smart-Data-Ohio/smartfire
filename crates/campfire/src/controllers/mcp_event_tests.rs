@@ -17,6 +17,9 @@ use std::{
 const KEY: &str = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
 const KEY2: &str = "whsec_MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
 async fn setup() -> (TestApp, FakeServer, Arc<FrozenClock>) {
+    setup_with_runner(false).await
+}
+async fn setup_with_runner(run_jobs: bool) -> (TestApp, FakeServer, Arc<FrozenClock>) {
     let mut route = Route::new("POST", "*", "/hook", 200);
     route.echo_body = true;
     let server = FakeServer::start(vec![route]).await;
@@ -38,9 +41,8 @@ async fn setup() -> (TestApp, FakeServer, Arc<FrozenClock>) {
         &[("RAILS_ENV", "test"), ("APP_URL", "http://campfire.test")],
     )
     .await
-    .unwrap()
-    .without_job_runner()
-    .await;
+    .unwrap();
+    let app = if run_jobs { app } else { app.without_job_runner().await };
     initialize(&app).await;
     app.db()
         .write(|tx| {
@@ -250,6 +252,7 @@ async fn mcp_events_verification_refresh_rotation_and_unsubscribe() {
     let first = server.received();
     assert_eq!(first.len(), 1);
     signed(&first[0], KEY);
+    assert_eq!(first[0].header("X-MCP-Subscription-Id"), Some(id.as_str()));
     assert_eq!(
         serde_json::from_slice::<Value>(&first[0].body).unwrap()["type"],
         "verification"
@@ -1264,4 +1267,268 @@ async fn mcp_events_room_filters_validate_access_canonicalize_and_limit_live_and
     p["cursor"] = json!("0");
     assert!(rpc(&app, "events/subscribe", p).await["result"]["id"].is_string());
     assert_eq!(jobs(&app).await.len(), 2);
+}
+
+#[tokio::test]
+async fn mcp_events_verification_expires_without_refresh_extending_it() {
+    let (app, server, clock) = setup().await;
+    let id = subscribe(&app, "mention").await;
+    clock.advance(jiff::SignedDuration::from_hours(23));
+    subscribe(&app, "mention").await;
+    assert_eq!(server.received().len(), 1);
+    let mut p = params("mention");
+    p["ttlMs"] = Value::Null;
+    let before = rpc(&app, "events/subscribe", p).await;
+    clock.advance(jiff::SignedDuration::from_hours(1));
+    // Delivery remains valid until refreshBefore, even after verification expires.
+    let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    publish(&app, m).await;
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    assert_eq!(status(&app).await[0], "delivered");
+    server.replace_routes(vec![Route::new("POST", "*", "/hook", 200).body("{}")]);
+    let failed = rpc(&app, "events/subscribe", params("mention")).await;
+    assert_eq!(failed["error"]["code"], -32015);
+    let saved = app
+        .db()
+        .read(move |c| domain::Subscription::find(c, &id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        saved.refresh_before.jiff().to_string(),
+        before["result"]["refreshBefore"]
+    );
+    let mut route = Route::new("POST", "*", "/hook", 200);
+    route.echo_body = true;
+    server.replace_routes(vec![route]);
+    subscribe(&app, "reply").await;
+    let count = server.received().len();
+    subscribe(&app, "mention").await;
+    assert_eq!(
+        server.received().len(),
+        count,
+        "verification is shared by credential and URL"
+    );
+    clock.advance(jiff::SignedDuration::from_hours(24));
+    subscribe(&app, "mention").await;
+    assert_eq!(server.received().len(), count + 1);
+}
+
+#[tokio::test]
+async fn mcp_events_retry_suppresses_changed_private_repository_access() {
+    use crate::integrations::agent_repositories::{RepositoryReader, RepositoryRequest};
+    struct AllowRepository;
+    impl RepositoryReader for AllowRepository {
+        fn readable(
+            &self,
+            _: RepositoryRequest,
+        ) -> crate::net::BoxFuture<'_, campfire_db::Result<bool>> {
+            Box::pin(async { Ok(true) })
+        }
+    }
+    let (app, server, clock) = setup().await;
+    app.booted
+        .app
+        .agent_repositories
+        .install(Arc::new(AllowRepository));
+    subscribe(&app, "mention").await;
+    let crypto = app.booted.app.ar_encryption.clone();
+    let event = app.db().write(move |tx| {
+        tx.conn().execute("UPDATE agents SET owner_id=? WHERE id=?", rusqlite::params![DAVID, AGENT])?;
+        tx.conn().execute("DELETE FROM github_connected_accounts WHERE user_id=?", [DAVID])?;
+        tx.conn().execute("INSERT INTO github_connected_accounts(user_id,github_login,access_token,created_at,updated_at) VALUES(?,'events-owner',?,?,?)", rusqlite::params![DAVID,crypto.encrypt("fake-token"),tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO channel_threads(id,name,room_id,creator_id,last_activity_at,created_at,updated_at) VALUES(1996101000,'Private PR',?,?,?,?,?)", rusqlite::params![ALL_TALK,DAVID,tx.now(),tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO github_pull_requests(id,owner,repo,number,title,head_branch,private,created_at,updated_at) VALUES(1996102000,'events','private',1,'Private title','private-branch',1,?,?)", [tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO github_pull_request_threads(channel_thread_id,github_pull_request_id,room_id,created_at,updated_at) VALUES(1996101000,1996102000,?,?,?)", rusqlite::params![ALL_TALK,tx.now(),tx.now()])?;
+        let m = Message::create(tx, NewMessage {room_id:ALL_TALK,creator_id:DAVID,thread_id:Some(1996101000),markdown_source:Some("Hey @[Bender Bot]".into()),..Default::default()})?;
+        Ok(m.id)
+    }).await.unwrap();
+    publish(&app, event).await;
+    server.replace_routes(vec![Route::new("POST", "*", "/hook", 503)]);
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    let body: Value = serde_json::from_slice(&server.received()[1].body).unwrap();
+    assert!(body.to_string().contains("Private title"), "{body}");
+    assert!(body.to_string().contains("private-branch"));
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM github_connected_accounts WHERE user_id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    clock.advance(jiff::SignedDuration::from_secs(31));
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    assert_eq!(
+        server.received().len(),
+        2,
+        "retry must not disclose cached private fields"
+    );
+    assert_eq!(
+        status(&app).await,
+        json!(["suppressed", 2, "access_changed"])
+    );
+}
+
+#[tokio::test]
+async fn mcp_events_cursor_waits_for_matching_ledger_fan_out() {
+    for outcome in ["pending", "delivered", "acknowledged"] {
+        let (app, server, _) = setup().await;
+        let mut p = params("mention");
+        p["arguments"] = json!({"roomIds":[ALL_TALK]});
+        let result = rpc(&app, "events/subscribe", p.clone()).await;
+        assert!(result.get("error").is_none(), "{result}");
+        let first = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+        let first = app
+            .db()
+            .write(move |tx| {
+                let id: i64 = tx.conn().query_row(
+                    "SELECT id FROM agent_events WHERE agent_id=? AND message_id=?",
+                    rusqlite::params![AGENT, first],
+                    |r| r.get(0),
+                )?;
+                tx.conn().execute(
+                    "UPDATE agent_events SET outcome=? WHERE id=?",
+                    rusqlite::params![outcome, id],
+                )?;
+                Ok(id)
+            })
+            .await
+            .unwrap();
+        let second = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+        let second = publish(&app, second).await;
+        deliver(&app, jobs(&app).await.remove(0)).await;
+        let received = server.received();
+        let body: Value = serde_json::from_slice(&received[1].body).unwrap();
+        assert!(
+            body["cursor"].as_str().unwrap().parse::<i64>().unwrap() < first,
+            "{outcome}: {body}"
+        );
+        let result = rpc(&app, "events/subscribe", p).await;
+        assert!(
+            result["result"]["cursor"]
+                .as_str()
+                .unwrap()
+                .parse::<i64>()
+                .unwrap()
+                < first
+        );
+        app.db()
+            .write(move |tx| {
+                if outcome == "delivered" {
+                    tx.conn().execute(
+                        "UPDATE agent_events SET outcome='acknowledged' WHERE id=?",
+                        [first],
+                    )?;
+                }
+                ledger::perform_delivery(tx, first)
+            })
+            .await
+            .unwrap();
+        deliver(&app, jobs(&app).await.remove(0)).await;
+        let received = server.received();
+        let body: Value = serde_json::from_slice(&received[2].body).unwrap();
+        assert_eq!(body["cursor"], second.to_string());
+    }
+}
+
+#[tokio::test]
+async fn mcp_events_explicit_replay_lowers_watermark_and_cached_retry_cursor() {
+    let (app, server, clock) = setup().await;
+    let old = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    let old = publish(&app, old).await;
+    subscribe(&app, "mention").await;
+    let live = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    publish(&app, live).await;
+    server.replace_routes(vec![Route::new("POST", "*", "/hook", 503)]);
+    let retry = jobs(&app).await.remove(0);
+    deliver(&app, retry.clone()).await;
+    let first: Value = serde_json::from_slice(&server.received()[1].body).unwrap();
+    let mut p = params("mention");
+    p["cursor"] = json!("0");
+    let replay = rpc(&app, "events/subscribe", p).await;
+    assert_eq!(replay["result"]["cursor"], "0");
+    clock.advance(jiff::SignedDuration::from_secs(31));
+    deliver(
+        &app,
+        domain::DeliveryJob {
+            attempt: 1,
+            ..retry
+        },
+    )
+    .await;
+    let received = server.received();
+    let second: Value = serde_json::from_slice(&received[2].body).unwrap();
+    assert!(second["cursor"].as_str().unwrap().parse::<i64>().unwrap() < old);
+    assert_eq!(first["data"], second["data"]);
+    assert_eq!(first["eventId"], second["eventId"]);
+    signed(&received[2], KEY);
+    assert_eq!(status(&app).await[0], "pending");
+}
+
+#[tokio::test]
+async fn mcp_events_expired_delivery_reactivates_on_replay_with_same_id() {
+    let (app, server, clock) = setup().await;
+    let subscription = subscribe(&app, "mention").await;
+    let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    publish(&app, m).await;
+    let original: String = app
+        .db()
+        .read(|c| {
+            Ok(
+                c.query_row("SELECT webhook_id FROM mcp_event_deliveries", [], |r| {
+                    r.get(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    clock.advance(jiff::SignedDuration::from_hours(2));
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    assert_eq!(server.received().len(), 1);
+    assert_eq!(status(&app).await[0], "expired");
+    let mut p = params("mention");
+    p["cursor"] = json!("0");
+    let refreshed = rpc(&app, "events/subscribe", p).await;
+    assert_eq!(refreshed["result"]["id"], subscription);
+    assert_eq!(refreshed["result"]["truncated"], false);
+    let queued = jobs(&app).await;
+    assert_eq!(queued.len(), 1);
+    deliver(&app, queued[0].clone()).await;
+    assert_eq!(status(&app).await[0], "delivered");
+    let received = server.received();
+    assert_eq!(received.len(), 2);
+    assert_eq!(received[1].header("webhook-id"), Some(original.as_str()));
+}
+
+#[tokio::test]
+async fn mcp_events_mention_dispatches_through_real_job_runner() {
+    let (app, server, _) = setup_with_runner(true).await;
+    let subscription = subscribe(&app, "mention").await;
+    let message = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    let result = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        loop {
+            if server.received().len() >= 2 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    })
+    .await;
+    // Stop and join the runner even when the observable delivery times out.
+    let app = app.without_job_runner().await;
+    result.expect("queued mention reaches the receiver through registered job handlers");
+    let received = server.received();
+    assert_eq!(received.len(), 2);
+    signed(&received[1], KEY);
+    let body: Value = serde_json::from_slice(&received[1].body).unwrap();
+    assert_eq!(body["name"], "mention");
+    assert_eq!(body["data"]["message"]["id"], message);
+    assert_eq!(
+        received[1].header("X-MCP-Subscription-Id"),
+        Some(subscription.as_str())
+    );
+    assert_eq!(status(&app).await[0], "delivered");
 }
