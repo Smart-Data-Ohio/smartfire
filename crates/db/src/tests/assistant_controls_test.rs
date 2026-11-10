@@ -459,7 +459,7 @@ fn pause_regression_pending_mcp_is_discarded_but_expired_history_is_preserved() 
     let t = super::channel_thread_test::frozen();
     t.write(|tx| {
         let agent_id = id("bender_agent");
-        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,created_at,updated_at) VALUES('pause-history',?,?,'mention','{}','https://events.example/hook','fixture',?,?,?)", rusqlite::params![agent_id,id("bender_main"),tx.now(),tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,watermark_event_id,created_at,updated_at) VALUES('pause-history',?,?,'mention','{}','https://events.example/hook','fixture',?,0,?,?)", rusqlite::params![agent_id,id("bender_main"),tx.now(),tx.now(),tx.now()])?;
         for status in ["pending", "expired"] {
             let event = AgentEvent::create(tx, NewEvent { agent_id, event_type: "mention".into(), outcome: Some("delivered".into()), ..Default::default() })?;
             tx.conn().execute("INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at,body) VALUES('pause-history',?,?,?,?,?,?, 'cached occurrence')", rusqlite::params![event.id,status,status,tx.now(),tx.now(),tx.now()])?;
