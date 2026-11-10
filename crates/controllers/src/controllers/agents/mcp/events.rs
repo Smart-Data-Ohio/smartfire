@@ -127,7 +127,7 @@ pub async fn dispatch(
             Ok((
                 domain::can_subscribe(conn, agent, &check_arguments)?,
                 domain::at_limit(conn, credential, &check_subscription)?,
-                domain::endpoint_verified(conn, credential, &check_url, now)?,
+                domain::endpoint_verified_at(conn, credential, &check_url, now)?,
             ))
         })
         .await
@@ -144,8 +144,8 @@ pub async fn dispatch(
             Some(json!({"limit":"subscriptions","max":20})),
         );
     }
-    let mut verified_at = None;
-    if !verified {
+    let mut verified_at = verified;
+    if verified_at.is_none() {
         let key = format!(
             "mcp:verification:{}",
             parsed_url.host_str().unwrap().to_ascii_lowercase()
@@ -193,7 +193,7 @@ pub async fn dispatch(
         ttl_ms: ttl,
         cursor,
         max_age_ms: max_age,
-        verified_at,
+        verified_at: verified_at.expect("cached or challenged verification"),
     };
     let encryption = c.app().ar_encryption.clone();
     let result = c

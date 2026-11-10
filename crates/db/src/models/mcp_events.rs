@@ -162,12 +162,17 @@ pub fn can_subscribe(conn: &Connection, agent: i64, arguments: &Arguments) -> Re
     }
     Ok(true)
 }
-pub fn endpoint_verified(conn: &Connection, credential: i64, url: &str, now: Timestamp) -> Result<bool> {
-    exists(
-        conn,
-        "SELECT 1 FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=? AND verified_at>?",
+pub fn endpoint_verified_at(
+    conn: &Connection,
+    credential: i64,
+    url: &str,
+    now: Timestamp,
+) -> Result<Option<Timestamp>> {
+    Ok(conn.query_row(
+        "SELECT MAX(verified_at) FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=? AND verified_at>?",
         params![credential, url, now.ago(SignedDuration::from_hours(24))],
-    )
+        |r| r.get(0),
+    )?)
 }
 pub fn at_limit(conn: &Connection, credential: i64, id: &str) -> Result<bool> {
     Ok(!exists(
@@ -191,7 +196,7 @@ pub struct Grant {
     pub ttl_ms: i64,
     pub cursor: Option<i64>,
     pub max_age_ms: i64,
-    pub verified_at: Option<Timestamp>,
+    pub verified_at: Timestamp,
 }
 pub enum GrantResult {
     Granted(Box<Subscription>, bool),
@@ -217,21 +222,11 @@ pub fn subscribe(
     if at_limit(tx.conn(), grant.credential, &id)? {
         return Ok(GrantResult::Limit);
     }
-    if let Some(verified_at) = grant.verified_at {
-        tx.conn().execute(
-            "UPDATE mcp_event_subscriptions SET verified_at=? WHERE agent_credential_id=? AND url=?",
-            params![verified_at, grant.credential, grant.url],
-        )?;
-    }
-    let verified_at = match grant.verified_at {
-        Some(at) => Some(at),
-        None => query_one(
-            tx.conn(),
-            "SELECT MAX(verified_at) FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=?",
-            params![grant.credential, grant.url],
-            |r| r.get::<_, Option<Timestamp>>(0),
-        )?.flatten(),
-    };
+    let verified_at = grant.verified_at;
+    tx.conn().execute(
+        "UPDATE mcp_event_subscriptions SET verified_at=MAX(COALESCE(verified_at,?1),?1) WHERE agent_credential_id=?2 AND url=?3",
+        params![verified_at, grant.credential, grant.url],
+    )?;
     let old = Subscription::find(tx.conn(), &id)?;
     let encrypted = encryption.encrypt(&grant.secret);
     let current: i64 = tx.conn().query_row(
@@ -251,36 +246,55 @@ pub fn subscribe(
         tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,json!(grant.arguments).to_string(),grant.url,encrypted,refresh,verified_at,watermark,tx.now(),tx.now()])?;
     }
     let mut truncated = false;
-    if let Some(cursor) = grant.cursor {
+    if grant.cursor.is_some() || old.is_some() {
+        let mut settled = false;
         let cutoff = tx.now().ago(SignedDuration::from_millis(grant.max_age_ms));
         let auth = super::agent_event_access::authorized_sql("e", "m");
         let events = query_all(
             tx.conn(),
             &format!(
-                "SELECT e.id,e.created_at,e.room_id FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id WHERE e.agent_id=? AND e.event_type=? AND e.id>? AND e.outcome IN ('delivered','acknowledged') AND ({auth}) ORDER BY e.id"
+                "SELECT e.id,e.created_at,e.room_id,COALESCE(e.outcome IN ('delivered','acknowledged') AND ({auth}),0),COALESCE(d.status='expired',0)
+                 FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id
+                 LEFT JOIN mcp_event_deliveries d ON d.subscription_id=?1 AND d.agent_event_id=e.id
+                 WHERE e.agent_id=?2 AND e.event_type=?3 AND
+                   ((e.id>?4 AND e.outcome IN ('delivered','acknowledged') AND ({auth})) OR d.status='expired')
+                 ORDER BY e.id"
             ),
-            params![grant.agent, grant.name, cursor],
+            params![id, grant.agent, grant.name, grant.cursor],
             |r| {
                 Ok((
                     r.get::<_, i64>(0)?,
                     r.get::<_, Timestamp>(1)?,
                     r.get::<_, Option<i64>>(2)?,
+                    r.get::<_, bool>(3)?,
+                    r.get::<_, bool>(4)?,
                 ))
             },
         )?;
-        for (event, at, room) in events {
-            if !grant.arguments.matches(room) {
+        for (event, at, room, eligible, expired) in events {
+            if !eligible || !grant.arguments.matches(room) {
+                if expired {
+                    tx.conn().execute(
+                        "UPDATE mcp_event_deliveries SET status='suppressed',last_error=NULL,updated_at=? WHERE subscription_id=? AND agent_event_id=? AND status='expired'",
+                        params![tx.now(), id, event],
+                    )?;
+                    settled = true;
+                }
                 continue;
             }
             if at < cutoff {
                 truncated = true;
                 tx.conn().execute(
-                    "INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at,last_error) VALUES(?,?,?,'suppressed',?,?,?,'replay_age') ON CONFLICT(subscription_id,agent_event_id) DO NOTHING",
+                    "INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at,last_error) VALUES(?,?,?,'suppressed',?,?,?,'replay_age') ON CONFLICT(subscription_id,agent_event_id) DO UPDATE SET status='suppressed',last_error='replay_age',updated_at=excluded.updated_at WHERE mcp_event_deliveries.status='expired' ",
                     params![id,event,nonce("msg_"),tx.now(),tx.now(),tx.now()],
                 )?;
+                settled |= expired;
             } else {
                 enqueue(tx, &id, event)?;
             }
+        }
+        if settled {
+            advance(tx, &id)?;
         }
     }
     Ok(GrantResult::Granted(
