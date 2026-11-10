@@ -126,6 +126,7 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
             .filter(|(_, name)| !(table == "active_storage_attachments" && name.as_str() == "spoiler"))
             .filter(|(_, name)| !(table == "channel_threads" && name.as_str() == "visibility"))
             .filter(|(_, name)| !(table == "agent_slash_commands" && name.as_str() == "option_schema"))
+            .filter(|(_, name)| !(table == "agents" && matches!(name.as_str(), "wake_policy" | "paused_at" | "paused_by_id")))
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
                 let rendered = match (name.as_str(), value) {
