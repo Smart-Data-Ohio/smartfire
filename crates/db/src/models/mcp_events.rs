@@ -223,6 +223,15 @@ pub fn subscribe(
             params![verified_at, grant.credential, grant.url],
         )?;
     }
+    let verified_at = match grant.verified_at {
+        Some(at) => Some(at),
+        None => query_one(
+            tx.conn(),
+            "SELECT MAX(verified_at) FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=?",
+            params![grant.credential, grant.url],
+            |r| r.get::<_, Option<Timestamp>>(0),
+        )?.flatten(),
+    };
     let old = Subscription::find(tx.conn(), &id)?;
     let encrypted = encryption.encrypt(&grant.secret);
     let current: i64 = tx.conn().query_row(
@@ -239,7 +248,7 @@ pub fn subscribe(
             != grant.secret;
         tx.conn().execute("UPDATE mcp_event_subscriptions SET secret=?,previous_secret=CASE WHEN ? THEN secret ELSE previous_secret END,previous_secret_expires_at=CASE WHEN ? THEN ? ELSE previous_secret_expires_at END,refresh_before=?,watermark_event_id=MIN(watermark_event_id,?),updated_at=? WHERE id=?",params![encrypted,changed,changed,tx.now().since(SignedDuration::from_mins(5)),refresh,grant.cursor.unwrap_or(old.watermark),tx.now(),id])?;
     } else {
-        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,json!(grant.arguments).to_string(),grant.url,encrypted,refresh,grant.verified_at.or(query_one(tx.conn(),"SELECT MAX(verified_at) FROM mcp_event_subscriptions WHERE agent_credential_id=? AND url=?",params![grant.credential,grant.url],|r|r.get::<_,Option<Timestamp>>(0))?.flatten()),watermark,tx.now(),tx.now()])?;
+        tx.conn().execute("INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,verified_at,watermark_event_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",params![id,grant.agent,grant.credential,grant.name,json!(grant.arguments).to_string(),grant.url,encrypted,refresh,verified_at,watermark,tx.now(),tx.now()])?;
     }
     let mut truncated = false;
     if let Some(cursor) = grant.cursor {
@@ -266,7 +275,7 @@ pub fn subscribe(
             if at < cutoff {
                 truncated = true;
                 tx.conn().execute(
-                    "INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at) VALUES(?,?,?,'suppressed',?,?,?) ON CONFLICT(subscription_id,agent_event_id) DO NOTHING",
+                    "INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at,last_error) VALUES(?,?,?,'suppressed',?,?,?,'replay_age') ON CONFLICT(subscription_id,agent_event_id) DO NOTHING",
                     params![id,event,nonce("msg_"),tx.now(),tx.now(),tx.now()],
                 )?;
             } else {
@@ -327,7 +336,7 @@ impl Delivery {
 fn enqueue(tx: &mut Tx<'_>, subscription: &str, event: i64) -> Result<()> {
     let id = query_one(
         tx.conn(),
-        "INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at) VALUES(?,?,?,'pending',?,?,?) ON CONFLICT(subscription_id,agent_event_id) DO NOTHING RETURNING id",
+        "INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at) VALUES(?,?,?,'pending',?,?,?) ON CONFLICT(subscription_id,agent_event_id) DO UPDATE SET status='pending',attempts=0,next_attempt_at=excluded.next_attempt_at,last_error=NULL,updated_at=excluded.updated_at WHERE mcp_event_deliveries.status='expired' OR (mcp_event_deliveries.status='suppressed' AND mcp_event_deliveries.last_error='replay_age') RETURNING id",
         params![
             subscription,
             event,
@@ -400,6 +409,10 @@ pub enum DeliveryOutcome {
     Permanent(Category),
     Terminate(Termination),
 }
+pub fn expire(tx: &Tx<'_>, d: &Delivery) -> Result<()> {
+    tx.conn().execute("UPDATE mcp_event_deliveries SET status='expired',updated_at=? WHERE id=? AND attempts=? AND status='pending'",params![tx.now(),d.id,d.attempts])?;
+    Ok(())
+}
 pub fn suppress(tx: &Tx<'_>, d: &Delivery) -> Result<()> {
     tx.conn().execute("UPDATE mcp_event_deliveries SET status='suppressed',updated_at=? WHERE id=? AND attempts=? AND status='pending'",params![tx.now(),d.id,d.attempts])?;
     advance(tx, &d.subscription_id)
@@ -416,7 +429,7 @@ pub fn delivery_cursor(
     Ok(query_one(conn,
         "WITH unsettled_obligations AS (
             SELECT agent_event_id AS event_id FROM mcp_event_deliveries
-            WHERE subscription_id=?1 AND status='pending' AND id IS NOT ?2
+            WHERE subscription_id=?1 AND status IN ('pending','expired') AND id IS NOT ?2
             UNION ALL
             SELECT e.id FROM agent_events e JOIN mcp_event_subscriptions s ON s.id=?1
             WHERE e.agent_id=s.agent_id AND e.event_type=s.name AND e.id>s.watermark_event_id
@@ -426,7 +439,7 @@ pub fn delivery_cursor(
         )
         SELECT COALESCE((SELECT MIN(event_id)-1 FROM unsettled_obligations),
             MAX(watermark_event_id,COALESCE((SELECT MAX(agent_event_id) FROM mcp_event_deliveries
-                WHERE subscription_id=?1 AND (status!='pending' OR id=?2)),watermark_event_id)))
+                WHERE subscription_id=?1 AND (status NOT IN ('pending','expired') OR id=?2)),watermark_event_id)))
         FROM mcp_event_subscriptions WHERE id=?1",
         params![subscription,settling],|r|r.get(0))?.unwrap_or(0))
 }
@@ -516,4 +529,103 @@ pub fn cleanup(tx: &Tx<'_>) -> Result<()> {
     )?;
     tx.conn().execute("DELETE FROM mcp_event_deliveries WHERE status IN ('delivered','failed','suppressed') AND updated_at<?",[tx.now().ago(SignedDuration::from_hours(7*24))])?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn expiry_migration_preserves_delivery_history_and_sequence() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", false).unwrap();
+        conn.execute_batch(include_str!(
+            "../../migrations/20261109120000_mcp_event_webhooks.sql"
+        ))
+        .unwrap();
+        conn.execute_batch(include_str!(
+            "../../migrations/20261109130000_mcp_event_delivery_body.sql"
+        ))
+        .unwrap();
+        for (id, status) in [
+            (1, "pending"),
+            (2, "delivered"),
+            (3, "failed"),
+            (4, "suppressed"),
+        ] {
+            conn.execute("INSERT INTO mcp_event_deliveries(id,subscription_id,agent_event_id,webhook_id,status,attempts,next_attempt_at,created_at,updated_at,body) VALUES(?,'subscription',?,?,?,2,'2026-11-09','2026-11-09','2026-11-09','exact cached bytes')",params![id,id,format!("msg_{id}"),status]).unwrap();
+        }
+        conn.execute(
+            "UPDATE sqlite_sequence SET seq=100 WHERE name='mcp_event_deliveries'",
+            [],
+        )
+        .unwrap();
+        assert!(
+            conn.execute(
+                "UPDATE mcp_event_deliveries SET status='expired' WHERE id=1",
+                []
+            )
+            .is_err()
+        );
+        conn.execute_batch(include_str!(
+            "../../migrations/20261109150000_mcp_delivery_expired.sql"
+        ))
+        .unwrap();
+        let rows: Vec<(i64, String, String, i64)> = query_all(
+            &conn,
+            "SELECT id,status,body,attempts FROM mcp_event_deliveries ORDER BY id",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .unwrap();
+        assert_eq!(
+            rows,
+            [
+                (1, "pending"),
+                (2, "delivered"),
+                (3, "failed"),
+                (4, "suppressed")
+            ]
+            .map(|(id, status)| (id, status.into(), "exact cached bytes".into(), 2))
+        );
+        conn.execute(
+            "UPDATE mcp_event_deliveries SET status='expired' WHERE id=1",
+            [],
+        )
+        .unwrap();
+        let sequence: i64 = conn
+            .query_row(
+                "SELECT seq FROM sqlite_sequence WHERE name='mcp_event_deliveries'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(sequence, 100);
+    }
+
+    #[test]
+    fn expiry_migration_does_not_add_a_sequence_to_an_unused_table() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE agents(id INTEGER PRIMARY KEY); CREATE TABLE agent_credentials(id INTEGER PRIMARY KEY); CREATE TABLE agent_events(id INTEGER PRIMARY KEY);").unwrap();
+        conn.execute_batch(include_str!(
+            "../../migrations/20261109120000_mcp_event_webhooks.sql"
+        ))
+        .unwrap();
+        conn.execute_batch(include_str!(
+            "../../migrations/20261109130000_mcp_event_delivery_body.sql"
+        ))
+        .unwrap();
+        conn.execute_batch(include_str!(
+            "../../migrations/20261109150000_mcp_delivery_expired.sql"
+        ))
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_sequence WHERE name='mcp_event_deliveries'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
 }

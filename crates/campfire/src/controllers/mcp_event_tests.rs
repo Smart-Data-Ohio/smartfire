@@ -871,7 +871,7 @@ async fn mcp_events_direct_message_and_expired_subscription() {
     clock.advance(jiff::SignedDuration::from_hours(2));
     deliver(&app, jobs(&app).await.remove(0)).await;
     assert_eq!(server.received().len(), 2);
-    assert_eq!(status(&app).await[0], "suppressed");
+    assert_eq!(status(&app).await[0], "expired");
     clock.advance(jiff::SignedDuration::from_hours(24));
     campfire_channels::jobs::periodic::stranded_agent_webhooks(app.db())
         .await
@@ -1541,19 +1541,88 @@ async fn mcp_events_cursor_ignores_unmatched_and_suppressed_ledger_rows() {
     assert!(result.get("error").is_none(), "{result}");
     for change in ["room", "type", "suppressed"] {
         let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
-        app.db().write(move |tx| {
-            tx.conn().execute(match change {
-                "room" => "UPDATE agent_events SET room_id=NULL WHERE message_id=?",
-                "type" => "UPDATE agent_events SET event_type='reply' WHERE message_id=?",
-                _ => "UPDATE agent_events SET outcome='suppressed' WHERE message_id=?",
-            }, [m])?;
-            Ok(())
-        }).await.unwrap();
+        app.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    match change {
+                        "room" => "UPDATE agent_events SET room_id=NULL WHERE message_id=?",
+                        "type" => "UPDATE agent_events SET event_type='reply' WHERE message_id=?",
+                        _ => "UPDATE agent_events SET outcome='suppressed' WHERE message_id=?",
+                    },
+                    [m],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
     }
     let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
-    let event = publish(&app,m).await;
-    deliver(&app,jobs(&app).await.remove(0)).await;
-    let received=server.received();
-    let body:Value=serde_json::from_slice(&received[1].body).unwrap();
-    assert_eq!(body["cursor"],event.to_string());
+    let event = publish(&app, m).await;
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    let received = server.received();
+    let body: Value = serde_json::from_slice(&received[1].body).unwrap();
+    assert_eq!(body["cursor"], event.to_string());
+}
+
+#[tokio::test]
+async fn mcp_events_reactivated_expiry_rechecks_access_and_suppression_is_permanent() {
+    let (app, server, clock) = setup().await;
+    subscribe(&app, "mention").await;
+    let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    publish(&app, m).await;
+    clock.advance(jiff::SignedDuration::from_hours(2));
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    let mut p = params("mention");
+    p["cursor"] = json!("0");
+    let refreshed = rpc(&app, "events/subscribe", p.clone()).await;
+    assert!(refreshed.get("error").is_none(), "{refreshed}");
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agent_grants SET revoked_at=? WHERE agent_id=?",
+                rusqlite::params![tx.now(), AGENT],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    assert_eq!(status(&app).await[0], "suppressed");
+    assert_eq!(server.received().len(), 1);
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agent_grants SET revoked_at=NULL WHERE agent_id=?",
+                [AGENT],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let replay = rpc(&app, "events/subscribe", p).await;
+    assert!(replay.get("error").is_none(), "{replay}");
+    assert!(jobs(&app).await.is_empty());
+    assert_eq!(server.received().len(), 1);
+}
+
+#[tokio::test]
+async fn mcp_events_broader_replay_can_include_previously_age_skipped_events() {
+    let (app, server, clock) = setup().await;
+    let m = post(&app, "Hey @[Bender Bot]", None, DAVID).await;
+    let event = publish(&app, m).await;
+    clock.advance(jiff::SignedDuration::from_mins(1));
+    let mut p = params("mention");
+    p["cursor"] = json!("0");
+    p["maxAgeMs"] = json!(0);
+    let first = rpc(&app, "events/subscribe", p.clone()).await;
+    assert_eq!(first["result"]["truncated"], true);
+    assert!(jobs(&app).await.is_empty());
+    p["maxAgeMs"] = json!(86_400_000);
+    let second = rpc(&app, "events/subscribe", p).await;
+    assert_eq!(second["result"]["truncated"], false);
+    assert_eq!(jobs(&app).await.len(), 1);
+    deliver(&app, jobs(&app).await.remove(0)).await;
+    let received = server.received();
+    let body: Value = serde_json::from_slice(&received[1].body).unwrap();
+    assert_eq!(body["data"]["id"], event);
 }

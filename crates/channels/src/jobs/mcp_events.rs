@@ -52,7 +52,7 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
     let state = app.clone();
     let prepared=app.db.write(move |tx| {
         let Some(s)=Subscription::find(tx.conn(),&d.subscription_id)? else {return Ok(None)};
-        if s.refresh_before<=tx.now() {domain::suppress(tx,&d)?;return Ok(None)}
+        if s.refresh_before<=tx.now() {domain::expire(tx,&d)?;return Ok(None)}
         if !domain::principal_live(tx.conn(),s.credential_id,tx.now(),&tx.env().default_url_origin)? {
             domain::finish(tx,&d,DeliveryOutcome::Terminate(domain::Termination::AccessRevoked))?;
             return Ok(None);
@@ -63,10 +63,10 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
             .map_err(|e| campfire_db::Error::Other(e.to_string()))).transpose()?;
         let mut event = event;
         // Polling acknowledgement does not change the occurrence owed to this webhook.
-        if event.outcome.as_deref() == Some("acknowledged") {
-            if let Some(outcome) = cached.as_ref().and_then(|body| body["data"]["outcome"].as_str()) {
-                event.outcome = Some(outcome.to_owned());
-            }
+        if event.outcome.as_deref() == Some("acknowledged")
+            && let Some(outcome) = cached.as_ref().and_then(|body| body["data"]["outcome"].as_str())
+        {
+            event.outcome = Some(outcome.to_owned());
         }
         let mut presenter=Presenter::new(tx.conn(),&state,None);
         presenter.cache_base_url=Some(tx.env().default_url_origin.clone());
@@ -86,7 +86,7 @@ pub async fn post_with_network(app: &App, job: DeliveryJob, net: &Network) -> an
                 if cursor < previous {
                     cached["cursor"] = json!(cursor.to_string());
                     let body = cached.to_string();
-                    tx.conn().execute("UPDATE mcp_event_deliveries SET body=? WHERE id=? AND attempts=? AND status='pending'", rusqlite::params![body,d.id,d.attempts])?;
+                    if tx.conn().execute("UPDATE mcp_event_deliveries SET body=? WHERE id=? AND attempts=? AND status='pending'", rusqlite::params![body,d.id,d.attempts])? == 0 { return Ok(None) }
                     body
                 } else {
                     body

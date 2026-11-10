@@ -270,7 +270,7 @@ Standard Webhooks signature, a `msg_verification_` webhook ID, and the determini
 `X-MCP-Subscription-Id`. The receiver
 must return a 2xx JSON response with the same `challenge`. Failure returns
 `CallbackEndpointError` with code `-32015` and categorized `data.reason`, such as
-`challenge_failed` or `timeout`, and stores nothing. The SEP draft lists `-32027`.
+`challenge_failed` or `timeout`, and does not create or refresh a subscription. The SEP draft lists `-32027`.
 Verification is valid for 24 hours per credential and callback URL. A subscribe
 or refresh after that repeats the challenge. Only a successful challenge renews
 `verified_at`. Failure preserves the existing subscription and its `refreshBefore`
@@ -385,7 +385,8 @@ Failures expose only `connection_refused`, `timeout`, `tls_error`, `http_4xx`,
 The cursor stays below the lowest matching unsettled obligation. This includes
 pending delivery rows and ledger events awaiting fan-out for the subscription's
 event name and `roomIds`. Otherwise it advances to the highest settled ID.
-Events skipped by the replay age bound count as settled for that subscription. Polling acknowledgements do not cancel owed webhook deliveries.
+Events skipped by the replay age bound count as settled for that replay.
+A later replay with a larger age bound can still queue them. Polling acknowledgements do not cancel owed webhook deliveries.
 
 Subscribing requires `read_messages` in at least one accessible room. Every
 attempt checks the current room, message, grants, agent, credential, and OAuth
@@ -399,7 +400,11 @@ A revoked or expired principal loses the subscription and its pending
 deliveries without a POST. Refresh with a live credential but revoked grants
 returns `Forbidden`, code `-32024`. Revoked credentials fail bearer authentication.
 Smartfire never sends `terminated` or `gap` control notifications. Verification
-envelopes remain supported. Expired subscriptions stop delivery.
+envelopes remain supported. Expired subscriptions stop delivery and record owed
+deliveries as `expired`. Refresh or replay covering those events reactivates them
+with the same webhook ID, subject to current access checks. Access suppressions and size
+failures remain permanent. Expired rows hold the cursor below the undelivered
+event until replay reactivates it or the subscription is removed.
 
 Each credential can own at most 20 subscriptions. Subscriptions expired for more
 than one day are removed. Settled delivery rows older than seven days are removed.
