@@ -42,6 +42,8 @@ pub fn routes() -> Router<Kit> {
                 .patch(unparsed_action(update))
                 .delete(action(remove)),
         )
+        .route("/api/v1/me/agents/{id}/pause", post(action(pause)))
+        .route("/api/v1/me/agents/{id}/resume", post(action(resume)))
         .route(
             "/api/v1/me/agents/{id}/access",
             put(unparsed_action(access)),
@@ -64,6 +66,8 @@ endpoint!(create => create_agent);
 endpoint!(show => show_agent);
 endpoint!(update => update_agent);
 endpoint!(remove => remove_agent);
+endpoint!(pause => pause_agent);
+endpoint!(resume => resume_agent);
 endpoint!(access => update_access);
 endpoint!(credentials => list_credentials);
 endpoint!(issue => issue_credential);
@@ -241,6 +245,7 @@ pub(crate) fn present(
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect();
+    let paused = agent.paused();
     Ok(api::PersonalAgent {
         id: agent.id,
         user_id: bot.id,
@@ -254,6 +259,13 @@ pub(crate) fn present(
         description: agent.description,
         daily_message_cap: agent.daily_message_cap,
         suspended: agent.suspended_at.is_some(),
+        wake_policy: match agent.wake_policy {
+            campfire_db::WakePolicy::Owner => api::WakePolicy::Owner,
+            campfire_db::WakePolicy::Anyone => api::WakePolicy::Anyone,
+        },
+        paused_at: agent.paused_at.filter(|_| paused).map(time),
+        paused_by: agent.paused_by_id.filter(|_| paused)
+            .map(|id| User::find_by_id(conn, id)).transpose()?.flatten().map(|u| u.name),
         room_ids,
         capabilities,
         last_used_at: credentials
@@ -480,6 +492,10 @@ async fn update_agent(c: &mut Ctx) -> Result {
             agent.update(
                 tx,
                 AgentChanges {
+                    wake_policy: input.wake_policy.map(|policy| match policy {
+                        api::WakePolicy::Owner => campfire_db::WakePolicy::Owner,
+                        api::WakePolicy::Anyone => campfire_db::WakePolicy::Anyone,
+                    }),
                     provider: input.provider.map(Some),
                     runtime: input.runtime.map(Some),
                     description: input.description.map(Some),
@@ -489,6 +505,7 @@ async fn update_agent(c: &mut Ctx) -> Result {
             )?;
             let mut changes = serde_json::Map::new();
             for (field, before, after) in [
+                ("wake_policy", json!(before_agent.wake_policy), json!(agent.wake_policy)),
                 ("name", json!(before_bot.name), json!(bot.name)),
                 (
                     "icon_name",
@@ -549,6 +566,58 @@ pub(crate) async fn avatar_input(
         .await?;
     Ok((picture, change))
 }
+pub(crate) fn set_paused(
+    tx: &mut Tx<'_>,
+    agent: &mut Agent,
+    actor_id: i64,
+    paused: bool,
+    context: &Context,
+) -> campfire_db::Result<()> {
+    if agent.suspended_at.is_some() || agent.paused() == paused {
+        return Ok(());
+    }
+    let before = agent.paused_at;
+    agent.update(
+        tx,
+        AgentChanges {
+            paused_at: Some(paused.then_some(tx.now())),
+            paused_by_id: Some(paused.then_some(actor_id)),
+            ..Default::default()
+        },
+    )?;
+    audit(
+        tx,
+        agent,
+        if paused {
+            "agent.pause"
+        } else {
+            "agent.resume"
+        },
+        json!({"paused_at":audit_log::pair(json!(before.map(time)),json!(agent.paused_at.map(time)))}),
+        context,
+    )
+}
+async fn pause_agent(c: &mut Ctx) -> Result {
+    change_pause(c, true).await
+}
+async fn resume_agent(c: &mut Ctx) -> Result {
+    change_pause(c, false).await
+}
+async fn change_pause(c: &mut Ctx, paused: bool) -> Result {
+    let owner = member(c).await?;
+    let agent_id = owned(c, owner.id).await?.id;
+    let context = campfire_people::controllers::two_factor::audit_context(c)?;
+    c.app()
+        .db
+        .write(move |tx| {
+            let mut agent = personal_agents::owned(tx.conn(), owner.id, agent_id)?;
+            set_paused(tx, &mut agent, owner.id, paused, &context)
+        })
+        .await
+        .map_err(saved_error)?;
+    reply_agent(c, agent_id, owner.id).await
+}
+
 async fn remove_agent(c: &mut Ctx) -> Result {
     let owner = member(c).await?;
     let agent = owned(c, owner.id).await?;

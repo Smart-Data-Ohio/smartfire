@@ -14,6 +14,11 @@ transaction. Deactivating or banning a person suspends every agent they own, so 
 agents' Bearer tokens answer 401 and their bot keys get 403 from every
 capability check.
 
+A pause records `paused_at` and `paused_by_id`. It preserves grants, rooms,
+credentials and OAuth connections. Authentication and OAuth refresh still work.
+Agent actions return 403 with `{"error":"agent_paused"}`. Resume restores access
+without replaying suppressed events. Suspension takes precedence over pause.
+
 ## Credentials
 
 `agent_credentials` holds Bearer agent tokens. Credentials store only a SHA256 digest
@@ -117,6 +122,15 @@ ledger-only types are `posted`
 rows `delivery_suppressed_rate_limit`, `delivery_suppressed_hop_limit`, and
 `delivery_suppressed_revoked`. Outcomes are `pending`, `delivered`,
 `acknowledged`, and `suppressed`.
+
+New personal agents default to `wake_policy='owner'`. Only messages created by
+the owner write `mention`, `reply` or `direct_message` rows. The owner can select
+`anyone` to accept messages from other room members. Existing agents retain
+`anyone` after migration. Workspace agents always use `anyone`.
+
+An eligible message for a paused agent writes a suppressed row with detail
+`Agent paused`. It schedules no delivery job, webhook or MCP event. Pending
+message deliveries check pause again when they run. Resume never replays these rows.
 
 A message creates one pending event per recipient agent: mentions of the
 agent's user, replies to the agent's messages (a reply wins over a mention
@@ -948,6 +962,9 @@ grant forbids the next post; a brand-new DM room cannot carry grants
 yet, so the workspace-wide form is enough to open it. Throttled at
 60/minute per credential.
 
+Messages filtered by an owner-only wake policy write no ledger row. They do not
+count as previously messaging the agent.
+
 "Previously messaged" means the agent's ledger holds at least one row
 with the human as actor and type `mention`, `reply`, or
 `direct_message`. Such a row is written when, in a room the agent
@@ -1213,8 +1230,12 @@ Administrators retain their existing bot management routes.
   It creates the bot, agent, memberships, grants and first credential atomically,
   returning 201 with `{agent, secret}`.
 - `GET /:id` and `PATCH /:id` read and edit the profile. PATCH accepts `name`,
-  `iconName`, `provider`, `runtime`, `description`, and `dailyMessageCap`.
+  `iconName`, `provider`, `runtime`, `description`, `dailyMessageCap`, and
+  `wakePolicy` (`"owner"` or `"anyone"`).
   An absent cap leaves it unchanged; null makes it unlimited.
+- `POST /:id/pause` and `POST /:id/resume` are idempotent and require no password
+  re-confirmation. They preserve access and credentials. Administrators can use
+  `POST /api/v1/admin/bots/:id/pause` and `/resume` with the bot user id for any agent.
 - `PUT /:id/access` replaces the `roomIds` and `capabilities` set in one
   transaction. Only non-direct rooms the owner currently belongs to are offered.
   An empty room set is allowed and leaves only the implicit owner DM available.
@@ -1228,6 +1249,11 @@ Administrators retain their existing bot management routes.
   RFC 3339 expiry timestamps must be in the future.
 - `DELETE /:id/credentials/:cid` revokes the credential. `DELETE /:id`
   uses the existing bot removal path, deactivating the bot and making its agent inactive.
+
+Presented agents include `wakePolicy`, `pausedAt`, and `pausedBy`, the pausing
+member's name. Pause and resume record `agent.pause` and `agent.resume` once per
+state change. Wake policy changes appear in `agent.update` before/after pairs.
+Each audit write shares the state change transaction.
 
 Each secret is `sfa_` followed by 64 random hexadecimal characters. Only its
 SHA-256 digest and last four characters are stored; subsequent reads never

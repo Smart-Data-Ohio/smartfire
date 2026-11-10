@@ -3,6 +3,14 @@ use crate::{BotAvatarSpec, CredentialState, Timestamp};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum WakePolicy {
+    Owner,
+    Anyone,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -49,6 +57,9 @@ pub struct PersonalAgent {
     pub description: Option<String>,
     pub daily_message_cap: Option<i64>,
     pub suspended: bool,
+    pub wake_policy: WakePolicy,
+    pub paused_at: Option<Timestamp>,
+    pub paused_by: Option<String>,
     pub room_ids: Vec<i64>,
     pub capabilities: Vec<String>,
     pub last_used_at: Option<Timestamp>,
@@ -151,6 +162,7 @@ pub struct CreatePersonalAgent {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdatePersonalAgent {
+    pub wake_policy: Option<WakePolicy>,
     pub name: Option<String>,
     pub icon_name: Option<String>,
     /// A blob uploaded with `POST /api/v1/uploads` becomes the picture. Without `botAvatar` it

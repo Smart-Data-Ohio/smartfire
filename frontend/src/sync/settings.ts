@@ -490,6 +490,7 @@ export const meAgents = {
     runAction(
       bounded(
         updateMeAgent(agentId, {
+          wakePolicy: null,
           name: null,
           iconName: null,
           avatar: null,
