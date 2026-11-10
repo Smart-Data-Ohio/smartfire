@@ -1,5 +1,5 @@
 use super::admin_tests::{get, json_body, parse, write};
-use crate::controllers::presenters::test_support::{ALL_TALK, Browser, DAVID, JASON, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{ALL_TALK, Browser, DAVID, KEVIN, Req, TestApp};
 use axum::http::{Method, StatusCode};
 use serde_json::{Value, json};
 
@@ -28,6 +28,7 @@ async fn app() -> Option<TestApp> {
     Some(app)
 }
 const ROOT: &str = "/api/v1/me/agents";
+const JZ: i64 = 773523953;
 const DISABLED_MESSAGE: &str = "Personal agents are turned off for this workspace.";
 async fn create(b: &mut Browser<'_>) -> Value {
     let r = write(b, Method::POST, ROOT, json!({"name":"Personal helper","roomIds":[ALL_TALK],"capabilities":["read_messages","post_messages"]})).await;
@@ -799,7 +800,7 @@ async fn assistants_owner_controls_are_idempotent_audited_and_preserve_access() 
     assert_eq!(policy.status, StatusCode::OK);
     assert_eq!(policy.json()["wakePolicy"], "anyone");
     let mut other = a.sign_in(DAVID).await;
-    let mut non_owner = a.sign_in(JASON).await;
+    let mut non_owner = a.sign_in(JZ).await;
     for action in ["pause", "resume"] {
         let denied = write(&mut non_owner, Method::POST, &format!("{path}/{action}"), json!({})).await;
         assert_eq!(denied.status, StatusCode::NOT_FOUND);
