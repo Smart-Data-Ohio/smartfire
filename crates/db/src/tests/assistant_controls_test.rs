@@ -4,13 +4,24 @@ use crate::{Agent, AgentChanges, AgentKind, WakePolicy};
 #[test]
 fn assistants_migration_preserves_existing_wake_behavior_and_defaults_new_personal_agents() {
     let catalog = crate::migrations::catalog();
-    let old = crate::schema::generate(&catalog[..catalog.len() - 1]).unwrap();
+    let pause = catalog
+        .iter()
+        .position(|m| m.version == "20261109140000")
+        .unwrap();
+    let old = crate::schema::generate(&catalog[..pause]).unwrap();
     let conn = rusqlite::Connection::open_in_memory().unwrap();
     conn.execute_batch(&old.schema_sql).unwrap();
+    for user in 1..=3 {
+        conn.execute("INSERT INTO users(id,name,created_at,updated_at) VALUES(?,?,'2026-11-09','2026-11-09')", rusqlite::params![user,format!("User {user}")]).unwrap();
+    }
     for (user, kind) in [(1, "personal"), (2, "workspace")] {
         conn.execute("INSERT INTO agents(user_id,owner_id,kind,created_at,updated_at) VALUES(?,2,?,'2026-11-09','2026-11-09')",rusqlite::params![user,kind]).unwrap();
     }
-    conn.execute_batch(&catalog.last().unwrap().sql).unwrap();
+    conn.execute_batch("INSERT INTO agent_credentials(id,agent_id,created_by_id,name,token_digest,token_last_four,created_at,updated_at) VALUES(1,1,2,'Migration','fixture','1234','2026-11-09','2026-11-09');
+        INSERT INTO agent_events(id,agent_id,event_type,created_at) VALUES(1,1,'mention','2026-11-09');
+        INSERT INTO mcp_event_subscriptions(id,agent_id,agent_credential_id,name,arguments,url,secret,refresh_before,watermark_event_id,created_at,updated_at) VALUES('subscription',1,1,'mention','{}','https://events.example/hook','fixture','2026-11-10',0,'2026-11-09','2026-11-09');").unwrap();
+    conn.execute("INSERT INTO mcp_event_deliveries(subscription_id,agent_event_id,webhook_id,status,next_attempt_at,created_at,updated_at,body) VALUES('subscription',1,'msg_paused','suppressed','2026-11-09','2026-11-09','2026-11-09','cached occurrence')", []).unwrap();
+    conn.execute_batch(&catalog[pause].sql).unwrap();
     assert_eq!(conn.query_row("SELECT COUNT(*) FROM agents WHERE wake_policy='anyone' AND paused_at IS NULL AND paused_by_id IS NULL",[],|r|r.get::<_,i64>(0)).unwrap(),2);
     conn.execute("INSERT INTO agents(user_id,owner_id,kind,created_at,updated_at) VALUES(3,2,'personal','2026-11-09','2026-11-09')",[]).unwrap();
     assert_eq!(
@@ -23,6 +34,36 @@ fn assistants_migration_preserves_existing_wake_behavior_and_defaults_new_person
     assert!(
         conn.execute("UPDATE agents SET wake_policy='invalid'", [])
             .is_err()
+    );
+    conn.execute(
+        "UPDATE agents SET paused_at='2026-11-09',paused_by_id=2 WHERE user_id=1",
+        [],
+    )
+    .unwrap();
+    for migration in &catalog[pause + 1..] {
+        conn.execute_batch(&migration.sql).unwrap();
+    }
+    assert_eq!(
+        conn.query_row(
+            "SELECT wake_policy,paused_at,paused_by_id FROM agents WHERE user_id=1",
+            [],
+            |r| Ok((
+                r.get::<_, WakePolicy>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, i64>(2)?
+            ))
+        )
+        .unwrap(),
+        (WakePolicy::Anyone, "2026-11-09".into(), 2)
+    );
+    assert_eq!(
+        conn.query_row("SELECT status,body FROM mcp_event_deliveries WHERE webhook_id='msg_paused'", [], |r| Ok((r.get::<_, String>(0)?,r.get::<_, String>(1)?))).unwrap(),
+        ("suppressed".into(), "cached occurrence".into())
+    );
+    conn.execute("UPDATE mcp_event_deliveries SET status='expired'", []).unwrap();
+    assert_eq!(
+        conn.query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |r| r.get::<_, i64>(0)).unwrap(),
+        0
     );
 }
 

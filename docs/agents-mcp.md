@@ -417,6 +417,9 @@ Every `tools/call` returns `isError: true` with structured content
 `tools/list`, `events/list` and `ping` remain available.
 `events/subscribe` returns error -32024 with message `Agent paused`.
 Pending MCP deliveries become suppressed at attempt time without terminating
-subscriptions. Resume delivers new eligible events and never replays suppressed
-rows. The REST SSE stream closes on its next credential health check when an
-agent is paused, as it does for revoked credentials. A new stream returns 403.
+subscriptions, even if the subscription has expired. Pause suppression is permanent
+for that occurrence. Resume delivers new eligible events. Deliveries already marked
+`expired` before pause remain eligible for explicit replay after resume, with current
+access and cached-payload checks. The REST SSE stream closes on its next credential
+health check when an agent is paused, as it does for revoked credentials. A new
+stream returns 403.
