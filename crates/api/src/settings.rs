@@ -363,7 +363,7 @@ pub(crate) async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
         },
         appearance: api::AppearanceSettings {
             theme: theme(&appearance.theme),
-            text_size: text_size(&appearance.text_size),
+            text_size: api::TextSize::from_stored(&appearance.text_size),
             time_zone: appearance
                 .time_zone
                 .as_deref()
@@ -558,32 +558,11 @@ fn theme(value: &str) -> api::Theme {
     }
 }
 
-fn text_size(value: &str) -> api::TextSize {
-    match value {
-        "smaller" => api::TextSize::Smaller,
-        "small" => api::TextSize::Small,
-        "large" => api::TextSize::Large,
-        "larger" => api::TextSize::Larger,
-        _ => api::TextSize::Default,
-    }
-}
-
 fn theme_value(theme: api::Theme) -> String {
     match theme {
         api::Theme::Light => "light",
         api::Theme::Dark => "dark",
         api::Theme::System => "system",
-    }
-    .into()
-}
-
-fn text_size_value(size: api::TextSize) -> String {
-    match size {
-        api::TextSize::Smaller => "smaller",
-        api::TextSize::Small => "small",
-        api::TextSize::Default => "default",
-        api::TextSize::Large => "large",
-        api::TextSize::Larger => "larger",
     }
     .into()
 }
@@ -871,7 +850,7 @@ async fn save_appearance(c: &mut Ctx) -> Result {
     };
     let settings = profile_settings::Changes {
         theme: update.theme.map(theme_value),
-        text_size: update.text_size.map(text_size_value),
+        text_size: update.text_size.map(|size| size.as_str().into()),
         time_zone: update.time_zone,
         appearance_preferences: update
             .appearance_preferences

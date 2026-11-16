@@ -13,6 +13,17 @@ pub mod updates;
 mod writes;
 pub use writes::{clock_time_to_minutes, minutes_to_clock_time, replace_keyword_alerts};
 
+/// The values `users.text_size` may hold, smallest first (`campfire_api_types::TextSize`).
+pub const TEXT_SIZES: &[&str] = &[
+    "smaller",
+    "small",
+    "default",
+    "large",
+    "larger",
+    "extra_large",
+    "largest",
+];
+
 #[derive(Debug, Clone)]
 pub struct UserStatusSettings {
     pub user: User,

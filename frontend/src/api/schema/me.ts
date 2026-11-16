@@ -18,7 +18,15 @@ export const Theme = Schema.Literals(["system", "light", "dark"]);
 
 export type ThemePin = Assert<Pinned<typeof Theme, GeneratedTheme>>;
 
-export const TextSize = Schema.Literals(["smaller", "small", "default", "large", "larger"]);
+export const TextSize = Schema.Literals([
+  "smaller",
+  "small",
+  "default",
+  "large",
+  "larger",
+  "extra_large",
+  "largest",
+]);
 
 export type TextSizePin = Assert<Pinned<typeof TextSize, GeneratedTextSize>>;
 

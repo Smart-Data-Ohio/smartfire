@@ -38,7 +38,7 @@ test("a theme pinned on this device wins, until it's set back to the account's",
   await expect(html(page)).toHaveAttribute("data-theme", "dark");
 });
 
-test("the five text sizes change the text, and the choice comes back on start", async ({
+test("the seven text sizes change the text, and the choice comes back on start", async ({
   page,
 }) => {
   await openApp(page, "settings/appearance");
@@ -46,26 +46,32 @@ test("the five text sizes change the text, and the choice comes back on start", 
   await page.getByRole("radio", { name: "Dark", exact: true }).check();
   await expect(html(page)).toHaveAttribute("data-theme", "dark");
 
-  const sizes: Record<string, number> = {};
+  const textSize = page.getByRole("combobox", { name: "Text size" });
 
-  for (const label of ["Smaller", "Small", "Default", "Large", "Larger"]) {
-    await page.getByRole("radio", { name: label, exact: true }).check();
-    await expect(page.getByRole("radio", { name: label, exact: true })).toBeChecked();
-    sizes[label] = await fontSize(page, ".settings-page h1, h1");
+  // Someone looking for "font size" finds it under its hint.
+  await expect(textSize).toHaveAccessibleDescription(/font size/);
+
+  const labels = ["Smaller", "Small", "Default", "Large", "Larger", "Extra large", "Largest"];
+  const sizes: number[] = [];
+
+  for (const label of labels) {
+    await textSize.selectOption({ label });
+    await expect.poll(() => fontSize(page, ".settings-page h1, h1")).not.toBe(sizes.at(-1) ?? 0);
+    sizes.push(await fontSize(page, ".settings-page h1, h1"));
   }
 
-  expect(sizes.Smaller).toBeLessThan(sizes.Small ?? 0);
-  expect(sizes.Small).toBeLessThan(sizes.Default ?? 0);
-  expect(sizes.Default).toBeLessThan(sizes.Large ?? 0);
-  expect(sizes.Large).toBeLessThan(sizes.Larger ?? 0);
+  expect(sizes).toEqual([...sizes].sort((a, b) => a - b));
 
-  // The account keeps "Larger": a fresh start shows it, messages included.
-  await openApp(page, "");
+  // The account keeps "Largest": a fresh start shows it, messages included.
+  await openApp(page, `r/${ROOM_IDS.general}`);
   await expect(html(page)).toHaveAttribute("data-theme", "dark");
-  await expect(html(page)).toHaveAttribute("data-text-size", "larger");
+  await expect(html(page)).toHaveAttribute("data-text-size", "largest");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
-    "18px",
+    "24px",
   );
+  // Message text follows: the body token is 15 px at the default size.
+  await expect(page.locator(".message:not([data-system]) .message-body").first()).toBeVisible();
+  expect(await fontSize(page, ".message:not([data-system]) .message-body")).toBeCloseTo(22.5, 1);
 });
 
 test("the sidebar's theme button saves to the account when nothing is pinned", async ({ page }) => {

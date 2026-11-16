@@ -120,6 +120,24 @@ fn absent_values_are_sent_as_null_not_omitted() {
 }
 
 #[test]
+fn text_sizes_keep_their_stored_names_in_order() {
+    let wire = [
+        "smaller",
+        "small",
+        "default",
+        "large",
+        "larger",
+        "extra_large",
+        "largest",
+    ];
+    let sizes = wire.map(|name| serde_json::from_value::<TextSize>(json!(name)).unwrap());
+    assert_eq!(
+        sizes.map(|size| serde_json::to_value(size).unwrap()),
+        wire.map(Value::from)
+    );
+}
+
+#[test]
 fn me_round_trips() {
     let me = Me {
         user: user(),

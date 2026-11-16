@@ -46,10 +46,7 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     for (key, values) in [
         ("presence_setting", &["auto", "dnd", "invisible"][..]),
         ("theme", &["light", "dark", "system"][..]),
-        (
-            "text_size",
-            &["smaller", "small", "default", "large", "larger"][..],
-        ),
+        ("text_size", crate::models::user_status_settings::TEXT_SIZES),
     ] {
         if !text(key).is_some_and(|s| values.contains(&s)) {
             errors.add(key, "is not included in the list");

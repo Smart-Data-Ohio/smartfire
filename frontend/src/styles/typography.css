@@ -133,6 +133,9 @@
     --font-features: "cv11", "ss01", "calt";
 
     /* Scale (rem at 16 px). Weights: 400 body, 500 names and unread rows, 600 headings. No 700. */
+    --text-tag: 0.625rem; /* 10: the unread divider, file-type tags */
+    --text-caption: 0.6875rem; /* 11: message flags, chips, hints */
+    --leading-caption: 1rem;
     --text-meta: 0.75rem; /* 12: timestamps, captions, badges */
     --leading-meta: 1rem;
     --text-sidebar: 0.8125rem; /* 13: sidebar rows, small controls */
@@ -198,6 +201,14 @@
 
 :root[data-text-size="larger"] {
   font-size: 112.5%;
+}
+
+:root[data-text-size="extra_large"] {
+  font-size: 125%;
+}
+
+:root[data-text-size="largest"] {
+  font-size: 150%;
 }
 
 @layer tokens {

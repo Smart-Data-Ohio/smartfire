@@ -690,6 +690,52 @@ async fn an_email_change_needs_the_current_password() {
     assert_eq!(snapshot(&a).await["audits"], before["audits"]);
 }
 
+/// The two steps above "Larger" save through the API and the classic form alike, and come back
+/// in the settings, `/api/v1/me` and the shell's `<html data-text-size>` boot value.
+#[tokio::test]
+async fn the_largest_text_sizes_save_and_come_back() {
+    // The database's validation accepts exactly the sizes the API names.
+    assert_eq!(
+        campfire_db::models::user_status_settings::TEXT_SIZES,
+        api::TextSize::ALL.map(api::TextSize::as_str)
+    );
+    for size in ["extra_large", "largest"] {
+        let saved = assert_parity(
+            async |b| {
+                classic(
+                    b,
+                    form(
+                        "/users/me/profile",
+                        Method::PATCH,
+                        &[("user[text_size]", size)],
+                    ),
+                )
+                .await
+            },
+            async |b| {
+                let settings = spa(
+                    b,
+                    Method::PATCH,
+                    "/api/v1/settings/appearance",
+                    update(APPEARANCE, json!({ "textSize": size })),
+                )
+                .await;
+                assert_eq!(json!(settings.appearance.text_size), json!(size));
+                let me: Value = parse(&b.send(get("/api/v1/me")).await);
+                assert_eq!(me["preferences"]["textSize"], json!(size));
+                let boot: Value = parse(&b.send(get("/api/v1/boot")).await);
+                assert_eq!(boot["textSize"], json!(size));
+            },
+        )
+        .await;
+        let Some((classic, _)) = saved else { return };
+        assert!(
+            classic.rows.to_string().contains(&format!("\"{size}\"")),
+            "the classic form stores {size}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn appearance_and_calls_save_as_the_classic_form_does() {
     assert_parity(

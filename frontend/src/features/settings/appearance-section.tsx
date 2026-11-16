@@ -139,11 +139,12 @@ export function AppearanceSection() {
           disabled={busy("theme")}
           onChange={(theme: Theme) => save("theme", { theme }, showTheme)}
         />
-        <SettingsRadios
+        <SettingsSelect
           label="Text size"
           value={chosen.textSize ?? appearance.textSize}
           choices={TEXT_SIZE_CHOICES}
           disabled={busy("textSize")}
+          hint="Makes all text bigger or smaller (the font size), on every device you sign in on."
           onChange={(textSize: TextSize) => save("textSize", { textSize }, showTextSize)}
         />
         <SettingsSelect

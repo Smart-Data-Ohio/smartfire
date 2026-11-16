@@ -368,10 +368,10 @@
     border-radius: var(--radius-xs);
     background: var(--danger-solid);
     color: var(--on-danger);
-    font-size: 10px;
+    font-size: var(--text-tag);
     font-weight: var(--weight-semibold);
     letter-spacing: 0.04em;
-    line-height: 16px;
+    line-height: var(--leading-caption);
     text-transform: uppercase;
   }
 
@@ -473,10 +473,12 @@
     min-width: 0;
   }
 
+  /* At the larger text sizes a narrow column can't hold name and time: the time wraps whole. */
   .message-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--space-2);
+    gap: 0 var(--space-2);
   }
 
   .message-author {
@@ -488,11 +490,13 @@
   .message-time {
     color: var(--text-faint);
     font-size: var(--text-meta);
+    white-space: nowrap;
   }
 
   .message-edited {
     color: var(--text-faint);
-    font-size: 11px;
+    font-size: var(--text-caption);
+    white-space: nowrap;
   }
 
   .message-body-row {
@@ -544,7 +548,7 @@
     }
 
     .unread-divider-label {
-      font-size: 11px;
+      font-size: var(--text-caption);
     }
 
     .timeline::before {
@@ -1103,7 +1107,7 @@
     .room-title .room-title-text .room-title-name {
       max-width: none;
       font-weight: var(--weight-semibold);
-      line-height: 20px;
+      line-height: 1.25rem;
     }
 
     .room-title-text .room-header-topic {
@@ -1111,7 +1115,7 @@
       margin-left: 0;
       border-left: 0;
       font-size: var(--text-meta);
-      line-height: 16px;
+      line-height: var(--leading-meta);
     }
 
     /* The call button at the touch size, its glyph alone; who's in the call shows in the call
