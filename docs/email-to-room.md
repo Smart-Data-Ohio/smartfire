@@ -68,49 +68,88 @@ the request body with `Content-Type: message/rfc822`.
    Inbound Parse) following that provider's domain-verification steps.
    This is DNS/org configuration outside this repo; nothing here changes
    it.
-3. Configure the provider to forward each message's raw RFC 822 bytes to
-   the relay endpoint with basic auth:
-   - **Postmark:** an inbound rule whose webhook posts the raw message
-     (enable "Post the full raw content") to the relay URL with the
-     basic-auth username `actionmailbox` and the ingress password.
-     Postmark stamps SpamAssassin verdict headers (`X-Spam-Status`,
-     `X-Spam-Score`, `X-Spam-Tests`), not an `Authentication-Results`
-     header ([inbound webhook docs](https://postmarkapp.com/developer/webhooks/inbound-webhook)).
-   - **Mailgun:** a route whose action forwards to the relay URL with
-     basic-auth credentials in the URL
-     (`https://actionmailbox:<password>@<app host>/rails/action_mailbox/relay/inbound_emails`).
-     Mailgun stamps `X-Mailgun-Spf` and `X-Mailgun-Dkim-Check-Result`
-     (plus `X-Mailgun-Sflag`/`X-Mailgun-Sscore` when spam filtering
-     marks headers), not an `Authentication-Results` header
-     ([spam filter docs](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/spam-filter/)).
-   - **SendGrid:** Inbound Parse pointed at the relay URL with basic auth
-     enabled, username `actionmailbox`. SendGrid reports SPF/DKIM
-     results as separate `SPF` and `dkim` Inbound Parse POST fields,
-     not as an `Authentication-Results` header on the raw message
-     ([Inbound Parse docs](https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-up-the-inbound-parse-webhook)).
-   - **Self-hosted Postfix/Exim/Qmail:** pipe each inbound message to an
-     HTTP POST of its raw bytes, for example
+3. Deliver raw RFC 822 bytes to the relay endpoint with basic auth.
+   Provider webhooks are not interchangeable with this endpoint. It rejects
+   JSON and form payloads with HTTP 415. Choose one of these paths:
+   - **Cloudflare Email Routing + Email Worker:** route the receiving
+     subdomain's catch-all to a Worker. Its
+     [email handler](https://developers.cloudflare.com/email-service/api/route-emails/email-handler/)
+     exposes `message.raw` and the envelope recipient `message.to`.
+     Prepend `X-Original-To: <message.to>` to the raw message, then POST
+     it with `Content-Type: message/rfc822` and basic auth. Store the
+     password as a Worker secret. Handle failed POSTs explicitly.
+   - **Mailgun:** use an adapter that validates Mailgun's webhook,
+     extracts `body-mime` from a
+     [MIME route](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/receive-http),
+     and prepends `X-Original-To` from its `recipient` envelope field.
+     The adapter POSTs those raw bytes to Smartfire. Mailgun's HTTP
+     route itself posts form data, not `message/rfc822`.
+   - **Postmark:** enable raw email content, then use an adapter that
+     authenticates the webhook and extracts `RawEmail` and the envelope
+     recipient `OriginalRecipient` from its
+     [JSON payload](https://postmarkapp.com/developer/webhooks/inbound-webhook).
+     Prepend `X-Original-To` with that recipient and POST the raw bytes.
+     Enabling raw content still sends JSON, not a raw HTTP body.
+   - **SendGrid:** enable "POST the raw, full MIME message", then use an
+     adapter that authenticates the webhook, extracts the `email` MIME
+     field and recipients from `envelope.to`, and POSTs the raw bytes
+     with `X-Original-To` for the intended room. Its
+     [Inbound Parse webhook](https://www.twilio.com/docs/sendgrid/api-reference/settings-inbound-parse)
+     sends multipart form data, including in raw mode.
+   - **Self-hosted Postfix/Exim/Qmail:** pipe inbound mail to an HTTP
+     POST of its raw bytes. Preserve the final envelope recipient as
+     `X-Original-To` or `Delivered-To`. After adding that header, use
      `curl --fail --data-binary @- -H 'Content-Type: message/rfc822' -u actionmailbox:<password> https://<app host>/rails/action_mailbox/relay/inbound_emails`.
-     A DKIM/DMARC milter (OpenDKIM, OpenDMARC, Rspamd) on
-     your MTA stamps `Authentication-Results` with your hostname as
-     the authserv-id.
+     Keep mail queued when the POST fails. A DKIM/DMARC milter such as
+     OpenDKIM, OpenDMARC, or Rspamd can stamp `Authentication-Results`.
 
-   Whichever relay you use, it must stamp its own
-   `Authentication-Results` header for member verification to work:
-   the app trusts only the topmost such header whose authserv-id
-   matches `INBOUND_EMAIL_AUTHSERV_ID`, and reads no other sender
-   verdict (`Received-SPF`, `DKIM-Signature`, `X-Spam-*`,
-   `X-Mailgun-*`, SendGrid's POST fields). The SaaS relays above
-   report their verdicts only in those proprietary headers and
-   fields, so their mail always posts as the **Email** bot. Set the
-   authserv id from a received message's headers — the identifier
-   before the first `;` in your relay's field — or leave it unset.
+   The endpoint receives no SMTP envelope or provider form fields.
+   Routing reads `To`, `Cc`, `Bcc`, `X-Original-To`, `X-Forwarded-To`,
+   and `Delivered-To` in the raw message. An envelope-only delivery
+   needs the relay or adapter to add one of these headers. Validate
+   envelope addresses before inserting them into a header, including
+   rejecting carriage returns and line feeds.
+
+   For member attribution, the relay must stamp its own
+   `Authentication-Results` header. The app trusts only the topmost
+   matching `INBOUND_EMAIL_AUTHSERV_ID`, with an aligned SPF, DKIM, or
+   DMARC pass. Provider-specific verdict fields are not read. Leave
+   `INBOUND_EMAIL_AUTHSERV_ID` unset unless the relay supplies and
+   protects this header. Delivery still works as the **Email** bot.
 4. Send a test message to a room's address and confirm it lands in the
    room; rotate the room's address afterwards if the test address was
    shared.
 
 Inbound mail is deduplicated by message id, and processing runs through
 the normal job backend, so a failed run retries like any other job.
+
+## Forwarding an inbox (Gmail / Google Workspace)
+
+1. Create an address in the room's **Email to room** settings. In the
+   Gmail inbox, open **Settings > See all settings > Forwarding and
+   POP/IMAP**, then **Add a forwarding address** and enter the room address.
+2. Gmail sends a confirmation email to the room. Open its verification
+   link or copy its confirmation code back into Gmail. This email posts
+   as the **Email** bot without needing a matching member or sender
+   authentication pass. It shares the normal 30-messages-per-hour room
+   limit, so request it before forwarding a busy inbox.
+3. Return to Gmail, enable forwarding or create a forwarding filter, and
+   save. Send a fresh message to the inbox and confirm it appears in the
+   room. Gmail's [forwarding instructions](https://support.google.com/mail/answer/10957)
+   cover this confirmation step. Gmail does not automatically forward spam.
+
+For a Google Group, add the room address as an external member with
+**Each email** delivery. Workspace and group policy must allow external
+members. Moderation, spam filtering, or digest delivery can delay or
+prevent delivery before Smartfire receives anything.
+
+Forwarding preserves the original `From` and often the inbox or group in
+`To`. The relay must preserve the room's final recipient as described
+above. Mail uses normal room unread state and notifications, including
+each member's involvement, mute, and do-not-disturb settings. Choose
+**Everything** to be notified of every incoming message. People with inbox
+access must also join the room. Forwarding does not synchronize access.
+Anyone in the room can read forwarded mail and the confirmation message.
 
 ## Sender verification
 

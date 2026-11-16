@@ -1,6 +1,6 @@
 use campfire_db::{
     Clock, Database, Event, EventSink, Message, RecordingSink, Room, TestClock, Timestamp, Tx,
-    fixtures,
+    User, fixtures,
 };
 use campfire_jobs::{JobQueue, Outcome, QueueConfig, Registry, RunnerConfig};
 use campfire_mail::{
@@ -740,6 +740,86 @@ fn render(_: &campfire_db::Connection, _: &Room, source: &str) -> campfire_db::R
             .replace('<', "&lt;")
             .replace('>', "&gt;")
     ))
+}
+
+macro_rules! forwarded_mail_test {
+    ($name:ident, $headers:expr) => {
+        #[tokio::test]
+        async fn $name() {
+            let h = Harness::new().await;
+            let raw = format!(
+                "From: Customer <customer@example.org>\r\n\
+                 To: Support <support@example.com>\r\n\
+                 {}\r\n\
+                 Subject: Shared inbox request\r\n\
+                 Content-Type: text/plain; charset=utf-8\r\n\r\n\
+                 Please help with our invoice.",
+                $headers.replace("ROOM", &format!("room-{}@mail.test", h.token)),
+            );
+            let message = h.message(h.deliver(raw.into_bytes()).await).await;
+            assert_eq!(message.room_id, h.room_id);
+            assert!(
+                message
+                    .markdown_source
+                    .unwrap()
+                    .contains("Please help with our invoice.")
+            );
+            let creator =
+                h.db.read(move |c| User::find(c, message.creator_id))
+                    .await
+                    .unwrap();
+            assert_eq!(creator.name, "Email");
+            assert!(creator.is_bot());
+        }
+    };
+}
+forwarded_mail_test!(
+    forwarded_mail_delivered_to,
+    "Delivered-To: support@example.com\r\nDelivered-To: ROOM"
+);
+forwarded_mail_test!(
+    forwarded_mail_x_forwarded_to,
+    "X-Forwarded-To: archive@example.com,\r\n ROOM"
+);
+forwarded_mail_test!(forwarded_mail_x_original_to, "X-Original-To: ROOM");
+forwarded_mail_test!(
+    forwarded_mail_google_group,
+    "List-ID: <support.example.com>\r\nX-BeenThere: support@example.com\r\nDelivered-To: ROOM"
+);
+
+#[tokio::test]
+async fn gmail_forwarding_confirmation_keeps_code_and_url() {
+    let h = Harness::new().await;
+    for html in [false, true] {
+        let code = "987654321";
+        let url = "https://mail-settings.google.com/mail/vf-test-confirmation";
+        let body = if html {
+            format!(
+                "<style>hidden-style</style><script>hidden-script</script><p>Confirmation code: <b>{code}</b></p><p><a href=\"{url}\">{url}</a></p>"
+            )
+        } else {
+            format!("Confirmation code: {code}\nConfirm forwarding: {url}")
+        };
+        let raw = String::from_utf8(h.raw(
+            "Gmail Team <forwarding-noreply@google.com>",
+            &[],
+            "Gmail Forwarding Confirmation - Receive Mail from support@example.com",
+            &body,
+        ))
+        .unwrap()
+        .replace("text/plain", if html { "text/html" } else { "text/plain" });
+        let message = h.message(h.deliver(raw.into_bytes()).await).await;
+        let source = message.markdown_source.unwrap();
+        assert!(source.contains(code));
+        assert!(source.contains(url));
+        assert!(!source.contains("hidden-script"));
+        assert!(!source.contains("hidden-style"));
+        let creator =
+            h.db.read(move |c| User::find(c, message.creator_id))
+                .await
+                .unwrap();
+        assert!(creator.is_bot());
+    }
 }
 
 macro_rules! member_test {

@@ -413,11 +413,20 @@ impl Email {
     }
     fn parse_with_depth_limit(raw: &[u8], depth_limit: Option<usize>) -> anyhow::Result<Self> {
         let (mail, leaves, multipart, mime_depth) = mime_leaves(raw, depth_limit)?;
-        let recipients = ["To", "Cc", "Bcc"]
-            .iter()
-            .flat_map(|h| addresses(&mail, h))
-            .map(|s| s.addr)
-            .collect();
+        // Forwarding keeps the inbox in To. The raw relay has no SMTP envelope, so
+        // include the delivery headers that relays preserve or add for that recipient.
+        let recipients = [
+            "To",
+            "Cc",
+            "Bcc",
+            "X-Original-To",
+            "X-Forwarded-To",
+            "Delivered-To",
+        ]
+        .iter()
+        .flat_map(|h| addresses(&mail, h))
+        .map(|s| s.addr)
+        .collect();
         let from = addresses(&mail, "From").into_iter().next();
         let mut files = Vec::new();
         let mut plain = None;
