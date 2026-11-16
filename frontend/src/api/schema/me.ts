@@ -12,21 +12,18 @@ import type { VoiceMode as GeneratedVoiceMode } from "../../gen/VoiceMode.ts";
 import { RoomId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
+import { tolerantLiteralsOr } from "./tolerant.ts";
 import { User } from "./user.ts";
 
 export const Theme = Schema.Literals(["system", "light", "dark"]);
 
 export type ThemePin = Assert<Pinned<typeof Theme, GeneratedTheme>>;
 
-export const TextSize = Schema.Literals([
-  "smaller",
-  "small",
+/** A size this build doesn't know (a newer server's) decodes as `"default"`. */
+export const TextSize = tolerantLiteralsOr(
+  ["smaller", "small", "default", "large", "larger", "extra_large", "largest"],
   "default",
-  "large",
-  "larger",
-  "extra_large",
-  "largest",
-]);
+);
 
 export type TextSizePin = Assert<Pinned<typeof TextSize, GeneratedTextSize>>;
 

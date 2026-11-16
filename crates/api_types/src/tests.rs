@@ -135,6 +135,7 @@ fn text_sizes_keep_their_stored_names_in_order() {
         sizes.map(|size| serde_json::to_value(size).unwrap()),
         wire.map(Value::from)
     );
+    assert_eq!(TextSize::ALL.map(TextSize::as_str), wire);
 }
 
 #[test]

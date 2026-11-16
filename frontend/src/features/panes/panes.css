@@ -154,7 +154,8 @@
 
   .pane-title {
     min-width: 0;
-    overflow: hidden;
+    /* Clips sideways for the ellipsis only, so large text sizes keep their descenders. */
+    overflow: clip visible;
     font-size: var(--text-body);
     font-weight: var(--weight-semibold);
     line-height: 20px;

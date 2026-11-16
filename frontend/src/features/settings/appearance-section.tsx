@@ -144,7 +144,7 @@ export function AppearanceSection() {
           value={chosen.textSize ?? appearance.textSize}
           choices={TEXT_SIZE_CHOICES}
           disabled={busy("textSize")}
-          hint="Makes all text bigger or smaller (the font size), on every device you sign in on."
+          hint="Sets the font size across Smartfire."
           onChange={(textSize: TextSize) => save("textSize", { textSize }, showTextSize)}
         />
         <SettingsSelect
