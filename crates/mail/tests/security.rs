@@ -8,6 +8,14 @@ fn unicode_auth_cases() -> serde_json::Value {
     serde_json::from_str(include_str!("../../../vectors/unicode_casing_parity.json")).unwrap()
 }
 
+fn dkim_only_expected(case: &serde_json::Value) -> bool {
+    // Preserve the recorded Rails verdicts, with explicit overrides for the stricter policy.
+    case.get("dkim_only_expected")
+        .unwrap_or(&case["expected"])
+        .as_bool()
+        .unwrap()
+}
+
 #[test]
 fn unicode_parity_authenticated_domains_use_downcase_without_folding() {
     for case in unicode_auth_cases()["auth"]
@@ -22,7 +30,7 @@ fn unicode_parity_authenticated_domains_use_downcase_without_folding() {
                 case["relay"].as_str(),
                 case["address"].as_str().unwrap()
             ),
-            case["expected"].as_bool().unwrap(),
+            dkim_only_expected(case),
             "{case}"
         );
     }
@@ -41,7 +49,7 @@ fn unicode_parity_relay_ids_use_full_folding_and_topmost_header() {
         let address = case["address"].as_str().unwrap();
         assert_eq!(
             authenticated_sender(&[header.into()], relay, address),
-            case["expected"].as_bool().unwrap(),
+            dkim_only_expected(case),
             "{case}"
         );
         assert!(!authenticated_sender(
@@ -80,7 +88,7 @@ fn review_non_ascii_authentication_whitespace_is_rejected() {
     ));
 }
 #[test]
-fn trusted_relay_authentication_matches_rails_corpus() {
+fn trusted_relay_authentication_matches_corpus_with_dkim_only_policy() {
     let corpus: serde_json::Value =
         serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
     for case in corpus["auth"].as_array().unwrap() {
@@ -98,7 +106,7 @@ fn trusted_relay_authentication_matches_rails_corpus() {
                 case["authserv_id"].as_str(),
                 case["address"].as_str().unwrap()
             ),
-            case["expected"].as_bool().unwrap(),
+            dkim_only_expected(case),
             "{case}"
         );
     }
@@ -225,7 +233,7 @@ fn relay_header(case: &serde_json::Value) -> Option<String> {
 }
 
 #[test]
-fn parsed_mail_authentication_headers_match_rails_corpus() {
+fn parsed_mail_authentication_headers_match_corpus_with_dkim_only_policy() {
     let corpus: serde_json::Value =
         serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
     for case in corpus["auth"].as_array().unwrap() {
@@ -249,7 +257,7 @@ fn parsed_mail_authentication_headers_match_rails_corpus() {
                 case["authserv_id"].as_str(),
                 case["address"].as_str().unwrap()
             ),
-            case["expected"].as_bool().unwrap(),
+            dkim_only_expected(case),
             "{case}"
         );
     }

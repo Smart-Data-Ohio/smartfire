@@ -27,34 +27,29 @@ pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, addre
     else {
         return false;
     };
-    static PROPERTIES: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?i)(header\.d|header\.from|smtp\.mailfrom)=([^\x09-\x0d ;()]+)").unwrap()
-    });
+    static DKIM_DOMAIN: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?i)header\.d=([^\x09-\x0d ;()]+)").unwrap());
     header.split(';').skip(1).any(|clause| {
         let Some((method, rest)) = strip(clause).split_once('=') else {
             return false;
         };
-        if !strip(rest)
-            .split(|c: char| regex_space(c) || c == '(')
-            .next()
-            .unwrap_or("")
-            .eq_ignore_ascii_case("pass")
+        // SPF authenticates the envelope sender, which forwarding can rewrite onto
+        // the From domain. DMARC can pass on that SPF alignment alone.
+        if !strip(method).eq_ignore_ascii_case("dkim")
+            || !strip(rest)
+                .split(|c: char| regex_space(c) || c == '(')
+                .next()
+                .unwrap_or("")
+                .eq_ignore_ascii_case("pass")
         {
             return false;
         }
-        let property = match strip(method).to_lowercase().as_str() {
-            "dkim" => "header.d",
-            "dmarc" => "header.from",
-            "spf" => "smtp.mailfrom",
-            _ => return false,
-        };
-        PROPERTIES.captures_iter(clause).any(|cap| {
-            cap[1].eq_ignore_ascii_case(property)
-                && cap[2]
-                    .trim_start_matches('@')
-                    .rsplit('@')
-                    .next()
-                    .is_some_and(|d| unicode::downcase(d) == domain)
+        DKIM_DOMAIN.captures_iter(clause).any(|cap| {
+            cap[1]
+                .trim_start_matches('@')
+                .rsplit('@')
+                .next()
+                .is_some_and(|d| unicode::downcase(d) == domain)
         })
     })
 }
@@ -149,7 +144,6 @@ pub fn attachment_verdict(content_type: &str, decoded: usize, encoded: usize) ->
 #[derive(Debug, Clone)]
 pub struct Email {
     pub recipients: Vec<String>,
-    pub direct_recipients: Vec<String>,
     pub from: Option<String>,
     pub sender_name: Option<String>,
     pub subject: String,
@@ -414,19 +408,20 @@ impl Email {
     }
     fn parse_with_depth_limit(raw: &[u8], depth_limit: Option<usize>) -> anyhow::Result<Self> {
         let (mail, leaves, multipart, mime_depth) = mime_leaves(raw, depth_limit)?;
-        let direct_recipients: Vec<String> = ["To", "Cc", "Bcc"]
-            .iter()
-            .flat_map(|h| addresses(&mail, h))
-            .map(|s| s.addr)
-            .collect();
         // X-Original-To and X-Forwarded-To follow Action Mailbox's mail_ext/recipients.rb.
         // Delivered-To is a Smartfire addition. Prefer delivery headers to visible recipients.
-        let recipients = ["X-Original-To", "Delivered-To", "X-Forwarded-To"]
-            .iter()
-            .flat_map(|h| addresses(&mail, h))
-            .map(|s| s.addr)
-            .chain(direct_recipients.iter().cloned())
-            .collect();
+        let recipients = [
+            "X-Original-To",
+            "Delivered-To",
+            "X-Forwarded-To",
+            "To",
+            "Cc",
+            "Bcc",
+        ]
+        .iter()
+        .flat_map(|h| addresses(&mail, h))
+        .map(|s| s.addr)
+        .collect();
         let from = addresses(&mail, "From").into_iter().next();
         let mut files = Vec::new();
         let mut plain = None;
@@ -480,7 +475,6 @@ impl Email {
         };
         Ok(Self {
             recipients,
-            direct_recipients,
             from: from
                 .as_ref()
                 .map(|s| strip(&s.addr).to_owned())

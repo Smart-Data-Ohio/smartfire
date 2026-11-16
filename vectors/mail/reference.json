@@ -1197,6 +1197,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -1208,6 +1209,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -1219,6 +1221,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -1989,6 +1992,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -2000,6 +2004,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -2011,6 +2016,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -2319,6 +2325,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -2330,6 +2337,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -2341,6 +2349,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -3111,6 +3120,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -3122,6 +3132,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -3133,6 +3144,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -5289,6 +5301,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -6147,6 +6160,7 @@
       ],
       "authserv_id": "mx.mail.test",
       "address": "person@example.com",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
@@ -6365,6 +6379,7 @@
       "headers": [
         "mx.mail.test;\r\n       dkim=pass header.i=@signer.example.com header.s=selector-fixture header.b=fixture;\r\n       arc=pass (i=1 spf=pass spfdomain=example.com dkim=pass dkdomain=example.com dmarc=pass fromdomain=example.com);\r\n       spf=pass (fixture relay comment) smtp.mailfrom=person@example.com"
       ],
+      "dkim_only_expected": false,
       "expected": true
     }
   ],

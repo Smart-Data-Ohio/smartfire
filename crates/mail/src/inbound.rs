@@ -195,15 +195,7 @@ fn creator(
     email: &Email,
     cfg: &Config,
 ) -> campfire_db::Result<(User, bool)> {
-    // Forwarded envelope authentication can align with a spoofed member From address.
-    if let Some(address) = &email.from
-        && let Some(domain) = &cfg.domain
-        && let Some(token) = &room.inbound_email_token
-        && email
-            .direct_recipients
-            .iter()
-            .any(|recipient| recipient.eq_ignore_ascii_case(&format!("room-{token}@{domain}")))
-    {
+    if let Some(address) = &email.from {
         let user = tx.conn().query_row("SELECT users.id FROM users JOIN memberships ON memberships.user_id = users.id WHERE users.status = 0 AND users.role != 2 AND memberships.room_id = ? AND LOWER(users.email_address) = ? LIMIT 1", params![room.id, unicode::downcase(address)], |r| r.get::<_, i64>(0)).optional()?;
         if let Some(id) = user
             && authenticated_sender(&email.auth_headers, cfg.authserv_id.as_deref(), address)

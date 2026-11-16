@@ -1,12 +1,10 @@
 # Email to room
 
 Any chat room (direct and board rooms excluded) can have a secret forward-to address.
-Mail sent there posts in the room. Direct mail posts as the matched member
-when the room address appears in `To`, `Cc`, or `Bcc`, the sender is an
-active room member, and the relay verifies the `From` domain (see
-[Sender verification](#sender-verification)). Forwarded mail and
-unverified senders post as the workspace **Email** bot with the sender
-named in the body.
+Mail sent or forwarded there posts in the room. Mail posts as the matched
+active room member when the relay verifies a DKIM signature from the
+`From` domain (see [Sender verification](#sender-verification)). Other mail
+posts as the workspace **Email** bot with the sender named in the body.
 
 ## The address
 
@@ -16,6 +14,9 @@ room (an administrator, or its creator) creates or rotates it from the
 room's settings page; rotating retires the old address immediately.
 Direct and board rooms never have an address, and deleted rooms receive
 nothing.
+
+Keep the address private. Anyone who knows it can post mail to the room.
+If the address leaks, rotate it in the room's settings.
 
 While `INBOUND_EMAIL_DOMAIN` is unset, inbound email is disabled cleanly:
 the mailbox drops everything, the room settings explain what to set, and
@@ -83,7 +84,8 @@ the request body with `Content-Type: message/rfc822`.
      it with `Content-Type: message/rfc822` and basic auth. Store the
      password as a Worker secret. Handle failed POSTs explicitly.
      Cloudflare [documents a standard `Authentication-Results` header](https://developers.cloudflare.com/email-service/api/route-emails/email-handler/#authentication-results).
-     The adapter must protect that header as described below.
+     Set `INBOUND_EMAIL_AUTHSERV_ID=mx.cloudflare.net`. The adapter must
+     protect that header as described below.
    - **Mailgun:** use an adapter that validates Mailgun's webhook,
      extracts `body-mime` from a
      [MIME route](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/receive-http),
@@ -121,16 +123,19 @@ the request body with `Content-Type: message/rfc822`.
 
    For member attribution, the relay must stamp its own
    `Authentication-Results` header. The app trusts only the topmost
-   matching `INBOUND_EMAIL_AUTHSERV_ID`, with an aligned SPF, DKIM, or
-   DMARC pass. Provider-specific verdict fields are not read. Leave
-   `INBOUND_EMAIL_AUTHSERV_ID` unset unless the relay supplies and
-   protects this header. Delivery still works as the **Email** bot.
+   matching `INBOUND_EMAIL_AUTHSERV_ID`, with `dkim=pass` and `header.d`
+   matching the `From` domain exactly. Provider-specific verdict fields
+   are not read. Leave `INBOUND_EMAIL_AUTHSERV_ID` unset unless the relay
+   supplies and protects this header. Delivery still works as the **Email** bot.
 4. Send a test message to a room's address and confirm it lands in the
    room; rotate the room's address afterwards if the test address was
    shared.
 
-Inbound mail is deduplicated by message id, and processing runs through
-the normal job backend, so a failed run retries like any other job.
+Inbound mail is deduplicated by `(message_id, checksum of the raw bytes)`.
+An identical delivery does not post again. Copies with different raw bytes
+post separately even when they share a message id. A message Cc'd to the room
+and also forwarded from an inbox therefore posts twice. Processing runs
+through the normal job backend, so a failed run retries like any other job.
 
 ## Forwarding an inbox (Gmail / Google Workspace)
 
@@ -154,11 +159,13 @@ prevent delivery before Smartfire receives anything.
 
 Forwarding preserves the original `From` and often the inbox or group in
 `To`. The relay must preserve the room's final recipient as described
-above. Forwarded mail always posts as the **Email** bot naming the sender.
-A forwarder's rewritten envelope sender can pass authentication for the
-inbox's domain even when the original `From` is spoofed, so that pass
-cannot justify posting as a member. Member attribution requires the
-chosen room address in `To`, `Cc`, or `Bcc` as well as sender verification.
+above. Forwarded mail from an active room member posts as that member when
+the relay reports `dkim=pass` with `header.d` matching the `From` domain
+exactly. A valid signature from the author's domain can survive forwarding,
+even when the room appears only in a delivery header. If forwarding breaks
+the signature, or the author's domain does not DKIM-sign, mail posts as the
+**Email** bot naming the sender. SPF and DMARC passes do not establish member
+identity, including for Gmail forwarding and Google Groups delivery.
 
 Mail over 30 messages per hour per room is dropped silently. The relay
 and Gmail see success, so forwarding a busy inbox can lose mail.
@@ -172,38 +179,38 @@ Anyone in the room can read forwarded mail and the confirmation message.
 ## Sender verification
 
 `From` is trivially spoofable, so a member address alone never decides
-who a message posts as. Mail posts as the matched member only when the
-chosen room address appears in `To`, `Cc`, or `Bcc` and the topmost
+who a message posts as. Mail posts as the matched active room member only
+when the topmost matching relay header verifies DKIM. The app selects the
 `Authentication-Results` header ([RFC 8601](https://www.rfc-editor.org/rfc/rfc8601.html))
-whose authserv-id matches `INBOUND_EMAIL_AUTHSERV_ID` reports a pass
-aligned with the `From` domain. Anything else — the id unconfigured,
-no header matching it, a failure, or a pass for another domain —
-posts as the **Email** bot with the sender shown.
+whose authserv-id matches `INBOUND_EMAIL_AUTHSERV_ID` and appears first.
+That header must report `dkim=pass` with `header.d` matching the `From`
+domain exactly.
+The comparison ignores domain case but does not accept a parent or
+subdomain match. This rule applies to both direct and forwarded mail.
+`To`, `Cc`, and `Bcc` do not prove identity because the sender writes them.
+An unconfigured id, no matching header, a failed or missing DKIM result,
+or a pass for another domain means the mail posts as the **Email** bot.
+Members whose domains do not DKIM-sign also post as the bot.
 
-A pass counts only with its own method's domain property matching the
-`From` domain exactly:
-
-- `dkim=pass` with `header.d` matching,
-- `dmarc=pass` with `header.from` matching,
-- `spf=pass` with `smtp.mailfrom` matching.
-
-An `spf=pass` on `smtp.helo` alone never verifies: the HELO name says
-which server connected, not who the message is from.
+DKIM verifies a signature by the author's domain. SPF authenticates the
+envelope sender, which a forwarder can rewrite onto its own domain even
+when `From` is spoofed. DMARC can pass through SPF alignment alone.
+Neither `spf=pass` nor `dmarc=pass` counts as proof for member attribution.
 
 Trusted headers: only the relay's own `Authentication-Results` field
-is trusted. Fields from any other authserv-id — including ones the
-sender forged — are ignored, as is every other sender header
+is trusted. Fields from any other authserv-id, including ones the
+sender forged, are ignored, as is every other sender header
 (`Received-SPF`, `DKIM-Signature`, `X-Spam-*`, `X-Mailgun-*`). The
 relay **must stamp its own `Authentication-Results` header** at
 receive time (prepended, so it is the topmost field), and should
 still strip any incoming `Authentication-Results` headers first: a
 forged field carrying the relay's own id would otherwise verify on a
 message the relay did not stamp. If the relay stamps no results for a
-message, member mail from that message posts as the bot — degraded,
-but safe. If your relay or adapter supplies verdicts only in proprietary
-headers or POST fields, leave `INBOUND_EMAIL_AUTHSERV_ID` unset.
+message, member mail from that message posts as the bot. If your relay
+or adapter supplies verdicts only in proprietary headers or POST fields,
+leave `INBOUND_EMAIL_AUTHSERV_ID` unset.
 Everything posts as the bot, and there is no id for a forger to guess.
 This limitation does not apply to Cloudflare Email Routing, which
 supplies the standard header linked in [Ingress setup](#ingress-setup-relay-provider).
-A standard header still needs the aligned domain properties listed
-above for Smartfire to attribute direct mail to a member.
+A standard header still needs `dkim=pass` and the matching `header.d`
+for Smartfire to attribute mail to a member.

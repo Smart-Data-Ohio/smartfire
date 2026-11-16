@@ -98,12 +98,14 @@
       "header": "mx.mail.test; dmarc=pass header.from=οσ.example",
       "relay": "mx.mail.test",
       "address": "alice@ΟΣ.example",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
       "header": "mx.mail.test; spf=pass smtp.mailfrom=bob@ΟΣ.example",
       "relay": "mx.mail.test",
       "address": "alice@οσ.example",
+      "dkim_only_expected": false,
       "expected": true
     },
     {
