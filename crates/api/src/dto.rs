@@ -1970,6 +1970,57 @@ mod tests {
     use super::{Timestamp, api, avatar_icon, inline_mentions, row_version, time};
 
     #[test]
+    fn app_badge_matches_unread_sidebar_rows_in_mixed_rooms() {
+        use campfire_db::{Membership, Snapshot, User};
+        let mut conn = campfire_db::Connection::open_in_memory().unwrap();
+        campfire_db::schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
+        let now = Timestamp::parse_db("2035-01-01T12:00:00Z").unwrap();
+        conn.execute_batch(
+            "INSERT INTO users(id,name,created_at,updated_at) VALUES(1,'Viewer','2035-01-01 00:00:00','2035-01-01 00:00:00'),(2,'Sender','2035-01-01 00:00:00','2035-01-01 00:00:00');
+             INSERT INTO rooms(id,name,type,creator_id,created_at,updated_at) VALUES
+               (1,'Unread','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (2,'Thread only','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (3,'Muted','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (4,'Invisible','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (5,'Deleted','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00');
+             UPDATE rooms SET deleted_at='2035-01-01 00:00:00' WHERE id=5;
+             INSERT INTO memberships(room_id,user_id,involvement,unread_at,created_at,updated_at) VALUES
+               (1,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (2,1,'mentions',NULL,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (3,1,'muted','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (4,1,'invisible','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (5,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
+             INSERT INTO channel_threads(id,room_id,creator_id,name,last_activity_at,created_at,updated_at) VALUES(1,2,2,'Thread','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
+             INSERT INTO thread_memberships(thread_id,user_id,involvement,unread_at,joined_at,created_at,updated_at) VALUES(1,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
+             INSERT INTO messages(id,room_id,thread_id,creator_id,client_message_id,created_at,updated_at) VALUES(1,2,1,2,'badge-thread','2035-01-01 00:00:00','2035-01-01 00:00:00');
+             INSERT INTO activity_items(user_id,source_id,source_type,event_type,created_at,updated_at) VALUES(1,1,'Message','thread_activity','2035-01-01 00:00:00','2035-01-01 00:00:00');"
+        ).unwrap();
+        let snapshot = Snapshot::begin(&conn).unwrap();
+        let sidebar = super::sidebar(
+            &snapshot,
+            &rails_compat::Secrets::new("test"),
+            &User::find(&snapshot, 1).unwrap(),
+            false,
+            now,
+        )
+        .unwrap();
+        let unread: Vec<_> = sidebar
+            .rows
+            .iter()
+            .filter(|row| row.membership.unread_at.is_some() || row.notification_count > 0)
+            .map(|row| row.room.id)
+            .collect();
+        assert!(unread.contains(&1));
+        assert!(unread.contains(&2));
+        assert!(unread.contains(&3));
+        assert_eq!(sidebar.rows.len(), 3);
+        assert_eq!(
+            Membership::unread_count(&snapshot, 1, now).unwrap(),
+            unread.len() as i64
+        );
+    }
+
+    #[test]
     fn play_sounds_carry_the_classic_catalog_and_asset_urls() {
         let bell = super::message_sound(campfire_db::Sound::find_by_name("bell").unwrap());
         assert_eq!(bell.name, "bell");

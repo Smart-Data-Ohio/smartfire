@@ -77,7 +77,10 @@ beforeEach(() => {
   mutations.setBlocks(listOfA);
 });
 
-afterEach(() => mutations.reset());
+afterEach(() => {
+  mutations.reset();
+  vi.unstubAllGlobals();
+});
 
 afterAll(() => vi.restoreAllMocks());
 
@@ -270,4 +273,11 @@ describe("what ends with the page's account", () => {
 
     expect(end).toHaveBeenCalledOnce();
   });
+});
+
+it("clears the old app badge even when a new sign-in reloads without a shell", () => {
+  const clearAppBadge = vi.fn(async () => undefined);
+  vi.stubGlobal("navigator", { clearAppBadge });
+  leaveForNewSignIn();
+  expect(clearAppBadge).toHaveBeenCalledOnce();
 });

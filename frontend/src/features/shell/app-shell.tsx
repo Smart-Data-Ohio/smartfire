@@ -1,5 +1,6 @@
 import { Outlet, useMatches, useMatchRoute, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { clearAppBadge } from "../../lib/app-badge.ts";
 import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
@@ -37,9 +38,11 @@ export function useAppIndicators(roomId: number | null, page: Page): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
 
   const badge = useStore((state) =>
-    state.accountChanged || state.sidebar.status !== "ready"
-      ? null
-      : sidebarTotals(state.sidebar).unreadRooms,
+    state.accountChanged
+      ? 0
+      : state.sidebar.status !== "ready"
+        ? null
+        : sidebarTotals(state.sidebar).unreadRooms,
   );
 
   const unread = useStore((state) => sidebarTotals(state.sidebar).unreadRooms > 0);
@@ -48,10 +51,33 @@ export function useAppIndicators(roomId: number | null, page: Page): void {
   useEffect(() => {
     if (badge === null) return;
 
-    const update = badge > 0 ? navigator.setAppBadge?.(badge) : navigator.clearAppBadge?.();
+    const update = () => {
+      const pending = badge > 0 ? navigator.setAppBadge?.(badge) : clearAppBadge();
 
-    // Badging can be denied by the browser without preventing the app from updating.
-    void update?.catch(() => undefined);
+      // Badging can be denied by the browser without preventing the app from updating.
+      void pending?.catch(() => undefined);
+    };
+
+    const pushed = (event: MessageEvent<unknown>) => {
+      const data = event.data;
+
+      if (data instanceof Object && "type" in data && data.type === "badge-pushed") {
+        update();
+      }
+    };
+
+    const visible = () => {
+      if (document.visibilityState === "visible") update();
+    };
+
+    update();
+    navigator.serviceWorker?.addEventListener("message", pushed);
+    document.addEventListener("visibilitychange", visible);
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener("message", pushed);
+      document.removeEventListener("visibilitychange", visible);
+    };
   }, [badge]);
 
   useEffect(() => {

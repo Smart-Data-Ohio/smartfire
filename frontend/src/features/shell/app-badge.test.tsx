@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { sidebarFixture, sidebarRowFixture } from "../../api/testing.ts";
 import { initialState } from "../../store/state.ts";
@@ -9,8 +9,10 @@ const setAppBadge = vi.fn(async (_count: number) => undefined);
 
 const clearAppBadge = vi.fn(async () => undefined);
 
+const serviceWorker = new EventTarget();
+
 function openApp() {
-  vi.stubGlobal("navigator", { setAppBadge, clearAppBadge });
+  vi.stubGlobal("navigator", { setAppBadge, clearAppBadge, serviceWorker });
 
   return renderHook(() => useAppIndicators(null, null));
 }
@@ -22,6 +24,8 @@ function unreadRow(id: number) {
 }
 
 afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
   store.setState(initialState, true);
   vi.unstubAllGlobals();
   vi.clearAllMocks();
@@ -102,4 +106,56 @@ it("handles a browser rejecting a badge update", async () => {
   openApp();
   await act(async () => mutations.markRoomRead(1));
   expect(clearAppBadge).toHaveBeenCalledOnce();
+});
+
+it("restores zero after a delayed push overwrites a badge cleared by reading", async () => {
+  mutations.loadSidebar(sidebarFixture([unreadRow(1)]), 0);
+  openApp();
+  await act(async () => mutations.markRoomRead(1));
+  expect(clearAppBadge).toHaveBeenCalledOnce();
+  await setAppBadge(4);
+  await act(async () => {
+    serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "badge-pushed" } }));
+  });
+  expect(clearAppBadge).toHaveBeenCalledTimes(2);
+});
+
+it("reasserts the current badge when the window becomes visible", async () => {
+  mutations.loadSidebar(sidebarFixture([unreadRow(1)]), 0);
+  openApp();
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+  await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+  expect(setAppBadge).toHaveBeenCalledOnce();
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+  expect(setAppBadge).toHaveBeenCalledTimes(2);
+});
+
+it("clears the old account badge and keeps it cleared after another push", async () => {
+  mutations.loadSidebar(sidebarFixture([unreadRow(1)]), 0);
+  openApp();
+  await act(async () => mutations.markAccountChanged());
+  expect(clearAppBadge).toHaveBeenCalledOnce();
+  await act(async () => {
+    serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "badge-pushed" } }));
+  });
+  expect(clearAppBadge).toHaveBeenCalledTimes(2);
+});
+
+it("does not reassert while loading and removes its event listeners on unmount", async () => {
+  const app = openApp();
+  await act(async () => {
+    serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "badge-pushed" } }));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  expect(clearAppBadge).not.toHaveBeenCalled();
+  await act(async () => mutations.loadSidebar(sidebarFixture([]), 0));
+  expect(clearAppBadge).toHaveBeenCalledOnce();
+  await act(async () => {
+    serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "badge-pushed" } }));
+  });
+  expect(clearAppBadge).toHaveBeenCalledTimes(2);
+  app.unmount();
+  serviceWorker.dispatchEvent(new MessageEvent("message", { data: { type: "badge-pushed" } }));
+  expect(clearAppBadge).toHaveBeenCalledTimes(2);
 });

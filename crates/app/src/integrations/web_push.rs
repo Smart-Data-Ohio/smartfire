@@ -57,14 +57,22 @@ impl Notification {
         payload: &PushPayload,
         now: Timestamp,
     ) -> campfire_db::Result<Self> {
-        Ok(Self {
+        Ok(Self::with_badge(
+            subscription,
+            payload,
+            subscription.badge(conn, now)?,
+        ))
+    }
+
+    fn with_badge(subscription: &PushSubscription, payload: &PushPayload, badge: i64) -> Self {
+        Self {
             title: payload.title.clone(),
             body: payload.body.clone(),
             path: payload.path.clone(),
             tag: payload.tag.clone(),
-            badge: subscription.badge(conn, now)?,
+            badge,
             subscription: subscription.clone(),
-        })
+        }
     }
 
     /// `encoded_message`: `JSON.generate` (plain JSON, no HTML escaping).

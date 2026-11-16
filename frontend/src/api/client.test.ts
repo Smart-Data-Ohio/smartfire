@@ -4,6 +4,7 @@ import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientError from "effect/http/HttpClientError";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import * as HttpClientResponse from "effect/http/HttpClientResponse";
+import { vi } from "vitest";
 import type { TwoFactorRequirement } from "../gen/TwoFactorRequirement.ts";
 import { passwordSignIn, submitChallenge } from "./auth-endpoints.ts";
 import { readBoot } from "./boot.ts";
@@ -132,6 +133,8 @@ function setCsrfMeta(token: string) {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals();
+
   for (const node of document.querySelectorAll('meta[name="csrf-token"], #boot')) {
     node.remove();
   }
@@ -449,6 +452,17 @@ describe("ApiClient", () => {
     return Effect.gen(function* () {
       expect(yield* Effect.flip(me())).toEqual(new Unauthorized({ message: "Signed out" }));
       expect(navigations).toEqual(["/app/session/new?return_to=%2Fapp%2Frooms%2F12%3Fmessage%3D4"]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("clears the app badge before leaving an expired session", () => {
+    const clearAppBadge = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { clearAppBadge });
+    const { layer } = harness(() => errorReply(401, new Unauthorized({ message: "Signed out" })));
+
+    return Effect.gen(function* () {
+      yield* Effect.flip(me());
+      expect(clearAppBadge).toHaveBeenCalledOnce();
     }).pipe(Effect.provide(layer));
   });
 

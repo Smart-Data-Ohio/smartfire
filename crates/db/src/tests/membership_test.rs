@@ -486,3 +486,39 @@ fn app_badge_excludes_memberships_whose_room_is_missing() {
         Ok(())
     });
 }
+
+#[test]
+fn app_badge_respects_timed_preference_mute_until_expiry() {
+    let t = TestDb::new();
+    let viewer = id("david");
+    let room = id("watercooler");
+    let until = t.now().jiff() + jiff::SignedDuration::from_secs(60);
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=NULL WHERE user_id=?",
+            [viewer],
+        )?;
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=? WHERE user_id=? AND room_id=?",
+            params![tx.now(), viewer, room],
+        )?;
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            params![
+                serde_json::json!({"room_mute_until": {room.to_string(): until.to_string()}})
+                    .to_string(),
+                viewer
+            ],
+        )?;
+        Ok(())
+    });
+    t.read(|conn| {
+        assert_eq!(Membership::unread_count(conn, viewer, t.now())?, 0);
+        Ok(())
+    });
+    t.travel(60);
+    t.read(|conn| {
+        assert_eq!(Membership::unread_count(conn, viewer, t.now())?, 1);
+        Ok(())
+    });
+}
