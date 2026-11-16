@@ -36,17 +36,20 @@ type Page = "Settings" | "Workspace" | "People" | "Server guide" | null;
  */
 export function useAppIndicators(roomId: number | null, page: Page): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
+  const accountChanged = useStore((state) => state.accountChanged);
 
   const badge = useStore((state) =>
-    state.accountChanged
-      ? 0
-      : state.sidebar.status !== "ready"
-        ? null
-        : sidebarTotals(state.sidebar).unreadRooms,
+    state.accountChanged || state.connection !== "online" || state.sidebar.status !== "ready"
+      ? null
+      : sidebarTotals(state.sidebar).unreadRooms,
   );
 
   const unread = useStore((state) => sidebarTotals(state.sidebar).unreadRooms > 0);
   const room = useStore((state) => (roomId === null ? null : (state.sidebar.rows[roomId] ?? null)));
+
+  useEffect(() => {
+    if (accountChanged) void clearAppBadge();
+  }, [accountChanged]);
 
   useEffect(() => {
     if (badge === null) return;

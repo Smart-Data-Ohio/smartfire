@@ -1971,7 +1971,9 @@ mod tests {
 
     #[test]
     fn app_badge_matches_unread_sidebar_rows_in_mixed_rooms() {
-        use campfire_db::{Membership, Snapshot, User};
+        use campfire_db::{
+            Membership, Snapshot, User, models::notification_policy::NotificationPreferences,
+        };
         let mut conn = campfire_db::Connection::open_in_memory().unwrap();
         campfire_db::schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
         let now = Timestamp::parse_db("2035-01-01T12:00:00Z").unwrap();
@@ -1982,14 +1984,17 @@ mod tests {
                (2,'Thread only','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (3,'Muted','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (4,'Invisible','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
-               (5,'Deleted','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00');
+               (5,'Deleted','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (6,'Timed mute','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00');
              UPDATE rooms SET deleted_at='2035-01-01 00:00:00' WHERE id=5;
+             UPDATE users SET inbox_preferences='{\"room_mute_until\":{\"6\":\"2035-01-01T13:00:00Z\"}}' WHERE id=1;
              INSERT INTO memberships(room_id,user_id,involvement,unread_at,created_at,updated_at) VALUES
                (1,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (2,1,'mentions',NULL,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (3,1,'muted','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (4,1,'invisible','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
-               (5,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
+               (5,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (6,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
              INSERT INTO channel_threads(id,room_id,creator_id,name,last_activity_at,created_at,updated_at) VALUES(1,2,2,'Thread','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
              INSERT INTO thread_memberships(thread_id,user_id,involvement,unread_at,joined_at,created_at,updated_at) VALUES(1,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
              INSERT INTO messages(id,room_id,thread_id,creator_id,client_message_id,created_at,updated_at) VALUES(1,2,1,2,'badge-thread','2035-01-01 00:00:00','2035-01-01 00:00:00');
@@ -2004,16 +2009,20 @@ mod tests {
             now,
         )
         .unwrap();
+        let preferences = NotificationPreferences::load(&snapshot, 1).unwrap();
         let unread: Vec<_> = sidebar
             .rows
             .iter()
+            // The window's notificationRow clears unread state and counts during a timed mute.
+            .filter(|row| !preferences.muted(row.room.id, now))
             .filter(|row| row.membership.unread_at.is_some() || row.notification_count > 0)
             .map(|row| row.room.id)
             .collect();
         assert!(unread.contains(&1));
         assert!(unread.contains(&2));
         assert!(unread.contains(&3));
-        assert_eq!(sidebar.rows.len(), 3);
+        assert!(!unread.contains(&6));
+        assert_eq!(sidebar.rows.len(), 4);
         assert_eq!(
             Membership::unread_count(&snapshot, 1, now).unwrap(),
             unread.len() as i64
