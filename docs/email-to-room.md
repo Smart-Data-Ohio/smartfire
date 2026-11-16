@@ -1,12 +1,12 @@
 # Email to room
 
 Any chat room (direct and board rooms excluded) can have a secret forward-to address.
-Mail sent there posts in the room: from the matched member when the
-sender's address belongs to an active room member *and* the relay's
-own `Authentication-Results` header reports SPF, DKIM or DMARC
-passing for the `From` domain (see
-[Sender verification](#sender-verification)), otherwise from the
-workspace **Email** bot with the sender named in the body.
+Mail sent there posts in the room. Direct mail posts as the matched member
+when the room address appears in `To`, `Cc`, or `Bcc`, the sender is an
+active room member, and the relay verifies the `From` domain (see
+[Sender verification](#sender-verification)). Forwarded mail and
+unverified senders post as the workspace **Email** bot with the sender
+named in the body.
 
 ## The address
 
@@ -27,7 +27,7 @@ everything that arrives posts as the **Email** bot.
 ## What arrives
 
 - The subject becomes the message's first line, then the body. Mail from
-  a non-member is prefixed with `From <sender>`.
+  the **Email** bot is prefixed with `From <sender>`.
 - Plain text is preferred. HTML-only mail is sanitized (script and style
   elements removed, the rest run through the safe-list sanitizer) and
   stripped to plain text; the stored message is never raw HTML.
@@ -47,9 +47,10 @@ everything that arrives posts as the **Email** bot.
   hour bucket, like the agent API throttle); over-limit mail is
   dropped silently.
 - Unknown tokens post nothing and bounce nothing, so the address reveals
-  nothing to probers. Mail to a non-room address (no `room-` token at
-  all) is marked bounced instead of raising a routing error — with no
-  reply sent, since the app has no outbound mail and answering
+  nothing to probers. Only room addresses on `INBOUND_EMAIL_DOMAIN`
+  count, with a case-insensitive domain match. Mail with no room token
+  on that domain is marked bounced instead of raising a routing error.
+  No reply is sent, since the app has no outbound mail and answering
   misaddressed mail would backscatter.
 
 ## Ingress setup (relay provider)
@@ -70,7 +71,10 @@ the request body with `Content-Type: message/rfc822`.
    it.
 3. Deliver raw RFC 822 bytes to the relay endpoint with basic auth.
    Provider webhooks are not interchangeable with this endpoint. It rejects
-   JSON and form payloads with HTTP 415. Choose one of these paths:
+   JSON and form payloads with HTTP 415. Before stamping delivery headers,
+   the relay or adapter must strip or overwrite all incoming `X-Original-To`,
+   `Delivered-To`, and `X-Forwarded-To` fields so sender-supplied or stale
+   recipients cannot control routing. Choose one of these paths:
    - **Cloudflare Email Routing + Email Worker:** route the receiving
      subdomain's catch-all to a Worker. Its
      [email handler](https://developers.cloudflare.com/email-service/api/route-emails/email-handler/)
@@ -78,6 +82,8 @@ the request body with `Content-Type: message/rfc822`.
      Prepend `X-Original-To: <message.to>` to the raw message, then POST
      it with `Content-Type: message/rfc822` and basic auth. Store the
      password as a Worker secret. Handle failed POSTs explicitly.
+     Cloudflare [documents a standard `Authentication-Results` header](https://developers.cloudflare.com/email-service/api/route-emails/email-handler/#authentication-results).
+     The adapter must protect that header as described below.
    - **Mailgun:** use an adapter that validates Mailgun's webhook,
      extracts `body-mime` from a
      [MIME route](https://documentation.mailgun.com/docs/mailgun/user-manual/receive-forward-store/receive-http),
@@ -104,11 +110,14 @@ the request body with `Content-Type: message/rfc822`.
      OpenDKIM, OpenDMARC, or Rspamd can stamp `Authentication-Results`.
 
    The endpoint receives no SMTP envelope or provider form fields.
-   Routing reads `To`, `Cc`, `Bcc`, `X-Original-To`, `X-Forwarded-To`,
-   and `Delivered-To` in the raw message. An envelope-only delivery
-   needs the relay or adapter to add one of these headers. Validate
-   envelope addresses before inserting them into a header, including
-   rejecting carriage returns and line feeds.
+   Routing considers only addresses on `INBOUND_EMAIL_DOMAIN`, ignoring
+   domain case, in this order: `X-Original-To`, `Delivered-To` (topmost
+   first), `X-Forwarded-To`, `To`, `Cc`, then `Bcc`. The first token for an
+   existing, non-deleted chat room wins. Unknown tokens and ineligible
+   rooms are skipped. An envelope-only delivery needs the relay or
+   adapter to add a delivery header. Validate envelope addresses before
+   inserting them into a header, including rejecting carriage returns
+   and line feeds.
 
    For member attribution, the relay must stamp its own
    `Authentication-Results` header. The app trusts only the topmost
@@ -145,7 +154,16 @@ prevent delivery before Smartfire receives anything.
 
 Forwarding preserves the original `From` and often the inbox or group in
 `To`. The relay must preserve the room's final recipient as described
-above. Mail uses normal room unread state and notifications, including
+above. Forwarded mail always posts as the **Email** bot naming the sender.
+A forwarder's rewritten envelope sender can pass authentication for the
+inbox's domain even when the original `From` is spoofed, so that pass
+cannot justify posting as a member. Member attribution requires the
+chosen room address in `To`, `Cc`, or `Bcc` as well as sender verification.
+
+Mail over 30 messages per hour per room is dropped silently. The relay
+and Gmail see success, so forwarding a busy inbox can lose mail.
+
+Mail uses normal room unread state and notifications, including
 each member's involvement, mute, and do-not-disturb settings. Choose
 **Everything** to be notified of every incoming message. People with inbox
 access must also join the room. Forwarding does not synchronize access.
@@ -155,7 +173,8 @@ Anyone in the room can read forwarded mail and the confirmation message.
 
 `From` is trivially spoofable, so a member address alone never decides
 who a message posts as. Mail posts as the matched member only when the
-topmost `Authentication-Results` header ([RFC 8601](https://www.rfc-editor.org/rfc/rfc8601.html))
+chosen room address appears in `To`, `Cc`, or `Bcc` and the topmost
+`Authentication-Results` header ([RFC 8601](https://www.rfc-editor.org/rfc/rfc8601.html))
 whose authserv-id matches `INBOUND_EMAIL_AUTHSERV_ID` reports a pass
 aligned with the `From` domain. Anything else — the id unconfigured,
 no header matching it, a failure, or a pass for another domain —
@@ -181,8 +200,10 @@ still strip any incoming `Authentication-Results` headers first: a
 forged field carrying the relay's own id would otherwise verify on a
 message the relay did not stamp. If the relay stamps no results for a
 message, member mail from that message posts as the bot — degraded,
-but safe. While your relay stamps no `Authentication-Results` at all
-(the SaaS relays in [Ingress setup](#ingress-setup-relay-provider)
-report their verdicts only in proprietary headers or POST fields),
-leave `INBOUND_EMAIL_AUTHSERV_ID` unset: everything posts as the bot,
-and there is no id for a forger to guess.
+but safe. If your relay or adapter supplies verdicts only in proprietary
+headers or POST fields, leave `INBOUND_EMAIL_AUTHSERV_ID` unset.
+Everything posts as the bot, and there is no id for a forger to guess.
+This limitation does not apply to Cloudflare Email Routing, which
+supplies the standard header linked in [Ingress setup](#ingress-setup-relay-provider).
+A standard header still needs the aligned domain properties listed
+above for Smartfire to attribute direct mail to a member.

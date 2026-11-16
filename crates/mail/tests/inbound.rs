@@ -743,17 +743,18 @@ fn render(_: &campfire_db::Connection, _: &Room, source: &str) -> campfire_db::R
 }
 
 macro_rules! forwarded_mail_test {
-    ($name:ident, $headers:expr) => {
+    ($name:ident, $to:expr, $headers:expr) => {
         #[tokio::test]
         async fn $name() {
             let h = Harness::new().await;
             let raw = format!(
                 "From: Customer <customer@example.org>\r\n\
-                 To: Support <support@example.com>\r\n\
+                 To: {}\r\n\
                  {}\r\n\
                  Subject: Shared inbox request\r\n\
                  Content-Type: text/plain; charset=utf-8\r\n\r\n\
                  Please help with our invoice.",
+                $to,
                 $headers.replace("ROOM", &format!("room-{}@mail.test", h.token)),
             );
             let message = h.message(h.deliver(raw.into_bytes()).await).await;
@@ -775,17 +776,103 @@ macro_rules! forwarded_mail_test {
 }
 forwarded_mail_test!(
     forwarded_mail_delivered_to,
+    "Support <support@example.com>",
     "Delivered-To: support@example.com\r\nDelivered-To: ROOM"
 );
 forwarded_mail_test!(
     forwarded_mail_x_forwarded_to,
+    "Support <support@example.com>",
     "X-Forwarded-To: archive@example.com,\r\n ROOM"
 );
-forwarded_mail_test!(forwarded_mail_x_original_to, "X-Original-To: ROOM");
+forwarded_mail_test!(
+    forwarded_mail_x_original_to,
+    "Support <support@example.com>",
+    "X-Original-To: ROOM"
+);
 forwarded_mail_test!(
     forwarded_mail_google_group,
-    "List-ID: <support.example.com>\r\nX-BeenThere: support@example.com\r\nDelivered-To: ROOM"
+    "Support group <support-group@googlegroups.com>",
+    "List-ID: <support-group.googlegroups.com>\r\nX-BeenThere: support-group@googlegroups.com\r\nDelivered-To: ROOM"
 );
+
+macro_rules! forwarded_member_test {
+    ($name:ident, $header:expr) => {
+        #[tokio::test]
+        async fn $name() {
+            let h = Harness::new().await;
+            let raw = format!(
+                "From: David <david@37signals.com>\r\n\
+                 To: Support <support@37signals.com>\r\n\
+                 {}: room-{}@mail.test\r\n\
+                 Authentication-Results: mx.mail.test; spf=pass smtp.mailfrom=support+caf_=room-{}=mail.test@37signals.com; dmarc=pass header.from=37signals.com\r\n\
+                 Subject: Forwarded request\r\n\r\nPlease help.",
+                $header, h.token, h.token,
+            );
+            let message = h.message(h.deliver(raw.into_bytes()).await).await;
+            let creator = h.db.read(move |c| User::find(c, message.creator_id)).await.unwrap();
+            assert!(creator.is_bot(), "forwarded mail posted as {:?}", creator.email_address);
+            assert_eq!(creator.name, "Email");
+            assert!(message.markdown_source.unwrap().contains("From David <david@37signals.com>"));
+        }
+    };
+}
+forwarded_member_test!(forwarded_member_x_forwarded_to_is_bot, "X-Forwarded-To");
+forwarded_member_test!(forwarded_member_x_original_to_is_bot, "X-Original-To");
+forwarded_member_test!(forwarded_member_delivered_to_is_bot, "Delivered-To");
+
+macro_rules! recipient_routing_test {
+    ($name:ident, $headers:expr) => {
+        #[tokio::test]
+        async fn $name() {
+            let h = Harness::new().await;
+            let other_room = fixtures::identify("hq");
+            let other_token = h.db.write(move |tx| {
+                Room::find(tx.conn(), other_room)?.regenerate_inbound_email_token(tx)
+            }).await.unwrap();
+            let headers = $headers
+                .replace("OTHER", &format!("room-{other_token}@mail.test"))
+                .replace("ROOM", &format!("room-{}@mail.test", h.token));
+            let raw = format!(
+                "From: customer@example.org\r\n{headers}\r\nSubject: Routing conflict\r\n\r\nPlease help."
+            );
+            let message = h.message(h.deliver(raw.into_bytes()).await).await;
+            assert_eq!(message.room_id, h.room_id);
+        }
+    };
+}
+recipient_routing_test!(
+    recipient_foreign_to_does_not_shadow_delivery,
+    "To: room-support@example.com\r\nX-Original-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_stale_original_to_does_not_shadow_delivered_to,
+    "To: support@example.com\r\nX-Original-To: room-stale@mail.test\r\nDelivered-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_stale_delivered_to_does_not_shadow_later_delivered_to,
+    "To: support@example.com\r\nDelivered-To: room-stale@mail.test\r\nDelivered-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_delivery_header_wins_over_to,
+    "To: OTHER\r\nX-Original-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_forwarded_copy_wins_over_cc,
+    "To: support@example.com\r\nCc: OTHER\r\nX-Forwarded-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_topmost_delivered_to_wins_over_forwarded_to,
+    "To: support@example.com\r\nX-Forwarded-To: OTHER\r\nDelivered-To: ROOM\r\nDelivered-To: OTHER"
+);
+
+#[tokio::test]
+async fn recipient_foreign_room_address_bounces() {
+    let h = Harness::new().await;
+    let raw = String::from_utf8(h.raw("customer@example.org", &[], "Foreign room", "Hello"))
+        .unwrap()
+        .replace("@mail.test", "@foreign.test");
+    assert_eq!(h.deliver(raw.into_bytes()).await, Routed::Bounced);
+}
 
 #[tokio::test]
 async fn gmail_forwarding_confirmation_keeps_code_and_url() {

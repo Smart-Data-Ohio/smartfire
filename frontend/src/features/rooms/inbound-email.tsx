@@ -176,8 +176,10 @@ export function InboundEmailSection({ roomId }: { readonly roomId: number }) {
         ) : (
           <>
             <p className="room-integration-note">
-              Forward an inbox to this address and its mail posts here. Room members are notified as
-              for any message, according to their notification settings.
+              Send or forward email here to post it in the room. Forwarded mail and unverified
+              senders post as the Email bot naming the sender; direct mail from a member whose
+              address passes sender verification posts as them. Members are notified per their
+              notification settings.
             </p>
             <p className="room-email-address">
               <code>{address}</code>

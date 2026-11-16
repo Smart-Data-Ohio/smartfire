@@ -195,7 +195,15 @@ fn creator(
     email: &Email,
     cfg: &Config,
 ) -> campfire_db::Result<(User, bool)> {
-    if let Some(address) = &email.from {
+    // Forwarded envelope authentication can align with a spoofed member From address.
+    if let Some(address) = &email.from
+        && let Some(domain) = &cfg.domain
+        && let Some(token) = &room.inbound_email_token
+        && email
+            .direct_recipients
+            .iter()
+            .any(|recipient| recipient.eq_ignore_ascii_case(&format!("room-{token}@{domain}")))
+    {
         let user = tx.conn().query_row("SELECT users.id FROM users JOIN memberships ON memberships.user_id = users.id WHERE users.status = 0 AND users.role != 2 AND memberships.room_id = ? AND LOWER(users.email_address) = ? LIMIT 1", params![room.id, unicode::downcase(address)], |r| r.get::<_, i64>(0)).optional()?;
         if let Some(id) = user
             && authenticated_sender(&email.auth_headers, cfg.authserv_id.as_deref(), address)
@@ -235,14 +243,26 @@ pub fn post(
     renderer: Option<&dyn Renderer>,
     attachment: Option<&Staged>,
 ) -> campfire_db::Result<Routed> {
-    let Some(token) = email.room_token() else {
-        return Ok(Routed::Bounced);
+    let Some(domain) = config.domain.as_deref() else {
+        return Ok(if email.room_token().is_some() {
+            Routed::Dropped
+        } else {
+            Routed::Bounced
+        });
     };
-    if config.domain.is_none() {
-        return Ok(Routed::Dropped);
+    let mut unmatched = Routed::Bounced;
+    let mut room = None;
+    for (token, recipient_domain) in email.room_recipients() {
+        if recipient_domain.eq_ignore_ascii_case(domain) {
+            unmatched = Routed::Dropped;
+            if let Some(candidate) = find_room(tx.conn(), token)? {
+                room = Some(candidate);
+                break;
+            }
+        }
     }
-    let Some(room) = find_room(tx.conn(), &token)? else {
-        return Ok(Routed::Dropped);
+    let Some(room) = room else {
+        return Ok(unmatched);
     };
     // Pinned Rails overflows its stack here. The WS10 parity exception preserves
     // zero posts while committing a terminal bounce instead of leaving Processing.
