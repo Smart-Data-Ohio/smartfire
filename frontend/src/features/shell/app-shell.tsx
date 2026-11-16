@@ -30,12 +30,29 @@ type Page = "Settings" | "Workspace" | "People" | "Server guide" | null;
 
 /**
  * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings, the
- * workspace pages and the people pages name themselves instead of a room.
+ * workspace pages and the people pages name themselves instead of a room. The app-icon badge
+ * counts the same visible unread rooms as the sidebar and clears once they are read.
  */
-function useDocumentTitle(roomId: number | null, page: Page): void {
+export function useAppIndicators(roomId: number | null, page: Page): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
+
+  const badge = useStore((state) =>
+    state.accountChanged || state.sidebar.status !== "ready"
+      ? null
+      : sidebarTotals(state.sidebar).unreadRooms,
+  );
+
   const unread = useStore((state) => sidebarTotals(state.sidebar).unreadRooms > 0);
   const room = useStore((state) => (roomId === null ? null : (state.sidebar.rows[roomId] ?? null)));
+
+  useEffect(() => {
+    if (badge === null) return;
+
+    const update = badge > 0 ? navigator.setAppBadge?.(badge) : navigator.clearAppBadge?.();
+
+    // Badging can be denied by the browser without preventing the app from updating.
+    void update?.catch(() => undefined);
+  }, [badge]);
 
   useEffect(() => {
     const prefix = mentions > 0 ? `(${mentions}) ` : unread ? "• " : "";
@@ -127,7 +144,7 @@ export function AppShell() {
     [router],
   );
 
-  useDocumentTitle(roomId, page);
+  useAppIndicators(roomId, page);
   useTwoFactorSetupGate();
   useClassicLinks();
   useBootFlash();

@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::Membership;
+use rusqlite::params;
 
 const TTL_PLUS_ONE: i64 = 61;
 
@@ -305,4 +306,183 @@ fn muted_involvement_and_stage_role_round_trip() {
         stored.stage_role, None,
         "non-stage rooms leave the stage columns nil"
     );
+}
+
+fn badge_with_membership(involvement: Option<&str>, deleted: bool) -> i64 {
+    let t = TestDb::new();
+    let viewer = id("david");
+    let room = id("watercooler");
+    let visible = !deleted && involvement.is_some_and(|level| level != "invisible");
+    let involvement = involvement.map(str::to_owned);
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=NULL WHERE user_id=?",
+            [viewer],
+        )?;
+        tx.conn().execute(
+            "UPDATE memberships SET involvement=?1,unread_at=?2 WHERE user_id=?3 AND room_id=?4",
+            params![involvement, tx.now(), viewer, room],
+        )?;
+        if deleted {
+            tx.conn().execute(
+                "UPDATE rooms SET deleted_at=? WHERE id=?",
+                params![tx.now(), room],
+            )?;
+        }
+        Ok(())
+    });
+    t.read(|conn| {
+        assert_eq!(
+            Membership::visible_with_ordered_room(conn, viewer)?
+                .iter()
+                .any(|(membership, row)| row.id == room && membership.unread()),
+            visible,
+        );
+        crate::PushSubscription::for_user(conn, viewer)?[0].badge(conn, t.now())
+    })
+}
+
+#[test]
+fn app_badge_excludes_invisible_memberships() {
+    assert_eq!(badge_with_membership(Some("invisible"), false), 0);
+}
+
+#[test]
+fn app_badge_excludes_null_involvement_memberships() {
+    assert_eq!(badge_with_membership(None, false), 0);
+}
+
+#[test]
+fn app_badge_excludes_deleted_rooms() {
+    assert_eq!(badge_with_membership(Some("mentions"), true), 0);
+}
+
+#[test]
+fn app_badge_keeps_visible_unread_memberships() {
+    for involvement in ["nothing", "muted", "mentions", "everything"] {
+        assert_eq!(
+            badge_with_membership(Some(involvement), false),
+            1,
+            "{involvement}"
+        );
+    }
+}
+
+#[test]
+fn app_badge_counts_notifying_threads_in_read_rooms_once() {
+    use crate::{ChannelThread, ThreadInvolvement, ThreadMembership};
+    let t = TestDb::new();
+    let viewer = id("jason");
+    let room = id("designers");
+    let thread = channel_thread_test::create_thread(&t, "designers", "david", None, Some("Badge"));
+    let thread_id = thread.id;
+    t.write(move |tx| {
+        let mut membership = ThreadMembership::join(tx, thread_id, viewer)?;
+        membership.update_involvement(tx, ThreadInvolvement::Everything)?;
+        membership.read(tx)?;
+        Ok(())
+    });
+    channel_thread_test::post_reply(&t, thread_id, "david", "First reply");
+    channel_thread_test::post_reply(&t, thread_id, "david", "Second reply");
+    t.write(move |tx| {
+        for mut membership in Membership::for_user(tx.conn(), viewer)? {
+            membership.read(tx)?;
+        }
+        Ok(())
+    });
+    t.read(|conn| {
+        assert!(ChannelThread::find(conn, thread_id)?.unread_for(conn, viewer)?);
+        assert!(
+            !Membership::find_by_room_and_user(conn, room, viewer)?
+                .unwrap()
+                .unread()
+        );
+        assert_eq!(Membership::unread_count(conn, viewer, t.now())?, 1);
+        Ok(())
+    });
+    t.write(move |tx| {
+        ThreadMembership::find_by_thread_and_user(tx.conn(), thread_id, viewer)?
+            .unwrap()
+            .read(tx)
+    });
+    t.read(|conn| {
+        assert_eq!(Membership::unread_count(conn, viewer, t.now())?, 0);
+        Ok(())
+    });
+}
+
+#[test]
+fn app_badge_keeps_each_visible_room_kind_and_drops_left_rooms() {
+    let t = TestDb::new();
+    let viewer = id("david");
+    let room = id("watercooler");
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=NULL WHERE user_id=?",
+            [viewer],
+        )?;
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at=? WHERE room_id=? AND user_id=?",
+            params![tx.now(), room, viewer],
+        )?;
+        Ok(())
+    });
+    for kind in [
+        crate::RoomType::Open,
+        crate::RoomType::Closed,
+        crate::RoomType::Direct,
+        crate::RoomType::Board,
+        crate::RoomType::Voice,
+        crate::RoomType::Stage,
+    ] {
+        t.write(move |tx| {
+            tx.conn()
+                .execute("UPDATE rooms SET type=? WHERE id=?", params![kind, room])?;
+            Ok(())
+        });
+        t.read(|conn| {
+            assert_eq!(
+                Membership::unread_count(conn, viewer, t.now())?,
+                1,
+                "{kind:?}"
+            );
+            Ok(())
+        });
+    }
+    t.write(move |tx| {
+        Membership::find_by_room_and_user(tx.conn(), room, viewer)?
+            .unwrap()
+            .destroy(tx)
+    });
+    t.read(|conn| {
+        assert_eq!(Membership::unread_count(conn, viewer, t.now())?, 0);
+        Ok(())
+    });
+}
+
+#[test]
+fn app_badge_excludes_memberships_whose_room_is_missing() {
+    let t = TestDb::new();
+    let viewer = id("david");
+    t.write(move |tx| {
+        tx.conn().execute("UPDATE memberships SET unread_at=NULL WHERE user_id=?", [viewer])?;
+        // The Rails-era table has no room foreign key, so old orphaned memberships can remain.
+        tx.conn().execute(
+            "INSERT INTO memberships(room_id,user_id,involvement,unread_at,created_at,updated_at) VALUES(-1,?1,'everything',?2,?2,?2)",
+            params![viewer, tx.now()],
+        )?;
+        Ok(())
+    });
+    t.read(|conn| {
+        assert!(
+            !Membership::visible_with_ordered_room(conn, viewer)?
+                .iter()
+                .any(|(_, room)| room.id == -1)
+        );
+        assert_eq!(
+            crate::PushSubscription::for_user(conn, viewer)?[0].badge(conn, t.now())?,
+            0
+        );
+        Ok(())
+    });
 }

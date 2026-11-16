@@ -366,19 +366,20 @@ impl Membership {
         )
     }
 
-    /// `user.memberships.unread.count`: the push badge.
+    /// `user.memberships.unread.count`: the push badge. Restricted to the SPA's visible
+    /// sidebar rows, including a read room with unread thread notifications (`rowUnread`).
     pub fn unread_count(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
         let preferences = super::notification_policy::NotificationPreferences::load(conn, user_id)?;
-        let unread = super::ignore_policy::room_unread_sql();
-        let rooms: Vec<i64> = sql::query_all(
-            conn,
-            &format!("SELECT room_id FROM memberships WHERE user_id=? AND {unread}"),
-            [user_id],
-            |row| row.get(0),
-        )?;
-        Ok(rooms
+        let counts = super::room_counts::notification_counts(conn, user_id, None, now)?;
+        Ok(Self::visible_with_ordered_room(conn, user_id)?
             .into_iter()
-            .filter(|room| !preferences.muted(*room, now))
+            .filter(|(membership, room)| {
+                !preferences.muted(room.id, now)
+                    && (membership.unread()
+                        || counts
+                            .get(&room.id)
+                            .is_some_and(|counts| counts.notifications > 0))
+            })
             .count() as i64)
     }
 
