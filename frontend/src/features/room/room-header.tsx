@@ -305,8 +305,15 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   // Wide screens' ⋯ menu (the pane buttons, in a narrow header): it closes when the header widens
   // past the step that shows it.
   const [moreOpen, setMoreOpen] = useState(false);
+  // A trip through the phone layout closes it, rather than reopening it on the way back.
+  const [moreLayout, setMoreLayout] = useState(phone);
 
-  const fit = useRoomHeaderFit({
+  if (moreLayout !== phone) {
+    setMoreLayout(phone);
+    setMoreOpen(false);
+  }
+
+  const fitRef = useRoomHeaderFit({
     wide: !phone,
     moreOpen,
     onMoreHidden: () => setMoreOpen(false),
@@ -342,9 +349,8 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   return (
     <>
       <PageHeader
-        ref={fit.ref}
+        ref={fitRef}
         className="room-header"
-        data-search={fit.searchFits ? undefined : "off"}
         back={{
           label: "Back to conversations",
           link: (props) => <Link to="/" {...props} />,
