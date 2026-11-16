@@ -184,7 +184,10 @@ when the topmost matching relay header verifies DKIM. The app selects the
 `Authentication-Results` header ([RFC 8601](https://www.rfc-editor.org/rfc/rfc8601.html))
 whose authserv-id matches `INBOUND_EMAIL_AUTHSERV_ID` and appears first.
 That header must report `dkim=pass` with `header.d` matching the `From`
-domain exactly.
+domain exactly. Member attribution also requires exactly one `From` field
+containing exactly one mailbox. Result clauses and properties ignore nested
+comments and treat quoted strings as opaque, so neither can supply a hidden
+`header.d` property or clause separator.
 The comparison ignores domain case but does not accept a parent or
 subdomain match. This rule applies to both direct and forwarded mail.
 `To`, `Cc`, and `Bcc` do not prove identity because the sender writes them.

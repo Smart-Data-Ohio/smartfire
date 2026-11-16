@@ -27,31 +27,105 @@ pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, addre
     else {
         return false;
     };
-    static DKIM_DOMAIN: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"(?i)header\.d=([^\x09-\x0d ;()]+)").unwrap());
-    header.split(';').skip(1).any(|clause| {
+    let Some((_, resinfo)) = header.split_once(';') else {
+        return false;
+    };
+    let Some(clauses) = authentication_parts(resinfo, |c| c == ';') else {
+        return false;
+    };
+    clauses.iter().any(|clause| {
         let Some((method, rest)) = strip(clause).split_once('=') else {
             return false;
         };
         // SPF authenticates the envelope sender, which forwarding can rewrite onto
         // the From domain. DMARC can pass on that SPF alignment alone.
-        if !strip(method).eq_ignore_ascii_case("dkim")
-            || !strip(rest)
-                .split(|c: char| regex_space(c) || c == '(')
-                .next()
-                .unwrap_or("")
-                .eq_ignore_ascii_case("pass")
+        if !strip(method).eq_ignore_ascii_case("dkim") {
+            return false;
+        }
+        let Some(properties) = authentication_parts(strip(rest), regex_space) else {
+            return false;
+        };
+        let mut properties = properties.iter().filter(|p| !p.is_empty());
+        if !properties
+            .next()
+            .is_some_and(|p| p.eq_ignore_ascii_case("pass"))
         {
             return false;
         }
-        DKIM_DOMAIN.captures_iter(clause).any(|cap| {
-            cap[1]
-                .trim_start_matches('@')
-                .rsplit('@')
-                .next()
-                .is_some_and(|d| unicode::downcase(d) == domain)
+        properties.any(|property| {
+            let Some((name, value)) = property.split_once('=') else {
+                return false;
+            };
+            if !name.eq_ignore_ascii_case("header.d") {
+                return false;
+            }
+            let value = if let Some(quoted) = value.strip_prefix('"') {
+                let Some(quoted) = quoted.strip_suffix('"') else {
+                    return false;
+                };
+                let mut value = String::new();
+                let mut chars = quoted.chars();
+                while let Some(c) = chars.next() {
+                    match c {
+                        '\\' => match chars.next() {
+                            Some(c) => value.push(c),
+                            None => return false,
+                        },
+                        '"' => return false,
+                        c => value.push(c),
+                    }
+                }
+                value
+            } else {
+                value.to_owned()
+            };
+            unicode::downcase(&value) == domain
         })
     })
+}
+
+// RFC 8601 comments and quoted strings can contain delimiters without starting
+// another result clause or property.
+fn authentication_parts(value: &str, separator: impl Fn(char) -> bool) -> Option<Vec<String>> {
+    let mut parts = Vec::new();
+    let mut part = String::new();
+    let mut comment_depth = 0;
+    let mut quoted = false;
+    let mut escaped = false;
+    for c in value.chars() {
+        if escaped {
+            if comment_depth == 0 {
+                part.push(c);
+            }
+            escaped = false;
+        } else if c == '\\' && (quoted || comment_depth > 0) {
+            escaped = true;
+            if comment_depth == 0 {
+                part.push(c);
+            }
+        } else if comment_depth > 0 {
+            match c {
+                '(' => comment_depth += 1,
+                ')' => comment_depth -= 1,
+                _ => {}
+            }
+        } else if c == '"' {
+            quoted = !quoted;
+            part.push(c);
+        } else if !quoted && c == '(' {
+            comment_depth = 1;
+            part.push(' ');
+        } else if !quoted && separator(c) {
+            parts.push(std::mem::take(&mut part));
+        } else {
+            part.push(c);
+        }
+    }
+    if quoted || comment_depth > 0 || escaped {
+        return None;
+    }
+    parts.push(part);
+    Some(parts)
 }
 
 pub fn html_to_text(html: &str) -> anyhow::Result<String> {
@@ -145,6 +219,7 @@ pub fn attachment_verdict(content_type: &str, decoded: usize, encoded: usize) ->
 pub struct Email {
     pub recipients: Vec<String>,
     pub from: Option<String>,
+    pub single_from: bool,
     pub sender_name: Option<String>,
     pub subject: String,
     pub body: String,
@@ -422,7 +497,10 @@ impl Email {
         .flat_map(|h| addresses(&mail, h))
         .map(|s| s.addr)
         .collect();
-        let from = addresses(&mail, "From").into_iter().next();
+        let from_addresses = addresses(&mail, "From");
+        let single_from =
+            mail.headers.get_all_headers("From").len() == 1 && from_addresses.len() == 1;
+        let from = from_addresses.into_iter().next();
         let mut files = Vec::new();
         let mut plain = None;
         let mut html = None;
@@ -479,6 +557,7 @@ impl Email {
                 .as_ref()
                 .map(|s| strip(&s.addr).to_owned())
                 .filter(|s| !blank(s)),
+            single_from,
             sender_name: from
                 .and_then(|s| s.display_name)
                 .map(|s| strip(&s).to_owned())

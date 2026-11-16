@@ -8,6 +8,38 @@ fn unicode_auth_cases() -> serde_json::Value {
     serde_json::from_str(include_str!("../../../vectors/unicode_casing_parity.json")).unwrap()
 }
 
+fn mail_auth_cases() -> serde_json::Value {
+    let mut corpus: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+    let overrides = [
+        // A prefixed name is not the header.d property (case 393).
+        "mx.mail.test; dkim=pass xheader.d=example.com",
+        // Comments cannot supply a signing domain (case 475).
+        "mx.mail.test; dkim=pass (header.d=example.com) header.d=attacker.test",
+        // A quoted reason cannot supply a signing domain (case 476).
+        "mx.mail.test; dkim=pass reason=\"header.d=example.com test\" header.d=attacker.test",
+        // header.d must be a domain, not an @domain identity.
+        "mx.mail.test; dkim=pass (comment) header.d=@example.com",
+        // header.d must be a domain, not a mailbox identity.
+        "mx.mail.test; dkim=pass (comment) header.d=a@example.com",
+        // A case-insensitive pass still requires a domain value.
+        "mx.mail.test; dkim=PASS (comment) header.d=@example.com",
+        // A case-insensitive pass does not turn a mailbox into a domain.
+        "mx.mail.test; dkim=PASS (comment) header.d=a@example.com",
+    ];
+    for header in overrides {
+        let case = corpus["auth"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|case| case["headers"] == serde_json::json!([header]))
+            .unwrap();
+        assert_eq!(case["expected"], true);
+        case["dkim_only_expected"] = false.into();
+    }
+    corpus
+}
+
 fn dkim_only_expected(case: &serde_json::Value) -> bool {
     // Preserve the recorded Rails verdicts, with explicit overrides for the stricter policy.
     case.get("dkim_only_expected")
@@ -89,8 +121,7 @@ fn review_non_ascii_authentication_whitespace_is_rejected() {
 }
 #[test]
 fn trusted_relay_authentication_matches_corpus_with_dkim_only_policy() {
-    let corpus: serde_json::Value =
-        serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+    let corpus = mail_auth_cases();
     for case in corpus["auth"].as_array().unwrap() {
         let headers = case
             .get("parsed_headers")
@@ -234,8 +265,7 @@ fn relay_header(case: &serde_json::Value) -> Option<String> {
 
 #[test]
 fn parsed_mail_authentication_headers_match_corpus_with_dkim_only_policy() {
-    let corpus: serde_json::Value =
-        serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+    let corpus = mail_auth_cases();
     for case in corpus["auth"].as_array().unwrap() {
         let fields = case["headers"]
             .as_array()

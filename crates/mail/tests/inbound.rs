@@ -990,6 +990,19 @@ macro_rules! member_test {
             } else {
                 assert!(creator.is_bot());
                 assert_eq!(creator.name, "Email");
+                let sender = $from
+                    .split("\r\n")
+                    .next()
+                    .unwrap()
+                    .split(',')
+                    .next()
+                    .unwrap();
+                assert!(
+                    message
+                        .markdown_source
+                        .unwrap()
+                        .starts_with(&format!("From {}\n\n", sender))
+                );
             }
         }
     };
@@ -1005,6 +1018,108 @@ member_test!(
     "David@37Signals.com",
     &["mx.mail.test; dkim=pass header.d=37signals.com"],
     true
+);
+member_test!(
+    dkim_syntax_duplicate_from_is_bot,
+    "david@37signals.com\r\nFrom: attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_multiple_from_mailboxes_is_bot,
+    "david@37signals.com, attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_quoted_identity_property_is_bot,
+    "david@37signals.com",
+    &[
+        "mx.mail.test; dkim=pass header.i=\"header.d=37signals.com x\"@attacker.test header.d=attacker.test"
+    ],
+    false
+);
+member_test!(
+    dkim_syntax_property_prefix_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass xheader.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_comment_property_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (header.d=37signals.com) header.d=attacker.test"],
+    false
+);
+member_test!(
+    dkim_syntax_reason_property_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass reason=\"header.d=37signals.com test\" header.d=attacker.test"],
+    false
+);
+member_test!(
+    dkim_syntax_comment_semicolon_is_member,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (1024-bit key; unprotected) header.d=37signals.com"],
+    true
+);
+member_test!(
+    dkim_syntax_nested_escaped_comment_is_member,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (outer (nested\\) key; unprotected)) header.d=37signals.com"],
+    true
+);
+member_test!(
+    dkim_syntax_escaped_open_comment_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (key \\( hidden header.d=37signals.com) header.d=attacker.test"],
+    false
+);
+member_test!(
+    dkim_syntax_quoted_semicolon_is_bot,
+    "david@37signals.com",
+    &[
+        "mx.mail.test; dkim=fail reason=\"ignored; dkim=pass header.d=37signals.com x\" header.d=attacker.test"
+    ],
+    false
+);
+member_test!(
+    dkim_syntax_escaped_quote_is_bot,
+    "david@37signals.com",
+    &[
+        "mx.mail.test; dkim=pass reason=\"escaped\\\" header.d=37signals.com x\" header.d=attacker.test"
+    ],
+    false
+);
+member_test!(
+    dkim_syntax_quoted_domain_is_member,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=\"37SIGNALS.COM\""],
+    true
+);
+member_test!(
+    dkim_syntax_subdomain_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=mail.37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_other_pass_then_member_failure_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=evil.test; dkim=fail header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_at_domain_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=@37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_mailbox_domain_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=attacker@37signals.com"],
+    false
 );
 member_test!(
     member_without_pass_posts_as_bot,
