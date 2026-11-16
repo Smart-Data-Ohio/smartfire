@@ -38,8 +38,9 @@ export function useAppIndicators(roomId: number | null, page: Page): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
   const accountChanged = useStore((state) => state.accountChanged);
 
+  // Until the sidebar has caught up with the server, a badge the service worker pushed is newer.
   const badge = useStore((state) =>
-    state.accountChanged || state.connection !== "online" || state.sidebar.status !== "ready"
+    state.accountChanged || !state.sidebarCaughtUp || state.sidebar.status !== "ready"
       ? null
       : sidebarTotals(state.sidebar).unreadRooms,
   );

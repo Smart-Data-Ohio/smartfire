@@ -48,6 +48,12 @@ export interface State {
   readonly me: Me | null;
   readonly connection: ConnectionStatus;
   /**
+   * The sidebar has caught up with the server on the current connection: its welcome was
+   * handled, with the replay or sidebar read it called for. Any connection change clears it, and
+   * so does a sidebar resync until its read lands. The app badge is written only while it holds.
+   */
+  readonly sidebarCaughtUp: boolean;
+  /**
    * Another tab signed in as someone else, and the server answered this page as them. Set once and
    * never cleared (only a reload starts over): the store takes no more changes, the API client
    * refuses every request, and the shell gives way to a notice asking for the reload.
@@ -167,6 +173,7 @@ export const initialState: State = {
   boot: null,
   me: null,
   connection: "connecting",
+  sidebarCaughtUp: false,
   accountChanged: false,
   users: {},
   presence: {},

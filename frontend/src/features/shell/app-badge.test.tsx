@@ -19,6 +19,7 @@ const serviceWorker = new EventTarget();
 
 function openApp() {
   mutations.setConnection("online");
+  mutations.setSidebarCaughtUp(true);
   vi.stubGlobal("navigator", { setAppBadge, clearAppBadge, serviceWorker });
 
   return renderHook(() => useAppIndicators(null, null));
@@ -140,7 +141,7 @@ it("reasserts the current badge when the window becomes visible", async () => {
 });
 
 it.each(["connecting", "reconnecting", "offline"] as const)(
-  "keeps a fresh push badge while sync is %s, including when shown again",
+  "keeps a fresh push badge while sync is %s, then until the sidebar catches up",
   async (connection) => {
     mutations.loadSidebar(sidebarFixture([]), 0);
     openApp();
@@ -156,6 +157,8 @@ it.each(["connecting", "reconnecting", "offline"] as const)(
     await act(async () => mutations.loadSidebar(sidebarFixture([unreadRow(1), unreadRow(2)]), 0));
     expect(badgeCount).toBe(1);
     await act(async () => mutations.setConnection("online"));
+    expect(badgeCount).toBe(1);
+    await act(async () => mutations.setSidebarCaughtUp(true));
     expect(badgeCount).toBe(2);
   },
 );

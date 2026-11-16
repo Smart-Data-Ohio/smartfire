@@ -8,7 +8,8 @@ it instead of re-deciding the rules, and the inbox recorder implements
 the same inbox rules in its own candidate flow.
 
 The app icon's number counts conversations with unread messages, the same conversations
-shown in bold in the sidebar. It clears when you have read them all.
+shown in bold in the sidebar. It clears when you have read them all. On each device, the number
+catches up to the sidebar's count when the app opens there.
 
 ## Presence and custom status
 

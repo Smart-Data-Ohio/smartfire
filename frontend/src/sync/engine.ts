@@ -280,6 +280,10 @@ export class Engine extends Context.Service<
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
       /** Replayed messages update the store, but must not play sounds. */
       const replayThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+      /** Counts connections, so a sidebar read that outlives its connection can't vouch for the next. */
+      const connections = yield* Ref.make(0);
+      /** A resume's replay is still on its way: the sidebar catches up once it has been applied. */
+      const replayOwed = yield* Ref.make(false);
 
       const activitySnapshotThrough = yield* Ref.make({
         generation: store.getState().activity.generation,
@@ -602,6 +606,12 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
+            // The sidebar may be behind the server until this read lands.
+            const connection = yield* Ref.get(connections);
+
+            yield* Ref.set(replayOwed, false);
+            mutations.setSidebarCaughtUp(false);
+
             // `followBlocks` fetches the ignore snapshot apart from these reads: one that stalls
             // or fails doesn't hold it up.
             yield* requestBlocks;
@@ -660,6 +670,10 @@ export class Engine extends Context.Service<
 
             // A read that failed or stalled is made again on the next resume.
             yield* Ref.set(userResyncStale, signedIn === null || !installed);
+
+            if (installed && (yield* Ref.get(connections)) === connection) {
+              mutations.setSidebarCaughtUp(true);
+            }
 
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
@@ -987,6 +1001,12 @@ export class Engine extends Context.Service<
           } else {
             yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
 
+            if (frame.replayThrough > point.seq) {
+              yield* Ref.set(replayOwed, true);
+            } else {
+              mutations.setSidebarCaughtUp(true);
+            }
+
             // Nor a snapshot that never landed.
             if (ignoresStale(store.getState().ignores)) {
               yield* requestBlocks;
@@ -1012,6 +1032,11 @@ export class Engine extends Context.Service<
         welcomed: Ref.Ref<boolean>,
       ) {
         let events: SyncEvent[] = [];
+        /**
+         * A batch or ping followed the welcome. The server sends a resume's whole replay right
+         * after its welcome and pings only after silence, so either means the replay is here.
+         */
+        let afterReplay = false;
 
         const flush = Effect.suspend(() => {
           const batch = events;
@@ -1031,11 +1056,14 @@ export class Engine extends Context.Service<
           switch (frame.t) {
             case "batch":
               events.push(...frame.events);
+              afterReplay = true;
               break;
             case "ping":
+              afterReplay = true;
               break;
             case "welcome":
               yield* flush;
+              afterReplay = false;
               yield* welcome(frame, scope);
 
               // Answered for someone else: stop reading, with no reconnect, and let `run` reload.
@@ -1057,6 +1085,10 @@ export class Engine extends Context.Service<
         }
 
         yield* flush;
+
+        if (afterReplay && (yield* Ref.getAndSet(replayOwed, false))) {
+          mutations.setSidebarCaughtUp(true);
+        }
 
         return null;
       });
@@ -1086,6 +1118,8 @@ export class Engine extends Context.Service<
             yield* Effect.addFinalizer(() => link.detach);
             yield* link.attach(connection, greeting);
             yield* Ref.set(openedAt, yield* Clock.currentTimeMillis);
+            yield* Ref.update(connections, (count) => count + 1);
+            yield* Ref.set(replayOwed, false);
             yield* setConnection("online");
 
             const bye = yield* Ref.make<boolean | null>(null);
