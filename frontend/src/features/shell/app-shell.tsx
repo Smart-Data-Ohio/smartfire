@@ -1,5 +1,6 @@
 import { Outlet, useMatches, useMatchRoute, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { clearAppBadge } from "../../lib/app-badge.ts";
 import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
@@ -30,12 +31,58 @@ type Page = "Settings" | "Workspace" | "People" | "Server guide" | null;
 
 /**
  * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings, the
- * workspace pages and the people pages name themselves instead of a room.
+ * workspace pages and the people pages name themselves instead of a room. The app-icon badge
+ * counts the same visible unread rooms as the sidebar and clears once they are read.
  */
-function useDocumentTitle(roomId: number | null, page: Page): void {
+export function useAppIndicators(roomId: number | null, page: Page): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
+  const accountChanged = useStore((state) => state.accountChanged);
+
+  // Until the sidebar has caught up with the server, a badge the service worker pushed is newer.
+  const badge = useStore((state) =>
+    state.accountChanged || !state.sidebarCaughtUp || state.sidebar.status !== "ready"
+      ? null
+      : sidebarTotals(state.sidebar).unreadRooms,
+  );
+
   const unread = useStore((state) => sidebarTotals(state.sidebar).unreadRooms > 0);
   const room = useStore((state) => (roomId === null ? null : (state.sidebar.rows[roomId] ?? null)));
+
+  useEffect(() => {
+    if (accountChanged) void clearAppBadge();
+  }, [accountChanged]);
+
+  useEffect(() => {
+    if (badge === null) return;
+
+    const update = () => {
+      const pending = badge > 0 ? navigator.setAppBadge?.(badge) : clearAppBadge();
+
+      // Badging can be denied by the browser without preventing the app from updating.
+      void pending?.catch(() => undefined);
+    };
+
+    const pushed = (event: MessageEvent<unknown>) => {
+      const data = event.data;
+
+      if (data instanceof Object && "type" in data && data.type === "badge-pushed") {
+        update();
+      }
+    };
+
+    const visible = () => {
+      if (document.visibilityState === "visible") update();
+    };
+
+    update();
+    navigator.serviceWorker?.addEventListener("message", pushed);
+    document.addEventListener("visibilitychange", visible);
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener("message", pushed);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [badge]);
 
   useEffect(() => {
     const prefix = mentions > 0 ? `(${mentions}) ` : unread ? "• " : "";
@@ -127,7 +174,7 @@ export function AppShell() {
     [router],
   );
 
-  useDocumentTitle(roomId, page);
+  useAppIndicators(roomId, page);
   useTwoFactorSetupGate();
   useClassicLinks();
   useBootFlash();

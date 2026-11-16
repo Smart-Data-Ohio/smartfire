@@ -117,7 +117,12 @@ self.addEventListener("push", (event) => {
 });
 
 async function updateBadgeCount(options: { readonly data: { readonly badge: number | null } }) {
-  return self.navigator.setAppBadge?.(options.data.badge || 0);
+  await self.navigator.setAppBadge?.(options.data.badge || 0)?.catch(() => undefined);
+  const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+
+  for (const client of clients) {
+    client.postMessage({ type: "badge-pushed" });
+  }
 }
 
 self.addEventListener("notificationclick", (event) => {
@@ -125,7 +130,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(openNotification(event.notification.data.path));
 });
 
-/** Exported in the worker's IIFE for browser-context verification; there is no message hook. */
+/** Exported in the worker's IIFE for browser-context verification; there is no message hook for notification clicks. */
 export async function openNotification(path: string): Promise<WindowClient | null> {
   // The server's aliases select the person's UI, including an explicit classic preference.
   const url = new URL(path, self.location.origin).href;

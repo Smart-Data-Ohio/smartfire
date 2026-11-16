@@ -280,6 +280,16 @@ export class Engine extends Context.Service<
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
       /** Replayed messages update the store, but must not play sounds. */
       const replayThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+      /** Counts connections, so a sidebar read that outlives its connection can't vouch for the next. */
+      const connections = yield* Ref.make(0);
+      /** A resume's replay is still on its way: the sidebar catches up once it has been applied. */
+      const replayOwed = yield* Ref.make(false);
+      /** The connection whose user resync failed to read the sidebar: it reads again until one lands. */
+      const sidebarReadFailed = yield* Ref.make<number | null>(null);
+      /** Wakes the connection's `retrySidebarRead`. */
+      const sidebarRetryWanted = yield* Queue.sliding<void>(1);
+      /** Numbers the user resync's sidebar reads: only the newest may install or settle the gate. */
+      const sidebarReads = yield* Ref.make(0);
 
       const activitySnapshotThrough = yield* Ref.make({
         generation: store.getState().activity.generation,
@@ -602,6 +612,14 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
+            // The sidebar may be behind the server until this read lands.
+            const connection = yield* Ref.get(connections);
+            const read = yield* Ref.updateAndGet(sidebarReads, (count) => count + 1);
+            const newest = Effect.map(Ref.get(sidebarReads), (latest) => latest === read);
+
+            yield* Ref.set(replayOwed, false);
+            mutations.setSidebarCaughtUp(false);
+
             // `followBlocks` fetches the ignore snapshot apart from these reads: one that stalls
             // or fails doesn't hold it up.
             yield* requestBlocks;
@@ -631,18 +649,23 @@ export class Engine extends Context.Service<
             const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
                 Effect.timeout(RESYNC_READ_TIMEOUT),
-                Effect.map((data) => {
-                  // Authoritative: every HTTP reply already on its way is stale now.
-                  const restored = mutations.resyncSidebar(data, since);
+                Effect.flatMap((data) =>
+                  Effect.gen(function* () {
+                    // A newer read started meanwhile: its snapshot, not this older one, stands.
+                    if (!(yield* newest)) return false;
 
-                  // The snapshot is newer than any room write still on its way.
-                  markSidebarSnapshot();
+                    // Authoritative: every HTTP reply already on its way is stale now.
+                    const restored = mutations.resyncSidebar(data, since);
 
-                  return restored;
-                }),
-                // A room it gave back that shows as unavailable reads itself again.
-                Effect.tap((restored) => Effect.forkIn(recoverResyncedRooms(restored), scope)),
-                Effect.as(true),
+                    // The snapshot is newer than any room write still on its way.
+                    markSidebarSnapshot();
+
+                    // A room it gave back that shows as unavailable reads itself again.
+                    yield* Effect.forkIn(recoverResyncedRooms(restored), scope);
+
+                    return true;
+                  }),
+                ),
               ),
             ).pipe(
               Effect.catch((error) =>
@@ -653,13 +676,28 @@ export class Engine extends Context.Service<
               Effect.provideContext(api),
             );
 
-            // Replayed layout events are covered only by a snapshot that actually installed.
-            if (installed && sidebarThrough !== undefined) {
-              yield* Ref.set(snapshotThrough, sidebarThrough);
-            }
+            if (!(yield* newest)) {
+              // A newer read started meanwhile: it alone settles the snapshot and the gate.
+              yield* Effect.logDebug("sync: superseded sidebar read dropped");
+            } else {
+              // Replayed layout events are covered only by a snapshot that actually installed.
+              if (installed && sidebarThrough !== undefined) {
+                yield* Ref.set(snapshotThrough, sidebarThrough);
+              }
 
-            // A read that failed or stalled is made again on the next resume.
-            yield* Ref.set(userResyncStale, signedIn === null || !installed);
+              // A read that failed or stalled is made again on the next resume.
+              yield* Ref.set(userResyncStale, signedIn === null || !installed);
+
+              if ((yield* Ref.get(connections)) === connection) {
+                if (installed) {
+                  yield* Ref.set(sidebarReadFailed, null);
+                  mutations.setSidebarCaughtUp(true);
+                } else {
+                  yield* Ref.set(sidebarReadFailed, connection);
+                  Queue.offerUnsafe(sidebarRetryWanted, undefined);
+                }
+              }
+            }
 
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
@@ -987,6 +1025,12 @@ export class Engine extends Context.Service<
           } else {
             yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
 
+            if (frame.replayThrough > point.seq) {
+              yield* Ref.set(replayOwed, true);
+            } else {
+              mutations.setSidebarCaughtUp(true);
+            }
+
             // Nor a snapshot that never landed.
             if (ignoresStale(store.getState().ignores)) {
               yield* requestBlocks;
@@ -1003,6 +1047,18 @@ export class Engine extends Context.Service<
       });
 
       /**
+       * The cursor has reached the welcome's `replayThrough`. The server splits a replay into
+       * batches that can land in separate groups, and sends it in sequence order ahead of anything
+       * live. Replay leaves out events not meant for this viewer, so the last ones may never
+       * come: then the next live event, or a ping, says the replay is done.
+       */
+      const replayApplied = Effect.gen(function* () {
+        const point = yield* cursor.get;
+
+        return point !== null && point.seq >= (yield* Ref.get(replayThrough));
+      });
+
+      /**
        * Handles one coalesced group of frames, in order: batch events gather into one commit,
        * flushed before any other frame. Returns `bye`'s `reconnect`, or `null` to keep going.
        */
@@ -1012,6 +1068,8 @@ export class Engine extends Context.Service<
         welcomed: Ref.Ref<boolean>,
       ) {
         let events: SyncEvent[] = [];
+        /** The server pings only after silence, so a resume's replay has all been sent. */
+        let pinged = false;
 
         const flush = Effect.suspend(() => {
           const batch = events;
@@ -1033,9 +1091,11 @@ export class Engine extends Context.Service<
               events.push(...frame.events);
               break;
             case "ping":
+              pinged = true;
               break;
             case "welcome":
               yield* flush;
+              pinged = false;
               yield* welcome(frame, scope);
 
               // Answered for someone else: stop reading, with no reconnect, and let `run` reload.
@@ -1058,7 +1118,43 @@ export class Engine extends Context.Service<
 
         yield* flush;
 
+        if ((yield* Ref.get(replayOwed)) && (pinged || (yield* replayApplied))) {
+          yield* Ref.set(replayOwed, false);
+          mutations.setSidebarCaughtUp(true);
+        }
+
         return null;
+      });
+
+      /**
+       * While this connection's sidebar read keeps failing, reads it again with the reconnect
+       * backoff, or at once when the tab is shown or back online. Ends with the connection.
+       */
+      const retrySidebarRead = Effect.fnUntraced(function* (
+        connection: number,
+        scope: Scope.Scope,
+      ) {
+        const failing = Effect.map(Ref.get(sidebarReadFailed), (failed) => failed === connection);
+
+        while (true) {
+          yield* Queue.take(sidebarRetryWanted);
+
+          const step = yield* Schedule.toStep(reconnectSchedule);
+
+          while (yield* failing) {
+            const [, delay] = yield* Effect.orDie(step(yield* Clock.currentTimeMillis, undefined));
+
+            yield* Effect.raceFirst(
+              Effect.sleep(delay),
+              Effect.asVoid(Stream.runHead(lifecycle.wakeups)),
+            );
+
+            // Another read (a server `resync`) may have landed meanwhile.
+            if (yield* failing) {
+              yield* resync(scope, ["user"]);
+            }
+          }
+        }
       });
 
       const greeting = Effect.gen(function* () {
@@ -1086,6 +1182,10 @@ export class Engine extends Context.Service<
             yield* Effect.addFinalizer(() => link.detach);
             yield* link.attach(connection, greeting);
             yield* Ref.set(openedAt, yield* Clock.currentTimeMillis);
+            const connectionId = yield* Ref.updateAndGet(connections, (count) => count + 1);
+
+            yield* Ref.set(replayOwed, false);
+            yield* Effect.forkScoped(retrySidebarRead(connectionId, scope));
             yield* setConnection("online");
 
             const bye = yield* Ref.make<boolean | null>(null);

@@ -255,6 +255,46 @@ describe("the setup screen", () => {
     await waitFor(() => expect(leave).toHaveBeenCalledWith(SIGNED_OUT_LOCATION));
   });
 
+  it("clears the badge before leaving after signing out", async () => {
+    const cleared = Promise.withResolvers<void>();
+    const clearAppBadge = vi.fn(() => cleared.promise);
+
+    Object.defineProperty(navigator, "clearAppBadge", { value: clearAppBadge, configurable: true });
+
+    try {
+      await twoFactor({ enrolled: false, required: true });
+      await mount("/app/two_factor/setup?required=true");
+      await screen.findByRole("img", { name: "QR code for your authenticator app" });
+      fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+      await waitFor(() => expect(clearAppBadge).toHaveBeenCalledOnce());
+      expect(leave).not.toHaveBeenCalled();
+      await act(async () => cleared.resolve());
+      await waitFor(() => expect(leave).toHaveBeenCalledWith(SIGNED_OUT_LOCATION));
+    } finally {
+      cleared.resolve();
+      Reflect.deleteProperty(navigator, "clearAppBadge");
+    }
+  });
+
+  it("still leaves when the browser rejects clearing the badge", async () => {
+    const clearAppBadge = vi.fn(async () => {
+      throw new DOMException("Denied", "NotAllowedError");
+    });
+
+    Object.defineProperty(navigator, "clearAppBadge", { value: clearAppBadge, configurable: true });
+
+    try {
+      await twoFactor({ enrolled: false, required: true });
+      await mount("/app/two_factor/setup?required=true");
+      await screen.findByRole("img", { name: "QR code for your authenticator app" });
+      fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+      await waitFor(() => expect(leave).toHaveBeenCalledWith(SIGNED_OUT_LOCATION));
+      expect(clearAppBadge).toHaveBeenCalledOnce();
+    } finally {
+      Reflect.deleteProperty(navigator, "clearAppBadge");
+    }
+  });
+
   it("ignores an answer that arrives after the screen has gone", async () => {
     const pending = Promise.withResolvers<SetupAnswer>();
 

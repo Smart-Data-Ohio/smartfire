@@ -1,5 +1,6 @@
 import { useBlocker, useRouter, useSearch } from "@tanstack/react-router";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
+import { clearAppBadge } from "../../lib/app-badge.ts";
 import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import { isSpaPath, spaUrlFor } from "../../lib/screens.ts";
 import { type SetupAnswer, type SetupState, twoFactorSetup } from "../../sync/two-factor-setup.ts";
@@ -189,7 +190,7 @@ export function TwoFactorSetupPage() {
         const answer = await twoFactorSetup.signOut(subscription?.endpoint ?? null);
 
         // The server has dropped the subscription with the session; the browser follows.
-        await subscription?.unsubscribe().catch(() => false);
+        await Promise.all([clearAppBadge(), subscription?.unsubscribe().catch(() => false)]);
 
         if (!alive.current) return;
 

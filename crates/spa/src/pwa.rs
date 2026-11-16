@@ -11,9 +11,10 @@ pub const SERVICE_WORKER_JS: &str = include_str!("../pwa/service_worker.js");
 /// activation it keeps the SPA worker's build caches, and it serves `/app/assets/` from them, so
 /// an SPA tab still open on an older build keeps loading its chunks after another tab switches
 /// to the classic UI. Pass-through requests use a static network route when supported, so
-/// they do not wake the worker during a script swap. Parity tests apply exactly these to the
-/// frozen Rails body.
-pub const SERVICE_WORKER_SPA_PATCH: [(&str, &str); 5] = [
+/// they do not wake the worker during a script swap. After a push sets the badge, it tells open
+/// windows to reconcile against their live sidebar, even if the browser denied the badge update.
+/// Parity tests apply exactly these to the frozen Rails body.
+pub const SERVICE_WORKER_SPA_PATCH: [(&str, &str); 6] = [
     (
         "const OFFLINE_URL = \"/offline.html\"\n",
         "const OFFLINE_URL = \"/offline.html\"\n\
@@ -79,6 +80,14 @@ pub const SERVICE_WORKER_SPA_PATCH: [(&str, &str); 5] = [
          \x20 return fetch(request)\n\
          }\n\n\
          async function networkThenOffline(request) {",
+    ),
+    (
+        "  return self.navigator.setAppBadge?.(badge || 0)\n",
+        "  await self.navigator.setAppBadge?.(badge || 0)?.catch(() => undefined)\n\
+         \x20 const clients = await self.clients.matchAll({ type: \"window\", includeUncontrolled: true })\n\
+         \x20 for (const client of clients) {\n\
+         \x20   client.postMessage({ type: \"badge-pushed\" })\n\
+         \x20 }\n",
     ),
 ];
 

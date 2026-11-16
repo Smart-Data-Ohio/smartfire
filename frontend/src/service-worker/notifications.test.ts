@@ -20,7 +20,15 @@ async function worker(
   const navigate = vi.fn(async () => undefined);
   const focus = vi.fn(async () => null);
   const showNotification = vi.fn(async () => undefined);
-  const setAppBadge = vi.fn(async () => undefined);
+  const setAppBadge = vi.fn(async (): Promise<void> => undefined);
+  const postMessage = vi.fn();
+  const secondPostMessage = vi.fn();
+
+  const matchAll = vi.fn(async () => [
+    { ...client, navigate, focus, postMessage },
+    { ...client, navigate, focus, postMessage: secondPostMessage },
+  ]);
+
   const openWindow = vi.fn(async () => null);
 
   vi.stubGlobal("self", {
@@ -34,7 +42,7 @@ async function worker(
     navigator: { setAppBadge },
     registration: { showNotification },
     clients: {
-      matchAll: vi.fn(async () => [{ ...client, navigate, focus }]),
+      matchAll,
       openWindow,
     },
     addEventListener: (name: string, handler: (event: WorkerEvent) => Promise<void> | void) => {
@@ -63,7 +71,17 @@ async function worker(
     await Promise.all(completions);
   }
 
-  return { dispatch, navigate, focus, openWindow, showNotification, setAppBadge };
+  return {
+    dispatch,
+    navigate,
+    focus,
+    openWindow,
+    showNotification,
+    setAppBadge,
+    postMessage,
+    secondPostMessage,
+    matchAll,
+  };
 }
 
 describe("shared worker notifications", () => {
@@ -120,4 +138,46 @@ describe("shared worker notifications", () => {
     expect(f.showNotification).toHaveBeenCalledExactlyOnceWith("New message", options);
     expect(f.setAppBadge).toHaveBeenCalledExactlyOnceWith(badge || 0);
   });
+});
+
+it("tells every window to restore its count only after the pushed badge settles", async () => {
+  const f = await worker();
+  let finish: (() => void) | undefined;
+  f.setAppBadge.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+
+  const pushed = f.dispatch("push", {
+    data: {
+      json: () => ({
+        title: "Late push",
+        options: { data: { badge: 4, path: "/rooms/12" }, tag: "room-12" },
+      }),
+    },
+  });
+
+  await Promise.resolve();
+  expect(f.postMessage).not.toHaveBeenCalled();
+  finish?.();
+  await pushed;
+  expect(f.matchAll).toHaveBeenCalledWith({ type: "window", includeUncontrolled: true });
+  expect(f.postMessage).toHaveBeenCalledExactlyOnceWith({ type: "badge-pushed" });
+  expect(f.secondPostMessage).toHaveBeenCalledExactlyOnceWith({ type: "badge-pushed" });
+});
+
+it("still asks windows to restore the badge when badging is rejected", async () => {
+  const f = await worker();
+  f.setAppBadge.mockRejectedValueOnce(new DOMException("Denied", "NotAllowedError"));
+  await f.dispatch("push", {
+    data: {
+      json: () => ({
+        title: "Late push",
+        options: { data: { badge: 4, path: "/rooms/12" }, tag: "room-12" },
+      }),
+    },
+  });
+  expect(f.postMessage).toHaveBeenCalledExactlyOnceWith({ type: "badge-pushed" });
 });
