@@ -80,29 +80,13 @@
     max-width: min(18rem, 100%);
   }
 
-  .room-header:has(.room-topic-button) .page-header-heading {
-    min-width: 14rem;
-  }
-
-  .room-header:has(.room-topic-button) .page-header-actions {
-    flex-shrink: 1;
-    min-width: 0;
-  }
-
-  .room-header:has(.room-topic-button) .header-search {
-    min-width: 0;
-  }
-
-  .room-header:has(.room-topic-button) .search-field {
-    max-width: 100%;
-  }
-
   /*
    * Wide screens: the room's name keeps a readable width however narrow an open pane and a large
    * text size leave the header. The actions give way first, as a narrower window has them do:
    * the search field narrows, then the call button drops its label, then the search goes (the
-   * sidebar's search stays). The breakpoints are the header's own width, in px for the icons and
-   * rem for the text, so they come sooner at the larger text sizes.
+   * sidebar's search stays), and last the call's faces go and the pane buttons fold into a ⋯
+   * menu. The breakpoints are the header's own width, in px for the icons and rem for the text,
+   * so they come sooner at the larger text sizes.
    */
   @media (720px <= width) {
     .room-header {
@@ -113,6 +97,11 @@
       min-width: 8rem;
     }
 
+    .room-header:has(.room-topic-button) .page-header-heading {
+      min-width: 14rem;
+    }
+
+    /* While the search shows, the actions may narrow: the field shrinks into the space. */
     .room-header .page-header-actions {
       flex-shrink: 1;
       min-width: 0;
@@ -126,14 +115,13 @@
       max-width: 100%;
     }
 
-    @container room-header (width < calc(430px + 12.875rem)) {
-      .room-header .huddle-launcher-label {
-        display: none;
-      }
+    /* Only the narrowest step needs the ⋯ menu. */
+    .room-header .page-header-overflow-wrap {
+      display: none;
     }
 
-    @container room-header (width < calc(392px + 9.25rem)) {
-      .room-header .header-search {
+    @container room-header (width < calc(430px + 12.875rem)) {
+      .room-header .huddle-launcher-label {
         display: none;
       }
     }
@@ -144,9 +132,52 @@
       }
     }
 
+    /*
+     * Without the search nothing in the actions can narrow, so they keep their full width and the
+     * name takes what's left: a call's faces, a stage or a voice limit, which these steps don't
+     * count, narrow the name rather than push a button past the header's edge.
+     */
+    @container room-header (width < calc(392px + 9.25rem)) {
+      .room-header .header-search {
+        display: none;
+      }
+
+      .room-header .page-header-heading {
+        min-width: 0;
+      }
+
+      .room-header .page-header-actions {
+        flex-shrink: 0;
+      }
+    }
+
     @container room-header (width < calc(392px + 15.25rem)) {
       .room-header:has(.room-topic-button) .header-search {
         display: none;
+      }
+
+      .room-header:has(.room-topic-button) .page-header-heading {
+        min-width: 0;
+      }
+
+      .room-header:has(.room-topic-button) .page-header-actions {
+        flex-shrink: 0;
+      }
+    }
+
+    /* The narrowest: the call's faces and the topic (still in About) go, and the pane buttons
+       move into a ⋯ menu. */
+    @container room-header (width < calc(340px + 9.25rem)) {
+      .room-header :is(.huddle-stack, .pane-buttons, .room-topic-button) {
+        display: none;
+      }
+
+      .room-header .room-title > a.room-title-button {
+        max-width: min(18rem, 100%);
+      }
+
+      .room-header .page-header-overflow-wrap {
+        display: inline-flex;
       }
     }
   }

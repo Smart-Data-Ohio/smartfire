@@ -311,6 +311,15 @@
     }
   }
 
+  /* The scheduled messages' button ("1 scheduled") takes the new-line hint's place when the
+     card is too narrow for both; in rem, as both are text, so it comes sooner at the larger
+     text sizes. */
+  @container composer (width < calc(480px + 7rem)) {
+    .composer-card:has(.composer-scheduled) .composer-hint {
+      display: none;
+    }
+  }
+
   @media (width < 720px) {
     /* Pinned to the bottom of the screen, which the shell keeps above the keyboard and the home
        indicator; the toolbar keeps only what a thumb needs. */

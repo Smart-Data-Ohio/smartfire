@@ -36,7 +36,7 @@
     overflow: clip visible;
     font-size: var(--text-title);
     font-weight: var(--weight-semibold);
-    line-height: 24px;
+    line-height: var(--leading-title);
     text-overflow: ellipsis;
     white-space: nowrap;
   }

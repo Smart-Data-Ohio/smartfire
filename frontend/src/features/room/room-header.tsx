@@ -274,8 +274,8 @@ function PhoneOverflowItems({
 /**
  * The conversation's page header, Slack's: the room's glyph and name (a DM shows the person,
  * their presence and status; an announcement room the megaphone and its tag), then the tools: on wide screens a DM's people actions, the call,
- * the bell, the calendar, the pane toggles (threads, pins, files and the member stack) and
- * search; on phones the back button, the call and a ⋯ menu holding the rest, and the name opens
+ * the bell, the calendar, the pane toggles (threads, pins, files and the member stack, in a ⋯
+ * menu when the header is narrow) and search; on phones the back button, the call and a ⋯ menu holding the rest, and the name opens
  * the room's details.
  */
 export function RoomHeader({ roomId }: { readonly roomId: number }) {
@@ -355,14 +355,18 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
           )
         }
         overflow={
-          !phone || kind === null ? undefined : notificationsRoute ? (
+          kind === null ? undefined : !phone ? (
+            // Wide screens show it only when the header is too narrow for the pane buttons
+            // (room.css), which it then holds.
+            <PaneMenuItems roomId={roomId} />
+          ) : notificationsRoute ? (
             <NotificationLevels roomId={roomId} />
           ) : (
             <PhoneOverflowItems roomId={roomId} directActions={direct.actions} self={self} />
           )
         }
         overflowLabel={phone && notificationsRoute ? "Notifications" : "More"}
-        overflowAlert={phone && hands > 0 ? raisedHandsLabel(hands) : undefined}
+        overflowAlert={hands > 0 ? raisedHandsLabel(hands) : undefined}
         overflowMenu={phone ? notificationsMenu : undefined}
       />
       {phone ? direct.dialogs : null}

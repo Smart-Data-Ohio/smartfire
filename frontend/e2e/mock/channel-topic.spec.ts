@@ -90,50 +90,128 @@ for (const viewport of [DESKTOP, PHONE]) {
   });
 }
 
-for (const width of [DESKTOP.width, 1280]) {
-  test(`at the largest text size with a pane open the room name stays readable at ${width}px`, async ({
-    page,
-  }, testInfo) => {
-    await page.setViewportSize({ ...DESKTOP, width });
-    await openApp(page, "");
-    await saveAccountAppearance(page, { textSize: "largest" });
-    await openApp(page, `r/${ROOM_IDS.general}`);
-    await openHeaderTool(page, /^Pinned messages/);
-    const pane = page.locator("aside.right-pane");
-    await expect(pane.getByRole("heading", { name: "Pinned messages" })).toBeVisible();
-    await expect(pane.locator(".pin-card")).toHaveCount(3);
-    await page.mouse.move(0, 0);
-    const header = page.locator(".room-header");
-    await expect(header.getByRole("heading", { name: "general", level: 1 })).toBeVisible();
-    await page.screenshot({ path: testInfo.outputPath(`largest-pane-${width}.png`) });
+// The room header at each text size's height token (--pane-header-height): 48 px, or a stacked
+// pane title (1.25rem) over its subtitle (1rem) plus 6 px at Largest's 24 px root.
+const HEADER_HEIGHT = { default: 48, largest: 60 } as const;
 
-    // The actions give way (the call button keeps its glyph, the search narrows or goes), so the
-    // name shows whole and nothing spills under the pane.
-    expect(
-      await header.evaluate((element) => {
-        const name = element.querySelector(".room-title-name");
+// #general has no topic and one scheduled message; launch-planning is given a topic; the Lounge
+// has people in its call and is given a voice limit, so its header shows their faces and "2/25".
+const HEADER_ROOMS = [
+  { id: ROOM_IDS.general, name: "general", settings: null },
+  {
+    id: ROOM_IDS.launchPlanning,
+    name: "launch-planning",
+    settings: { field: "Topic", value: "Ship the launch checklist by Thursday" },
+  },
+  { id: ROOM_IDS.lounge, name: "Lounge", settings: { field: "Voice user limit", value: "25" } },
+] as const;
 
-        if (name === null) throw new Error("Missing room name");
+for (const textSize of ["default", "largest"] as const) {
+  for (const room of HEADER_ROOMS) {
+    for (const width of [1280, 760]) {
+      test(`at the ${textSize} text size with a pane open, ${room.name}'s header fits at ${width}px`, async ({
+        page,
+      }, testInfo) => {
+        await page.setViewportSize({ ...DESKTOP, width });
+        await openApp(page, "");
+        await saveAccountAppearance(page, { textSize });
 
-        return {
-          visible: name.getBoundingClientRect().width > 0,
-          whole: name.scrollWidth <= name.clientWidth,
-          contained: element.scrollWidth <= element.clientWidth,
-        };
-      }),
-    ).toEqual({ visible: true, whole: true, contained: true });
+        if (room.settings === null) {
+          await openApp(page, `r/${room.id}`);
+        } else {
+          await openApp(page, `r/${room.id}/settings`);
+          const dialog = page.getByRole("dialog");
+          const field = dialog.getByLabel(room.settings.field);
 
-    // The pane's title over its subtitle fits, and its header lines up with the room's.
-    const heights = await Promise.all(
-      [header, pane.locator(".pane-header")].map(
-        async (locator) => (await locator.boundingBox())?.height,
-      ),
-    );
+          await (room.settings.field === "Topic"
+            ? field.fill(room.settings.value)
+            : field.selectOption(room.settings.value));
+          await dialog.getByRole("button", { name: "Save changes" }).click();
+          await expect(dialog).toBeHidden();
+        }
 
-    expect(heights[0]).toBeGreaterThan(48);
-    expect(heights[1]).toBe(heights[0]);
-  });
+        const header = page.locator(".room-header");
+        await expect(header.getByRole("heading", { name: room.name, level: 1 })).toBeAttached();
+
+        // The topic shows in a wide enough header; the narrowest leaves it to About.
+        if (room.id === ROOM_IDS.launchPlanning) {
+          await expect(header.getByRole("button", { name: "Channel topic, About" })).toBeVisible({
+            visible: width > 760,
+          });
+        }
+
+        if (room.id === ROOM_IDS.lounge) {
+          await expect(header.locator(".huddle-stack")).toBeAttached();
+          await expect(
+            header.getByRole("status", { name: /of 25 voice participants$/ }),
+          ).toBeVisible();
+        }
+
+        await openHeaderTool(page, /^Pinned messages/);
+        const pane = page.locator("aside.right-pane");
+        await expect(pane.getByRole("heading", { name: "Pinned messages" })).toBeVisible();
+        await page.mouse.move(0, 0);
+        await page.screenshot({
+          path: testInfo.outputPath(`${textSize}-${room.name}-${width}.png`),
+        });
+
+        // The actions give way (the call button keeps its glyph, the search narrows or goes, the
+        // pane buttons fold into ⋯), so the name shows and no control ends past the header.
+        expect(
+          await header.evaluate((element) => {
+            const right = element.getBoundingClientRect().right;
+            const name = element.querySelector(".room-title-name");
+
+            if (name === null) throw new Error("Missing room name");
+
+            return {
+              named: name.getBoundingClientRect().width > 0,
+              spilled: Array.from(
+                element.querySelectorAll(".page-header-actions :is(button, a, input)"),
+                (control) => control.getBoundingClientRect(),
+              )
+                .filter((box) => box.width > 0 && box.right > right + 0.5)
+                .map((box) => Math.round(box.right - right)),
+              contained: element.scrollWidth <= element.clientWidth,
+            };
+          }),
+        ).toEqual({ named: true, spilled: [], contained: true });
+
+        expect((await header.boundingBox())?.height).toBe(HEADER_HEIGHT[textSize]);
+
+        // Send stays in the composer's card, beside "1 scheduled" in #general.
+        const card = page.locator(".room .composer-card");
+        const send = card.locator(".composer-send-group");
+        const [cardBox, sendBox] = await Promise.all([card.boundingBox(), send.boundingBox()]);
+
+        expect(sendBox).not.toBeNull();
+        expect(cardBox).not.toBeNull();
+        expect((sendBox?.x ?? 0) + (sendBox?.width ?? 0)).toBeLessThanOrEqual(
+          (cardBox?.x ?? 0) + (cardBox?.width ?? 0),
+        );
+      });
+    }
+  }
 }
+
+test("at the largest text size a pane's header lines up with the room's", async ({ page }) => {
+  await page.setViewportSize({ ...DESKTOP, width: 1280 });
+  await openApp(page, "");
+  await saveAccountAppearance(page, { textSize: "largest" });
+  await openApp(page, `r/${ROOM_IDS.general}`);
+  await openHeaderTool(page, /^Pinned messages/);
+  const pane = page.locator("aside.right-pane");
+  await expect(pane.locator(".pin-card")).toHaveCount(3);
+
+  const heights = await Promise.all(
+    [page.locator(".room-header"), pane.locator(".pane-header")].map(
+      async (locator) => (await locator.boundingBox())?.height,
+    ),
+  );
+
+  expect(heights[0]).toBe(HEADER_HEIGHT.largest);
+  expect(heights[1]).toBe(heights[0]);
+});
 
 test("a topic saves, truncates in the header, and updates another open client", async ({
   page,
