@@ -1,4 +1,18 @@
 /* A conversation: header, timeline and composer. */
+
+/* Lengths room-header-fit.ts reads in px: the name's minimum and the search's usable width. */
+@property --room-name-min {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --header-search-min {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 @layer app {
   /* The conversation and, beside it, the right pane (thread or side pane). */
   .room-layout {
@@ -80,25 +94,36 @@
     max-width: min(18rem, 100%);
   }
 
+  /* An announcement room's tag keeps its width; the name narrows beside it. */
+  .room-title:has(.room-announcement-tag) > a.room-title-button {
+    flex-shrink: 1;
+  }
+
   /*
    * Wide screens: the room's name keeps a readable width however narrow an open pane and a large
    * text size leave the header. The actions give way first, as a narrower window has them do:
    * the search field narrows, then the call button drops its label, then the search goes (the
    * sidebar's search stays), and last the call's faces go and the pane buttons fold into a ⋯
    * menu. The breakpoints are the header's own width, in px for the icons and rem for the text,
-   * so they come sooner at the larger text sizes.
+   * so they come sooner at the larger text sizes. An announcement room's tag counts as a topic.
+   * The steps count a plain room's actions; room-header-fit.ts also hides the search
+   * (data-search="off") whenever a call's faces, a stage or a voice limit leave it less than its
+   * usable width.
    */
   @media (720px <= width) {
     .room-header {
+      --room-name-min: 8rem;
+      --header-search-min: 7rem;
+
       container: room-header / inline-size;
     }
 
-    .room-header .page-header-heading {
-      min-width: 8rem;
+    .room-header:has(.room-topic-button, .room-announcement-tag) {
+      --room-name-min: 14rem;
     }
 
-    .room-header:has(.room-topic-button) .page-header-heading {
-      min-width: 14rem;
+    .room-header .page-header-heading {
+      min-width: var(--room-name-min);
     }
 
     /* While the search shows, the actions may narrow: the field shrinks into the space. */
@@ -108,7 +133,7 @@
     }
 
     .room-header .header-search {
-      min-width: 0;
+      min-width: var(--header-search-min);
     }
 
     .room-header .search-field {
@@ -127,7 +152,7 @@
     }
 
     @container room-header (width < calc(430px + 18.875rem)) {
-      .room-header:has(.room-topic-button) .huddle-launcher-label {
+      .room-header:has(.room-topic-button, .room-announcement-tag) .huddle-launcher-label {
         display: none;
       }
     }
@@ -137,6 +162,18 @@
      * name takes what's left: a call's faces, a stage or a voice limit, which these steps don't
      * count, narrow the name rather than push a button past the header's edge.
      */
+    .room-header[data-search="off"] .header-search {
+      display: none;
+    }
+
+    .room-header[data-search="off"] .page-header-heading {
+      min-width: 0;
+    }
+
+    .room-header[data-search="off"] .page-header-actions {
+      flex-shrink: 0;
+    }
+
     @container room-header (width < calc(392px + 9.25rem)) {
       .room-header .header-search {
         display: none;
@@ -152,23 +189,23 @@
     }
 
     @container room-header (width < calc(392px + 15.25rem)) {
-      .room-header:has(.room-topic-button) .header-search {
+      .room-header:has(.room-topic-button, .room-announcement-tag) .header-search {
         display: none;
       }
 
-      .room-header:has(.room-topic-button) .page-header-heading {
+      .room-header:has(.room-topic-button, .room-announcement-tag) .page-header-heading {
         min-width: 0;
       }
 
-      .room-header:has(.room-topic-button) .page-header-actions {
+      .room-header:has(.room-topic-button, .room-announcement-tag) .page-header-actions {
         flex-shrink: 0;
       }
     }
 
-    /* The narrowest: the call's faces and the topic (still in About) go, and the pane buttons
-       move into a ⋯ menu. */
+    /* The narrowest: the call's faces, the topic (still in About) and the announcement tag (the
+       megaphone stays) go, and the pane buttons move into a ⋯ menu. */
     @container room-header (width < calc(340px + 9.25rem)) {
-      .room-header :is(.huddle-stack, .pane-buttons, .room-topic-button) {
+      .room-header :is(.huddle-stack, .pane-buttons, .room-topic-button, .room-announcement-tag) {
         display: none;
       }
 

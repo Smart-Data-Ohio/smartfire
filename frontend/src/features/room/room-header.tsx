@@ -1,4 +1,5 @@
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import type { RoomKind } from "../../gen/RoomKind.ts";
 import { useAnnouncementRoom } from "../../store/announcements.ts";
 import { useStore } from "../../store/store.ts";
@@ -32,6 +33,7 @@ import {
   NotificationsSubMenu,
   useNotificationsMenuOpen,
 } from "../sidebar/notifications-button.tsx";
+import { useRoomHeaderFit } from "./room-header-fit.ts";
 
 const PRESENCE_TEXT = {
   online: "Active",
@@ -300,6 +302,15 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const notificationsRoute = useMatchRoute()({ to: "/r/$roomId/notifications" }) !== false;
   // A stage's raised hands sit one tap deeper on phones (the ⋯ menu's Stage item), so ⋯ shows a dot.
   const hands = useRaisedHands(roomId);
+  // Wide screens' ⋯ menu (the pane buttons, in a narrow header): it closes when the header widens
+  // past the step that shows it.
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const fit = useRoomHeaderFit({
+    wide: !phone,
+    moreOpen,
+    onMoreHidden: () => setMoreOpen(false),
+  });
 
   const title =
     name === null || kind === null ? (
@@ -331,7 +342,9 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   return (
     <>
       <PageHeader
+        ref={fit.ref}
         className="room-header"
+        data-search={fit.searchFits ? undefined : "off"}
         back={{
           label: "Back to conversations",
           link: (props) => <Link to="/" {...props} />,
@@ -367,7 +380,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         }
         overflowLabel={phone && notificationsRoute ? "Notifications" : "More"}
         overflowAlert={hands > 0 ? raisedHandsLabel(hands) : undefined}
-        overflowMenu={phone ? notificationsMenu : undefined}
+        overflowMenu={phone ? notificationsMenu : { open: moreOpen, onOpenChange: setMoreOpen }}
       />
       {phone ? direct.dialogs : null}
     </>

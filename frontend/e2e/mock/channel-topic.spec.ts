@@ -1,3 +1,4 @@
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import {
   DESKTOP,
   expect,
@@ -7,6 +8,7 @@ import {
   ROOM_IDS,
   saveAccountAppearance,
   test,
+  USER_IDS,
 } from "./support.ts";
 
 const ROOM = ROOM_IDS.launchPlanning;
@@ -94,8 +96,9 @@ for (const viewport of [DESKTOP, PHONE]) {
 // pane title (1.25rem) over its subtitle (1rem) plus 6 px at Largest's 24 px root.
 const HEADER_HEIGHT = { default: 48, largest: 60 } as const;
 
-// #general has no topic and one scheduled message; launch-planning is given a topic; the Lounge
-// has people in its call and is given a voice limit, so its header shows their faces and "2/25".
+// #general has no topic and one scheduled message; launch-planning is given a topic;
+// #announcements is made an announcement room, so it carries the "Announcement" tag; the Lounge has people in its call and is given a
+// voice limit, so its header shows their faces and "2/25".
 const HEADER_ROOMS = [
   { id: ROOM_IDS.general, name: "general", settings: null },
   {
@@ -103,35 +106,123 @@ const HEADER_ROOMS = [
     name: "launch-planning",
     settings: { field: "Topic", value: "Ship the launch checklist by Thursday" },
   },
+  { id: ROOM_IDS.announcements, name: "announcements", settings: null, announcement: true },
   { id: ROOM_IDS.lounge, name: "Lounge", settings: { field: "Voice user limit", value: "25" } },
 ] as const;
 
+interface HeaderRoom {
+  readonly id: number;
+  readonly name: string;
+  readonly settings: { readonly field: string; readonly value: string } | null;
+  readonly announcement?: boolean;
+}
+
+/** Opens `room` at `textSize`, after saving its topic or voice limit or making it announce. */
+async function openHeaderRoom(
+  page: Page,
+  room: HeaderRoom,
+  textSize: "default" | "largest",
+): Promise<Locator> {
+  await openApp(page, "");
+  await saveAccountAppearance(page, { textSize });
+
+  if (room.announcement === true) {
+    await openApp(page, `r/${room.id}/settings`);
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("tab", { name: "Announcements" }).click();
+    const flag = dialog.getByRole("switch", { name: /Announcement channel/ });
+
+    await flag.click();
+    await expect(flag).toHaveAttribute("aria-checked", "true");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page.locator(".room-header .room-announcement-tag")).toBeAttached();
+  } else if (room.settings === null) {
+    await openApp(page, `r/${room.id}`);
+  } else {
+    await openApp(page, `r/${room.id}/settings`);
+    const dialog = page.getByRole("dialog");
+    const field = dialog.getByLabel(room.settings.field);
+
+    await (room.settings.field === "Topic"
+      ? field.fill(room.settings.value)
+      : field.selectOption(room.settings.value));
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await expect(dialog).toBeHidden();
+  }
+
+  const header = page.locator(".room-header");
+  await expect(header.getByRole("heading", { name: room.name, level: 1 })).toBeAttached();
+
+  return header;
+}
+
+/**
+ * What's wrong with the room header's layout, or nothing: a control past its edge, overflow, a
+ * name squeezed out or overlapping the actions, or a search narrower than its usable width.
+ */
+function headerProblems(header: Locator): Promise<string[]> {
+  return header.evaluate((element) => {
+    const problems: string[] = [];
+    const right = element.getBoundingClientRect().right;
+    const name = element.querySelector(".room-title-name");
+    const actions = element.querySelector(".page-header-actions");
+    const search = element.querySelector<HTMLElement>(".header-search");
+
+    if (name === null || actions === null) throw new Error("Missing header parts");
+
+    if (name.getBoundingClientRect().width <= 0) problems.push("no name");
+
+    if (element.scrollWidth > element.clientWidth) {
+      problems.push(`overflow ${element.scrollWidth} > ${element.clientWidth}`);
+    }
+
+    for (const control of actions.querySelectorAll(":is(button, a, input)")) {
+      const box = control.getBoundingClientRect();
+
+      if (box.width > 0 && box.right > right + 0.5) {
+        problems.push(
+          `${control.getAttribute("aria-label")} ${Math.round(box.right - right)}px out`,
+        );
+      }
+    }
+
+    // The name area (the name, its tag or topic) ends before the actions start.
+    const actionsLeft = actions.getBoundingClientRect().left;
+
+    for (const part of element.querySelectorAll(".room-title > *")) {
+      const box = part.getBoundingClientRect();
+
+      if (box.width > 0 && box.right > actionsLeft + 0.5) {
+        problems.push(
+          `${part.className} ${Math.round(box.right - actionsLeft)}px over the actions`,
+        );
+      }
+    }
+
+    if (search?.checkVisibility()) {
+      const usable = Number.parseFloat(
+        getComputedStyle(element).getPropertyValue("--header-search-min"),
+      );
+
+      if (search.getBoundingClientRect().width < usable) {
+        problems.push(`search ${Math.round(search.getBoundingClientRect().width)}px`);
+      }
+    }
+
+    return problems;
+  });
+}
+
 for (const textSize of ["default", "largest"] as const) {
   for (const room of HEADER_ROOMS) {
-    for (const width of [1280, 760]) {
+    for (const width of [1440, 1280, 760]) {
       test(`at the ${textSize} text size with a pane open, ${room.name}'s header fits at ${width}px`, async ({
         page,
       }, testInfo) => {
         await page.setViewportSize({ ...DESKTOP, width });
-        await openApp(page, "");
-        await saveAccountAppearance(page, { textSize });
-
-        if (room.settings === null) {
-          await openApp(page, `r/${room.id}`);
-        } else {
-          await openApp(page, `r/${room.id}/settings`);
-          const dialog = page.getByRole("dialog");
-          const field = dialog.getByLabel(room.settings.field);
-
-          await (room.settings.field === "Topic"
-            ? field.fill(room.settings.value)
-            : field.selectOption(room.settings.value));
-          await dialog.getByRole("button", { name: "Save changes" }).click();
-          await expect(dialog).toBeHidden();
-        }
-
-        const header = page.locator(".room-header");
-        await expect(header.getByRole("heading", { name: room.name, level: 1 })).toBeAttached();
+        const header = await openHeaderRoom(page, room, textSize);
 
         // The topic shows in a wide enough header; the narrowest leaves it to About.
         if (room.id === ROOM_IDS.launchPlanning) {
@@ -156,26 +247,16 @@ for (const textSize of ["default", "largest"] as const) {
         });
 
         // The actions give way (the call button keeps its glyph, the search narrows or goes, the
-        // pane buttons fold into ⋯), so the name shows and no control ends past the header.
-        expect(
-          await header.evaluate((element) => {
-            const right = element.getBoundingClientRect().right;
-            const name = element.querySelector(".room-title-name");
+        // pane buttons fold into ⋯), so the name shows beside them and no control ends past the
+        // header.
+        expect(await headerProblems(header)).toEqual([]);
 
-            if (name === null) throw new Error("Missing room name");
-
-            return {
-              named: name.getBoundingClientRect().width > 0,
-              spilled: Array.from(
-                element.querySelectorAll(".page-header-actions :is(button, a, input)"),
-                (control) => control.getBoundingClientRect(),
-              )
-                .filter((box) => box.width > 0 && box.right > right + 0.5)
-                .map((box) => Math.round(box.right - right)),
-              contained: element.scrollWidth <= element.clientWidth,
-            };
-          }),
-        ).toEqual({ named: true, spilled: [], contained: true });
+        // The tag shows until the narrowest step, which folds the pane buttons into ⋯.
+        if (room.id === ROOM_IDS.announcements) {
+          await expect(header.getByText("Announcement", { exact: true })).toBeVisible({
+            visible: await header.locator(".pane-buttons").isVisible(),
+          });
+        }
 
         expect((await header.boundingBox())?.height).toBe(HEADER_HEIGHT[textSize]);
 
@@ -193,6 +274,104 @@ for (const textSize of ["default", "largest"] as const) {
     }
   }
 }
+
+async function control(
+  request: APIRequestContext,
+  action: string,
+  data: Record<string, number | string | boolean>,
+): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const response = await request.post(`/__mock/${action}`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data,
+  });
+
+  expect(response.ok(), await response.text()).toBe(true);
+}
+
+// A stage with seven people in its call: its button and their faces widen the actions past what
+// room.css's steps count, so the search must go before it would squeeze to a sliver.
+const BUSY_STAGE: HeaderRoom = { id: ROOM_IDS.townHall, name: "Town Hall", settings: null };
+
+const CALLERS = [
+  USER_IDS.maya,
+  USER_IDS.jonah,
+  USER_IDS.priya,
+  USER_IDS.sam,
+  USER_IDS.lucia,
+  USER_IDS.theo,
+  USER_IDS.grace,
+];
+
+const SWEEP_ROOMS: readonly HeaderRoom[] = [
+  BUSY_STAGE,
+  ...HEADER_ROOMS.filter(
+    (room) => room.id === ROOM_IDS.lounge || room.id === ROOM_IDS.announcements,
+  ),
+];
+
+for (const textSize of ["default", "largest"] as const) {
+  for (const room of SWEEP_ROOMS) {
+    test(`at the ${textSize} text size ${room.name}'s header fits from 1440 to 720px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(DESKTOP);
+
+      if (room.id === BUSY_STAGE.id) {
+        for (const userId of CALLERS) {
+          await control(page.request, "huddle-join", { roomId: room.id, userId });
+        }
+      }
+
+      const header = await openHeaderRoom(page, room, textSize);
+
+      if (room.id !== ROOM_IDS.announcements) {
+        await expect(header.locator(".huddle-stack")).toBeAttached();
+      }
+
+      const problems: string[] = [];
+
+      for (let width = 1440; width >= 720; width -= 10) {
+        await page.setViewportSize({ ...DESKTOP, width });
+        // A frame for the container steps and the header's measurement to settle.
+        await page.evaluate(
+          () =>
+            new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+        );
+
+        for (const problem of await headerProblems(header)) {
+          problems.push(`${width}px: ${problem}`);
+        }
+      }
+
+      expect(problems).toEqual([]);
+    });
+  }
+}
+
+test("the ⋯ menu closes when the header widens past it, focus on a pane button", async ({
+  page,
+}) => {
+  await page.setViewportSize({ ...DESKTOP, width: 760 });
+  await openApp(page, `r/${ROOM_IDS.general}`);
+  const header = page.locator(".room-header");
+  const more = header.getByRole("button", { name: "More" });
+
+  await more.click();
+  const menu = page.getByRole("menu", { name: "More" });
+  await expect(menu.getByRole("menuitem", { name: "Threads" })).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+
+  await page.setViewportSize(DESKTOP);
+  await expect(menu).toHaveCount(0);
+  await expect(more).toBeHidden();
+  const threads = header.getByRole("button", { name: "Threads" });
+
+  await expect(threads).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(threads).toBeFocused();
+});
 
 test("at the largest text size a pane's header lines up with the room's", async ({ page }) => {
   await page.setViewportSize({ ...DESKTOP, width: 1280 });
