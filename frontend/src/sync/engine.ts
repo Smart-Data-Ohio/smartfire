@@ -284,6 +284,10 @@ export class Engine extends Context.Service<
       const connections = yield* Ref.make(0);
       /** A resume's replay is still on its way: the sidebar catches up once it has been applied. */
       const replayOwed = yield* Ref.make(false);
+      /** The connection whose user resync failed to read the sidebar: it reads again until one lands. */
+      const sidebarReadFailed = yield* Ref.make<number | null>(null);
+      /** Wakes the connection's `retrySidebarRead`. */
+      const sidebarRetryWanted = yield* Queue.sliding<void>(1);
 
       const activitySnapshotThrough = yield* Ref.make({
         generation: store.getState().activity.generation,
@@ -671,8 +675,14 @@ export class Engine extends Context.Service<
             // A read that failed or stalled is made again on the next resume.
             yield* Ref.set(userResyncStale, signedIn === null || !installed);
 
-            if (installed && (yield* Ref.get(connections)) === connection) {
-              mutations.setSidebarCaughtUp(true);
+            if ((yield* Ref.get(connections)) === connection) {
+              if (installed) {
+                yield* Ref.set(sidebarReadFailed, null);
+                mutations.setSidebarCaughtUp(true);
+              } else {
+                yield* Ref.set(sidebarReadFailed, connection);
+                Queue.offerUnsafe(sidebarRetryWanted, undefined);
+              }
             }
 
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
@@ -1023,6 +1033,18 @@ export class Engine extends Context.Service<
       });
 
       /**
+       * The cursor has reached the welcome's `replayThrough`. The server splits a replay into
+       * batches that can land in separate groups, and sends it in sequence order ahead of anything
+       * live. Replay leaves out events not meant for this viewer, so the last ones may never
+       * come: then the next live event, or a ping, says the replay is done.
+       */
+      const replayApplied = Effect.gen(function* () {
+        const point = yield* cursor.get;
+
+        return point !== null && point.seq >= (yield* Ref.get(replayThrough));
+      });
+
+      /**
        * Handles one coalesced group of frames, in order: batch events gather into one commit,
        * flushed before any other frame. Returns `bye`'s `reconnect`, or `null` to keep going.
        */
@@ -1032,11 +1054,8 @@ export class Engine extends Context.Service<
         welcomed: Ref.Ref<boolean>,
       ) {
         let events: SyncEvent[] = [];
-        /**
-         * A batch or ping followed the welcome. The server sends a resume's whole replay right
-         * after its welcome and pings only after silence, so either means the replay is here.
-         */
-        let afterReplay = false;
+        /** The server pings only after silence, so a resume's replay has all been sent. */
+        let pinged = false;
 
         const flush = Effect.suspend(() => {
           const batch = events;
@@ -1056,14 +1075,13 @@ export class Engine extends Context.Service<
           switch (frame.t) {
             case "batch":
               events.push(...frame.events);
-              afterReplay = true;
               break;
             case "ping":
-              afterReplay = true;
+              pinged = true;
               break;
             case "welcome":
               yield* flush;
-              afterReplay = false;
+              pinged = false;
               yield* welcome(frame, scope);
 
               // Answered for someone else: stop reading, with no reconnect, and let `run` reload.
@@ -1086,11 +1104,43 @@ export class Engine extends Context.Service<
 
         yield* flush;
 
-        if (afterReplay && (yield* Ref.getAndSet(replayOwed, false))) {
+        if ((yield* Ref.get(replayOwed)) && (pinged || (yield* replayApplied))) {
+          yield* Ref.set(replayOwed, false);
           mutations.setSidebarCaughtUp(true);
         }
 
         return null;
+      });
+
+      /**
+       * While this connection's sidebar read keeps failing, reads it again with the reconnect
+       * backoff, or at once when the tab is shown or back online. Ends with the connection.
+       */
+      const retrySidebarRead = Effect.fnUntraced(function* (
+        connection: number,
+        scope: Scope.Scope,
+      ) {
+        const failing = Effect.map(Ref.get(sidebarReadFailed), (failed) => failed === connection);
+
+        while (true) {
+          yield* Queue.take(sidebarRetryWanted);
+
+          const step = yield* Schedule.toStep(reconnectSchedule);
+
+          while (yield* failing) {
+            const [, delay] = yield* Effect.orDie(step(yield* Clock.currentTimeMillis, undefined));
+
+            yield* Effect.raceFirst(
+              Effect.sleep(delay),
+              Effect.asVoid(Stream.runHead(lifecycle.wakeups)),
+            );
+
+            // Another read (a server `resync`) may have landed meanwhile.
+            if (yield* failing) {
+              yield* resync(scope, ["user"]);
+            }
+          }
+        }
       });
 
       const greeting = Effect.gen(function* () {
@@ -1118,8 +1168,10 @@ export class Engine extends Context.Service<
             yield* Effect.addFinalizer(() => link.detach);
             yield* link.attach(connection, greeting);
             yield* Ref.set(openedAt, yield* Clock.currentTimeMillis);
-            yield* Ref.update(connections, (count) => count + 1);
+            const connectionId = yield* Ref.updateAndGet(connections, (count) => count + 1);
+
             yield* Ref.set(replayOwed, false);
+            yield* Effect.forkScoped(retrySidebarRead(connectionId, scope));
             yield* setConnection("online");
 
             const bye = yield* Ref.make<boolean | null>(null);

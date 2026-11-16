@@ -57,11 +57,11 @@ const unreadRow = (id: number) => {
   return { ...row, membership: { ...row.membership, unreadAt: row.room.createdAt } };
 };
 
-const unreadEvent = (seq: number): SyncEvent => ({
+const unreadEvent = (seq: number, roomId = 12): SyncEvent => ({
   seq,
   topic: "user",
   type: "room.unread",
-  data: { roomId: 12, messageId: 100 + seq, mentioned: false },
+  data: { roomId, messageId: 100 + seq, mentioned: false },
 });
 
 const boot: Boot = {
@@ -219,6 +219,150 @@ it.effect("waits for a resume's replay before writing the badge", () =>
       expect(clearAppBadge).toHaveBeenCalledOnce();
       expect(setAppBadge).toHaveBeenLastCalledWith(1);
       expect(badgeCount).toBe(1);
+    }),
+  ),
+);
+
+it.effect("waits for every batch of a replay split across groups", () =>
+  withSync(
+    Effect.gen(function* () {
+      const socket = yield* MemorySocket;
+
+      yield* serve([sidebarRowFixture(12, "general"), sidebarRowFixture(13, "random")]);
+      yield* openApp;
+      yield* reconnect;
+
+      const before = appWrites();
+
+      yield* socket.push({
+        t: "welcome",
+        epoch: "e1",
+        seq: 10,
+        resumed: true,
+        replayThrough: 12,
+        viewerId: meFixture.user.id,
+      });
+      yield* settle;
+      yield* pushBadge(2);
+
+      // The first batch is only part of the replay: the old count must not replace the push.
+      yield* socket.push({ t: "batch", events: [unreadEvent(11)] });
+      yield* settle;
+      expect(store.getState().sidebarCaughtUp).toBe(false);
+      expect(appWrites()).toBe(before);
+      expect(badgeCount).toBe(2);
+
+      yield* socket.push({ t: "batch", events: [unreadEvent(12, 13)] });
+      yield* settle;
+      expect(store.getState().sidebarCaughtUp).toBe(true);
+      expect(setAppBadge).toHaveBeenLastCalledWith(2);
+      expect(badgeCount).toBe(2);
+    }),
+  ),
+);
+
+it.effect("takes a ping as the end of a replay whose last events weren't for this viewer", () =>
+  withSync(
+    Effect.gen(function* () {
+      const socket = yield* MemorySocket;
+
+      yield* serve([sidebarRowFixture(12, "general")]);
+      yield* openApp;
+      yield* reconnect;
+
+      const before = appWrites();
+
+      yield* socket.push({
+        t: "welcome",
+        epoch: "e1",
+        seq: 10,
+        resumed: true,
+        replayThrough: 15,
+        viewerId: meFixture.user.id,
+      });
+      yield* socket.push({ t: "batch", events: [unreadEvent(11)] });
+      yield* settle;
+      expect(store.getState().sidebarCaughtUp).toBe(false);
+      expect(appWrites()).toBe(before);
+
+      yield* socket.push({ t: "ping" });
+      yield* settle;
+      expect(store.getState().sidebarCaughtUp).toBe(true);
+      expect(setAppBadge).toHaveBeenLastCalledWith(1);
+    }),
+  ),
+);
+
+it.effect("reads a failed sidebar again on the same connection", () =>
+  withSync(
+    Effect.gen(function* () {
+      const api = yield* FakeApi;
+      const socket = yield* MemorySocket;
+
+      yield* serve([unreadRow(12)]);
+      yield* openApp;
+      expect(badgeCount).toBe(1);
+
+      yield* reconnect;
+      yield* api.route("GET /sidebar", () =>
+        Effect.fail(new ServerError({ status: 503, message: "Try again later" })),
+      );
+      yield* socket.push({
+        t: "welcome",
+        epoch: "e2",
+        seq: 1,
+        resumed: false,
+        replayThrough: 1,
+        viewerId: meFixture.user.id,
+      });
+      yield* settle;
+      expect(store.getState().sidebarCaughtUp).toBe(false);
+
+      // The room was read elsewhere meanwhile. The retry finds it, with no reconnect.
+      yield* serve([sidebarRowFixture(12, "general")]);
+      yield* TestClock.adjust("1 second");
+      expect(store.getState().connection).toBe("online");
+      expect(store.getState().sidebarCaughtUp).toBe(true);
+      expect(clearAppBadge).toHaveBeenCalledOnce();
+      expect(badgeCount).toBe(0);
+    }),
+  ),
+);
+
+it.effect("reads a failed sidebar again as soon as the tab is shown", () =>
+  withSync(
+    Effect.gen(function* () {
+      const api = yield* FakeApi;
+      const lifecycle = yield* TestLifecycle;
+      const socket = yield* MemorySocket;
+
+      yield* serve([unreadRow(12)]);
+      yield* openApp;
+      yield* reconnect;
+
+      // Every read fails until well into the backoff.
+      yield* api.route("GET /sidebar", () =>
+        Effect.fail(new ServerError({ status: 503, message: "Try again later" })),
+      );
+      yield* socket.push({
+        t: "welcome",
+        epoch: "e2",
+        seq: 1,
+        resumed: false,
+        replayThrough: 1,
+        viewerId: meFixture.user.id,
+      });
+      yield* TestClock.adjust("10 seconds");
+      yield* socket.push({ t: "ping" });
+      yield* settle;
+      expect(store.getState().sidebarCaughtUp).toBe(false);
+
+      yield* serve([sidebarRowFixture(12, "general")]);
+      yield* lifecycle.fire("hidden");
+      yield* lifecycle.fire("visible");
+      yield* settle;
+      expect(store.getState().sidebarCaughtUp).toBe(true);
+      expect(badgeCount).toBe(0);
     }),
   ),
 );

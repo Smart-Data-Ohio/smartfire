@@ -356,7 +356,12 @@ export const mutations = {
       return;
     }
 
-    apply((state) => ({ ...state, accountChanged: true, connection: "offline" }));
+    apply((state) => ({
+      ...state,
+      accountChanged: true,
+      connection: "offline",
+      sidebarCaughtUp: false,
+    }));
 
     // One hook failing must not keep the others from ending what they hold.
     for (const [key, { end }] of [...accountChangeHooks]) {
