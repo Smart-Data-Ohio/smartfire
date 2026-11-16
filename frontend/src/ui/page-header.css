@@ -1,7 +1,7 @@
 /*
  * A screen's title bar (PageHeader): back, the title and its subtitle, the actions and the ⋯ menu.
- * 48 px everywhere, lined up with the panes beside it; on phones every button in it is 44 px and
- * the title takes what's left.
+ * 48 px (taller at the largest text sizes: --pane-header-height), lined up with the panes beside
+ * it; on phones every button in it is 44 px and the title takes what's left.
  */
 
 @layer ui {

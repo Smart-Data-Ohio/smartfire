@@ -75,6 +75,11 @@
     max-width: min(18rem, calc(100% - 2rem));
   }
 
+  /* Alone in the title (no topic or tag beside it), the name needn't leave room for one. */
+  .room-title:not(:has(.room-topic-button, .room-announcement-tag)) > a.room-title-button {
+    max-width: min(18rem, 100%);
+  }
+
   .room-header:has(.room-topic-button) .page-header-heading {
     min-width: 14rem;
   }
@@ -90,6 +95,60 @@
 
   .room-header:has(.room-topic-button) .search-field {
     max-width: 100%;
+  }
+
+  /*
+   * Wide screens: the room's name keeps a readable width however narrow an open pane and a large
+   * text size leave the header. The actions give way first, as a narrower window has them do:
+   * the search field narrows, then the call button drops its label, then the search goes (the
+   * sidebar's search stays). The breakpoints are the header's own width, in px for the icons and
+   * rem for the text, so they come sooner at the larger text sizes.
+   */
+  @media (720px <= width) {
+    .room-header {
+      container: room-header / inline-size;
+    }
+
+    .room-header .page-header-heading {
+      min-width: 8rem;
+    }
+
+    .room-header .page-header-actions {
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .room-header .header-search {
+      min-width: 0;
+    }
+
+    .room-header .search-field {
+      max-width: 100%;
+    }
+
+    @container room-header (width < calc(430px + 12.875rem)) {
+      .room-header .huddle-launcher-label {
+        display: none;
+      }
+    }
+
+    @container room-header (width < calc(392px + 9.25rem)) {
+      .room-header .header-search {
+        display: none;
+      }
+    }
+
+    @container room-header (width < calc(430px + 18.875rem)) {
+      .room-header:has(.room-topic-button) .huddle-launcher-label {
+        display: none;
+      }
+    }
+
+    @container room-header (width < calc(392px + 15.25rem)) {
+      .room-header:has(.room-topic-button) .header-search {
+        display: none;
+      }
+    }
   }
 
   .room-title-icon {

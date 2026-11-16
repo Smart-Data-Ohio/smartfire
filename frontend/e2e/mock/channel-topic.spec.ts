@@ -1,4 +1,13 @@
-import { DESKTOP, expect, openApp, PHONE, ROOM_IDS, test } from "./support.ts";
+import {
+  DESKTOP,
+  expect,
+  openApp,
+  openHeaderTool,
+  PHONE,
+  ROOM_IDS,
+  saveAccountAppearance,
+  test,
+} from "./support.ts";
 
 const ROOM = ROOM_IDS.launchPlanning;
 
@@ -78,6 +87,51 @@ for (const viewport of [DESKTOP, PHONE]) {
         true,
       );
     }
+  });
+}
+
+for (const width of [DESKTOP.width, 1280]) {
+  test(`at the largest text size with a pane open the room name stays readable at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ ...DESKTOP, width });
+    await openApp(page, "");
+    await saveAccountAppearance(page, { textSize: "largest" });
+    await openApp(page, `r/${ROOM_IDS.general}`);
+    await openHeaderTool(page, /^Pinned messages/);
+    const pane = page.locator("aside.right-pane");
+    await expect(pane.getByRole("heading", { name: "Pinned messages" })).toBeVisible();
+    await expect(pane.locator(".pin-card")).toHaveCount(3);
+    await page.mouse.move(0, 0);
+    const header = page.locator(".room-header");
+    await expect(header.getByRole("heading", { name: "general", level: 1 })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`largest-pane-${width}.png`) });
+
+    // The actions give way (the call button keeps its glyph, the search narrows or goes), so the
+    // name shows whole and nothing spills under the pane.
+    expect(
+      await header.evaluate((element) => {
+        const name = element.querySelector(".room-title-name");
+
+        if (name === null) throw new Error("Missing room name");
+
+        return {
+          visible: name.getBoundingClientRect().width > 0,
+          whole: name.scrollWidth <= name.clientWidth,
+          contained: element.scrollWidth <= element.clientWidth,
+        };
+      }),
+    ).toEqual({ visible: true, whole: true, contained: true });
+
+    // The pane's title over its subtitle fits, and its header lines up with the room's.
+    const heights = await Promise.all(
+      [header, pane.locator(".pane-header")].map(
+        async (locator) => (await locator.boundingBox())?.height,
+      ),
+    );
+
+    expect(heights[0]).toBeGreaterThan(48);
+    expect(heights[1]).toBe(heights[0]);
   });
 }
 

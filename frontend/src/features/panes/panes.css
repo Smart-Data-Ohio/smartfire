@@ -158,7 +158,7 @@
     overflow: clip visible;
     font-size: var(--text-body);
     font-weight: var(--weight-semibold);
-    line-height: 20px;
+    line-height: 1.25rem;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
