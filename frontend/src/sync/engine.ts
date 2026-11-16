@@ -288,6 +288,8 @@ export class Engine extends Context.Service<
       const sidebarReadFailed = yield* Ref.make<number | null>(null);
       /** Wakes the connection's `retrySidebarRead`. */
       const sidebarRetryWanted = yield* Queue.sliding<void>(1);
+      /** Numbers the user resync's sidebar reads: only the newest may install or settle the gate. */
+      const sidebarReads = yield* Ref.make(0);
 
       const activitySnapshotThrough = yield* Ref.make({
         generation: store.getState().activity.generation,
@@ -612,6 +614,8 @@ export class Engine extends Context.Service<
           if (topic === "user") {
             // The sidebar may be behind the server until this read lands.
             const connection = yield* Ref.get(connections);
+            const read = yield* Ref.updateAndGet(sidebarReads, (count) => count + 1);
+            const newest = Effect.map(Ref.get(sidebarReads), (latest) => latest === read);
 
             yield* Ref.set(replayOwed, false);
             mutations.setSidebarCaughtUp(false);
@@ -645,18 +649,23 @@ export class Engine extends Context.Service<
             const installed = yield* withRowTicket((since) =>
               sidebar().pipe(
                 Effect.timeout(RESYNC_READ_TIMEOUT),
-                Effect.map((data) => {
-                  // Authoritative: every HTTP reply already on its way is stale now.
-                  const restored = mutations.resyncSidebar(data, since);
+                Effect.flatMap((data) =>
+                  Effect.gen(function* () {
+                    // A newer read started meanwhile: its snapshot, not this older one, stands.
+                    if (!(yield* newest)) return false;
 
-                  // The snapshot is newer than any room write still on its way.
-                  markSidebarSnapshot();
+                    // Authoritative: every HTTP reply already on its way is stale now.
+                    const restored = mutations.resyncSidebar(data, since);
 
-                  return restored;
-                }),
-                // A room it gave back that shows as unavailable reads itself again.
-                Effect.tap((restored) => Effect.forkIn(recoverResyncedRooms(restored), scope)),
-                Effect.as(true),
+                    // The snapshot is newer than any room write still on its way.
+                    markSidebarSnapshot();
+
+                    // A room it gave back that shows as unavailable reads itself again.
+                    yield* Effect.forkIn(recoverResyncedRooms(restored), scope);
+
+                    return true;
+                  }),
+                ),
               ),
             ).pipe(
               Effect.catch((error) =>
@@ -667,21 +676,26 @@ export class Engine extends Context.Service<
               Effect.provideContext(api),
             );
 
-            // Replayed layout events are covered only by a snapshot that actually installed.
-            if (installed && sidebarThrough !== undefined) {
-              yield* Ref.set(snapshotThrough, sidebarThrough);
-            }
+            if (!(yield* newest)) {
+              // A newer read started meanwhile: it alone settles the snapshot and the gate.
+              yield* Effect.logDebug("sync: superseded sidebar read dropped");
+            } else {
+              // Replayed layout events are covered only by a snapshot that actually installed.
+              if (installed && sidebarThrough !== undefined) {
+                yield* Ref.set(snapshotThrough, sidebarThrough);
+              }
 
-            // A read that failed or stalled is made again on the next resume.
-            yield* Ref.set(userResyncStale, signedIn === null || !installed);
+              // A read that failed or stalled is made again on the next resume.
+              yield* Ref.set(userResyncStale, signedIn === null || !installed);
 
-            if ((yield* Ref.get(connections)) === connection) {
-              if (installed) {
-                yield* Ref.set(sidebarReadFailed, null);
-                mutations.setSidebarCaughtUp(true);
-              } else {
-                yield* Ref.set(sidebarReadFailed, connection);
-                Queue.offerUnsafe(sidebarRetryWanted, undefined);
+              if ((yield* Ref.get(connections)) === connection) {
+                if (installed) {
+                  yield* Ref.set(sidebarReadFailed, null);
+                  mutations.setSidebarCaughtUp(true);
+                } else {
+                  yield* Ref.set(sidebarReadFailed, connection);
+                  Queue.offerUnsafe(sidebarRetryWanted, undefined);
+                }
               }
             }
 
