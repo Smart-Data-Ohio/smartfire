@@ -192,8 +192,8 @@ strings as opaque, so neither can supply a hidden
 `header.d` property or clause separator.
 The comparison ignores domain case but does not accept a parent or
 subdomain match. This rule applies to both direct and forwarded mail.
-`INBOUND_EMAIL_AUTHSERV_ID` must name a relay that escapes comment text in
-`Authentication-Results` or never copies the envelope sender's local part into comments.
+`INBOUND_EMAIL_AUTHSERV_ID` must name a relay that never writes unescaped
+envelope-sender text into the comments or property values of its `Authentication-Results`.
 `To`, `Cc`, and `Bcc` do not prove identity because the sender writes them.
 An unconfigured id, no matching header, a failed or missing DKIM result,
 or a pass for another domain means the mail posts as the **Email** bot.

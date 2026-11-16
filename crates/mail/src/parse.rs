@@ -503,7 +503,7 @@ impl Email {
         let single_from = mail
             .headers
             .iter()
-            .filter(|h| h.get_key_ref().trim_end().eq_ignore_ascii_case("From"))
+            .filter(|h| h.get_key_ref().trim().eq_ignore_ascii_case("From"))
             .count()
             == 1
             && from_addresses.len() == 1;
