@@ -1026,6 +1026,18 @@ member_test!(
     false
 );
 member_test!(
+    dkim_syntax_space_before_from_colon_is_bot,
+    "david@37signals.com\r\nFrom : attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_tab_before_from_colon_is_bot,
+    "david@37signals.com\r\nFrom\t: attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
     dkim_syntax_multiple_from_mailboxes_is_bot,
     "david@37signals.com, attacker@37signals.com",
     &["mx.mail.test; dkim=pass header.d=37signals.com"],
@@ -1043,6 +1055,12 @@ member_test!(
     dkim_syntax_property_prefix_is_bot,
     "david@37signals.com",
     &["mx.mail.test; dkim=pass xheader.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_duplicate_domain_property_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=attacker.test header.d=37signals.com"],
     false
 );
 member_test!(

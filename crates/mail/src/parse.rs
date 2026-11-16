@@ -52,35 +52,37 @@ pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, addre
         {
             return false;
         }
-        properties.any(|property| {
-            let Some((name, value)) = property.split_once('=') else {
+        let mut domains = properties.filter_map(|property| {
+            let (name, value) = property.split_once('=')?;
+            name.eq_ignore_ascii_case("header.d").then_some(value)
+        });
+        let Some(value) = domains.next() else {
+            return false;
+        };
+        if domains.next().is_some() {
+            return false;
+        }
+        let value = if let Some(quoted) = value.strip_prefix('"') {
+            let Some(quoted) = quoted.strip_suffix('"') else {
                 return false;
             };
-            if !name.eq_ignore_ascii_case("header.d") {
-                return false;
-            }
-            let value = if let Some(quoted) = value.strip_prefix('"') {
-                let Some(quoted) = quoted.strip_suffix('"') else {
-                    return false;
-                };
-                let mut value = String::new();
-                let mut chars = quoted.chars();
-                while let Some(c) = chars.next() {
-                    match c {
-                        '\\' => match chars.next() {
-                            Some(c) => value.push(c),
-                            None => return false,
-                        },
-                        '"' => return false,
-                        c => value.push(c),
-                    }
+            let mut value = String::new();
+            let mut chars = quoted.chars();
+            while let Some(c) = chars.next() {
+                match c {
+                    '\\' => match chars.next() {
+                        Some(c) => value.push(c),
+                        None => return false,
+                    },
+                    '"' => return false,
+                    c => value.push(c),
                 }
-                value
-            } else {
-                value.to_owned()
-            };
-            unicode::downcase(&value) == domain
-        })
+            }
+            value
+        } else {
+            value.to_owned()
+        };
+        unicode::downcase(&value) == domain
     })
 }
 
@@ -498,8 +500,13 @@ impl Email {
         .map(|s| s.addr)
         .collect();
         let from_addresses = addresses(&mail, "From");
-        let single_from =
-            mail.headers.get_all_headers("From").len() == 1 && from_addresses.len() == 1;
+        let single_from = mail
+            .headers
+            .iter()
+            .filter(|h| h.get_key_ref().trim_end().eq_ignore_ascii_case("From"))
+            .count()
+            == 1
+            && from_addresses.len() == 1;
         let from = from_addresses.into_iter().next();
         let mut files = Vec::new();
         let mut plain = None;
