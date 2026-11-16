@@ -214,6 +214,7 @@ compatibility input. Rollback switches pinned images through the existing releas
 | `DISABLE_SSL`, `RAILS_LOG_LEVEL` | SSL middleware and log level |
 | `APP_VERSION`, `GIT_REVISION` | version headers and UI |
 | `RAILS_MAX_THREADS`, `JOB_CONCURRENCY` | reader pool and in-process job concurrency |
+| `INBOUND_EMAIL_DOMAIN`, `RAILS_INBOUND_EMAIL_PASSWORD`, `INBOUND_EMAIL_AUTHSERV_ID` | email-to-room domain, relay basic-auth password, and optional trusted sender-verification authserv-id; see [email to room](../docs/email-to-room.md) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web Push; Rust also accepts `VAPID_SUBJECT` |
 | `ADMIN_SESSION_IDLE_TIMEOUT_DAYS` | administrator session lifetime |
 | `LIVEKIT_URL`, `LIVEKIT_INTERNAL_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_GATEWAY_SECRET` | CSP public origin and configured-huddle checks for room-removal broadcasts; full huddle integration is owned by WS13 |
@@ -229,7 +230,6 @@ are preserved by ONCE; packaging does not pretend to implement those features:
 | `RAILS_MASTER_KEY` | no encrypted Rails credentials loader; supply supported secrets directly as environment variables |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_SIGN_IN_DOMAINS`, `GOOGLE_CALENDAR_WEBHOOK_URL`, `GOOGLE_PICKER_API_KEY`, `GOOGLE_CLOUD_PROJECT_NUMBER` | Google/OIDC/Calendar/Drive: WS14 and WS9 |
 | `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `FIZZY_API_BASE_URL` | integrations: WS15 |
-| `INBOUND_EMAIL_DOMAIN`, `INBOUND_EMAIL_AUTHSERV_ID`, `RAILS_INBOUND_EMAIL_PASSWORD` | mail: WS10, in flight |
 | `SMTP_ADDRESS`, `SMTP_PORT`, `SMTP_DOMAIN`, `SMTP_USER_NAME`, `SMTP_PASSWORD`, `SMTP_AUTHENTICATION`, `SMTP_ENABLE_STARTTLS`, `MAILER_FROM` | mail: WS10, in flight |
 | `APP_URL` | absolute integration/mail URL configuration: WS10/WS14; current rendering uses the request origin |
 | `LEGAL_OPERATOR_NAME`, `LEGAL_CONTACT_EMAIL`, `LEGAL_EFFECTIVE_DATE` | public-policy domain: WS8 |
