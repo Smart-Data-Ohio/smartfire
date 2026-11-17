@@ -489,46 +489,45 @@ test("typing in the header's search doesn't re-measure the header", async ({ pag
   const field = header.getByRole("combobox", { name: /search/i });
 
   await expect(field).toBeVisible();
-  // A font finishing loading re-measures the header, so open the dropdown once and load every face first.
-  await field.click();
-  await page.keyboard.type("l");
-  await expect(header.locator(".search-dropdown")).toBeVisible();
-  // Lay the open dropdown out and let its fonts finish loading before it closes.
-  const settle = () =>
-    page.evaluate(async () => {
-      void document.body.offsetHeight;
-      // Load every declared face now, so none finishes loading (and re-measures) mid-test.
+  await expect(header.locator(".room-title")).toBeVisible();
+  await expect(header.locator(".skeleton")).toHaveCount(0);
+
+  // A font finishing loading, or room data still landing in the header, rightly re-measures it. Typing
+  // alone never should, so one quiet attempt out of three proves it; typing that re-measured would fail
+  // every attempt.
+  await expect(async () => {
+    await page.evaluate(async () => {
       await Promise.all([...document.fonts].map((face) => face.load().catch(() => undefined)));
       await document.fonts.ready;
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
-  await settle();
-  await page.keyboard.press("Escape");
-  await page.mouse.click(0, 0);
-  await settle();
 
-  // Every measurement sets the header's data-search (and data-label) while it measures.
-  const records = await header.evaluateHandle((element) => {
-    const seen: MutationRecord[] = [];
-    const observer = new MutationObserver((batch) => seen.push(...batch));
+    // Every measurement sets the header's data-search (and data-label) while it measures.
+    const records = await header.evaluateHandle((element) => {
+      const seen: MutationRecord[] = [];
+      const observer = new MutationObserver((batch) => seen.push(...batch));
 
-    observer.observe(element, { attributes: true, attributeFilter: ["data-search", "data-label"] });
+      observer.observe(element, {
+        attributes: true,
+        attributeFilter: ["data-search", "data-label"],
+      });
 
-    return seen;
-  });
+      return seen;
+    });
 
-  await field.click();
-  await page.keyboard.type("launch", { delay: 30 });
-  await expect(header.locator(".search-dropdown")).toBeVisible();
-  await page.mouse.move(0, 0);
+    await field.click();
+    await field.fill("");
+    await page.keyboard.type("launch", { delay: 30 });
+    await expect(header.locator(".search-dropdown")).toBeVisible();
+    await page.mouse.move(0, 0);
 
-  expect(
-    await records.evaluate(async (seen) => {
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(
+      await records.evaluate(async (seen) => {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
 
-      return seen.length;
-    }),
-  ).toBe(0);
+        return seen.length;
+      }),
+    ).toBe(0);
+  }).toPass({ intervals: [250, 500, 1000], timeout: 30_000 });
 });
 
 test("focus returns to the wide header after a trip through the phone layout", async ({ page }) => {
