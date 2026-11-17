@@ -140,6 +140,8 @@ export const TEXT_SIZE_CHOICES: readonly Choice<TextSize>[] = [
   { value: "default", label: "Default" },
   { value: "large", label: "Large" },
   { value: "larger", label: "Larger" },
+  { value: "extra_large", label: "Extra large" },
+  { value: "largest", label: "Largest" },
 ];
 
 export const PRESENCE_CHOICES: readonly Choice<PresenceSetting>[] = [

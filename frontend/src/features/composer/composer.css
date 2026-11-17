@@ -199,7 +199,7 @@
     margin-right: var(--space-1-5);
     white-space: nowrap;
     color: var(--text-faint);
-    font-size: 11px;
+    font-size: var(--text-caption);
     opacity: 0;
     translate: var(--distance-micro) 0;
     transition:
@@ -307,6 +307,15 @@
     .composer-formats + .composer-divider,
     .composer-toolbar > .composer-divider,
     .composer-usage-text {
+      display: none;
+    }
+  }
+
+  /* The scheduled messages' button ("1 scheduled") takes the new-line hint's place when the
+     card is too narrow for both; in rem, as both are text, so it comes sooner at the larger
+     text sizes. */
+  @container composer (width < calc(480px + 7rem)) {
+    .composer-card:has(.composer-scheduled) .composer-hint {
       display: none;
     }
   }

@@ -64,8 +64,9 @@ pub enum Theme {
     Dark,
 }
 
+/// The account's text size: the root font size, from 87.5% to 150% of the browser's.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 #[ts(export)]
 pub enum TextSize {
     Smaller,
@@ -73,6 +74,42 @@ pub enum TextSize {
     Default,
     Large,
     Larger,
+    ExtraLarge,
+    Largest,
+}
+
+impl TextSize {
+    /// Every size, smallest first.
+    pub const ALL: [Self; 7] = [
+        Self::Smaller,
+        Self::Small,
+        Self::Default,
+        Self::Large,
+        Self::Larger,
+        Self::ExtraLarge,
+        Self::Largest,
+    ];
+
+    /// The name `users.text_size` stores, which is also the wire value.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Smaller => "smaller",
+            Self::Small => "small",
+            Self::Default => "default",
+            Self::Large => "large",
+            Self::Larger => "larger",
+            Self::ExtraLarge => "extra_large",
+            Self::Largest => "largest",
+        }
+    }
+
+    /// A stored name's size; an unknown name is `Default`.
+    pub fn from_stored(stored: &str) -> Self {
+        Self::ALL
+            .into_iter()
+            .find(|size| size.as_str() == stored)
+            .unwrap_or(Self::Default)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

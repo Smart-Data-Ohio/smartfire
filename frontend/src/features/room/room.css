@@ -1,4 +1,18 @@
 /* A conversation: header, timeline and composer. */
+
+/* Lengths room-header-fit.ts reads in px: the name's minimum and the search's usable width. */
+@property --room-name-min {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --header-search-min {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 @layer app {
   /* The conversation and, beside it, the right pane (thread or side pane). */
   .room-layout {
@@ -75,21 +89,190 @@
     max-width: min(18rem, calc(100% - 2rem));
   }
 
-  .room-header:has(.room-topic-button) .page-header-heading {
-    min-width: 14rem;
+  /* Alone in the title (no topic or tag beside it), the name needn't leave room for one. */
+  .room-title:not(:has(.room-topic-button, .room-announcement-tag)) > a.room-title-button {
+    max-width: min(18rem, 100%);
   }
 
-  .room-header:has(.room-topic-button) .page-header-actions {
-    flex-shrink: 1;
-    min-width: 0;
-  }
+  /*
+   * Wide screens: the room's name keeps a readable width however narrow an open pane and a large
+   * text size leave the header. The actions give way first, as a narrower window has them do:
+   * the search field narrows, then the call button drops its label, then the search goes (the
+   * sidebar's search stays), and last the call's faces go and the pane buttons fold into a ⋯
+   * menu. The breakpoints are the header's own width, in px for the icons and rem for the text,
+   * so they come sooner at the larger text sizes. A topic or an announcement room's tag, which
+   * narrow before the name does, raise the name's minimum, the tag's enough to show both.
+   * The steps count a plain room's actions; room-header-fit.ts also drops the call button's label
+   * (data-label="off") and then hides the search (data-search="off") whenever a call's faces, a
+   * stage or a voice limit leave it less than its usable width, and takes the narrowest step
+   * (data-compact) before the name would narrow past a readable width.
+   */
+  @media (720px <= width) {
+    .room-header {
+      --room-name-min: 8rem;
+      --header-search-min: 7rem;
 
-  .room-header:has(.room-topic-button) .header-search {
-    min-width: 0;
-  }
+      container: room-header / inline-size;
+    }
 
-  .room-header:has(.room-topic-button) .search-field {
-    max-width: 100%;
+    .room-header:has(.room-topic-button) {
+      --room-name-min: 14rem;
+    }
+
+    .room-header:has(.room-announcement-tag) {
+      --room-name-min: 18rem;
+    }
+
+    /* The tag narrows before the name, and goes once the title can't show most of both. */
+    .room-header .room-title:has(.room-announcement-tag) {
+      container: room-title / inline-size;
+    }
+
+    @container room-title (width < 16rem) {
+      .room-header .room-announcement-tag {
+        display: none;
+      }
+
+      .room-header .room-title > a.room-title-button {
+        max-width: min(18rem, 100%);
+      }
+    }
+
+    /* room-header-fit.ts's --room-name-floor: the name's readable width in this room. */
+    .room-header .page-header-heading {
+      min-width: max(var(--room-name-min), var(--room-name-floor, 0px));
+    }
+
+    /* While the search shows, the actions may narrow: the field shrinks into the space. */
+    .room-header .page-header-actions {
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .room-header .header-search {
+      min-width: var(--header-search-min);
+    }
+
+    .room-header .search-field {
+      max-width: 100%;
+    }
+
+    /* Only the narrowest step needs the ⋯ menu. */
+    .room-header .page-header-overflow-wrap {
+      display: none;
+    }
+
+    @container room-header (width < calc(430px + 12.875rem)) {
+      .room-header .huddle-launcher-label {
+        display: none;
+      }
+    }
+
+    @container room-header (width < calc(430px + 18.875rem)) {
+      .room-header:has(.room-topic-button) .huddle-launcher-label {
+        display: none;
+      }
+    }
+
+    @container room-header (width < calc(430px + 22.875rem)) {
+      .room-header:has(.room-announcement-tag) .huddle-launcher-label {
+        display: none;
+      }
+    }
+
+    /* room-header-fit.ts drops the call button's label before it hides the search. */
+    .room-header[data-label="off"] .huddle-launcher-label {
+      display: none;
+    }
+
+    /*
+     * Without the search nothing in the actions can narrow, so they keep their full width and the
+     * name takes what's left: a call's faces, a stage or a voice limit, which these steps don't
+     * count, narrow the name rather than push a button past the header's edge.
+     */
+    .room-header[data-search="off"] .header-search {
+      display: none;
+    }
+
+    .room-header[data-search="off"] .page-header-heading {
+      min-width: 0;
+    }
+
+    .room-header[data-search="off"] .page-header-actions {
+      flex-shrink: 0;
+    }
+
+    @container room-header (width < calc(392px + 9.25rem)) {
+      .room-header .header-search {
+        display: none;
+      }
+
+      .room-header .page-header-heading {
+        min-width: 0;
+      }
+
+      .room-header .page-header-actions {
+        flex-shrink: 0;
+      }
+    }
+
+    @container room-header (width < calc(392px + 15.25rem)) {
+      .room-header:has(.room-topic-button) .header-search {
+        display: none;
+      }
+
+      .room-header:has(.room-topic-button) .page-header-heading {
+        min-width: 0;
+      }
+
+      .room-header:has(.room-topic-button) .page-header-actions {
+        flex-shrink: 0;
+      }
+    }
+
+    @container room-header (width < calc(392px + 19.25rem)) {
+      .room-header:has(.room-announcement-tag) .header-search {
+        display: none;
+      }
+
+      .room-header:has(.room-announcement-tag) .page-header-heading {
+        min-width: 0;
+      }
+
+      .room-header:has(.room-announcement-tag) .page-header-actions {
+        flex-shrink: 0;
+      }
+    }
+
+    /* The narrowest: the call's faces, the topic (still in About) and the announcement tag (the
+       megaphone stays) go, and the pane buttons move into a ⋯ menu. room-header-fit.ts takes it
+       sooner (data-compact) when a busy call would leave the name too little. */
+    .room-header[data-compact]
+      :is(.huddle-stack, .pane-buttons, .room-topic-button, .room-announcement-tag) {
+      display: none;
+    }
+
+    .room-header[data-compact] .room-title > a.room-title-button {
+      max-width: min(18rem, 100%);
+    }
+
+    .room-header[data-compact] .page-header-overflow-wrap {
+      display: inline-flex;
+    }
+
+    @container room-header (width < calc(340px + 9.25rem)) {
+      .room-header :is(.huddle-stack, .pane-buttons, .room-topic-button, .room-announcement-tag) {
+        display: none;
+      }
+
+      .room-header .room-title > a.room-title-button {
+        max-width: min(18rem, 100%);
+      }
+
+      .room-header .page-header-overflow-wrap {
+        display: inline-flex;
+      }
+    }
   }
 
   .room-title-icon {
@@ -112,9 +295,10 @@
     font-weight: var(--weight-regular);
   }
 
-  /* An announcement room's tag beside its name, quieter than the name. */
+  /* An announcement room's tag beside its name, quieter than the name, which it narrows before. */
   .room-announcement-tag {
-    flex-shrink: 0;
+    min-width: 0;
+    overflow: hidden;
     padding: 0 var(--space-1-5);
     border-radius: var(--radius-sm);
     background: var(--bg-sunken);
@@ -123,6 +307,8 @@
     font-size: var(--text-meta);
     font-weight: var(--weight-medium);
     line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .room-header-topic {
@@ -368,10 +554,10 @@
     border-radius: var(--radius-xs);
     background: var(--danger-solid);
     color: var(--on-danger);
-    font-size: 10px;
+    font-size: var(--text-tag);
     font-weight: var(--weight-semibold);
     letter-spacing: 0.04em;
-    line-height: 16px;
+    line-height: var(--leading-caption);
     text-transform: uppercase;
   }
 
@@ -473,10 +659,12 @@
     min-width: 0;
   }
 
+  /* At the larger text sizes a narrow column can't hold name and time: the time wraps whole. */
   .message-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--space-2);
+    gap: 0 var(--space-2);
   }
 
   .message-author {
@@ -488,11 +676,13 @@
   .message-time {
     color: var(--text-faint);
     font-size: var(--text-meta);
+    white-space: nowrap;
   }
 
   .message-edited {
     color: var(--text-faint);
-    font-size: 11px;
+    font-size: var(--text-caption);
+    white-space: nowrap;
   }
 
   .message-body-row {
@@ -544,7 +734,7 @@
     }
 
     .unread-divider-label {
-      font-size: 11px;
+      font-size: var(--text-caption);
     }
 
     .timeline::before {
@@ -1103,7 +1293,7 @@
     .room-title .room-title-text .room-title-name {
       max-width: none;
       font-weight: var(--weight-semibold);
-      line-height: 20px;
+      line-height: 1.25rem;
     }
 
     .room-title-text .room-header-topic {
@@ -1111,7 +1301,7 @@
       margin-left: 0;
       border-left: 0;
       font-size: var(--text-meta);
-      line-height: 16px;
+      line-height: var(--leading-meta);
     }
 
     /* The call button at the touch size, its glyph alone; who's in the call shows in the call

@@ -6,6 +6,7 @@ import { CreateMessage, MessageDTO, MessagePage } from "./message.ts";
 import { PresenceList } from "./presence.ts";
 import { ReadState } from "./read.ts";
 import { Membership, Room, RoomDetail } from "./room.ts";
+import { AppearanceSettings } from "./settings.ts";
 import { Sidebar } from "./sidebar.ts";
 import { ClientFrame, ServerFrame } from "./sync.ts";
 import { User, UserList } from "./user.ts";
@@ -107,6 +108,28 @@ const sidebarRowJson = {
 const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S["Encoded"]) =>
   expect(Schema.encodeSync(schema)(Schema.decodeUnknownSync(schema)(wire))).toEqual(wire);
 
+const meJson = {
+  user: userJson,
+  emailAddress: "ada@example.com",
+  preferences: {
+    settingsRevision: 4,
+    theme: "system",
+    textSize: "default",
+    appearancePreferences: null,
+    timeZone: "America/New_York",
+    timeZoneExplicit: false,
+    tourCompleted: true,
+    voiceMode: "push_to_talk",
+    pushToTalkKey: "`",
+  },
+  presenceSetting: "dnd",
+  doNotDisturb: { enabled: true, until: "2026-10-06T17:00:00.000Z" },
+  quietHours: { startMinute: 1320, endMinute: 420 },
+  chatSounds: { muted: true, quietHours: null, timeZone: "UTC", quietWindows: [] },
+  outOfOffice: null,
+  lastRoomId: 12,
+};
+
 describe("DTO schemas", () => {
   it("keeps announcement, ignore and webhook fields together", () => {
     const wire = {
@@ -135,29 +158,26 @@ describe("DTO schemas", () => {
     expect(Schema.encodeSync(MessageDTO)(message)).toEqual(messageJson);
   });
 
-  it("round-trips me, rooms and memberships", () => {
-    const meJson = {
-      user: userJson,
-      emailAddress: "ada@example.com",
-      preferences: {
-        settingsRevision: 4,
-        theme: "system",
-        textSize: "default",
-        appearancePreferences: null,
-        timeZone: "America/New_York",
-        timeZoneExplicit: false,
-        tourCompleted: true,
-        voiceMode: "push_to_talk",
-        pushToTalkKey: "`",
-      },
-      presenceSetting: "dnd",
-      doNotDisturb: { enabled: true, until: "2026-10-06T17:00:00.000Z" },
-      quietHours: { startMinute: 1320, endMinute: 420 },
-      chatSounds: { muted: true, quietHours: null, timeZone: "UTC", quietWindows: [] },
-      outOfOffice: null,
-      lastRoomId: 12,
-    };
+  it("decodes a text size this build doesn't know as the default", () => {
+    const me = Schema.decodeUnknownSync(Me)({
+      ...meJson,
+      preferences: { ...meJson.preferences, textSize: "something_new" },
+    });
 
+    expect(me.preferences.textSize).toBe("default");
+
+    const appearance = Schema.decodeUnknownSync(AppearanceSettings)({
+      theme: "system",
+      textSize: "something_new",
+      timeZone: null,
+      timeZones: [],
+      appearancePreferences: null,
+    });
+
+    expect(appearance.textSize).toBe("default");
+  });
+
+  it("round-trips me, rooms and memberships", () => {
     expect(Schema.encodeSync(Me)(Schema.decodeUnknownSync(Me)(meJson))).toEqual(meJson);
     expect(Schema.encodeSync(Room)(Schema.decodeUnknownSync(Room)(roomJson))).toEqual(roomJson);
     expect(

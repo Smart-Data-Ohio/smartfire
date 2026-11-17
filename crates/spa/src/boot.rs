@@ -1,6 +1,7 @@
 //! The boot JSON: what the SPA needs before its first request, inlined into the shell (and served
 //! by `GET /api/v1/boot` with the CSRF token).
 
+use campfire_api_types::TextSize;
 use serde::Serialize;
 
 /// Boot JSON v0. Field names are the TypeScript ones (camelCase).
@@ -13,7 +14,7 @@ pub struct Boot {
     pub custom_styles: Option<String>,
     /// `<html data-theme>`: "light", "dark" or "system" ([`theme`]).
     pub theme: &'static str,
-    /// `<html data-text-size>`: "smaller" to "larger" ([`text_size`]).
+    /// `<html data-text-size>`: "smaller" to "largest" ([`text_size`]).
     pub text_size: &'static str,
     /// The Action Cable endpoint, as the layout's `action-cable-url` meta tag gives it.
     pub cable_url: String,
@@ -86,13 +87,9 @@ pub fn theme(stored: Option<&str>) -> &'static str {
 /// `Users::PresenceHelper#user_text_size`: the stored size if it's one of `TEXT_SIZES`, else
 /// "default".
 pub fn text_size(stored: Option<&str>) -> &'static str {
-    match stored {
-        Some("smaller") => "smaller",
-        Some("small") => "small",
-        Some("large") => "large",
-        Some("larger") => "larger",
-        _ => "default",
-    }
+    stored
+        .map_or(TextSize::Default, TextSize::from_stored)
+        .as_str()
 }
 
 /// `value` as JSON that's safe inside a `<script>` element: no `<`, `>` or `&` (so no

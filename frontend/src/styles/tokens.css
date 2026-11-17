@@ -201,7 +201,10 @@
 
     --rail-width: 64px;
     --sidebar-width: 248px;
-    --pane-header-height: 48px;
+    /* 48 px, until a stacked title (1.25rem) over a subtitle (1rem) needs more: whenever the root
+       font passes 18 px, from the larger text sizes or a larger browser default. Then every
+       header, the sidebar's, the room's and the pane's, grows together and they stay in one line. */
+    --pane-header-height: max(48px, 2.25rem + 6px);
     --right-pane-width: 380px;
 
     /* ── Phone: breakpoint, touch sizes, safe areas, keyboard ───────────────────── */

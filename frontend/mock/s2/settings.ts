@@ -487,7 +487,16 @@ export function createSettings(
       const textSize = stringField(body, "textSize");
       const zone = stringField(body, "timeZone");
       const themes = ["system", "light", "dark"] as const;
-      const sizes = ["smaller", "small", "default", "large", "larger"] as const;
+
+      const sizes = [
+        "smaller",
+        "small",
+        "default",
+        "large",
+        "larger",
+        "extra_large",
+        "largest",
+      ] as const;
 
       return {
         ...held,
