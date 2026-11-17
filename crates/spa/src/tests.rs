@@ -675,9 +675,27 @@ fn theme_and_text_size_fall_back_like_the_layout() {
         ["light", "dark", "system", "system", "system"]
     );
     assert_eq!(
-        ["smaller", "small", "default", "large", "larger", "huge"]
-            .map(|size| text_size(Some(size))),
-        ["smaller", "small", "default", "large", "larger", "default"]
+        [
+            "smaller",
+            "small",
+            "default",
+            "large",
+            "larger",
+            "extra_large",
+            "largest",
+            "huge"
+        ]
+        .map(|size| text_size(Some(size))),
+        [
+            "smaller",
+            "small",
+            "default",
+            "large",
+            "larger",
+            "extra_large",
+            "largest",
+            "default"
+        ]
     );
     assert_eq!(text_size(None), "default");
 }

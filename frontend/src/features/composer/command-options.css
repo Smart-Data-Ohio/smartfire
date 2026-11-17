@@ -21,7 +21,7 @@
   .command-options-name {
     flex-shrink: 0;
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--text-sidebar);
     font-weight: var(--weight-semibold);
   }
 
@@ -81,7 +81,7 @@
     padding: 0 var(--space-1-5) 0 var(--space-2);
     color: var(--text-muted);
     font-family: var(--font-mono);
-    font-size: 13px;
+    font-size: var(--text-sidebar);
     white-space: nowrap;
   }
 

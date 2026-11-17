@@ -3,6 +3,7 @@ import * as FetchHttpClient from "effect/http/FetchHttpClient";
 import * as HttpClient from "effect/http/HttpClient";
 import * as HttpClientRequest from "effect/http/HttpClientRequest";
 import type * as HttpClientResponse from "effect/http/HttpClientResponse";
+import { clearAppBadge } from "../lib/app-badge.ts";
 import { gatedFetch } from "../lib/network-gate.ts";
 import {
   ApiErrorResponse,
@@ -345,6 +346,7 @@ function readFailure(
       if (leaveOnSignOut) {
         const location = yield* navigation.location;
 
+        yield* Effect.promise(clearAppBadge);
         yield* navigation.assign(`/app/session/new?return_to=${encodeURIComponent(location)}`);
       }
 

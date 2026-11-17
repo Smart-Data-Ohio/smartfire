@@ -1,6 +1,6 @@
 use campfire_db::{
     Clock, Database, Event, EventSink, Message, RecordingSink, Room, TestClock, Timestamp, Tx,
-    fixtures,
+    User, fixtures,
 };
 use campfire_jobs::{JobQueue, Outcome, QueueConfig, Registry, RunnerConfig};
 use campfire_mail::{
@@ -742,6 +742,234 @@ fn render(_: &campfire_db::Connection, _: &Room, source: &str) -> campfire_db::R
     ))
 }
 
+macro_rules! forwarded_mail_test {
+    ($name:ident, $to:expr, $headers:expr) => {
+        #[tokio::test]
+        async fn $name() {
+            let h = Harness::new().await;
+            let raw = format!(
+                "From: Customer <customer@example.org>\r\n\
+                 To: {}\r\n\
+                 {}\r\n\
+                 Subject: Shared inbox request\r\n\
+                 Content-Type: text/plain; charset=utf-8\r\n\r\n\
+                 Please help with our invoice.",
+                $to,
+                $headers.replace("ROOM", &format!("room-{}@mail.test", h.token)),
+            );
+            let message = h.message(h.deliver(raw.into_bytes()).await).await;
+            assert_eq!(message.room_id, h.room_id);
+            assert!(
+                message
+                    .markdown_source
+                    .unwrap()
+                    .contains("Please help with our invoice.")
+            );
+            let creator =
+                h.db.read(move |c| User::find(c, message.creator_id))
+                    .await
+                    .unwrap();
+            assert_eq!(creator.name, "Email");
+            assert!(creator.is_bot());
+        }
+    };
+}
+forwarded_mail_test!(
+    forwarded_mail_delivered_to,
+    "Support <support@example.com>",
+    "Delivered-To: support@example.com\r\nDelivered-To: ROOM"
+);
+forwarded_mail_test!(
+    forwarded_mail_x_forwarded_to,
+    "Support <support@example.com>",
+    "X-Forwarded-To: archive@example.com,\r\n ROOM"
+);
+forwarded_mail_test!(
+    forwarded_mail_x_original_to,
+    "Support <support@example.com>",
+    "X-Original-To: ROOM"
+);
+forwarded_mail_test!(
+    forwarded_mail_google_group,
+    "Support group <support-group@googlegroups.com>",
+    "List-ID: <support-group.googlegroups.com>\r\nX-BeenThere: support-group@googlegroups.com\r\nDelivered-To: ROOM"
+);
+
+macro_rules! forwarded_member_test {
+    ($name:ident, $recipients:expr, $auth:expr, $member:expr) => {
+        #[tokio::test]
+        async fn $name() {
+            let h = Harness::new().await;
+            let raw = format!(
+                "From: David <david@37signals.com>\r\n\
+                 {}\r\n\
+                 Authentication-Results: mx.mail.test; {}\r\n\
+                 Subject: Forwarded request\r\n\r\nPlease help.",
+                $recipients, $auth,
+            )
+            .replace("ROOM", &format!("room-{}@mail.test", h.token))
+            .replace("TOKEN", &h.token);
+            let message = h.message(h.deliver(raw.into_bytes()).await).await;
+            assert_eq!(message.room_id, h.room_id);
+            let creator =
+                h.db.read(move |c| User::find(c, message.creator_id))
+                    .await
+                    .unwrap();
+            if $member {
+                assert_eq!(creator.id, fixtures::identify("david"));
+                assert_eq!(
+                    message.markdown_source.as_deref(),
+                    Some("**Forwarded request**\n\nPlease help.")
+                );
+            } else {
+                assert!(
+                    creator.is_bot(),
+                    "forwarded mail posted as {:?}",
+                    creator.email_address
+                );
+                assert_eq!(creator.name, "Email");
+                assert_eq!(
+                    message.markdown_source.as_deref(),
+                    Some(
+                        "From David <david@37signals.com>\n\n**Forwarded request**\n\nPlease help."
+                    )
+                );
+            }
+        }
+    };
+}
+forwarded_member_test!(
+    forwarded_member_x_forwarded_to_is_bot,
+    "To: support@37signals.com\r\nX-Forwarded-To: ROOM",
+    "spf=pass smtp.mailfrom=support+caf_=room-TOKEN=mail.test@37signals.com; dmarc=pass header.from=37signals.com",
+    false
+);
+forwarded_member_test!(
+    forwarded_member_x_original_to_is_bot,
+    "To: support@37signals.com\r\nX-Original-To: ROOM",
+    "spf=pass smtp.mailfrom=support+caf_=room-TOKEN=mail.test@37signals.com; dmarc=pass header.from=37signals.com",
+    false
+);
+forwarded_member_test!(
+    forwarded_member_delivered_to_is_bot,
+    "To: support@37signals.com\r\nDelivered-To: ROOM",
+    "spf=pass smtp.mailfrom=support+caf_=room-TOKEN=mail.test@37signals.com; dmarc=pass header.from=37signals.com",
+    false
+);
+forwarded_member_test!(
+    dkim_only_forwarded_spoof_with_room_cc_is_bot,
+    "To: support@37signals.com\r\nCc: ROOM\r\nX-Forwarded-To: ROOM",
+    "spf=pass smtp.mailfrom=support+caf_=room-TOKEN=mail.test@37signals.com; dmarc=pass header.from=37signals.com",
+    false
+);
+forwarded_member_test!(
+    dkim_only_group_spoof_with_room_cc_is_bot,
+    "To: support-group@37signals.com\r\nCc: ROOM\r\nDelivered-To: ROOM",
+    "spf=pass smtp.mailfrom=support-group+bnc123@37signals.com; dmarc=pass header.from=37signals.com",
+    false
+);
+forwarded_member_test!(
+    dkim_only_caf_spf_with_room_to_is_bot,
+    "To: ROOM\r\nX-Forwarded-To: ROOM",
+    "spf=pass smtp.mailfrom=support+caf_=room-TOKEN=mail.test@37signals.com",
+    false
+);
+forwarded_member_test!(
+    dkim_only_forwarded_member_with_domain_signature,
+    "To: support@37signals.com\r\nX-Forwarded-To: ROOM",
+    "dkim=pass header.d=37signals.com",
+    true
+);
+
+macro_rules! recipient_routing_test {
+    ($name:ident, $headers:expr) => {
+        #[tokio::test]
+        async fn $name() {
+            let h = Harness::new().await;
+            let other_room = fixtures::identify("hq");
+            let other_token = h.db.write(move |tx| {
+                Room::find(tx.conn(), other_room)?.regenerate_inbound_email_token(tx)
+            }).await.unwrap();
+            let headers = $headers
+                .replace("OTHER", &format!("room-{other_token}@mail.test"))
+                .replace("ROOM", &format!("room-{}@mail.test", h.token));
+            let raw = format!(
+                "From: customer@example.org\r\n{headers}\r\nSubject: Routing conflict\r\n\r\nPlease help."
+            );
+            let message = h.message(h.deliver(raw.into_bytes()).await).await;
+            assert_eq!(message.room_id, h.room_id);
+        }
+    };
+}
+recipient_routing_test!(
+    recipient_foreign_to_does_not_shadow_delivery,
+    "To: room-support@example.com\r\nX-Original-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_stale_original_to_does_not_shadow_delivered_to,
+    "To: support@example.com\r\nX-Original-To: room-stale@mail.test\r\nDelivered-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_stale_delivered_to_does_not_shadow_later_delivered_to,
+    "To: support@example.com\r\nDelivered-To: room-stale@mail.test\r\nDelivered-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_delivery_header_wins_over_to,
+    "To: OTHER\r\nX-Original-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_forwarded_copy_wins_over_cc,
+    "To: support@example.com\r\nCc: OTHER\r\nX-Forwarded-To: ROOM"
+);
+recipient_routing_test!(
+    recipient_topmost_delivered_to_wins_over_forwarded_to,
+    "To: support@example.com\r\nX-Forwarded-To: OTHER\r\nDelivered-To: ROOM\r\nDelivered-To: OTHER"
+);
+
+#[tokio::test]
+async fn recipient_foreign_room_address_bounces() {
+    let h = Harness::new().await;
+    let raw = String::from_utf8(h.raw("customer@example.org", &[], "Foreign room", "Hello"))
+        .unwrap()
+        .replace("@mail.test", "@foreign.test");
+    assert_eq!(h.deliver(raw.into_bytes()).await, Routed::Bounced);
+}
+
+#[tokio::test]
+async fn gmail_forwarding_confirmation_keeps_code_and_url() {
+    let h = Harness::new().await;
+    for html in [false, true] {
+        let code = "987654321";
+        let url = "https://mail-settings.google.com/mail/vf-test-confirmation";
+        let body = if html {
+            format!(
+                "<style>hidden-style</style><script>hidden-script</script><p>Confirmation code: <b>{code}</b></p><p><a href=\"{url}\">{url}</a></p>"
+            )
+        } else {
+            format!("Confirmation code: {code}\nConfirm forwarding: {url}")
+        };
+        let raw = String::from_utf8(h.raw(
+            "Gmail Team <forwarding-noreply@google.com>",
+            &[],
+            "Gmail Forwarding Confirmation - Receive Mail from support@example.com",
+            &body,
+        ))
+        .unwrap()
+        .replace("text/plain", if html { "text/html" } else { "text/plain" });
+        let message = h.message(h.deliver(raw.into_bytes()).await).await;
+        let source = message.markdown_source.unwrap();
+        assert!(source.contains(code));
+        assert!(source.contains(url));
+        assert!(!source.contains("hidden-script"));
+        assert!(!source.contains("hidden-style"));
+        let creator =
+            h.db.read(move |c| User::find(c, message.creator_id))
+                .await
+                .unwrap();
+        assert!(creator.is_bot());
+    }
+}
+
 macro_rules! member_test {
     ($name:ident, $from:expr, $headers:expr, $member:expr) => {
         #[tokio::test]
@@ -762,6 +990,19 @@ macro_rules! member_test {
             } else {
                 assert!(creator.is_bot());
                 assert_eq!(creator.name, "Email");
+                let sender = $from
+                    .split("\r\n")
+                    .next()
+                    .unwrap()
+                    .split(',')
+                    .next()
+                    .unwrap();
+                assert!(
+                    message
+                        .markdown_source
+                        .unwrap()
+                        .starts_with(&format!("From {}\n\n", sender))
+                );
             }
         }
     };
@@ -779,16 +1020,136 @@ member_test!(
     true
 );
 member_test!(
+    dkim_syntax_duplicate_from_is_bot,
+    "david@37signals.com\r\nFrom: attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_space_before_from_colon_is_bot,
+    "david@37signals.com\r\nFrom : attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_tab_before_from_colon_is_bot,
+    "david@37signals.com\r\nFrom\t: attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_multiple_from_mailboxes_is_bot,
+    "david@37signals.com, attacker@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_quoted_identity_property_is_bot,
+    "david@37signals.com",
+    &[
+        "mx.mail.test; dkim=pass header.i=\"header.d=37signals.com x\"@attacker.test header.d=attacker.test"
+    ],
+    false
+);
+member_test!(
+    dkim_syntax_property_prefix_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass xheader.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_duplicate_domain_property_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=attacker.test header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_comment_property_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (header.d=37signals.com) header.d=attacker.test"],
+    false
+);
+member_test!(
+    dkim_syntax_reason_property_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass reason=\"header.d=37signals.com test\" header.d=attacker.test"],
+    false
+);
+member_test!(
+    dkim_syntax_comment_semicolon_is_member,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (1024-bit key; unprotected) header.d=37signals.com"],
+    true
+);
+member_test!(
+    dkim_syntax_nested_escaped_comment_is_member,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (outer (nested\\) key; unprotected)) header.d=37signals.com"],
+    true
+);
+member_test!(
+    dkim_syntax_escaped_open_comment_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass (key \\( hidden header.d=37signals.com) header.d=attacker.test"],
+    false
+);
+member_test!(
+    dkim_syntax_quoted_semicolon_is_bot,
+    "david@37signals.com",
+    &[
+        "mx.mail.test; dkim=fail reason=\"ignored; dkim=pass header.d=37signals.com x\" header.d=attacker.test"
+    ],
+    false
+);
+member_test!(
+    dkim_syntax_escaped_quote_is_bot,
+    "david@37signals.com",
+    &[
+        "mx.mail.test; dkim=pass reason=\"escaped\\\" header.d=37signals.com x\" header.d=attacker.test"
+    ],
+    false
+);
+member_test!(
+    dkim_syntax_quoted_domain_is_member,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=\"37SIGNALS.COM\""],
+    true
+);
+member_test!(
+    dkim_syntax_subdomain_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=mail.37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_other_pass_then_member_failure_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=evil.test; dkim=fail header.d=37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_at_domain_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=@37signals.com"],
+    false
+);
+member_test!(
+    dkim_syntax_mailbox_domain_is_bot,
+    "david@37signals.com",
+    &["mx.mail.test; dkim=pass header.d=attacker@37signals.com"],
+    false
+);
+member_test!(
     member_without_pass_posts_as_bot,
     "david@37signals.com",
     &[],
     false
 );
 member_test!(
-    dmarc_member_pass,
+    dkim_only_dmarc_pass_is_bot,
     "david@37signals.com",
     &["mx.mail.test; dmarc=pass (p=REJECT) header.from=37signals.com"],
-    true
+    false
 );
 member_test!(
     foreign_domain_pass_is_bot,
@@ -809,10 +1170,10 @@ member_test!(
     false
 );
 member_test!(
-    spf_mailfrom_is_member,
+    spf_mailfrom_is_bot,
     "david@37signals.com",
     &["mx.mail.test; spf=pass smtp.mailfrom=david@37signals.com"],
-    true
+    false
 );
 member_test!(
     forged_pass_above_relay_failure_is_bot,

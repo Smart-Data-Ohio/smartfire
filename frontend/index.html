@@ -70,7 +70,7 @@
             meta.media = meta.dataset.scheme === theme ? "all" : "not all";
           }
         }
-        root.dataset.textSize = ["smaller", "small", "large", "larger"].includes(boot.textSize)
+        root.dataset.textSize = ["smaller", "small", "large", "larger", "extra_large", "largest"].includes(boot.textSize)
           ? boot.textSize
           : "default";
         const density = choice("density", ["comfortable", "compact"], "comfortable");

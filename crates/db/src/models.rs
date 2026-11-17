@@ -87,6 +87,7 @@ pub mod push_subscription;
 pub mod rich_text_record;
 pub mod room;
 pub mod room_category;
+pub mod room_counts;
 pub mod saved_item;
 pub mod scheduled_message;
 pub mod search;

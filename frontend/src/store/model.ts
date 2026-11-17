@@ -9,6 +9,7 @@ import type { MessageSticker } from "../gen/MessageSticker.ts";
 import type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
+import type { TextSize } from "../gen/TextSize.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadPermissions } from "../gen/ThreadPermissions.ts";
 
@@ -72,7 +73,7 @@ export interface Boot {
     readonly uploadLimitBytes: number;
   };
   readonly theme: "system" | "light" | "dark";
-  readonly textSize: "smaller" | "small" | "default" | "large" | "larger";
+  readonly textSize: TextSize;
   readonly cableUrl: string;
   readonly serviceWorkerUrl: string | null;
   readonly version: string;

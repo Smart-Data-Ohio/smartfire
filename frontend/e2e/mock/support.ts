@@ -179,16 +179,23 @@ export async function openApp(page: Page, path: string, theme: Theme = "light"):
 }
 
 /**
- * Opens a room tool from the room header: its button, or on phones (under 720 px) its item in the
- * ⋯ menu. A menu ignores a click on its trigger just after it closed, so the phone path tries again.
+ * Opens a room tool from the room header: its button, or its item in the ⋯ menu on phones (under
+ * 720 px) and in a header too narrow for the pane buttons. A menu ignores a click on its trigger
+ * just after it closed, so the menu path tries again.
  */
 export async function openHeaderTool(page: Page, name: RegExp | string): Promise<void> {
   const header = page.locator(".room-header");
 
   if ((page.viewportSize()?.width ?? 0) >= 720) {
-    await header.getByRole("button", { name }).first().click();
+    const button = header.getByRole("button", { name }).first();
 
-    return;
+    await expect(button.or(header.getByRole("button", { name: "More" })).first()).toBeVisible();
+
+    if (await button.isVisible()) {
+      await button.click();
+
+      return;
+    }
   }
 
   const menu = page.getByRole("menu", { name: "More" });

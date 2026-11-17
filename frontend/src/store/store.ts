@@ -340,14 +340,28 @@ export const mutations = {
   invalidateIgnores: () => apply(reduce.invalidateIgnores),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
-    apply((state) => (state.connection === connection ? state : { ...state, connection })),
+    apply((state) =>
+      state.connection === connection ? state : { ...state, connection, sidebarCaughtUp: false },
+    ),
+  /** Caught up only counts while online: a new connection must catch up again. */
+  setSidebarCaughtUp: (caughtUp: boolean) =>
+    apply((state) => {
+      const next = caughtUp && state.connection === "online";
+
+      return state.sidebarCaughtUp === next ? state : { ...state, sidebarCaughtUp: next };
+    }),
   /** The server answered for another sign-in: offline for good, until the page reloads. */
   markAccountChanged: () => {
     if (store.getState().accountChanged) {
       return;
     }
 
-    apply((state) => ({ ...state, accountChanged: true, connection: "offline" }));
+    apply((state) => ({
+      ...state,
+      accountChanged: true,
+      connection: "offline",
+      sidebarCaughtUp: false,
+    }));
 
     // One hook failing must not keep the others from ending what they hold.
     for (const [key, { end }] of [...accountChangeHooks]) {

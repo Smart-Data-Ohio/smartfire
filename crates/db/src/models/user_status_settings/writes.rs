@@ -229,11 +229,7 @@ impl UserStatusSettings {
                 self.theme.as_str(),
                 ["light", "dark", "system"].as_slice(),
             ),
-            (
-                "text_size",
-                self.text_size.as_str(),
-                ["smaller", "small", "default", "large", "larger"].as_slice(),
-            ),
+            ("text_size", self.text_size.as_str(), super::TEXT_SIZES),
         ] {
             if !allowed.contains(&value) {
                 errors.add(key, "is not included in the list");

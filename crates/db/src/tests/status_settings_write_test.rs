@@ -684,3 +684,22 @@ fn ws17_effective_presence_folds_the_manual_setting_over_the_lease_state() {
     });
     assert_eq!(settings(&t).effective_presence(Online), Offline);
 }
+
+#[test]
+fn the_largest_text_sizes_pass_both_settings_writers() {
+    let t = TestDb::new();
+    for size in ["extra_large", "largest"] {
+        t.write(move |tx| {
+            crate::slash_commands::user_settings::update(
+                tx,
+                id("david"),
+                json!({ "text_size": size }),
+            )
+        });
+        // Both writers check every column, so a status save keeps the stored size valid too.
+        let mut user = settings(&t);
+        user.custom_status_text = Some(format!("Reading at {size}"));
+        t.write(move |tx| user.save(tx));
+        assert_eq!(settings(&t).text_size, size);
+    }
+}

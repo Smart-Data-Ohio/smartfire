@@ -120,7 +120,11 @@ async function showNotification({ title, options }) {
 }
 
 async function updateBadgeCount({ data: { badge } }) {
-  return self.navigator.setAppBadge?.(badge || 0)
+  await self.navigator.setAppBadge?.(badge || 0)?.catch(() => undefined)
+  const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+  for (const client of clients) {
+    client.postMessage({ type: "badge-pushed" })
+  }
 }
 
 self.addEventListener("notificationclick", (event) => {

@@ -1,4 +1,5 @@
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import type { RoomKind } from "../../gen/RoomKind.ts";
 import { useAnnouncementRoom } from "../../store/announcements.ts";
 import { useStore } from "../../store/store.ts";
@@ -32,6 +33,7 @@ import {
   NotificationsSubMenu,
   useNotificationsMenuOpen,
 } from "../sidebar/notifications-button.tsx";
+import { useRoomHeaderFit } from "./room-header-fit.ts";
 
 const PRESENCE_TEXT = {
   online: "Active",
@@ -274,8 +276,8 @@ function PhoneOverflowItems({
 /**
  * The conversation's page header, Slack's: the room's glyph and name (a DM shows the person,
  * their presence and status; an announcement room the megaphone and its tag), then the tools: on wide screens a DM's people actions, the call,
- * the bell, the calendar, the pane toggles (threads, pins, files and the member stack) and
- * search; on phones the back button, the call and a ⋯ menu holding the rest, and the name opens
+ * the bell, the calendar, the pane toggles (threads, pins, files and the member stack, in a ⋯
+ * menu when the header is narrow) and search; on phones the back button, the call and a ⋯ menu holding the rest, and the name opens
  * the room's details.
  */
 export function RoomHeader({ roomId }: { readonly roomId: number }) {
@@ -300,6 +302,22 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const notificationsRoute = useMatchRoute()({ to: "/r/$roomId/notifications" }) !== false;
   // A stage's raised hands sit one tap deeper on phones (the ⋯ menu's Stage item), so ⋯ shows a dot.
   const hands = useRaisedHands(roomId);
+  // Wide screens' ⋯ menu (the pane buttons, in a narrow header): it closes when the header widens
+  // past the step that shows it.
+  const [moreOpen, setMoreOpen] = useState(false);
+  // A trip through the phone layout closes it, rather than reopening it on the way back.
+  const [moreLayout, setMoreLayout] = useState(phone);
+
+  if (moreLayout !== phone) {
+    setMoreLayout(phone);
+    setMoreOpen(false);
+  }
+
+  const fitRef = useRoomHeaderFit({
+    wide: !phone,
+    moreOpen,
+    onMoreHidden: () => setMoreOpen(false),
+  });
 
   const title =
     name === null || kind === null ? (
@@ -331,6 +349,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   return (
     <>
       <PageHeader
+        ref={fitRef}
         className="room-header"
         back={{
           label: "Back to conversations",
@@ -355,15 +374,19 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
           )
         }
         overflow={
-          !phone || kind === null ? undefined : notificationsRoute ? (
+          kind === null ? undefined : !phone ? (
+            // Wide screens show it only when the header is too narrow for the pane buttons
+            // (room.css), which it then holds.
+            <PaneMenuItems roomId={roomId} />
+          ) : notificationsRoute ? (
             <NotificationLevels roomId={roomId} />
           ) : (
             <PhoneOverflowItems roomId={roomId} directActions={direct.actions} self={self} />
           )
         }
         overflowLabel={phone && notificationsRoute ? "Notifications" : "More"}
-        overflowAlert={phone && hands > 0 ? raisedHandsLabel(hands) : undefined}
-        overflowMenu={phone ? notificationsMenu : undefined}
+        overflowAlert={hands > 0 ? raisedHandsLabel(hands) : undefined}
+        overflowMenu={phone ? notificationsMenu : { open: moreOpen, onOpenChange: setMoreOpen }}
       />
       {phone ? direct.dialogs : null}
     </>

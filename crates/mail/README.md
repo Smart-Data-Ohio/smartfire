@@ -60,6 +60,8 @@ The oracle includes 34 full messages covering display-name specials, tabs, quote
 Unicode and long encoded words, plus 579 authentication cases and whitespace coercions.
 Basic-auth vectors store credential parts and mutation recipes; tests construct headers
 at runtime to keep encoded authorization headers out of source fixtures.
+Recorded authentication verdicts remain frozen. The `dkim_only_expected` overrides record
+the stricter member-attribution policy, which accepts aligned DKIM passes only.
 The corpus includes sanitized structures from 32 public real-email HTML parts and two
 archived Authentication-Results fields; their provenance and redaction rules are in the
 git history, under `reference-tools/mail/corpus/`. Modern mail-client coverage remains limited.

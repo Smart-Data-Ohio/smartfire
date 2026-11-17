@@ -3,6 +3,7 @@
 //! (more are dropped, like `Concurrent::RejectedExecutionError`, and logged), and one worker that
 //! destroys expired or unusable subscriptions in order.
 
+use std::collections::{HashMap, hash_map::Entry};
 use std::fmt::Display;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, mpsc};
@@ -88,7 +89,7 @@ impl Pool {
     }
 
     /// `queue(payload, subscriptions)`: in id order (`find_each`), each subscription's
-    /// notification is built here (counting its badge) and delivered on the pool.
+    /// notification is built here (counting the badge once per user) and delivered on the pool.
     pub fn queue(
         &self,
         conn: &Connection,
@@ -97,8 +98,13 @@ impl Pool {
         now: Timestamp,
     ) -> campfire_db::Result<()> {
         subscriptions.sort_by_key(|s| s.id);
+        let mut badges = HashMap::new();
         for subscription in &subscriptions {
-            self.deliver_later(Notification::build(conn, subscription, payload, now)?);
+            let badge = match badges.entry(subscription.user_id) {
+                Entry::Occupied(entry) => *entry.get(),
+                Entry::Vacant(entry) => *entry.insert(subscription.badge(conn, now)?),
+            };
+            self.deliver_later(Notification::with_badge(subscription, payload, badge));
         }
         Ok(())
     }
@@ -179,5 +185,53 @@ impl Inner {
         if let Some(sender) = self.invalidations.lock().unwrap().as_ref() {
             let _ = sender.send(id);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+
+    thread_local! { static BADGE_QUERIES: Cell<usize> = const { Cell::new(0) }; }
+
+    #[tokio::test]
+    async fn app_badge_is_counted_once_per_user_per_queue() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        campfire_db::schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
+        conn.execute_batch("INSERT INTO users(id,name,created_at,updated_at) VALUES(1,'One','2035-01-01','2035-01-01'),(2,'Two','2035-01-01','2035-01-01');").unwrap();
+        let key = p256::ecdsa::SigningKey::from_slice(&[1; 32]).unwrap();
+        let vapid = VapidConfig::new(
+            "mailto:test@example.com",
+            &super::super::encode64_nopad(key.verifying_key().to_sec1_point(false).as_bytes()),
+            &super::super::encode64_nopad(&key.to_bytes()),
+        )
+        .unwrap();
+        let pool = Pool::new(Network::system(), vapid, |_| Ok::<_, String>(()));
+        let payload = PushPayload::new("Test".into(), "Message".into(), "/app/".into(), None);
+        let subscriptions = [1, 2, 1, 2, 1]
+            .map(|user| PushSubscription::new(user, None, None, None, None))
+            .to_vec();
+        BADGE_QUERIES.set(0);
+        conn.trace_v2(
+            rusqlite::trace::TraceEventCodes::SQLITE_TRACE_STMT,
+            Some(|event: rusqlite::trace::TraceEvent<'_>| {
+                if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event
+                    && sql.starts_with("WITH \"bounds\"")
+                {
+                    BADGE_QUERIES.set(BADGE_QUERIES.get() + 1);
+                }
+            }),
+        )
+        .unwrap();
+        let now = Timestamp::parse_db("2035-01-01T12:00:00Z").unwrap();
+        pool.queue(&conn, &payload, subscriptions.clone(), now)
+            .unwrap();
+        let first = BADGE_QUERIES.get();
+        pool.queue(&conn, &payload, subscriptions, now).unwrap();
+        let second = BADGE_QUERIES.get();
+        pool.shutdown().await;
+        assert_eq!(first, 2, "one count per user, regardless of device count");
+        assert_eq!(second, 4, "a later push must count again");
     }
 }

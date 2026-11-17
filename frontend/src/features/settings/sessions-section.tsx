@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SessionInfo } from "../../gen/SessionInfo.ts";
 import type { SessionList } from "../../gen/SessionList.ts";
+import { clearAppBadge } from "../../lib/app-badge.ts";
 import { ActionError } from "../../sync/run.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
@@ -45,7 +46,9 @@ function signedOut(error: Error): boolean {
 function leave(subscription: PushSubscription | null): void {
   const unsubscribed = subscription === null ? Promise.resolve(true) : subscription.unsubscribe();
 
-  void unsubscribed.catch(() => false).then(() => window.location.assign("/app/session/new"));
+  void Promise.all([clearAppBadge(), unsubscribed.catch(() => false)]).then(() =>
+    window.location.assign("/app/session/new"),
+  );
 }
 
 /**

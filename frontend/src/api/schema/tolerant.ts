@@ -25,3 +25,19 @@ export function tolerantLiterals<const Known extends readonly [string, ...string
     }),
   );
 }
+
+/** `Schema.Literals(known)`, decoding any other string as `fallback`, one of the known values. */
+export function tolerantLiteralsOr<const Known extends readonly [string, ...string[]]>(
+  known: Known,
+  fallback: Known[number],
+) {
+  const isKnown = (raw: string): raw is Known[number] => known.some((value) => value === raw);
+  const Known = Schema.Literals(known);
+
+  return Schema.Union([Known, AnyString]).pipe(
+    Schema.decodeTo(Known, {
+      decode: SchemaGetter.transform((raw) => (isKnown(raw) ? raw : fallback)),
+      encode: SchemaGetter.transform((value) => value),
+    }),
+  );
+}

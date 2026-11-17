@@ -4,6 +4,7 @@
  * engine stops first, then this clears what the tab kept for them and loads the page again.
  */
 
+import { clearAppBadge } from "../lib/app-badge.ts";
 import { mutations, store } from "../store/store.ts";
 
 /** What this tab keeps in sessionStorage: drafts, the sync resume point. */
@@ -52,6 +53,8 @@ export function stopRunForNewSignIn(stop: () => void): () => void {
  * reloads once stopped), or reloads.
  */
 export function leaveForNewSignIn(): void {
+  void clearAppBadge();
+
   try {
     mutations.markAccountChanged();
   } finally {
