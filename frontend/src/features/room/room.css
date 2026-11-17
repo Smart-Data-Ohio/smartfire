@@ -102,10 +102,10 @@
    * menu. The breakpoints are the header's own width, in px for the icons and rem for the text,
    * so they come sooner at the larger text sizes. A topic or an announcement room's tag, which
    * narrow before the name does, raise the name's minimum, the tag's enough to show both.
-   * The steps count a plain room's actions; room-header-fit.ts also hides the search
-   * (data-search="off") whenever a call's faces, a stage or a voice limit leave it less than its
-   * usable width, and takes the narrowest step (data-compact) before the name would narrow past
-   * a readable width.
+   * The steps count a plain room's actions; room-header-fit.ts also drops the call button's label
+   * (data-label="off") and then hides the search (data-search="off") whenever a call's faces, a
+   * stage or a voice limit leave it less than its usable width, and takes the narrowest step
+   * (data-compact) before the name would narrow past a readable width.
    */
   @media (720px <= width) {
     .room-header {
@@ -178,6 +178,11 @@
       .room-header:has(.room-announcement-tag) .huddle-launcher-label {
         display: none;
       }
+    }
+
+    /* room-header-fit.ts drops the call button's label before it hides the search. */
+    .room-header[data-label="off"] .huddle-launcher-label {
+      display: none;
     }
 
     /*

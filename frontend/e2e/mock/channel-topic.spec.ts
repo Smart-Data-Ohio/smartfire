@@ -369,9 +369,20 @@ const BUSY_STAGE: HeaderRoom = {
 const SWEEP_ROOMS: readonly HeaderRoom[] = [
   BUSY_STAGE,
   ...HEADER_ROOMS.filter(
-    (room) => room.id === ROOM_IDS.lounge || room.id === ROOM_IDS.announcements,
+    (room) =>
+      room.id === ROOM_IDS.general ||
+      room.id === ROOM_IDS.lounge ||
+      room.id === ROOM_IDS.announcements,
   ),
 ];
+
+/** Whether the header shows its search and the call button's label. */
+function shownParts(header: Locator): Promise<{ search: boolean; label: boolean }> {
+  return header.evaluate((element) => ({
+    search: element.querySelector(".header-search")?.checkVisibility() === true,
+    label: element.querySelector(".huddle-launcher-label")?.checkVisibility() === true,
+  }));
+}
 
 // Every 10 px, and the widths where the search's visibility once flipped every frame (Town Hall,
 // the Lounge, at both sizes).
@@ -391,11 +402,14 @@ for (const textSize of ["default", "largest"] as const) {
       await page.setViewportSize(DESKTOP);
       const header = await openHeaderRoom(page, room, textSize);
 
-      if (room.id !== ROOM_IDS.announcements || room.busy === true) {
+      if (room.id === ROOM_IDS.lounge || room.busy === true) {
         await expect(header.locator(".huddle-stack")).toBeAttached();
       }
 
       const problems: string[] = [];
+      // The actions give way in order as the header narrows, the call button's label before the
+      // search, and nothing that went comes back narrower.
+      let gone = { search: false, label: false };
 
       for (const width of SWEEP_WIDTHS) {
         await page.setViewportSize({ ...DESKTOP, width });
@@ -404,6 +418,20 @@ for (const textSize of ["default", "largest"] as const) {
         if (new Set(states).size > 1) {
           problems.push(`${width}px: ${states.join(" → ")}`);
         }
+
+        const shown = await shownParts(header);
+
+        if (shown.label && !shown.search) {
+          problems.push(`${width}px: the search went before the call button's label`);
+        }
+
+        for (const part of ["search", "label"] as const) {
+          if (gone[part] && shown[part]) {
+            problems.push(`${width}px: the ${part} came back`);
+          }
+        }
+
+        gone = { search: gone.search || !shown.search, label: gone.label || !shown.label };
 
         for (const problem of await headerProblems(header)) {
           problems.push(`${width}px: ${problem}`);
@@ -452,6 +480,59 @@ test("the ⋯ menu closes when the header widens past it, focus on a pane button
   await expect(threads).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(threads).toBeFocused();
+});
+
+test("typing in the header's search doesn't re-measure the header", async ({ page }) => {
+  await page.setViewportSize({ ...DESKTOP, width: 1280 });
+  await openApp(page, `r/${ROOM_IDS.general}`);
+  const header = page.locator(".room-header");
+  const field = header.getByRole("combobox", { name: /search/i });
+
+  await expect(field).toBeVisible();
+  // The dropdown's first opening loads a font, and a font loading re-measures: open it once first.
+  await field.click();
+  await page.keyboard.type("l");
+  await expect(header.locator(".search-dropdown")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.mouse.click(0, 0);
+  await page.evaluate(() => document.fonts.ready);
+
+  // Every measurement sets the header's data-search (and data-label) while it measures.
+  const records = await header.evaluateHandle((element) => {
+    const seen: MutationRecord[] = [];
+    const observer = new MutationObserver((batch) => seen.push(...batch));
+
+    observer.observe(element, { attributes: true, attributeFilter: ["data-search", "data-label"] });
+
+    return seen;
+  });
+
+  await field.click();
+  await page.keyboard.type("launch", { delay: 30 });
+  await expect(header.locator(".search-dropdown")).toBeVisible();
+  await page.mouse.move(0, 0);
+
+  expect(
+    await records.evaluate(async (seen) => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      return seen.length;
+    }),
+  ).toBe(0);
+});
+
+test("focus returns to the wide header after a trip through the phone layout", async ({ page }) => {
+  await page.setViewportSize({ ...DESKTOP, width: 760 });
+  await openApp(page, `r/${ROOM_IDS.general}`);
+  const header = page.locator(".room-header");
+
+  await header.getByRole("button", { name: "More" }).click();
+  await expect(page.getByRole("menu", { name: "More" })).toBeVisible();
+
+  await page.setViewportSize(PHONE);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await page.setViewportSize(DESKTOP);
+  await expect(header.getByRole("button", { name: "Threads" })).toBeFocused();
 });
 
 test("the ⋯ menu stays closed after a trip through the phone layout", async ({ page }) => {
