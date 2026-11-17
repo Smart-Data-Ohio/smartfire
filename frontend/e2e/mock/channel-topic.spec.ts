@@ -489,13 +489,23 @@ test("typing in the header's search doesn't re-measure the header", async ({ pag
   const field = header.getByRole("combobox", { name: /search/i });
 
   await expect(field).toBeVisible();
-  // The dropdown's first opening loads a font, and a font loading re-measures: open it once first.
+  // A font finishing loading re-measures the header, so open the dropdown once and load every face first.
   await field.click();
   await page.keyboard.type("l");
   await expect(header.locator(".search-dropdown")).toBeVisible();
+  // Lay the open dropdown out and let its fonts finish loading before it closes.
+  const settle = () =>
+    page.evaluate(async () => {
+      void document.body.offsetHeight;
+      // Load every declared face now, so none finishes loading (and re-measures) mid-test.
+      await Promise.all([...document.fonts].map((face) => face.load().catch(() => undefined)));
+      await document.fonts.ready;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+  await settle();
   await page.keyboard.press("Escape");
   await page.mouse.click(0, 0);
-  await page.evaluate(() => document.fonts.ready);
+  await settle();
 
   // Every measurement sets the header's data-search (and data-label) while it measures.
   const records = await header.evaluateHandle((element) => {
