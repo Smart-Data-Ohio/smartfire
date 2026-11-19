@@ -310,7 +310,7 @@ export function SlackSetupSection() {
   return (
     <SettingsPage
       title="Slack import"
-      description="Move this workspace from Slack Pro to Smartfire: create an internal Slack app, connect it, dry-run the migration, then import."
+      description="Move your Slack workspace and all its messages into Smartfire. The process requires creating an internal Slack app, connecting it, running a dry run migration, and then running the final import."
     >
       {load.status === "loading" ? <PaneListSkeleton rows={4} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
@@ -353,8 +353,10 @@ export function SlackSetupSection() {
             ) : setup.teamKnown && setup.connection.state === "connected" ? (
               <>
                 <p>
-                  Dry runs write nothing: review the plan, then run a scoped test import (undoable)
-                  before the full import.
+                  Dry runs don't change anything in Smartfire. After the dry run finishes, you'll
+                  review the import plan: Slack channels that don't exist in Smartfire yet will
+                  create new rooms automatically, or you can merge them into existing rooms or skip
+                  them. You can then run an undoable test import before the full import.
                 </p>
                 <DryRun />
               </>
