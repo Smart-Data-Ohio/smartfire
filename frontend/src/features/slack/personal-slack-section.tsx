@@ -11,6 +11,7 @@ import { useConfirmFirst } from "../auth/confirm-first.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { CONFIRM, modeLabel, personalConnectionSentence } from "./slack-format.ts";
+import { personalGuideProgress, SlackImportFacts, SlackImportGuideList } from "./slack-guide.tsx";
 import { SlackRunView, useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
 import "./slack.css";
@@ -97,6 +98,7 @@ export function PersonalSlackSection() {
 
   const page = load.status === "ready" ? load.page : null;
   const connected = page?.connection.state === "connected";
+  const progress = page === null ? undefined : personalGuideProgress(page);
 
   return (
     <SettingsPage
@@ -117,6 +119,12 @@ export function PersonalSlackSection() {
       ) : null}
       {page?.teamKnown === true ? (
         <>
+          <SettingsGroup
+            title="How it works"
+            description="Follow these steps to copy your personal Slack conversations over — no file exports or technical setup needed."
+          >
+            <SlackImportGuideList progress={progress} showPreviewLink />
+          </SettingsGroup>
           <SettingsGroup title="Your Slack connection">
             <p>{personalConnectionSentence(page.connection)}</p>
             <div className="settings-actions">
@@ -178,6 +186,9 @@ export function PersonalSlackSection() {
                 </CardTable>
               </section>
             )}
+          </SettingsGroup>
+          <SettingsGroup title="Good to know">
+            <SlackImportFacts />
           </SettingsGroup>
         </>
       ) : null}

@@ -16,6 +16,7 @@ import { playMessageChime } from "../huddle/sounds.ts";
 import { SearchHotkey } from "../search/search-hotkey.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
+import { SlackImportPrompt } from "../slack/slack-import-prompt.tsx";
 import { GlobalOverlays } from "../switcher/global-overlays.tsx";
 import { AccountChangedNotice } from "./account-changed.tsx";
 import { useBootFlash } from "./boot-flash.ts";
@@ -205,6 +206,7 @@ export function AppShell() {
       <main className="app-main">
         <UpdateBanner />
         <ConnectionBanner />
+        <SlackImportPrompt />
         <div className="app-main-dock">
           <HuddleDock compact />
         </div>
