@@ -56,4 +56,161 @@
   .slack-sample-text {
     white-space: pre-wrap;
   }
+
+  /* ── Guided personal Slack import prompt ──────────────────────────────── */
+
+  .slack-prompt {
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-raised);
+  }
+
+  .slack-prompt-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .slack-prompt-icon {
+    flex-shrink: 0;
+    color: var(--accent);
+  }
+
+  .slack-prompt-copy {
+    flex: 1;
+    min-width: 200px;
+    margin: 0;
+    color: var(--text);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-ui);
+  }
+
+  .slack-prompt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  /* ── Step-by-step guide & good-to-know list ───────────────────────────── */
+
+  .slack-guide-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .slack-guide-step {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+  }
+
+  .slack-guide-step[data-state="current"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .slack-guide-badge {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+  }
+
+  .slack-guide-step[data-state="current"] .slack-guide-badge {
+    background: var(--accent-solid);
+    color: var(--on-accent);
+  }
+
+  .slack-guide-step[data-state="done"] .slack-guide-badge {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .slack-guide-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    min-width: 0;
+  }
+
+  .slack-guide-title {
+    margin: 0;
+    color: var(--text-strong);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-ui);
+  }
+
+  .slack-guide-body {
+    margin: 0;
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-body);
+  }
+
+  .slack-guide-action {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-sidebar);
+  }
+
+  .slack-guide-facts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding-left: var(--space-4);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-body);
+  }
+
+  .slack-guide-fact strong {
+    color: var(--text-strong);
+  }
+
+  .slack-dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .slack-dialog-facts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .slack-dialog-subheading {
+    margin: 0;
+    color: var(--text-strong);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-ui);
+  }
+
+  @media (width < 720px) {
+    .slack-prompt-inner {
+      padding: var(--space-2) var(--space-3);
+    }
+
+    .slack-prompt-actions {
+      width: 100%;
+    }
+  }
 }
