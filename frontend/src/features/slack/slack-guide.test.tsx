@@ -262,7 +262,7 @@ describe("SlackImportPrompt", () => {
     vi.spyOn(slack, "personal").mockResolvedValue(personalPage());
 
     const pathname = await renderWithPrompt("/");
-    const prompt = await screen.findByRole("complementary", { name: "Import your Slack history" });
+    const prompt = await screen.findByRole("region", { name: "Import your Slack history" });
 
     fireEvent.click(within(prompt).getByRole("button", { name: "How it works" }));
 
@@ -276,7 +276,7 @@ describe("SlackImportPrompt", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Go to Slack import" }));
 
     await waitFor(() => expect(pathname()).toBe("/settings/slack"));
-    expect(screen.queryByRole("complementary", { name: "Import your Slack history" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Import your Slack history" })).toBeNull();
   });
 
   it("clears cached eligibility on settings entry so a failed refresh does not re-show stale prompt", async () => {
@@ -287,7 +287,7 @@ describe("SlackImportPrompt", () => {
       .mockRejectedValueOnce(new Error("offline"));
 
     const pathname = await renderWithPrompt("/");
-    const prompt = await screen.findByRole("complementary", { name: "Import your Slack history" });
+    const prompt = await screen.findByRole("region", { name: "Import your Slack history" });
 
     fireEvent.click(within(prompt).getByRole("button", { name: "Import from Slack" }));
     await waitFor(() => expect(pathname()).toBe("/settings/slack"));
@@ -296,7 +296,7 @@ describe("SlackImportPrompt", () => {
     fireEvent.click(screen.getByRole("link", { name: "Back to home" }));
     await waitFor(() => expect(pathname()).toBe("/"));
     await waitFor(() => expect(personal).toHaveBeenCalledTimes(3));
-    expect(screen.queryByRole("complementary", { name: "Import your Slack history" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Import your Slack history" })).toBeNull();
   });
 
   it("remembers dismissal for the current user", async () => {
@@ -304,11 +304,11 @@ describe("SlackImportPrompt", () => {
 
     await renderWithPrompt("/");
 
-    const prompt = await screen.findByRole("complementary", { name: "Import your Slack history" });
+    const prompt = await screen.findByRole("region", { name: "Import your Slack history" });
 
     fireEvent.click(within(prompt).getByRole("button", { name: "Dismiss Slack import prompt" }));
 
-    expect(screen.queryByRole("complementary", { name: "Import your Slack history" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Import your Slack history" })).toBeNull();
     expect(isSlackPromptDismissed(VIEWER_ID)).toBe(true);
   });
 
@@ -319,7 +319,7 @@ describe("SlackImportPrompt", () => {
 
     await renderWithPrompt("/");
     await waitFor(() => expect(personal).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole("complementary", { name: "Import your Slack history" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Import your Slack history" })).toBeNull();
 
     cleanup();
     personal.mockResolvedValue(
@@ -327,14 +327,14 @@ describe("SlackImportPrompt", () => {
     );
     await renderWithPrompt("/");
     await waitFor(() => expect(personal).toHaveBeenCalledTimes(2));
-    expect(screen.queryByRole("complementary", { name: "Import your Slack history" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Import your Slack history" })).toBeNull();
   });
 
   it("does not appear on settings pages", async () => {
     const personal = vi.spyOn(slack, "personal").mockResolvedValue(personalPage());
 
     await renderWithPrompt("/settings/integrations");
-    expect(screen.queryByRole("complementary", { name: "Import your Slack history" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Import your Slack history" })).toBeNull();
     expect(personal).not.toHaveBeenCalled();
   });
 });

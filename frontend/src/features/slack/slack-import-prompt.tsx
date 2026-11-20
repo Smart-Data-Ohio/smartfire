@@ -125,7 +125,7 @@ export function SlackImportPrompt() {
 
   return (
     <>
-      <aside className="slack-prompt" aria-label="Import your Slack history">
+      <section className="slack-prompt" aria-label="Import your Slack history">
         <div className="slack-prompt-inner">
           <Icon name="download" size={16} className="slack-prompt-icon" />
           <p className="slack-prompt-copy">
@@ -142,7 +142,7 @@ export function SlackImportPrompt() {
             <IconButton icon="x" size="sm" label="Dismiss Slack import prompt" onClick={dismiss} />
           </div>
         </div>
-      </aside>
+      </section>
       <Dialog
         open={guideOpen}
         onOpenChange={setGuideOpen}
