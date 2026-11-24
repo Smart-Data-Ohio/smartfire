@@ -21,9 +21,10 @@ import {
   keyed,
   partlyRead,
   planCoverage,
+  planFor,
   rowReason,
-  savedSelection,
-  saveSelection,
+  saveChoices,
+  savedChoices,
 } from "./slack-format.ts";
 import { useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
@@ -76,17 +77,17 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
       ),
     );
 
-  const [checked, setChecked] = useState<ReadonlySet<string>>(
-    () => savedSelection(plan) ?? active(),
-  );
+  const [saved] = useState(() => savedChoices(plan));
+  const [checked, setChecked] = useState<ReadonlySet<string>>(() => saved?.checked ?? active());
 
-  useEffect(() => saveSelection(plan.runId, checked), [plan.runId, checked]);
-
-  const [targets, setTargets] = useState<Readonly<Record<string, string>>>(() =>
-    Object.fromEntries(
+  const [targets, setTargets] = useState<Readonly<Record<string, string>>>(() => ({
+    ...Object.fromEntries(
       plan.conversations.map(({ conversation, target }) => [conversation.id, target]),
     ),
-  );
+    ...saved?.targets,
+  }));
+
+  useEffect(() => saveChoices(plan.runId, { checked, targets }), [plan.runId, checked, targets]);
 
   const [oldest, setOldest] = useState(plan.defaultOldest);
   const [latest, setLatest] = useState("");
@@ -336,6 +337,8 @@ export function SlackPlanSection() {
     fetchPlan();
   };
 
+  const plan = planFor(load.status === "ready" ? load.plan : null, runId);
+
   return (
     <SettingsPage
       title="Import plan"
@@ -349,9 +352,11 @@ export function SlackPlanSection() {
         <Icon name="chevron-left" size={14} />
         Back to the dry run
       </Link>
-      {load.status === "loading" ? <PaneListSkeleton rows={4} /> : null}
+      {load.status === "loading" || (load.status === "ready" && plan === null) ? (
+        <PaneListSkeleton rows={4} />
+      ) : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
-      {load.status === "ready" ? <PlanForm key={runId} plan={load.plan} /> : null}
+      {plan === null ? null : <PlanForm key={plan.runId} plan={plan} />}
     </SettingsPage>
   );
 }

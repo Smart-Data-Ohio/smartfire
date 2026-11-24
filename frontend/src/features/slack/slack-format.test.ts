@@ -18,9 +18,10 @@ import {
   peopleLine,
   personalConnectionSentence,
   planCoverage,
+  planFor,
   rowReason,
-  savedSelection,
-  saveSelection,
+  saveChoices,
+  savedChoices,
 } from "./slack-format.ts";
 import { MAX_ISSUE_PAGES } from "./slack-pages.ts";
 
@@ -242,16 +243,30 @@ describe("rowReason", () => {
   });
 });
 
-describe("savedSelection", () => {
+describe("savedChoices", () => {
   afterEach(() => sessionStorage.clear());
 
-  it("brings back the rows last checked on this plan, and only rows it still has", () => {
-    expect(savedSelection(PLAN)).toBeNull();
+  it("brings back this plan's checked rows and targets, dropping what it no longer has", () => {
+    expect(savedChoices(PLAN)).toBeNull();
 
-    saveSelection(PLAN.runId, new Set(["C2", "GONE"]));
+    saveChoices(PLAN.runId, {
+      checked: new Set(["C2", "GONE"]),
+      targets: { C1: "4", C2: "skip", C3: "99", GONE: "new" },
+    });
 
-    expect(savedSelection(PLAN)).toEqual(new Set(["C2"]));
-    expect(savedSelection({ ...PLAN, runId: 8 })).toBeNull();
+    expect(savedChoices(PLAN)).toEqual({
+      checked: new Set(["C2"]),
+      targets: { C1: "4", C2: "skip" },
+    });
+    expect(savedChoices({ ...PLAN, runId: 8 })).toBeNull();
+  });
+});
+
+describe("planFor", () => {
+  it("shows a loaded plan only on its own page", () => {
+    expect(planFor(PLAN, PLAN.runId)).toBe(PLAN);
+    expect(planFor(PLAN, PLAN.runId + 1)).toBeNull();
+    expect(planFor(null, PLAN.runId)).toBeNull();
   });
 });
 

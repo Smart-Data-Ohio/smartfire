@@ -159,9 +159,13 @@ test("the plan leaves channels nobody uses unchecked", async ({ page }) => {
   await expect(leads).not.toBeChecked();
 
   // Coming back to the plan (for the full import after a test one) keeps what was checked.
+  const target = page.getByRole("combobox", { name: "Target for leads" });
+
   await leads.check();
+  await target.selectOption("skip");
   await page.reload();
   await expect(leads).toBeChecked();
+  await expect(target).toHaveValue("skip");
 });
 
 test("an import needs a checked conversation", async ({ page }) => {

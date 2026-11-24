@@ -189,28 +189,60 @@ export function rowReason(
   return target === "skip" ? null : inactiveReason(conversation, now, coverage);
 }
 
-const SELECTION_PREFIX = "smartfire.slack-plan.";
+const CHOICES_PREFIX = "smartfire.slack-plan.";
 
-/** The rows an admin last checked on this plan in this tab, or null when there are none saved. */
-export function savedSelection(plan: SlackPlan): ReadonlySet<string> | null {
+/** An admin's checked rows and targets on one plan. */
+export interface PlanChoices {
+  readonly checked: ReadonlySet<string>;
+  readonly targets: Readonly<Record<string, string>>;
+}
+
+/**
+ * The checked rows and targets an admin last chose on this plan in this tab, or null when none
+ * are saved. Rows and rooms the plan no longer has are dropped.
+ */
+export function savedChoices(plan: SlackPlan): PlanChoices | null {
   try {
-    const saved = sessionStorage.getItem(`${SELECTION_PREFIX}${plan.runId}`);
+    const saved = sessionStorage.getItem(`${CHOICES_PREFIX}${plan.runId}`);
 
     if (saved === null) return null;
 
     const ids = new Set(plan.conversations.map(({ conversation }) => conversation.id));
+    const targets = new Set(["new", "skip", ...plan.rooms.map((room) => `${room.id}`)]);
 
-    // Slack conversation ids are one line each.
-    return new Set(saved.split("\n").filter((id) => ids.has(id)));
+    const rows = saved
+      .split("\n")
+      .map((line) => line.split("\t"))
+      .filter(([id = "", target = ""]) => ids.has(id) && targets.has(target));
+
+    return {
+      checked: new Set(rows.flatMap(([id = "", , on]) => (on === "1" ? [id] : []))),
+      targets: Object.fromEntries(rows.map(([id = "", target = ""]) => [id, target])),
+    };
   } catch {
     return null;
   }
 }
 
-/** Keeps the checked rows, so coming back to the plan for the full import keeps the choices. */
-export function saveSelection(runId: number, checked: ReadonlySet<string>): void {
+/**
+ * The loaded plan if it is the one the page is for. Right after a switch to another plan the last
+ * one is still loaded; showing it would save its choices as the new plan's.
+ */
+export function planFor(loaded: SlackPlan | null, runId: number): SlackPlan | null {
+  return loaded?.runId === runId ? loaded : null;
+}
+
+/**
+ * Keeps the checked rows and targets, one `id<TAB>target<TAB>1|0` line per row, so coming back
+ * to the plan for the full import keeps the choices.
+ */
+export function saveChoices(runId: number, { checked, targets }: PlanChoices): void {
+  const lines = Object.entries(targets).map(
+    ([id, target]) => `${id}\t${target}\t${checked.has(id) ? "1" : "0"}`,
+  );
+
   try {
-    sessionStorage.setItem(`${SELECTION_PREFIX}${runId}`, [...checked].join("\n"));
+    sessionStorage.setItem(`${CHOICES_PREFIX}${runId}`, lines.join("\n"));
   } catch {
     // Without storage the plan starts from its defaults again.
   }
