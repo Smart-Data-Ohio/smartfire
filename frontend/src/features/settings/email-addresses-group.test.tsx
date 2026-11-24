@@ -168,9 +168,9 @@ it("asks before removing an address, then removes it", async () => {
   renderGroup();
   fireEvent.click(await screen.findByRole("button", { name: `Remove ${SEEDED_LINKED_ADDRESS}` }));
 
-  const dialog = await screen.findByRole("alertdialog", {
-    name: `Remove ${SEEDED_LINKED_ADDRESS}?`,
-  });
+  const dialog = await screen.findByRole("alertdialog", { name: "Remove this email address?" });
+
+  expect(dialog.textContent).toContain(SEEDED_LINKED_ADDRESS);
 
   expect(remove).not.toHaveBeenCalled();
   fireEvent.click(within(dialog).getByRole("button", { name: "Remove" }));

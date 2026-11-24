@@ -68,7 +68,7 @@ function AddEmailAddress({ onSent }: { readonly onSent: () => void }) {
 
   return (
     <>
-      <form className="settings-token" onSubmit={submit} noValidate>
+      <form className="settings-token settings-email-add" onSubmit={submit} noValidate>
         <TextField
           label="Add email address"
           type="email"
@@ -250,8 +250,12 @@ export function EmailAddressesGroup({
         }}
         role="alertdialog"
         size="sm"
-        title={`Remove ${removing?.emailAddress ?? "this address"}?`}
-        description="You won't be able to sign in with it anymore."
+        title="Remove this email address?"
+        description={
+          <span className="settings-email-address">
+            You won't be able to sign in with {removing?.emailAddress ?? "it"} anymore.
+          </span>
+        }
         footer={
           <>
             <Button variant="secondary" onClick={() => setRemoving(null)} data-autofocus>

@@ -831,6 +831,19 @@
     gap: var(--space-2);
   }
 
+  /* Phones: the send button sits under the field at full width, not where a label would be. */
+  @media (width < 720px) {
+    .settings-email-add > .field {
+      flex-basis: 100%;
+      max-width: none;
+    }
+
+    .settings-email-add > .button {
+      flex: 1 1 100%;
+      margin-top: 0;
+    }
+  }
+
   /* This browser's push state: a quiet icon disc, accented only while notifications are on. */
   .settings-push-row {
     padding-block: var(--space-3);
