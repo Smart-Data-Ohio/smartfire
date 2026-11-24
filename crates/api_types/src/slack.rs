@@ -330,6 +330,9 @@ pub struct SlackPlan {
     pub samples: Vec<SlackSample>,
     /// A test import's default oldest day (`YYYY-MM-DD`, two weeks back).
     pub default_oldest: String,
+    /// The dry run's date bounds, when it had them: it counted only messages between them.
+    pub scanned_from: Option<String>,
+    pub scanned_until: Option<String>,
 }
 
 /// `POST /api/v1/admin/slack/runs` (`accounts/slack_import_runs#create`): a workspace dry run.

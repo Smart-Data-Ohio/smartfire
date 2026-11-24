@@ -123,11 +123,29 @@ export function optional(value: string): string | null {
 const YEAR_MS = 365 * 86_400_000;
 
 /**
- * A conversation nobody uses: no members, or no messages in the past year. The plan leaves it
- * unchecked. A dry run from before last-message dates were recorded counts as active.
+ * Whether a dry run counted every message of the past year: it had no latest bound, and no oldest
+ * bound inside the year. A bounded run's zero or old counts say nothing about recent use.
  */
-export function inactive(conversation: SlackConversation, now: number): boolean {
-  if (conversation.members === 0 || conversation.messages === 0) return true;
+export function coversPastYear(
+  plan: Pick<SlackPlan, "scannedFrom" | "scannedUntil">,
+  now: number,
+): boolean {
+  if (plan.scannedUntil !== null) return false;
+
+  return plan.scannedFrom === null || Date.parse(plan.scannedFrom) <= now - YEAR_MS;
+}
+
+/**
+ * A conversation nobody uses: no members, or (when the dry run covered the past year) no
+ * messages in it. The plan leaves it unchecked. A dry run from before last-message dates were
+ * recorded counts its channels with messages as active.
+ */
+export function inactive(conversation: SlackConversation, now: number, covered: boolean): boolean {
+  if (conversation.members === 0) return true;
+
+  if (!covered) return false;
+
+  if (conversation.messages === 0) return true;
 
   if (conversation.lastMessageAt === null) return false;
 
@@ -135,14 +153,37 @@ export function inactive(conversation: SlackConversation, now: number): boolean 
 }
 
 /** Why the plan left a conversation unchecked, or null when it didn't. */
-export function inactiveReason(conversation: SlackConversation, now: number): string | null {
-  if (!inactive(conversation, now)) return null;
+export function inactiveReason(
+  conversation: SlackConversation,
+  now: number,
+  covered: boolean,
+): string | null {
+  if (!inactive(conversation, now, covered)) return null;
 
   if (conversation.members === 0) return "No members";
 
   if (conversation.messages === 0) return "No messages";
 
   return "No messages in the past year";
+}
+
+/** The plan's line about the channels it left unchecked, or null when there is nothing to say. */
+export function inactiveHint(count: number, covered: boolean): string | null {
+  const channels = count === 1 ? "1 channel" : `${count} channels`;
+  const start = count === 1 ? "starts" : "start";
+
+  if (!covered) {
+    const limited =
+      "This dry run was limited to a date range, so it can't tell which channels went quiet.";
+
+    return count === 0
+      ? limited
+      : `${channels} with no members ${start} unchecked. ${limited} Check one to import it anyway.`;
+  }
+
+  if (count === 0) return null;
+
+  return `${channels} ${start} unchecked: no members, or no messages in the past year. Check one to import it anyway.`;
 }
 
 /** The plan form as the classic form posts it: the checked conversations in plan order, every row's target. */

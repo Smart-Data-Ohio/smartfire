@@ -552,6 +552,8 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
           ),
           samples: SAMPLES,
           defaultOldest: timestamp(ctx.now() - 14 * 86_400_000).slice(0, 10),
+          scannedFrom: null,
+          scannedUntil: null,
         });
       }),
       route("POST", /^\/admin\/slack\/runs\/(\d+)\/import$/, (request) => {

@@ -120,6 +120,10 @@ fn apply(
                 )?
             };
             p.add_counts(&result.counts);
+            // A run that counted messages before last-message dates were recorded can't know its
+            // newest one, so it keeps none rather than an older page's.
+            let dated =
+                integer(&p.entry_mut()["messages"]) == 0 || !p.entry_mut()["latest"].is_null();
             add(
                 &mut p.entry_mut()["messages"],
                 integer(&result.counts["messages"]),
@@ -130,7 +134,7 @@ fn apply(
                 result.parents.len() as i64
             };
             add(&mut p.entry_mut()["threads"], thread_count);
-            if let Some(ts) = result.latest {
+            if let Some(ts) = result.latest.filter(|_| dated) {
                 let mut latest = present(&p.entry_mut()["latest"]);
                 writer::keep_newer(&mut latest, &ts);
                 p.entry_mut()["latest"] = json!(latest);

@@ -145,7 +145,7 @@ test("the plan leaves channels nobody uses unchecked", async ({ page }) => {
 
   await expect(page.getByRole("checkbox", { name: "Import general" })).toBeChecked();
   await expect(leads).not.toBeChecked();
-  await expect(page.getByText("1 inactive channel is unchecked")).toBeVisible();
+  await expect(page.getByText("1 channel starts unchecked")).toBeVisible();
   await expect(page.getByRole("row", { name: /leads/ })).toContainText(
     "No messages in the past year",
   );

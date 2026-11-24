@@ -198,6 +198,14 @@ fn presence(value: &Value) -> Option<String> {
     present(value).then(|| text(value))
 }
 
+/// A run's stored date bound (`options.rs` keeps it as ISO 8601) on the wire.
+fn scan_bound(value: &Value) -> Option<String> {
+    presence(value)?
+        .parse::<jiff::Timestamp>()
+        .ok()
+        .map(|bound| time(Timestamp::from_jiff(bound)))
+}
+
 /// A run's stored time (`RunData` holds it as the database writes it) on the wire.
 fn stamp(text: &str) -> Result<String> {
     Timestamp::parse_db(text)
@@ -593,6 +601,8 @@ async fn show_plan(c: &mut Ctx) -> Result {
             })
             .collect(),
         default_oldest: oldest,
+        scanned_from: scan_bound(&data.options["oldest"]),
+        scanned_until: scan_bound(&data.options["latest"]),
     };
     c.json(StatusCode::OK, &plan)
 }

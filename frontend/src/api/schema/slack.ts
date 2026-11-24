@@ -271,6 +271,8 @@ export const SlackPlan = Schema.Struct({
   rooms: Schema.Array(SlackRoomTarget),
   samples: Schema.Array(SlackSample),
   defaultOldest: Schema.String,
+  scannedFrom: Schema.NullOr(Schema.String),
+  scannedUntil: Schema.NullOr(Schema.String),
 });
 
 export type SlackPlanPin = Assert<Pinned<typeof SlackPlan, GeneratedSlackPlan>>;

@@ -122,6 +122,8 @@ describe("S7 Slack schemas", () => {
       rooms: [{ id: 4, name: "General" }],
       samples: [{ conversation: "general", slackText: "*hi*", html: "<p><strong>hi</strong></p>" }],
       defaultOldest: "2026-09-22",
+      scannedFrom: null,
+      scannedUntil: null,
     });
     roundTrips(StartSlackDryRun, { includePrivate: true, oldest: "2026-01-01", latest: null });
     roundTrips(StartSlackImport, {

@@ -228,6 +228,8 @@ fn the_plan_and_the_starts() {
                 html: "<p><strong>hi</strong></p>".into(),
             }],
             default_oldest: "2026-09-22".into(),
+            scanned_from: Some("2025-01-01T00:00:00.000Z".into()),
+            scanned_until: None,
         },
         json!({
             "runId": 12,
@@ -245,7 +247,9 @@ fn the_plan_and_the_starts() {
                 "slackText": "*hi*",
                 "html": "<p><strong>hi</strong></p>"
             }],
-            "defaultOldest": "2026-09-22"
+            "defaultOldest": "2026-09-22",
+            "scannedFrom": "2025-01-01T00:00:00.000Z",
+            "scannedUntil": null
         }),
     );
     assert_wire(

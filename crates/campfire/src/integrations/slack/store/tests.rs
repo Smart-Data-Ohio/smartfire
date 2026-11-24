@@ -16,7 +16,7 @@ use campfire_db::models::slack_import::SlackImport;
 use rusqlite::params;
 use serde_json::Value;
 use serde_json::json;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 #[tokio::test]
@@ -596,4 +596,48 @@ async fn slack_finishing_per_conversation_seeks_identity_index_and_renews_heartb
         let mut explain=tx.conn().prepare("EXPLAIN QUERY PLAN SELECT record_id FROM slack_import_records WHERE slack_workspace_id=1 AND slack_kind='message' AND slack_key>='C1:' AND slack_key<'C1;'")?;
         let details=explain.query_map([],|row|row.get::<_,String>(3))?.collect::<rusqlite::Result<Vec<_>>>()?.join(" ");assert!(details.contains("USING INDEX index_slack_import_records_on_slack_identity"),"{details}");assert!(details.contains("slack_key"));Ok(())
     }).await.unwrap();
+}
+#[tokio::test]
+async fn slack_dry_run_keeps_no_last_message_for_a_run_counted_before_dates() {
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let lease = db
+        .write(move |tx| {
+            tx.conn()
+                .execute("UPDATE slack_imports SET mode='dry_run' WHERE id=?", [id])?;
+            SlackImport::claim_running(tx, id)?;
+            Ok(SlackImport::acquire_step_lease(
+                tx,
+                id,
+                campfire_db::models::slack_import::StepStatus::Running,
+            )?
+            .unwrap())
+        })
+        .await
+        .unwrap();
+    let store = SqlStore {
+        db: db.clone(),
+        lease: Some(lease),
+        allowed_domains: HashSet::new(),
+    };
+    let mut p = Progress::new(run(&db, id).await);
+    // CRESUMED counted messages before this version recorded dates; CFRESH starts now.
+    p.stats["conversations"] = json!([
+        {"id":"CRESUMED","name":"resumed","messages":5,"threads":0},
+        {"id":"CFRESH","name":"fresh","messages":0,"threads":0},
+    ]);
+    let page = json!([{"ts":"1600000000.000100","text":"An older page"}]);
+    let mut latest = HashMap::new();
+    for conversation in ["CRESUMED", "CFRESH"] {
+        p.state["convo"] =
+            json!({"id":conversation,"bounds":{"oldest":null,"latest":null},"thread_queue":[]});
+        p = store
+            .commit(p, Operation::History(page.clone()))
+            .await
+            .unwrap()
+            .unwrap();
+        latest.insert(conversation, p.entry_mut()["latest"].clone());
+    }
+    assert_eq!(latest["CRESUMED"], Value::Null);
+    assert_eq!(latest["CFRESH"], json!("1600000000.000100"));
 }

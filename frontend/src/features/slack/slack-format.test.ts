@@ -5,8 +5,10 @@ import {
   activeRunSentence,
   adminConnectionSentence,
   countLines,
+  coversPastYear,
   importBody,
   inactive,
+  inactiveHint,
   inactiveReason,
   keyed,
   modeLabel,
@@ -38,6 +40,8 @@ const PLAN: SlackPlan = {
   rooms: [{ id: 4, name: "General" }],
   samples: [],
   defaultOldest: "2026-09-22",
+  scannedFrom: null,
+  scannedUntil: null,
 };
 
 describe("the Slack import words", () => {
@@ -138,23 +142,67 @@ describe("inactive", () => {
   });
 
   it("keeps a channel with members and a message in the past year", () => {
-    expect(inactive(channel({}), NOW)).toBe(false);
-    expect(inactiveReason(channel({}), NOW)).toBeNull();
+    expect(inactive(channel({}), NOW, true)).toBe(false);
+    expect(inactiveReason(channel({}), NOW, true)).toBeNull();
   });
 
   it("leaves out a channel with no members or no messages", () => {
-    expect(inactiveReason(channel({ members: 0 }), NOW)).toBe("No members");
-    expect(inactiveReason(channel({ messages: 0, lastMessageAt: null }), NOW)).toBe("No messages");
+    expect(inactiveReason(channel({ members: 0 }), NOW, true)).toBe("No members");
+    expect(inactiveReason(channel({ messages: 0, lastMessageAt: null }), NOW, true)).toBe(
+      "No messages",
+    );
   });
 
   it("leaves out a channel whose last message is over a year old", () => {
-    expect(inactiveReason(channel({ lastMessageAt: "2025-11-20T09:00:00.000Z" }), NOW)).toBe(
+    expect(inactiveReason(channel({ lastMessageAt: "2025-11-20T09:00:00.000Z" }), NOW, true)).toBe(
       "No messages in the past year",
     );
-    expect(inactive(channel({ lastMessageAt: "2025-11-30T09:00:00.000Z" }), NOW)).toBe(false);
+    expect(inactive(channel({ lastMessageAt: "2025-11-30T09:00:00.000Z" }), NOW, true)).toBe(false);
   });
 
   it("counts an older dry run without last-message dates as active", () => {
-    expect(inactive(channel({ lastMessageAt: null }), NOW)).toBe(false);
+    expect(inactive(channel({ lastMessageAt: null }), NOW, true)).toBe(false);
+  });
+
+  it("trusts only the member count when the dry run skipped part of the year", () => {
+    const quiet = channel({ messages: 0, lastMessageAt: null });
+
+    expect(inactive(quiet, NOW, false)).toBe(false);
+    expect(inactive(channel({ lastMessageAt: "2024-01-01T00:00:00.000Z" }), NOW, false)).toBe(
+      false,
+    );
+    expect(inactiveReason(channel({ members: 0 }), NOW, false)).toBe("No members");
+  });
+});
+
+describe("coversPastYear", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+
+  it("needs no latest bound and no oldest bound inside the year", () => {
+    expect(coversPastYear({ scannedFrom: null, scannedUntil: null }, NOW)).toBe(true);
+    expect(
+      coversPastYear({ scannedFrom: "2025-01-01T00:00:00.000Z", scannedUntil: null }, NOW),
+    ).toBe(true);
+    expect(
+      coversPastYear({ scannedFrom: "2026-11-10T00:00:00.000Z", scannedUntil: null }, NOW),
+    ).toBe(false);
+    expect(
+      coversPastYear({ scannedFrom: null, scannedUntil: "2025-05-01T00:00:00.000Z" }, NOW),
+    ).toBe(false);
+  });
+});
+
+describe("inactiveHint", () => {
+  it("says how many channels start unchecked and why", () => {
+    expect(inactiveHint(0, true)).toBeNull();
+    expect(inactiveHint(1, true)).toBe(
+      "1 channel starts unchecked: no members, or no messages in the past year. Check one to import it anyway.",
+    );
+    expect(inactiveHint(3, false)).toBe(
+      "3 channels with no members start unchecked. This dry run was limited to a date range, so it can't tell which channels went quiet. Check one to import it anyway.",
+    );
+    expect(inactiveHint(0, false)).toBe(
+      "This dry run was limited to a date range, so it can't tell which channels went quiet.",
+    );
   });
 });

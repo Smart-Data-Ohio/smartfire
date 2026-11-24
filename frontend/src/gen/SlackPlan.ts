@@ -15,4 +15,8 @@ rooms: Array<SlackRoomTarget>, samples: Array<SlackSample>,
 /**
  * A test import's default oldest day (`YYYY-MM-DD`, two weeks back).
  */
-defaultOldest: string, };
+defaultOldest: string,
+/**
+ * The dry run's date bounds, when it had them: it counted only messages between them.
+ */
+scannedFrom: string | null, scannedUntil: string | null, };
