@@ -18,7 +18,7 @@ use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN, Req, T
 fn found() -> Value {
     json!({
         "conversations": [
-            {"id": "C1", "name": "general", "type": "public_channel", "members": 4, "messages": 12, "threads": 2, "latest": "1700000000.000100"},
+            {"id": "C1", "name": "general", "type": "public_channel", "members": 4, "messages": 12, "threads": 2, "latest": "1700000000.000100", "dated": true},
             {"id": "G2", "name": "secret", "type": "private_channel", "members": 2, "messages": 3, "scanned_from": 1700000000.0},
             {"id": "D3", "name": "Kevin", "type": "im", "messages": 1}
         ],
@@ -381,6 +381,12 @@ async fn a_run_reads_as_its_classic_page() {
         [None, Some("2023-11-14T22:13:20.000Z"), None],
         "where a catch-up dry run started reading a channel"
     );
+    let dated: Vec<_> = plan
+        .conversations
+        .iter()
+        .map(|each| each.conversation.dated)
+        .collect();
+    assert_eq!(dated, [true, false, false], "only runs that recorded dates");
     assert_eq!((plan.scanned_from, plan.scanned_until), (None, None));
     assert!(
         plan.started_at.is_some(),

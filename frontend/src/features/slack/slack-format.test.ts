@@ -31,6 +31,7 @@ const conversation = (id: string) => ({
   threads: 0,
   lastMessageAt: null,
   scannedFrom: null,
+  dated: true,
 });
 
 const PLAN: SlackPlan = {
@@ -184,18 +185,20 @@ describe("inactive", () => {
   });
 });
 
+const NOW_PLAN = Date.parse("2026-11-24T12:00:00Z");
+
 describe("planCoverage", () => {
   const plan = (
     scannedFrom: string | null,
     scannedUntil: string | null,
-    dates: readonly (string | null)[] = ["2026-11-01T00:00:00.000Z"],
+    rows: readonly Partial<SlackConversation & { target: string }>[] = [{}],
   ): SlackPlan => ({
     ...PLAN,
     scannedFrom,
     scannedUntil,
-    conversations: dates.map((lastMessageAt, index) => ({
-      conversation: { ...conversation(`C${index}`), lastMessageAt },
-      target: "new",
+    conversations: rows.map(({ target = "new", ...changes }, index) => ({
+      conversation: { ...conversation(`C${index}`), ...changes },
+      target,
     })),
   });
 
@@ -208,9 +211,21 @@ describe("planCoverage", () => {
     expect(planCoverage(plan(null, "2025-05-01T00:00:00.000Z"))).toBe("bounded");
   });
 
-  it("is undated when any conversation with messages has no date", () => {
-    expect(planCoverage(plan(null, null, [null]))).toBe("undated");
-    expect(planCoverage(plan(null, null, ["2026-11-01T00:00:00.000Z", null]))).toBe("undated");
+  it("is undated when any channel was scanned before dates were recorded", () => {
+    // An older catch-up dry run that counted nothing still read only part of the channel.
+    const legacy = { dated: false, messages: 0, lastMessageAt: null };
+    const empty = { messages: 0, lastMessageAt: null };
+
+    expect(planCoverage(plan(null, null, [legacy]))).toBe("undated");
+    expect(planCoverage(plan(null, null, [empty, legacy]))).toBe("undated");
+    expect(inactive(conversation("C1"), NOW_PLAN, planCoverage(plan(null, null, [legacy])))).toBe(
+      false,
+    );
+    expect(planCoverage(plan(null, null, [empty]))).toBe("full");
+  });
+
+  it("ignores a row that starts skipped, which was never scanned", () => {
+    expect(planCoverage(plan(null, null, [{}, { dated: false, target: "skip" }]))).toBe("full");
   });
 });
 

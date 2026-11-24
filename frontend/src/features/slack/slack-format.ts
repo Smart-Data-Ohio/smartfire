@@ -125,17 +125,18 @@ const YEAR_MS = 365 * 86_400_000;
 /**
  * What a dry run's counts say about the past year. `"full"`: it read every message.
  * `"bounded"`: it had date bounds, so a zero or old count says nothing about recent use (an
- * oldest bound also hides new replies to older threads). `"undated"`: some channel's messages
- * were counted before last-message dates (and catch-up starts) were recorded, so only the
- * member count is trusted.
+ * oldest bound also hides new replies to older threads). `"undated"`: some channel was scanned
+ * before last-message dates and catch-up starts were recorded (even one that counted nothing
+ * may have read only a catch-up window), so only the member count is trusted.
  */
 export type Coverage = "full" | "bounded" | "undated";
 
 export function planCoverage(plan: SlackPlan): Coverage {
   if (plan.scannedFrom !== null || plan.scannedUntil !== null) return "bounded";
 
+  // A row that starts skipped (its mapped room is gone) was never scanned, so has no dates.
   const undated = plan.conversations.some(
-    ({ conversation }) => conversation.messages > 0 && conversation.lastMessageAt === null,
+    ({ conversation, target }) => target !== "skip" && !conversation.dated,
   );
 
   return undated ? "undated" : "full";

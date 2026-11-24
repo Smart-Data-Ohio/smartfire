@@ -270,6 +270,10 @@ async fn slack_sql_store_dry_run_collects_samples_without_domain_rows_or_reply_f
     };
     assert_eq!(latest("CCHAN"), Some(json!("1700000011.000011")));
     assert_eq!(latest("CARCH"), Some(json!("1700000020.000020")));
+    let dated = array(&row.stats["conversations"])
+        .iter()
+        .all(|c| c["dated"] == true);
+    assert!(dated, "a dry run marks every channel it scans as dated");
     assert!(
         !server
             .received()
@@ -676,4 +680,9 @@ async fn slack_dry_run_resumed_across_the_upgrade_records_only_what_it_can_know(
         .unwrap()
         .unwrap();
     assert_eq!(p.entry_mut()["scanned_from"], json!(1599000000.0));
+    assert_eq!(
+        p.entry_mut()["dated"],
+        Value::Null,
+        "a run resumed past `Bounds` from an older version stays undated"
+    );
 }

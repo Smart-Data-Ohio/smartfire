@@ -91,6 +91,11 @@ fn apply(
             p.state["convo"]["bounds"] =
                 json!({"oldest":oldest,"latest":time_bound(&p.run.options["latest"])?});
             note_scanned_from(p);
+            // Everything the plan judges a channel by is recorded from here on. A run resumed
+            // past this step from an older version stays undated.
+            if p.dry_run() {
+                p.entry_mut()["dated"] = json!(true);
+            }
         }
         Operation::History(messages) => {
             let conversation = string(&p.state["convo"]["id"]);

@@ -213,6 +213,9 @@ pub struct SlackConversation {
     /// The oldest time the dry run read this conversation from: the run's oldest bound, or a
     /// catch-up's start after an earlier import. None when it read the whole history.
     pub scanned_from: Option<Timestamp>,
+    /// Whether the dry run recorded this conversation's last-message date and scan start from
+    /// the start of its scan. False for a run from before they were recorded.
+    pub dated: bool,
 }
 
 /// `GET .../runs/:id/status`: one run's progress, polled while it is active.

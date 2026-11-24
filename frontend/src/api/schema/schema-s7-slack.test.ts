@@ -52,6 +52,7 @@ const conversation = {
   threads: 7,
   lastMessageAt: "2026-09-30T14:00:00.000Z",
   scannedFrom: null,
+  dated: true,
 };
 
 const row = {

@@ -303,6 +303,7 @@ fn conversation(value: &Value) -> api::SlackConversation {
         last_message_at: presence(&value["latest"])
             .and_then(|ts| slack_time(&ts).ok())
             .map(time),
+        dated: value["dated"] == true,
     }
 }
 

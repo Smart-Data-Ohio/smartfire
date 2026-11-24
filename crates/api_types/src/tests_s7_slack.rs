@@ -53,6 +53,7 @@ fn conversation() -> SlackConversation {
         threads: 7,
         last_message_at: Some("2026-09-30T14:00:00.000Z".into()),
         scanned_from: None,
+        dated: true,
     }
 }
 
@@ -201,7 +202,8 @@ fn a_run_and_its_issues() {
                 "conversations": [{
                     "id": "C111", "name": "general", "kind": "Public channel", "archived": false,
                     "members": 9, "messages": 120, "threads": 7,
-                    "lastMessageAt": "2026-09-30T14:00:00.000Z", "scannedFrom": null
+                    "lastMessageAt": "2026-09-30T14:00:00.000Z", "scannedFrom": null,
+                    "dated": true
                 }]
             },
             "issues": [{"level": "warning", "slackRef": "C111", "message": "No access"}],
@@ -239,7 +241,8 @@ fn the_plan_and_the_starts() {
                 "conversation": {
                     "id": "C111", "name": "general", "kind": "Public channel", "archived": false,
                     "members": 9, "messages": 120, "threads": 7,
-                    "lastMessageAt": "2026-09-30T14:00:00.000Z", "scannedFrom": null
+                    "lastMessageAt": "2026-09-30T14:00:00.000Z", "scannedFrom": null,
+                    "dated": true
                 },
                 "target": "4"
             }],
