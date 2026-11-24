@@ -67,6 +67,25 @@ impl EmailAddress {
         )
     }
 
+    /// A removal at the same clock instant as a request also retires that request.
+    pub fn removed_since(
+        conn: &Connection,
+        user_id: i64,
+        address: &str,
+        since: Timestamp,
+    ) -> Result<bool> {
+        Ok(conn.query_row_cached(
+            "SELECT EXISTS (
+                SELECT 1 FROM audit_logs
+                WHERE target_type = 'User' AND target_id = ?1
+                  AND action = 'user.email_address.remove' AND created_at >= ?3
+                  AND json_extract(details, '$.email_address') = ?2 COLLATE NOCASE
+            )",
+            params![user_id, normalize(address), since],
+            |row| row.get(0),
+        )?)
+    }
+
     pub fn is_available(conn: &Connection, address: &str) -> Result<bool> {
         Ok(!primary_conflict(conn, address, None)? && Self::by_address(conn, address)?.is_none())
     }

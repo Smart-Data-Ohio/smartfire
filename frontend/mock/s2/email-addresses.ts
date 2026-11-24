@@ -21,6 +21,12 @@ export const MOCK_EMAIL_TOKEN = "mock-email-token";
 /** A link opened in a signed-out browser: confirming goes on to sign in. */
 export const MOCK_EMAIL_SIGNED_OUT_TOKEN = "mock-email-signed-out";
 
+/** A link opened while signed in to a different account. */
+export const MOCK_EMAIL_MISMATCH_TOKEN = "mock-email-mismatch";
+
+export const EMAIL_ACCOUNT_MISMATCH =
+  "You're signed in to a different account. Sign out, then open this link again.";
+
 /** A link whose address another account linked first. */
 export const MOCK_EMAIL_TAKEN_TOKEN = "mock-email-taken";
 
@@ -88,6 +94,13 @@ export function createEmailAddresses(
     return state;
   };
 
+  const confirmation = (
+    emailAddress: string,
+    requiresSignIn: boolean,
+    accountMismatch = false,
+  ): MockResponse =>
+    answer(200, { emailAddress, accountName: "Riel", requiresSignIn, accountMismatch });
+
   const list = (): EmailAddressList => ({
     primary: primary.get(),
     secondary: [...current().secondary],
@@ -122,7 +135,7 @@ export function createEmailAddresses(
 
         const emailAddress = (stringField(body, "emailAddress") ?? "").trim();
 
-        if (!/^[^@\s]+@[^@\s]+$/.test(emailAddress)) {
+        if (!/^[^@\s]+@[^@\s]+$/.test(emailAddress) || emailAddress.includes("..")) {
           throw validation("emailAddress", "isn't valid");
         }
 
@@ -151,13 +164,8 @@ export function createEmailAddresses(
         const held = current();
         const previous = primary.get();
 
-        held.secondary = held.secondary.flatMap((each) =>
-          each === entry
-            ? previous === null
-              ? []
-              : [{ ...each, emailAddress: previous }]
-            : [each],
-        );
+        held.secondary = held.secondary.filter((each) => each !== entry);
+        held.waiting = previous;
         primary.set(entry.emailAddress);
 
         return noContent();
@@ -167,14 +175,13 @@ export function createEmailAddresses(
 
         switch (token) {
           case MOCK_EMAIL_TOKEN:
-            return answer(200, {
-              emailAddress: current().waiting ?? "extra@smartdata.example",
-              requiresSignIn: false,
-            });
+            return confirmation(current().waiting ?? "extra@smartdata.example", false);
           case MOCK_EMAIL_SIGNED_OUT_TOKEN:
-            return answer(200, { emailAddress: "phone@smartdata.example", requiresSignIn: true });
+            return confirmation("phone@smartdata.example", true);
+          case MOCK_EMAIL_MISMATCH_TOKEN:
+            return confirmation("extra@smartdata.example", true, true);
           case MOCK_EMAIL_TAKEN_TOKEN:
-            return answer(200, { emailAddress: "shared@smartdata.example", requiresSignIn: false });
+            return confirmation("shared@smartdata.example", false);
           default:
             return refusal(400, "base", INVALID_EMAIL_LINK);
         }
@@ -196,6 +203,8 @@ export function createEmailAddresses(
             link("phone@smartdata.example");
 
             return answer(200, { kind: "navigate", location: "/app/session/new" });
+          case MOCK_EMAIL_MISMATCH_TOKEN:
+            return refusal(400, "base", EMAIL_ACCOUNT_MISMATCH);
           case MOCK_EMAIL_TAKEN_TOKEN:
             return refusal(422, "emailAddress", EMAIL_TAKEN);
           default:

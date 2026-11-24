@@ -164,7 +164,7 @@ fn fingerprint(secrets: &Secrets, password_digest: &str, email_address: &str) ->
 }
 
 /// HMAC-SHA256 of `parts`, NUL-separated, under the key for `salt`, truncated and hex-encoded.
-fn keyed_fingerprint(secrets: &Secrets, salt: &str, parts: &[&str]) -> String {
+pub(crate) fn keyed_fingerprint(secrets: &Secrets, salt: &str, parts: &[&str]) -> String {
     let key = secrets.key_generator.generate_key(salt, 32);
     let mut mac = Hmac::<Sha256>::new_from_slice(&key).expect("HMAC accepts any key length");
     for (n, part) in parts.iter().enumerate() {

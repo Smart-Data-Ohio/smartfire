@@ -14,11 +14,17 @@ import {
 
 const TITLE = "Confirm your email address";
 
+const ACCOUNT_MISMATCH =
+  "You're signed in to a different account. Sign out, then open this link again.";
+
 const COULD_NOT_CONFIRM = "Couldn't confirm this email address. Try again.";
 
 type Landing =
   | { readonly status: "checking" }
-  | { readonly status: "ready"; readonly emailAddress: string; readonly requiresSignIn: boolean }
+  | {
+      readonly status: "ready";
+      readonly link: Extract<EmailConfirmationNext, { emailAddress: string }>;
+    }
   | { readonly status: "refused"; readonly message: string }
   | { readonly status: "failed"; readonly message: string };
 
@@ -44,7 +50,9 @@ function refusal(next: EmailConfirmationNext): string {
 export function ConfirmEmailPage({ token }: { readonly token: string }) {
   const titleId = useId();
   const flash = useInlineFlash();
-  const [logoUrl] = useState(() => inlineSignedOutBoot()?.workspace.logoUrl ?? null);
+  const [boot] = useState(inlineSignedOutBoot);
+  const logoUrl = boot?.workspace.logoUrl ?? null;
+  const signedIn = boot?.signedIn === true;
   const [landing, setLanding] = useState<Landing>({ status: "checking" });
   const [busy, setBusy] = useState(false);
 
@@ -57,7 +65,7 @@ export function ConfirmEmailPage({ token }: { readonly token: string }) {
       (next) =>
         setLanding(
           "emailAddress" in next
-            ? { status: "ready", ...next }
+            ? { status: "ready", link: next }
             : { status: "refused", message: refusal(next) },
         ),
       (error: Error) => setLanding({ status: "failed", message: error.message }),
@@ -102,29 +110,39 @@ export function ConfirmEmailPage({ token }: { readonly token: string }) {
   }
 
   if (landing.status === "ready") {
+    const { accountMismatch, accountName, emailAddress, requiresSignIn } = landing.link;
+
     return (
       <AuthScreen labelledBy={titleId} flash={flash}>
         <AuthHeader
           titleId={titleId}
           title={TITLE}
           logoUrl={logoUrl}
-          lede="Link this address to your account. You can use it to sign in and reset your password."
+          lede={`This address will be linked to ${accountName}'s Smartfire account. Once linked, it can be used to sign in and reset the password.`}
         />
         <div className="auth-view-stack">
-          <p className="auth-view-address">{landing.emailAddress}</p>
-          <Button
-            variant="primary"
-            size="lg"
-            className="auth-view-wide"
-            loading={busy}
-            loadingLabel="Confirming…"
-            onClick={confirm}
-          >
-            Confirm
-          </Button>
-          {landing.requiresSignIn ? (
-            <p className="auth-view-note">You'll go to the sign-in page after confirming.</p>
-          ) : null}
+          <p className="auth-view-address">{emailAddress}</p>
+          {accountMismatch ? (
+            <p className="auth-view-alert" role="alert">
+              {ACCOUNT_MISMATCH}
+            </p>
+          ) : (
+            <>
+              <Button
+                variant="primary"
+                size="lg"
+                className="auth-view-wide"
+                loading={busy}
+                loadingLabel="Confirming…"
+                onClick={confirm}
+              >
+                Confirm
+              </Button>
+              {requiresSignIn ? (
+                <p className="auth-view-note">You'll go to the sign-in page after confirming.</p>
+              ) : null}
+            </>
+          )}
         </div>
       </AuthScreen>
     );
@@ -142,14 +160,13 @@ export function ConfirmEmailPage({ token }: { readonly token: string }) {
             Try again
           </Button>
         ) : null}
-        {/* A full load: the settings page is the signed-in app, outside this signed-out shell. */}
         <a
-          href="/app/settings/profile"
+          href={signedIn ? "/app/settings/profile" : "/app/session/new"}
           className="button auth-view-wide"
           data-variant="secondary"
           data-size="lg"
         >
-          Go to settings
+          {signedIn ? "Go to settings" : "Go to sign in"}
         </a>
       </div>
     </AuthScreen>

@@ -95,7 +95,14 @@ async fn delivery(app: App, job: DeliveryJob, execution: campfire_jobs::Executio
         Notification::EmailAddressConfirmation {
             user_id,
             email_address,
-        } => match email_address_confirmation_message(&app, user_id, email_address).await? {
+        } => match email_address_confirmation_message(
+            &app,
+            user_id,
+            email_address,
+            execution.enqueued_at,
+        )
+        .await?
+        {
             Some(message) => message,
             None => return Ok(Outcome::Done),
         },
@@ -253,6 +260,7 @@ pub async fn email_address_confirmation_message(
     app: &App,
     user_id: i64,
     email_address: String,
+    requested_at: Timestamp,
 ) -> campfire_db::Result<Option<outbound::Message>> {
     let config = &app.mail.config;
     let Some(origin) = config
@@ -261,6 +269,10 @@ pub async fn email_address_confirmation_message(
     else {
         return Ok(None);
     };
+    let expires_at = requested_at.jiff() + rails_compat::email_address_confirmation::EXPIRES_IN;
+    if app.db.env().now().jiff() >= expires_at || outbound::first_address(&email_address).is_err() {
+        return Ok(None);
+    }
     let candidate = app
         .db
         .read(move |conn| {
@@ -269,7 +281,13 @@ pub async fn email_address_confirmation_message(
             else {
                 return Ok(None);
             };
-            Ok(EmailAddress::is_available(conn, &email_address)?.then_some((user, email_address)))
+            if !EmailAddress::is_available(conn, &email_address)?
+                || EmailAddress::removed_since(conn, user_id, &email_address, requested_at)?
+                || password_changed_since(conn, user_id, requested_at)?
+            {
+                return Ok(None);
+            }
+            Ok(Some((user, email_address)))
         })
         .await?;
     let Some((user, email_address)) = candidate else {
@@ -279,14 +297,12 @@ pub async fn email_address_confirmation_message(
         &app.secrets,
         user.id,
         &email_address,
-        app.db.env().now().jiff(),
+        user.password_digest.as_deref().unwrap_or_default(),
+        requested_at.jiff(),
     );
     Ok(Some(outbound::email_address_confirmation(
         config,
-        &outbound::User {
-            name: user.name,
-            email: user.email_address.unwrap_or_default(),
-        },
+        user.display_name(),
         &email_address,
         &format!("{origin}/app/email_addresses/confirm/{token}"),
     )))

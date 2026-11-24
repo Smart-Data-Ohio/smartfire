@@ -5,7 +5,11 @@ import type { SignInMethods } from "./SignInMethods";
 import type { SignInWorkspace } from "./SignInWorkspace";
 import type { SignedOut } from "./SignedOut";
 
-export type SignedOutBoot = { kind: SignedOut, workspace: SignInWorkspace, signInMethods: SignInMethods, firstRunPending: boolean,
+export type SignedOutBoot = { kind: SignedOut,
+/**
+ * Included on pages that offer different recovery links according to the session.
+ */
+signedIn?: boolean, workspace: SignInWorkspace, signInMethods: SignInMethods, firstRunPending: boolean,
 /**
  * The first administrator, whom the retained sign-in page names for help.
  */

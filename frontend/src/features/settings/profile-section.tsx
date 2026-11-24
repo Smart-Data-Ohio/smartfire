@@ -260,7 +260,10 @@ export function ProfileSection() {
           value={email}
           autoComplete="username"
           placeholder="Enter your email address"
-          error={fieldError(fields, "emailAddress", "Email address")}
+          error={
+            fields.emailAddress?.find((message) => message.endsWith(".")) ??
+            fieldError(fields, "emailAddress", "Email address")
+          }
           attempt={attempt}
           onChange={(event) => setEmail(event.target.value)}
         />
@@ -325,6 +328,7 @@ export function ProfileSection() {
         </div>
       </form>
       <EmailAddressesGroup
+        key={profile.emailAddress}
         onPrimaryChanged={() => {
           settingsActions
             .load()

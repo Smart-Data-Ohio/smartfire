@@ -180,7 +180,7 @@ it("asks before removing an address, then removes it", async () => {
   expect(await screen.findByText("No other addresses linked yet.")).toBeTruthy();
 });
 
-it("makes a linked address primary and shows the swap", async () => {
+it("makes a linked address primary and releases the old primary", async () => {
   const makePrimary = vi.spyOn(settings, "setPrimaryEmailAddress");
   const onPrimaryChanged = renderGroup();
 
@@ -192,7 +192,8 @@ it("makes a linked address primary and shows the swap", async () => {
   await waitFor(() =>
     expect(screen.getAllByRole("listitem")[0]?.textContent).toBe(`${SEEDED_LINKED_ADDRESS}Primary`),
   );
-  expect(screen.getByRole("button", { name: `Make ${PRIMARY} primary` })).toBeTruthy();
+  expect(screen.queryByText(PRIMARY)).toBeNull();
+  expect(screen.getByText(/we'll email the old one a link to keep it linked/)).toBeTruthy();
   expect(onPrimaryChanged).toHaveBeenCalledOnce();
 });
 
@@ -217,4 +218,23 @@ it("moves the profile's email field to the new primary", async () => {
   );
   await waitFor(() => expect(email).toHaveProperty("value", SEEDED_LINKED_ADDRESS));
   expect(screen.queryByLabelText("Current password")).toBeNull();
+});
+
+it("refreshes the address list after Save profile changes the primary", async () => {
+  render(<ProfileHarness initial={await settings.load()} />);
+  const primary = await screen.findByRole("list", { name: "Your email addresses" });
+
+  expect(within(primary).getByText(PRIMARY)).toBeTruthy();
+  fireEvent.change(screen.getByRole("textbox", { name: "Email address" }), {
+    target: { value: "saved@example.test" },
+  });
+  fireEvent.change(screen.getByLabelText("Current password"), { target: { value: PASSWORD } });
+  fireEvent.click(screen.getByRole("button", { name: "Save profile" }));
+
+  await waitFor(() => {
+    const list = screen.getByRole("list", { name: "Your email addresses" });
+
+    expect(within(list).getByText("saved@example.test")).toBeTruthy();
+    expect(within(list).queryByText(PRIMARY)).toBeNull();
+  });
 });

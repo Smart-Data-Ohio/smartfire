@@ -2276,8 +2276,9 @@ async fn email_confirmation_worker_delivers_only_the_available_address() {
 
     let smtp = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let port = smtp.local_addr().unwrap().port().to_string();
+    let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
     let app = TestApp::boot_with_clock_and_env(
-        Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+        clock.clone(),
         &[
             ("SMTP_ADDRESS", "127.0.0.1"),
             ("SMTP_PORT", &port),
@@ -2298,13 +2299,36 @@ async fn email_confirmation_worker_delivers_only_the_available_address() {
             request(tx, DAVID, "free@example.test".into());
             request(tx, DAVID, "claimed@example.test".into());
             request(tx, JASON, "inactive@example.test".into());
+            request(tx, DAVID, "removed@example.test".into());
 
+            let david = User::find(tx.conn(), DAVID)?;
+            assert_eq!(
+                EmailAddress::confirm(tx, &david, "Removed@example.test")?,
+                Confirmation::Added
+            );
             let other = User::find(tx.conn(), KEVIN)?;
             assert_eq!(
                 EmailAddress::confirm(tx, &other, "claimed@example.test")?,
                 Confirmation::Added
             );
             User::find(tx.conn(), JASON)?.deactivate(tx)
+        })
+        .await
+        .unwrap();
+
+    clock.advance(jiff::SignedDuration::from_secs(1));
+    app.db
+        .write(|tx| {
+            let david = User::find(tx.conn(), DAVID)?;
+            let (_, address) = EmailAddress::by_address(tx.conn(), "removed@example.test")?.unwrap();
+            EmailAddress::remove(tx, david.id, address.id)?;
+            campfire_runtime::authentication::audit_email_address(
+                tx,
+                &david,
+                "user.email_address.remove",
+                &address.email_address,
+                &Default::default(),
+            )
         })
         .await
         .unwrap();

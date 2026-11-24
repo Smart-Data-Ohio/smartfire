@@ -163,18 +163,17 @@ pub fn password_reset(config: &Config, user: &User, url: &str) -> Message {
 }
 pub fn email_address_confirmation(
     config: &Config,
-    user: &User,
+    name: &str,
     address: &str,
     url: &str,
 ) -> Message {
     let text = format!(
-        "Hi {},\n\nSomeone asked to link {address} to your Smartfire account. Once confirmed, you can use it to sign in and reset your password. Open this link to finish:\n\n{url}\n\nThe link expires in 24 hours. If you didn't ask to link this address, you can ignore this email. Nothing will change.\n",
-        user.name
+        "Someone asked to link {address} to {name}'s Smartfire account. Open this link to confirm the address:\n\n{url}\n\nOnce linked, this address can be used to sign in and reset the password. The link expires in 24 hours. If you didn't ask to link this address, you can ignore this email.\n"
     );
     let body = format!(
-        "<p>Hi {},</p>\n\n<p>Someone asked to link {} to your Smartfire account. Once confirmed, you can use it to sign in and reset your password.</p>\n\n<p><a href=\"{}\">Confirm email address</a></p>\n\n<p>The link expires in 24 hours. If you didn't ask to link this address, you can ignore this email. Nothing will change.</p>\n",
-        h(&user.name),
+        "<p>Someone asked to link {} to {}'s Smartfire account.</p>\n\n<p><a href=\"{}\">Confirm email address</a></p>\n\n<p>Once linked, this address can be used to sign in and reset the password. The link expires in 24 hours. If you didn't ask to link this address, you can ignore this email.</p>\n",
         h(address),
+        h(name),
         h(url),
     );
     Message {

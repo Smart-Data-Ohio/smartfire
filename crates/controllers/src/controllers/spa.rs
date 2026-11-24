@@ -231,7 +231,14 @@ pub async fn show(c: &mut Ctx) -> Result {
             SignedOutRoute::Invite => users::page_status(c, true).await?,
             _ => StatusCode::OK,
         };
-        let (boot, favicon) = load_signed_out_boot(c, true).await?;
+        let signed_in = if route == SignedOutRoute::ConfirmEmailAddress {
+            concerns::restore_authentication(c).await?;
+            Some(concerns::current_user(c).is_some())
+        } else {
+            None
+        };
+        let (mut boot, favicon) = load_signed_out_boot(c, true).await?;
+        boot.signed_in = signed_in;
         let nonce = c.content_security_policy_nonce();
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref(), &favicon);
         c.no_store();
@@ -312,6 +319,7 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<(SignedOu
     };
     let boot = SignedOutBoot {
         kind: SignedOut::SignedOut,
+        signed_in: None,
         workspace,
         sign_in_methods: {
             let provider = c.app().google.sign_in();

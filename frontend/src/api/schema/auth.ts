@@ -45,6 +45,7 @@ export const SignedOutBoot = Schema.Struct({
   firstRunPending: Schema.Boolean,
   helpContact: SignInHelpContact,
   version: Schema.String,
+  signedIn: Schema.optionalKey(Schema.Boolean),
   csrfToken: Schema.String,
   /** A redirect's notice or alert (a refused Google sign-in), for this page load only. */
   flash: Schema.NullOr(

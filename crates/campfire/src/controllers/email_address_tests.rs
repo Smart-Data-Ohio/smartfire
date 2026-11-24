@@ -1,9 +1,13 @@
 use super::password_reset_tests::{capture_mail_jobs, captured_mail_jobs};
 use super::signed_out_contracts_tests::inline_boot;
-use crate::controllers::presenters::test_support::{DAVID, KEVIN, Reply, Req, SEED_NOW, TestApp};
+use crate::controllers::presenters::test_support::{
+    Browser, DAVID, KEVIN, Reply, Req, SEED_NOW, TestApp,
+};
 use axum::http::{Method, StatusCode};
-use campfire_db::User;
 use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+use campfire_db::{Timestamp, User, UserChanges};
+use campfire_kit::FrozenClock;
+use jiff::SignedDuration;
 use rails_compat::email_address_confirmation;
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -17,12 +21,15 @@ const MAIL: &[(&str, &str)] = &[
 ];
 
 async fn app(env: &[(&str, &str)]) -> TestApp {
-    TestApp::boot_with_clock_and_env(
-        Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
-        env,
-    )
-    .await
-    .expect("restored default seed")
+    app_with_clock(env).await.0
+}
+
+async fn app_with_clock(env: &[(&str, &str)]) -> (TestApp, Arc<FrozenClock>) {
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let app = TestApp::boot_with_clock_and_env(clock.clone(), env)
+        .await
+        .expect("restored default seed");
+    (app, clock)
 }
 
 fn add(address: &str) -> Req {
@@ -33,13 +40,47 @@ fn confirmation(method: Method, token: &str) -> Req {
     Req::new(method, &format!("{ADDRESSES}/confirmations/{token}"))
 }
 
-fn token(a: &TestApp, user_id: i64, email: &str, age: jiff::SignedDuration) -> String {
+async fn token(a: &TestApp, user_id: i64, email: &str, age: SignedDuration) -> String {
+    let digest = a
+        .db()
+        .read(move |conn| {
+            Ok(User::find(conn, user_id)?
+                .password_digest
+                .unwrap_or_default())
+        })
+        .await
+        .unwrap();
     email_address_confirmation::token(
         &a.booted.app.secrets,
         user_id,
         email,
+        &digest,
         a.booted.app.clock.now() - age,
     )
+}
+
+async fn confirmation_message(
+    a: &TestApp,
+    user_id: i64,
+    address: &str,
+    requested_at: Timestamp,
+) -> Option<campfire_mail::outbound::Message> {
+    campfire_runtime::mail::email_address_confirmation_message(
+        &a.booted.app,
+        user_id,
+        address.into(),
+        requested_at,
+    )
+    .await
+    .unwrap()
+}
+
+fn link_token(message: &campfire_mail::outbound::Message) -> &str {
+    message
+        .text
+        .lines()
+        .find_map(|line| line.strip_prefix("http://campfire.test/app/email_addresses/confirm/"))
+        .expect("confirmation link")
 }
 
 async fn primary_of(a: &TestApp, user_id: i64) -> String {
@@ -127,30 +168,36 @@ async fn mail_configuration_controls_requests_and_delivery_checks_current_owners
     assert_eq!(b.write(add(LINKED)).await.status, StatusCode::NOT_FOUND);
 
     let a = app(MAIL).await;
+    let requested_at = a.db().env().now();
+    assert!(
+        confirmation_message(
+            &a,
+            DAVID,
+            LINKED,
+            requested_at.ago(email_address_confirmation::EXPIRES_IN),
+        )
+        .await
+        .is_none()
+    );
     let render = |user, address: String| {
-        campfire_runtime::mail::email_address_confirmation_message(&a.booted.app, user, address)
+        campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            user,
+            address,
+            requested_at,
+        )
     };
     let message = render(DAVID, LINKED.into()).await.unwrap().unwrap();
     assert_eq!(message.to, LINKED);
-    let url = message
-        .text
-        .lines()
-        .find(|line| line.starts_with("http"))
-        .unwrap();
-    let signature = url
-        .strip_prefix("http://campfire.test/app/email_addresses/confirm/")
-        .unwrap();
-    assert_eq!(
-        email_address_confirmation::verify(
-            &a.booted.app.secrets,
-            signature,
-            a.booted.app.clock.now()
-        ),
-        Some(email_address_confirmation::Claim {
-            user_id: DAVID,
-            email_address: LINKED.into()
-        }),
-    );
+    let claim = email_address_confirmation::verify(
+        &a.booted.app.secrets,
+        link_token(&message),
+        a.booted.app.clock.now(),
+    )
+    .expect("mail carries a confirmation claim");
+    assert_eq!(claim.user_id, DAVID);
+    assert_eq!(claim.email_address, LINKED);
+    assert_eq!(claim.issued_at, requested_at.jiff());
     assert!(
         render(DAVID, primary_of(&a, DAVID).await)
             .await
@@ -179,7 +226,7 @@ async fn mail_configuration_controls_requests_and_delivery_checks_current_owners
 #[tokio::test]
 async fn confirmation_is_public_idempotent_and_audited() {
     let a = app(MAIL).await;
-    let token = token(&a, DAVID, LINKED, jiff::SignedDuration::ZERO);
+    let token = token(&a, DAVID, LINKED, SignedDuration::ZERO).await;
     let mut phone = a.anonymous();
     let page = phone
         .get(&format!("/app/email_addresses/confirm/{token}"))
@@ -187,11 +234,12 @@ async fn confirmation_is_public_idempotent_and_audited() {
     assert_eq!(page.status, StatusCode::OK);
     assert_eq!(page.header("referrer-policy"), Some("no-referrer"));
     assert_eq!(inline_boot(&page)["kind"], "signedOut");
+    assert_eq!(inline_boot(&page)["signedIn"], false);
     let status = phone.send(confirmation(Method::GET, &token)).await;
-    assert_eq!(
-        status.json(),
-        json!({"emailAddress": LINKED, "requiresSignIn": true})
-    );
+    assert_eq!(status.status, StatusCode::OK, "{}", status.text());
+    assert_eq!(status.json()["emailAddress"], LINKED);
+    assert_eq!(status.json()["requiresSignIn"], true);
+    assert_eq!(status.json()["accountMismatch"], false);
     let applied = phone.write(confirmation(Method::PUT, &token)).await;
     assert_eq!(applied.status, StatusCode::OK, "{}", applied.text());
     assert_eq!(
@@ -235,10 +283,10 @@ async fn confirmation_is_public_idempotent_and_audited() {
 async fn confirmation_refuses_bad_links_and_an_address_claimed_in_the_meantime() {
     let a = app(MAIL).await;
     let mut phone = a.anonymous();
-    let zero = jiff::SignedDuration::ZERO;
-    let valid = token(&a, DAVID, LINKED, zero);
+    let zero = SignedDuration::ZERO;
+    let valid = token(&a, DAVID, LINKED, zero).await;
     let foreign = rails_compat::signed_id::avatar_token(&a.booted.app.secrets, DAVID);
-    let expired = token(&a, DAVID, LINKED, email_address_confirmation::EXPIRES_IN);
+    let expired = token(&a, DAVID, LINKED, email_address_confirmation::EXPIRES_IN).await;
     for token in [foreign, expired, format!("{valid}0")] {
         for method in [Method::GET, Method::PUT] {
             let reply = phone.write(confirmation(method, &token)).await;
@@ -258,6 +306,167 @@ async fn confirmation_refuses_bad_links_and_an_address_claimed_in_the_meantime()
         })
     );
     assert!(audits(&a).await.is_empty());
+}
+
+#[tokio::test]
+async fn confirmation_names_the_account_and_refuses_a_different_viewer() {
+    let a = app(MAIL).await;
+    let name = "D. Example";
+    a.db()
+        .write(move |tx| {
+            User::find(tx.conn(), DAVID)?.update(
+                tx,
+                UserChanges {
+                    nickname: Some(Some(name.into())),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let mail = confirmation_message(&a, DAVID, LINKED, a.db().env().now())
+        .await
+        .unwrap();
+    let sentence = format!("Someone asked to link {LINKED} to {name}'s Smartfire account.");
+    assert!(mail.text.contains(&sentence), "{}", mail.text);
+    assert!(mail.html.contains(&sentence), "{}", mail.html);
+    let token = link_token(&mail);
+
+    let mut other = a.sign_in(KEVIN).await;
+    let page = other
+        .get(&format!("/app/email_addresses/confirm/{token}"))
+        .await;
+    assert_eq!(inline_boot(&page)["signedIn"], true);
+    let shown = other.send(confirmation(Method::GET, token)).await;
+    assert_eq!(shown.status, StatusCode::OK, "{}", shown.text());
+    assert_eq!(
+        shown.json(),
+        json!({"emailAddress": LINKED, "accountName": name, "requiresSignIn": true, "accountMismatch": true})
+    );
+    let reply = other.write(confirmation(Method::PUT, token)).await;
+    assert_eq!(reply.status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"error","fieldErrors":{"base":["You're signed in to a different account. Sign out, then open this link again."]}})
+    );
+    let mut owner = a.sign_in(DAVID).await;
+    assert_eq!(owner.get(ADDRESSES).await.json()["secondary"], json!([]));
+    assert!(audits(&a).await.is_empty());
+    assert_eq!(
+        owner.write(confirmation(Method::PUT, token)).await.status,
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
+async fn removing_an_address_retires_its_confirmation_and_queued_delivery() {
+    let (a, clock) = app_with_clock(MAIL).await;
+    let requested_at = a.db().env().now();
+    let token = token(&a, DAVID, LINKED, SignedDuration::ZERO).await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    assert_eq!(
+        owner.write(confirmation(Method::PUT, &token)).await.status,
+        StatusCode::OK
+    );
+    let listed = owner.get(ADDRESSES).await.json();
+    let id = listed["secondary"][0]["id"].as_i64().unwrap();
+
+    clock.advance(SignedDuration::from_secs(1));
+    let delete = Req::new(Method::DELETE, &format!("{ADDRESSES}/{id}"));
+    assert_eq!(owner.write(delete).await.status, StatusCode::NO_CONTENT);
+    let mut phone = a.anonymous();
+    assert_invalid_confirmation(&mut phone, &token).await;
+    assert!(
+        confirmation_message(&a, DAVID, &LINKED.to_ascii_lowercase(), requested_at)
+            .await
+            .is_none()
+    );
+    assert_eq!(owner.get(ADDRESSES).await.json()["secondary"], json!([]));
+
+    clock.advance(SignedDuration::from_secs(1));
+    let fresh = confirmation_message(&a, DAVID, LINKED, a.db().env().now())
+        .await
+        .unwrap();
+    assert_eq!(
+        phone
+            .write(confirmation(Method::PUT, link_token(&fresh)))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    assert_invalid_confirmation(&mut phone, &token).await;
+}
+
+#[tokio::test]
+async fn setting_a_password_retires_a_passwordless_confirmation_and_queued_delivery() {
+    let (a, clock) = app_with_clock(MAIL).await;
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE users SET password_digest=NULL WHERE id=?", [DAVID])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let requested_at = a.db().env().now();
+    let message = confirmation_message(&a, DAVID, LINKED, requested_at)
+        .await
+        .unwrap();
+    let token = link_token(&message);
+    let mut phone = a.anonymous();
+    assert_eq!(
+        phone.send(confirmation(Method::GET, token)).await.status,
+        StatusCode::OK
+    );
+
+    clock.advance(SignedDuration::from_secs(1));
+    let mut owner = a.sign_in(DAVID).await;
+    let reply = owner
+        .write(
+            Req::new(Method::PATCH, "/api/v1/settings/profile")
+                .json_body(&json!({"password": "new test passphrase"})),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_invalid_confirmation(&mut phone, token).await;
+    assert!(
+        confirmation_message(&a, DAVID, LINKED, requested_at)
+            .await
+            .is_none()
+    );
+
+    clock.advance(SignedDuration::from_secs(1));
+    let fresh = confirmation_message(&a, DAVID, LINKED, a.db().env().now())
+        .await
+        .unwrap();
+    assert_eq!(
+        phone
+            .write(confirmation(Method::PUT, link_token(&fresh)))
+            .await
+            .status,
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
+async fn put_confirmation_refuses_a_deactivated_account() {
+    let a = app(MAIL).await;
+    let token = token(&a, DAVID, LINKED, SignedDuration::ZERO).await;
+    a.db()
+        .write(|tx| User::find(tx.conn(), DAVID)?.deactivate(tx))
+        .await
+        .unwrap();
+    assert_invalid_confirmation(&mut a.anonymous(), &token).await;
+    assert!(audits(&a).await.is_empty());
+}
+
+async fn assert_invalid_confirmation(phone: &mut Browser<'_>, token: &str) {
+    for method in [Method::GET, Method::PUT] {
+        let reply = phone.write(confirmation(method, token)).await;
+        assert_eq!(reply.status, StatusCode::BAD_REQUEST, "{}", reply.text());
+        assert!(reply.json()["fieldErrors"]["base"].is_array());
+    }
 }
 
 #[tokio::test]
@@ -325,10 +534,13 @@ async fn promotion_releases_and_emails_the_old_primary_without_stamping_it() {
         .unwrap();
     assert!(!self_changed);
 
-    let relink = token(&a, DAVID, &previous_primary, jiff::SignedDuration::ZERO);
+    let mail = confirmation_message(&a, DAVID, &previous_primary, a.db().env().now())
+        .await
+        .expect("the old primary receives a confirmation link");
+    let relink = link_token(&mail);
     assert_eq!(
         a.anonymous()
-            .write(confirmation(Method::PUT, &relink))
+            .write(confirmation(Method::PUT, relink))
             .await
             .status,
         StatusCode::OK

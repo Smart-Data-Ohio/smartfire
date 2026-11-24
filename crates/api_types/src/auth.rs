@@ -286,6 +286,10 @@ pub enum SignedOut {
 #[ts(export)]
 pub struct SignedOutBoot {
     pub kind: SignedOut,
+    /// Included on pages that offer different recovery links according to the session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub signed_in: Option<bool>,
     pub workspace: SignInWorkspace,
     pub sign_in_methods: SignInMethods,
     pub first_run_pending: bool,
@@ -566,6 +570,7 @@ mod tests {
         assert_wire(
             &SignedOutBoot {
                 kind: SignedOut::SignedOut,
+                signed_in: None,
                 workspace: SignInWorkspace {
                     invite_splash_url: None,
                     name: None,

@@ -205,7 +205,7 @@ export function EmailAddressesGroup({
   return (
     <SettingsGroup
       title="Email addresses"
-      description="Sign in or reset your password with any of these. Notifications go to your primary address. If you switch your primary address, the old one stays linked."
+      description="Sign in or reset your password with any of these. Notifications go to your primary address. If you switch your primary address, we'll email the old one a link to keep it linked."
     >
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}

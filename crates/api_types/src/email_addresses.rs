@@ -42,5 +42,7 @@ pub struct EmailAddressList {
 #[ts(export)]
 pub struct EmailAddressConfirmation {
     pub email_address: String,
+    pub account_name: String,
     pub requires_sign_in: bool,
+    pub account_mismatch: bool,
 }

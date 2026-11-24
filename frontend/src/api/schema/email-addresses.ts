@@ -29,7 +29,9 @@ export const EmailAddressRequestResult = Schema.Struct({
 /** A confirmation link that works: the address, and whether signing in follows. */
 export const EmailAddressConfirmation = Schema.Struct({
   emailAddress: Schema.String,
+  accountName: Schema.String,
   requiresSignIn: Schema.Boolean,
+  accountMismatch: Schema.Boolean,
 });
 
 /** A confirmation endpoint's answer: the link's address, or a next action (a refusal, a page). */

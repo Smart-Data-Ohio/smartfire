@@ -160,11 +160,13 @@ async fn resettable(c: &Ctx) -> Result<Option<Claim>> {
     let Some(claim) = password_reset::verify(&secrets, token, c.now()) else {
         return Ok(None);
     };
-    c.app()
+    let ready = c
+        .app()
         .db
         .read(move |conn| Ok(resettable_user(conn, &secrets, &claim)?.map(|_| claim)))
         .await
-        .map_err(Error::internal)
+        .map_err(Error::internal)?;
+    Ok(ready.filter(|claim| claim.unexpired(&c.app().secrets, c.now())))
 }
 
 /// Sets the new password if the link still matches its user and is unexpired, checked again on the

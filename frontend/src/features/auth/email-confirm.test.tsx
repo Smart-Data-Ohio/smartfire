@@ -2,8 +2,10 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  EMAIL_ACCOUNT_MISMATCH,
   EMAIL_TAKEN,
   INVALID_EMAIL_LINK,
+  MOCK_EMAIL_MISMATCH_TOKEN,
   MOCK_EMAIL_SIGNED_OUT_TOKEN,
   MOCK_EMAIL_TAKEN_TOKEN,
   MOCK_EMAIL_TOKEN,
@@ -24,7 +26,10 @@ beforeEach(async () => {
   await resetSignIn(network);
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  document.getElementById("boot")?.remove();
+  vi.restoreAllMocks();
+});
 
 it("shows the address and links it only on Confirm, then loads the next page in full", async () => {
   const confirm = vi.spyOn(auth, "confirmEmailAddress");
@@ -35,6 +40,7 @@ it("shows the address and links it only on Confirm, then loads the next page in 
     await screen.findByRole("heading", { level: 1, name: "Confirm your email address" }),
   ).toBeTruthy();
   expect(screen.getByText("extra@smartdata.example")).toBeTruthy();
+  expect(screen.getByText(/Riel's Smartfire account/)).toBeTruthy();
   expect(screen.queryByText("You'll go to the sign-in page after confirming.")).toBeNull();
   // Opening the link (a mail scanner's prefetch) links nothing.
   expect(confirm).not.toHaveBeenCalled();
@@ -53,14 +59,30 @@ it("says a signed-out browser signs in after confirming", async () => {
   await waitFor(() => expect(assign).toHaveBeenCalledWith("/app/session/new"));
 });
 
-it("says when a link is invalid or expired, without a Confirm button", async () => {
+it.each([
+  [false, "Go to sign in", "/app/session/new"],
+  [true, "Go to settings", "/app/settings/profile"],
+])("routes recovery for a broken link with signedIn=%s", async (signedIn, label, href) => {
+  const inline = document.createElement("script");
+
+  inline.id = "boot";
+  inline.type = "application/json";
+  inline.textContent = JSON.stringify({ ...(await auth.boot()), signedIn });
+  document.body.append(inline);
   await renderAuth("/app/email_addresses/confirm/expired-link");
 
   expect(await screen.findByRole("alert")).toHaveProperty("textContent", INVALID_EMAIL_LINK);
   expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
-  expect(screen.getByRole("link", { name: "Go to settings" }).getAttribute("href")).toBe(
-    "/app/settings/profile",
-  );
+  expect(screen.getByRole("link", { name: label }).getAttribute("href")).toBe(href);
+});
+
+it("names the target account and hides Confirm for a different signed-in account", async () => {
+  await renderAuth(`/app/email_addresses/confirm/${MOCK_EMAIL_MISMATCH_TOKEN}`);
+
+  expect(await screen.findByRole("alert")).toHaveProperty("textContent", EMAIL_ACCOUNT_MISMATCH);
+  expect(screen.getByText(/Riel's Smartfire account/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Confirm" })).toBeNull();
+  expect(assign).not.toHaveBeenCalled();
 });
 
 it("says when another account linked the address first", async () => {
