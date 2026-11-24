@@ -393,7 +393,7 @@ impl TwoFactorBackupCode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TwoFactorSetupSecret {
     pub id: i64,
     pub session_id: i64,

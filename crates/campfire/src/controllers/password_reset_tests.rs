@@ -771,97 +771,171 @@ async fn password_reset_delivery_job_uses_enqueue_time_and_skips_stale_requests(
     assert!(smtp.await.unwrap_err().is_cancelled());
 }
 
-/// A password sign-in as `POST /api/v1/session` makes one, except that with `?reset=1` the
-/// password is reset (as a reset committing meanwhile would) after it is checked and before the
-/// session starts. 200 when a session started, 409 when it was refused.
-async fn sign_in_racing_a_reset(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
-    use campfire_app::app::AppCtx;
-    crate::concerns::before_actions(
-        c,
-        crate::concerns::Before::default().allow_unauthenticated_access(),
-    )
-    .await?;
-    let email = c.param_str("email_address").unwrap_or_default().to_owned();
-    let user = crate::concerns::authenticate_by(c, email, PASSWORD.into())
-        .await?
-        .expect("the seed's password");
-    let proof = crate::concerns::password_proof(c, &user);
-    if c.param_str("reset") == Some("1") {
-        let digest = campfire_db::PasswordDigest::hash(NEW_PASSWORD.into(), 4)
-            .await
-            .unwrap();
-        let id = user.id;
-        c.app()
-            .db
-            .write(move |tx| {
-                let mut user = campfire_db::User::find(tx.conn(), id)?;
-                campfire_runtime::authentication::reset_password(
-                    tx,
-                    &mut user,
-                    digest,
-                    &Default::default(),
-                )
-            })
-            .await
-            .unwrap();
-    }
-    let started = crate::concerns::start_password_session_for(c, user, false, proof).await?;
-    Ok(c.head(if started.is_some() {
-        StatusCode::OK
-    } else {
-        StatusCode::CONFLICT
-    }))
-}
-
-async fn race_sign_in(a: &TestApp, email: &str, reset: bool) -> StatusCode {
-    use tower::ServiceExt;
-    let app = &a.booted.app;
-    let kit = campfire_kit::Kit::new(
-        campfire_kit::KitConfig::production(app.config.disable_ssl),
-        Arc::new(campfire_kit::RailsCrypto::new(app.secrets.clone())),
-        app.clock.clone(),
-        app.clone(),
-    );
-    let router = axum::Router::new()
-        .route(
-            "/race",
-            axum::routing::get(campfire_kit::action(sign_in_racing_a_reset)),
-        )
-        .with_state(kit.clone())
-        .layer(axum::middleware::from_fn_with_state(
-            kit,
-            campfire_kit::adapter::rails_middleware,
-        ));
-    let uri = format!(
-        "/race?email_address={}&reset={}",
-        email.replace('@', "%40"),
-        u8::from(reset)
-    );
-    router
-        .oneshot(
-            axum::http::Request::builder()
-                .uri(uri)
-                .header(axum::http::header::HOST, "example.org")
-                .body(axum::body::Body::empty())
-                .unwrap(),
-        )
+async fn reset_password_during_request(db: campfire_db::Database) {
+    let digest = campfire_db::PasswordDigest::hash(NEW_PASSWORD.into(), db.env().bcrypt_cost)
         .await
-        .unwrap()
-        .status()
+        .unwrap();
+    db.write(move |tx| {
+        let mut user = campfire_db::User::find(tx.conn(), DAVID)?;
+        campfire_runtime::authentication::reset_password(tx, &mut user, digest, &Default::default())
+    })
+    .await
+    .unwrap();
 }
 
 /// A password sign-in that checked the password a reset then replaced starts no session.
 #[tokio::test]
 async fn a_sign_in_that_checked_the_replaced_password_starts_no_session() {
+    use campfire_runtime::authentication::test_hooks::BEFORE_SESSION_WRITE;
+    use std::cell::RefCell;
+
+    let (a, _) = app(&MAIL).await;
+    a.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
+        .await
+        .unwrap();
+    let david = email_of(&a, DAVID).await;
+    let before = count(&a, SESSIONS, DAVID).await;
+    let signed_in = a.anonymous().password_sign_in(&david, PASSWORD).await;
+    assert_eq!(signed_in.json()["kind"], "signedIn");
+    assert_eq!(count(&a, SESSIONS, DAVID).await, before + 1);
+
+    let reply = BEFORE_SESSION_WRITE
+        .scope(
+            RefCell::new(Some(Box::pin(reset_password_during_request(
+                a.db().clone(),
+            )))),
+            a.anonymous().password_sign_in(&david, PASSWORD),
+        )
+        .await;
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new"})
+    );
+    assert_eq!(count(&a, SESSIONS, DAVID).await, 0);
+}
+
+#[tokio::test]
+async fn a_password_reset_before_enrollment_confirm_leaves_two_factor_disabled() {
+    use campfire_db::TwoFactorCredential;
+    use campfire_runtime::authentication::test_hooks::BEFORE_ENROLLMENT_CONFIRM;
+    use std::cell::RefCell;
+
+    let (a, _) = app(&MAIL).await;
+    a.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
+        .await
+        .unwrap();
+    let mut browser = a.sign_in(DAVID).await;
+    let setup = "/api/v1/two_factor/setup";
+    let state = browser.get(setup).await.json();
+    let secret = state["setup"]["secret"].as_str().unwrap();
+    let code = rails_compat::totp::at(secret, a.booted.app.clock.now().as_second()).unwrap();
+    let confirm = Req::new(Method::POST, setup).json_body(&json!({"code":code}));
+    let reply = BEFORE_ENROLLMENT_CONFIRM
+        .scope(
+            RefCell::new(Some(Box::pin(reset_password_during_request(
+                a.db().clone(),
+            )))),
+            browser.write(confirm),
+        )
+        .await;
+    assert_eq!(count(&a, SESSIONS, DAVID).await, 0);
+    assert!(
+        !a.db()
+            .read(|conn| Ok(
+                TwoFactorCredential::for_user(conn, DAVID)?.is_some_and(|c| c.enabled())
+            ))
+            .await
+            .unwrap()
+    );
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM two_factor_backup_codes
+                   WHERE two_factor_credential_id IN
+                   (SELECT id FROM two_factor_credentials WHERE user_id=?)",
+            DAVID
+        )
+        .await,
+        0
+    );
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new"})
+    );
+}
+
+#[tokio::test]
+async fn transfer_requires_a_challenge_if_the_remembered_device_is_revoked_before_session_write() {
+    use campfire_runtime::authentication::test_hooks::BEFORE_SESSION_WRITE;
+    use std::cell::RefCell;
+
     let (a, _) = app(&MAIL).await;
     let david = email_of(&a, DAVID).await;
-    let sessions = "SELECT count(*) FROM sessions WHERE user_id=?";
-    let before = count(&a, sessions, DAVID).await;
-    assert_eq!(race_sign_in(&a, &david, false).await, StatusCode::OK);
-    assert_eq!(count(&a, sessions, DAVID).await, before + 1);
+    let mut browser = a.anonymous();
+    assert_eq!(
+        browser.password_sign_in(&david, PASSWORD).await.json()["kind"],
+        "secondFactorRequired"
+    );
+    add_backup_code(&a).await;
+    assert_eq!(
+        browser
+            .write(
+                Req::new(Method::POST, "/api/v1/two_factor/challenge")
+                    .header("x-forwarded-proto", "https")
+                    .json_body(&json!({"code":BACKUP,"rememberDevice":true})),
+            )
+            .await
+            .json()["kind"],
+        "signedIn"
+    );
+    let remember = browser
+        .cookie_header()
+        .split("; ")
+        .find(|pair| pair.starts_with("two_factor_remember="))
+        .unwrap()
+        .to_owned();
+    let token = crate::controllers::presenters::accounts::transfer_id(
+        &a.booted.app.secrets,
+        DAVID,
+        a.booted.app.clock.now(),
+    );
+    let transfer = || {
+        Req::new(Method::PUT, &format!("/api/v1/session/transfers/{token}"))
+            .header("x-forwarded-proto", "https")
+    };
+    let mut browser = a.anonymous();
+    browser.absorb_cookie_header(&remember);
+    assert_eq!(browser.write(transfer()).await.json()["kind"], "signedIn");
 
-    assert_eq!(race_sign_in(&a, &david, true).await, StatusCode::CONFLICT);
-    assert_eq!(count(&a, sessions, DAVID).await, 0);
+    let mut browser = a.anonymous();
+    browser.absorb_cookie_header(&remember);
+    let db = a.db().clone();
+    let revoke = async move {
+        db.write(|tx| {
+            TwoFactorRememberedDevice::revoke_all(tx, DAVID)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    };
+    let before = count(&a, SESSIONS, DAVID).await;
+    let reply = BEFORE_SESSION_WRITE
+        .scope(
+            RefCell::new(Some(Box::pin(revoke))),
+            browser.write(transfer()),
+        )
+        .await;
+    assert_eq!(
+        reply.json()["kind"],
+        "secondFactorRequired",
+        "{}",
+        reply.text()
+    );
+    assert_eq!(count(&a, SESSIONS, DAVID).await, before);
+    assert_eq!(count(&a, REMEMBERED, DAVID).await, 0);
 }
 
 /// A second step started with the old password can't finish once a reset has replaced it, even
@@ -1004,6 +1078,12 @@ async fn assert_reset_delivery_matches(stored: &'static str, submitted: &str, re
             .to_string(),
         recipient
     );
+    a.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
+        .await
+        .unwrap();
+    let mut browser = a.anonymous();
+    let token = link_token(&message);
     // The link must still verify against the stored address, with its case and spaces intact.
     assert_eq!(browser.send(check(&token)).await.status, StatusCode::OK);
     let reset = browser.write(submit(&token, NEW_PASSWORD)).await;
@@ -1056,6 +1136,37 @@ async fn password_reset_delivery_refuses_addresses_that_collide_after_trimming()
 }
 
 #[tokio::test]
+async fn password_sign_in_refuses_ambiguous_normalized_addresses() {
+    let (a, _) = app(&MAIL).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address='  DAVID@37SIGNALS.COM  ',
+                    password_digest=(SELECT password_digest FROM users WHERE id=?1)
+                 WHERE id=?2",
+                [DAVID, JASON],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let exact = a
+        .anonymous()
+        .password_sign_in("david@37signals.com", PASSWORD)
+        .await;
+    assert_eq!(exact.json()["kind"], "secondFactorRequired");
+    let mut browser = a.anonymous();
+    let missing = browser
+        .password_sign_in("unknown@example.com", PASSWORD)
+        .await;
+    let ambiguous = browser
+        .password_sign_in("David@37signals.com", PASSWORD)
+        .await;
+    assert_eq!(ambiguous.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(ambiguous.json(), missing.json());
+}
+
+#[tokio::test]
 async fn a_password_reset_link_is_refused_after_the_member_is_banned() {
     let (a, _) = app(&MAIL).await;
     let david = email_of(&a, DAVID).await;
@@ -1078,12 +1189,6 @@ async fn a_password_reset_link_is_refused_after_the_member_is_banned() {
     refused_link(&b.write(submit(&token, NEW_PASSWORD)).await);
     assert_eq!(reset_state(&a).await[0], before[0]);
     assert_eq!(
-    a.db()
-        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
-        .await
-        .unwrap();
-    let mut browser = a.anonymous();
-    let token = link_token(&message);
         count(
             &a,
             "SELECT count(*) FROM audit_logs WHERE action='user.password.reset' AND target_id=?",
@@ -1135,37 +1240,6 @@ async fn a_profile_password_change_rechecks_its_session_and_digest_after_authori
                 let mut user = User::find(tx.conn(), DAVID)?;
                 if !revoke_session {
                     // Change the digest without revoking the session, isolating the digest check.
-#[tokio::test]
-async fn password_sign_in_refuses_ambiguous_normalized_addresses() {
-    let (a, _) = app(&MAIL).await;
-    a.db()
-        .write(|tx| {
-            tx.conn().execute(
-                "UPDATE users SET email_address='  DAVID@37SIGNALS.COM  ',
-                    password_digest=(SELECT password_digest FROM users WHERE id=?1)
-                 WHERE id=?2",
-                [DAVID, JASON],
-            )?;
-            Ok(())
-        })
-        .await
-        .unwrap();
-    let exact = a
-        .anonymous()
-        .password_sign_in("david@37signals.com", PASSWORD)
-        .await;
-    assert_eq!(exact.json()["kind"], "secondFactorRequired");
-    let mut browser = a.anonymous();
-    let missing = browser
-        .password_sign_in("unknown@example.com", PASSWORD)
-        .await;
-    let ambiguous = browser
-        .password_sign_in("David@37signals.com", PASSWORD)
-        .await;
-    assert_eq!(ambiguous.status, StatusCode::UNAUTHORIZED);
-    assert_eq!(ambiguous.json(), missing.json());
-}
-
                     return user.update(
                         tx,
                         UserChanges {

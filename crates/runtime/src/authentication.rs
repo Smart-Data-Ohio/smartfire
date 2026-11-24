@@ -10,6 +10,24 @@ use rails_compat::{ar_encryption::ArEncryption, totp};
 use rusqlite::OptionalExtension;
 use serde_json::json;
 
+#[cfg(feature = "test-support")]
+pub mod test_hooks {
+    use std::{cell::RefCell, future::Future, pin::Pin};
+
+    type Hook = RefCell<Option<Pin<Box<dyn Future<Output = ()> + Send>>>>;
+
+    tokio::task_local! {
+        pub static BEFORE_ENROLLMENT_CONFIRM: Hook;
+        pub static BEFORE_SESSION_WRITE: Hook;
+    }
+
+    pub(crate) async fn run(key: &'static tokio::task::LocalKey<Hook>) {
+        if let Ok(Some(hook)) = key.try_with(|hook| hook.borrow_mut().take()) {
+            hook.await;
+        }
+    }
+}
+
 /// `app/controllers/users/profiles_controller.rb`: security audits and the rollback marker
 /// commit with the user update.
 /// Credential changes require the original session and digest, and email submissions must still
@@ -349,6 +367,7 @@ pub fn reset_password(
 }
 
 pub enum Enrollment {
+    SessionGone,
     Enabled,
     Wrong,
     Confirmed {
@@ -358,9 +377,8 @@ pub enum Enrollment {
     },
 }
 
-/// `SetupsController#create` has no action-wide transaction. Each model operation
-/// commits separately; confirmation consumes its setup secret atomically, and
-/// each session destruction commits its dependent deletions and durable jobs.
+/// `SetupsController#create` commits each model operation separately. Confirmation checks the
+/// session and consumes its setup secret atomically before enrollment issues backup codes.
 pub async fn enroll(
     db: &Database,
     user: User,
@@ -370,11 +388,16 @@ pub async fn enroll(
 ) -> Result<Enrollment> {
     let user_id = user.id;
     let creation_encryption = encryption.clone();
-    let (mut credential, setup) = db
+    let snapshot = db
         .write(move |tx| {
+            let session = match Session::find(tx.conn(), session_id) {
+                Ok(session) if session.user_id == user_id => session,
+                Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
+                Err(error) => return Err(error),
+            };
             let existing = TwoFactorCredential::for_user(tx.conn(), user_id)?;
             if let Some(credential) = existing.as_ref().filter(|c| c.enabled()) {
-                return Ok((credential.clone(), None));
+                return Ok(Some((session, credential.clone(), None)));
             }
             let setup = TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?;
             let credential = match existing {
@@ -386,9 +409,12 @@ pub async fn enroll(
                     &totp::generate_secret(),
                 )?,
             };
-            Ok((credential, setup))
+            Ok(Some((session, credential, setup)))
         })
         .await?;
+    let Some((session, credential, setup)) = snapshot else {
+        return Ok(Enrollment::SessionGone);
+    };
     if credential.enabled() {
         return Ok(Enrollment::Enabled);
     }
@@ -396,11 +422,32 @@ pub async fn enroll(
         return Ok(Enrollment::Wrong);
     };
     let credential_id = credential.id;
-    if !db
-        .write(move |tx| credential.confirm_with_setup_secret(tx, &encryption, &setup, &code))
-        .await?
-    {
-        return Ok(Enrollment::Wrong);
+    #[cfg(feature = "test-support")]
+    test_hooks::run(&test_hooks::BEFORE_ENROLLMENT_CONFIRM).await;
+    let confirmed = db
+        .write(move |tx| {
+            if Session::find_by_token(tx.conn(), &session.token)?.as_ref() != Some(&session) {
+                return Ok(Err(Enrollment::SessionGone));
+            }
+            if TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?.as_ref()
+                != Some(&setup)
+            {
+                return Ok(Err(Enrollment::Wrong));
+            }
+            let Some(mut credential) = TwoFactorCredential::for_user(tx.conn(), user_id)?
+                .filter(|current| current.id == credential_id)
+            else {
+                return Ok(Err(Enrollment::Wrong));
+            };
+            if credential.enabled() {
+                return Ok(Err(Enrollment::Enabled));
+            }
+            let confirmed = credential.confirm_with_setup_secret(tx, &encryption, &setup, &code)?;
+            Ok(confirmed.then_some(()).ok_or(Enrollment::Wrong))
+        })
+        .await?;
+    if let Err(outcome) = confirmed {
+        return Ok(outcome);
     }
     let codes = db
         .write(move |tx| TwoFactorBackupCode::regenerate_set(tx, credential_id))

@@ -4,7 +4,7 @@ use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_session, require_current_user};
 use campfire_api_types::{TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
-use campfire_db::{TwoFactorCredential, TwoFactorRememberedDevice, User};
+use campfire_db::{TwoFactorCredential, User};
 use campfire_kit::{
     Cookie, Ctx, Error, RateLimit, Redirect, Result, SameSite, StatusCode, format, halt,
 };
@@ -169,6 +169,7 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
     .await
     .map_err(Error::internal)?;
     match outcome {
+        crate::authentication::Enrollment::SessionGone => halt(c.head(StatusCode::UNAUTHORIZED)),
         crate::authentication::Enrollment::Enabled => profile(c, mode),
         crate::authentication::Enrollment::Wrong => {
             c.flash().now(
@@ -292,23 +293,21 @@ pub async fn begin_session_response(
         .read(move |conn| user_enabled(conn, user_id))
         .await
         .map_err(Error::internal)?;
-    if enabled {
-        let token = c.cookies.signed("two_factor_remember");
-        let remembered = c
-            .app()
-            .db
-            .write(move |tx| {
-                TwoFactorRememberedDevice::find_valid(tx, token.as_deref(), Some(user_id))
-            })
-            .await
-            .map_err(Error::internal)?
-            .is_some();
-        if remembered {
-            if !start_session_for(c, user.clone(), true, proof).await? {
-                return password_replaced(c, mode);
-            }
-            sign_in_audit(c, user, method.into(), Some("remembered_device")).await?;
-        } else {
+    let token = if enabled {
+        c.cookies.signed("two_factor_remember")
+    } else {
+        None
+    };
+    let factor = token.as_ref().map(|_| "remembered_device");
+    let started = if enabled && token.is_none() {
+        concerns::SessionStart::ChallengeRequired
+    } else {
+        concerns::start_sign_in_session_for(c, user.clone(), proof.clone(), token).await?
+    };
+    match started {
+        concerns::SessionStart::Started(_) => sign_in_audit(c, user, method.into(), factor).await?,
+        concerns::SessionStart::PasswordReplaced => return password_replaced(c, mode),
+        concerns::SessionStart::ChallengeRequired => {
             let now = c.now();
             c.session()
                 .insert(concerns::session_keys::RETURN_TO_KEY, return_url);
@@ -316,40 +315,9 @@ pub async fn begin_session_response(
             concerns::session_keys::stash_two_factor_pending_password(c.session(), proof);
             return mode.challenge(c);
         }
-    } else {
-        if !start_session_for(c, user.clone(), false, proof).await? {
-            return password_replaced(c, mode);
-        }
-        sign_in_audit(c, user, method.into(), None).await?;
     }
     let return_url = concerns::post_authentication_destination(c, return_url).await?;
     mode.signed_in(c, &return_url)
-}
-/// Starts the session, a password sign-in's only while the password it checked is still the
-/// user's; false when a reset replaced it in between.
-async fn start_session_for(
-    c: &mut Ctx,
-    user: User,
-    two_factor_verified: bool,
-    proof: Option<String>,
-) -> Result<bool> {
-    match proof {
-        Some(proof) => {
-            Ok(
-                concerns::start_password_session_for(c, user, two_factor_verified, proof)
-                    .await?
-                    .is_some(),
-            )
-        }
-        None if two_factor_verified => {
-            concerns::start_new_verified_session_for(c, user).await?;
-            Ok(true)
-        }
-        None => {
-            concerns::start_new_session_for(c, user).await?;
-            Ok(true)
-        }
-    }
 }
 /// A sign-in whose password was reset before it finished: back to sign in, as when a pending
 /// second factor has gone.
