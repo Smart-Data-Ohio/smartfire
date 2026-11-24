@@ -54,7 +54,7 @@ pub async fn relay(c: &mut Ctx) -> Result {
     .map_err(Error::internal)?;
     Ok(c.head(StatusCode::NO_CONTENT))
 }
-async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> JobResult {
+async fn delivery(app: App, job: DeliveryJob, execution: campfire_jobs::Execution) -> JobResult {
     let Some(settings) = &app.mail.config.smtp else {
         return Ok(Outcome::Done);
     };
@@ -85,7 +85,7 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
             })
         }
         Notification::PasswordReset { email_address } => {
-            match password_reset_message(&app, email_address).await? {
+            match password_reset_message(&app, email_address, execution.enqueued_at).await? {
                 Some(message) => message,
                 None => return Ok(Outcome::Done),
             }
@@ -110,11 +110,15 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
     outbound::deliver(settings, &message, app.db.env().now().jiff()).await?;
     Ok(Outcome::Done)
 }
-/// The reset email for the account `email_address` signs in with, its link minted now; `None`
-/// (nothing is sent) when reset isn't available or the address has no account that can reset.
+/// The reset email for the account `email_address` signs in with, its link minted now from the
+/// current password and expiring 15 minutes after the request (`requested_at`, when the job was
+/// queued). `None` (nothing is sent) when reset isn't available, the address has no account that
+/// can reset, the request's 15 minutes are over (a delivery delayed or retried that long), or the
+/// password has changed since the request.
 pub async fn password_reset_message(
     app: &App,
     email_address: String,
+    requested_at: Timestamp,
 ) -> campfire_db::Result<Option<outbound::Message>> {
     let config = &app.mail.config;
     let Some(origin) = config
@@ -123,11 +127,22 @@ pub async fn password_reset_message(
     else {
         return Ok(None);
     };
+    let expires_at = requested_at.jiff() + rails_compat::password_reset::EXPIRES_IN;
+    if app.db.env().now().jiff() >= expires_at {
+        return Ok(None);
+    }
     let user = app
         .db
-        .read(move |conn| User::find_active_by_email_address(conn, &email_address))
-        .await?
-        .filter(crate::authentication::can_reset_password);
+        .read(move |conn| {
+            let Some(user) = User::find_active_by_email_address(conn, &email_address)?
+                .filter(crate::authentication::can_reset_password)
+            else {
+                return Ok(None);
+            };
+            let changed = password_changed_since(conn, user.id, requested_at)?;
+            Ok((!changed).then_some(user))
+        })
+        .await?;
     let Some(user) = user else {
         return Ok(None);
     };
@@ -137,7 +152,7 @@ pub async fn password_reset_message(
         user.id,
         user.password_digest.as_deref().unwrap_or_default(),
         &email,
-        app.db.env().now().jiff(),
+        requested_at.jiff(),
     );
     Ok(Some(outbound::password_reset(
         config,
@@ -147,6 +162,19 @@ pub async fn password_reset_message(
         },
         &format!("{origin}/app/passwords/{token}"),
     )))
+}
+/// Whether the user's password was changed or reset at or after `since`, by the audit log.
+fn password_changed_since(
+    conn: &rusqlite::Connection,
+    user_id: i64,
+    since: Timestamp,
+) -> campfire_db::Result<bool> {
+    Ok(conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM audit_logs WHERE target_type='User' AND target_id=?1 \
+         AND action IN ('user.password.change','user.password.reset') AND created_at>=?2)",
+        rusqlite::params![user_id, since],
+        |row| row.get(0),
+    )?)
 }
 async fn routing(app: App, job: RoutingJob, _: campfire_jobs::Execution) -> JobResult {
     let renderer = app

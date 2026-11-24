@@ -107,12 +107,30 @@ async fn captured_mail_jobs(a: &TestApp) -> Vec<Value> {
         .unwrap()
 }
 
-/// The link the reset email for `email` carries, as delivery builds it now.
+/// The reset email for `email`, as delivery builds it for a request made at `requested_at`.
+async fn reset_message(
+    a: &TestApp,
+    email: &str,
+    requested_at: jiff::Timestamp,
+) -> Option<campfire_mail::outbound::Message> {
+    campfire_runtime::mail::password_reset_message(
+        &a.booted.app,
+        email.into(),
+        campfire_db::Timestamp::from_jiff(requested_at),
+    )
+    .await
+    .unwrap()
+}
+
+/// The link the reset email for `email` carries, as delivery builds it now for a request made now.
 async fn emailed_token(a: &TestApp, email: &str) -> String {
-    let message = campfire_runtime::mail::password_reset_message(&a.booted.app, email.into())
+    let message = reset_message(a, email, a.booted.app.clock.now())
         .await
-        .unwrap()
         .expect("a reset email");
+    link_token(&message)
+}
+
+fn link_token(message: &campfire_mail::outbound::Message) -> String {
     let url = message
         .text
         .lines()
@@ -207,9 +225,9 @@ async fn every_request_answers_alike_and_queues_one_job() {
 async fn delivery_writes_only_to_accounts_that_can_reset() {
     let (a, _) = app(&MAIL).await;
     let (david, refused) = accounts(&a).await;
-    let message = campfire_runtime::mail::password_reset_message(&a.booted.app, david.clone())
+    let now = a.booted.app.clock.now();
+    let message = reset_message(&a, &david, now)
         .await
-        .unwrap()
         .expect("David can reset");
     assert!(message.to.ends_with(&format!("<{david}>")), "{}", message.to);
     assert_eq!(message.from, "Smartfire <alerts@example.com>");
@@ -221,21 +239,10 @@ async fn delivery_writes_only_to_accounts_that_can_reset() {
         message.text
     );
     for email in refused {
-        assert!(
-            campfire_runtime::mail::password_reset_message(&a.booted.app, email.clone())
-                .await
-                .unwrap()
-                .is_none(),
-            "{email}"
-        );
+        assert!(reset_message(&a, &email, now).await.is_none(), "{email}");
     }
     let (unconfigured, _) = app(&MAIL[..2]).await;
-    assert!(
-        campfire_runtime::mail::password_reset_message(&unconfigured.booted.app, david)
-            .await
-            .unwrap()
-            .is_none()
-    );
+    assert!(reset_message(&unconfigured, &david, now).await.is_none());
 }
 
 #[tokio::test]
@@ -525,4 +532,34 @@ async fn a_link_that_expires_before_the_write_resets_nothing() {
         .unwrap();
     assert!(!reset);
     assert_eq!(reset_state(&a).await, before);
+}
+
+/// Delivery runs when the queue gets to it, perhaps after downtime or SMTP retries: the link still
+/// expires 15 minutes after the request, nothing goes out once those are over, and nothing goes
+/// out once the password has changed since the request.
+#[tokio::test]
+async fn late_and_superseded_deliveries_keep_the_request_s_fifteen_minutes() {
+    use jiff::SignedDuration;
+    use rails_compat::password_reset::{EXPIRES_IN, verify};
+    let (a, clock) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let secrets = a.booted.app.secrets.clone();
+    let now = a.booted.app.clock.now();
+
+    assert!(reset_message(&a, &david, now - EXPIRES_IN).await.is_none());
+
+    let requested = now - SignedDuration::from_mins(10);
+    let token = link_token(&reset_message(&a, &david, requested).await.expect("still in time"));
+    let left = SignedDuration::from_mins(5);
+    assert!(verify(&secrets, &token, now + left - SignedDuration::from_secs(1)).is_some());
+    assert!(verify(&secrets, &token, now + left).is_none());
+
+    let reply = a.anonymous().write(submit(&token, NEW_PASSWORD)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert!(reset_message(&a, &david, requested).await.is_none());
+    assert!(reset_message(&a, &david, now).await.is_none(), "changed at the request's instant");
+
+    clock.advance(SignedDuration::from_secs(1));
+    let later = a.booted.app.clock.now();
+    assert!(reset_message(&a, &david, later).await.is_some(), "a request after the change");
 }

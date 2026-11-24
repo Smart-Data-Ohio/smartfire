@@ -43,18 +43,19 @@ impl Claim {
     }
 }
 
-/// A reset link's token for the user with this password digest and email address.
+/// A reset link's token for the user with this password digest and email address, expiring
+/// [`EXPIRES_IN`] after `requested_at`.
 pub fn token(
     secrets: &Secrets,
     user_id: i64,
     password_digest: &str,
     email_address: &str,
-    now: Timestamp,
+    requested_at: Timestamp,
 ) -> String {
     verifier(secrets).generate(
         &json!([user_id, fingerprint(secrets, password_digest, email_address)]),
         Some(&purpose()),
-        Some(now + EXPIRES_IN),
+        Some(requested_at + EXPIRES_IN),
     )
 }
 
