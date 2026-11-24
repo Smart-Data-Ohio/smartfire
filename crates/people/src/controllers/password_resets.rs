@@ -8,7 +8,7 @@
 //! (`Config::password_reset_available`); otherwise every endpoint answers 404.
 
 use campfire_api_types::{PasswordResetRequest, PasswordResetState, PasswordResetSubmission};
-use campfire_db::models::audit_log::Context;
+use campfire_db::models::{audit_log::Context, user::normalize_email_address};
 use campfire_db::{PasswordDigest, Tx, User};
 use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, halt};
 use jiff::SignedDuration;
@@ -28,6 +28,7 @@ const RESET_NOTICE: &str = "Password updated. Sign in with your new password.";
 
 /// bcrypt reads only the first 72 bytes of a password.
 const MAX_PASSWORD_BYTES: usize = 72;
+const MAX_EMAIL_BYTES: usize = 254;
 
 /// Requests from one address.
 pub fn request_rate_limit() -> RateLimit {
@@ -55,16 +56,19 @@ async fn create_response(c: &mut Ctx) -> Result {
     before_actions(c, "password_resets#create").await?;
     rate_limit(c, &request_rate_limit(), None)?;
     let body: PasswordResetRequest = auth::body(c).await?;
-    let email_address = campfire_richtext::ruby::strip(&body.email_address).to_owned();
-    rate_limit(c, &inbox_rate_limit(), Some(&inbox_key(&email_address)))?;
-    c.app()
-        .db
-        .write(move |tx| {
-            authentication::request_password_reset(tx, email_address);
-            Ok(())
-        })
-        .await
-        .map_err(Error::internal)?;
+    let email_address = campfire_richtext::ruby::strip(&body.email_address);
+    rate_limit(c, &inbox_rate_limit(), Some(&inbox_key(email_address)))?;
+    if email_address.len() <= MAX_EMAIL_BYTES {
+        let email_address = email_address.to_owned();
+        c.app()
+            .db
+            .write(move |tx| {
+                authentication::request_password_reset(tx, email_address);
+                Ok(())
+            })
+            .await
+            .map_err(Error::internal)?;
+    }
     auth::json(c, StatusCode::OK, &PasswordResetState::Requested)
 }
 
@@ -145,7 +149,7 @@ fn rate_limit(c: &mut Ctx, limit: &RateLimit, by: Option<&str>) -> Result<()> {
 
 /// One bucket per address however it's capitalised or spaced, without keeping the address.
 fn inbox_key(email_address: &str) -> String {
-    let normalized = authentication::normalize_password_reset_address(email_address);
+    let normalized = normalize_email_address(email_address);
     hex::encode(Sha256::digest(normalized.as_bytes()))
 }
 

@@ -22,6 +22,11 @@ pub mod presentation;
 pub mod profile_settings;
 pub mod ui_preference;
 
+/// The address form shared by sign-in, password reset delivery and its inbox rate limit.
+pub fn normalize_email_address(address: &str) -> String {
+    rails_compat::unicode::fold(campfire_richtext::ruby::strip(address))
+}
+
 /// `enum :role, %i[ member administrator bot ]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Role {
@@ -387,8 +392,43 @@ impl User {
         )
     }
 
+    /// Prefer an exact address, even when it is ineligible. Otherwise require a unique
+    /// eligible active user whose address matches after stripping space and folding case.
+    pub fn find_active_by_sign_in_address(
+        conn: &Connection,
+        address: &str,
+        eligible: impl Fn(&Self) -> bool,
+    ) -> Result<Option<Self>> {
+        if let Some(user) = Self::find_active_by_email_address(conn, address)? {
+            return Ok(eligible(&user).then_some(user));
+        }
+        let normalized = normalize_email_address(address);
+        if normalized.is_empty() {
+            return Ok(None);
+        }
+
+        let mut query = conn
+            .prepare_cached("SELECT * FROM users WHERE status = 0 AND email_address IS NOT NULL")?;
+        let mut rows = query.query([])?;
+        let mut candidate = None;
+        while let Some(row) = rows.next()? {
+            let email: String = row.get("email_address")?;
+            if normalize_email_address(&email) != normalized {
+                continue;
+            }
+            let user = Self::from_row(row)?;
+            if eligible(&user) {
+                if candidate.is_some() {
+                    return Ok(None);
+                }
+                candidate = Some(user);
+            }
+        }
+        Ok(candidate)
+    }
+
     /// The password half of `User.active.authenticate_by(email_address:, password:)`, given
-    /// what [`User::find_active_by_email_address`] found. Blocking (bcrypt), so it runs with no
+    /// what [`User::find_active_by_sign_in_address`] found. Blocking (bcrypt), so it runs with no
     /// connection held. A blank password returns nil before the lookup in Rails; callers skip
     /// the lookup for one too.
     pub fn authenticated(candidate: Option<Self>, password: &str) -> Option<Self> {

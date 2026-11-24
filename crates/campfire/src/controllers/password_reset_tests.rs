@@ -255,6 +255,41 @@ async fn every_request_answers_alike_and_queues_one_job() {
 }
 
 #[tokio::test]
+async fn oversized_password_reset_addresses_spend_both_limits_without_queuing() {
+    let (a, _) = app(&MAIL).await;
+    capture_mail_jobs(&a).await;
+    let mut b = a.anonymous();
+    let local = "é".repeat(121);
+    let too_long = format!("  {local}x@example.com  ");
+    let at_limit = format!("  {local}@example.com  ");
+    assert_eq!(at_limit.trim().len(), 254);
+    assert_eq!(too_long.trim().len(), 255);
+
+    let ip = "198.51.100.20";
+    for _ in 0..3 {
+        let reply = b.write(request(&too_long, ip)).await;
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_eq!(reply.json(), json!({"kind":"requested"}));
+    }
+    assert_eq!(
+        b.write(request(&too_long, "198.51.100.21")).await.status,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    for address in [&at_limit, "unknown@example.com"] {
+        assert_eq!(b.write(request(address, ip)).await.status, StatusCode::OK);
+    }
+    assert_eq!(
+        b.write(request("another@example.com", ip)).await.status,
+        StatusCode::TOO_MANY_REQUESTS
+    );
+    assert_eq!(
+        captured_mail_jobs(&a).await,
+        [at_limit.trim(), "unknown@example.com"]
+            .map(|email| json!({"notification":{"PasswordReset":{"email_address":email}}}))
+    );
+}
+
+#[tokio::test]
 async fn delivery_writes_only_to_accounts_that_can_reset() {
     let (a, _) = app(&MAIL).await;
     let (david, refused) = accounts(&a).await;
@@ -970,17 +1005,17 @@ async fn assert_reset_delivery_matches(stored: &'static str, submitted: &str, re
         recipient
     );
     // The link must still verify against the stored address, with its case and spaces intact.
-    assert_eq!(
-        a.anonymous()
-            .send(check(&link_token(&message)))
-            .await
-            .status,
-        StatusCode::OK
-    );
+    assert_eq!(browser.send(check(&token)).await.status, StatusCode::OK);
+    let reset = browser.write(submit(&token, NEW_PASSWORD)).await;
+    assert_eq!(reset.status, StatusCode::OK, "{}", reset.text());
+    let sign_in = browser.password_sign_in(submitted, NEW_PASSWORD).await;
+    assert_eq!(sign_in.status, StatusCode::OK, "{}", sign_in.text());
+    assert_eq!(sign_in.json()["kind"], "signedIn");
+    assert_eq!(count(&a, SESSIONS, DAVID).await, 1);
 }
 
 #[tokio::test]
-async fn password_reset_delivery_matches_padded_stored_addresses() {
+async fn password_reset_and_sign_in_match_padded_stored_addresses() {
     assert_reset_delivery_matches(
         "  david@37signals.com  ",
         "david@37signals.com",
@@ -990,7 +1025,7 @@ async fn password_reset_delivery_matches_padded_stored_addresses() {
 }
 
 #[tokio::test]
-async fn password_reset_delivery_matches_unicode_case() {
+async fn password_reset_and_sign_in_match_unicode_case() {
     assert_reset_delivery_matches("JÖRG@x.com", "jörg@x.com", "JÖRG@x.com").await;
 }
 
@@ -1043,6 +1078,12 @@ async fn a_password_reset_link_is_refused_after_the_member_is_banned() {
     refused_link(&b.write(submit(&token, NEW_PASSWORD)).await);
     assert_eq!(reset_state(&a).await[0], before[0]);
     assert_eq!(
+    a.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
+        .await
+        .unwrap();
+    let mut browser = a.anonymous();
+    let token = link_token(&message);
         count(
             &a,
             "SELECT count(*) FROM audit_logs WHERE action='user.password.reset' AND target_id=?",
@@ -1094,6 +1135,37 @@ async fn a_profile_password_change_rechecks_its_session_and_digest_after_authori
                 let mut user = User::find(tx.conn(), DAVID)?;
                 if !revoke_session {
                     // Change the digest without revoking the session, isolating the digest check.
+#[tokio::test]
+async fn password_sign_in_refuses_ambiguous_normalized_addresses() {
+    let (a, _) = app(&MAIL).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address='  DAVID@37SIGNALS.COM  ',
+                    password_digest=(SELECT password_digest FROM users WHERE id=?1)
+                 WHERE id=?2",
+                [DAVID, JASON],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let exact = a
+        .anonymous()
+        .password_sign_in("david@37signals.com", PASSWORD)
+        .await;
+    assert_eq!(exact.json()["kind"], "secondFactorRequired");
+    let mut browser = a.anonymous();
+    let missing = browser
+        .password_sign_in("unknown@example.com", PASSWORD)
+        .await;
+    let ambiguous = browser
+        .password_sign_in("David@37signals.com", PASSWORD)
+        .await;
+    assert_eq!(ambiguous.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(ambiguous.json(), missing.json());
+}
+
                     return user.update(
                         tx,
                         UserChanges {

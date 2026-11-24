@@ -1,7 +1,7 @@
 //! App adapter for campfire_mail. WS9 emits its typed notification jobs; WS5/WS8 install the
 //! shared Markdown renderer; WS11 installs webhook fanout. Mail owns neither trigger.
 use crate::app::{App, AppCtx};
-use crate::authentication::{can_reset_password, normalize_password_reset_address};
+use crate::authentication::can_reset_password;
 use campfire_db::{Attachment, Message, Room, Timestamp, User};
 use campfire_jobs::{JobError, JobResult, Outcome};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode};
@@ -133,7 +133,9 @@ pub async fn password_reset_message(
         .db
         .read(move |conn| {
             let address = campfire_richtext::ruby::strip(&email_address);
-            let Some(user) = reset_recipient(conn, address)? else {
+            let Some(user) =
+                User::find_active_by_sign_in_address(conn, address, can_reset_password)?
+            else {
                 return Ok(None);
             };
             let changed = password_changed_since(conn, user.id, requested_at)?;
@@ -163,41 +165,6 @@ pub async fn password_reset_message(
         &format!("{origin}/app/passwords/{token}"),
     )))
 }
-/// An exact primary address takes precedence over a unique normalized match.
-fn reset_recipient(
-    conn: &rusqlite::Connection,
-    address: &str,
-) -> campfire_db::Result<Option<User>> {
-    if let Some(user) = User::find_active_by_email_address(conn, address)? {
-        return Ok(can_reset_password(&user).then_some(user));
-    }
-    let normalized = normalize_password_reset_address(address);
-    if normalized.is_empty() {
-        return Ok(None);
-    }
-
-    let mut query = conn.prepare_cached(
-        "SELECT * FROM users WHERE status = 0 AND email_address IS NOT NULL
-         AND password_digest IS NOT NULL",
-    )?;
-    let mut rows = query.query([])?;
-    let mut candidate = None;
-    while let Some(row) = rows.next()? {
-        let email: String = row.get("email_address")?;
-        if normalize_password_reset_address(&email) != normalized {
-            continue;
-        }
-        let user = User::from_row(row)?;
-        if can_reset_password(&user) {
-            if candidate.is_some() {
-                return Ok(None);
-            }
-            candidate = Some(user);
-        }
-    }
-    Ok(candidate)
-}
-
 /// Whether the user's password was changed or reset at or after `since`, by the audit log.
 fn password_changed_since(
     conn: &rusqlite::Connection,
