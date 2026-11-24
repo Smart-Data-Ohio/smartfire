@@ -213,8 +213,10 @@ fn password_problem(password: &str) -> Option<&'static str> {
     }
 }
 
+/// A `token` error, so the page can tell a dead link (ask for another) from a refusal it can
+/// retry, such as a rate limit's `base` error.
 fn invalid_link(c: &mut Ctx) -> Result {
-    auth::field_error(c, StatusCode::BAD_REQUEST, "base", INVALID_LINK)
+    auth::field_error(c, StatusCode::BAD_REQUEST, "token", INVALID_LINK)
 }
 
 /// A used, expired or forged link, recorded as a failed sign-in as a bad transfer link is.

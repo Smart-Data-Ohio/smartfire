@@ -7,9 +7,11 @@ import {
   MOCK_RESET_TOKEN,
   RESET_RATE_ALERT,
 } from "../../../mock/s2/sign-in.ts";
+import type { SignedOutBoot } from "../../gen/SignedOutBoot.ts";
 import { auth } from "../../sync/auth.ts";
 import { installMockNetwork } from "../../test/mock-network.ts";
 import { pageExit } from "./auth-navigation.ts";
+import { RESET_UNAVAILABLE } from "./password-new.tsx";
 import { renderAuth, resetSignIn } from "./testing.tsx";
 
 const network = installMockNetwork();
@@ -23,7 +25,10 @@ beforeEach(async () => {
   await resetSignIn(network, { passwordReset: true });
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  document.getElementById("boot")?.remove();
+});
 
 const emailField = () => screen.getByRole("textbox", { name: "Email address" });
 
@@ -88,7 +93,8 @@ describe("choosing a new password", () => {
       await screen.findByRole("heading", { level: 1, name: "Choose a new password" }),
     ).toBeTruthy();
     expect(passwordField().getAttribute("autocomplete")).toBe("new-password");
-    expect(passwordField().getAttribute("maxlength")).toBe("72");
+    // The server measures bcrypt's 72 bytes; a browser's maxlength counts UTF-16 units instead.
+    expect(passwordField().getAttribute("maxlength")).toBeNull();
     expect(passwordField()).toBe(document.activeElement);
 
     await user.type(passwordField(), "a new passphrase");
@@ -123,5 +129,87 @@ describe("choosing a new password", () => {
       "/app/session/new",
     );
     expect(resets).not.toHaveBeenCalled();
+  });
+
+  it("keeps the form and the typed password when a new password is refused for now", async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(auth, "resetPassword").mockResolvedValueOnce({
+      kind: "error",
+      fieldErrors: { base: [RESET_RATE_ALERT] },
+    });
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+    await user.type(await screen.findByLabelText("New password"), "a new passphrase");
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    expect(await screen.findByText(RESET_RATE_ALERT)).toBeTruthy();
+    expect(passwordField().value).toBe("a new passphrase");
+    expect(screen.queryByRole("link", { name: "Get a new link" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/app/session/new"));
+  });
+
+  it("offers a new link when the link stops working before the password is set", async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(auth, "resetPassword").mockResolvedValueOnce({
+      kind: "error",
+      fieldErrors: { token: [INVALID_RESET] },
+    });
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+    await user.type(await screen.findByLabelText("New password"), "a new passphrase");
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", INVALID_RESET);
+    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(screen.getByRole("link", { name: "Get a new link" })).toBeTruthy();
+  });
+
+  it("offers to try again when the network fails", async () => {
+    const user = userEvent.setup();
+
+    vi.spyOn(auth, "passwordReset").mockRejectedValueOnce(new Error("Network unreachable"));
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Network unreachable");
+    expect(screen.queryByRole("link", { name: "Get a new link" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.type(await screen.findByLabelText("New password"), "a new passphrase");
+
+    vi.spyOn(auth, "resetPassword").mockRejectedValueOnce(new Error("Network unreachable"));
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    expect(await screen.findByText("Network unreachable")).toBeTruthy();
+    expect(passwordField().value).toBe("a new passphrase");
+  });
+
+  it("points to an administrator when reset links are turned off", async () => {
+    await resetSignIn(network, { passwordReset: false });
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+
+    expect(await screen.findByText(RESET_UNAVAILABLE)).toBeTruthy();
+    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(screen.getByRole("link", { name: "Go to sign in" })).toBeTruthy();
+  });
+
+  it("doesn't check the link when the inlined boot says reset is off", async () => {
+    const checks = vi.spyOn(auth, "passwordReset");
+    const boot: SignedOutBoot = await fetch("/api/v1/session/boot").then((reply) => reply.json());
+    const script = document.createElement("script");
+
+    script.id = "boot";
+    script.type = "application/json";
+    script.textContent = JSON.stringify({
+      ...boot,
+      signInMethods: { ...boot.signInMethods, passwordReset: false },
+    });
+    document.body.append(script);
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+
+    expect(await screen.findByText(RESET_UNAVAILABLE)).toBeTruthy();
+    expect(checks).not.toHaveBeenCalled();
   });
 });

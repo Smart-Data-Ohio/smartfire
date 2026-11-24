@@ -152,7 +152,7 @@ fn refused_link(reply: &Reply) {
     assert_eq!(reply.status, StatusCode::BAD_REQUEST, "{}", reply.text());
     assert_eq!(
         reply.json(),
-        json!({"kind":"error","fieldErrors":{"base":[INVALID_LINK]}})
+        json!({"kind":"error","fieldErrors":{"token":[INVALID_LINK]}})
     );
 }
 

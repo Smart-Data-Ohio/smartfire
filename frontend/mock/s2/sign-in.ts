@@ -10,9 +10,10 @@
  * rate limited. The sign-in link `mock-transfer-token` signs in, `mock-transfer-two-factor` goes
  * on to the challenge, and any other link is invalid.
  *
- * Password reset is offered while `passwordReset` is set. Requesting a link answers alike for any
- * address (one starting `limit` is rate limited); the link `mock-reset-token` works, any other is
- * invalid, and setting a password with it goes to sign in with a notice.
+ * Password reset is offered while `passwordReset` is set; otherwise its endpoints answer 404.
+ * Requesting a link answers alike for any address (one starting `limit` is rate limited); the link
+ * `mock-reset-token` works, any other is invalid, and setting a password with it goes to sign in
+ * with a notice.
  *
  * `alert` or `notice` leaves a flash for the next boot, which reads it once, as a server redirect's
  * flash is read by the page it lands on.
@@ -114,6 +115,9 @@ export interface SignInModule {
 const answer = (status: number, json: AuthResponse): MockResponse => ({ status, json });
 
 const resetState = (json: PasswordResetState): MockResponse => ({ status: 200, json });
+
+/** Every password reset endpoint's answer while reset isn't offered. */
+const RESET_UNAVAILABLE: MockResponse = { status: 404, json: { kind: "error", fieldErrors: {} } };
 
 const refusal = (status: number, field: string, message: string): MockResponse =>
   answer(status, { kind: "error", fieldErrors: { [field]: [message] } });
@@ -280,7 +284,7 @@ export function createSignIn(
       }),
       route("PUT", /^\/session\/transfers\/[^/]+$/, () => refusal(400, "base", INVALID_TRANSFER)),
       route("POST", /^\/password_resets$/, ({ body }) => {
-        if (!current().passwordReset) return answer(404, { kind: "error", fieldErrors: {} });
+        if (!current().passwordReset) return RESET_UNAVAILABLE;
 
         const email = (stringField(body, "emailAddress") ?? "").trim().toLowerCase();
 
@@ -289,10 +293,14 @@ export function createSignIn(
         return resetState({ kind: "requested" });
       }),
       route("GET", new RegExp(`^/password_resets/${MOCK_RESET_TOKEN}$`), () =>
-        resetState({ kind: "ready" }),
+        current().passwordReset ? resetState({ kind: "ready" }) : RESET_UNAVAILABLE,
       ),
-      route("GET", /^\/password_resets\/[^/]+$/, () => refusal(400, "base", INVALID_RESET)),
+      route("GET", /^\/password_resets\/[^/]+$/, () =>
+        current().passwordReset ? refusal(400, "token", INVALID_RESET) : RESET_UNAVAILABLE,
+      ),
       route("PUT", new RegExp(`^/password_resets/${MOCK_RESET_TOKEN}$`), ({ body }) => {
+        if (!current().passwordReset) return RESET_UNAVAILABLE;
+
         if ((stringField(body, "password") ?? "").trim() === "") {
           return refusal(422, "password", BLANK_NEW_PASSWORD);
         }
@@ -301,7 +309,9 @@ export function createSignIn(
 
         return answer(200, BACK_TO_SIGN_IN);
       }),
-      route("PUT", /^\/password_resets\/[^/]+$/, () => refusal(400, "base", INVALID_RESET)),
+      route("PUT", /^\/password_resets\/[^/]+$/, () =>
+        current().passwordReset ? refusal(400, "token", INVALID_RESET) : RESET_UNAVAILABLE,
+      ),
       route("GET", /^\/first_run$/, () => {
         const held = current();
 

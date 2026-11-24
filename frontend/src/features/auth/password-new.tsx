@@ -19,6 +19,10 @@ import { EMAIL_TRANSLATIONS } from "./translations.ts";
 
 const TITLE = "Reset your password";
 
+/** What the reset pages say when this workspace can't email reset links. */
+export const RESET_UNAVAILABLE =
+  "This workspace can't email password reset links. Ask a workspace administrator to reset your password.";
+
 /**
  * `/app/passwords/new`: "Forgot password?". Asks for the account's email address and says a link
  * is on its way, the same for every address, whether or not it has an account.
@@ -90,10 +94,7 @@ function RequestForm({
       <AuthScreen labelledBy={titleId} below={<AuthFooter boot={boot} />} flash={flash}>
         <AuthHeader titleId={titleId} title={TITLE} logoUrl={workspace.logoUrl} />
         <div className="auth-view-stack">
-          <p className="auth-view-lede">
-            This workspace can't email password reset links. Ask a workspace administrator to reset
-            your password.
-          </p>
+          <p className="auth-view-lede">{RESET_UNAVAILABLE}</p>
           {signIn}
         </div>
       </AuthScreen>

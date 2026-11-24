@@ -14,6 +14,7 @@ import {
   useInlineFlash,
   useRestoredFromCache,
 } from "./auth-parts.tsx";
+import { RESET_UNAVAILABLE } from "./password-new.tsx";
 
 const TITLE = "Reset your password";
 
@@ -21,7 +22,8 @@ type Landing =
   | { readonly status: "checking" }
   | { readonly status: "ready" }
   | { readonly status: "refused"; readonly message: string }
-  | { readonly status: "failed"; readonly message: string };
+  | { readonly status: "failed"; readonly message: string }
+  | { readonly status: "unavailable" };
 
 /** The route's page, started over for each link. */
 export function EditPasswordRoute() {
@@ -38,24 +40,48 @@ export function EditPasswordPage({ token }: { readonly token: string }) {
   const titleId = useId();
   const flash = useInlineFlash();
   const [logoUrl] = useState(() => inlineSignedOutBoot()?.workspace.logoUrl ?? null);
-  const [landing, setLanding] = useState<Landing>({ status: "checking" });
+
+  // The boot already says when reset is off; then there's no link to check.
+  const [unavailable] = useState(
+    () => inlineSignedOutBoot()?.signInMethods.passwordReset === false,
+  );
+
+  const [landing, setLanding] = useState<Landing>(
+    unavailable ? { status: "unavailable" } : { status: "checking" },
+  );
 
   useDocumentTitle(TITLE);
 
   const check = () => {
+    if (unavailable) return;
+
     setLanding({ status: "checking" });
     auth.passwordReset(token).then(
-      (next) =>
-        setLanding(
-          next.kind === "ready"
-            ? { status: "ready" }
-            : { status: "refused", message: refusal(next) },
-        ),
+      (next) => setLanding(next.kind === "ready" ? { status: "ready" } : checkRefusal(next)),
       (error: Error) => setLanding({ status: "failed", message: error.message }),
     );
   };
 
-  useEffect(check, [token]);
+  useEffect(check, [token, unavailable]);
+
+  if (landing.status === "unavailable") {
+    return (
+      <AuthScreen labelledBy={titleId} flash={flash}>
+        <AuthHeader titleId={titleId} title={TITLE} logoUrl={logoUrl} />
+        <div className="auth-view-stack">
+          <p className="auth-view-lede">{RESET_UNAVAILABLE}</p>
+          <Link
+            to="/session/new"
+            className="button auth-view-wide"
+            data-variant="secondary"
+            data-size="lg"
+          >
+            Go to sign in
+          </Link>
+        </div>
+      </AuthScreen>
+    );
+  }
 
   if (landing.status === "checking") {
     return (
@@ -70,14 +96,7 @@ export function EditPasswordPage({ token }: { readonly token: string }) {
   }
 
   if (landing.status === "ready") {
-    return (
-      <NewPasswordForm
-        token={token}
-        logoUrl={logoUrl}
-        flash={flash}
-        refused={(message) => setLanding({ status: "refused", message })}
-      />
-    );
+    return <NewPasswordForm token={token} logoUrl={logoUrl} flash={flash} land={setLanding} />;
   }
 
   return (
@@ -118,12 +137,13 @@ function NewPasswordForm({
   token,
   logoUrl,
   flash,
-  refused,
+  land,
 }: {
   readonly token: string;
   readonly logoUrl: string | null;
   readonly flash: ReturnType<typeof useInlineFlash>;
-  readonly refused: (message: string) => void;
+  /** Leaves the form for a dead link or reset turned off. */
+  readonly land: (landing: Landing) => void;
 }) {
   const titleId = useId();
   const follow = useFollowNext();
@@ -146,11 +166,15 @@ function NewPasswordForm({
     switch (next.kind) {
       case "error": {
         const problem = next.fieldErrors.password?.[0];
+        const elsewhere = linkGone(next.fieldErrors);
 
-        if (problem === undefined) {
-          refused(refusalMessage(next.fieldErrors, "base"));
-        } else {
+        if (problem !== undefined) {
           refuse(problem);
+        } else if (elsewhere === null) {
+          // A rate limit, say: the form and the typed password stay for another try.
+          refuse(refusalMessage(next.fieldErrors, "base"));
+        } else {
+          land(elsewhere);
         }
 
         return;
@@ -199,7 +223,6 @@ function NewPasswordForm({
           required
           autoFocus
           autoComplete="new-password"
-          maxLength={72}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           error={error}
@@ -220,7 +243,26 @@ function NewPasswordForm({
   );
 }
 
-/** Why the link can't be used: the server's reason, else a general one. */
-function refusal(next: PasswordResetNext): string {
-  return next.kind === "error" ? refusalMessage(next.fieldErrors, "base") : GENERIC_REFUSAL;
+/** Where a link check that didn't answer `ready` leaves the page. */
+function checkRefusal(next: PasswordResetNext): Landing {
+  if (next.kind !== "error") return { status: "refused", message: GENERIC_REFUSAL };
+
+  return (
+    linkGone(next.fieldErrors) ?? {
+      status: "failed",
+      message: refusalMessage(next.fieldErrors, "base"),
+    }
+  );
+}
+
+/**
+ * The page for a dead link (the server's `token` error) or reset turned off (its 404, with no
+ * field errors); `null` for a refusal worth trying again.
+ */
+function linkGone(fieldErrors: Readonly<Record<string, readonly string[]>>): Landing | null {
+  const dead = fieldErrors.token?.[0];
+
+  if (dead !== undefined) return { status: "refused", message: dead };
+
+  return Object.keys(fieldErrors).length === 0 ? { status: "unavailable" } : null;
 }

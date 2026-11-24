@@ -114,7 +114,8 @@ Successful responses use HTTP 200 and the discriminated `AuthResponse` union:
   returns an empty 400. Empty access-gate refusals have an empty field-error map.
 
 Password refusals keep HTTP 401, rate limits keep 429, invalid codes keep 422, and invalid
-transfer IDs and password reset tokens keep 400 (with a `base` error). A blank or over-72-byte
+transfer IDs keep 400 (with a `base` error). An invalid or expired password reset link is a 400
+`token` error, so the page can tell it from a retryable `base` error. A blank or over-72-byte
 new password is a 422 `password` error. Invalid JSON bodies use 422. CSRF rejection keeps the kit's 422.
 
 Return destinations come from `return_to_after_authenticating` in the cookie session and
