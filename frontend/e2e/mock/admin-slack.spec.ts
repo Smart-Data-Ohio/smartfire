@@ -157,6 +157,11 @@ test("the plan leaves channels nobody uses unchecked", async ({ page }) => {
 
   await page.getByRole("button", { name: "Select active" }).click();
   await expect(leads).not.toBeChecked();
+
+  // Coming back to the plan (for the full import after a test one) keeps what was checked.
+  await leads.check();
+  await page.reload();
+  await expect(leads).toBeChecked();
 });
 
 test("an import needs a checked conversation", async ({ page }) => {

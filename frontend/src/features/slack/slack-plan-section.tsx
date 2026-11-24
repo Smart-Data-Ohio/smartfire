@@ -17,11 +17,13 @@ import {
   CONFIRM,
   importBody,
   inactiveHint,
-  inactiveReason,
   judgedAt,
   keyed,
   partlyRead,
   planCoverage,
+  rowReason,
+  savedSelection,
+  saveSelection,
 } from "./slack-format.ts";
 import { useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
@@ -52,11 +54,7 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
   const reasons = useMemo(
     () =>
       new Map(
-        plan.conversations.map(({ conversation, target }) => [
-          conversation.id,
-          // A row the plan already skips (its mapped room is gone) wasn't read, so isn't quiet.
-          target === "skip" ? null : inactiveReason(conversation, since, coverage),
-        ]),
+        plan.conversations.map((row) => [row.conversation.id, rowReason(row, since, coverage)]),
       ),
     [plan, since, coverage],
   );
@@ -78,7 +76,11 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
       ),
     );
 
-  const [checked, setChecked] = useState<ReadonlySet<string>>(active);
+  const [checked, setChecked] = useState<ReadonlySet<string>>(
+    () => savedSelection(plan) ?? active(),
+  );
+
+  useEffect(() => saveSelection(plan.runId, checked), [plan.runId, checked]);
 
   const [targets, setTargets] = useState<Readonly<Record<string, string>>>(() =>
     Object.fromEntries(

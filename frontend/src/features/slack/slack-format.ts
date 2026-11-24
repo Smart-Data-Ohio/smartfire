@@ -4,6 +4,7 @@ import type { SlackConversation } from "../../gen/SlackConversation.ts";
 import type { SlackCounts } from "../../gen/SlackCounts.ts";
 import type { SlackPeople } from "../../gen/SlackPeople.ts";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
+import type { SlackPlanConversation } from "../../gen/SlackPlanConversation.ts";
 import type { SlackPreset } from "../../gen/SlackPreset.ts";
 import type { SlackRunMode } from "../../gen/SlackRunMode.ts";
 import type { SlackRunSummary } from "../../gen/SlackRunSummary.ts";
@@ -174,6 +175,45 @@ export function inactive(
   if (conversation.lastMessageAt === null) return false;
 
   return now - Date.parse(conversation.lastMessageAt) > YEAR_MS;
+}
+
+/**
+ * Why the plan leaves a row unchecked, or null when it doesn't. A row that starts as "Skip"
+ * stays out of the import either way, so it isn't judged.
+ */
+export function rowReason(
+  { conversation, target }: SlackPlanConversation,
+  now: number,
+  coverage: Coverage,
+): string | null {
+  return target === "skip" ? null : inactiveReason(conversation, now, coverage);
+}
+
+const SELECTION_PREFIX = "smartfire.slack-plan.";
+
+/** The rows an admin last checked on this plan in this tab, or null when there are none saved. */
+export function savedSelection(plan: SlackPlan): ReadonlySet<string> | null {
+  try {
+    const saved = sessionStorage.getItem(`${SELECTION_PREFIX}${plan.runId}`);
+
+    if (saved === null) return null;
+
+    const ids = new Set(plan.conversations.map(({ conversation }) => conversation.id));
+
+    // Slack conversation ids are one line each.
+    return new Set(saved.split("\n").filter((id) => ids.has(id)));
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps the checked rows, so coming back to the plan for the full import keeps the choices. */
+export function saveSelection(runId: number, checked: ReadonlySet<string>): void {
+  try {
+    sessionStorage.setItem(`${SELECTION_PREFIX}${runId}`, [...checked].join("\n"));
+  } catch {
+    // Without storage the plan starts from its defaults again.
+  }
 }
 
 /** Why the plan left a conversation unchecked, or null when it didn't. */

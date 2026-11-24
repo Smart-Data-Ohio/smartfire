@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { SlackConversation } from "../../gen/SlackConversation.ts";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
 import {
@@ -18,6 +18,9 @@ import {
   peopleLine,
   personalConnectionSentence,
   planCoverage,
+  rowReason,
+  savedSelection,
+  saveSelection,
 } from "./slack-format.ts";
 import { MAX_ISSUE_PAGES } from "./slack-pages.ts";
 
@@ -226,6 +229,29 @@ describe("planCoverage", () => {
 
   it("ignores a row that starts skipped, which was never scanned", () => {
     expect(planCoverage(plan(null, null, [{}, { dated: false, target: "skip" }]))).toBe("full");
+  });
+});
+
+describe("rowReason", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+  const quiet = { ...conversation("C1"), members: 0 };
+
+  it("doesn't judge a row that starts skipped", () => {
+    expect(rowReason({ conversation: quiet, target: "new" }, NOW, "full")).toBe("No members");
+    expect(rowReason({ conversation: quiet, target: "skip" }, NOW, "full")).toBeNull();
+  });
+});
+
+describe("savedSelection", () => {
+  afterEach(() => sessionStorage.clear());
+
+  it("brings back the rows last checked on this plan, and only rows it still has", () => {
+    expect(savedSelection(PLAN)).toBeNull();
+
+    saveSelection(PLAN.runId, new Set(["C2", "GONE"]));
+
+    expect(savedSelection(PLAN)).toEqual(new Set(["C2"]));
+    expect(savedSelection({ ...PLAN, runId: 8 })).toBeNull();
   });
 });
 
