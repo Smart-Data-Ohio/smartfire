@@ -700,3 +700,30 @@ async fn a_pending_second_step_from_the_old_password_ends_at_a_reset() {
     assert_eq!(reply.json()["kind"], "signedIn", "{}", reply.text());
     assert_eq!(count(&a, sessions, DAVID).await, 1);
 }
+
+/// Asking for a link and setting a password need the page's CSRF token, as the other signed-out
+/// JSON writes do: without it or with a wrong one, 422 and nothing happens.
+#[tokio::test]
+async fn requests_and_new_passwords_need_the_csrf_token() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    capture_mail_jobs(&a).await;
+    let token = emailed_token(&a, &david).await;
+    let before = reset_state(&a).await;
+    let mut b = a.anonymous();
+    b.get("/app/passwords/new").await;
+    for csrf in [None, Some("invalid")] {
+        for req in [request(&david, "198.51.100.9"), submit(&token, NEW_PASSWORD)] {
+            let path = req.path.clone();
+            let req = match csrf {
+                Some(value) => req.header(campfire_kit::csrf::HEADER, value),
+                None => req,
+            };
+            let reply = b.send(req).await;
+            assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY, "{path} {csrf:?}");
+        }
+    }
+    assert_eq!(captured_mail_jobs(&a).await, Vec::<Value>::new());
+    assert_eq!(reset_state(&a).await, before);
+    assert_eq!(b.send(check(&token)).await.status, StatusCode::OK);
+}
