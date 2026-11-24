@@ -90,11 +90,19 @@ fn apply(
             }
             p.state["convo"]["bounds"] =
                 json!({"oldest":oldest,"latest":time_bound(&p.run.options["latest"])?});
+            note_scanned_from(p);
+            // Everything the plan judges a channel by is recorded from here on. A run resumed
+            // past this step from an older version stays undated.
+            if p.dry_run() {
+                p.entry_mut()["dated"] = json!(true);
+            }
         }
         Operation::History(messages) => {
             let conversation = string(&p.state["convo"]["id"]);
             let bounds = writer::Bounds::from_value(&p.state["convo"]["bounds"]);
             let result = if p.dry_run() {
+                // Again on every page: a run resumed from saved bounds skips `Bounds`.
+                note_scanned_from(p);
                 let name = string(&p.entry_mut()["name"]);
                 writer::dry_history(
                     tx,
@@ -120,6 +128,10 @@ fn apply(
                 )?
             };
             p.add_counts(&result.counts);
+            // A run that counted messages before last-message dates were recorded can't know its
+            // newest one, so it keeps none rather than an older page's.
+            let tracks_latest =
+                integer(&p.entry_mut()["messages"]) == 0 || !p.entry_mut()["latest"].is_null();
             add(
                 &mut p.entry_mut()["messages"],
                 integer(&result.counts["messages"]),
@@ -130,6 +142,11 @@ fn apply(
                 result.parents.len() as i64
             };
             add(&mut p.entry_mut()["threads"], thread_count);
+            if let Some(ts) = result.latest.filter(|_| tracks_latest) {
+                let mut latest = present(&p.entry_mut()["latest"]);
+                writer::keep_newer(&mut latest, &ts);
+                p.entry_mut()["latest"] = json!(latest);
+            }
             p.stats["samples"]
                 .as_array_mut()
                 .expect("samples")
@@ -417,6 +434,14 @@ fn note_written(p: &mut Progress, id: &str) {
         .expect("written conversations");
     if !ids.contains(&json!(id)) {
         ids.push(json!(id));
+    }
+}
+/// Records a dry run's oldest bound for the conversation, so the plan can't call it quiet from
+/// messages the run didn't read. Import rows stay as Rails recorded them.
+fn note_scanned_from(p: &mut Progress) {
+    let oldest = p.state["convo"]["bounds"]["oldest"].clone();
+    if p.dry_run() && !oldest.is_null() {
+        p.entry_mut()["scanned_from"] = oldest;
     }
 }
 fn catchup_oldest(tx: &Tx<'_>, run: &SlackImport, conversation: &str) -> Result<Option<f64>> {

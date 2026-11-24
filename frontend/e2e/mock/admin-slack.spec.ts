@@ -138,6 +138,36 @@ test("a full import from the plan, then undoing it", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Undo import" })).toHaveCount(0);
 });
 
+test("the plan leaves channels nobody uses unchecked", async ({ page }) => {
+  await open(page, "admin/slack/runs/1/plan");
+
+  const leads = page.getByRole("checkbox", { name: "Import leads" });
+
+  await expect(page.getByRole("checkbox", { name: "Import general" })).toBeChecked();
+  // design last posted 380 days ago: over a year before today, but not before the dry run started.
+  await expect(page.getByRole("checkbox", { name: "Import design" })).toBeChecked();
+  await expect(leads).not.toBeChecked();
+  await expect(page.getByText("1 channel starts unchecked")).toBeVisible();
+  await expect(page.getByRole("row", { name: /leads/ })).toContainText(
+    "No messages in the past year",
+  );
+
+  await page.getByRole("button", { name: "Select all" }).click();
+  await expect(leads).toBeChecked();
+
+  await page.getByRole("button", { name: "Select active" }).click();
+  await expect(leads).not.toBeChecked();
+
+  // Coming back to the plan (for the full import after a test one) keeps what was checked.
+  const target = page.getByRole("combobox", { name: "Target for leads" });
+
+  await leads.check();
+  await target.selectOption("skip");
+  await page.reload();
+  await expect(leads).toBeChecked();
+  await expect(target).toHaveValue("skip");
+});
+
 test("an import needs a checked conversation", async ({ page }) => {
   await open(page, "admin/slack/runs/1/plan");
 

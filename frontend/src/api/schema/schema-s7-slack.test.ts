@@ -50,6 +50,9 @@ const conversation = {
   members: 9,
   messages: 120,
   threads: 7,
+  lastMessageAt: "2026-09-30T14:00:00.000Z",
+  scannedFrom: null,
+  dated: true,
 };
 
 const row = {
@@ -121,6 +124,9 @@ describe("S7 Slack schemas", () => {
       rooms: [{ id: 4, name: "General" }],
       samples: [{ conversation: "general", slackText: "*hi*", html: "<p><strong>hi</strong></p>" }],
       defaultOldest: "2026-09-22",
+      scannedFrom: "2025-01-01T00:00:00.000Z",
+      scannedUntil: null,
+      startedAt: "2026-09-30T15:00:00.000Z",
     });
     roundTrips(StartSlackDryRun, { includePrivate: true, oldest: "2026-01-01", latest: null });
     roundTrips(StartSlackImport, {

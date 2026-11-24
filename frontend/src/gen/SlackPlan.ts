@@ -15,4 +15,13 @@ rooms: Array<SlackRoomTarget>, samples: Array<SlackSample>,
 /**
  * A test import's default oldest day (`YYYY-MM-DD`, two weeks back).
  */
-defaultOldest: string, };
+defaultOldest: string,
+/**
+ * The dry run's date bounds, when it had them: it counted only messages between them.
+ */
+scannedFrom: string | null, scannedUntil: string | null,
+/**
+ * When the dry run started: the plan measures "the past year" back from it, since the run
+ * may have read a channel any time after.
+ */
+startedAt: string | null, };

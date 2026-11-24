@@ -417,3 +417,40 @@ fn slack_writer_bounds_match_actual_rails_rational_float_comparisons() {
         );
     }
 }
+
+#[tokio::test]
+async fn slack_dry_history_keeps_the_newest_counted_message_or_reply() {
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let run = run(&db, id).await;
+    let messages = vec![
+        json!({"ts":"1700000300.000000","subtype":"channel_join","text":"<@U1> has joined the channel"}),
+        json!({"ts":"1700000200.000000","text":"Thread","reply_count":2,"latest_reply":"1700000250.000000"}),
+        json!({"ts":"1700000100.000000","text":"Hello"}),
+    ];
+    let (unbounded, bounded) = db
+        .write(move |tx| {
+            let unbounded = dry_history(tx, &run, "general", &messages, Bounds::default(), 0)?;
+            let before_reply = Bounds {
+                oldest: None,
+                latest: Some(1_700_000_220.0),
+            };
+            let bounded = dry_history(tx, &run, "general", &messages, before_reply, 0)?;
+            Ok((unbounded.latest, bounded.latest))
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        unbounded.as_deref(),
+        Some("1700000250.000000"),
+        "a thread reply is newer than every counted message; the join is not counted"
+    );
+    assert_eq!(
+        bounded.as_deref(),
+        Some("1700000200.000000"),
+        "a reply after the latest bound is not counted"
+    );
+    let mut newest = Some("1700000400.000000".to_owned());
+    keep_newer(&mut newest, "1700000250.000000");
+    assert_eq!(newest.as_deref(), Some("1700000400.000000"));
+}

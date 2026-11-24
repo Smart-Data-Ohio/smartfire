@@ -11,4 +11,18 @@ id: string, name: string,
 /**
  * "Public channel", "Private channel", "Direct message", "Group DM".
  */
-kind: string, archived: boolean, members: number, messages: number, threads: number, };
+kind: string, archived: boolean, members: number, messages: number, threads: number,
+/**
+ * The newest message or thread reply the dry run counted, or none.
+ */
+lastMessageAt: string | null,
+/**
+ * The oldest time the dry run read this conversation from: the run's oldest bound, or a
+ * catch-up's start after an earlier import. None when it read the whole history.
+ */
+scannedFrom: string | null,
+/**
+ * Whether the dry run recorded this conversation's last-message date and scan start from
+ * the start of its scan. False for a run from before they were recorded.
+ */
+dated: boolean, };

@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
 import type { SlackPreset } from "../../gen/SlackPreset.ts";
+import { formatFull, formatListTime } from "../../lib/time.ts";
 import { slack } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
@@ -12,7 +13,20 @@ import { AdministratorsOnly, adminFailure, Confirm, useAdmin } from "../admin/ad
 import { BodyHtml } from "../messages/body-html.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
-import { CONFIRM, importBody, keyed } from "./slack-format.ts";
+import {
+  CONFIRM,
+  importBody,
+  inactiveHint,
+  judgedAt,
+  keyed,
+  partlyRead,
+  planCoverage,
+  planFor,
+  rowReason,
+  saveChoices,
+  savedChoices,
+} from "./slack-format.ts";
+import { newestOnly } from "./slack-poll.ts";
 import { useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
 import "./slack.css";
@@ -34,14 +48,47 @@ interface Ask {
 function PlanForm({ plan }: { readonly plan: SlackPlan }) {
   const navigate = useNavigate();
   const id = useId();
-  const everything = () => new Set(plan.conversations.map(({ conversation }) => conversation.id));
-  const [checked, setChecked] = useState<ReadonlySet<string>>(everything);
+  const [now] = useState(Date.now);
 
-  const [targets, setTargets] = useState<Readonly<Record<string, string>>>(() =>
-    Object.fromEntries(
+  const coverage = planCoverage(plan);
+  const since = judgedAt(plan, now);
+
+  const reasons = useMemo(
+    () =>
+      new Map(
+        plan.conversations.map((row) => [row.conversation.id, rowReason(row, since, coverage)]),
+      ),
+    [plan, since, coverage],
+  );
+
+  const inactiveCount = [...reasons.values()].filter((reason) => reason !== null).length;
+
+  const hint = inactiveHint(
+    inactiveCount,
+    coverage,
+    plan.conversations.some(({ conversation }) => partlyRead(conversation)),
+  );
+
+  const everything = () => new Set(plan.conversations.map(({ conversation }) => conversation.id));
+
+  const active = () =>
+    new Set(
+      plan.conversations.flatMap(({ conversation }) =>
+        reasons.get(conversation.id) === null ? [conversation.id] : [],
+      ),
+    );
+
+  const [saved] = useState(() => savedChoices(plan));
+  const [checked, setChecked] = useState<ReadonlySet<string>>(() => saved?.checked ?? active());
+
+  const [targets, setTargets] = useState<Readonly<Record<string, string>>>(() => ({
+    ...Object.fromEntries(
       plan.conversations.map(({ conversation, target }) => [conversation.id, target]),
     ),
-  );
+    ...saved?.targets,
+  }));
+
+  useEffect(() => saveChoices(plan.runId, { checked, targets }), [plan.runId, checked, targets]);
 
   const [oldest, setOldest] = useState(plan.defaultOldest);
   const [latest, setLatest] = useState("");
@@ -91,10 +138,16 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
           <Button size="sm" onClick={() => setChecked(everything())}>
             Select all
           </Button>
+          {inactiveCount > 0 && inactiveCount < plan.conversations.length ? (
+            <Button size="sm" onClick={() => setChecked(active())}>
+              Select active
+            </Button>
+          ) : null}
           <Button size="sm" onClick={() => setChecked(new Set())}>
             Select none
           </Button>
         </div>
+        {hint === null ? null : <p className="settings-hint text-faint">{hint}</p>}
         <section className="admin-audit-wrap" aria-label="Conversations to import">
           <table className="admin-audit-table">
             <thead>
@@ -108,6 +161,7 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
                 <th scope="col">Members</th>
                 <th scope="col">Messages</th>
                 <th scope="col">Threads</th>
+                <th scope="col">Last message</th>
               </tr>
             </thead>
             <tbody>
@@ -152,6 +206,21 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
                   <td>{conversation.members}</td>
                   <td>{conversation.messages}</td>
                   <td>{conversation.threads}</td>
+                  <td>
+                    {conversation.lastMessageAt === null ? (
+                      "—"
+                    ) : (
+                      <time
+                        dateTime={conversation.lastMessageAt}
+                        title={formatFull(conversation.lastMessageAt)}
+                      >
+                        {formatListTime(conversation.lastMessageAt, now)}
+                      </time>
+                    )}
+                    {reasons.get(conversation.id) ? (
+                      <span className="text-faint"> · {reasons.get(conversation.id)}</span>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -241,33 +310,56 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
 }
 
 /**
+ * Reads a run's plan, and again on `reload`. Only the newest read's answer counts: after a
+ * switch to another plan, the earlier plan's late answer must not replace the current one.
+ */
+export function usePlanLoad(
+  runId: number,
+  enabled: boolean,
+  read: (runId: number) => Promise<SlackPlan> = slack.plan,
+) {
+  const [load, setLoad] = useState<Load>({ status: "loading" });
+  const [tickets] = useState(newestOnly);
+
+  const fetchPlan = useCallback(() => {
+    const newest = tickets.take();
+
+    read(runId).then(
+      (plan) => {
+        if (newest()) setLoad({ status: "ready", plan });
+      },
+      (error: Error) => {
+        if (newest()) setLoad({ status: "error", message: error.message });
+      },
+    );
+  }, [read, runId, tickets]);
+
+  useEffect(() => {
+    if (enabled) fetchPlan();
+  }, [enabled, fetchPlan]);
+
+  const reload = () => {
+    setLoad({ status: "loading" });
+    fetchPlan();
+  };
+
+  return { load, reload };
+}
+
+/**
  * Import plan: a completed dry run's conversations to check, each one's target (a new room, a
  * room to merge into, or skip), the converted samples, and the test or full import.
  */
 export function SlackPlanSection() {
   const { workspace } = useAdmin();
   const runId = useRunId();
-  const [load, setLoad] = useState<Load>({ status: "loading" });
-
-  const fetchPlan = useCallback(() => {
-    slack.plan(runId).then(
-      (plan) => setLoad({ status: "ready", plan }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
-    );
-  }, [runId]);
-
-  useEffect(() => {
-    if (workspace.canAdminister) fetchPlan();
-  }, [fetchPlan, workspace.canAdminister]);
+  const { load, reload } = usePlanLoad(runId, workspace.canAdminister);
 
   if (!workspace.canAdminister) {
     return <AdministratorsOnly />;
   }
 
-  const reload = () => {
-    setLoad({ status: "loading" });
-    fetchPlan();
-  };
+  const plan = planFor(load.status === "ready" ? load.plan : null, runId);
 
   return (
     <SettingsPage
@@ -282,9 +374,11 @@ export function SlackPlanSection() {
         <Icon name="chevron-left" size={14} />
         Back to the dry run
       </Link>
-      {load.status === "loading" ? <PaneListSkeleton rows={4} /> : null}
+      {load.status === "loading" || (load.status === "ready" && plan === null) ? (
+        <PaneListSkeleton rows={4} />
+      ) : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
-      {load.status === "ready" ? <PlanForm key={runId} plan={load.plan} /> : null}
+      {plan === null ? null : <PlanForm key={plan.runId} plan={plan} />}
     </SettingsPage>
   );
 }

@@ -1,8 +1,10 @@
 /** The Slack import screens' words and the small rules behind them, as the classic pages have them. */
 import type { SlackConnectionState } from "../../gen/SlackConnectionState.ts";
+import type { SlackConversation } from "../../gen/SlackConversation.ts";
 import type { SlackCounts } from "../../gen/SlackCounts.ts";
 import type { SlackPeople } from "../../gen/SlackPeople.ts";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
+import type { SlackPlanConversation } from "../../gen/SlackPlanConversation.ts";
 import type { SlackPreset } from "../../gen/SlackPreset.ts";
 import type { SlackRunMode } from "../../gen/SlackRunMode.ts";
 import type { SlackRunSummary } from "../../gen/SlackRunSummary.ts";
@@ -117,6 +119,191 @@ export function optional(value: string): string | null {
   const trimmed = value.trim();
 
   return trimmed === "" ? null : trimmed;
+}
+
+const YEAR_MS = 365 * 86_400_000;
+
+/**
+ * What a dry run's counts say about the past year. `"full"`: it read every message.
+ * `"bounded"`: it had date bounds, so a zero or old count says nothing about recent use (an
+ * oldest bound also hides new replies to older threads). `"undated"`: some channel was scanned
+ * before last-message dates and catch-up starts were recorded (even one that counted nothing
+ * may have read only a catch-up window), so only the member count is trusted.
+ */
+export type Coverage = "full" | "bounded" | "undated";
+
+export function planCoverage(plan: SlackPlan): Coverage {
+  if (plan.scannedFrom !== null || plan.scannedUntil !== null) return "bounded";
+
+  // A row that starts skipped was never scanned, so has no dates.
+  const undated = plan.conversations.some(
+    ({ conversation, target }) => target !== "skip" && !conversation.dated,
+  );
+
+  return undated ? "undated" : "full";
+}
+
+/**
+ * The time a plan measures "the past year" back from: when its dry run started, before it read
+ * any channel, so a channel that posted after the run read it isn't called quiet.
+ */
+export function judgedAt(plan: SlackPlan, now: number): number {
+  return plan.startedAt === null ? now : Math.min(now, Date.parse(plan.startedAt));
+}
+
+/** A conversation the dry run read only part of: an earlier import's catch-up start. */
+export function partlyRead(conversation: SlackConversation): boolean {
+  return conversation.scannedFrom !== null;
+}
+
+/**
+ * A conversation nobody uses: no members, or (when the dry run read its whole history) no
+ * messages in the past year. The plan leaves it unchecked. A conversation with messages but no
+ * last-message date counts as active.
+ */
+export function inactive(
+  conversation: SlackConversation,
+  now: number,
+  coverage: Coverage,
+): boolean {
+  if (conversation.members === 0) return true;
+
+  if (coverage !== "full" || partlyRead(conversation)) return false;
+
+  if (conversation.messages === 0) return true;
+
+  if (conversation.lastMessageAt === null) return false;
+
+  return now - Date.parse(conversation.lastMessageAt) > YEAR_MS;
+}
+
+/**
+ * Why the plan leaves a row unchecked, or null when it doesn't. A row that starts as "Skip"
+ * stays out of the import either way, so it isn't judged.
+ */
+export function rowReason(
+  { conversation, target }: SlackPlanConversation,
+  now: number,
+  coverage: Coverage,
+): string | null {
+  return target === "skip" ? null : inactiveReason(conversation, now, coverage);
+}
+
+const CHOICES_PREFIX = "smartfire.slack-plan.";
+
+/** An admin's checked rows and targets on one plan. */
+export interface PlanChoices {
+  readonly checked: ReadonlySet<string>;
+  readonly targets: Readonly<Record<string, string>>;
+}
+
+/**
+ * The checked rows and targets an admin last chose on this plan in this tab, or null when none
+ * are saved. Rows and rooms the plan no longer has are dropped.
+ */
+export function savedChoices(plan: SlackPlan): PlanChoices | null {
+  try {
+    const saved = sessionStorage.getItem(`${CHOICES_PREFIX}${plan.runId}`);
+
+    if (saved === null) return null;
+
+    const ids = new Set(plan.conversations.map(({ conversation }) => conversation.id));
+    const targets = new Set(["new", "skip", ...plan.rooms.map((room) => `${room.id}`)]);
+
+    const rows = saved
+      .split("\n")
+      .map((line) => line.split("\t"))
+      .filter(([id = "", target = ""]) => ids.has(id) && targets.has(target));
+
+    return {
+      checked: new Set(rows.flatMap(([id = "", , on]) => (on === "1" ? [id] : []))),
+      targets: Object.fromEntries(rows.map(([id = "", target = ""]) => [id, target])),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The loaded plan if it is the one the page is for. Right after a switch to another plan the last
+ * one is still loaded; showing it would save its choices as the new plan's.
+ */
+export function planFor(loaded: SlackPlan | null, runId: number): SlackPlan | null {
+  return loaded?.runId === runId ? loaded : null;
+}
+
+/**
+ * Keeps the checked rows and targets, one `id<TAB>target<TAB>1|0` line per row, so coming back
+ * to the plan for the full import keeps the choices.
+ */
+export function saveChoices(runId: number, { checked, targets }: PlanChoices): void {
+  const lines = Object.entries(targets).map(
+    ([id, target]) => `${id}\t${target}\t${checked.has(id) ? "1" : "0"}`,
+  );
+
+  try {
+    sessionStorage.setItem(`${CHOICES_PREFIX}${runId}`, lines.join("\n"));
+  } catch {
+    // Without storage the plan starts from its defaults again.
+  }
+}
+
+/** Why the plan left a conversation unchecked, or null when it didn't. */
+export function inactiveReason(
+  conversation: SlackConversation,
+  now: number,
+  coverage: Coverage,
+): string | null {
+  if (!inactive(conversation, now, coverage)) return null;
+
+  if (conversation.members === 0) return "No members";
+
+  if (conversation.messages === 0) return "No messages";
+
+  return "No messages in the past year";
+}
+
+/**
+ * The plan's lines about the channels it left unchecked, or null when there is nothing to say.
+ * `partly` is whether an earlier import left some channels read only from its catch-up start.
+ */
+export function inactiveHint(count: number, coverage: Coverage, partly: boolean): string | null {
+  const channels = count === 1 ? "1 channel" : `${count} channels`;
+  const start = count === 1 ? "starts" : "start";
+  const anyway = "Check one to import it anyway.";
+
+  const imported = partly
+    ? "Channels an earlier import brought in aren't unchecked for going quiet: this dry run read only their newer messages."
+    : null;
+
+  const lines = (...parts: readonly (string | null)[]) => {
+    const text = parts.filter((part) => part !== null).join(" ");
+
+    return text === "" ? null : text;
+  };
+
+  switch (coverage) {
+    case "full":
+      return lines(
+        count === 0
+          ? null
+          : `${channels} ${start} unchecked: no members, or no messages in the past year. ${anyway}`,
+        imported,
+      );
+
+    case "bounded":
+      return lines(
+        count === 0 ? null : `${channels} with no members ${start} unchecked.`,
+        "This dry run was limited to a date range, so it can't tell which channels went quiet.",
+        count === 0 ? null : anyway,
+      );
+
+    case "undated":
+      return lines(
+        count === 0 ? null : `${channels} with no members ${start} unchecked. ${anyway}`,
+        "This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.",
+      );
+  }
 }
 
 /** The plan form as the classic form posts it: the checked conversations in plan order, every row's target. */

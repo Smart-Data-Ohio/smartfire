@@ -13,6 +13,7 @@ use axum::Router;
 use axum::routing::{get, post};
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
+use campfire_app::integrations::slack::writer::slack_time;
 use campfire_controllers::controllers::slack::{
     self as classic,
     runs::{self, DryRunForm, ImportForm, PersonalForm, Started},
@@ -197,6 +198,14 @@ fn presence(value: &Value) -> Option<String> {
     present(value).then(|| text(value))
 }
 
+/// A run's stored date bound (`options.rs` keeps it as ISO 8601) on the wire.
+fn scan_bound(value: &Value) -> Option<String> {
+    presence(value)?
+        .parse::<jiff::Timestamp>()
+        .ok()
+        .map(|bound| time(Timestamp::from_jiff(bound)))
+}
+
 /// A run's stored time (`RunData` holds it as the database writes it) on the wire.
 fn stamp(text: &str) -> Result<String> {
     Timestamp::parse_db(text)
@@ -288,6 +297,13 @@ fn conversation(value: &Value) -> api::SlackConversation {
         members: count(&value["members"]),
         messages: count(&value["messages"]),
         threads: count(&value["threads"]),
+        scanned_from: value["scanned_from"]
+            .as_f64()
+            .map(|seconds| time(Timestamp::from_microsecond((seconds * 1e6).round() as i64))),
+        last_message_at: presence(&value["latest"])
+            .and_then(|ts| slack_time(&ts).ok())
+            .map(time),
+        dated: value["dated"] == true,
     }
 }
 
@@ -589,6 +605,9 @@ async fn show_plan(c: &mut Ctx) -> Result {
             })
             .collect(),
         default_oldest: oldest,
+        scanned_from: scan_bound(&data.options["oldest"]),
+        scanned_until: scan_bound(&data.options["latest"]),
+        started_at: data.started_at.as_deref().map(stamp).transpose()?,
     };
     c.json(StatusCode::OK, &plan)
 }

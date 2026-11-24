@@ -16,7 +16,7 @@ use campfire_db::models::slack_import::SlackImport;
 use rusqlite::params;
 use serde_json::Value;
 use serde_json::json;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 #[tokio::test]
@@ -262,6 +262,18 @@ async fn slack_sql_store_dry_run_collects_samples_without_domain_rows_or_reply_f
     let row = import(&db, crypto, id, network).await;
     assert!(array(&row.stats["samples"]).len() <= 20);
     assert!(!array(&row.stats["samples"]).is_empty());
+    let latest = |id: &str| {
+        array(&row.stats["conversations"])
+            .iter()
+            .find(|c| c["id"] == id)
+            .map(|c| c["latest"].clone())
+    };
+    assert_eq!(latest("CCHAN"), Some(json!("1700000011.000011")));
+    assert_eq!(latest("CARCH"), Some(json!("1700000020.000020")));
+    let dated = array(&row.stats["conversations"])
+        .iter()
+        .all(|c| c["dated"] == true);
+    assert!(dated, "a dry run marks every channel it scans as dated");
     assert!(
         !server
             .received()
@@ -474,8 +486,31 @@ async fn slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward
     .unwrap();
     let catchup = selected_run(&db, json!({"conversation_ids":["CCHAN"]})).await;
     let (_server, network) = fake(window_routes(Some("1717200000.000001"), None)).await;
-    let third = import(&db, crypto, catchup, network).await;
+    let third = import(&db, crypto.clone(), catchup, network).await;
     assert_eq!(third.stats["counts"]["messages"], 0);
+    let scanned_from = |row: &SlackImport| {
+        array(&row.stats["conversations"])
+            .iter()
+            .find(|c| c["id"] == "CCHAN")
+            .map(|c| c["scanned_from"].as_f64())
+    };
+    assert_eq!(
+        scanned_from(&first),
+        Some(None),
+        "imports keep their recorded rows"
+    );
+    // A dry run after the full import reads only from the catch-up start, and says so.
+    let dry = selected_run(&db, json!({"conversation_ids":["CCHAN"]})).await;
+    db.write(move |tx| {
+        tx.conn()
+            .execute("UPDATE slack_imports SET mode='dry_run' WHERE id=?", [dry])?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let (_server, network) = fake(window_routes(Some("1717200000.000001"), None)).await;
+    let checked = import(&db, crypto, dry, network).await;
+    assert_eq!(scanned_from(&checked), Some(Some(1717200000.000001)));
 }
 #[tokio::test]
 async fn slack_catchup_coverage_is_invalidated_by_undoing_an_earlier_bounded_run() {
@@ -588,4 +623,66 @@ async fn slack_finishing_per_conversation_seeks_identity_index_and_renews_heartb
         let mut explain=tx.conn().prepare("EXPLAIN QUERY PLAN SELECT record_id FROM slack_import_records WHERE slack_workspace_id=1 AND slack_kind='message' AND slack_key>='C1:' AND slack_key<'C1;'")?;
         let details=explain.query_map([],|row|row.get::<_,String>(3))?.collect::<rusqlite::Result<Vec<_>>>()?.join(" ");assert!(details.contains("USING INDEX index_slack_import_records_on_slack_identity"),"{details}");assert!(details.contains("slack_key"));Ok(())
     }).await.unwrap();
+}
+#[tokio::test]
+async fn slack_dry_run_resumed_across_the_upgrade_records_only_what_it_can_know() {
+    let (db, _, _dir) = setup().await;
+    let id = start(&db).await;
+    let lease = db
+        .write(move |tx| {
+            tx.conn()
+                .execute("UPDATE slack_imports SET mode='dry_run' WHERE id=?", [id])?;
+            SlackImport::claim_running(tx, id)?;
+            Ok(SlackImport::acquire_step_lease(
+                tx,
+                id,
+                campfire_db::models::slack_import::StepStatus::Running,
+            )?
+            .unwrap())
+        })
+        .await
+        .unwrap();
+    let store = SqlStore {
+        db: db.clone(),
+        lease: Some(lease),
+        allowed_domains: HashSet::new(),
+    };
+    let mut p = Progress::new(run(&db, id).await);
+    // CRESUMED counted messages before this version recorded dates; CFRESH starts now.
+    p.stats["conversations"] = json!([
+        {"id":"CRESUMED","name":"resumed","messages":5,"threads":0},
+        {"id":"CFRESH","name":"fresh","messages":0,"threads":0},
+    ]);
+    let page = json!([{"ts":"1600000000.000100","text":"An older page"}]);
+    let mut latest = HashMap::new();
+    for conversation in ["CRESUMED", "CFRESH"] {
+        p.state["convo"] =
+            json!({"id":conversation,"bounds":{"oldest":null,"latest":null},"thread_queue":[]});
+        p = store
+            .commit(p, Operation::History(page.clone()))
+            .await
+            .unwrap()
+            .unwrap();
+        latest.insert(conversation, p.entry_mut()["latest"].clone());
+    }
+    assert_eq!(latest["CRESUMED"], Value::Null);
+    assert_eq!(latest["CFRESH"], json!("1600000000.000100"));
+    // A run resumed from saved bounds skips `Bounds`, so the page records the catch-up start.
+    p.stats["conversations"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"CCAUGHT","name":"caught","messages":0,"threads":0}));
+    p.state["convo"] =
+        json!({"id":"CCAUGHT","bounds":{"oldest":1599000000.0,"latest":null},"thread_queue":[]});
+    p = store
+        .commit(p, Operation::History(page))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(p.entry_mut()["scanned_from"], json!(1599000000.0));
+    assert_eq!(
+        p.entry_mut()["dated"],
+        Value::Null,
+        "a run resumed past `Bounds` from an older version stays undated"
+    );
 }

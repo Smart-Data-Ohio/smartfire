@@ -1,16 +1,27 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import type { SlackConversation } from "../../gen/SlackConversation.ts";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
 import {
   activeRunSentence,
   adminConnectionSentence,
   countLines,
   importBody,
+  inactive,
+  inactiveHint,
+  inactiveReason,
+  judgedAt,
   keyed,
   modeLabel,
   optional,
   parseRunSearch,
+  partlyRead,
   peopleLine,
   personalConnectionSentence,
+  planCoverage,
+  planFor,
+  rowReason,
+  saveChoices,
+  savedChoices,
 } from "./slack-format.ts";
 import { MAX_ISSUE_PAGES } from "./slack-pages.ts";
 
@@ -22,6 +33,9 @@ const conversation = (id: string) => ({
   members: 1,
   messages: 1,
   threads: 0,
+  lastMessageAt: null,
+  scannedFrom: null,
+  dated: true,
 });
 
 const PLAN: SlackPlan = {
@@ -34,6 +48,9 @@ const PLAN: SlackPlan = {
   rooms: [{ id: 4, name: "General" }],
   samples: [],
   defaultOldest: "2026-09-22",
+  scannedFrom: null,
+  scannedUntil: null,
+  startedAt: null,
 };
 
 describe("the Slack import words", () => {
@@ -119,5 +136,193 @@ describe("a run page's query", () => {
     expect(parseRunSearch({ page: "x" })).toEqual({ page: undefined });
     expect(parseRunSearch({})).toEqual({ page: undefined });
     expect(parseRunSearch({ page: "1000000" })).toEqual({ page: MAX_ISSUE_PAGES });
+  });
+});
+
+describe("inactive", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+
+  const channel = (changes: Partial<SlackConversation>): SlackConversation => ({
+    ...conversation("C9"),
+    members: 4,
+    messages: 30,
+    lastMessageAt: "2026-06-01T09:00:00.000Z",
+    ...changes,
+  });
+
+  it("keeps a channel with members and a message in the past year", () => {
+    expect(inactive(channel({}), NOW, "full")).toBe(false);
+    expect(inactiveReason(channel({}), NOW, "full")).toBeNull();
+  });
+
+  it("leaves out a channel with no members or no messages", () => {
+    expect(inactiveReason(channel({ members: 0 }), NOW, "full")).toBe("No members");
+    expect(inactiveReason(channel({ messages: 0, lastMessageAt: null }), NOW, "full")).toBe(
+      "No messages",
+    );
+  });
+
+  it("leaves out a channel whose last message is over a year old", () => {
+    expect(
+      inactiveReason(channel({ lastMessageAt: "2025-11-20T09:00:00.000Z" }), NOW, "full"),
+    ).toBe("No messages in the past year");
+    expect(inactive(channel({ lastMessageAt: "2025-11-30T09:00:00.000Z" }), NOW, "full")).toBe(
+      false,
+    );
+  });
+
+  it("trusts only the member count when some messages were counted without dates", () => {
+    expect(inactive(channel({ lastMessageAt: null }), NOW, "undated")).toBe(false);
+    expect(inactive(channel({ messages: 0, lastMessageAt: null }), NOW, "undated")).toBe(false);
+    expect(inactive(channel({ lastMessageAt: "2024-01-01T00:00:00.000Z" }), NOW, "undated")).toBe(
+      false,
+    );
+    expect(inactiveReason(channel({ members: 0 }), NOW, "undated")).toBe("No members");
+  });
+
+  it("trusts only the member count when the dry run skipped part of the year", () => {
+    expect(inactive(channel({ messages: 0, lastMessageAt: null }), NOW, "bounded")).toBe(false);
+    expect(inactive(channel({ lastMessageAt: "2024-01-01T00:00:00.000Z" }), NOW, "bounded")).toBe(
+      false,
+    );
+    expect(inactiveReason(channel({ members: 0 }), NOW, "bounded")).toBe("No members");
+  });
+});
+
+const NOW_PLAN = Date.parse("2026-11-24T12:00:00Z");
+
+describe("planCoverage", () => {
+  const plan = (
+    scannedFrom: string | null,
+    scannedUntil: string | null,
+    rows: readonly Partial<SlackConversation & { target: string }>[] = [{}],
+  ): SlackPlan => ({
+    ...PLAN,
+    scannedFrom,
+    scannedUntil,
+    conversations: rows.map(({ target = "new", ...changes }, index) => ({
+      conversation: { ...conversation(`C${index}`), ...changes },
+      target,
+    })),
+  });
+
+  it("is full with no bounds", () => {
+    expect(planCoverage(plan(null, null))).toBe("full");
+  });
+
+  it("is bounded by any oldest or latest bound", () => {
+    expect(planCoverage(plan("2025-01-01T00:00:00.000Z", null))).toBe("bounded");
+    expect(planCoverage(plan(null, "2025-05-01T00:00:00.000Z"))).toBe("bounded");
+  });
+
+  it("is undated when any channel was scanned before dates were recorded", () => {
+    // An older catch-up dry run that counted nothing still read only part of the channel.
+    const legacy = { dated: false, messages: 0, lastMessageAt: null };
+    const empty = { messages: 0, lastMessageAt: null };
+
+    expect(planCoverage(plan(null, null, [legacy]))).toBe("undated");
+    expect(planCoverage(plan(null, null, [empty, legacy]))).toBe("undated");
+    expect(inactive(conversation("C1"), NOW_PLAN, planCoverage(plan(null, null, [legacy])))).toBe(
+      false,
+    );
+    expect(planCoverage(plan(null, null, [empty]))).toBe("full");
+  });
+
+  it("ignores a row that starts skipped, which was never scanned", () => {
+    expect(planCoverage(plan(null, null, [{}, { dated: false, target: "skip" }]))).toBe("full");
+  });
+});
+
+describe("rowReason", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+  const quiet = { ...conversation("C1"), members: 0 };
+
+  it("doesn't judge a row that starts skipped", () => {
+    expect(rowReason({ conversation: quiet, target: "new" }, NOW, "full")).toBe("No members");
+    expect(rowReason({ conversation: quiet, target: "skip" }, NOW, "full")).toBeNull();
+  });
+});
+
+describe("savedChoices", () => {
+  afterEach(() => sessionStorage.clear());
+
+  it("brings back this plan's checked rows and targets, dropping what it no longer has", () => {
+    expect(savedChoices(PLAN)).toBeNull();
+
+    saveChoices(PLAN.runId, {
+      checked: new Set(["C2", "GONE"]),
+      targets: { C1: "4", C2: "skip", C3: "99", GONE: "new" },
+    });
+
+    expect(savedChoices(PLAN)).toEqual({
+      checked: new Set(["C2"]),
+      targets: { C1: "4", C2: "skip" },
+    });
+    expect(savedChoices({ ...PLAN, runId: 8 })).toBeNull();
+  });
+});
+
+describe("planFor", () => {
+  it("shows a loaded plan only on its own page", () => {
+    expect(planFor(PLAN, PLAN.runId)).toBe(PLAN);
+    expect(planFor(PLAN, PLAN.runId + 1)).toBeNull();
+    expect(planFor(null, PLAN.runId)).toBeNull();
+  });
+});
+
+describe("judgedAt", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+
+  it("measures the past year from when the dry run started", () => {
+    expect(judgedAt({ ...PLAN, startedAt: null }, NOW)).toBe(NOW);
+    expect(judgedAt({ ...PLAN, startedAt: "2026-08-01T00:00:00.000Z" }, NOW)).toBe(
+      Date.parse("2026-08-01T00:00:00.000Z"),
+    );
+    expect(judgedAt({ ...PLAN, startedAt: "2026-12-01T00:00:00.000Z" }, NOW)).toBe(NOW);
+  });
+});
+
+describe("partlyRead", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+
+  it("keeps a channel an earlier import left read only from its catch-up start", () => {
+    const quiet = {
+      ...conversation("C1"),
+      members: 4,
+      messages: 0,
+      scannedFrom: "2026-10-01T00:00:00.000Z",
+    };
+
+    expect(partlyRead(quiet)).toBe(true);
+    expect(inactive(quiet, NOW, "full")).toBe(false);
+    expect(inactive({ ...quiet, members: 0 }, NOW, "full")).toBe(true);
+    expect(inactive({ ...quiet, scannedFrom: null }, NOW, "full")).toBe(true);
+  });
+});
+
+describe("inactiveHint", () => {
+  it("says how many channels start unchecked and why", () => {
+    expect(inactiveHint(0, "full", false)).toBeNull();
+    expect(inactiveHint(1, "full", false)).toBe(
+      "1 channel starts unchecked: no members, or no messages in the past year. Check one to import it anyway.",
+    );
+    expect(inactiveHint(3, "bounded", false)).toBe(
+      "3 channels with no members start unchecked. This dry run was limited to a date range, so it can't tell which channels went quiet. Check one to import it anyway.",
+    );
+    expect(inactiveHint(0, "bounded", false)).toBe(
+      "This dry run was limited to a date range, so it can't tell which channels went quiet.",
+    );
+    expect(inactiveHint(0, "undated", false)).toBe(
+      "This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.",
+    );
+    expect(inactiveHint(2, "undated", false)).toBe(
+      "2 channels with no members start unchecked. Check one to import it anyway. This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.",
+    );
+  });
+
+  it("explains channels an earlier import left partly read", () => {
+    expect(inactiveHint(0, "full", true)).toBe(
+      "Channels an earlier import brought in aren't unchecked for going quiet: this dry run read only their newer messages.",
+    );
   });
 });

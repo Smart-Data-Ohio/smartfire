@@ -180,6 +180,9 @@ export const SlackConversation = Schema.Struct({
   members: Schema.Int,
   messages: Schema.Int,
   threads: Schema.Int,
+  lastMessageAt: Schema.NullOr(Timestamp),
+  scannedFrom: Schema.NullOr(Timestamp),
+  dated: Schema.Boolean,
 });
 
 export type SlackConversationPin = Assert<
@@ -270,6 +273,9 @@ export const SlackPlan = Schema.Struct({
   rooms: Schema.Array(SlackRoomTarget),
   samples: Schema.Array(SlackSample),
   defaultOldest: Schema.String,
+  scannedFrom: Schema.NullOr(Timestamp),
+  scannedUntil: Schema.NullOr(Timestamp),
+  startedAt: Schema.NullOr(Timestamp),
 });
 
 export type SlackPlanPin = Assert<Pinned<typeof SlackPlan, GeneratedSlackPlan>>;

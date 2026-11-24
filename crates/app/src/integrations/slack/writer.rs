@@ -373,6 +373,21 @@ pub struct History {
     pub counts: Value,
     pub parents: Vec<Value>,
     pub samples: Vec<Value>,
+    /// A dry run's newest counted message or thread reply (a Slack `ts`).
+    pub latest: Option<String>,
+}
+/// Keeps the newer of `latest` and `ts`, both Slack timestamps.
+pub fn keep_newer(latest: &mut Option<String>, ts: &str) {
+    let Ok(candidate) = slack_time(ts) else {
+        return;
+    };
+    if latest
+        .as_deref()
+        .and_then(|current| slack_time(current).ok())
+        .is_none_or(|current| candidate > current)
+    {
+        *latest = Some(ts.to_owned());
+    }
 }
 pub fn history(
     tx: &mut Tx<'_>,
@@ -443,6 +458,7 @@ pub fn history(
         counts,
         parents,
         samples: Vec::new(),
+        latest: None,
     })
 }
 fn deleted_thread(
@@ -669,6 +685,7 @@ pub fn dry_history(
 ) -> Result<History> {
     let mut counts = counts();
     let mut samples = Vec::new();
+    let mut latest = None;
     let mut users = IndexMap::new();
     enrich(tx, run, messages, &mut users)?;
     let names = users
@@ -694,9 +711,14 @@ pub fn dry_history(
         }
         add(&mut counts["messages"], 1);
         add(&mut counts["files_linked"], converted.files_linked as i64);
+        keep_newer(&mut latest, &ts);
         if integer(&message["reply_count"]) > 0 {
             add(&mut counts["threads"], 1);
             add(&mut counts["replies"], integer(&message["reply_count"]));
+            let reply = string(&message["latest_reply"]);
+            if !reply.trim().is_empty() && bounds.contains(&reply).unwrap_or(false) {
+                keep_newer(&mut latest, &reply);
+            }
         }
         if samples.len() < remaining {
             samples.push(json!({"conversation":conversation_name,"slack_text":truncate(&string(&message["text"]),200),"markdown":truncate(&converted.markdown,500)}));
@@ -706,6 +728,7 @@ pub fn dry_history(
         counts,
         parents: Vec::new(),
         samples,
+        latest,
     })
 }
 fn truncate(s: &str, limit: usize) -> String {
