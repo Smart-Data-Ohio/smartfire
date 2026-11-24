@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { AssignRoomCategory as GeneratedAssignRoomCategory } from "../../gen/AssignRoomCategory.ts";
 import type { CreateRoomCategory as GeneratedCreateRoomCategory } from "../../gen/CreateRoomCategory.ts";
+import type { DirectClosedChange as GeneratedDirectClosedChange } from "../../gen/DirectClosedChange.ts";
 import type { FavoriteList as GeneratedFavoriteList } from "../../gen/FavoriteList.ts";
 import type { InvolvementChange as GeneratedInvolvementChange } from "../../gen/InvolvementChange.ts";
 import type { MoveFavorite as GeneratedMoveFavorite } from "../../gen/MoveFavorite.ts";
@@ -95,6 +96,12 @@ export type UpdateInvolvement = typeof UpdateInvolvement.Type;
 
 export type UpdateInvolvementPin = Assert<
   Pinned<typeof UpdateInvolvement, GeneratedUpdateInvolvement>
+>;
+
+export const DirectClosedChange = Schema.Struct({ row: Schema.NullOr(SidebarRow) });
+
+export type DirectClosedChangePin = Assert<
+  Pinned<typeof DirectClosedChange, GeneratedDirectClosedChange>
 >;
 
 export const InvolvementChange = Schema.Struct({ membership: Membership, settings: Settings });

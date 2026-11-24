@@ -163,6 +163,7 @@ export interface SidebarState {
    * `noteToSelf` name it; hiding it keeps the id, so labels elsewhere still say "(you)".
    */
   readonly noteToSelfRoomId: number | null;
+  readonly noteToSelfClosed: boolean;
   readonly canCreateRooms: boolean;
   /** Organising changes on their way to the server, drawn over the rows (S3, organize.ts). */
   readonly overlay: SidebarOverlay;
@@ -189,6 +190,7 @@ export const initialState: State = {
     workspaceOverlay: null,
     placeholderUserIds: [],
     noteToSelfRoomId: null,
+    noteToSelfClosed: false,
     canCreateRooms: false,
     overlay: emptyOverlay,
   },

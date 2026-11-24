@@ -156,9 +156,26 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
   }
 
   const listed = sidebar.rows.map((row) => row.room.id).filter((id) => rows[id] !== undefined);
+  const noteToSelfRoomId = sidebar.noteToSelfRoomId ?? state.sidebar.noteToSelfRoomId;
+
+  const noteToSelfClosed =
+    noteToSelfRoomId !== null && touchedSince(state, noteToSelfRoomId, since)
+      ? state.sidebar.noteToSelfClosed
+      : sidebar.noteToSelfClosed === true;
+
+  const lastRoom = state.me?.lastRoomId;
+
+  const me =
+    state.me !== null &&
+    lastRoom != null &&
+    state.sidebar.rows[lastRoom]?.room.kind === "direct" &&
+    rows[lastRoom] === undefined
+      ? { ...state.me, lastRoomId: null }
+      : state.me;
 
   let next: State = {
     ...state,
+    me,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
       ...state.sidebar,
@@ -172,7 +189,8 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
           ? state.sidebar.workspaceLayout
           : sidebar.workspaceLayout,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
-      noteToSelfRoomId: sidebar.noteToSelfRoomId ?? state.sidebar.noteToSelfRoomId,
+      noteToSelfRoomId,
+      noteToSelfClosed,
       canCreateRooms: sidebar.canCreateRooms,
       overlay: state.sidebar.overlay,
     },
@@ -1027,6 +1045,7 @@ function upsertRow(state: State, row: SidebarRow): State {
           rows,
           order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
           noteToSelfRoomId: isNoteToSelf(row) ? row.room.id : state.sidebar.noteToSelfRoomId,
+          noteToSelfClosed: !isNoteToSelf(row) && state.sidebar.noteToSelfClosed,
         },
       },
       {
@@ -1295,9 +1314,21 @@ export function applyEvents(
       case "sidebar.row.upserted":
         next = upsertRow(next, event.data);
         break;
-      case "sidebar.row.removed":
-        next = removeRow(next, event.data.roomId);
+      case "sidebar.row.removed": {
+        const { roomId, closed } = event.data;
+        next = removeRow(next, roomId);
+
+        if (closed === true && next.me?.lastRoomId === roomId) {
+          next = { ...next, me: { ...next.me, lastRoomId: null } };
+        }
+
+        if (roomId === next.sidebar.noteToSelfRoomId) {
+          next = { ...next, sidebar: { ...next.sidebar, noteToSelfClosed: closed === true } };
+        }
+
         break;
+      }
+
       case "workspace.layout.updated":
         next = {
           ...next,

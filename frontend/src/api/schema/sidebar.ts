@@ -63,6 +63,7 @@ export const Sidebar = Schema.Struct({
   users: Schema.Array(User),
   directPlaceholderUserIds: Schema.Array(UserId),
   noteToSelfRoomId: Schema.optionalKey(RoomId),
+  noteToSelfClosed: Schema.optionalKey(Schema.Boolean),
   canCreateRooms: Schema.Boolean,
   workspaceLayout: WorkspaceLayout,
 });
@@ -74,6 +75,7 @@ export type SidebarPin = Assert<Pinned<typeof Sidebar, GeneratedSidebar>>;
 /** The `sidebar.row.removed` event's data. */
 export const SidebarRowRemoved = Schema.Struct({
   roomId: RoomId,
+  closed: Schema.optionalKey(Schema.Boolean),
   refreshRoom: Schema.optionalKey(Schema.Boolean),
 });
 

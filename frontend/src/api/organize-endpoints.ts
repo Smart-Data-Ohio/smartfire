@@ -6,6 +6,7 @@
  */
 import { Effect } from "effect";
 import type { CreateRoomCategory } from "../gen/CreateRoomCategory.ts";
+import type { DirectClosedChange } from "../gen/DirectClosedChange.ts";
 import type { FavoriteList } from "../gen/FavoriteList.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { InvolvementChange } from "../gen/InvolvementChange.ts";
@@ -13,6 +14,7 @@ import type { MoveWorkspaceRoom } from "../gen/MoveWorkspaceRoom.ts";
 import type { ReorderWorkspaceCategories } from "../gen/ReorderWorkspaceCategories.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
 import type { RoomCategoryList } from "../gen/RoomCategoryList.ts";
+import type { SetDirectClosed } from "../gen/SetDirectClosed.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { UpdateRoomCategory } from "../gen/UpdateRoomCategory.ts";
 import type { WorkspaceCategory } from "../gen/WorkspaceCategory.ts";
@@ -20,6 +22,7 @@ import type { WorkspaceLayout } from "../gen/WorkspaceLayout.ts";
 import type { WriteWorkspaceCategory } from "../gen/WriteWorkspaceCategory.ts";
 import { call, noContent } from "./call.ts";
 import {
+  DirectClosedChange as DirectClosedChangeSchema,
   FavoriteList as FavoriteListSchema,
   InvolvementChange as InvolvementChangeSchema,
   RoomCategoryList as RoomCategoryListSchema,
@@ -106,6 +109,17 @@ export const moveFavorite = Effect.fn("api.moveFavorite")(function* (
   return yield* call(
     { method: "PATCH", path: `/rooms/${roomId}/favorite`, body: { position } },
     wire<FavoriteList>(FavoriteListSchema),
+  );
+});
+
+/** `PUT /rooms/:id/closed`: close or reopen a direct conversation in the sidebar. */
+export const setDirectClosed = Effect.fn("api.setDirectClosed")(function* (
+  roomId: number,
+  body: SetDirectClosed,
+) {
+  return yield* call(
+    { method: "PUT", path: `/rooms/${roomId}/closed`, body },
+    wire<DirectClosedChange>(DirectClosedChangeSchema),
   );
 });
 

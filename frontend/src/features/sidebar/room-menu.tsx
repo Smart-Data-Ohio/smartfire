@@ -30,6 +30,7 @@ import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import { toastFailure } from "../settings/settings-parts.tsx";
 import {
+  closeConversation,
   markRead,
   moveRoom,
   moveSharedRoom,
@@ -392,13 +393,15 @@ export function RoomMenuItems({
           </MenuItem>
         </>
       )}
-      {kind === "direct" ? null : (
-        <>
-          <MenuSeparator />
-          <MenuItem icon="settings" onSelect={openSettings}>
-            {kind === "open" || kind === "closed" ? "Channel settings" : "Settings"}
-          </MenuItem>
-        </>
+      <MenuSeparator />
+      {kind === "direct" ? (
+        <MenuItem icon="x" onSelect={() => closeConversation(row)}>
+          Close conversation
+        </MenuItem>
+      ) : (
+        <MenuItem icon="settings" onSelect={openSettings}>
+          {kind === "open" || kind === "closed" ? "Channel settings" : "Settings"}
+        </MenuItem>
       )}
     </>
   );

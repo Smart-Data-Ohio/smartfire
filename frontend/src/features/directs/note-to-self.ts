@@ -96,7 +96,9 @@ export function noteToSelfRoomId(state: State): number | null {
  * with you while you have no row for it.
  */
 export function offersNoteToSelf(state: State): boolean {
-  return sidebarOffersNoteToSelf(state.sidebar, viewerIdOf(state));
+  return (
+    !state.sidebar.noteToSelfClosed && sidebarOffersNoteToSelf(state.sidebar, viewerIdOf(state))
+  );
 }
 
 /** Whether `roomId` is your note-to-self, as the server marks it. */

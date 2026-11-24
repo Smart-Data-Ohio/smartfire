@@ -451,6 +451,8 @@ const search = {
  * sidebar has been fetched again by then).
  */
 const organize = {
+  closeDirect: (roomId: number): Promise<void> =>
+    runAction(organizeActions.setDirectClosed(roomId, true)),
   moveRoom: (roomId: number, slot: RoomSlot): Promise<void> =>
     runAction(organizeActions.moveRoom(roomId, slot)),
   favorite: (roomId: number, index?: number): Promise<void> =>

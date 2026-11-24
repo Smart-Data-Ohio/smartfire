@@ -4,7 +4,7 @@ import { clearAppBadge } from "../../lib/app-badge.ts";
 import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
-import { useStore } from "../../store/store.ts";
+import { store, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
 import { ReauthenticateDialog } from "../auth/reauthenticate.tsx";
@@ -140,6 +140,22 @@ export function AppShell() {
   const roomId = params.roomId ?? null;
 
   useEffect(() => actions.messageChimes.follow(playMessageChime), []);
+
+  useEffect(() => {
+    if (roomId === null) return;
+
+    return store.subscribe((state, previous) => {
+      if (
+        previous.sidebar.rows[roomId]?.room.kind === "direct" &&
+        state.sidebar.rows[roomId] === undefined &&
+        router.state.matches.some(
+          (match) => "roomId" in match.params && match.params.roomId === roomId,
+        )
+      ) {
+        void router.navigate({ to: "/", replace: true });
+      }
+    });
+  }, [roomId, router]);
 
   // Reduced motion shows the placeholder at once; otherwise the current screen stays briefly.
   useEffect(() => {

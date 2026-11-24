@@ -729,8 +729,9 @@
     white-space: nowrap;
   }
 
-  /* Slack's hover "⋯": over the row's end, the count making way for it. */
-  .sidebar-row-more {
+  /* The row actions sit over its trailing status on hover or keyboard focus. */
+  .sidebar-row-more,
+  .sidebar-row-close {
     --button-height: 22px;
 
     position: absolute;
@@ -742,23 +743,52 @@
     transition: opacity var(--duration-micro) var(--ease-enter);
   }
 
+  .sidebar-row-close {
+    right: calc(var(--space-2) + var(--space-1) + 24px);
+    pointer-events: none;
+  }
+
   @media (width < 720px) {
-    .sidebar-row-more {
+    .sidebar-row-more,
+    .sidebar-row-close {
       top: calc(var(--touch-target) / 2);
     }
   }
 
   .sidebar-row-item:hover .sidebar-row-more,
-  .sidebar-row-more[aria-expanded="true"] {
+  .sidebar-row-more[aria-expanded="true"],
+  .sidebar-row-item:where([data-direct]):has(:focus-visible)
+    :is(.sidebar-row-more, .sidebar-row-close) {
     opacity: 1;
   }
 
-  .sidebar-row-item:hover .sidebar-row {
+  .sidebar-row-close:focus-visible {
+    pointer-events: auto;
+  }
+
+  @media (hover: hover) {
+    .sidebar-row-item[data-direct] .sidebar-row {
+      padding-right: calc(var(--space-1-5) + 48px);
+    }
+
+    .sidebar-row-item[data-direct] .sidebar-row .badge {
+      position: absolute;
+      right: var(--space-1-5);
+    }
+
+    .sidebar-row-item:hover .sidebar-row-close {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  .sidebar-row-item:where(:not([data-direct])):hover .sidebar-row {
     padding-right: calc(var(--space-1-5) + 24px);
   }
 
   .sidebar-row-item:hover .sidebar-row .badge,
-  .sidebar-row-item:hover .sidebar-row-muted {
+  .sidebar-row-item:hover .sidebar-row-muted,
+  .sidebar-row-item[data-direct]:has(:focus-visible) .sidebar-row :is(.badge, .sidebar-row-muted) {
     opacity: 0;
   }
 
@@ -770,7 +800,7 @@
     }
   }
 
-  .sidebar-scroll[data-dragging] .sidebar-row-more {
+  .sidebar-scroll[data-dragging] :is(.sidebar-row-more, .sidebar-row-close) {
     display: none;
   }
 

@@ -28,6 +28,7 @@ import {
   resetRoomRereads,
 } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
+import { setDirectClosed } from "./organize-actions.ts";
 import { Outbox, roomSendRevision, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import {
@@ -61,6 +62,7 @@ interface RoomVisit {
   readonly sendRevision: number;
   /** This visit's reads a newer room outcome (a membership fact) refused. */
   readonly refused: number;
+  readonly revealDirect: boolean;
 }
 
 let nextVisitToken = 0,
@@ -75,6 +77,7 @@ function beginVisit(roomId: number, focusMessageId: number | null): RoomVisit {
     load: 0,
     sendRevision: roomSendRevision(roomId),
     refused: 0,
+    revealDirect: true,
   };
 
   visits.set(roomId, visit);
@@ -284,6 +287,20 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 
     if (mutations.setRoomDetail(detail, started)) {
       clearRoomJoin(roomId);
+      const visit = visits.get(roomId);
+
+      if (visit?.token === token && visit.revealDirect) {
+        visits.set(roomId, { ...visit, revealDirect: false });
+
+        if (loaded.success.membership.closed === true) {
+          yield* setDirectClosed(roomId, false).pipe(
+            Effect.catch((error) =>
+              Effect.logWarning("direct conversation did not reopen", error.message),
+            ),
+          );
+        }
+      }
+
       yield* loadTimeline(roomId, token, detail, load);
 
       return;

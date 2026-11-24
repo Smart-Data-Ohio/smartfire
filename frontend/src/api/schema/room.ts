@@ -58,6 +58,7 @@ export const Membership = Schema.Struct({
   lastReadMessageId: Schema.NullOr(MessageId),
   roomCategoryId: Schema.NullOr(RoomCategoryId),
   favoritePosition: Schema.NullOr(Schema.Int),
+  closed: Schema.optionalKey(Schema.Boolean),
   stageRole: Schema.NullOr(StageRole),
 });
 

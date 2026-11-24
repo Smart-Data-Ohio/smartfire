@@ -149,6 +149,35 @@ describe("the note-to-self", () => {
     expect(roomIsNoteToSelf(state, SELF_ROOM)).toBe(true);
   });
 
+  it("stays off the sidebar after it is closed, including after an older snapshot", () => {
+    const shown = signedIn([grace, self], [3], SELF_ROOM);
+
+    const close = {
+      seq: 1,
+      topic: "user",
+      type: "sidebar.row.removed",
+      data: { roomId: SELF_ROOM, closed: true },
+    } as const;
+
+    const closed = applyEvents(shown, [close], 0);
+    const older = { ...sidebarFixture([grace, self], [3]), noteToSelfRoomId: SELF_ROOM };
+    const reloaded = loadSidebar(closed, older, rowClock(shown));
+
+    expect(offersNoteToSelf(closed)).toBe(false);
+    expect(offersNoteToSelf(reloaded)).toBe(false);
+    expect(localItems(reloaded.sidebar, VIEWER)).toContainEqual(
+      expect.objectContaining({ key: `person:${VIEWER}`, roomId: SELF_ROOM }),
+    );
+
+    const snapshot = {
+      ...sidebarFixture([grace], [3]),
+      noteToSelfRoomId: SELF_ROOM,
+      noteToSelfClosed: true,
+    };
+
+    expect(offersNoteToSelf(loadSidebar(shown, snapshot, rowClock(shown)))).toBe(false);
+  });
+
   it("survives a sidebar reply older than hiding it, landing after", () => {
     const shown = signedIn([grace, self], [3], SELF_ROOM);
     const since = rowClock(shown);

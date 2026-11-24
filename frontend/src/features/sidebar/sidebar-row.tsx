@@ -30,6 +30,7 @@ import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { GroupAvatars } from "./group-avatars.tsx";
+import { closeConversation } from "./organize-commands.ts";
 import { notificationLabel, rowPillCount, rowState, rowUnread } from "./sections.ts";
 
 /** What a row can ask of the sidebar: drag it, or open its menu somewhere. */
@@ -295,6 +296,7 @@ export function SidebarRow({
     <li
       className="sidebar-row-item"
       data-room-id={room.id}
+      data-direct={room.kind === "direct" || undefined}
       data-flip={main ? `room-${room.id}` : undefined}
       data-drop-edge={dropEdge}
       data-dragging={dragging || undefined}
@@ -364,6 +366,16 @@ export function SidebarRow({
         <CallMark roomId={room.id} />
         <Badge count={pill} tone="danger" label={`, ${notificationLabel(pill)}`} />
       </Link>
+      {room.kind === "direct" ? (
+        <IconButton
+          icon="x"
+          label={`Close conversation with ${label}`}
+          size="sm"
+          tooltipPlacement="right"
+          className="sidebar-row-close"
+          onClick={() => closeConversation(row)}
+        />
+      ) : null}
       <IconButton
         icon="more"
         label={`${label} options`}

@@ -82,6 +82,7 @@ function WelcomeHome({ lastRoomId }: { readonly lastRoomId: number | null }) {
 export function HomeView() {
   const phone = useSyncExternalStore(subscribePhone, isPhone, () => false);
   const me = useStore((state) => state.me);
+  const hasConversations = useStore((state) => state.sidebar.order.length > 0);
   const { status, welcome } = useWelcome();
   const welcomeDismissed = useWelcomeDismissed();
   const reading = !phone && !welcomeDismissed && (status === "idle" || status === "loading");
@@ -112,8 +113,14 @@ export function HomeView() {
 
   return (
     <div className="home-empty">
-      <p className="text-title">No conversations yet</p>
-      <p className="text-muted">When someone adds you to a room, it shows up on the left.</p>
+      {hasConversations ? (
+        <p className="text-title">Select a conversation</p>
+      ) : (
+        <>
+          <p className="text-title">No conversations yet</p>
+          <p className="text-muted">When someone adds you to a room, it shows up on the left.</p>
+        </>
+      )}
     </div>
   );
 }

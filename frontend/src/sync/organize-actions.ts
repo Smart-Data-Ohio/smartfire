@@ -88,7 +88,7 @@ const landRows = Effect.fn("organize.landRows")(function* (
 
   // Local events: `seq` only matters to the sync cursor, which never sees these.
   const fresh = rows.flatMap((row) =>
-    state.sidebar.rows[row.room.id] === undefined
+    state.sidebar.rows[row.room.id] === undefined && row.membership.closed !== true
       ? [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted" as const, data: row }]
       : [],
   );
@@ -103,6 +103,37 @@ const landRows = Effect.fn("organize.landRows")(function* (
 /** Sends an organising request holding a row ticket, then lands its reply's rows. */
 const organizing = <E, R>(request: Effect.Effect<readonly SidebarRow[], E, R>) =>
   withRowTicket((since) => Effect.flatMap(request, (rows) => landRows(rows, since)));
+
+/** Land the reply through the same reducer as the viewer's sync event. */
+export const setDirectClosed = Effect.fn("organize.setDirectClosed")(function* (
+  roomId: number,
+  closed: boolean,
+) {
+  yield* withRowTicket((since) =>
+    Effect.gen(function* () {
+      const { row } = yield* api.setDirectClosed(roomId, { closed });
+
+      if (row !== null) {
+        yield* landRows([row], since);
+      } else if (closed) {
+        const state = store.getState();
+        const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
+        mutations.landReplyRows(
+          [
+            {
+              seq: 0,
+              topic: `user:${viewerId}`,
+              type: "sidebar.row.removed",
+              data: { roomId, closed },
+            },
+          ],
+          yield* Clock.currentTimeMillis,
+          since,
+        );
+      }
+    }),
+  );
+});
 
 /** The server's copy of a row, without pending changes: what the next call starts from. */
 const serverRow = (roomId: number) => store.getState().sidebar.rows[roomId];
