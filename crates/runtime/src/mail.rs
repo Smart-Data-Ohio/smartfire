@@ -84,6 +84,12 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
                 email: user.email_address.unwrap_or_default(),
             })
         }
+        Notification::PasswordReset { email_address } => {
+            match password_reset_message(&app, email_address).await? {
+                Some(message) => message,
+                None => return Ok(Outcome::Done),
+            }
+        }
         Notification::NewSignIn { activity_item_id } => {
             let item = app.db.read(move |conn| {
                 let row = conn.query_row("SELECT user_id, source_id, source_type, created_at FROM activity_items WHERE id = ?", [activity_item_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, String>(2)?, r.get::<_, Timestamp>(3)?))).optional()?.ok_or(campfire_db::Error::RecordNotFound("ActivityItem"))?;
@@ -103,6 +109,44 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
     };
     outbound::deliver(settings, &message, app.db.env().now().jiff()).await?;
     Ok(Outcome::Done)
+}
+/// The reset email for the account `email_address` signs in with, its link minted now; `None`
+/// (nothing is sent) when reset isn't available or the address has no account that can reset.
+pub async fn password_reset_message(
+    app: &App,
+    email_address: String,
+) -> campfire_db::Result<Option<outbound::Message>> {
+    let config = &app.mail.config;
+    let Some(origin) = config
+        .validated_app_url()
+        .filter(|_| config.password_reset_available())
+    else {
+        return Ok(None);
+    };
+    let user = app
+        .db
+        .read(move |conn| User::find_active_by_email_address(conn, &email_address))
+        .await?
+        .filter(crate::authentication::can_reset_password);
+    let Some(user) = user else {
+        return Ok(None);
+    };
+    let email = user.email_address.clone().unwrap_or_default();
+    let token = rails_compat::password_reset::token(
+        &app.secrets,
+        user.id,
+        user.password_digest.as_deref().unwrap_or_default(),
+        &email,
+        app.db.env().now().jiff(),
+    );
+    Ok(Some(outbound::password_reset(
+        config,
+        &outbound::User {
+            name: user.name,
+            email,
+        },
+        &format!("{origin}/app/passwords/{token}"),
+    )))
 }
 async fn routing(app: App, job: RoutingJob, _: campfire_jobs::Execution) -> JobResult {
     let renderer = app

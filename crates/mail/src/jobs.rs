@@ -8,6 +8,9 @@ pub enum Notification {
     OAuthRefreshReuse { user_id: i64 },
     NewSignIn { activity_item_id: i64 },
     Lockout { user_id: i64 },
+    /// "Forgot password?": the address as it was submitted. Delivery looks it up and mints the
+    /// link, so the jobs table never holds one, and sends nothing to an address that can't reset.
+    PasswordReset { email_address: String },
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeliveryJob {
@@ -35,6 +38,11 @@ pub fn new_sign_in_alert_later(tx: &mut Tx<'_>, activity_item_id: i64) {
 pub fn lockout_notice_later(tx: &mut Tx<'_>, user_id: i64) {
     tx.emit_after_commit(Event::job(&DeliveryJob {
         notification: Notification::Lockout { user_id },
+    }));
+}
+pub fn password_reset_later(tx: &mut Tx<'_>, email_address: String) {
+    tx.emit_after_commit(Event::job(&DeliveryJob {
+        notification: Notification::PasswordReset { email_address },
     }));
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -130,3 +130,24 @@ fn validated_app_url_requires_a_configured_http_origin() {
         assert_eq!(config.validated_app_url().as_deref(), Some(expected));
     }
 }
+#[test]
+fn password_reset_requires_smtp_a_real_sender_and_a_valid_origin() {
+    let complete = [
+        ("SMTP_ADDRESS", "smtp.example.com"),
+        ("MAILER_FROM", "alerts@example.com"),
+        ("APP_URL", "https://example.com"),
+    ];
+    assert!(config(&complete).password_reset_available());
+    for missing in ["SMTP_ADDRESS", "MAILER_FROM", "APP_URL"] {
+        let pairs = complete
+            .into_iter()
+            .filter(|(k, _)| *k != missing)
+            .collect::<Vec<_>>();
+        assert!(!config(&pairs).password_reset_available(), "{missing}");
+    }
+    assert!(!Config::default().password_reset_available());
+    // A hand-built configuration with an origin `from_map` would refuse still gets no link.
+    let mut c = config(&complete);
+    c.app_url = Some("https://example.com/path?x=1".into());
+    assert!(!c.password_reset_available());
+}

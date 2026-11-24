@@ -14,6 +14,7 @@ use lettre::{
 
 pub const SIGN_IN_SUBJECT: &str = "New sign-in to your Smartfire account";
 pub const LOCKOUT_SUBJECT: &str = "Several wrong sign-in codes were entered";
+pub const PASSWORD_RESET_SUBJECT: &str = "Reset your Smartfire password";
 const LOCKOUT: &str = "Several wrong sign-in codes were entered for your account. If that was you, wait a little and try again; if it was not you, your password may be compromised, so change it and review your remembered devices on your profile.";
 #[derive(Debug, Clone)]
 pub struct User {
@@ -135,6 +136,29 @@ pub fn lockout_notice(user: &User) -> Message {
             "<p>Hi {},</p>\n\n<p>{LOCKOUT}</p>\n",
             h(&user.name)
         )),
+    }
+}
+/// "Forgot password?": the one-time link to choose a new password. Sent only when
+/// `Config::password_reset_available`, so `mailer_from` is set.
+pub fn password_reset(config: &Config, user: &User, url: &str) -> Message {
+    let text = format!(
+        "Hi {},\n\nSomeone asked to reset the password for your Smartfire account. To choose a new password, open this link:\n\n{url}\n\nThe link expires in 15 minutes and works once. If you didn't ask to reset your password, you can ignore this email: your password stays the same.\n",
+        user.name
+    );
+    let body = format!(
+        "<p>Hi {},</p>\n\n<p>Someone asked to reset the password for your Smartfire account.</p>\n\n<p><a href=\"{}\">Choose a new password</a></p>\n\n<p>The link expires in 15 minutes and works once. If you didn't ask to reset your password, you can ignore this email: your password stays the same.</p>\n",
+        h(&user.name),
+        h(url)
+    );
+    Message {
+        from: config
+            .mailer_from
+            .clone()
+            .unwrap_or_else(|| "Smartfire <noreply@example.com>".into()),
+        to: address_with_name(user),
+        subject: PASSWORD_RESET_SUBJECT.into(),
+        text,
+        html: layout(&body),
     }
 }
 fn crlf(s: &str) -> String {

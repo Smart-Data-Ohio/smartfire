@@ -3,7 +3,7 @@
 //! No request, cookies or rendering enter this layer.
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target, pair};
 use campfire_db::{
-    ActivityItem, ChallengeFailure, Database, Result, Session, TwoFactorBackupCode,
+    ActivityItem, ChallengeFailure, Database, PasswordDigest, Result, Session, TwoFactorBackupCode,
     TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
 };
 use rails_compat::{ar_encryption::ArEncryption, totp};
@@ -257,6 +257,60 @@ pub fn reset_two_factor(tx: &mut Tx<'_>, user: &User, context: &Context) -> Resu
         },
         context,
     )?;
+    Ok(())
+}
+
+/// Who "Forgot password?" can email a link to: someone password sign-in accepts (active, with an
+/// address), a person rather than a bot, with a password. Google-only members sign in with Google.
+pub fn can_reset_password(user: &User) -> bool {
+    user.is_active()
+        && !user.is_bot()
+        && user
+            .email_address
+            .as_deref()
+            .is_some_and(|email| !email.is_empty())
+        && user
+            .password_digest
+            .as_deref()
+            .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
+}
+
+/// "Forgot password?": queue the email. Delivery decides whether `email_address` gets one, so
+/// every request does the same work and answers the same.
+pub fn request_password_reset(tx: &mut Tx<'_>, email_address: String) {
+    campfire_mail::jobs::password_reset_later(tx, email_address);
+}
+
+/// A reset link's new password: saved with its audit, then every remembered device and session
+/// of the user's goes, as a password change and an administrator's two-step reset do.
+pub fn reset_password(
+    tx: &mut Tx<'_>,
+    user: &mut User,
+    digest: PasswordDigest,
+    context: &Context,
+) -> Result<()> {
+    user.update(
+        tx,
+        UserChanges {
+            password_digest: Some(digest),
+            ..Default::default()
+        },
+    )?;
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "user.password.reset".into(),
+            actor: Some(Actor::from(&*user)),
+            target: Some(Target::from(&*user)),
+            ..Default::default()
+        },
+        context,
+    )?;
+    TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
+    for session in Session::for_user(tx.conn(), user.id)? {
+        session.destroy(tx)?;
+    }
+    user.reset_remote_connections(tx);
     Ok(())
 }
 

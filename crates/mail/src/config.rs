@@ -78,6 +78,11 @@ impl Config {
     pub fn security_configured(&self) -> bool {
         self.smtp.is_some() && self.mailer_from.is_some() && self.app_url.is_some()
     }
+    /// Whether a password reset email can go out with a working link: SMTP, a real sender (not
+    /// the placeholder) and the app's URL.
+    pub fn password_reset_available(&self) -> bool {
+        self.smtp.is_some() && self.mailer_from.is_some() && self.validated_app_url().is_some()
+    }
     pub fn two_factor_configured(&self) -> bool {
         self.smtp.is_some()
     }
