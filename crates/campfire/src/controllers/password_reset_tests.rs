@@ -563,3 +563,140 @@ async fn late_and_superseded_deliveries_keep_the_request_s_fifteen_minutes() {
     let later = a.booted.app.clock.now();
     assert!(reset_message(&a, &david, later).await.is_some(), "a request after the change");
 }
+
+/// A password sign-in as `POST /api/v1/session` makes one, except that with `?reset=1` the
+/// password is reset (as a reset committing meanwhile would) after it is checked and before the
+/// session starts. 200 when a session started, 409 when it was refused.
+async fn sign_in_racing_a_reset(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+    use campfire_app::app::AppCtx;
+    crate::concerns::before_actions(
+        c,
+        crate::concerns::Before::default().allow_unauthenticated_access(),
+    )
+    .await?;
+    let email = c.param_str("email_address").unwrap_or_default().to_owned();
+    let user = crate::concerns::authenticate_by(c, email, PASSWORD.into())
+        .await?
+        .expect("the seed's password");
+    let proof = crate::concerns::password_proof(c, &user);
+    if c.param_str("reset") == Some("1") {
+        let digest = campfire_db::PasswordDigest::hash(NEW_PASSWORD.into(), 4)
+            .await
+            .unwrap();
+        let id = user.id;
+        c.app()
+            .db
+            .write(move |tx| {
+                let mut user = campfire_db::User::find(tx.conn(), id)?;
+                campfire_runtime::authentication::reset_password(
+                    tx,
+                    &mut user,
+                    digest,
+                    &Default::default(),
+                )
+            })
+            .await
+            .unwrap();
+    }
+    let started = crate::concerns::start_password_session_for(c, user, false, proof).await?;
+    Ok(c.head(if started.is_some() {
+        StatusCode::OK
+    } else {
+        StatusCode::CONFLICT
+    }))
+}
+
+async fn race_sign_in(a: &TestApp, email: &str, reset: bool) -> StatusCode {
+    use tower::ServiceExt;
+    let app = &a.booted.app;
+    let kit = campfire_kit::Kit::new(
+        campfire_kit::KitConfig::production(app.config.disable_ssl),
+        Arc::new(campfire_kit::RailsCrypto::new(app.secrets.clone())),
+        app.clock.clone(),
+        app.clone(),
+    );
+    let router = axum::Router::new()
+        .route(
+            "/race",
+            axum::routing::get(campfire_kit::action(sign_in_racing_a_reset)),
+        )
+        .with_state(kit.clone())
+        .layer(axum::middleware::from_fn_with_state(
+            kit,
+            campfire_kit::adapter::rails_middleware,
+        ));
+    let uri = format!(
+        "/race?email_address={}&reset={}",
+        email.replace('@', "%40"),
+        u8::from(reset)
+    );
+    router
+        .oneshot(
+            axum::http::Request::builder()
+                .uri(uri)
+                .header(axum::http::header::HOST, "example.org")
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap()
+        .status()
+}
+
+/// A password sign-in that checked the password a reset then replaced starts no session.
+#[tokio::test]
+async fn a_sign_in_that_checked_the_replaced_password_starts_no_session() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let sessions = "SELECT count(*) FROM sessions WHERE user_id=?";
+    let before = count(&a, sessions, DAVID).await;
+    assert_eq!(race_sign_in(&a, &david, false).await, StatusCode::OK);
+    assert_eq!(count(&a, sessions, DAVID).await, before + 1);
+
+    assert_eq!(race_sign_in(&a, &david, true).await, StatusCode::CONFLICT);
+    assert_eq!(count(&a, sessions, DAVID).await, 0);
+}
+
+/// A second step started with the old password can't finish once a reset has replaced it, even
+/// with a right code: the new password is needed. With it, the second step works as before.
+#[tokio::test]
+async fn a_pending_second_step_from_the_old_password_ends_at_a_reset() {
+    use rails_compat::{ar_encryption::ArEncryption, totp};
+    let (a, clock) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let enc = ArEncryption::new(&a.booted.app.secrets);
+    let secret = a
+        .db()
+        .read(move |conn| {
+            let credential = campfire_db::TwoFactorCredential::for_user(conn, DAVID)?
+                .expect("David has two-step sign-in");
+            credential.secret(&enc)
+        })
+        .await
+        .unwrap();
+    let code = || totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
+    let sessions = "SELECT count(*) FROM sessions WHERE user_id=?";
+
+    let mut b = a.anonymous();
+    let pending = b.password_sign_in(&david, PASSWORD).await;
+    assert_eq!(pending.json()["kind"], "secondFactorRequired", "{}", pending.text());
+    let token = emailed_token(&a, &david).await;
+    let reply = a.anonymous().write(submit(&token, NEW_PASSWORD)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+
+    let reply = b.answer_challenge(&code(), false).await;
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new"}),
+        "{}",
+        reply.text()
+    );
+    assert_eq!(count(&a, sessions, DAVID).await, 0);
+
+    clock.advance(jiff::SignedDuration::from_secs(30));
+    let pending = b.password_sign_in(&david, NEW_PASSWORD).await;
+    assert_eq!(pending.json()["kind"], "secondFactorRequired", "{}", pending.text());
+    let reply = b.answer_challenge(&code(), false).await;
+    assert_eq!(reply.json()["kind"], "signedIn", "{}", reply.text());
+    assert_eq!(count(&a, sessions, DAVID).await, 1);
+}

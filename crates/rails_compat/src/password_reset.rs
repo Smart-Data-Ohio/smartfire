@@ -19,6 +19,9 @@ pub const EXPIRES_IN: SignedDuration = SignedDuration::from_mins(15);
 /// The fingerprint key's own salt, so the fingerprint shares no key with anything else.
 const FINGERPRINT_SALT: &str = "smartfire/password_reset/fingerprint";
 
+/// The sign-in proof's own salt.
+const SIGN_IN_SALT: &str = "smartfire/sign_in/password_fingerprint";
+
 /// Bytes of HMAC-SHA256 kept in the fingerprint.
 const FINGERPRINT_BYTES: usize = 16;
 
@@ -74,6 +77,19 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
     }
 }
 
+/// A password sign-in's proof of the password it checked: a fingerprint of that password's digest,
+/// kept with the pending sign-in until a session starts, so a sign-in that checked the password a
+/// reset has since replaced can't finish. It changes with the digest and reveals nothing of it.
+pub fn sign_in_proof(secrets: &Secrets, password_digest: &str) -> String {
+    keyed_fingerprint(secrets, SIGN_IN_SALT, &[password_digest])
+}
+
+/// Whether `proof` was made from this password digest.
+pub fn sign_in_proof_matches(secrets: &Secrets, proof: &str, password_digest: &str) -> bool {
+    let current = sign_in_proof(secrets, password_digest);
+    bool::from(current.as_bytes().ct_eq(proof.as_bytes()))
+}
+
 fn purpose() -> String {
     combine_purposes("User", Some("password_reset"))
 }
@@ -81,11 +97,19 @@ fn purpose() -> String {
 /// HMAC-SHA256 of the digest and address under a key of its own, truncated and hex-encoded: it
 /// changes with either and reveals neither.
 fn fingerprint(secrets: &Secrets, password_digest: &str, email_address: &str) -> String {
-    let key = secrets.key_generator.generate_key(FINGERPRINT_SALT, 32);
+    keyed_fingerprint(secrets, FINGERPRINT_SALT, &[password_digest, email_address])
+}
+
+/// HMAC-SHA256 of `parts`, NUL-separated, under the key for `salt`, truncated and hex-encoded.
+fn keyed_fingerprint(secrets: &Secrets, salt: &str, parts: &[&str]) -> String {
+    let key = secrets.key_generator.generate_key(salt, 32);
     let mut mac = Hmac::<Sha256>::new_from_slice(&key).expect("HMAC accepts any key length");
-    mac.update(password_digest.as_bytes());
-    mac.update(b"\0");
-    mac.update(email_address.as_bytes());
+    for (n, part) in parts.iter().enumerate() {
+        if n > 0 {
+            mac.update(b"\0");
+        }
+        mac.update(part.as_bytes());
+    }
     hex::encode(&mac.finalize().into_bytes()[..FINGERPRINT_BYTES])
 }
 
@@ -146,6 +170,18 @@ mod tests {
         assert!(!decoded.contains(DIGEST), "{decoded}");
         assert!(!decoded.contains("ada@example.com"), "{decoded}");
         assert!(decoded.contains("user/password_reset"), "{decoded}");
+    }
+
+    #[test]
+    fn a_sign_in_proof_names_one_digest_and_hides_it() {
+        let secrets = secrets();
+        let proof = sign_in_proof(&secrets, DIGEST);
+        assert!(sign_in_proof_matches(&secrets, &proof, DIGEST));
+        assert!(!sign_in_proof_matches(&secrets, &proof, "$2a$04$another-digest"));
+        assert!(!sign_in_proof_matches(&secrets, "", DIGEST));
+        assert!(!proof.contains("$2a$"), "{proof}");
+        // Not the reset link's fingerprint of the same digest: each has its own key.
+        assert_ne!(proof, fingerprint(&secrets, DIGEST, ""));
     }
 
     #[test]

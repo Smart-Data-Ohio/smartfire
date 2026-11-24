@@ -952,13 +952,17 @@ fn bounce_back_after_sign_in(c: &mut Ctx) -> Result<bool> {
     Ok(format.is_some_and(|format| format.symbol == "html" || format.string.contains("html")))
 }
 
-/// `two_factor_pending_user`: the active user a still-valid pending second factor names.
+/// `two_factor_pending_user`: the active user a still-valid pending second factor names. A pending
+/// password sign-in also needs the password it checked to be the user's password still: one that
+/// a reset replaced, or one from before the proof was kept, is no longer pending.
 pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
     let now = c.now();
     let Some(user_id) = session_keys::two_factor_pending_user_id(c.session(), now) else {
         return Ok(None);
     };
-    c.app()
+    let proof = pending_password_proof(c);
+    let user = c
+        .app()
         .db
         .read(move |conn| match User::find_active(conn, user_id) {
             Ok(user) => Ok(Some(user)),
@@ -966,7 +970,37 @@ pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
             Err(error) => Err(error),
         })
         .await
-        .map_err(Error::internal)
+        .map_err(Error::internal)?;
+    let secrets = &c.app().secrets;
+    Ok(user.filter(|user| proof.as_ref().is_none_or(|proof| password_proven(secrets, proof, user))))
+}
+
+/// What a pending sign-in must show of its password: `Some` for a password sign-in (empty when it
+/// kept no proof, which then matches no password), `None` for other methods.
+pub fn pending_password_proof(c: &mut Ctx) -> Option<String> {
+    let session = c.session();
+    (session_keys::two_factor_pending_method(session) == PASSWORD_SIGN_IN)
+        .then(|| session_keys::two_factor_pending_password(session).unwrap_or_default())
+}
+
+/// The sign-in method whose pending state and session are bound to the password it checked.
+pub const PASSWORD_SIGN_IN: &str = "password";
+
+/// A password sign-in's proof of the password it checked, for `start_password_session_for` and a
+/// pending second factor.
+pub fn password_proof(c: &Ctx, user: &User) -> String {
+    rails_compat::password_reset::sign_in_proof(
+        &c.app().secrets,
+        user.password_digest.as_deref().unwrap_or_default(),
+    )
+}
+
+fn password_proven(secrets: &rails_compat::Secrets, proof: &str, user: &User) -> bool {
+    rails_compat::password_reset::sign_in_proof_matches(
+        secrets,
+        proof,
+        user.password_digest.as_deref().unwrap_or_default(),
+    )
 }
 
 /// `redirect_signed_in_user_to_root`
@@ -1020,15 +1054,33 @@ pub async fn authenticate_by(
 /// flows pass true through `start_new_verified_session_for`. Every real session records its
 /// device and alerts on a new device, using WS10's typed mail API when configured.
 pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
-    start_session(c, user, false).await
+    let session = start_session(c, user, false, None).await?;
+    Ok(session.expect("no password to check"))
 }
 
 /// A completed second factor (or valid remembered device) creates a verified session.
 pub async fn start_new_verified_session_for(c: &mut Ctx, user: User) -> Result<Session> {
-    start_session(c, user, true).await
+    let session = start_session(c, user, true, None).await?;
+    Ok(session.expect("no password to check"))
 }
 
-async fn start_session(c: &mut Ctx, user: User, two_factor_verified: bool) -> Result<Session> {
+/// A password sign-in's session, started only while the user's password is still the one its
+/// `proof` (`password_proof`) names, checked on the writer; `None` once a reset has replaced it.
+pub async fn start_password_session_for(
+    c: &mut Ctx,
+    user: User,
+    two_factor_verified: bool,
+    proof: String,
+) -> Result<Option<Session>> {
+    start_session(c, user, two_factor_verified, Some(proof)).await
+}
+
+async fn start_session(
+    c: &mut Ctx,
+    user: User,
+    two_factor_verified: bool,
+    proof: Option<String>,
+) -> Result<Option<Session>> {
     session_keys::clear_confirmations(c.session());
     let device_id = ensure_device_cookie(c)?;
     let (user_agent, ip) = (
@@ -1037,23 +1089,33 @@ async fn start_session(c: &mut Ctx, user: User, two_factor_verified: bool) -> Re
     );
     let user_id = user.id;
     let notify = c.app().mail.config.security_configured();
+    let secrets = c.app().secrets.clone();
     let session = c
         .app()
         .db
         .write(move |tx| {
+            if let Some(proof) = proof {
+                let current = User::find_by_id(tx.conn(), user_id)?;
+                if !current.is_some_and(|user| password_proven(&secrets, &proof, &user)) {
+                    return Ok(None);
+                }
+            }
             let attributes = NewSession {
                 user_agent: user_agent.as_deref(),
                 ip_address: Some(&ip),
                 device_id: Some(&device_id),
                 two_factor_verified,
             };
-            crate::authentication::start_session(tx, user_id, attributes, notify)
+            crate::authentication::start_session(tx, user_id, attributes, notify).map(Some)
         })
         .await
         .map_err(Error::internal)?;
+    let Some(session) = session else {
+        return Ok(None);
+    };
     authenticated_as(c, session.clone(), Some(user), true).await?;
     c.form_authenticity_token();
-    Ok(session)
+    Ok(Some(session))
 }
 
 /// `ensure_device_cookie`: the browser's `device_id` (new-device sign-in alerts key on it), minted
