@@ -1,0 +1,449 @@
+//! "Forgot password?" over the frozen seed: availability, the uniform request, delivery, and the
+//! one-time link that sets a new password and signs the user out everywhere.
+use crate::controllers::presenters::test_support::{
+    BENDER, DAVID, JASON, KEVIN, Reply, Req, SEED_NOW, TestApp,
+};
+use crate::controllers::spa::signed_out_contracts_tests::inline_boot;
+use axum::http::{Method, StatusCode};
+use campfire_db::TwoFactorRememberedDevice;
+use serde_json::{Value, json};
+use std::sync::Arc;
+
+const MAIL: [(&str, &str); 3] = [
+    ("SMTP_ADDRESS", "smtp.invalid"),
+    ("MAILER_FROM", "Smartfire <alerts@example.com>"),
+    ("APP_URL", "http://campfire.test"),
+];
+const PASSWORD: &str = "secret123456";
+const NEW_PASSWORD: &str = "a brand new passphrase";
+const INVALID_LINK: &str = "This password reset link is invalid or expired.";
+
+async fn app(env: &[(&str, &str)]) -> (TestApp, Arc<campfire_kit::FrozenClock>) {
+    let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let app = TestApp::boot_with_clock_and_env(clock.clone(), env)
+        .await
+        .expect("restored default seed");
+    (app, clock)
+}
+
+async fn email_of(a: &TestApp, user_id: i64) -> String {
+    a.db()
+        .read(move |conn| Ok(campfire_db::User::find(conn, user_id)?.email_address.unwrap()))
+        .await
+        .unwrap()
+}
+
+/// David can reset; the rest are the accounts that can't, each with an address of its own.
+async fn accounts(a: &TestApp) -> (String, Vec<String>) {
+    a.db()
+        .write(|tx| {
+            let conn = tx.conn();
+            // Google-only: no password.
+            conn.execute("UPDATE users SET password_digest=NULL WHERE id=?", [KEVIN])?;
+            conn.execute(
+                "UPDATE users SET email_address='bender@example.com' WHERE id=?",
+                [BENDER],
+            )?;
+            conn.execute("UPDATE users SET status=1 WHERE id=?", [JASON])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut refused = vec!["nobody@example.com".to_string()];
+    for id in [KEVIN, BENDER, JASON] {
+        refused.push(email_of(a, id).await);
+    }
+    (email_of(a, DAVID).await, refused)
+}
+
+fn request(email: &str, ip: &str) -> Req {
+    Req::new(Method::POST, "/api/v1/password_resets")
+        .header("accept", "application/json")
+        .header("x-forwarded-for", ip)
+        .json_body(&json!({ "emailAddress": email }))
+}
+
+fn submit(token: &str, password: &str) -> Req {
+    Req::new(Method::PUT, &format!("/api/v1/password_resets/{token}"))
+        .header("accept", "application/json")
+        .header("x-forwarded-for", "198.51.100.200")
+        .json_body(&json!({ "password": password }))
+}
+
+fn check(token: &str) -> Req {
+    Req::new(Method::GET, &format!("/api/v1/password_resets/{token}"))
+        .header("accept", "application/json")
+}
+
+/// Records the arguments of every mail delivery job as it's queued.
+async fn capture_mail_jobs(a: &TestApp) {
+    a.db()
+        .write(|tx| {
+            tx.conn().execute_batch(
+                "CREATE TABLE reset_mail(args TEXT NOT NULL);
+                 CREATE TRIGGER capture_reset_mail BEFORE INSERT ON background_jobs
+                 WHEN NEW.job_class='Smartfire::MailDeliveryJob'
+                 BEGIN INSERT INTO reset_mail VALUES(NEW.arguments); END;",
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+async fn captured_mail_jobs(a: &TestApp) -> Vec<Value> {
+    a.db()
+        .read(|conn| {
+            let mut stmt = conn.prepare("SELECT args FROM reset_mail ORDER BY rowid")?;
+            let rows = stmt
+                .query_map([], |r| r.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(rows
+                .iter()
+                .map(|args| serde_json::from_str(args).unwrap())
+                .collect())
+        })
+        .await
+        .unwrap()
+}
+
+/// The link the reset email for `email` carries, as delivery builds it now.
+async fn emailed_token(a: &TestApp, email: &str) -> String {
+    let message = campfire_runtime::mail::password_reset_message(&a.booted.app, email.into())
+        .await
+        .unwrap()
+        .expect("a reset email");
+    let url = message
+        .text
+        .lines()
+        .find(|line| line.starts_with("http"))
+        .unwrap();
+    url.strip_prefix("http://campfire.test/app/passwords/")
+        .expect("the SPA's reset page under APP_URL")
+        .to_string()
+}
+
+async fn count(a: &TestApp, sql: &'static str, id: i64) -> i64 {
+    a.db()
+        .read(move |conn| Ok(conn.query_row(sql, [id], |r| r.get(0))?))
+        .await
+        .unwrap()
+}
+
+fn refused_link(reply: &Reply) {
+    assert_eq!(reply.status, StatusCode::BAD_REQUEST, "{}", reply.text());
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"error","fieldErrors":{"base":[INVALID_LINK]}})
+    );
+}
+
+#[tokio::test]
+async fn reset_is_offered_only_when_mail_can_send_a_working_link() {
+    for (env, available) in [
+        (&MAIL[..], true),
+        (&MAIL[..2], false),
+        (&[MAIL[0], MAIL[2]][..], false),
+        (&[][..], false),
+    ] {
+        let (a, _) = app(env).await;
+        let mut b = a.anonymous();
+        let page = b.get("/app/session/new").await;
+        assert_eq!(
+            inline_boot(&page)["signInMethods"]["passwordReset"],
+            available,
+            "{env:?}"
+        );
+        for path in ["/app/passwords/new", "/app/passwords/some-token"] {
+            let page = b.get(path).await;
+            assert_eq!(page.status, StatusCode::OK, "{path}");
+            assert_eq!(inline_boot(&page)["kind"], "signedOut", "{path}");
+        }
+        if !available {
+            let reply = b.write(request("david@37signals.com", "198.51.100.1")).await;
+            assert_eq!(reply.status, StatusCode::NOT_FOUND);
+            assert_eq!(reply.json(), json!({"kind":"error","fieldErrors":{}}));
+            assert_eq!(b.send(check("token")).await.status, StatusCode::NOT_FOUND);
+            assert_eq!(
+                b.write(submit("token", NEW_PASSWORD)).await.status,
+                StatusCode::NOT_FOUND
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn every_request_answers_alike_and_queues_one_job() {
+    let (a, _) = app(&MAIL).await;
+    let (david, refused) = accounts(&a).await;
+    capture_mail_jobs(&a).await;
+    let mut b = a.anonymous();
+    let mut answers = Vec::new();
+    let emails = std::iter::once(david.clone())
+        .chain(refused.iter().cloned())
+        .collect::<Vec<_>>();
+    for (n, email) in emails.iter().enumerate() {
+        let reply = b.write(request(email, &format!("198.51.100.{n}"))).await;
+        answers.push((
+            reply.status,
+            reply.text(),
+            reply.header("content-type").map(str::to_owned),
+            reply.header("cache-control").map(str::to_owned),
+        ));
+    }
+    assert_eq!(answers[0].0, StatusCode::OK);
+    assert_eq!(answers[0].1, r#"{"kind":"requested"}"#);
+    assert!(answers.iter().all(|answer| *answer == answers[0]), "{answers:?}");
+    assert_eq!(
+        captured_mail_jobs(&a).await,
+        emails
+            .iter()
+            .map(|email| json!({"notification":{"PasswordReset":{"email_address": email}}}))
+            .collect::<Vec<_>>()
+    );
+}
+
+#[tokio::test]
+async fn delivery_writes_only_to_accounts_that_can_reset() {
+    let (a, _) = app(&MAIL).await;
+    let (david, refused) = accounts(&a).await;
+    let message = campfire_runtime::mail::password_reset_message(&a.booted.app, david.clone())
+        .await
+        .unwrap()
+        .expect("David can reset");
+    assert!(message.to.ends_with(&format!("<{david}>")), "{}", message.to);
+    assert_eq!(message.from, "Smartfire <alerts@example.com>");
+    assert!(
+        message
+            .text
+            .contains("http://campfire.test/app/passwords/"),
+        "{}",
+        message.text
+    );
+    for email in refused {
+        assert!(
+            campfire_runtime::mail::password_reset_message(&a.booted.app, email.clone())
+                .await
+                .unwrap()
+                .is_none(),
+            "{email}"
+        );
+    }
+    let (unconfigured, _) = app(&MAIL[..2]).await;
+    assert!(
+        campfire_runtime::mail::password_reset_message(&unconfigured.booted.app, david)
+            .await
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn a_link_sets_the_password_once_and_signs_out_everywhere() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    a.db()
+        .write(|tx| {
+            TwoFactorRememberedDevice::create_for(tx, DAVID, Some("Laptop"), None)?;
+            tx.conn().execute("DELETE FROM audit_logs", [])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut signed_in = a.sign_in(DAVID).await;
+    assert_eq!(signed_in.get("/api/v1/boot").await.status, StatusCode::OK);
+    assert!(count(&a, "SELECT count(*) FROM sessions WHERE user_id=?", DAVID).await > 0);
+    let others = count(&a, "SELECT count(*) FROM sessions WHERE user_id<>?", DAVID).await;
+
+    let token = emailed_token(&a, &david).await;
+    let mut b = a.anonymous();
+    let ready = b.send(check(&token)).await;
+    assert_eq!(ready.status, StatusCode::OK);
+    assert_eq!(ready.json(), json!({"kind":"ready"}));
+
+    let reply = b.write(submit(&token, NEW_PASSWORD)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new"})
+    );
+    // The sign-in page it lands on says so.
+    let page = b.get("/app/session/new").await;
+    assert_eq!(
+        inline_boot(&page)["flash"],
+        json!({"kind":"notice","message":"Your password has been reset. Sign in with your new password."})
+    );
+
+    assert_eq!(
+        count(&a, "SELECT count(*) FROM sessions WHERE user_id=?", DAVID).await,
+        0
+    );
+    assert_eq!(
+        count(&a, "SELECT count(*) FROM sessions WHERE user_id<>?", DAVID).await,
+        others
+    );
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM two_factor_remembered_devices WHERE user_id=?",
+            DAVID
+        )
+        .await,
+        0
+    );
+    let audits = a
+        .db()
+        .read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT action,actor_id,target_id,target_type,ip_address FROM audit_logs ORDER BY id",
+            )?;
+            let rows = stmt
+                .query_map([], |r| {
+                    Ok(json!([
+                        r.get::<_, String>(0)?,
+                        r.get::<_, Option<i64>>(1)?,
+                        r.get::<_, Option<i64>>(2)?,
+                        r.get::<_, Option<String>>(3)?,
+                        r.get::<_, Option<String>>(4)?
+                    ]))
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(rows)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        audits,
+        [json!(["user.password.reset", DAVID, DAVID, "User", "198.51.100.200"])]
+    );
+    assert_eq!(
+        signed_in.get("/api/v1/boot").await.location(),
+        Some("http://campfire.test/app/session/new")
+    );
+
+    // Used once: the password it was made for is gone.
+    refused_link(&b.send(check(&token)).await);
+    refused_link(&b.write(submit(&token, "yet another passphrase")).await);
+
+    let old = a.anonymous().password_sign_in(&david, PASSWORD).await;
+    assert_eq!(old.status, StatusCode::UNAUTHORIZED);
+    let new = a.anonymous().password_sign_in(&david, NEW_PASSWORD).await;
+    assert_eq!(new.status, StatusCode::OK, "{}", new.text());
+    assert!(
+        ["signedIn", "secondFactorRequired"].contains(&new.json()["kind"].as_str().unwrap()),
+        "{}",
+        new.text()
+    );
+}
+
+#[tokio::test]
+async fn expired_retargeted_and_foreign_links_are_refused() {
+    let (a, clock) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let digest = || async {
+        a.db()
+            .read(|conn| Ok(campfire_db::User::find(conn, DAVID)?.password_digest))
+            .await
+            .unwrap()
+    };
+    let before = digest().await;
+    let mut b = a.anonymous();
+
+    let token = emailed_token(&a, &david).await;
+    clock.advance(rails_compat::password_reset::EXPIRES_IN);
+    refused_link(&b.send(check(&token)).await);
+    refused_link(&b.write(submit(&token, NEW_PASSWORD)).await);
+
+    let token = emailed_token(&a, &david).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address='david@example.org' WHERE id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    refused_link(&b.write(submit(&token, NEW_PASSWORD)).await);
+
+    let transfer = rails_compat::signed_id::transfer_id(&a.booted.app.secrets, DAVID, a.booted.app.clock.now());
+    refused_link(&b.write(submit(&transfer, NEW_PASSWORD)).await);
+    refused_link(&b.write(submit("forged", NEW_PASSWORD)).await);
+    assert_eq!(digest().await, before);
+    let failures = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT count(*) FROM audit_logs WHERE action='session.sign_in.failure' AND details LIKE '%password_reset%'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert!(failures >= 1, "refusals are recorded as failed sign-ins");
+}
+
+#[tokio::test]
+async fn a_new_password_must_be_present_and_fit() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let token = emailed_token(&a, &david).await;
+    let mut b = a.anonymous();
+    for (password, message) in [
+        ("", "Enter a new password."),
+        ("   ", "Enter a new password."),
+        (
+            &*"x".repeat(73),
+            "Your new password is too long (maximum is 72 bytes).",
+        ),
+    ] {
+        let reply = b.write(submit(&token, password)).await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(
+            reply.json(),
+            json!({"kind":"error","fieldErrors":{"password":[message]}})
+        );
+    }
+    // Refusing the password leaves the link working.
+    assert_eq!(b.send(check(&token)).await.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn requests_and_new_passwords_are_rate_limited() {
+    let (a, _) = app(&MAIL).await;
+    let mut b = a.anonymous();
+    let too_many = json!({"kind":"error","fieldErrors":{"base":["Too many requests. Try again in a few minutes."]}});
+
+    // Five per address in 15 minutes.
+    for n in 0..5 {
+        let reply = b
+            .write(request(&format!("person{n}@example.com"), "198.51.100.7"))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{n}");
+    }
+    let reply = b.write(request("person5@example.com", "198.51.100.7")).await;
+    assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(reply.json(), too_many);
+
+    // Three per inbox from anywhere, however it's written.
+    for (n, email) in ["inbox@example.com", "Inbox@Example.com", " inbox@example.com"]
+        .iter()
+        .enumerate()
+    {
+        let reply = b.write(request(email, &format!("198.18.0.{n}"))).await;
+        assert_eq!(reply.status, StatusCode::OK, "{email}");
+    }
+    let reply = b.write(request("INBOX@example.com", "198.18.0.9")).await;
+    assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(reply.json(), too_many);
+
+    // Ten new-password attempts per address.
+    for _ in 0..10 {
+        refused_link(&b.write(submit("forged", NEW_PASSWORD)).await);
+    }
+    let reply = b.write(submit("forged", NEW_PASSWORD)).await;
+    assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(reply.json(), too_many);
+}

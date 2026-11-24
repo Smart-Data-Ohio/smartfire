@@ -86,6 +86,7 @@ pub use auth::{
     SudoResponse, SudoRetry, SudoState, SudoSubmission, TransferSignIn,
 };
 pub use auth::{FirstRunState, FirstRunSubmission};
+pub use auth::{PasswordResetRequest, PasswordResetState, PasswordResetSubmission};
 pub use auth::{FlashMessage, FlashMessageKind, SignInHelpContact};
 pub use auth::{InviteRefusal, JoinPage, WorkspaceJoin};
 pub use auth::{

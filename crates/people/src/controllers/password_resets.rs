@@ -1,0 +1,234 @@
+//! "Forgot password?", after Rails 8's `PasswordsController`: ask for a link by email address,
+//! then choose a new password with it. The link is a signed token
+//! (`rails_compat::password_reset`) that names the user and their current password and address,
+//! so it works once and only while both stay the same. Setting the password signs the user out
+//! everywhere and doesn't sign them in: they sign in again, second step and access gates included.
+//!
+//! Reset is available only when outbound mail can send a working link
+//! (`Config::password_reset_available`); otherwise every endpoint answers 404.
+
+use campfire_api_types::{PasswordResetRequest, PasswordResetState, PasswordResetSubmission};
+use campfire_db::User;
+use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, halt};
+use jiff::SignedDuration;
+use rails_compat::password_reset::{self, Claim};
+use sha2::{Digest, Sha256};
+
+use super::auth::{self, ResponseMode};
+use crate::app::AppCtx;
+use crate::authentication::{self, can_reset_password};
+use crate::concerns::{self, Before};
+
+const INVALID_LINK: &str = "This password reset link is invalid or expired.";
+const TOO_MANY: &str = "Too many requests. Try again in a few minutes.";
+const BLANK_PASSWORD: &str = "Enter a new password.";
+const LONG_PASSWORD: &str = "Your new password is too long (maximum is 72 bytes).";
+const RESET_NOTICE: &str = "Your password has been reset. Sign in with your new password.";
+
+/// bcrypt reads only the first 72 bytes of a password.
+const MAX_PASSWORD_BYTES: usize = 72;
+
+/// Requests from one address.
+pub fn request_rate_limit() -> RateLimit {
+    RateLimit::new("password_resets", 5, SignedDuration::from_mins(15)).named("create")
+}
+
+/// Requests for one email address, from anywhere, so one inbox can't be flooded.
+pub fn inbox_rate_limit() -> RateLimit {
+    RateLimit::new("password_resets", 3, SignedDuration::from_mins(15)).named("inbox")
+}
+
+/// New passwords from one address.
+pub fn update_rate_limit() -> RateLimit {
+    RateLimit::new("password_resets", 10, SignedDuration::from_mins(15)).named("update")
+}
+
+/// `POST /api/v1/password_resets`: the same `requested` answer for every address, account or not;
+/// the delivery job decides whether one is sent.
+pub async fn create_json(c: &mut Ctx) -> Result {
+    let result = create_response(c).await;
+    auth::complete(c, result)
+}
+
+async fn create_response(c: &mut Ctx) -> Result {
+    before_actions(c, "password_resets#create").await?;
+    rate_limit(c, &request_rate_limit(), None)?;
+    let body: PasswordResetRequest = auth::body(c).await?;
+    rate_limit(c, &inbox_rate_limit(), Some(&inbox_key(&body.email_address)))?;
+    let email_address = body.email_address;
+    c.app()
+        .db
+        .write(move |tx| {
+            authentication::request_password_reset(tx, email_address);
+            Ok(())
+        })
+        .await
+        .map_err(Error::internal)?;
+    auth::json(c, StatusCode::OK, &PasswordResetState::Requested)
+}
+
+/// `GET /api/v1/password_resets/:token`: whether the link still works, before a password is typed.
+pub async fn show_json(c: &mut Ctx) -> Result {
+    let result = show_response(c).await;
+    auth::complete(c, result)
+}
+
+async fn show_response(c: &mut Ctx) -> Result {
+    before_actions(c, "password_resets#edit").await?;
+    match resettable(c).await? {
+        Some(_) => auth::json(c, StatusCode::OK, &PasswordResetState::Ready),
+        None => invalid_link(c),
+    }
+}
+
+/// `PUT /api/v1/password_resets/:token`: the new password, then `navigate` to sign in.
+pub async fn update_json(c: &mut Ctx) -> Result {
+    let result = update_response(c).await;
+    auth::complete(c, result)
+}
+
+async fn update_response(c: &mut Ctx) -> Result {
+    before_actions(c, "password_resets#update").await?;
+    rate_limit(c, &update_rate_limit(), None)?;
+    let body: PasswordResetSubmission = auth::body(c).await?;
+    let Some((user, claim)) = resettable(c).await? else {
+        return refuse_link(c).await;
+    };
+    if let Some(problem) = password_problem(&body.password) {
+        return auth::field_error(c, StatusCode::UNPROCESSABLE_ENTITY, "password", problem);
+    }
+    let digest = concerns::password_digest(c, Some(body.password))
+        .await?
+        .expect("a password was given");
+    let context = super::two_factor::audit_context(c)?;
+    let secrets = c.app().secrets.clone();
+    // Checked again on the writer: a second use of the link racing this one finds the new digest.
+    let reset = c
+        .app()
+        .db
+        .write(move |tx| {
+            let current = User::find_by_id(tx.conn(), user.id)?
+                .filter(|user| still_resettable(&secrets, &claim, user));
+            match current {
+                Some(mut user) => {
+                    authentication::reset_password(tx, &mut user, digest, &context)?;
+                    Ok(true)
+                }
+                None => Ok(false),
+            }
+        })
+        .await
+        .map_err(Error::internal)?;
+    if !reset {
+        return refuse_link(c).await;
+    }
+    c.flash().set_notice(RESET_NOTICE);
+    let sign_in = c.url_for("/app/session/new");
+    ResponseMode::Json.navigate(c, &sign_in)
+}
+
+async fn before_actions(c: &mut Ctx, endpoint: &'static str) -> Result<()> {
+    auth::before_actions(
+        c,
+        endpoint,
+        Before::default().allow_unauthenticated_access(),
+        ResponseMode::Json,
+    )
+    .await?;
+    if !c.app().mail.config.password_reset_available() {
+        return halt(c.head(StatusCode::NOT_FOUND));
+    }
+    Ok(())
+}
+
+fn rate_limit(c: &mut Ctx, limit: &RateLimit, by: Option<&str>) -> Result<()> {
+    if c.rate_limited(limit, by)? {
+        return halt(auth::field_error(
+            c,
+            StatusCode::TOO_MANY_REQUESTS,
+            "base",
+            TOO_MANY,
+        )?);
+    }
+    Ok(())
+}
+
+/// One bucket per address however it's capitalised or spaced, without keeping the address.
+fn inbox_key(email_address: &str) -> String {
+    let normalized = rails_compat::unicode::fold(campfire_richtext::ruby::strip(email_address));
+    hex::encode(Sha256::digest(normalized.as_bytes()))
+}
+
+/// The link's user, while the link verifies and still matches them.
+async fn resettable(c: &Ctx) -> Result<Option<(User, Claim)>> {
+    let token = c.param_str("token").unwrap_or_default();
+    let secrets = c.app().secrets.clone();
+    let Some(claim) = password_reset::verify(&secrets, token, c.now()) else {
+        return Ok(None);
+    };
+    let user_id = claim.user_id;
+    let user = c
+        .app()
+        .db
+        .read(move |conn| User::find_by_id(conn, user_id))
+        .await
+        .map_err(Error::internal)?;
+    Ok(user
+        .filter(|user| still_resettable(&secrets, &claim, user))
+        .map(|user| (user, claim)))
+}
+
+fn still_resettable(secrets: &rails_compat::Secrets, claim: &Claim, user: &User) -> bool {
+    can_reset_password(user)
+        && claim.matches(
+            secrets,
+            user.password_digest.as_deref().unwrap_or_default(),
+            user.email_address.as_deref().unwrap_or_default(),
+        )
+}
+
+fn password_problem(password: &str) -> Option<&'static str> {
+    if campfire_richtext::ruby::is_blank(password) {
+        Some(BLANK_PASSWORD)
+    } else if password.len() > MAX_PASSWORD_BYTES {
+        Some(LONG_PASSWORD)
+    } else {
+        None
+    }
+}
+
+fn invalid_link(c: &mut Ctx) -> Result {
+    auth::field_error(c, StatusCode::BAD_REQUEST, "base", INVALID_LINK)
+}
+
+/// A used, expired or forged link, recorded as a failed sign-in as a bad transfer link is.
+async fn refuse_link(c: &mut Ctx) -> Result {
+    super::sessions::record_sign_in_failure(c, "password_reset", String::new()).await?;
+    invalid_link(c)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn passwords_must_be_present_and_fit_bcrypt() {
+        assert_eq!(password_problem(""), Some(BLANK_PASSWORD));
+        assert_eq!(password_problem("   "), Some(BLANK_PASSWORD));
+        assert_eq!(password_problem(&"a".repeat(72)), None);
+        assert_eq!(password_problem(&"a".repeat(73)), Some(LONG_PASSWORD));
+        // 24 three-byte characters fill bcrypt's 72 bytes; one more doesn't fit.
+        assert_eq!(password_problem(&"€".repeat(24)), None);
+        assert_eq!(password_problem(&"€".repeat(25)), Some(LONG_PASSWORD));
+    }
+
+    #[test]
+    fn inbox_buckets_ignore_case_and_surrounding_space() {
+        assert_eq!(
+            inbox_key(" Ada@Example.com "),
+            inbox_key("ada@example.com")
+        );
+        assert_ne!(inbox_key("ada@example.com"), inbox_key("bob@example.com"));
+        assert!(!inbox_key("ada@example.com").contains("ada"));
+    }
+}

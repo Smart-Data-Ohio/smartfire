@@ -7,6 +7,7 @@
 pub mod controllers {
     pub mod accounts;
     pub mod auth;
+    pub mod password_resets;
     pub mod qr_code;
     pub mod sessions;
     pub mod sudos;

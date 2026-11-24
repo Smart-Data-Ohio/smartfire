@@ -19,6 +19,35 @@ pub struct GoogleSignInStart {}
 #[ts(export)]
 pub struct TransferSignIn {}
 
+/// `POST /api/v1/password_resets`: email a password reset link to this address. The answer is
+/// [`PasswordResetState::Requested`] whether or not the address has an account.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PasswordResetRequest {
+    pub email_address: String,
+}
+
+/// `PUT /api/v1/password_resets/:token`: the new password. Success is an [`AuthResponse`]
+/// `navigate` to the sign-in page; the link stops working.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct PasswordResetSubmission {
+    pub password: String,
+}
+
+/// What the password reset endpoints answer besides an [`AuthResponse`] (a refusal, the rate
+/// limit, or `navigate` once the password is reset).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub enum PasswordResetState {
+    /// `POST`: taken. A link is on its way if the address belongs to an account that can have one.
+    Requested,
+    /// `GET /api/v1/password_resets/:token`: the link works; the page may ask for a password.
+    Ready,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -312,6 +341,9 @@ pub struct SignInMethods {
     pub google: bool,
     /// The Google Workspace domains Google sign-in accepts, named under its button.
     pub google_domains: Vec<String>,
+    /// Whether "Forgot password?" can email a reset link: outbound mail with a sender and the
+    /// app's URL are configured.
+    pub password_reset: bool,
 }
 
 /// `POST /api/v1/join/:join_code` and `POST /api/v1/invites/:token`: the retained join form's
@@ -544,6 +576,7 @@ mod tests {
                     password: true,
                     google: true,
                     google_domains: vec!["example.com".into()],
+                    password_reset: true,
                 },
                 first_run_pending: true,
                 help_contact: Some(SignInHelpContact {
@@ -557,7 +590,7 @@ mod tests {
                     message: "Google sign-in failed.".into(),
                 }),
             },
-            json!({"kind":"signedOut","workspace":{"name":null,"inviteSplashUrl":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"]},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked","flash":{"kind":"alert","message":"Google sign-in failed."}}),
+            json!({"kind":"signedOut","workspace":{"name":null,"inviteSplashUrl":null,"logoUrl":null,"description":""},"signInMethods":{"password":true,"google":true,"googleDomains":["example.com"],"passwordReset":true},"firstRunPending":true,"helpContact":{"name":"Ada","emailAddress":"ada@example.com"},"version":"1.2.3","csrfToken":"masked","flash":{"kind":"alert","message":"Google sign-in failed."}}),
         );
         assert_wire(
             &PasswordSignIn {
@@ -628,6 +661,23 @@ mod tests {
         );
         assert_wire(&GoogleSignInStart {}, json!({}));
         assert_wire(&TransferSignIn {}, json!({}));
+        assert_wire(
+            &PasswordResetRequest {
+                email_address: "ada@example.com".into(),
+            },
+            json!({"emailAddress":"ada@example.com"}),
+        );
+        assert_wire(
+            &PasswordResetSubmission {
+                password: "secret".into(),
+            },
+            json!({"password":"secret"}),
+        );
+        assert_wire(
+            &PasswordResetState::Requested,
+            json!({"kind":"requested"}),
+        );
+        assert_wire(&PasswordResetState::Ready, json!({"kind":"ready"}));
     }
 
     #[test]
