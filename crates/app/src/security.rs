@@ -341,13 +341,22 @@ static INVITE_TOKEN_IN_PATH: LazyLock<Regex> =
 static WEBHOOK_TOKEN_IN_PATH: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(/api/webhooks/[^/\s"?#<>]+/)[^/\s"?#<>]+"#).unwrap());
 
+/// A password reset link's token after `/app/passwords/` or `/api/v1/password_resets/`. The
+/// request page `/app/passwords/new` keeps its name.
+static PASSWORD_RESET_TOKEN_IN_PATH: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(/passwords/|/password_resets/)([^/\s"?#<>]+)"#).unwrap());
+
 /// `LogScrubbingFormatter#scrub`
 pub fn scrub_log_line(line: &str) -> Cow<'_, str> {
     let scrubbed = BOT_KEY_IN_PATH.replace_all(line, "${1}[FILTERED]");
     let scrubbed = INVITE_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]");
+    let scrubbed = WEBHOOK_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]");
     Cow::Owned(
-        WEBHOOK_TOKEN_IN_PATH
-            .replace_all(&scrubbed, "${1}[FILTERED]")
+        PASSWORD_RESET_TOKEN_IN_PATH
+            .replace_all(&scrubbed, |captures: &regex::Captures| match &captures[2] {
+                "new" => captures[0].to_string(),
+                _ => format!("{}[FILTERED]", &captures[1]),
+            })
             .into_owned(),
     )
 }
@@ -680,6 +689,25 @@ mod tests {
             .write_all(b"POST /api/webhooks/12/abc123\nrequest failed path=\"/api/webhooks/34/def456\" /rooms/1/12-AbC /invite/ghi789\n")
             .unwrap();
         assert_eq!(out, b"POST /api/webhooks/12/[FILTERED]\nrequest failed path=\"/api/webhooks/34/[FILTERED]\" /rooms/1/[FILTERED] /invite/[FILTERED]\n");
+    }
+
+    #[test]
+    fn password_reset_tokens_are_scrubbed_from_log_lines() {
+        for (line, expected) in [
+            ("GET /app/passwords/abc--123", "GET /app/passwords/[FILTERED]"),
+            (
+                "PUT /api/v1/password_resets/abc--123 HTTP/1.1",
+                "PUT /api/v1/password_resets/[FILTERED] HTTP/1.1",
+            ),
+            (
+                "GET /api/v1/password_resets/abc--123?x=1",
+                "GET /api/v1/password_resets/[FILTERED]?x=1",
+            ),
+            ("GET /app/passwords/new", "GET /app/passwords/new"),
+            ("POST /api/v1/password_resets", "POST /api/v1/password_resets"),
+        ] {
+            assert_eq!(scrub_log_line(line), expected, "{line}");
+        }
     }
 
     #[test]
