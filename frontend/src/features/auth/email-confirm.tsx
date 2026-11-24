@@ -108,7 +108,7 @@ export function ConfirmEmailPage({ token }: { readonly token: string }) {
           titleId={titleId}
           title={TITLE}
           logoUrl={logoUrl}
-          lede="Link this address to your account. You can then use it to sign in."
+          lede="Link this address to your account. You can use it to sign in and reset your password."
         />
         <div className="auth-view-stack">
           <p className="auth-view-address">{landing.emailAddress}</p>
@@ -123,7 +123,7 @@ export function ConfirmEmailPage({ token }: { readonly token: string }) {
             Confirm
           </Button>
           {landing.requiresSignIn ? (
-            <p className="auth-view-note">You'll sign in after confirming.</p>
+            <p className="auth-view-note">You'll go to the sign-in page after confirming.</p>
           ) : null}
         </div>
       </AuthScreen>

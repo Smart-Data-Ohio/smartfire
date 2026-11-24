@@ -24,11 +24,12 @@ export const MOCK_EMAIL_SIGNED_OUT_TOKEN = "mock-email-signed-out";
 /** A link whose address another account linked first. */
 export const MOCK_EMAIL_TAKEN_TOKEN = "mock-email-taken";
 
-export const INVALID_EMAIL_LINK = "This confirmation link is invalid or has expired.";
+export const INVALID_EMAIL_LINK =
+  "This confirmation link is invalid or expired. Send a new link from your profile settings.";
 
 export const EMAIL_TAKEN = "This email address is already linked to another account.";
 
-export const EMAIL_RATE_LIMITED = "Too many confirmation requests. Try again later.";
+export const EMAIL_RATE_LIMITED = "Too many requests. Try again in an hour.";
 
 /** The address the seed links besides the primary. */
 export const SEEDED_LINKED_ADDRESS = "riel.personal@example.test";
@@ -122,7 +123,7 @@ export function createEmailAddresses(
         const emailAddress = (stringField(body, "emailAddress") ?? "").trim();
 
         if (!/^[^@\s]+@[^@\s]+$/.test(emailAddress)) {
-          throw validation("emailAddress", "must be a valid email address");
+          throw validation("emailAddress", "isn't valid");
         }
 
         if (emailAddress.toLowerCase().startsWith("limit")) {

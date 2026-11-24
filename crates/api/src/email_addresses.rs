@@ -55,10 +55,7 @@ async fn request_confirmation(c: &mut Ctx) -> Result {
     if email_address.len() > 254
         || !campfire_db::models::drive_recipients::eligible_email(&email_address)
     {
-        return Err(fail(
-            c,
-            validation("emailAddress", "must be a valid email address"),
-        ));
+        return Err(fail(c, validation("emailAddress", "isn't valid")));
     }
     let limit = RateLimit::new(
         "email_address_confirmation",
@@ -69,7 +66,7 @@ async fn request_confirmation(c: &mut Ctx) -> Result {
         return Err(fail(
             c,
             ApiError::RateLimited {
-                message: "Too many confirmation requests. Try again later.".into(),
+                message: "Too many requests. Try again in an hour.".into(),
                 retry_after: 3600,
             },
         ));

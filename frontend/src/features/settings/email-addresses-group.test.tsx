@@ -105,7 +105,7 @@ it("sends a link and says the same thing whether or not the address is free", as
   await userEvent.click(screen.getByRole("button", { name: "Send link" }));
 
   expect((await screen.findByRole("status")).textContent).toBe(
-    "We sent a confirmation link to new@x.test. Open it to finish linking.",
+    "If new@x.test isn't already used by an account, we've emailed it a confirmation link. Open the link within 24 hours to finish linking.",
   );
   expect(add).toHaveBeenCalledWith("new@x.test");
   expect(addressField()).toHaveProperty("value", "");
@@ -116,7 +116,7 @@ it("shows the server's problem with the address on the field", async () => {
   await userEvent.type(await screen.findByRole("textbox", { name: "Add email address" }), "nope");
   await userEvent.click(screen.getByRole("button", { name: "Send link" }));
 
-  expect(await screen.findByText("Email address must be a valid email address.")).toBeTruthy();
+  expect(await screen.findByText("Email address isn't valid.")).toBeTruthy();
   expect(addressField().getAttribute("aria-invalid")).toBe("true");
 });
 
@@ -158,7 +158,7 @@ it("hides adding when outgoing email isn't set up", async () => {
   });
   renderGroup();
 
-  expect(await screen.findByText(/isn't set up for this workspace/)).toBeTruthy();
+  expect(await screen.findByText(/can't email confirmation links/)).toBeTruthy();
   expect(screen.queryByRole("textbox", { name: "Add email address" })).toBeNull();
 });
 

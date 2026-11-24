@@ -2343,7 +2343,7 @@ async fn email_confirmation_worker_delivers_only_the_available_address() {
             if line == ".\r\n" {
                 break;
             }
-            saw_subject |= line.starts_with("Subject: Confirm your email address for Smartfire");
+            saw_subject |= line.starts_with("Subject: Confirm your Smartfire email address");
         }
         assert!(saw_subject);
         peer.get_mut().write_all(b"250 Accepted\r\n").await.unwrap();

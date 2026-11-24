@@ -383,7 +383,7 @@ pub fn promote_email_address(
         let mut errors = campfire_db::Errors::default();
         errors.add(
             "email_address",
-            "cannot be swapped because the current primary address is shared by another account",
+            "can't be changed because another account uses your current primary address",
         );
         return errors.into_result();
     }

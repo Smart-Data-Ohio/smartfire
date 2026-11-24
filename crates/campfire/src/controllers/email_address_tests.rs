@@ -83,7 +83,7 @@ async fn request_is_sudo_gated_uniform_and_enqueues_once_per_valid_address() {
     assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(
         invalid.json()["error"]["fields"]["emailAddress"],
-        json!(["must be a valid email address"])
+        json!(["isn't valid"])
     );
 
     let addresses = [
@@ -193,7 +193,7 @@ async fn confirmation_is_public_idempotent_and_audited() {
     );
     assert_eq!(
         inline_boot(&phone.get("/app/session/new").await)["flash"],
-        json!({"kind":"notice","message":"Email address confirmed."})
+        json!({"kind":"notice","message":"Your email address is linked. You can use it to sign in."})
     );
 
     let mut owner = a.sign_in(DAVID).await;

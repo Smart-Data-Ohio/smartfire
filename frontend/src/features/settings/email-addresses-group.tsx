@@ -75,7 +75,7 @@ function AddEmailAddress({ onSent }: { readonly onSent: () => void }) {
           value={address}
           autoComplete="email"
           spellCheck={false}
-          placeholder="name@example.com"
+          placeholder="you@example.com"
           error={error}
           attempt={attempt}
           onChange={(event) => setAddress(event.target.value)}
@@ -93,7 +93,8 @@ function AddEmailAddress({ onSent }: { readonly onSent: () => void }) {
       </form>
       {sent === null ? null : (
         <p className="settings-callout settings-email-address" role="status">
-          We sent a confirmation link to {sent}. Open it to finish linking.
+          If {sent} isn't already used by an account, we've emailed it a confirmation link. Open the
+          link within 24 hours to finish linking.
         </p>
       )}
     </>
@@ -204,7 +205,7 @@ export function EmailAddressesGroup({
   return (
     <SettingsGroup
       title="Email addresses"
-      description="Sign in with any of these. Notifications go to your primary address."
+      description="Sign in or reset your password with any of these. Notifications go to your primary address. If you switch your primary address, the old one stays linked."
     >
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
@@ -238,7 +239,7 @@ export function EmailAddressesGroup({
             <AddEmailAddress onSent={fetchList} />
           ) : (
             <p className="settings-hint text-faint">
-              Adding an address needs outgoing email, which isn't set up for this workspace.
+              This workspace can't email confirmation links, so you can't add another address.
             </p>
           )}
         </>
@@ -253,7 +254,8 @@ export function EmailAddressesGroup({
         title="Remove this email address?"
         description={
           <span className="settings-email-address">
-            You won't be able to sign in with {removing?.emailAddress ?? "it"} anymore.
+            You won't be able to use {removing?.emailAddress ?? "it"} to sign in or reset your
+            password.
           </span>
         }
         footer={

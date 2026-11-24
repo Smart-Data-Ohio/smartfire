@@ -168,12 +168,13 @@ pub fn email_address_confirmation(
     url: &str,
 ) -> Message {
     let text = format!(
-        "Hi {},\n\nOpen this link to confirm this email address for your Smartfire account.\n\n{url}\n\nThe link expires in 24 hours. You can ignore this email if you didn't request it.\n",
+        "Hi {},\n\nSomeone asked to link {address} to your Smartfire account. Once confirmed, you can use it to sign in and reset your password. Open this link to finish:\n\n{url}\n\nThe link expires in 24 hours. If you didn't ask to link this address, you can ignore this email. Nothing will change.\n",
         user.name
     );
     let body = format!(
-        "<p>Hi {},</p><p>Confirm this email address for your Smartfire account.</p><p><a href=\"{}\">Confirm email address</a></p><p>The link expires in 24 hours. You can ignore this email if you didn't request it.</p>",
+        "<p>Hi {},</p>\n\n<p>Someone asked to link {} to your Smartfire account. Once confirmed, you can use it to sign in and reset your password.</p>\n\n<p><a href=\"{}\">Confirm email address</a></p>\n\n<p>The link expires in 24 hours. If you didn't ask to link this address, you can ignore this email. Nothing will change.</p>\n",
         h(&user.name),
+        h(address),
         h(url),
     );
     Message {
@@ -182,7 +183,7 @@ pub fn email_address_confirmation(
             .clone()
             .unwrap_or_else(|| "Smartfire <noreply@example.com>".into()),
         to: address.to_owned(),
-        subject: "Confirm your email address for Smartfire".into(),
+        subject: "Confirm your Smartfire email address".into(),
         text,
         html: layout(&body),
     }

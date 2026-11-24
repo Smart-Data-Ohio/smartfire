@@ -35,7 +35,7 @@ it("shows the address and links it only on Confirm, then loads the next page in 
     await screen.findByRole("heading", { level: 1, name: "Confirm your email address" }),
   ).toBeTruthy();
   expect(screen.getByText("extra@smartdata.example")).toBeTruthy();
-  expect(screen.queryByText("You'll sign in after confirming.")).toBeNull();
+  expect(screen.queryByText("You'll go to the sign-in page after confirming.")).toBeNull();
   // Opening the link (a mail scanner's prefetch) links nothing.
   expect(confirm).not.toHaveBeenCalled();
 
@@ -48,7 +48,7 @@ it("shows the address and links it only on Confirm, then loads the next page in 
 it("says a signed-out browser signs in after confirming", async () => {
   await renderAuth(`/app/email_addresses/confirm/${MOCK_EMAIL_SIGNED_OUT_TOKEN}`);
 
-  expect(await screen.findByText("You'll sign in after confirming.")).toBeTruthy();
+  expect(await screen.findByText("You'll go to the sign-in page after confirming.")).toBeTruthy();
   await userEvent.setup().click(screen.getByRole("button", { name: "Confirm" }));
   await waitFor(() => expect(assign).toHaveBeenCalledWith("/app/session/new"));
 });

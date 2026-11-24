@@ -106,7 +106,8 @@ async fn update(c: &mut Ctx) -> Result {
             "This email address is already linked to another account.",
         ),
         Some(Confirmation::Added | Confirmation::AlreadyLinked) => {
-            c.flash().set_notice("Email address confirmed.");
+            c.flash()
+                .set_notice("Your email address is linked. You can use it to sign in.");
             let path = if concerns::current_user(c).is_some() {
                 "/app/settings"
             } else {
@@ -122,6 +123,6 @@ fn invalid_link(c: &mut Ctx) -> Result {
         c,
         StatusCode::BAD_REQUEST,
         "base",
-        "This email confirmation link is invalid or expired.",
+        "This confirmation link is invalid or expired. Send a new link from your profile settings.",
     )
 }
