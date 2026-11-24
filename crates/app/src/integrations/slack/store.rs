@@ -90,15 +90,14 @@ fn apply(
             }
             p.state["convo"]["bounds"] =
                 json!({"oldest":oldest,"latest":time_bound(&p.run.options["latest"])?});
-            // The plan can't call a channel quiet from messages this dry run didn't read.
-            if let Some(oldest) = oldest.filter(|_| p.dry_run()) {
-                p.entry_mut()["scanned_from"] = json!(oldest);
-            }
+            note_scanned_from(p);
         }
         Operation::History(messages) => {
             let conversation = string(&p.state["convo"]["id"]);
             let bounds = writer::Bounds::from_value(&p.state["convo"]["bounds"]);
             let result = if p.dry_run() {
+                // Again on every page: a run resumed from saved bounds skips `Bounds`.
+                note_scanned_from(p);
                 let name = string(&p.entry_mut()["name"]);
                 writer::dry_history(
                     tx,
@@ -430,6 +429,14 @@ fn note_written(p: &mut Progress, id: &str) {
         .expect("written conversations");
     if !ids.contains(&json!(id)) {
         ids.push(json!(id));
+    }
+}
+/// Records a dry run's oldest bound for the conversation, so the plan can't call it quiet from
+/// messages the run didn't read. Import rows stay as Rails recorded them.
+fn note_scanned_from(p: &mut Progress) {
+    let oldest = p.state["convo"]["bounds"]["oldest"].clone();
+    if p.dry_run() && !oldest.is_null() {
+        p.entry_mut()["scanned_from"] = oldest;
     }
 }
 fn catchup_oldest(tx: &Tx<'_>, run: &SlackImport, conversation: &str) -> Result<Option<f64>> {

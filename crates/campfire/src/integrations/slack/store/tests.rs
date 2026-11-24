@@ -621,7 +621,7 @@ async fn slack_finishing_per_conversation_seeks_identity_index_and_renews_heartb
     }).await.unwrap();
 }
 #[tokio::test]
-async fn slack_dry_run_keeps_no_last_message_for_a_run_counted_before_dates() {
+async fn slack_dry_run_resumed_across_the_upgrade_records_only_what_it_can_know() {
     let (db, _, _dir) = setup().await;
     let id = start(&db).await;
     let lease = db
@@ -663,4 +663,17 @@ async fn slack_dry_run_keeps_no_last_message_for_a_run_counted_before_dates() {
     }
     assert_eq!(latest["CRESUMED"], Value::Null);
     assert_eq!(latest["CFRESH"], json!("1600000000.000100"));
+    // A run resumed from saved bounds skips `Bounds`, so the page records the catch-up start.
+    p.stats["conversations"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id":"CCAUGHT","name":"caught","messages":0,"threads":0}));
+    p.state["convo"] =
+        json!({"id":"CCAUGHT","bounds":{"oldest":1599000000.0,"latest":null},"thread_queue":[]});
+    p = store
+        .commit(p, Operation::History(page))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(p.entry_mut()["scanned_from"], json!(1599000000.0));
 }

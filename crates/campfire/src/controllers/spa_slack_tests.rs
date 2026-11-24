@@ -383,7 +383,7 @@ async fn a_run_reads_as_its_classic_page() {
     );
     assert_eq!((plan.scanned_from, plan.scanned_until), (None, None));
     assert!(
-        plan.finished_at.is_some(),
+        plan.started_at.is_some(),
         "the plan measures the year from it"
     );
 

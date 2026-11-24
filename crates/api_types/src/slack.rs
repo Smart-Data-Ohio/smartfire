@@ -336,8 +336,9 @@ pub struct SlackPlan {
     /// The dry run's date bounds, when it had them: it counted only messages between them.
     pub scanned_from: Option<Timestamp>,
     pub scanned_until: Option<Timestamp>,
-    /// When the dry run finished: the plan measures "the past year" back from it.
-    pub finished_at: Option<Timestamp>,
+    /// When the dry run started: the plan measures "the past year" back from it, since the run
+    /// may have read a channel any time after.
+    pub started_at: Option<Timestamp>,
 }
 
 /// `POST /api/v1/admin/slack/runs` (`accounts/slack_import_runs#create`): a workspace dry run.

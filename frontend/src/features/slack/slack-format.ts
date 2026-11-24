@@ -126,7 +126,8 @@ const YEAR_MS = 365 * 86_400_000;
  * What a dry run's counts say about the past year. `"full"`: it read every message.
  * `"bounded"`: it had date bounds, so a zero or old count says nothing about recent use (an
  * oldest bound also hides new replies to older threads). `"undated"`: some channel's messages
- * were counted before last-message dates were recorded.
+ * were counted before last-message dates (and catch-up starts) were recorded, so only the
+ * member count is trusted.
  */
 export type Coverage = "full" | "bounded" | "undated";
 
@@ -141,11 +142,11 @@ export function planCoverage(plan: SlackPlan): Coverage {
 }
 
 /**
- * The time a plan measures "the past year" back from: when its dry run finished, so a channel
- * that posted after an old dry run isn't called quiet.
+ * The time a plan measures "the past year" back from: when its dry run started, before it read
+ * any channel, so a channel that posted after the run read it isn't called quiet.
  */
 export function judgedAt(plan: SlackPlan, now: number): number {
-  return plan.finishedAt === null ? now : Math.min(now, Date.parse(plan.finishedAt));
+  return plan.startedAt === null ? now : Math.min(now, Date.parse(plan.startedAt));
 }
 
 /** A conversation the dry run read only part of: an earlier import's catch-up start. */
@@ -165,7 +166,7 @@ export function inactive(
 ): boolean {
   if (conversation.members === 0) return true;
 
-  if (coverage === "bounded" || partlyRead(conversation)) return false;
+  if (coverage !== "full" || partlyRead(conversation)) return false;
 
   if (conversation.messages === 0) return true;
 
@@ -199,7 +200,7 @@ export function inactiveHint(count: number, coverage: Coverage, partly: boolean)
   const anyway = "Check one to import it anyway.";
 
   const imported = partly
-    ? "Channels an earlier import brought in stay checked: this dry run read only their newer messages."
+    ? "Channels an earlier import brought in aren't unchecked for going quiet: this dry run read only their newer messages."
     : null;
 
   const lines = (...parts: readonly (string | null)[]) => {
@@ -226,8 +227,7 @@ export function inactiveHint(count: number, coverage: Coverage, partly: boolean)
 
     case "undated":
       return lines(
-        count === 0 ? null : `${channels} ${start} unchecked. ${anyway}`,
-        imported,
+        count === 0 ? null : `${channels} with no members ${start} unchecked. ${anyway}`,
         "This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.",
       );
   }

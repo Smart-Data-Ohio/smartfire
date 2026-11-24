@@ -125,7 +125,7 @@ describe("S7 Slack schemas", () => {
       defaultOldest: "2026-09-22",
       scannedFrom: "2025-01-01T00:00:00.000Z",
       scannedUntil: null,
-      finishedAt: "2026-09-30T15:00:00.000Z",
+      startedAt: "2026-09-30T15:00:00.000Z",
     });
     roundTrips(StartSlackDryRun, { includePrivate: true, oldest: "2026-01-01", latest: null });
     roundTrips(StartSlackImport, {

@@ -231,7 +231,7 @@ fn the_plan_and_the_starts() {
             default_oldest: "2026-09-22".into(),
             scanned_from: Some("2025-01-01T00:00:00.000Z".into()),
             scanned_until: None,
-            finished_at: Some("2026-09-30T15:00:00.000Z".into()),
+            started_at: Some("2026-09-30T15:00:00.000Z".into()),
         },
         json!({
             "runId": 12,
@@ -252,7 +252,7 @@ fn the_plan_and_the_starts() {
             "defaultOldest": "2026-09-22",
             "scannedFrom": "2025-01-01T00:00:00.000Z",
             "scannedUntil": null,
-            "finishedAt": "2026-09-30T15:00:00.000Z"
+            "startedAt": "2026-09-30T15:00:00.000Z"
         }),
     );
     assert_wire(

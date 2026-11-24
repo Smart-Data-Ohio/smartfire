@@ -21,6 +21,7 @@ defaultOldest: string,
  */
 scannedFrom: string | null, scannedUntil: string | null,
 /**
- * When the dry run finished: the plan measures "the past year" back from it.
+ * When the dry run started: the plan measures "the past year" back from it, since the run
+ * may have read a channel any time after.
  */
-finishedAt: string | null, };
+startedAt: string | null, };

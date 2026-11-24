@@ -606,7 +606,7 @@ async fn show_plan(c: &mut Ctx) -> Result {
         default_oldest: oldest,
         scanned_from: scan_bound(&data.options["oldest"]),
         scanned_until: scan_bound(&data.options["latest"]),
-        finished_at: data.finished_at.as_deref().map(stamp).transpose()?,
+        started_at: data.started_at.as_deref().map(stamp).transpose()?,
     };
     c.json(StatusCode::OK, &plan)
 }
