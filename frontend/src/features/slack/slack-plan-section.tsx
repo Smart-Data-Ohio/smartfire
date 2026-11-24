@@ -26,6 +26,7 @@ import {
   saveChoices,
   savedChoices,
 } from "./slack-format.ts";
+import { newestOnly } from "./slack-poll.ts";
 import { useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
 import "./slack.css";
@@ -309,33 +310,54 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
 }
 
 /**
+ * Reads a run's plan, and again on `reload`. Only the newest read's answer counts: after a
+ * switch to another plan, the earlier plan's late answer must not replace the current one.
+ */
+export function usePlanLoad(
+  runId: number,
+  enabled: boolean,
+  read: (runId: number) => Promise<SlackPlan> = slack.plan,
+) {
+  const [load, setLoad] = useState<Load>({ status: "loading" });
+  const [tickets] = useState(newestOnly);
+
+  const fetchPlan = useCallback(() => {
+    const newest = tickets.take();
+
+    read(runId).then(
+      (plan) => {
+        if (newest()) setLoad({ status: "ready", plan });
+      },
+      (error: Error) => {
+        if (newest()) setLoad({ status: "error", message: error.message });
+      },
+    );
+  }, [read, runId, tickets]);
+
+  useEffect(() => {
+    if (enabled) fetchPlan();
+  }, [enabled, fetchPlan]);
+
+  const reload = () => {
+    setLoad({ status: "loading" });
+    fetchPlan();
+  };
+
+  return { load, reload };
+}
+
+/**
  * Import plan: a completed dry run's conversations to check, each one's target (a new room, a
  * room to merge into, or skip), the converted samples, and the test or full import.
  */
 export function SlackPlanSection() {
   const { workspace } = useAdmin();
   const runId = useRunId();
-  const [load, setLoad] = useState<Load>({ status: "loading" });
-
-  const fetchPlan = useCallback(() => {
-    slack.plan(runId).then(
-      (plan) => setLoad({ status: "ready", plan }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
-    );
-  }, [runId]);
-
-  useEffect(() => {
-    if (workspace.canAdminister) fetchPlan();
-  }, [fetchPlan, workspace.canAdminister]);
+  const { load, reload } = usePlanLoad(runId, workspace.canAdminister);
 
   if (!workspace.canAdminister) {
     return <AdministratorsOnly />;
   }
-
-  const reload = () => {
-    setLoad({ status: "loading" });
-    fetchPlan();
-  };
 
   const plan = planFor(load.status === "ready" ? load.plan : null, runId);
 
