@@ -24,8 +24,12 @@ function heldReads() {
     });
 
   const answer = async (runId: number) => {
+    const resolve = answers.get(runId);
+
+    if (resolve === undefined) throw new Error(`run ${runId} was never read`);
+
     await act(async () => {
-      answers.get(runId)?.(plan(runId));
+      resolve(plan(runId));
     });
   };
 
