@@ -14,6 +14,7 @@ import { act, render } from "@testing-library/react";
 import type { MockNetwork } from "../../test/mock-network.ts";
 import { parseSignInSearch } from "./auth-navigation.ts";
 import { ChallengePage } from "./challenge.tsx";
+import { ConfirmEmailRoute } from "./email-confirm.tsx";
 import { FirstRunPage } from "./first-run.tsx";
 import { InviteRoute, JoinCodeRoute } from "./join.tsx";
 import { EditPasswordRoute } from "./password-edit.tsx";
@@ -48,6 +49,11 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
       getParentRoute: () => root,
       path: "passwords/$token",
       component: EditPasswordRoute,
+    }),
+    createRoute({
+      getParentRoute: () => root,
+      path: "email_addresses/confirm/$token",
+      component: ConfirmEmailRoute,
     }),
     createRoute({ getParentRoute: () => root, path: "join/$joinCode", component: JoinCodeRoute }),
     createRoute({ getParentRoute: () => root, path: "invite/$token", component: InviteRoute }),

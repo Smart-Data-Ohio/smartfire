@@ -180,6 +180,17 @@ const editPasswordRoute = createRoute({
   ),
 });
 
+/** `/app/email_addresses/confirm/:token`: an emailed link's landing, linking the address. */
+const confirmEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "email_addresses/confirm/$token",
+  ...chunked(() =>
+    import("./features/auth/email-confirm.tsx").then((module) => ({
+      default: module.ConfirmEmailRoute,
+    })),
+  ),
+});
+
 /** `/app/join/:joinCode`: joining with the workspace's join code (users/new). */
 const joinRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -814,6 +825,7 @@ const routeTree = rootRoute.addChildren([
   transferRoute,
   newPasswordRoute,
   editPasswordRoute,
+  confirmEmailRoute,
   joinRoute,
   inviteRoute,
   firstRunRoute,

@@ -311,6 +311,19 @@
     text-align: center;
   }
 
+  /* An email address being confirmed: long ones wrap anywhere rather than widen the card. */
+  .auth-view-address {
+    margin: 0;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-ui);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
   /* ── Waiting and refusals ── */
 
   .auth-view-wait {
