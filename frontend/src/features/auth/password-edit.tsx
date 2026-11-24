@@ -101,7 +101,7 @@ export function EditPasswordPage({ token }: { readonly token: string }) {
 
   return (
     <AuthScreen labelledBy={titleId} flash={flash}>
-      <AuthHeader titleId={titleId} title={TITLE} logoUrl={logoUrl} />
+      <AuthHeader titleId={titleId} title="Couldn't reset your password" logoUrl={logoUrl} />
       <div className="auth-view-stack">
         <p className="auth-view-alert" role="alert">
           {landing.message}
@@ -117,7 +117,7 @@ export function EditPasswordPage({ token }: { readonly token: string }) {
             data-variant="primary"
             data-size="lg"
           >
-            Get a new link
+            Request new link
           </Link>
         )}
         <Link
@@ -126,7 +126,7 @@ export function EditPasswordPage({ token }: { readonly token: string }) {
           data-variant="secondary"
           data-size="lg"
         >
-          Go to sign in
+          Go to sign-in
         </Link>
       </div>
     </AuthScreen>
@@ -211,7 +211,7 @@ function NewPasswordForm({
         titleId={titleId}
         title="Choose a new password"
         logoUrl={logoUrl}
-        lede="You'll sign in with it next. Every device signed in to your account is signed out."
+        lede="Resetting your password signs you out on every device. You'll sign in again next."
       />
 
       <form className="auth-view-form" onSubmit={submit} aria-labelledby={titleId}>
@@ -234,7 +234,7 @@ function NewPasswordForm({
           size="lg"
           className="auth-view-wide"
           loading={busy}
-          loadingLabel="Saving…"
+          loadingLabel="Resetting…"
         >
           Reset password
         </Button>

@@ -16,7 +16,7 @@ const MAIL: [(&str, &str); 3] = [
 ];
 const PASSWORD: &str = "secret123456";
 const NEW_PASSWORD: &str = "a brand new passphrase";
-const INVALID_LINK: &str = "This password reset link is invalid or expired.";
+const INVALID_LINK: &str = "This reset link didn't work. It may have expired or already been used.";
 
 async fn app(env: &[(&str, &str)]) -> (TestApp, Arc<campfire_kit::FrozenClock>) {
     let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
@@ -278,7 +278,7 @@ async fn a_link_sets_the_password_once_and_signs_out_everywhere() {
     let page = b.get("/app/session/new").await;
     assert_eq!(
         inline_boot(&page)["flash"],
-        json!({"kind":"notice","message":"Your password has been reset. Sign in with your new password."})
+        json!({"kind":"notice","message":"Password updated. Sign in with your new password."})
     );
 
     assert_eq!(
@@ -403,7 +403,7 @@ async fn a_new_password_must_be_present_and_fit() {
         ("   ", "Enter a new password."),
         (
             &*"x".repeat(73),
-            "Your new password is too long (maximum is 72 bytes).",
+            "That password is too long. Choose a shorter one.",
         ),
     ] {
         let reply = b.write(submit(&token, password)).await;
@@ -421,7 +421,7 @@ async fn a_new_password_must_be_present_and_fit() {
 async fn requests_and_new_passwords_are_rate_limited() {
     let (a, _) = app(&MAIL).await;
     let mut b = a.anonymous();
-    let too_many = json!({"kind":"error","fieldErrors":{"base":["Too many requests. Try again in a few minutes."]}});
+    let too_many = json!({"kind":"error","fieldErrors":{"base":["Too many attempts. Try again in a few minutes."]}});
 
     // Five per address in 15 minutes.
     for n in 0..5 {

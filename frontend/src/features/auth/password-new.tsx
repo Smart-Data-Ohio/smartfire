@@ -21,7 +21,7 @@ const TITLE = "Reset your password";
 
 /** What the reset pages say when this workspace can't email reset links. */
 export const RESET_UNAVAILABLE =
-  "This workspace can't email password reset links. Ask a workspace administrator to reset your password.";
+  "Reset emails aren't set up here. Ask a workspace administrator to reset your password.";
 
 /**
  * `/app/passwords/new`: "Forgot password?". Asks for the account's email address and says a link
@@ -85,7 +85,7 @@ function RequestForm({
       data-variant="secondary"
       data-size="lg"
     >
-      Back to sign in
+      Back to sign-in
     </Link>
   );
 
@@ -107,16 +107,16 @@ function RequestForm({
         <AuthHeader titleId={titleId} title="Check your email" logoUrl={workspace.logoUrl} />
         <div className="auth-view-stack" role="status">
           <p className="auth-view-lede">
-            If {sentTo} belongs to an account that signs in with a password, we've emailed it a link
-            to choose a new one. The link expires in 15 minutes.
+            If {sentTo} uses a password to sign in, we've sent a reset link. Open it to choose a new
+            password. It works once and expires in 15 minutes.
           </p>
           {signIn}
           <p className="auth-view-note">
             Didn't get it? Check your spam folder, or{" "}
             <Button variant="link" size="sm" onClick={() => setSentTo(null)}>
-              send another link
+              try again
             </Button>
-            .
+            . If you sign in with Google, use Google sign-in instead.
           </p>
         </div>
       </AuthScreen>
@@ -192,7 +192,7 @@ function RequestForm({
           loading={busy}
           loadingLabel="Sending…"
         >
-          Email me a link
+          Send reset link
         </Button>
       </form>
 

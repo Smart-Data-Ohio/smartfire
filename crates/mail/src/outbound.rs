@@ -142,11 +142,11 @@ pub fn lockout_notice(user: &User) -> Message {
 /// `Config::password_reset_available`, so `mailer_from` is set.
 pub fn password_reset(config: &Config, user: &User, url: &str) -> Message {
     let text = format!(
-        "Hi {},\n\nSomeone asked to reset the password for your Smartfire account. To choose a new password, open this link:\n\n{url}\n\nThe link expires in 15 minutes and works once. If you didn't ask to reset your password, you can ignore this email: your password stays the same.\n",
+        "Hi {},\n\nSomeone asked to reset your Smartfire password. Open this link to choose a new one:\n\n{url}\n\nThis link works once and expires in 15 minutes. Resetting your password signs you out on every device.\n\nDidn't ask for this? You can ignore this email. Your password won't change.\n",
         user.name
     );
     let body = format!(
-        "<p>Hi {},</p>\n\n<p>Someone asked to reset the password for your Smartfire account.</p>\n\n<p><a href=\"{}\">Choose a new password</a></p>\n\n<p>The link expires in 15 minutes and works once. If you didn't ask to reset your password, you can ignore this email: your password stays the same.</p>\n",
+        "<p>Hi {},</p>\n\n<p>Someone asked to reset your Smartfire password.</p>\n\n<p><a href=\"{}\">Choose a new password</a></p>\n\n<p>This link works once and expires in 15 minutes. Resetting your password signs you out on every device.</p>\n\n<p>Didn't ask for this? You can ignore this email. Your password won't change.</p>\n",
         h(&user.name),
         h(url)
     );

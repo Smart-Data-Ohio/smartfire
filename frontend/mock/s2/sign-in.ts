@@ -68,13 +68,14 @@ export const INVALID_TRANSFER = "This sign-in link is invalid or expired.";
 /** The password reset link that works. */
 export const MOCK_RESET_TOKEN = "mock-reset-token";
 
-export const INVALID_RESET = "This password reset link is invalid or expired.";
+export const INVALID_RESET =
+  "This reset link didn't work. It may have expired or already been used.";
 
-export const RESET_RATE_ALERT = "Too many requests. Try again in a few minutes.";
+export const RESET_RATE_ALERT = "Too many attempts. Try again in a few minutes.";
 
 export const BLANK_NEW_PASSWORD = "Enter a new password.";
 
-export const RESET_NOTICE = "Your password has been reset. Sign in with your new password.";
+export const RESET_NOTICE = "Password updated. Sign in with your new password.";
 
 /** `auth::decode`'s refusal of a submission it can't read. */
 export const UNREADABLE_SUBMISSION = "The request body isn't valid.";

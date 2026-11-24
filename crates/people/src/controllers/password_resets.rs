@@ -20,11 +20,11 @@ use crate::app::AppCtx;
 use crate::authentication::{self, can_reset_password};
 use crate::concerns::{self, Before};
 
-const INVALID_LINK: &str = "This password reset link is invalid or expired.";
-const TOO_MANY: &str = "Too many requests. Try again in a few minutes.";
+const INVALID_LINK: &str = "This reset link didn't work. It may have expired or already been used.";
+const TOO_MANY: &str = "Too many attempts. Try again in a few minutes.";
 const BLANK_PASSWORD: &str = "Enter a new password.";
-const LONG_PASSWORD: &str = "Your new password is too long (maximum is 72 bytes).";
-const RESET_NOTICE: &str = "Your password has been reset. Sign in with your new password.";
+const LONG_PASSWORD: &str = "That password is too long. Choose a shorter one.";
+const RESET_NOTICE: &str = "Password updated. Sign in with your new password.";
 
 /// bcrypt reads only the first 72 bytes of a password.
 const MAX_PASSWORD_BYTES: usize = 72;

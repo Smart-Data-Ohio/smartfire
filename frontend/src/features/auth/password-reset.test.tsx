@@ -47,17 +47,17 @@ describe("asking for a link", () => {
     expect(emailField()).toHaveProperty("value", "nobody@x.test");
     expect(emailField()).toBe(document.activeElement);
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "Email me a link" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Send reset link" }));
 
     expect(await screen.findByRole("heading", { level: 1, name: "Check your email" })).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain("If nobody@x.test belongs to");
+    expect(screen.getByRole("status").textContent).toContain("If nobody@x.test uses a password");
     expect(screen.getByRole("status").textContent).toContain("15 minutes");
     expect(requests).toHaveBeenCalledWith("nobody@x.test");
-    expect(screen.getByRole("link", { name: "Back to sign in" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Back to sign-in" }).getAttribute("href")).toBe(
       "/app/session/new?email_address=nobody%40x.test",
     );
 
-    await userEvent.setup().click(screen.getByRole("button", { name: "send another link" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "try again" }));
     expect(emailField()).toHaveProperty("value", "nobody@x.test");
   });
 
@@ -66,7 +66,7 @@ describe("asking for a link", () => {
 
     await renderAuth("/app/passwords/new");
     await user.type(await screen.findByRole("textbox", { name: "Email address" }), "limit@x.test");
-    await user.click(screen.getByRole("button", { name: "Email me a link" }));
+    await user.click(screen.getByRole("button", { name: "Send reset link" }));
 
     expect(await screen.findByText(RESET_RATE_ALERT)).toBeTruthy();
     expect(emailField().getAttribute("aria-invalid")).toBe("true");
@@ -79,7 +79,7 @@ describe("asking for a link", () => {
 
     expect(await screen.findByText(/Ask a workspace administrator/)).toBeTruthy();
     expect(screen.queryByRole("textbox", { name: "Email address" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Back to sign in" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to sign-in" })).toBeTruthy();
   });
 });
 
@@ -122,10 +122,10 @@ describe("choosing a new password", () => {
 
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", INVALID_RESET);
     expect(screen.queryByLabelText("New password")).toBeNull();
-    expect(screen.getByRole("link", { name: "Get a new link" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Request new link" }).getAttribute("href")).toBe(
       "/app/passwords/new",
     );
-    expect(screen.getByRole("link", { name: "Go to sign in" }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: "Go to sign-in" }).getAttribute("href")).toBe(
       "/app/session/new",
     );
     expect(resets).not.toHaveBeenCalled();
