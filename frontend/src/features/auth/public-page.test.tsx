@@ -92,7 +92,7 @@ describe("the public pages", () => {
     boot.textContent = JSON.stringify({
       kind: "signedOut",
       workspace: { inviteSplashUrl: null, name: "Harbor", logoUrl: null, description: "" },
-      signInMethods: { password: true, google: false, googleDomains: [] },
+      signInMethods: { password: true, google: false, googleDomains: [], passwordReset: false },
       firstRunPending: false,
       helpContact: null,
       version: "2.0.0",

@@ -16,6 +16,8 @@ import { parseSignInSearch } from "./auth-navigation.ts";
 import { ChallengePage } from "./challenge.tsx";
 import { FirstRunPage } from "./first-run.tsx";
 import { InviteRoute, JoinCodeRoute } from "./join.tsx";
+import { EditPasswordRoute } from "./password-edit.tsx";
+import { NewPasswordPage } from "./password-new.tsx";
 import { AboutPage, PrivacyPage, TermsPage } from "./public-page.tsx";
 import { SignInPage } from "./sign-in.tsx";
 import { TransferRoute } from "./transfer.tsx";
@@ -35,6 +37,17 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
       path: "session/new",
       validateSearch: parseSignInSearch,
       component: SignInPage,
+    }),
+    createRoute({
+      getParentRoute: () => root,
+      path: "passwords/new",
+      validateSearch: parseSignInSearch,
+      component: NewPasswordPage,
+    }),
+    createRoute({
+      getParentRoute: () => root,
+      path: "passwords/$token",
+      component: EditPasswordRoute,
     }),
     createRoute({ getParentRoute: () => root, path: "join/$joinCode", component: JoinCodeRoute }),
     createRoute({ getParentRoute: () => root, path: "invite/$token", component: InviteRoute }),
@@ -67,11 +80,12 @@ export async function renderAuth(path: string): Promise<AuthRouter> {
 }
 
 /**
- * The mock's sign-in state: Google configured, first run pending, a second step waiting, and an
+ * The mock's sign-in state: Google or password reset configured, first run pending, a second step waiting, and an
  * alert or notice for the next boot to read once.
  */
 export interface SignInChange {
   readonly google?: boolean;
+  readonly passwordReset?: boolean;
   readonly firstRunPending?: boolean;
   readonly pending?: boolean;
   readonly firstRunUnavailable?: boolean;

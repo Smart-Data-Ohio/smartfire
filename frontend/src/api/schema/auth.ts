@@ -3,6 +3,7 @@ import type { AuthResponse as WireResponse } from "../../gen/AuthResponse.ts";
 import type { ChallengeState as WireChallenge } from "../../gen/ChallengeState.ts";
 import type { FirstRunState as WireFirstRun } from "../../gen/FirstRunState.ts";
 import type { JoinPage as WireJoinPage } from "../../gen/JoinPage.ts";
+import type { PasswordResetState as WirePasswordReset } from "../../gen/PasswordResetState.ts";
 import type { SignedOutBoot as WireBoot } from "../../gen/SignedOutBoot.ts";
 import type { Assert, Pinned } from "./pin.ts";
 
@@ -39,6 +40,7 @@ export const SignedOutBoot = Schema.Struct({
     password: Schema.Boolean,
     google: Schema.Boolean,
     googleDomains: Schema.Array(Schema.String),
+    passwordReset: Schema.Boolean,
   }),
   firstRunPending: Schema.Boolean,
   helpContact: SignInHelpContact,
@@ -76,6 +78,20 @@ export const FirstRunState = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("pending"), csrfToken: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("navigate"), location: Schema.String }),
 ]);
+
+/** A password reset endpoint's own answer: the request was taken, or the link works. */
+export const PasswordResetState = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("requested") }),
+  Schema.Struct({ kind: Schema.Literal("ready") }),
+]);
+
+/** A password reset endpoint's answer: its state, or a next action (a refusal, sign in). */
+export const PasswordResetAnswer = Schema.Union([
+  ...PasswordResetState.members,
+  ...AuthResponse.members,
+]);
+
+export type PasswordResetStatePin = Assert<Pinned<typeof PasswordResetState, WirePasswordReset>>;
 
 export type AuthResponsePin = Assert<Pinned<typeof AuthResponse, WireResponse>>;
 

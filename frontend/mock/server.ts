@@ -1723,6 +1723,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       case "sign-in":
         signIn.configure({
           google: booleanField(body, "google"),
+          passwordReset: booleanField(body, "passwordReset"),
           firstRunPending: booleanField(body, "firstRunPending"),
           pending: booleanField(body, "pending"),
           firstRunUnavailable: booleanField(body, "firstRunUnavailable"),

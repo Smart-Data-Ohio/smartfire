@@ -4,4 +4,9 @@ export type SignInMethods = { password: boolean, google: boolean,
 /**
  * The Google Workspace domains Google sign-in accepts, named under its button.
  */
-googleDomains: Array<string>, };
+googleDomains: Array<string>,
+/**
+ * Whether "Forgot password?" can email a reset link: outbound mail with a sender and the
+ * app's URL are configured.
+ */
+passwordReset: boolean, };

@@ -10,6 +10,10 @@
  * rate limited. The sign-in link `mock-transfer-token` signs in, `mock-transfer-two-factor` goes
  * on to the challenge, and any other link is invalid.
  *
+ * Password reset is offered while `passwordReset` is set. Requesting a link answers alike for any
+ * address (one starting `limit` is rate limited); the link `mock-reset-token` works, any other is
+ * invalid, and setting a password with it goes to sign in with a notice.
+ *
  * `alert` or `notice` leaves a flash for the next boot, which reads it once, as a server redirect's
  * flash is read by the page it lands on.
  *
@@ -23,6 +27,7 @@
 import type { AuthResponse } from "../../src/gen/AuthResponse.ts";
 import type { FirstRunState } from "../../src/gen/FirstRunState.ts";
 import type { FlashMessage } from "../../src/gen/FlashMessage.ts";
+import type { PasswordResetState } from "../../src/gen/PasswordResetState.ts";
 import type { SignedOutBoot } from "../../src/gen/SignedOutBoot.ts";
 import type { MockResponse } from "../http.ts";
 import { type Json, parseJson, stringField } from "../json.ts";
@@ -59,6 +64,17 @@ export const CODE_RATE_ALERT = "Too many attempts. Try again in a few minutes.";
 
 export const INVALID_TRANSFER = "This sign-in link is invalid or expired.";
 
+/** The password reset link that works. */
+export const MOCK_RESET_TOKEN = "mock-reset-token";
+
+export const INVALID_RESET = "This password reset link is invalid or expired.";
+
+export const RESET_RATE_ALERT = "Too many requests. Try again in a few minutes.";
+
+export const BLANK_NEW_PASSWORD = "Enter a new password.";
+
+export const RESET_NOTICE = "Your password has been reset. Sign in with your new password.";
+
 /** `auth::decode`'s refusal of a submission it can't read. */
 export const UNREADABLE_SUBMISSION = "The request body isn't valid.";
 
@@ -68,6 +84,7 @@ interface State {
   /** Whether a first factor is waiting on its second step. */
   pending: boolean;
   google: boolean;
+  passwordReset: boolean;
   firstRunPending: boolean;
   /** The last first-run submission as it arrived, for tests. */
   firstRun: Json;
@@ -80,9 +97,10 @@ interface State {
 /** The sign-in module. */
 export interface SignInModule {
   readonly routes: readonly Route[];
-  /** `/__mock/sign-in`: Google configured, first run pending, a second step waiting, a flash. */
+  /** `/__mock/sign-in`: Google and password reset configured, first run pending, a second step waiting, a flash. */
   configure(change: {
     readonly google: boolean | null;
+    readonly passwordReset: boolean | null;
     readonly firstRunPending: boolean | null;
     readonly pending: boolean | null;
     readonly firstRunUnavailable: boolean | null;
@@ -94,6 +112,8 @@ export interface SignInModule {
 }
 
 const answer = (status: number, json: AuthResponse): MockResponse => ({ status, json });
+
+const resetState = (json: PasswordResetState): MockResponse => ({ status: 200, json });
 
 const refusal = (status: number, field: string, message: string): MockResponse =>
   answer(status, { kind: "error", fieldErrors: { [field]: [message] } });
@@ -146,6 +166,7 @@ export function createSignIn(
       state = {
         pending: false,
         google: false,
+        passwordReset: false,
         firstRunPending: false,
         firstRun: null,
         firstRunUnavailable: false,
@@ -171,6 +192,7 @@ export function createSignIn(
         password: true,
         google: held.google,
         googleDomains: held.google ? ["smartdata.example"] : [],
+        passwordReset: held.passwordReset,
       },
       firstRunPending: held.firstRunPending,
       helpContact: { name: "Riel", emailAddress: MOCK_TWO_FACTOR_EMAIL },
@@ -186,6 +208,7 @@ export function createSignIn(
       const held = current();
 
       held.google = change.google ?? held.google;
+      held.passwordReset = change.passwordReset ?? held.passwordReset;
       held.firstRunPending = change.firstRunPending ?? held.firstRunPending;
       held.pending = change.pending ?? held.pending;
       held.firstRunUnavailable = change.firstRunUnavailable ?? held.firstRunUnavailable;
@@ -256,6 +279,29 @@ export function createSignIn(
         return answer(200, CHALLENGE);
       }),
       route("PUT", /^\/session\/transfers\/[^/]+$/, () => refusal(400, "base", INVALID_TRANSFER)),
+      route("POST", /^\/password_resets$/, ({ body }) => {
+        if (!current().passwordReset) return answer(404, { kind: "error", fieldErrors: {} });
+
+        const email = (stringField(body, "emailAddress") ?? "").trim().toLowerCase();
+
+        if (email.startsWith("limit")) return refusal(429, "base", RESET_RATE_ALERT);
+
+        return resetState({ kind: "requested" });
+      }),
+      route("GET", new RegExp(`^/password_resets/${MOCK_RESET_TOKEN}$`), () =>
+        resetState({ kind: "ready" }),
+      ),
+      route("GET", /^\/password_resets\/[^/]+$/, () => refusal(400, "base", INVALID_RESET)),
+      route("PUT", new RegExp(`^/password_resets/${MOCK_RESET_TOKEN}$`), ({ body }) => {
+        if ((stringField(body, "password") ?? "").trim() === "") {
+          return refusal(422, "password", BLANK_NEW_PASSWORD);
+        }
+
+        current().flash = { kind: "notice", message: RESET_NOTICE };
+
+        return answer(200, BACK_TO_SIGN_IN);
+      }),
+      route("PUT", /^\/password_resets\/[^/]+$/, () => refusal(400, "base", INVALID_RESET)),
       route("GET", /^\/first_run$/, () => {
         const held = current();
 

@@ -157,6 +157,29 @@ const transferRoute = createRoute({
   ),
 });
 
+/** `/app/passwords/new`: "Forgot password?", asking for a reset link by email. */
+const newPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "passwords/new",
+  validateSearch: parseSignInSearch,
+  ...chunked(() =>
+    import("./features/auth/password-new.tsx").then((module) => ({
+      default: module.NewPasswordPage,
+    })),
+  ),
+});
+
+/** `/app/passwords/:token`: the reset link's landing, choosing the new password. */
+const editPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "passwords/$token",
+  ...chunked(() =>
+    import("./features/auth/password-edit.tsx").then((module) => ({
+      default: module.EditPasswordRoute,
+    })),
+  ),
+});
+
 /** `/app/join/:joinCode`: joining with the workspace's join code (users/new). */
 const joinRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -789,6 +812,8 @@ const routeTree = rootRoute.addChildren([
   signInRoute,
   challengeRoute,
   transferRoute,
+  newPasswordRoute,
+  editPasswordRoute,
   joinRoute,
   inviteRoute,
   firstRunRoute,

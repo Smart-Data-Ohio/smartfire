@@ -2,12 +2,20 @@ import { Effect, Schema } from "effect";
 import type { ChallengeSubmission } from "../gen/ChallengeSubmission.ts";
 import type { FirstRunSubmission } from "../gen/FirstRunSubmission.ts";
 import type { GoogleSignInStart } from "../gen/GoogleSignInStart.ts";
+import type { PasswordResetRequest } from "../gen/PasswordResetRequest.ts";
+import type { PasswordResetSubmission } from "../gen/PasswordResetSubmission.ts";
 import type { PasswordSignIn } from "../gen/PasswordSignIn.ts";
 import type { SignOut } from "../gen/SignOut.ts";
 import type { TransferSignIn } from "../gen/TransferSignIn.ts";
 import type { WorkspaceJoin } from "../gen/WorkspaceJoin.ts";
 import { ApiClient } from "./client.ts";
-import { AuthResponse, FirstRunState, JoinAnswer, SignedOutBoot } from "./schema/auth.ts";
+import {
+  AuthResponse,
+  FirstRunState,
+  JoinAnswer,
+  PasswordResetAnswer,
+  SignedOutBoot,
+} from "./schema/auth.ts";
 
 const decodeAuth = Schema.decodeUnknownEffect(AuthResponse);
 
@@ -16,6 +24,11 @@ const decodeBoot = Schema.decodeUnknownEffect(SignedOutBoot);
 const decodeFirstRun = Schema.decodeUnknownEffect(FirstRunState);
 
 const decodeJoin = Schema.decodeUnknownEffect(JoinAnswer);
+
+const decodePasswordReset = Schema.decodeUnknownEffect(PasswordResetAnswer);
+
+const passwordResetPath = (token: string): string =>
+  `/password_resets/${encodeURIComponent(token)}`;
 
 /** How a visitor joins: the workspace's join code, or a workspace invite's token. */
 export type JoinTarget =
@@ -81,6 +94,41 @@ export const consumeTransfer = Effect.fn("consumeTransfer")(function* (id: strin
   return yield* client.execute(
     { method: "PUT", path: `/session/transfers/${encodeURIComponent(id)}`, body, auth: true },
     decodeAuth,
+  );
+});
+
+/** `POST /password_resets`: the same `requested` answer whether or not the address has an account. */
+export const requestPasswordReset = Effect.fn("requestPasswordReset")(function* (
+  body: PasswordResetRequest,
+) {
+  const client = yield* ApiClient;
+
+  return yield* client.execute(
+    { method: "POST", path: "/password_resets", body, auth: true },
+    decodePasswordReset,
+  );
+});
+
+/** `GET /password_resets/:token`: `ready` while the link works, else its refusal. */
+export const readPasswordReset = Effect.fn("readPasswordReset")(function* (token: string) {
+  const client = yield* ApiClient;
+
+  return yield* client.execute(
+    { method: "GET", path: passwordResetPath(token), auth: true },
+    decodePasswordReset,
+  );
+});
+
+/** `PUT /password_resets/:token`: the new password; success navigates to sign in. */
+export const submitPasswordReset = Effect.fn("submitPasswordReset")(function* (
+  token: string,
+  body: PasswordResetSubmission,
+) {
+  const client = yield* ApiClient;
+
+  return yield* client.execute(
+    { method: "PUT", path: passwordResetPath(token), body, auth: true },
+    decodePasswordReset,
   );
 });
 

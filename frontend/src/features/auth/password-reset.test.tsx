@@ -1,0 +1,127 @@
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  BLANK_NEW_PASSWORD,
+  INVALID_RESET,
+  MOCK_RESET_TOKEN,
+  RESET_RATE_ALERT,
+} from "../../../mock/s2/sign-in.ts";
+import { auth } from "../../sync/auth.ts";
+import { installMockNetwork } from "../../test/mock-network.ts";
+import { pageExit } from "./auth-navigation.ts";
+import { renderAuth, resetSignIn } from "./testing.tsx";
+
+const network = installMockNetwork();
+
+afterAll(() => network.restore());
+
+let assign = vi.spyOn(pageExit, "assign");
+
+beforeEach(async () => {
+  assign = vi.spyOn(pageExit, "assign").mockImplementation(() => undefined);
+  await resetSignIn(network, { passwordReset: true });
+});
+
+afterEach(() => vi.restoreAllMocks());
+
+const emailField = () => screen.getByRole("textbox", { name: "Email address" });
+
+// SAFETY: the password field is an <input>.
+const passwordField = () => screen.getByLabelText("New password") as HTMLInputElement;
+
+describe("asking for a link", () => {
+  it("fills in the address from sign in and says the same whatever the answer", async () => {
+    const requests = vi.spyOn(auth, "requestPasswordReset");
+
+    await renderAuth("/app/passwords/new?email_address=nobody%40x.test");
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Reset your password" }),
+    ).toBeTruthy();
+    expect(emailField()).toHaveProperty("value", "nobody@x.test");
+    expect(emailField()).toBe(document.activeElement);
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Email me a link" }));
+
+    expect(await screen.findByRole("heading", { level: 1, name: "Check your email" })).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toContain("If nobody@x.test belongs to");
+    expect(screen.getByRole("status").textContent).toContain("15 minutes");
+    expect(requests).toHaveBeenCalledWith("nobody@x.test");
+    expect(screen.getByRole("link", { name: "Back to sign in" }).getAttribute("href")).toBe(
+      "/app/session/new?email_address=nobody%40x.test",
+    );
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "send another link" }));
+    expect(emailField()).toHaveProperty("value", "nobody@x.test");
+  });
+
+  it("says when requests are rate limited", async () => {
+    const user = userEvent.setup();
+
+    await renderAuth("/app/passwords/new");
+    await user.type(await screen.findByRole("textbox", { name: "Email address" }), "limit@x.test");
+    await user.click(screen.getByRole("button", { name: "Email me a link" }));
+
+    expect(await screen.findByText(RESET_RATE_ALERT)).toBeTruthy();
+    expect(emailField().getAttribute("aria-invalid")).toBe("true");
+    expect(screen.queryByRole("heading", { name: "Check your email" })).toBeNull();
+  });
+
+  it("points to an administrator when reset links can't be emailed", async () => {
+    await resetSignIn(network, { passwordReset: false });
+    await renderAuth("/app/passwords/new");
+
+    expect(await screen.findByText(/Ask a workspace administrator/)).toBeTruthy();
+    expect(screen.queryByRole("textbox", { name: "Email address" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to sign in" })).toBeTruthy();
+  });
+});
+
+describe("choosing a new password", () => {
+  it("sets it and goes to sign in with a full page load", async () => {
+    const user = userEvent.setup();
+
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Choose a new password" }),
+    ).toBeTruthy();
+    expect(passwordField().getAttribute("autocomplete")).toBe("new-password");
+    expect(passwordField().getAttribute("maxlength")).toBe("72");
+    expect(passwordField()).toBe(document.activeElement);
+
+    await user.type(passwordField(), "a new passphrase");
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/app/session/new"));
+  });
+
+  it("shows the password's problem on the field", async () => {
+    const user = userEvent.setup();
+
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+    await user.type(await screen.findByLabelText("New password"), "   ");
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    expect(await screen.findByText(BLANK_NEW_PASSWORD)).toBeTruthy();
+    expect(passwordField().getAttribute("aria-invalid")).toBe("true");
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("says when a link is invalid or expired and offers a new one", async () => {
+    const resets = vi.spyOn(auth, "resetPassword");
+
+    await renderAuth("/app/passwords/expired-link");
+
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", INVALID_RESET);
+    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(screen.getByRole("link", { name: "Get a new link" }).getAttribute("href")).toBe(
+      "/app/passwords/new",
+    );
+    expect(screen.getByRole("link", { name: "Go to sign in" }).getAttribute("href")).toBe(
+      "/app/session/new",
+    );
+    expect(resets).not.toHaveBeenCalled();
+  });
+});
