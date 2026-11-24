@@ -91,13 +91,14 @@ impl EmailAddress {
     }
 
     pub fn is_available(conn: &Connection, address: &str) -> Result<bool> {
-        Ok(!primary_conflict(conn, address, None)? && Self::by_address(conn, address)?.is_none())
+        Ok(!primary_conflict_for_secondary(conn, address, None)?
+            && Self::by_address(conn, address)?.is_none())
     }
 
     /// The immediate writer transaction serializes claims against primary and secondary writes.
     pub fn confirm(tx: &Tx<'_>, user: &User, address: &str) -> Result<Confirmation> {
         let address = address.trim();
-        if primary_conflict(tx.conn(), address, Some(user.id))? {
+        if primary_conflict_for_secondary(tx.conn(), address, Some(user.id))? {
             return Ok(Confirmation::Taken);
         }
         if let Some((owner, _)) = Self::by_address(tx.conn(), address)? {
@@ -124,7 +125,30 @@ impl EmailAddress {
     }
 }
 
+/// Primary writes retain SQLite's ASCII comparison between primary addresses.
 pub(super) fn primary_conflict(
+    conn: &Connection,
+    address: &str,
+    except: Option<i64>,
+) -> Result<bool> {
+    // SQLite's trim defaults to ASCII space. Use the same whitespace as str::trim.
+    const WHITESPACE: &str = concat!(
+        "\t\n\x0b\x0c\r \u{85}\u{a0}\u{1680}",
+        "\u{2000}\u{2001}\u{2002}\u{2003}\u{2004}\u{2005}\u{2006}\u{2007}\u{2008}\u{2009}\u{200a}",
+        "\u{2028}\u{2029}\u{202f}\u{205f}\u{3000}",
+    );
+    Ok(conn.query_row_cached(
+        "SELECT EXISTS (
+            SELECT 1 FROM users WHERE trim(email_address, ?3) = ?1 COLLATE NOCASE
+            AND (?2 IS NULL OR id != ?2)
+        )",
+        params![address.trim(), except, WHITESPACE],
+        |row| row.get(0),
+    )?)
+}
+
+/// Secondary claims must also be unambiguous under password-reset matching.
+fn primary_conflict_for_secondary(
     conn: &Connection,
     address: &str,
     except: Option<i64>,
