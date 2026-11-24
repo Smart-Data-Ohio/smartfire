@@ -79,9 +79,14 @@ impl Config {
         self.smtp.is_some() && self.mailer_from.is_some() && self.app_url.is_some()
     }
     /// Whether a password reset email can go out with a working link: SMTP, a real sender (not
-    /// the placeholder) and the app's URL.
+    /// the placeholder) that delivery can address mail from, and the app's URL.
     pub fn password_reset_available(&self) -> bool {
-        self.smtp.is_some() && self.mailer_from.is_some() && self.validated_app_url().is_some()
+        self.smtp.is_some()
+            && self
+                .mailer_from
+                .as_deref()
+                .is_some_and(|from| crate::outbound::first_address(from).is_ok())
+            && self.validated_app_url().is_some()
     }
     pub fn two_factor_configured(&self) -> bool {
         self.smtp.is_some()

@@ -146,6 +146,17 @@ fn password_reset_requires_smtp_a_real_sender_and_a_valid_origin() {
         assert!(!config(&pairs).password_reset_available(), "{missing}");
     }
     assert!(!Config::default().password_reset_available());
+    // A sender delivery can't address mail from would make every request fail at sending.
+    for from in ["not an address", "Smartfire <alerts>", "<>", "Smartfire"] {
+        let mut pairs = complete.to_vec();
+        pairs[1] = ("MAILER_FROM", from);
+        assert!(!config(&pairs).password_reset_available(), "{from}");
+    }
+    for from in ["Smartfire <alerts@example.com>", "\"Smart, fire\" <alerts@example.com>"] {
+        let mut pairs = complete.to_vec();
+        pairs[1] = ("MAILER_FROM", from);
+        assert!(config(&pairs).password_reset_available(), "{from}");
+    }
     // A hand-built configuration with an origin `from_map` would refuse still gets no link.
     let mut c = config(&complete);
     c.app_url = Some("https://example.com/path?x=1".into());

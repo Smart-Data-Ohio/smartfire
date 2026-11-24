@@ -298,13 +298,6 @@ pub async fn deliver(
         &format!("{:x}_{token}@{domain}.mail", now.as_second()),
         &format!("--==_mimepart_{token}"),
     )?;
-    let first_address = |header: &str| -> anyhow::Result<lettre::Address> {
-        let list = mailparse::addrparse(header)?.into_inner();
-        match list.into_iter().next() {
-            Some(mailparse::MailAddr::Single(info)) => Ok(info.addr.parse()?),
-            _ => anyhow::bail!("missing mail address"),
-        }
-    };
     let envelope = Envelope::new(
         Some(first_address(&message.from)?),
         vec![first_address(&message.to)?],
@@ -315,6 +308,15 @@ pub async fn deliver(
         transport(settings)?.send_raw(&envelope, &raw).await?;
     }
     Ok(())
+}
+
+/// The envelope address of a `From` or `To` header: its first address.
+pub fn first_address(header: &str) -> anyhow::Result<lettre::Address> {
+    let list = mailparse::addrparse(header)?.into_inner();
+    match list.into_iter().next() {
+        Some(mailparse::MailAddr::Single(info)) => Ok(info.addr.parse()?),
+        _ => anyhow::bail!("missing mail address"),
+    }
 }
 
 /// Mail/Net::SMTP also supports CRAM-MD5, which Lettre's high-level SASL enum omits.
