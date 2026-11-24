@@ -5,8 +5,9 @@ use crate::controllers::presenters::test_support::{
 };
 use axum::http::{Method, StatusCode};
 use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
-use campfire_db::{Timestamp, User, UserChanges};
+use campfire_db::{PasswordDigest, Timestamp, User, UserChanges, models::audit_log};
 use campfire_kit::FrozenClock;
+use campfire_mail::jobs::{DeliveryJob, EmailAddressConfirmation, Notification};
 use jiff::SignedDuration;
 use rails_compat::email_address_confirmation;
 use serde_json::{Value, json};
@@ -40,6 +41,83 @@ fn confirmation(method: Method, token: &str) -> Req {
     Req::new(method, &format!("{ADDRESSES}/confirmations/{token}"))
 }
 
+fn promote(id: i64) -> Req {
+    Req::new(Method::POST, &format!("{ADDRESSES}/{id}/primary"))
+}
+
+async fn reset_password(a: &TestApp) {
+    let digest = PasswordDigest::hash("a new test passphrase".into(), 4)
+        .await
+        .unwrap();
+    a.db()
+        .write(move |tx| {
+            let mut user = User::find(tx.conn(), DAVID)?;
+            campfire_runtime::authentication::reset_password(
+                tx,
+                &mut user,
+                digest,
+                &audit_log::Context::default(),
+            )
+        })
+        .await
+        .unwrap();
+}
+
+async fn write_during_password_reset(a: &TestApp, request: Req) -> Reply {
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    capture_mail_jobs(a).await;
+    let hold = campfire_api::test_hooks::hold_before_email_address_write(a.db().path(), DAVID);
+    tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        let (reply, ()) = tokio::join!(owner.write(request), async {
+            hold.reached.wait().await;
+            reset_password(a).await;
+            hold.release.wait().await;
+        });
+        reply
+    })
+    .await
+    .expect("the request reached its write after authorization")
+}
+
+#[tokio::test]
+async fn password_reset_between_authorization_and_add_queues_nothing() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let reply = write_during_password_reset(&a, add(LINKED)).await;
+    assert!(captured_mail_jobs(&a).await.is_empty());
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    assert_eq!(reply.json()["error"]["_tag"], "Unauthorized");
+}
+
+#[tokio::test]
+async fn password_reset_between_authorization_and_remove_preserves_the_address() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let owned = link(&a, DAVID, LINKED).await;
+    let request = Req::new(Method::DELETE, &format!("{ADDRESSES}/{}", owned.id));
+    let reply = write_during_password_reset(&a, request).await;
+    assert!(
+        a.db()
+            .read(move |conn| EmailAddress::find_owned(conn, DAVID, owned.id))
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    assert_eq!(reply.json()["error"]["_tag"], "Unauthorized");
+}
+
+#[tokio::test]
+async fn password_reset_between_authorization_and_promotion_returns_json_unauthorized() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let previous = primary_of(&a, DAVID).await;
+    let owned = link(&a, DAVID, LINKED).await;
+    let reply = write_during_password_reset(&a, promote(owned.id)).await;
+    assert_eq!(primary_of(&a, DAVID).await, previous);
+    assert!(captured_mail_jobs(&a).await.is_empty());
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    assert_eq!(reply.json()["error"]["_tag"], "Unauthorized");
+}
+
 async fn token(a: &TestApp, user_id: i64, email: &str, age: SignedDuration) -> String {
     let digest = a
         .db()
@@ -67,12 +145,100 @@ async fn confirmation_message(
 ) -> Option<campfire_mail::outbound::Message> {
     campfire_runtime::mail::email_address_confirmation_message(
         &a.booted.app,
-        user_id,
-        address.into(),
+        confirmation_job(a, user_id, address).await,
         requested_at,
     )
     .await
     .unwrap()
+}
+
+async fn confirmation_job(a: &TestApp, user_id: i64, address: &str) -> EmailAddressConfirmation {
+    let address = address.to_owned();
+    a.db()
+        .read(move |conn| {
+            let user = User::find(conn, user_id)?;
+            Ok(EmailAddressConfirmation::new(&user, address))
+        })
+        .await
+        .unwrap()
+}
+
+async fn queued_confirmation(a: &TestApp) -> EmailAddressConfirmation {
+    let [job] = <[Value; 1]>::try_from(captured_mail_jobs(a).await).expect("one queued job");
+    let job: DeliveryJob = serde_json::from_value(job).unwrap();
+    let Notification::EmailAddressConfirmation(confirmation) = job.notification else {
+        panic!("expected a confirmation job, got {job:?}");
+    };
+    confirmation
+}
+
+#[tokio::test]
+async fn queued_confirmation_does_not_send_after_reset_even_if_the_clock_goes_back() {
+    let (a, clock) = app_with_clock(MAIL).await;
+    let a = a.without_job_runner().await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    capture_mail_jobs(&a).await;
+    let requested_at = a.db().env().now();
+    assert_eq!(owner.write(add(LINKED)).await.status, StatusCode::OK);
+    let job = queued_confirmation(&a).await;
+
+    clock.advance(SignedDuration::from_secs(-1));
+    reset_password(&a).await;
+    clock.advance(SignedDuration::from_secs(2));
+
+    assert!(
+        campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            job,
+            requested_at
+        )
+        .await
+        .unwrap()
+        .is_none()
+    );
+}
+
+fn assert_address_snapshot(log: &[String]) {
+    let begin = log
+        .iter()
+        .position(|sql| sql.starts_with("BEGIN"))
+        .expect("opens a snapshot");
+    let end = log
+        .iter()
+        .position(|sql| sql.starts_with("ROLLBACK"))
+        .expect("closes it");
+    let snapshot = &log[begin + 1..end];
+    for table in ["users", "user_email_addresses"] {
+        assert!(
+            snapshot
+                .iter()
+                .any(|sql| sql.contains(&format!("FROM {table}"))
+                    || sql.contains(&format!("FROM \"{table}\""))),
+            "missing {table}: {snapshot:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn list_and_confirmation_delivery_read_both_address_sources_in_a_snapshot() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let mut owner = a.sign_in(DAVID).await;
+    let log = a.db().capture_read_queries();
+    assert_eq!(owner.get(ADDRESSES).await.status, StatusCode::OK);
+    a.db().stop_capturing_read_queries();
+    let list_queries = log.lock().unwrap().clone();
+
+    let log = a.db().capture_read_queries();
+    assert!(
+        confirmation_message(&a, DAVID, LINKED, a.db().env().now())
+            .await
+            .is_some()
+    );
+    a.db().stop_capturing_read_queries();
+    let delivery_queries = log.lock().unwrap().clone();
+    assert_address_snapshot(&list_queries);
+    assert_address_snapshot(&delivery_queries);
 }
 
 fn link_token(message: &campfire_mail::outbound::Message) -> &str {
@@ -139,10 +305,15 @@ async fn request_is_sudo_gated_uniform_and_enqueues_once_per_valid_address() {
         primary_of(&a, KEVIN).await,
         primary_of(&a, DAVID).await,
     ];
-    let expected: Vec<_> = addresses.iter().map(|address| {
-        json!({"notification":{"EmailAddressConfirmation":{"user_id": DAVID, "email_address": address}}})
-    }).collect();
+    let mut expected = Vec::new();
     for address in addresses {
+        let job = confirmation_job(&a, DAVID, &address).await;
+        expected.push(
+            serde_json::to_value(DeliveryJob {
+                notification: Notification::EmailAddressConfirmation(job),
+            })
+            .unwrap(),
+        );
         let reply = b.write(add(&format!(" {address} "))).await;
         assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
         assert_eq!(
@@ -179,15 +350,9 @@ async fn mail_configuration_controls_requests_and_delivery_checks_current_owners
         .await
         .is_none()
     );
-    let render = |user, address: String| {
-        campfire_runtime::mail::email_address_confirmation_message(
-            &a.booted.app,
-            user,
-            address,
-            requested_at,
-        )
-    };
-    let message = render(DAVID, LINKED.into()).await.unwrap().unwrap();
+    let message = confirmation_message(&a, DAVID, LINKED, requested_at)
+        .await
+        .unwrap();
     assert_eq!(message.to, LINKED);
     let claim = email_address_confirmation::verify(
         &a.booted.app.secrets,
@@ -199,16 +364,14 @@ async fn mail_configuration_controls_requests_and_delivery_checks_current_owners
     assert_eq!(claim.email_address, LINKED);
     assert_eq!(claim.issued_at, requested_at.jiff());
     assert!(
-        render(DAVID, primary_of(&a, DAVID).await)
+        confirmation_message(&a, DAVID, &primary_of(&a, DAVID).await, requested_at)
             .await
-            .unwrap()
             .is_none()
     );
     link(&a, KEVIN, LINKED).await;
     assert!(
-        render(DAVID, LINKED.to_ascii_lowercase())
+        confirmation_message(&a, DAVID, &LINKED.to_ascii_lowercase(), requested_at)
             .await
-            .unwrap()
             .is_none()
     );
     a.db()
@@ -216,9 +379,8 @@ async fn mail_configuration_controls_requests_and_delivery_checks_current_owners
         .await
         .unwrap();
     assert!(
-        render(DAVID, "free@example.test".into())
+        confirmation_message(&a, DAVID, "free@example.test", requested_at)
             .await
-            .unwrap()
             .is_none()
     );
 }
@@ -470,6 +632,93 @@ async fn assert_invalid_confirmation(phone: &mut Browser<'_>, token: &str) {
 }
 
 #[tokio::test]
+async fn changing_a_promoted_primary_retires_its_earlier_confirmation_and_queued_mail() {
+    let (a, clock) = app_with_clock(MAIL).await;
+    let a = a.without_job_runner().await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    capture_mail_jobs(&a).await;
+    let requested_at = a.db().env().now();
+    let address = LINKED.to_ascii_lowercase();
+    assert_eq!(owner.write(add(&address)).await.status, StatusCode::OK);
+    let job = queued_confirmation(&a).await;
+    let token = token(&a, DAVID, LINKED, SignedDuration::ZERO).await;
+    let mut phone = a.anonymous();
+    assert_eq!(
+        phone.write(confirmation(Method::PUT, &token)).await.status,
+        StatusCode::OK
+    );
+    let id = owner.get(ADDRESSES).await.json()["secondary"][0]["id"]
+        .as_i64()
+        .unwrap();
+
+    clock.advance(SignedDuration::from_secs(1));
+    assert_eq!(
+        owner.write(promote(id)).await.status,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        phone.write(confirmation(Method::PUT, &token)).await.status,
+        StatusCode::OK
+    );
+    clock.advance(SignedDuration::from_secs(1));
+    let reply = owner
+        .write(
+            Req::new(Method::PATCH, "/api/v1/settings/profile").json_body(&json!({
+                "emailAddress": "new-primary@example.test",
+                "currentPassword": "secret123456",
+            })),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+
+    let delivery = campfire_runtime::mail::email_address_confirmation_message(
+        &a.booted.app,
+        job,
+        requested_at,
+    )
+    .await
+    .unwrap();
+    let replay = phone.write(confirmation(Method::PUT, &token)).await;
+    assert_eq!(
+        (delivery.is_none(), replay.status),
+        (true, StatusCode::BAD_REQUEST)
+    );
+    assert_invalid_confirmation(&mut phone, &token).await;
+    assert_eq!(owner.get(ADDRESSES).await.json()["secondary"], json!([]));
+}
+
+#[tokio::test]
+async fn promotion_releases_a_legacy_mailbox_without_queuing_or_sending_confirmation() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let victim = primary_of(&a, KEVIN).await;
+    let legacy = format!("X <{victim}>");
+    let stored = legacy.clone();
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address=?1 WHERE id=?2",
+                rusqlite::params![stored, DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let owned = link(&a, DAVID, LINKED).await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    capture_mail_jobs(&a).await;
+    let reply = owner.write(promote(owned.id)).await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    assert_eq!(primary_of(&a, DAVID).await, LINKED);
+    assert_eq!(primary_of(&a, KEVIN).await, victim);
+
+    let queued = captured_mail_jobs(&a).await;
+    let delivery = confirmation_message(&a, DAVID, &legacy, a.db().env().now()).await;
+    assert_eq!((queued.len(), delivery.is_none()), (0, true));
+}
+
+#[tokio::test]
 async fn promotion_releases_and_emails_the_old_primary_without_stamping_it() {
     let a = app(MAIL).await.without_job_runner().await;
     let previous_primary = primary_of(&a, DAVID).await;
@@ -477,7 +726,6 @@ async fn promotion_releases_and_emails_the_old_primary_without_stamping_it() {
     let foreign = link(&a, KEVIN, "foreign@example.test").await;
     let removable = link(&a, DAVID, "removable@example.test").await;
     let remove = |id| Req::new(Method::DELETE, &format!("{ADDRESSES}/{id}"));
-    let promote = |id| Req::new(Method::POST, &format!("{ADDRESSES}/{id}/primary"));
     let mut owner = a.sign_in(DAVID).await;
     assert_sudo(owner.write(remove(owned.id)).await);
     assert_sudo(owner.write(promote(owned.id)).await);
@@ -503,12 +751,9 @@ async fn promotion_releases_and_emails_the_old_primary_without_stamping_it() {
     assert_eq!(list["primary"], LINKED);
     assert_eq!(list["secondary"].as_array().unwrap().len(), 1);
     assert_eq!(list["secondary"][0]["id"], removable.id);
-    assert_eq!(
-        captured_mail_jobs(&a).await,
-        [
-            json!({"notification":{"EmailAddressConfirmation":{"user_id":DAVID,"email_address":previous_primary}}})
-        ]
-    );
+    let job = queued_confirmation(&a).await;
+    assert_eq!(job.user_id, DAVID);
+    assert_eq!(job.email_address, previous_primary);
     assert_eq!(
         owner.write(remove(removable.id)).await.status,
         StatusCode::NO_CONTENT
@@ -534,9 +779,14 @@ async fn promotion_releases_and_emails_the_old_primary_without_stamping_it() {
         .unwrap();
     assert!(!self_changed);
 
-    let mail = confirmation_message(&a, DAVID, &previous_primary, a.db().env().now())
-        .await
-        .expect("the old primary receives a confirmation link");
+    let mail = campfire_runtime::mail::email_address_confirmation_message(
+        &a.booted.app,
+        job,
+        a.db().env().now(),
+    )
+    .await
+    .unwrap()
+    .expect("the old primary receives a confirmation link");
     let relink = link_token(&mail);
     assert_eq!(
         a.anonymous()

@@ -2267,7 +2267,7 @@ fn event_sink_does_not_keep_a_stopped_cable_server_alive() {
 }
 
 #[tokio::test]
-async fn email_confirmation_worker_delivers_only_the_available_address() {
+async fn email_address_confirmation_worker_delivers_only_the_available_address() {
     use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, SEED_NOW, TestApp};
     use campfire_db::User;
     use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
@@ -2296,12 +2296,13 @@ async fn email_confirmation_worker_delivers_only_the_available_address() {
         .write(|tx| {
             use campfire_runtime::authentication::request_email_address_confirmation as request;
 
-            request(tx, DAVID, "free@example.test".into());
-            request(tx, DAVID, "claimed@example.test".into());
-            request(tx, JASON, "inactive@example.test".into());
-            request(tx, DAVID, "removed@example.test".into());
-
             let david = User::find(tx.conn(), DAVID)?;
+            let mut jason = User::find(tx.conn(), JASON)?;
+            request(tx, &david, "free@example.test".into());
+            request(tx, &david, "claimed@example.test".into());
+            request(tx, &jason, "inactive@example.test".into());
+            request(tx, &david, "removed@example.test".into());
+
             assert_eq!(
                 EmailAddress::confirm(tx, &david, "Removed@example.test")?,
                 Confirmation::Added
@@ -2311,7 +2312,7 @@ async fn email_confirmation_worker_delivers_only_the_available_address() {
                 EmailAddress::confirm(tx, &other, "claimed@example.test")?,
                 Confirmation::Added
             );
-            User::find(tx.conn(), JASON)?.deactivate(tx)
+            jason.deactivate(tx)
         })
         .await
         .unwrap();
@@ -2320,7 +2321,8 @@ async fn email_confirmation_worker_delivers_only_the_available_address() {
     app.db
         .write(|tx| {
             let david = User::find(tx.conn(), DAVID)?;
-            let (_, address) = EmailAddress::by_address(tx.conn(), "removed@example.test")?.unwrap();
+            let (_, address) =
+                EmailAddress::by_address(tx.conn(), "removed@example.test")?.unwrap();
             EmailAddress::remove(tx, david.id, address.id)?;
             campfire_runtime::authentication::audit_email_address(
                 tx,

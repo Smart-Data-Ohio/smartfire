@@ -109,6 +109,15 @@ fn profile_write_authorized(
     }))
 }
 
+/// Recheck the session and password observed before authorizing a credential write.
+pub fn credential_write_authorized(
+    tx: &Tx<'_>,
+    user: &User,
+    session_id: Option<i64>,
+) -> Result<bool> {
+    profile_write_authorized(tx, user, session_id, false, true)
+}
+
 fn audit_primary_email_change(
     tx: &Tx<'_>,
     user: &User,
@@ -345,8 +354,8 @@ pub fn can_reset_password(user: &User) -> bool {
             .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
 }
 
-pub fn request_email_address_confirmation(tx: &mut Tx<'_>, user_id: i64, email_address: String) {
-    campfire_mail::jobs::email_address_confirmation_later(tx, user_id, email_address);
+pub fn request_email_address_confirmation(tx: &mut Tx<'_>, user: &User, email_address: String) {
+    campfire_mail::jobs::email_address_confirmation_later(tx, user, email_address);
 }
 
 pub fn audit_email_address(
@@ -384,11 +393,10 @@ pub fn promote_email_address(
     audit_primary_email_change(tx, user, previous.as_deref(), context)?;
     if let Some(address) = previous
         .as_deref()
-        .map(str::trim)
-        .filter(|address| !address.is_empty())
+        .and_then(campfire_mail::outbound::bare_confirmation_address)
         && EmailAddress::is_available(tx.conn(), address)?
     {
-        request_email_address_confirmation(tx, user.id, address.to_owned());
+        request_email_address_confirmation(tx, user, address.to_owned());
     }
     campfire_db::user::profile_settings::bump_revision(tx, user.id)?;
     Ok(true)

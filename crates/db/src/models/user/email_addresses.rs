@@ -67,8 +67,8 @@ impl EmailAddress {
         )
     }
 
-    /// A removal at the same clock instant as a request also retires that request.
-    pub fn removed_since(
+    /// A primary change can request a re-link at the same instant the old address is released.
+    pub fn released_after(
         conn: &Connection,
         user_id: i64,
         address: &str,
@@ -76,9 +76,13 @@ impl EmailAddress {
     ) -> Result<bool> {
         let normalized = normalize(address);
         let mut query = conn.prepare_cached(
-            "SELECT json_extract(details, '$.email_address') FROM audit_logs
+            "SELECT CASE action
+                      WHEN 'user.email_address.remove' THEN json_extract(details, '$.email_address')
+                      WHEN 'user.email.change' THEN json_extract(details, '$.email_address.before')
+                    END
+             FROM audit_logs
              WHERE target_type = 'User' AND target_id = ?1
-               AND action = 'user.email_address.remove' AND created_at >= ?2",
+               AND action IN ('user.email_address.remove', 'user.email.change') AND created_at > ?2",
         )?;
         let mut rows = query.query(params![user_id, since])?;
         while let Some(row) = rows.next()? {

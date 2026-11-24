@@ -146,7 +146,7 @@ fn confirmable_user(
         return Ok(None);
     };
     if !claim.matches_password(secrets, user.password_digest.as_deref().unwrap_or_default())
-        || EmailAddress::removed_since(
+        || EmailAddress::released_after(
             conn,
             user.id,
             &claim.email_address,

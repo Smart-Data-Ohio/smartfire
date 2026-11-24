@@ -1,22 +1,60 @@
 //! Typed durable jobs and the API consumed by WS9 security triggers.
-use campfire_db::{Event, Job, Tx};
+use campfire_db::{Event, Job, Tx, User};
 use campfire_jobs::{JobKind, RetryPolicy};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Notification {
-    OAuthRefreshReuse { user_id: i64 },
-    NewSignIn { activity_item_id: i64 },
-    Lockout { user_id: i64 },
+    OAuthRefreshReuse {
+        user_id: i64,
+    },
+    NewSignIn {
+        activity_item_id: i64,
+    },
+    Lockout {
+        user_id: i64,
+    },
     /// "Forgot password?": the address as it was submitted. Delivery looks it up and mints the
     /// link, so the jobs table never holds one, and sends nothing to an address that can't reset.
     PasswordReset {
         email_address: String,
     },
-    EmailAddressConfirmation {
-        user_id: i64,
-        email_address: String,
-    },
+    EmailAddressConfirmation(EmailAddressConfirmation),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmailAddressConfirmation {
+    pub user_id: i64,
+    pub email_address: String,
+    // Jobs queued before fingerprints were recorded deserialize and skip delivery.
+    #[serde(default)]
+    password_fingerprint: Option<String>,
+}
+
+impl EmailAddressConfirmation {
+    pub fn new(user: &User, email_address: String) -> Self {
+        Self {
+            user_id: user.id,
+            email_address,
+            password_fingerprint: Some(password_fingerprint(user)),
+        }
+    }
+
+    pub fn matches_password(&self, user: &User) -> bool {
+        self.password_fingerprint
+            .as_ref()
+            .is_some_and(|fingerprint| *fingerprint == password_fingerprint(user))
+    }
+}
+
+fn password_fingerprint(user: &User) -> String {
+    let mut hash = Sha256::new();
+    if let Some(digest) = &user.password_digest {
+        hash.update([1]);
+        hash.update(digest.as_bytes());
+    }
+    format!("{:x}", hash.finalize())
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeliveryJob {
@@ -51,12 +89,12 @@ pub fn password_reset_later(tx: &mut Tx<'_>, email_address: String) {
         notification: Notification::PasswordReset { email_address },
     }));
 }
-pub fn email_address_confirmation_later(tx: &mut Tx<'_>, user_id: i64, email_address: String) {
+pub fn email_address_confirmation_later(tx: &mut Tx<'_>, user: &User, email_address: String) {
     tx.emit_after_commit(Event::job(&DeliveryJob {
-        notification: Notification::EmailAddressConfirmation {
-            user_id,
+        notification: Notification::EmailAddressConfirmation(EmailAddressConfirmation::new(
+            user,
             email_address,
-        },
+        )),
     }));
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]

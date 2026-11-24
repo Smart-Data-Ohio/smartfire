@@ -9,7 +9,10 @@ use campfire_kit::{Ctx, Error, Response, Result, StatusCode};
 use campfire_mail::{
     config::RelayAuth,
     inbound,
-    jobs::{DeliveryJob, IncinerationJob, MessageCreated, Notification, RoutingJob},
+    jobs::{
+        DeliveryJob, EmailAddressConfirmation, IncinerationJob, MessageCreated, Notification,
+        RoutingJob,
+    },
     outbound::{self, SignIn},
 };
 use rusqlite::OptionalExtension;
@@ -92,20 +95,12 @@ async fn delivery(app: App, job: DeliveryJob, execution: campfire_jobs::Executio
                 None => return Ok(Outcome::Done),
             }
         }
-        Notification::EmailAddressConfirmation {
-            user_id,
-            email_address,
-        } => match email_address_confirmation_message(
-            &app,
-            user_id,
-            email_address,
-            execution.enqueued_at,
-        )
-        .await?
-        {
-            Some(message) => message,
-            None => return Ok(Outcome::Done),
-        },
+        Notification::EmailAddressConfirmation(job) => {
+            match email_address_confirmation_message(&app, job, execution.enqueued_at).await? {
+                Some(message) => message,
+                None => return Ok(Outcome::Done),
+            }
+        }
         Notification::NewSignIn { activity_item_id } => {
             let item = app.db.read(move |conn| {
                 let row = conn.query_row("SELECT user_id, source_id, source_type, created_at FROM activity_items WHERE id = ?", [activity_item_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, String>(2)?, r.get::<_, Timestamp>(3)?))).optional()?.ok_or(campfire_db::Error::RecordNotFound("ActivityItem"))?;
@@ -267,8 +262,7 @@ fn password_changed_since(
 
 pub async fn email_address_confirmation_message(
     app: &App,
-    user_id: i64,
-    email_address: String,
+    job: EmailAddressConfirmation,
     requested_at: Timestamp,
 ) -> campfire_db::Result<Option<outbound::Message>> {
     let config = &app.mail.config;
@@ -279,19 +273,25 @@ pub async fn email_address_confirmation_message(
         return Ok(None);
     };
     let expires_at = requested_at.jiff() + rails_compat::email_address_confirmation::EXPIRES_IN;
-    if app.db.env().now().jiff() >= expires_at || outbound::first_address(&email_address).is_err() {
+    let Some(address) = outbound::bare_confirmation_address(&job.email_address) else {
+        return Ok(None);
+    };
+    if app.db.env().now().jiff() >= expires_at {
         return Ok(None);
     }
+    let email_address = address.to_owned();
+    let user_id = job.user_id;
     let candidate = app
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             let Some(user) =
                 User::find_by_id(conn, user_id)?.filter(|user| user.is_active() && !user.is_bot())
             else {
                 return Ok(None);
             };
-            if !EmailAddress::is_available(conn, &email_address)?
-                || EmailAddress::removed_since(conn, user_id, &email_address, requested_at)?
+            if !job.matches_password(&user)
+                || !EmailAddress::is_available(conn, &email_address)?
+                || EmailAddress::released_after(conn, user_id, &email_address, requested_at)?
                 || password_changed_since(conn, user_id, requested_at)?
             {
                 return Ok(None);

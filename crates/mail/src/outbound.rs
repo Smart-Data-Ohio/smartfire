@@ -396,6 +396,22 @@ pub fn first_address(header: &str) -> anyhow::Result<lettre::Address> {
     }
 }
 
+/// The address used for ownership checks must be exactly the mailbox delivery will use.
+pub fn bare_confirmation_address(address: &str) -> Option<&str> {
+    let address = address.trim();
+    if address.len() > 254 || !campfire_db::models::drive_recipients::eligible_email(address) {
+        return None;
+    }
+    let parsed = mailparse::addrparse(address).ok()?;
+    let [mailparse::MailAddr::Single(info)] = parsed.as_slice() else {
+        return None;
+    };
+    (info.display_name.is_none()
+        && info.addr == address
+        && info.addr.parse::<lettre::Address>().is_ok())
+    .then_some(address)
+}
+
 /// Mail/Net::SMTP also supports CRAM-MD5, which Lettre's high-level SASL enum omits.
 /// Its low-level connection still owns SMTP framing, STARTTLS and certificate verification.
 async fn deliver_cram_md5(

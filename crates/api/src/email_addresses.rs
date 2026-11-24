@@ -5,8 +5,9 @@ use campfire_api_types::{
 use campfire_app::app::AppCtx;
 use campfire_db::user::email_addresses::EmailAddress;
 use campfire_db::{Error as DbError, User};
-use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode};
+use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, halt};
 use campfire_runtime::authentication;
+use campfire_runtime::concerns::sudo::session_id;
 use jiff::SignedDuration;
 
 use crate::admin::{self, body, require_sudo, viewer};
@@ -23,7 +24,7 @@ async fn list(c: &mut Ctx) -> Result {
     let list = c
         .app()
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             let user = User::find_active(conn, user_id)?;
             let secondary = EmailAddress::for_user(conn, user_id)?
                 .into_iter()
@@ -45,19 +46,17 @@ async fn list(c: &mut Ctx) -> Result {
 }
 
 async fn request_confirmation(c: &mut Ctx) -> Result {
-    let user_id = viewer(c).await?.id;
+    let user = viewer(c).await?;
+    let user_id = user.id;
     if !c.app().mail.config.password_reset_available() {
         return Err(fail(c, not_found()));
     }
     require_sudo(c).await?;
     let request: EmailAddressRequest = body(c).await?;
-    let email_address = request.email_address.trim().to_owned();
-    if email_address.len() > 254
-        || !campfire_db::models::drive_recipients::eligible_email(&email_address)
-        || campfire_mail::outbound::first_address(&email_address).is_err()
-    {
+    let Some(address) = campfire_mail::outbound::bare_confirmation_address(&request.email_address)
+    else {
         return Err(fail(c, validation("emailAddress", "isn't valid")));
-    }
+    };
     let limit = RateLimit::new(
         "email_address_confirmation",
         5,
@@ -72,15 +71,26 @@ async fn request_confirmation(c: &mut Ctx) -> Result {
             },
         ));
     }
+    let email_address = address.to_owned();
     let destination = email_address.clone();
-    c.app()
+    let session_id = session_id(c);
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_email_address_write(c.app().db.path(), user_id).await;
+    let saved = c
+        .app()
         .db
         .write(move |tx| {
-            authentication::request_email_address_confirmation(tx, user_id, destination);
-            Ok(())
+            if !authentication::credential_write_authorized(tx, &user, session_id)? {
+                return Ok(false);
+            }
+            authentication::request_email_address_confirmation(tx, &user, destination);
+            Ok(true)
         })
         .await
         .map_err(Error::internal)?;
+    if !saved {
+        return halt(c.head(StatusCode::UNAUTHORIZED));
+    }
     c.json(
         StatusCode::OK,
         &EmailAddressRequestResult::ConfirmationSent { email_address },
@@ -88,15 +98,22 @@ async fn request_confirmation(c: &mut Ctx) -> Result {
 }
 
 async fn remove(c: &mut Ctx) -> Result {
-    let user_id = viewer(c).await?.id;
+    let user = viewer(c).await?;
     require_sudo(c).await?;
     let id = address_id(c)?;
     let context = admin::audit_context(c)?;
-    c.app()
+    let session_id = session_id(c);
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_email_address_write(c.app().db.path(), user.id).await;
+    let saved = c
+        .app()
         .db
         .write(move |tx| {
-            let user = User::find_active(tx.conn(), user_id)?;
-            let address = EmailAddress::remove(tx, user_id, id)?
+            if !authentication::credential_write_authorized(tx, &user, session_id)? {
+                return Ok(false);
+            }
+            let user = User::find_active(tx.conn(), user.id)?;
+            let address = EmailAddress::remove(tx, user.id, id)?
                 .ok_or(DbError::RecordNotFound("EmailAddress"))?;
             authentication::audit_email_address(
                 tx,
@@ -104,10 +121,14 @@ async fn remove(c: &mut Ctx) -> Result {
                 "user.email_address.remove",
                 &address.email_address,
                 &context,
-            )
+            )?;
+            Ok(true)
         })
         .await
         .map_err(Error::internal)?;
+    if !saved {
+        return halt(c.head(StatusCode::UNAUTHORIZED));
+    }
     Ok(c.head(StatusCode::NO_CONTENT))
 }
 
@@ -116,7 +137,9 @@ async fn promote(c: &mut Ctx) -> Result {
     require_sudo(c).await?;
     let id = address_id(c)?;
     let context = admin::audit_context(c)?;
-    let session_id = campfire_runtime::concerns::sudo::session_id(c);
+    let session_id = session_id(c);
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_email_address_write(c.app().db.path(), user.id).await;
     let saved = c
         .app()
         .db
@@ -126,7 +149,7 @@ async fn promote(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     if !saved {
-        return Ok(c.head(StatusCode::UNAUTHORIZED));
+        return halt(c.head(StatusCode::UNAUTHORIZED));
     }
     Ok(c.head(StatusCode::NO_CONTENT))
 }
