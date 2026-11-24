@@ -19,7 +19,7 @@ fn found() -> Value {
     json!({
         "conversations": [
             {"id": "C1", "name": "general", "type": "public_channel", "members": 4, "messages": 12, "threads": 2, "latest": "1700000000.000100"},
-            {"id": "G2", "name": "secret", "type": "private_channel", "members": 2, "messages": 3},
+            {"id": "G2", "name": "secret", "type": "private_channel", "members": 2, "messages": 3, "scanned_from": 1700000000.0},
             {"id": "D3", "name": "Kevin", "type": "im", "messages": 1}
         ],
         "users": {"total": 3, "matched": 2, "placeholders": 1},
@@ -371,6 +371,16 @@ async fn a_run_reads_as_its_classic_page() {
         [Some("2023-11-14T22:13:20.000Z"), None, None],
         "a dry run's newest Slack ts, on the wire"
     );
+    let scanned_from: Vec<_> = plan
+        .conversations
+        .iter()
+        .map(|each| each.conversation.scanned_from.as_deref())
+        .collect();
+    assert_eq!(
+        scanned_from,
+        [None, Some("2023-11-14T22:13:20.000Z"), None],
+        "where a catch-up dry run started reading a channel"
+    );
     assert_eq!((plan.scanned_from, plan.scanned_until), (None, None));
 
     let bounded = self::run(
@@ -378,7 +388,7 @@ async fn a_run_reads_as_its_classic_page() {
         "workspace",
         "dry_run",
         "completed",
-        json!({"oldest": "2026-01-02T05:00:00Z", "latest": null}),
+        json!({"oldest": "2026-01-02T05:00:00Z", "latest": "2026-03-01T00:00:00Z"}),
     )
     .await;
     let bounded: api::SlackPlan = parse(
@@ -387,8 +397,14 @@ async fn a_run_reads_as_its_classic_page() {
             .await,
     );
     assert_eq!(
-        (bounded.scanned_from.as_deref(), bounded.scanned_until),
-        (Some("2026-01-02T05:00:00.000Z"), None),
+        (
+            bounded.scanned_from.as_deref(),
+            bounded.scanned_until.as_deref()
+        ),
+        (
+            Some("2026-01-02T05:00:00.000Z"),
+            Some("2026-03-01T00:00:00.000Z")
+        ),
         "the dry run's date bounds, so the plan knows what it counted"
     );
 

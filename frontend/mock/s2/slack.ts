@@ -50,6 +50,7 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
     messages: 340,
     threads: 22,
     lastMessageAt: daysAgo(1),
+    scannedFrom: null,
   },
   {
     id: "C200",
@@ -60,6 +61,7 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
     messages: 88,
     threads: 4,
     lastMessageAt: daysAgo(9),
+    scannedFrom: null,
   },
   {
     id: "G300",
@@ -70,6 +72,7 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
     messages: 12,
     threads: 0,
     lastMessageAt: daysAgo(730),
+    scannedFrom: null,
   },
 ];
 
@@ -84,6 +87,7 @@ const PERSONAL_CONVERSATIONS: readonly SlackConversation[] = [
     messages: 3,
     threads: 0,
     lastMessageAt: daysAgo(2),
+    scannedFrom: null,
   },
   {
     id: "D100",
@@ -94,6 +98,7 @@ const PERSONAL_CONVERSATIONS: readonly SlackConversation[] = [
     messages: 41,
     threads: 1,
     lastMessageAt: daysAgo(4),
+    scannedFrom: null,
   },
   {
     id: "M200",
@@ -104,6 +109,7 @@ const PERSONAL_CONVERSATIONS: readonly SlackConversation[] = [
     messages: 9,
     threads: 0,
     lastMessageAt: daysAgo(30),
+    scannedFrom: null,
   },
 ];
 

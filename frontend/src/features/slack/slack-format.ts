@@ -123,31 +123,32 @@ export function optional(value: string): string | null {
 const YEAR_MS = 365 * 86_400_000;
 
 /**
- * What a dry run's counts say about the past year. `"full"`: it counted every message of it.
- * `"bounded"`: it had a latest bound, or an oldest bound inside the year, so a zero or old count
- * says nothing about recent use. `"undated"`: it counted everything but ran before last-message
- * dates were recorded.
+ * What a dry run's counts say about the past year. `"full"`: it read every message.
+ * `"bounded"`: it had date bounds, so a zero or old count says nothing about recent use (an
+ * oldest bound also hides new replies to older threads). `"undated"`: some channel's messages
+ * were counted before last-message dates were recorded.
  */
 export type Coverage = "full" | "bounded" | "undated";
 
-export function planCoverage(plan: SlackPlan, now: number): Coverage {
-  const bounded =
-    plan.scannedUntil !== null ||
-    (plan.scannedFrom !== null && Date.parse(plan.scannedFrom) > now - YEAR_MS);
+export function planCoverage(plan: SlackPlan): Coverage {
+  if (plan.scannedFrom !== null || plan.scannedUntil !== null) return "bounded";
 
-  if (bounded) return "bounded";
+  const undated = plan.conversations.some(
+    ({ conversation }) => conversation.messages > 0 && conversation.lastMessageAt === null,
+  );
 
-  const used = plan.conversations.filter(({ conversation }) => conversation.messages > 0);
+  return undated ? "undated" : "full";
+}
 
-  return used.length > 0 && used.every(({ conversation }) => conversation.lastMessageAt === null)
-    ? "undated"
-    : "full";
+/** A conversation the dry run read only part of: an earlier import's catch-up start. */
+export function partlyRead(conversation: SlackConversation): boolean {
+  return conversation.scannedFrom !== null;
 }
 
 /**
- * A conversation nobody uses: no members, or (when the dry run counted the whole past year) no
- * messages in it. The plan leaves it unchecked. A conversation with messages but no last-message
- * date counts as active.
+ * A conversation nobody uses: no members, or (when the dry run read its whole history) no
+ * messages in the past year. The plan leaves it unchecked. A conversation with messages but no
+ * last-message date counts as active.
  */
 export function inactive(
   conversation: SlackConversation,
@@ -156,7 +157,7 @@ export function inactive(
 ): boolean {
   if (conversation.members === 0) return true;
 
-  if (coverage === "bounded") return false;
+  if (coverage === "bounded" || partlyRead(conversation)) return false;
 
   if (conversation.messages === 0) return true;
 
@@ -180,35 +181,47 @@ export function inactiveReason(
   return "No messages in the past year";
 }
 
-/** The plan's line about the channels it left unchecked, or null when there is nothing to say. */
-export function inactiveHint(count: number, coverage: Coverage): string | null {
+/**
+ * The plan's lines about the channels it left unchecked, or null when there is nothing to say.
+ * `partly` is whether an earlier import left some channels read only from its catch-up start.
+ */
+export function inactiveHint(count: number, coverage: Coverage, partly: boolean): string | null {
   const channels = count === 1 ? "1 channel" : `${count} channels`;
   const start = count === 1 ? "starts" : "start";
   const anyway = "Check one to import it anyway.";
 
+  const imported = partly
+    ? "Channels an earlier import brought in stay checked: this dry run read only their newer messages."
+    : null;
+
+  const lines = (...parts: readonly (string | null)[]) => {
+    const text = parts.filter((part) => part !== null).join(" ");
+
+    return text === "" ? null : text;
+  };
+
   switch (coverage) {
     case "full":
-      return count === 0
-        ? null
-        : `${channels} ${start} unchecked: no members, or no messages in the past year. ${anyway}`;
+      return lines(
+        count === 0
+          ? null
+          : `${channels} ${start} unchecked: no members, or no messages in the past year. ${anyway}`,
+        imported,
+      );
 
-    case "bounded": {
-      const limited =
-        "This dry run was limited to a date range, so it can't tell which channels went quiet.";
+    case "bounded":
+      return lines(
+        count === 0 ? null : `${channels} with no members ${start} unchecked.`,
+        "This dry run was limited to a date range, so it can't tell which channels went quiet.",
+        count === 0 ? null : anyway,
+      );
 
-      return count === 0
-        ? limited
-        : `${channels} with no members ${start} unchecked. ${limited} ${anyway}`;
-    }
-
-    case "undated": {
-      const undated =
-        "This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.";
-
-      return count === 0
-        ? undated
-        : `${channels} with no members or messages ${start} unchecked. ${undated}`;
-    }
+    case "undated":
+      return lines(
+        count === 0 ? null : `${channels} ${start} unchecked. ${anyway}`,
+        imported,
+        "This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.",
+      );
   }
 }
 

@@ -90,6 +90,10 @@ fn apply(
             }
             p.state["convo"]["bounds"] =
                 json!({"oldest":oldest,"latest":time_bound(&p.run.options["latest"])?});
+            // The plan can't call a channel quiet from messages this dry run didn't read.
+            if let Some(oldest) = oldest.filter(|_| p.dry_run()) {
+                p.entry_mut()["scanned_from"] = json!(oldest);
+            }
         }
         Operation::History(messages) => {
             let conversation = string(&p.state["convo"]["id"]);

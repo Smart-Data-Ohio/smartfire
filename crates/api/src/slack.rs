@@ -297,6 +297,9 @@ fn conversation(value: &Value) -> api::SlackConversation {
         members: count(&value["members"]),
         messages: count(&value["messages"]),
         threads: count(&value["threads"]),
+        scanned_from: value["scanned_from"]
+            .as_f64()
+            .map(|seconds| time(Timestamp::from_microsecond((seconds * 1e6).round() as i64))),
         last_message_at: presence(&value["latest"])
             .and_then(|ts| slack_time(&ts).ok())
             .map(time),

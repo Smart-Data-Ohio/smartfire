@@ -15,4 +15,9 @@ kind: string, archived: boolean, members: number, messages: number, threads: num
 /**
  * The newest message or thread reply the dry run counted, or none.
  */
-lastMessageAt: string | null, };
+lastMessageAt: string | null,
+/**
+ * The oldest time the dry run read this conversation from: the run's oldest bound, or a
+ * catch-up's start after an earlier import. None when it read the whole history.
+ */
+scannedFrom: string | null, };

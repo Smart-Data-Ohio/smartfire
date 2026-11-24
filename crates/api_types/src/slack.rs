@@ -210,6 +210,9 @@ pub struct SlackConversation {
     pub threads: i64,
     /// The newest message or thread reply the dry run counted, or none.
     pub last_message_at: Option<Timestamp>,
+    /// The oldest time the dry run read this conversation from: the run's oldest bound, or a
+    /// catch-up's start after an earlier import. None when it read the whole history.
+    pub scanned_from: Option<Timestamp>,
 }
 
 /// `GET .../runs/:id/status`: one run's progress, polled while it is active.

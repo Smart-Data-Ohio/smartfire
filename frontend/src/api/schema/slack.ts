@@ -181,6 +181,7 @@ export const SlackConversation = Schema.Struct({
   messages: Schema.Int,
   threads: Schema.Int,
   lastMessageAt: Schema.NullOr(Timestamp),
+  scannedFrom: Schema.NullOr(Timestamp),
 });
 
 export type SlackConversationPin = Assert<

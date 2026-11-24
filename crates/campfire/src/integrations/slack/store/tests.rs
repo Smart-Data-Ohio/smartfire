@@ -482,8 +482,27 @@ async fn slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward
     .unwrap();
     let catchup = selected_run(&db, json!({"conversation_ids":["CCHAN"]})).await;
     let (_server, network) = fake(window_routes(Some("1717200000.000001"), None)).await;
-    let third = import(&db, crypto, catchup, network).await;
+    let third = import(&db, crypto.clone(), catchup, network).await;
     assert_eq!(third.stats["counts"]["messages"], 0);
+    let scanned_from = |row: &SlackImport| {
+        array(&row.stats["conversations"])
+            .iter()
+            .find(|c| c["id"] == "CCHAN")
+            .map(|c| c["scanned_from"].as_f64())
+    };
+    assert_eq!(scanned_from(&first), Some(None), "imports keep their recorded rows");
+    // A dry run after the full import reads only from the catch-up start, and says so.
+    let dry = selected_run(&db, json!({"conversation_ids":["CCHAN"]})).await;
+    db.write(move |tx| {
+        tx.conn()
+            .execute("UPDATE slack_imports SET mode='dry_run' WHERE id=?", [dry])?;
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let (_server, network) = fake(window_routes(Some("1717200000.000001"), None)).await;
+    let checked = import(&db, crypto, dry, network).await;
+    assert_eq!(scanned_from(&checked), Some(Some(1717200000.000001)));
 }
 #[tokio::test]
 async fn slack_catchup_coverage_is_invalidated_by_undoing_an_earlier_bounded_run() {

@@ -13,6 +13,7 @@ import {
   modeLabel,
   optional,
   parseRunSearch,
+  partlyRead,
   peopleLine,
   personalConnectionSentence,
   planCoverage,
@@ -28,6 +29,7 @@ const conversation = (id: string) => ({
   messages: 1,
   threads: 0,
   lastMessageAt: null,
+  scannedFrom: null,
 });
 
 const PLAN: SlackPlan = {
@@ -179,48 +181,76 @@ describe("inactive", () => {
 });
 
 describe("planCoverage", () => {
-  const NOW = Date.parse("2026-11-24T12:00:00Z");
-
   const plan = (
     scannedFrom: string | null,
     scannedUntil: string | null,
-    lastMessageAt: string | null = "2026-11-01T00:00:00.000Z",
+    dates: readonly (string | null)[] = ["2026-11-01T00:00:00.000Z"],
   ): SlackPlan => ({
     ...PLAN,
     scannedFrom,
     scannedUntil,
-    conversations: [{ conversation: { ...conversation("C1"), lastMessageAt }, target: "new" }],
+    conversations: dates.map((lastMessageAt, index) => ({
+      conversation: { ...conversation(`C${index}`), lastMessageAt },
+      target: "new",
+    })),
   });
 
-  it("is full with no bounds, or an oldest bound before the year", () => {
-    expect(planCoverage(plan(null, null), NOW)).toBe("full");
-    expect(planCoverage(plan("2025-01-01T00:00:00.000Z", null), NOW)).toBe("full");
+  it("is full with no bounds", () => {
+    expect(planCoverage(plan(null, null))).toBe("full");
   });
 
-  it("is bounded by a latest bound or an oldest bound inside the year", () => {
-    expect(planCoverage(plan("2026-11-10T00:00:00.000Z", null), NOW)).toBe("bounded");
-    expect(planCoverage(plan(null, "2025-05-01T00:00:00.000Z"), NOW)).toBe("bounded");
+  it("is bounded by any oldest or latest bound", () => {
+    expect(planCoverage(plan("2025-01-01T00:00:00.000Z", null))).toBe("bounded");
+    expect(planCoverage(plan(null, "2025-05-01T00:00:00.000Z"))).toBe("bounded");
   });
 
-  it("is undated when no conversation with messages has a date", () => {
-    expect(planCoverage(plan(null, null, null), NOW)).toBe("undated");
+  it("is undated when any conversation with messages has no date", () => {
+    expect(planCoverage(plan(null, null, [null]))).toBe("undated");
+    expect(planCoverage(plan(null, null, ["2026-11-01T00:00:00.000Z", null]))).toBe("undated");
+  });
+});
+
+describe("partlyRead", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+
+  it("keeps a channel an earlier import left read only from its catch-up start", () => {
+    const quiet = {
+      ...conversation("C1"),
+      members: 4,
+      messages: 0,
+      scannedFrom: "2026-10-01T00:00:00.000Z",
+    };
+
+    expect(partlyRead(quiet)).toBe(true);
+    expect(inactive(quiet, NOW, "full")).toBe(false);
+    expect(inactive({ ...quiet, members: 0 }, NOW, "full")).toBe(true);
+    expect(inactive({ ...quiet, scannedFrom: null }, NOW, "full")).toBe(true);
   });
 });
 
 describe("inactiveHint", () => {
   it("says how many channels start unchecked and why", () => {
-    expect(inactiveHint(0, "full")).toBeNull();
-    expect(inactiveHint(1, "full")).toBe(
+    expect(inactiveHint(0, "full", false)).toBeNull();
+    expect(inactiveHint(1, "full", false)).toBe(
       "1 channel starts unchecked: no members, or no messages in the past year. Check one to import it anyway.",
     );
-    expect(inactiveHint(3, "bounded")).toBe(
+    expect(inactiveHint(3, "bounded", false)).toBe(
       "3 channels with no members start unchecked. This dry run was limited to a date range, so it can't tell which channels went quiet. Check one to import it anyway.",
     );
-    expect(inactiveHint(0, "bounded")).toBe(
+    expect(inactiveHint(0, "bounded", false)).toBe(
       "This dry run was limited to a date range, so it can't tell which channels went quiet.",
     );
-    expect(inactiveHint(0, "undated")).toBe(
+    expect(inactiveHint(0, "undated", false)).toBe(
       "This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.",
+    );
+    expect(inactiveHint(2, "undated", false)).toBe(
+      "2 channels start unchecked. Check one to import it anyway. This dry run is from before last-message dates were recorded. Start a new dry run to leave quiet channels unchecked.",
+    );
+  });
+
+  it("explains channels an earlier import left partly read", () => {
+    expect(inactiveHint(0, "full", true)).toBe(
+      "Channels an earlier import brought in stay checked: this dry run read only their newer messages.",
     );
   });
 });

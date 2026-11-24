@@ -19,6 +19,7 @@ import {
   inactiveHint,
   inactiveReason,
   keyed,
+  partlyRead,
   planCoverage,
 } from "./slack-format.ts";
 import { useRunId } from "./slack-run.tsx";
@@ -44,7 +45,7 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
   const id = useId();
   const [now] = useState(Date.now);
 
-  const coverage = planCoverage(plan, now);
+  const coverage = planCoverage(plan);
 
   const reasons = useMemo(
     () =>
@@ -59,7 +60,11 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
 
   const inactiveCount = [...reasons.values()].filter((reason) => reason !== null).length;
 
-  const hint = inactiveHint(inactiveCount, coverage);
+  const hint = inactiveHint(
+    inactiveCount,
+    coverage,
+    plan.conversations.some(({ conversation }) => partlyRead(conversation)),
+  );
 
   const everything = () => new Set(plan.conversations.map(({ conversation }) => conversation.id));
 
