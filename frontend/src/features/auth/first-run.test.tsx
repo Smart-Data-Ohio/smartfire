@@ -77,7 +77,7 @@ function inlineBoot(firstRunPending: boolean): void {
   boot.textContent = JSON.stringify({
     kind: "signedOut",
     workspace: { inviteSplashUrl: null, name: null, logoUrl: null, description: "" },
-    signInMethods: { password: true, google: false, googleDomains: [] },
+    signInMethods: { password: true, google: false, googleDomains: [], passwordReset: false },
     firstRunPending,
     helpContact: null,
     version: "2.0.0",

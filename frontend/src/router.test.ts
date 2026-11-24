@@ -75,6 +75,8 @@ describe("the screen map and the router", () => {
       "/app/session/new",
       "/app/two_factor/challenge",
       "/app/session/transfers/:id",
+      "/app/passwords/new",
+      "/app/passwords/:id",
       "/app/join/:id",
       "/app/invite/:id",
       "/app/first_run",

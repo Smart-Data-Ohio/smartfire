@@ -61,7 +61,7 @@ describe("branding", () => {
         logoUrl: "/logo.png",
         description: "Crew room.\nBe kind.",
       },
-      signInMethods: { password: true, google: false, googleDomains: [] },
+      signInMethods: { password: true, google: false, googleDomains: [], passwordReset: false },
       firstRunPending: false,
       helpContact: null,
       version: "2.0.0",
@@ -186,6 +186,32 @@ describe("password sign-in", () => {
     expect(await screen.findByRole("textbox", { name: "Authenticator code" })).toBeTruthy();
     expect(router.pathname()).toBe("/two_factor/challenge");
     expect(assign).not.toHaveBeenCalled();
+  });
+});
+
+describe("forgot password", () => {
+  it("is offered only when reset links can be emailed", async () => {
+    await resetSignIn(network, { passwordReset: false });
+    await renderAuth("/app/session/new");
+
+    await screen.findByRole("textbox", { name: "Email address" });
+    expect(screen.queryByRole("link", { name: "Forgot password?" })).toBeNull();
+  });
+
+  it("carries the address typed so far to the reset page", async () => {
+    await resetSignIn(network, { passwordReset: true });
+
+    const router = await renderAuth("/app/session/new");
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByRole("textbox", { name: "Email address" }), "ada@x.test");
+    await user.click(screen.getByRole("link", { name: "Forgot password?" }));
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Reset your password" }),
+    ).toBeTruthy();
+    expect(router.pathname()).toBe("/passwords/new");
+    expect(emailField()).toHaveProperty("value", "ada@x.test");
   });
 });
 

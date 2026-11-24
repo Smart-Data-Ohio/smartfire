@@ -527,7 +527,7 @@ async fn signed_out_boot_is_allow_listed_and_contains_only_public_auth_inputs() 
         assert_eq!(boot["kind"], "signedOut");
         assert_eq!(
             boot["signInMethods"],
-            json!({"password":true,"google":false,"googleDomains":[]})
+            json!({"password":true,"google":false,"googleDomains":[],"passwordReset":false})
         );
         assert_eq!(boot["firstRunPending"], false);
         // The retained sign-in page's help line: the first administrator and the version.

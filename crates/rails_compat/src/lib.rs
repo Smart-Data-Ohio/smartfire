@@ -19,6 +19,7 @@ pub mod keyword_regex;
 pub mod message_encryptor;
 pub mod message_verifier;
 pub mod password;
+pub mod password_reset;
 pub mod signed_id;
 pub mod totp;
 pub mod unicode;

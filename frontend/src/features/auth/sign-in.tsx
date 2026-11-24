@@ -1,4 +1,4 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { type AuthNext, auth, type SignedOutBootData } from "../../sync/auth.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
@@ -174,6 +174,17 @@ function SignInForm({
           Sign in
         </Button>
       </form>
+
+      {signInMethods.password && signInMethods.passwordReset ? (
+        <p className="auth-view-note">
+          <Link
+            to="/passwords/new"
+            search={email.trim() === "" ? {} : { email_address: email.trim() }}
+          >
+            Forgot password?
+          </Link>
+        </p>
+      ) : null}
 
       {signInMethods.google ? (
         <div className="auth-view-stack">

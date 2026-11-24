@@ -4,7 +4,7 @@ use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_session, require_current_user};
 use campfire_api_types::{TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
-use campfire_db::{TwoFactorCredential, TwoFactorRememberedDevice, User};
+use campfire_db::{TwoFactorCredential, User};
 use campfire_kit::{
     Cookie, Ctx, Error, RateLimit, Redirect, Result, SameSite, StatusCode, format, halt,
 };
@@ -169,6 +169,7 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
     .await
     .map_err(Error::internal)?;
     match outcome {
+        crate::authentication::Enrollment::SessionGone => halt(c.head(StatusCode::UNAUTHORIZED)),
         crate::authentication::Enrollment::Enabled => profile(c, mode),
         crate::authentication::Enrollment::Wrong => {
             c.flash().now(
@@ -285,39 +286,44 @@ pub async fn begin_session_response(
 ) -> Result {
     let return_url = concerns::post_authenticating_url(c).await?;
     let user_id = user.id;
+    let proof = (method == concerns::PASSWORD_SIGN_IN).then(|| concerns::password_proof(c, &user));
     let enabled = c
         .app()
         .db
         .read(move |conn| user_enabled(conn, user_id))
         .await
         .map_err(Error::internal)?;
-    if enabled {
-        let token = c.cookies.signed("two_factor_remember");
-        let remembered = c
-            .app()
-            .db
-            .write(move |tx| {
-                TwoFactorRememberedDevice::find_valid(tx, token.as_deref(), Some(user_id))
-            })
-            .await
-            .map_err(Error::internal)?
-            .is_some();
-        if remembered {
-            concerns::start_new_verified_session_for(c, user.clone()).await?;
-            sign_in_audit(c, user, method.into(), Some("remembered_device")).await?;
-        } else {
+    let token = if enabled {
+        c.cookies.signed("two_factor_remember")
+    } else {
+        None
+    };
+    let factor = token.as_ref().map(|_| "remembered_device");
+    let started = if enabled && token.is_none() {
+        concerns::SessionStart::ChallengeRequired
+    } else {
+        concerns::start_sign_in_session_for(c, user.clone(), proof.clone(), token).await?
+    };
+    match started {
+        concerns::SessionStart::Started(_) => sign_in_audit(c, user, method.into(), factor).await?,
+        concerns::SessionStart::PasswordReplaced => return password_replaced(c, mode),
+        concerns::SessionStart::ChallengeRequired => {
             let now = c.now();
             c.session()
                 .insert(concerns::session_keys::RETURN_TO_KEY, return_url);
             concerns::session_keys::stash_two_factor_pending(c.session(), user_id, method, now);
+            concerns::session_keys::stash_two_factor_pending_password(c.session(), proof);
             return mode.challenge(c);
         }
-    } else {
-        concerns::start_new_session_for(c, user.clone()).await?;
-        sign_in_audit(c, user, method.into(), None).await?;
     }
     let return_url = concerns::post_authentication_destination(c, return_url).await?;
     mode.signed_in(c, &return_url)
+}
+/// A sign-in whose password was reset before it finished: back to sign in, as when a pending
+/// second factor has gone.
+fn password_replaced(c: &mut Ctx, mode: ResponseMode) -> Result {
+    concerns::session_keys::clear_two_factor_pending(c.session());
+    mode.navigate(c, &c.url_for("/app/session/new"))
 }
 fn user_enabled(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<bool> {
     Ok(TwoFactorCredential::for_user(conn, user_id)?.is_some_and(|v| v.enabled()))
@@ -452,39 +458,66 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     let user_id = user.id;
     let code = scalar(c, "code");
     let method = concerns::session_keys::two_factor_pending_method(c.session());
-    let audit_method = method.clone();
+    let proof = concerns::pending_password_proof(c);
     let mut context = audit_context(c)?;
     context.actor = Some(Actor::from(&user));
     let secrets = c.app().secrets.clone();
-    let notify = c.app().mail.config.two_factor_configured();
+    let encryption = c.app().ar_encryption.clone();
+    let notify_lockout = c.app().mail.config.two_factor_configured();
+    let notify_new_sign_in = c.app().mail.config.security_configured();
+    let remember_device = c.param_str("remember_device") == Some("1");
+    let existing_device_id = c.cookies.signed("device_id");
+    let device_id = existing_device_id
+        .clone()
+        .unwrap_or_else(concerns::new_device_id);
     let outcome = c
         .app()
         .db
         .write(move |tx| {
             crate::authentication::challenge(
                 tx,
-                user_id,
-                &ArEncryption::new(&secrets),
-                &code,
-                &audit_method,
+                &secrets,
+                &encryption,
+                crate::authentication::ChallengeSignIn {
+                    user_id,
+                    password_proof: proof.as_deref(),
+                    code: &code,
+                    method: &method,
+                    device_id: &device_id,
+                    remember_device,
+                    notify_lockout,
+                    notify_new_sign_in,
+                },
                 &context,
-                notify,
             )
         })
         .await
         .map_err(Error::internal)?;
     match outcome {
-        crate::authentication::Challenge::Gone => {
+        crate::authentication::Challenge::Gone => password_replaced(c, mode),
+        crate::authentication::Challenge::Accepted {
+            session,
+            remembered,
+        } => {
             concerns::session_keys::clear_two_factor_pending(c.session());
-            mode.navigate(c, &c.url_for("/app/session/new"))
-        }
-        crate::authentication::Challenge::Accepted(factor) => {
-            concerns::session_keys::clear_two_factor_pending(c.session());
-            concerns::start_new_verified_session_for(c, user.clone()).await?;
-            if c.param_str("remember_device") == Some("1") {
-                remember_device(c, user_id).await?;
+            concerns::session_keys::clear_confirmations(c.session());
+            if existing_device_id.is_none()
+                && let Some(device_id) = &session.device_id
+            {
+                concerns::set_device_cookie(c, device_id)?;
             }
-            sign_in_audit(c, user, method, Some(factor)).await?;
+            concerns::authenticated_as(c, *session, Some(user), true).await?;
+            c.form_authenticity_token();
+            if let Some(remembered) = remembered {
+                c.cookies.set_signed(
+                    "two_factor_remember",
+                    Cookie::new(remembered.token)
+                        .expires(remembered.expires_at.jiff())
+                        .httponly()
+                        .secure()
+                        .same_site(Some(SameSite::Lax)),
+                )?;
+            }
             let location = concerns::post_authenticating_url(c).await?;
             mode.signed_in(c, &location)
         }
@@ -527,27 +560,6 @@ async fn render_challenge(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -
         ),
     }
 }
-async fn remember_device(c: &mut Ctx, user_id: i64) -> Result<()> {
-    let agent = c.request.user_agent().map(str::to_string);
-    let ip = c.request.remote_ip()?.to_string();
-    let (device, token) = c
-        .app()
-        .db
-        .write(move |tx| {
-            TwoFactorRememberedDevice::create_for(tx, user_id, agent.as_deref(), Some(&ip))
-        })
-        .await
-        .map_err(Error::internal)?;
-    c.cookies.set_signed(
-        "two_factor_remember",
-        Cookie::new(token)
-            .expires(device.expires_at.jiff())
-            .httponly()
-            .secure()
-            .same_site(Some(SameSite::Lax)),
-    )
-}
-
 async fn reauthenticated(c: &mut Ctx, user: &User, reauth: Option<&str>) -> Result<bool> {
     if let Some(value) = reauth {
         let value = value.to_owned();

@@ -1,0 +1,259 @@
+import { Link, useParams } from "@tanstack/react-router";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
+import { auth, inlineSignedOutBoot, type PasswordResetNext } from "../../sync/auth.ts";
+import { Button, Spinner } from "../../ui/button.tsx";
+import { TextField } from "../../ui/text-field.tsx";
+import { pageExit } from "./auth-navigation.ts";
+import {
+  AuthHeader,
+  AuthScreen,
+  useDocumentTitle,
+  useFollowNext,
+  useInlineFlash,
+  useRestoredFromCache,
+} from "./auth-parts.tsx";
+import { RESET_UNAVAILABLE } from "./password-new.tsx";
+
+const TITLE = "Reset your password";
+
+const RESET_FAILED = "Couldn't reset your password. Try again.";
+
+const TOO_MANY_ATTEMPTS = "Too many attempts. Try again in a few minutes.";
+
+type Landing =
+  | { readonly status: "checking" }
+  | { readonly status: "ready" }
+  | { readonly status: "refused"; readonly message: string }
+  | { readonly status: "failed"; readonly message: string }
+  | { readonly status: "unavailable" };
+
+/** The route's page, started over for each link. */
+export function EditPasswordRoute() {
+  const { token } = useParams({ from: "/passwords/$token" });
+
+  return <EditPasswordPage key={token} token={token} />;
+}
+
+/**
+ * `/app/passwords/:token`: the reset link's landing. It checks the link first, so an expired one
+ * says so before a password is typed, then sets the new password and goes to sign in.
+ */
+export function EditPasswordPage({ token }: { readonly token: string }) {
+  const titleId = useId();
+  const flash = useInlineFlash();
+  const [logoUrl] = useState(() => inlineSignedOutBoot()?.workspace.logoUrl ?? null);
+
+  // The boot already says when reset is off; then there's no link to check.
+  const [unavailable] = useState(
+    () => inlineSignedOutBoot()?.signInMethods.passwordReset === false,
+  );
+
+  const [landing, setLanding] = useState<Landing>(
+    unavailable ? { status: "unavailable" } : { status: "checking" },
+  );
+
+  useDocumentTitle(TITLE);
+
+  const check = () => {
+    if (unavailable) return;
+
+    setLanding({ status: "checking" });
+    auth.passwordReset(token).then(
+      (next) => setLanding(next.kind === "ready" ? { status: "ready" } : checkRefusal(next)),
+      (error: Error) => setLanding({ status: "failed", message: error.message }),
+    );
+  };
+
+  useEffect(check, [token, unavailable]);
+
+  if (landing.status === "unavailable") {
+    return (
+      <AuthScreen labelledBy={titleId} flash={flash}>
+        <AuthHeader titleId={titleId} title={TITLE} logoUrl={logoUrl} />
+        <div className="auth-view-stack">
+          <p className="auth-view-lede">{RESET_UNAVAILABLE}</p>
+          <Link
+            to="/session/new"
+            className="button auth-view-wide"
+            data-variant="secondary"
+            data-size="lg"
+          >
+            Go to sign in
+          </Link>
+        </div>
+      </AuthScreen>
+    );
+  }
+
+  if (landing.status === "checking") {
+    return (
+      <AuthScreen labelledBy={titleId} busy flash={flash}>
+        <AuthHeader titleId={titleId} title={TITLE} logoUrl={logoUrl} />
+        <p className="auth-view-wait" role="status">
+          <Spinner />
+          One moment…
+        </p>
+      </AuthScreen>
+    );
+  }
+
+  if (landing.status === "ready") {
+    return <NewPasswordForm token={token} logoUrl={logoUrl} flash={flash} land={setLanding} />;
+  }
+
+  return (
+    <AuthScreen labelledBy={titleId} flash={flash}>
+      <AuthHeader titleId={titleId} title="Couldn't reset your password" logoUrl={logoUrl} />
+      <div className="auth-view-stack">
+        <p className="auth-view-alert" role="alert">
+          {landing.message}
+        </p>
+        {landing.status === "failed" ? (
+          <Button variant="primary" size="lg" className="auth-view-wide" onClick={check}>
+            Try again
+          </Button>
+        ) : (
+          <Link
+            to="/passwords/new"
+            className="button auth-view-wide"
+            data-variant="primary"
+            data-size="lg"
+          >
+            Request new link
+          </Link>
+        )}
+        <Link
+          to="/session/new"
+          className="button auth-view-wide"
+          data-variant="secondary"
+          data-size="lg"
+        >
+          Go to sign-in
+        </Link>
+      </div>
+    </AuthScreen>
+  );
+}
+
+function NewPasswordForm({
+  token,
+  logoUrl,
+  flash,
+  land,
+}: {
+  readonly token: string;
+  readonly logoUrl: string | null;
+  readonly flash: ReturnType<typeof useInlineFlash>;
+  /** Leaves the form for a dead link or reset turned off. */
+  readonly land: (landing: Landing) => void;
+}) {
+  const titleId = useId();
+  const follow = useFollowNext();
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | undefined>(undefined);
+  const [attempt, setAttempt] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  useRestoredFromCache(() => setBusy(false));
+
+  const refuse = (message: string) => {
+    setError(message);
+    setAttempt((count) => count + 1);
+    setBusy(false);
+    passwordRef.current?.focus();
+  };
+
+  const answered = (next: PasswordResetNext) => {
+    switch (next.kind) {
+      case "error": {
+        const problem = next.status === 422 ? next.fieldErrors.password?.[0] : undefined;
+
+        if (next.status === 429) {
+          refuse(TOO_MANY_ATTEMPTS);
+        } else if (problem !== undefined) {
+          refuse(problem);
+        } else {
+          land(checkRefusal(next));
+        }
+
+        return;
+      }
+
+      case "navigate":
+        // A full load, so the sign-in page shows the notice the server left for it. Busy stays on
+        // while the page leaves.
+        pageExit.assign(next.location);
+
+        return;
+      case "ready":
+      case "requested":
+        refuse(RESET_FAILED);
+
+        return;
+      default:
+        follow(next);
+    }
+  };
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (busy) return;
+
+    setBusy(true);
+    auth.resetPassword(token, password).then(answered, (failure: Error) => refuse(failure.message));
+  };
+
+  return (
+    <AuthScreen labelledBy={titleId} flash={flash}>
+      <AuthHeader
+        titleId={titleId}
+        title="Choose a new password"
+        logoUrl={logoUrl}
+        lede="Resetting your password signs you out on every device. You'll sign in again next."
+      />
+
+      <form className="auth-view-form" onSubmit={submit} aria-labelledby={titleId}>
+        <TextField
+          ref={passwordRef}
+          label="New password"
+          type="password"
+          name="password"
+          required
+          autoFocus
+          autoComplete="new-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          error={error}
+          attempt={attempt}
+        />
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="auth-view-wide"
+          loading={busy}
+          loadingLabel="Resetting…"
+        >
+          Reset password
+        </Button>
+      </form>
+    </AuthScreen>
+  );
+}
+
+/** Where a link check that didn't answer `ready` leaves the page. */
+function checkRefusal(next: PasswordResetNext): Landing {
+  if (next.kind === "error") {
+    if (next.status === 404) return { status: "unavailable" };
+
+    if (next.status === 429) return { status: "failed", message: TOO_MANY_ATTEMPTS };
+
+    const dead = next.status === 400 ? next.fieldErrors.token?.[0] : undefined;
+
+    if (dead !== undefined) return { status: "refused", message: dead };
+  }
+
+  return { status: "failed", message: RESET_FAILED };
+}

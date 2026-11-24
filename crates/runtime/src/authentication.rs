@@ -3,29 +3,78 @@
 //! No request, cookies or rendering enter this layer.
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target, pair};
 use campfire_db::{
-    ActivityItem, ChallengeFailure, Database, Result, Session, TwoFactorBackupCode,
+    ActivityItem, ChallengeFailure, Database, PasswordDigest, Result, Session, TwoFactorBackupCode,
     TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
 };
 use rails_compat::{ar_encryption::ArEncryption, totp};
+use rusqlite::OptionalExtension;
 use serde_json::json;
+
+#[cfg(feature = "test-support")]
+pub mod test_hooks {
+    use std::{cell::RefCell, future::Future, pin::Pin};
+
+    type Hook = RefCell<Option<Pin<Box<dyn Future<Output = ()> + Send>>>>;
+
+    tokio::task_local! {
+        pub static BEFORE_ENROLLMENT_CONFIRM: Hook;
+        pub static BEFORE_SESSION_WRITE: Hook;
+    }
+
+    pub(crate) async fn run(key: &'static tokio::task::LocalKey<Hook>) {
+        if let Ok(Some(hook)) = key.try_with(|hook| hook.borrow_mut().take()) {
+            hook.await;
+        }
+    }
+}
 
 /// `app/controllers/users/profiles_controller.rb`: security audits and the rollback marker
 /// commit with the user update.
-/// The controller checks the existing password before constructing these changes.
+/// Credential changes require the original session and digest, and email submissions must still
+/// agree with the address snapshot used to authorize them.
+/// Returns false without writing when that authorization has gone stale.
 pub fn update_profile(
     tx: &mut Tx<'_>,
     user: &mut User,
     mut changes: UserChanges,
-    email_changing: bool,
-    password_changing: bool,
+    audit_email_change: bool,
+    session_id: Option<i64>,
+    legacy_raw_password_present: bool,
     context: &Context,
-) -> Result<()> {
+) -> Result<bool> {
+    let writes_digest = changes.password_digest.is_some();
+    let submitted_email = changes.email_address.as_ref();
+    if submitted_email.is_some() || writes_digest || audit_email_change {
+        let current: Option<(Option<String>, Option<String>, bool)> = tx
+            .conn()
+            .query_row(
+                "SELECT email_address, password_digest,
+                        EXISTS(SELECT 1 FROM sessions WHERE user_id = users.id AND id = ?2)
+                 FROM users WHERE id = ?1",
+                rusqlite::params![user.id, session_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .optional()?;
+        let Some((current_email, current_digest, has_session)) = current else {
+            return Ok(false);
+        };
+        if submitted_email.is_some() && current_email != user.email_address {
+            return Ok(false);
+        }
+        let writes_email = submitted_email.is_some_and(|email| *email != current_email);
+        if (writes_email || writes_digest || audit_email_change)
+            && (!has_session || current_digest != user.password_digest)
+        {
+            return Ok(false);
+        }
+    }
+    let previous_digest = writes_digest.then(|| user.password_digest.clone());
     let previous_email = user.email_address.clone();
-    if email_changing {
+    if audit_email_change {
         changes.email_self_changed_at = Some(tx.now());
     }
     user.update(tx, changes)?;
-    if email_changing {
+    if audit_email_change {
         AuditLog::record(
             tx,
             NewAuditLog {
@@ -40,7 +89,10 @@ pub fn update_profile(
             context,
         )?;
     }
-    if password_changing {
+    // The retained form also audits non-scalar input that strong parameters discard.
+    if legacy_raw_password_present
+        || previous_digest.is_some_and(|digest| digest != user.password_digest)
+    {
         AuditLog::record(
             tx,
             NewAuditLog {
@@ -53,7 +105,7 @@ pub fn update_profile(
         )?;
         TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
     }
-    Ok(())
+    Ok(true)
 }
 
 /// `Accounts::UsersController#update`: only a successful, changed role writes a row.
@@ -260,7 +312,62 @@ pub fn reset_two_factor(tx: &mut Tx<'_>, user: &User, context: &Context) -> Resu
     Ok(())
 }
 
+/// Who "Forgot password?" can email a link to: someone password sign-in accepts (active, with an
+/// address), a person rather than a bot, with a password. Google-only members sign in with Google.
+pub fn can_reset_password(user: &User) -> bool {
+    user.is_active()
+        && !user.is_bot()
+        && user
+            .email_address
+            .as_deref()
+            .is_some_and(|email| !email.is_empty())
+        && user
+            .password_digest
+            .as_deref()
+            .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
+}
+
+/// "Forgot password?": queue the email. Delivery decides whether `email_address` gets one,
+/// so the request can answer independently of whether the account exists.
+pub fn request_password_reset(tx: &mut Tx<'_>, email_address: String) {
+    campfire_mail::jobs::password_reset_later(tx, email_address);
+}
+
+/// A reset link's new password: saved with its audit, then every remembered device and session
+/// of the user's goes, as a password change and an administrator's two-step reset do.
+pub fn reset_password(
+    tx: &mut Tx<'_>,
+    user: &mut User,
+    digest: PasswordDigest,
+    context: &Context,
+) -> Result<()> {
+    user.update(
+        tx,
+        UserChanges {
+            password_digest: Some(digest),
+            ..Default::default()
+        },
+    )?;
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "user.password.reset".into(),
+            actor: Some(Actor::from(&*user)),
+            target: Some(Target::from(&*user)),
+            ..Default::default()
+        },
+        context,
+    )?;
+    TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
+    for session in Session::for_user(tx.conn(), user.id)? {
+        session.destroy(tx)?;
+    }
+    user.reset_remote_connections(tx);
+    Ok(())
+}
+
 pub enum Enrollment {
+    SessionGone,
     Enabled,
     Wrong,
     Confirmed {
@@ -270,9 +377,8 @@ pub enum Enrollment {
     },
 }
 
-/// `SetupsController#create` has no action-wide transaction. Each model operation
-/// commits separately; confirmation consumes its setup secret atomically, and
-/// each session destruction commits its dependent deletions and durable jobs.
+/// `SetupsController#create` commits each model operation separately. Confirmation checks the
+/// session and consumes its setup secret atomically before enrollment issues backup codes.
 pub async fn enroll(
     db: &Database,
     user: User,
@@ -282,14 +388,14 @@ pub async fn enroll(
 ) -> Result<Enrollment> {
     let user_id = user.id;
     let creation_encryption = encryption.clone();
-    let (mut credential, setup) = db
+    let enrollment = db
         .write(move |tx| {
-            let existing = TwoFactorCredential::for_user(tx.conn(), user_id)?;
-            if let Some(credential) = existing.as_ref().filter(|c| c.enabled()) {
-                return Ok((credential.clone(), None));
-            }
-            let setup = TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?;
-            let credential = match existing {
+            let session = match Session::find(tx.conn(), session_id) {
+                Ok(session) if session.user_id == user_id => session,
+                Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
+                Err(error) => return Err(error),
+            };
+            let credential = match TwoFactorCredential::for_user(tx.conn(), user_id)? {
                 Some(credential) => credential,
                 None => TwoFactorCredential::create(
                     tx,
@@ -298,21 +404,43 @@ pub async fn enroll(
                     &totp::generate_secret(),
                 )?,
             };
-            Ok((credential, setup))
+            Ok(Some((session.token, credential)))
         })
         .await?;
+    let Some((session_token, credential)) = enrollment else {
+        return Ok(Enrollment::SessionGone);
+    };
     if credential.enabled() {
         return Ok(Enrollment::Enabled);
     }
-    let Some(setup) = setup else {
-        return Ok(Enrollment::Wrong);
-    };
     let credential_id = credential.id;
-    if !db
-        .write(move |tx| credential.confirm_with_setup_secret(tx, &encryption, &setup, &code))
-        .await?
-    {
-        return Ok(Enrollment::Wrong);
+    #[cfg(feature = "test-support")]
+    test_hooks::run(&test_hooks::BEFORE_ENROLLMENT_CONFIRM).await;
+    let confirmed = db
+        .write(move |tx| {
+            if !Session::find_by_token(tx.conn(), &session_token)?
+                .is_some_and(|session| session.id == session_id && session.user_id == user_id)
+            {
+                return Ok(Err(Enrollment::SessionGone));
+            }
+            let Some(setup) = TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?
+            else {
+                return Ok(Err(Enrollment::Wrong));
+            };
+            let Some(mut credential) = TwoFactorCredential::for_user(tx.conn(), user_id)?
+                .filter(|current| current.id == credential_id)
+            else {
+                return Ok(Err(Enrollment::Wrong));
+            };
+            if credential.enabled() {
+                return Ok(Err(Enrollment::Enabled));
+            }
+            let confirmed = credential.confirm_with_setup_secret(tx, &encryption, &setup, &code)?;
+            Ok(confirmed.then_some(()).ok_or(Enrollment::Wrong))
+        })
+        .await?;
+    if let Err(outcome) = confirmed {
+        return Ok(outcome);
     }
     let codes = db
         .write(move |tx| TwoFactorBackupCode::regenerate_set(tx, credential_id))
@@ -352,23 +480,63 @@ pub async fn enroll(
     })
 }
 
+pub(crate) fn password_proven(secrets: &rails_compat::Secrets, proof: &str, user: &User) -> bool {
+    rails_compat::password_reset::sign_in_proof_matches(
+        secrets,
+        proof,
+        user.password_digest.as_deref().unwrap_or_default(),
+    )
+}
+
 pub enum Challenge {
     Gone,
-    Accepted(&'static str),
+    Accepted {
+        session: Box<Session>,
+        remembered: Option<RememberedCookie>,
+    },
     Wrong,
     Locked(i64),
 }
 
+pub struct RememberedCookie {
+    pub token: String,
+    pub expires_at: campfire_db::Timestamp,
+}
+
+pub struct ChallengeSignIn<'a> {
+    pub user_id: i64,
+    pub password_proof: Option<&'a str>,
+    pub code: &'a str,
+    pub method: &'a str,
+    pub device_id: &'a str,
+    pub remember_device: bool,
+    pub notify_lockout: bool,
+    pub notify_new_sign_in: bool,
+}
+
+/// Check the first factor before consuming the second, and commit it with the session and
+/// remembered device, so a password reset can only precede or revoke the whole sign-in.
 pub fn challenge(
     tx: &mut Tx<'_>,
-    user_id: i64,
+    secrets: &rails_compat::Secrets,
     encryption: &ArEncryption,
-    code: &str,
-    method: &str,
+    attempt: ChallengeSignIn<'_>,
     context: &Context,
-    notify: bool,
 ) -> Result<Challenge> {
-    if campfire_db::User::find_by_id(tx.conn(), user_id)?.is_none_or(|u| !u.is_active()) {
+    let ChallengeSignIn {
+        user_id,
+        password_proof,
+        code,
+        method,
+        device_id,
+        remember_device,
+        notify_lockout,
+        notify_new_sign_in,
+    } = attempt;
+    let Some(user) = User::find_by_id(tx.conn(), user_id)?.filter(User::is_active) else {
+        return Ok(Challenge::Gone);
+    };
+    if password_proof.is_some_and(|proof| !password_proven(secrets, proof, &user)) {
         return Ok(Challenge::Gone);
     }
     let Some(mut credential) =
@@ -392,7 +560,32 @@ pub fn challenge(
     };
     if let Some(factor) = factor {
         credential.register_challenge_success(tx)?;
-        return Ok(Challenge::Accepted(factor));
+        let attributes = campfire_db::NewSession {
+            user_agent: context.user_agent.as_deref(),
+            ip_address: context.ip_address.as_deref(),
+            device_id: Some(device_id),
+            two_factor_verified: true,
+        };
+        let session = start_session(tx, user_id, attributes, notify_new_sign_in)?;
+        let remembered = if remember_device {
+            let (device, token) = TwoFactorRememberedDevice::create_for(
+                tx,
+                user_id,
+                context.user_agent.as_deref(),
+                context.ip_address.as_deref(),
+            )?;
+            Some(RememberedCookie {
+                token,
+                expires_at: device.expires_at,
+            })
+        } else {
+            None
+        };
+        record_sign_in(tx, &user, method, Some(factor), context)?;
+        return Ok(Challenge::Accepted {
+            session: Box::new(session),
+            remembered,
+        });
     }
     let locked = credential.register_challenge_failure(tx)? == ChallengeFailure::Locked;
     AuditLog::record(
@@ -426,7 +619,7 @@ pub fn challenge(
             "UPDATE activity_items SET updated_at=? WHERE id=?",
             rusqlite::params![tx.now(), item.id],
         )?;
-        if notify {
+        if notify_lockout {
             campfire_mail::jobs::lockout_notice_later(tx, user_id);
         }
         Ok(Challenge::Locked(minutes(&credential, tx.now())))

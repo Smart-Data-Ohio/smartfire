@@ -80,7 +80,12 @@ describe("signed-out auth contracts", () => {
           logoUrl: null,
           description: "Hello",
         },
-        signInMethods: { password: true, google: true, googleDomains: ["smartdata.net"] },
+        signInMethods: {
+          password: true,
+          google: true,
+          googleDomains: ["smartdata.net"],
+          passwordReset: false,
+        },
         firstRunPending: false,
         helpContact: { name: "Ada", emailAddress: "ada@example.com" },
         version: "2.0.0",

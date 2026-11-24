@@ -582,27 +582,36 @@ async fn write_profile(
     user: User,
     changes: UserChanges,
     settings: profile_settings::Changes,
-    email_changing: bool,
-    password_changing: bool,
+    audit_email_change: bool,
 ) -> Result<()> {
     let audit = audit_context(c)?;
-    c.app()
+    let session_id = current_session(c).map(|session| session.id);
+    let saved = c
+        .app()
         .db
         .write(move |tx| {
             let mut user = user;
-            authentication::update_profile(
+            if !authentication::update_profile(
                 tx,
                 &mut user,
                 changes,
-                email_changing,
-                password_changing,
+                audit_email_change,
+                session_id,
+                false,
                 &audit,
-            )?;
+            )? {
+                return Ok(false);
+            }
             profile_settings::update(tx, user.id, settings)?;
-            profile_settings::bump_revision(tx, user.id)
+            profile_settings::bump_revision(tx, user.id)?;
+            Ok(true)
         })
         .await
-        .map_err(Error::internal)
+        .map_err(Error::internal)?;
+    if !saved {
+        return campfire_kit::halt(c.head(StatusCode::UNAUTHORIZED));
+    }
+    Ok(())
 }
 
 async fn save_profile(c: &mut Ctx) -> Result {
@@ -625,11 +634,11 @@ async fn save_profile(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let email_changing = update
+    let email_change_requested = update
         .email_address
         .as_deref()
         .is_some_and(|email| user.email_change_requested(email));
-    if email_changing {
+    if email_change_requested {
         let password = update.current_password.clone();
         let missing = password
             .as_deref()
@@ -649,14 +658,10 @@ async fn save_profile(c: &mut Ctx) -> Result {
             return Err(fail(c, validation("currentPassword", message)));
         }
     }
-    let password_changing = update
-        .password
-        .as_deref()
-        .is_some_and(|password| !campfire_richtext::ruby::is_blank(password));
     let changes = UserChanges {
         name: update.name,
         email_address: update.email_address.map(Some),
-        // `password=` ignores a blank password.
+        // `password=` ignores an empty password.
         password_digest: concerns::password_digest(
             c,
             update.password.filter(|password| !password.is_empty()),
@@ -675,15 +680,7 @@ async fn save_profile(c: &mut Ctx) -> Result {
         },
         ..profile_settings::Changes::default()
     };
-    write_profile(
-        c,
-        user,
-        changes,
-        settings,
-        email_changing,
-        password_changing,
-    )
-    .await?;
+    write_profile(c, user, changes, settings, email_change_requested).await?;
     if identity_changing {
         publish_identity(c, id).await?;
     }
@@ -857,7 +854,7 @@ async fn save_appearance(c: &mut Ctx) -> Result {
             .map(|preferences| preferences.0),
         ..profile_settings::Changes::default()
     };
-    write_profile(c, user, changes, settings, false, false).await?;
+    write_profile(c, user, changes, settings, false).await?;
     reply(c, id).await
 }
 
@@ -870,7 +867,7 @@ async fn save_calls(c: &mut Ctx) -> Result {
         push_to_talk_key: update.push_to_talk_key,
         ..profile_settings::Changes::default()
     };
-    write_profile(c, user, UserChanges::default(), settings, false, false).await?;
+    write_profile(c, user, UserChanges::default(), settings, false).await?;
     reply(c, id).await
 }
 

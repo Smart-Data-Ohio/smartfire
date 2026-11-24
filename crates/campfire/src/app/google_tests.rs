@@ -925,7 +925,7 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
     );
     assert_eq!(
         sign_in_boot(&mut b).await["signInMethods"],
-        json!({"password":true,"google":true,"googleDomains":["smartdata.net","cnbssoftware.com"]})
+        json!({"password":true,"google":true,"googleDomains":["smartdata.net","cnbssoftware.com"],"passwordReset":false})
     );
     // Each app-scoped config installation models Rails' current env for that request.
     for mode in 0..2 {
@@ -941,7 +941,7 @@ async fn google_sessions_configured_page_and_disabled_credentials_or_domains_kee
         let mut b = a.anonymous();
         assert_eq!(
             sign_in_boot(&mut b).await["signInMethods"],
-            json!({"password":true,"google":false,"googleDomains":[]})
+            json!({"password":true,"google":false,"googleDomains":[],"passwordReset":false})
         );
         assert_eq!(
             b.write(Req::new(Method::POST, "/session/google"))

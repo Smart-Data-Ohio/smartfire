@@ -4,7 +4,7 @@
  * that never reached a decision (the network, an unreadable body) rejects with an `ActionError`.
  */
 
-import { Option, Schema } from "effect";
+import { type Effect, Option, Schema } from "effect";
 import {
   consumeTransfer,
   googleSignIn,
@@ -13,10 +13,13 @@ import {
   readChallenge,
   readFirstRun,
   readJoinPage,
+  readPasswordReset,
+  requestPasswordReset,
   signedOutBoot,
   submitChallenge,
   submitFirstRun,
   submitJoin,
+  submitPasswordReset,
 } from "../api/auth-endpoints.ts";
 import { readPublicPage } from "../api/public-page-endpoints.ts";
 import {
@@ -44,6 +47,9 @@ export type AuthNext = typeof AuthResponse.Type;
 export type JoinNext = typeof JoinAnswer.Type;
 
 export type { JoinTarget };
+
+/** A password reset endpoint's answer: its state, or a next action. */
+export type PasswordResetNext = Effect.Success<ReturnType<typeof readPasswordReset>>;
 
 /** Whether first run is still open. */
 export type FirstRunOpen = typeof FirstRunState.Type;
@@ -86,6 +92,14 @@ export const auth = {
   /** Sets up the workspace and its first administrator, signed in as them. */
   firstRun: (submission: FirstRunSubmission, avatar: File | null): Promise<AuthNext> =>
     runAction(submitFirstRun(submission, avatar)),
+  /** Emails a reset link if the address has an account that can have one; answers alike either way. */
+  requestPasswordReset: (emailAddress: string): Promise<PasswordResetNext> =>
+    runAction(requestPasswordReset({ emailAddress })),
+  /** Whether a reset link still works. */
+  passwordReset: (token: string): Promise<PasswordResetNext> => runAction(readPasswordReset(token)),
+  /** Sets the new password; the answer goes to sign in. */
+  resetPassword: (token: string, password: string): Promise<PasswordResetNext> =>
+    runAction(submitPasswordReset(token, { password })),
   /** About, Privacy or Terms, for anyone. */
   publicPage: (page: PublicPageName): Promise<PublicPageData> => runAction(readPublicPage(page)),
 };

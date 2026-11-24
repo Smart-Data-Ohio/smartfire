@@ -9,6 +9,10 @@ pub enum SignedOutRoute {
     /// `/app/invite/:token`, where `/invite/:token` redirects.
     Invite,
     FirstRun,
+    /// `/app/passwords/new`: "Forgot password?", asking for a reset link.
+    NewPassword,
+    /// `/app/passwords/:token`: choosing a new password with a reset link.
+    EditPassword,
 }
 
 pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
@@ -16,8 +20,10 @@ pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
         "/app/session/new" => Some(SignedOutRoute::SignIn),
         "/app/two_factor/challenge" => Some(SignedOutRoute::Challenge),
         "/app/first_run" => Some(SignedOutRoute::FirstRun),
+        "/app/passwords/new" => Some(SignedOutRoute::NewPassword),
         _ => [
             ("/app/session/transfers/", SignedOutRoute::Transfer),
+            ("/app/passwords/", SignedOutRoute::EditPassword),
             ("/app/join/", SignedOutRoute::Join),
             ("/app/invite/", SignedOutRoute::Invite),
         ]
@@ -69,6 +75,14 @@ mod tests {
             signed_out_route("/app/first_run"),
             Some(SignedOutRoute::FirstRun)
         );
+        assert_eq!(
+            signed_out_route("/app/passwords/new"),
+            Some(SignedOutRoute::NewPassword)
+        );
+        assert_eq!(
+            signed_out_route("/app/passwords/signed--token"),
+            Some(SignedOutRoute::EditPassword)
+        );
         for path in [
             "/session/new",
             "/app/",
@@ -82,6 +96,11 @@ mod tests {
             "/app/invite/a/b",
             "/first_run",
             "/app/first_run/extra",
+            "/app/passwords",
+            "/app/passwords/",
+            "/app/passwords/new/extra",
+            "/app/passwords/token/edit",
+            "/passwords/new",
         ] {
             assert_eq!(signed_out_route(path), None, "{path}");
         }

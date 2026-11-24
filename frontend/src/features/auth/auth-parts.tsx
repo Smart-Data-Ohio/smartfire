@@ -23,13 +23,20 @@ export function refusalMessage(
   fieldErrors: Readonly<Record<string, readonly string[]>>,
   ...keys: readonly string[]
 ): string {
+  return firstRefusalMessage(fieldErrors, ...keys) ?? GENERIC_REFUSAL;
+}
+
+export function firstRefusalMessage(
+  fieldErrors: Readonly<Record<string, readonly string[]>>,
+  ...keys: readonly string[]
+): string | undefined {
   for (const key of keys) {
     const message = fieldErrors[key]?.[0];
 
     if (message !== undefined) return message;
   }
 
-  return Object.values(fieldErrors).flat()[0] ?? GENERIC_REFUSAL;
+  return Object.values(fieldErrors).flat()[0];
 }
 
 /** Sets the tab's title while a signed-out page is up, as the retained pages' `<title>`. */

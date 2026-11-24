@@ -3,7 +3,8 @@
 //!
 //! - the pending second factor (`Authentication`, app/controllers/concerns/authentication.rb):
 //!   `two_factor_pending_user_id`, `two_factor_pending_expires_at` (epoch seconds) and
-//!   `two_factor_pending_method`;
+//!   `two_factor_pending_method`, and, from a password sign-in, `two_factor_pending_password`
+//!   (Smartfire's: the proof of the password it checked, `password_reset::sign_in_proof`);
 //! - sudo mode (`SudoMode`, app/controllers/concerns/sudo_mode.rb): `sudo_verified_at` (epoch
 //!   seconds) and the stashed `sudo_pending_request`;
 //! - Google step-up (`TwoFactorReauthentication`): `two_factor_reauthenticated_at`;
@@ -26,6 +27,7 @@ use super::ruby_to_i;
 pub const TWO_FACTOR_PENDING_USER_KEY: &str = "two_factor_pending_user_id";
 pub const TWO_FACTOR_PENDING_EXPIRY_KEY: &str = "two_factor_pending_expires_at";
 pub const TWO_FACTOR_PENDING_METHOD_KEY: &str = "two_factor_pending_method";
+pub const TWO_FACTOR_PENDING_PASSWORD_KEY: &str = "two_factor_pending_password";
 /// `TWO_FACTOR_PENDING_TTL = 10.minutes`
 pub const TWO_FACTOR_PENDING_TTL: SignedDuration = SignedDuration::from_mins(10);
 
@@ -60,6 +62,25 @@ pub fn stash_two_factor_pending(session: &mut Session, user_id: i64, method: &st
         (now + TWO_FACTOR_PENDING_TTL).as_second(),
     );
     session.insert(TWO_FACTOR_PENDING_METHOD_KEY, method);
+}
+
+/// A password sign-in's proof of the password it checked, kept with its pending second factor;
+/// `None` for a sign-in by another method.
+pub fn stash_two_factor_pending_password(session: &mut Session, proof: Option<String>) {
+    match proof {
+        Some(proof) => session.insert(TWO_FACTOR_PENDING_PASSWORD_KEY, proof),
+        None => {
+            session.remove(TWO_FACTOR_PENDING_PASSWORD_KEY);
+        }
+    }
+}
+
+/// The pending password sign-in's proof, if it has one.
+pub fn two_factor_pending_password(session: &Session) -> Option<String> {
+    session
+        .get(TWO_FACTOR_PENDING_PASSWORD_KEY)
+        .map(to_s)
+        .filter(|proof| !proof.is_empty())
 }
 
 /// `two_factor_pending_user` up to its `User.active.find_by(id:)`: the id to look up, or `None`
@@ -103,6 +124,7 @@ pub fn clear_two_factor_pending(session: &mut Session) {
         TWO_FACTOR_PENDING_USER_KEY,
         TWO_FACTOR_PENDING_EXPIRY_KEY,
         TWO_FACTOR_PENDING_METHOD_KEY,
+        TWO_FACTOR_PENDING_PASSWORD_KEY,
     ] {
         session.remove(key);
     }

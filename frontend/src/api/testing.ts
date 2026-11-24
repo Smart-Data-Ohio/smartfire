@@ -244,19 +244,23 @@ export class FakeApi extends Context.Service<
   /** `FakeApi` plus the `ApiClient` it drives (success bodies still go through their decoder). */
   static readonly layerClient = Layer.effect(
     ApiClient,
-    Effect.map(FakeApi, (fake) =>
-      ApiClient.of({
-        execute: (request, decode) =>
-          fake.dispatch(request).pipe(
-            Effect.flatMap(decode),
-            Effect.catchTag("SchemaError", (error) =>
-              Effect.fail(new ServerError({ status: 200, message: error.message })),
-            ),
+    Effect.map(FakeApi, (fake) => {
+      const execute: ApiClient["Service"]["execute"] = (request, decode) =>
+        fake.dispatch(request).pipe(
+          Effect.flatMap(decode),
+          Effect.catchTag("SchemaError", (error) =>
+            Effect.fail(new ServerError({ status: 200, message: error.message })),
           ),
+        );
+
+      return ApiClient.of({
+        execute,
+        executeWithStatus: (request, decode) =>
+          Effect.map(execute(request, decode), (body) => ({ status: 200, body })),
         setCsrfToken: () => Effect.void,
         csrfToken: Effect.succeed("test-csrf-token"),
-      }),
-    ),
+      });
+    }),
   ).pipe(Layer.provideMerge(FakeApi.layer));
 }
 

@@ -178,3 +178,35 @@ fn oauth_refresh_reuse_notice_names_owner_and_reconnect_location_and_escapes_htm
     assert!(message.html.contains("Owner &lt;script&gt;"));
     assert!(!message.html.contains("Owner <script>"));
 }
+#[test]
+fn password_reset_links_the_token_from_the_configured_sender() {
+    let config = Config {
+        mailer_from: Some("Smartfire <alerts@example.com>".into()),
+        app_url: Some("https://example.com".into()),
+        ..Default::default()
+    };
+    let url = "https://example.com/app/passwords/abc--123";
+    let message = outbound::password_reset(
+        &config,
+        &User {
+            name: "Ada <Lovelace>".into(),
+            email: "ada@example.com".into(),
+        },
+        url,
+    );
+    assert_eq!(message.from, "Smartfire <alerts@example.com>");
+    assert_eq!(message.to, "\"Ada <Lovelace>\" <ada@example.com>");
+    assert_eq!(message.subject, outbound::PASSWORD_RESET_SUBJECT);
+    assert!(message.text.contains(&format!("\n{url}\n")), "{}", message.text);
+    assert!(message.text.contains("15 minutes"));
+    assert!(message.html.contains(&format!("<a href=\"{url}\">")));
+    assert!(message.html.contains("Ada &lt;Lovelace&gt;"));
+    assert!(message.html.contains("15 minutes"));
+    let raw = String::from_utf8(
+        message
+            .encoded("2026-09-29T12:30:00Z".parse().unwrap(), "id@test", "b")
+            .unwrap(),
+    )
+    .unwrap();
+    assert!(raw.contains("Subject: Reset your Smartfire password\r\n"));
+}

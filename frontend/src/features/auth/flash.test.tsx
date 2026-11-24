@@ -35,7 +35,12 @@ function inlineBoot(flash: SignedOutBoot["flash"], firstRunPending = false): voi
   const data: SignedOutBoot = {
     kind: "signedOut",
     workspace: { inviteSplashUrl: null, name: "Harbor", logoUrl: null, description: "" },
-    signInMethods: { password: true, google: true, googleDomains: ["smartdata.example"] },
+    signInMethods: {
+      password: true,
+      google: true,
+      googleDomains: ["smartdata.example"],
+      passwordReset: false,
+    },
     firstRunPending,
     helpContact: null,
     version: "2.0.0",

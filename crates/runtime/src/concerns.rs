@@ -952,13 +952,17 @@ fn bounce_back_after_sign_in(c: &mut Ctx) -> Result<bool> {
     Ok(format.is_some_and(|format| format.symbol == "html" || format.string.contains("html")))
 }
 
-/// `two_factor_pending_user`: the active user a still-valid pending second factor names.
+/// `two_factor_pending_user`: the active user a still-valid pending second factor names. A pending
+/// password sign-in also needs the password it checked to be the user's password still: one that
+/// a reset replaced, or one from before the proof was kept, is no longer pending.
 pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
     let now = c.now();
     let Some(user_id) = session_keys::two_factor_pending_user_id(c.session(), now) else {
         return Ok(None);
     };
-    c.app()
+    let proof = pending_password_proof(c);
+    let user = c
+        .app()
         .db
         .read(move |conn| match User::find_active(conn, user_id) {
             Ok(user) => Ok(Some(user)),
@@ -966,7 +970,33 @@ pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
             Err(error) => Err(error),
         })
         .await
-        .map_err(Error::internal)
+        .map_err(Error::internal)?;
+    let secrets = &c.app().secrets;
+    Ok(user.filter(|user| {
+        proof
+            .as_ref()
+            .is_none_or(|proof| crate::authentication::password_proven(secrets, proof, user))
+    }))
+}
+
+/// What a pending sign-in must show of its password: `Some` for a password sign-in (empty when it
+/// kept no proof, which then matches no password), `None` for other methods.
+pub fn pending_password_proof(c: &mut Ctx) -> Option<String> {
+    let session = c.session();
+    (session_keys::two_factor_pending_method(session) == PASSWORD_SIGN_IN)
+        .then(|| session_keys::two_factor_pending_password(session).unwrap_or_default())
+}
+
+/// The sign-in method whose pending state and session are bound to the password it checked.
+pub const PASSWORD_SIGN_IN: &str = "password";
+
+/// A password sign-in's proof of the password it checked, for `start_sign_in_session_for` and a
+/// pending second factor.
+pub fn password_proof(c: &Ctx, user: &User) -> String {
+    rails_compat::password_reset::sign_in_proof(
+        &c.app().secrets,
+        user.password_digest.as_deref().unwrap_or_default(),
+    )
 }
 
 /// `redirect_signed_in_user_to_root`
@@ -1004,7 +1034,7 @@ pub async fn authenticate_by(
     let candidate = c
         .app()
         .db
-        .read(move |conn| User::find_active_by_email_address(conn, &email_address))
+        .read(move |conn| User::find_active_by_sign_in_address(conn, &email_address))
         .await
         .map_err(Error::internal)?;
     tokio::task::spawn_blocking(move || User::authenticated(candidate, &password))
@@ -1012,35 +1042,82 @@ pub async fn authenticate_by(
         .map_err(Error::internal)
 }
 
-/// `start_new_session_for(user)`: drop the previous member's confirmations, make sure the browser
-/// has its `device_id`, start the session, and settle the CSRF token before any page renders (so
-/// concurrent first renders don't each start their own).
-///
-/// Rails' `two_factor_verified:` defaults to false; the completed challenge and remembered-device
-/// flows pass true through `start_new_verified_session_for`. Every real session records its
-/// device and alerts on a new device, using WS10's typed mail API when configured.
+pub enum SessionStart {
+    Started(Box<Session>),
+    PasswordReplaced,
+    ChallengeRequired,
+}
+
+/// `start_new_session_for(user)`: a new session created after first-run or registration.
 pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
-    start_session(c, user, false).await
+    let SessionStart::Started(session) = start_session(c, user, false, None, None).await? else {
+        unreachable!("registration has no sign-in proof");
+    };
+    Ok(*session)
 }
 
-/// A completed second factor (or valid remembered device) creates a verified session.
+/// A verified session for fixture sign-ins.
+#[cfg(feature = "test-support")]
 pub async fn start_new_verified_session_for(c: &mut Ctx, user: User) -> Result<Session> {
-    start_session(c, user, true).await
+    let SessionStart::Started(session) = start_session(c, user, true, None, None).await? else {
+        unreachable!("fixture sign-in has no sign-in proof");
+    };
+    Ok(*session)
 }
 
-async fn start_session(c: &mut Ctx, user: User, two_factor_verified: bool) -> Result<Session> {
-    session_keys::clear_confirmations(c.session());
-    let device_id = ensure_device_cookie(c)?;
+/// Recheck any password proof and remembered device while holding the session writer.
+pub async fn start_sign_in_session_for(
+    c: &mut Ctx,
+    user: User,
+    proof: Option<String>,
+    remembered_token: Option<String>,
+) -> Result<SessionStart> {
+    start_session(c, user, remembered_token.is_some(), proof, remembered_token).await
+}
+
+async fn start_session(
+    c: &mut Ctx,
+    user: User,
+    two_factor_verified: bool,
+    proof: Option<String>,
+    remembered_token: Option<String>,
+) -> Result<SessionStart> {
+    let existing_device_id = c.cookies.signed("device_id");
+    let device_id = existing_device_id.clone().unwrap_or_else(new_device_id);
     let (user_agent, ip) = (
         c.request.user_agent().map(str::to_string),
         c.request.remote_ip()?.to_string(),
     );
     let user_id = user.id;
     let notify = c.app().mail.config.security_configured();
-    let session = c
+    let secrets = c.app().secrets.clone();
+    #[cfg(feature = "test-support")]
+    crate::authentication::test_hooks::run(
+        &crate::authentication::test_hooks::BEFORE_SESSION_WRITE,
+    )
+    .await;
+    let started = c
         .app()
         .db
         .write(move |tx| {
+            if let Some(proof) = proof {
+                let current = User::find_by_id(tx.conn(), user_id)?;
+                if !current.is_some_and(|user| {
+                    crate::authentication::password_proven(&secrets, &proof, &user)
+                }) {
+                    return Ok(SessionStart::PasswordReplaced);
+                }
+            }
+            if let Some(token) = remembered_token
+                && campfire_db::TwoFactorRememberedDevice::find_valid(
+                    tx,
+                    Some(&token),
+                    Some(user_id),
+                )?
+                .is_none()
+            {
+                return Ok(SessionStart::ChallengeRequired);
+            }
             let attributes = NewSession {
                 user_agent: user_agent.as_deref(),
                 ip_address: Some(&ip),
@@ -1048,12 +1125,21 @@ async fn start_session(c: &mut Ctx, user: User, two_factor_verified: bool) -> Re
                 two_factor_verified,
             };
             crate::authentication::start_session(tx, user_id, attributes, notify)
+                .map(|session| SessionStart::Started(Box::new(session)))
         })
         .await
         .map_err(Error::internal)?;
-    authenticated_as(c, session.clone(), Some(user), true).await?;
-    c.form_authenticity_token();
-    Ok(session)
+    if let SessionStart::Started(session) = &started {
+        if existing_device_id.is_none()
+            && let Some(device_id) = &session.device_id
+        {
+            set_device_cookie(c, device_id)?;
+        }
+        session_keys::clear_confirmations(c.session());
+        authenticated_as(c, (**session).clone(), Some(user), true).await?;
+        c.form_authenticity_token();
+    }
+    Ok(started)
 }
 
 /// `ensure_device_cookie`: the browser's `device_id` (new-device sign-in alerts key on it), minted
@@ -1063,16 +1149,24 @@ pub fn ensure_device_cookie(c: &mut Ctx) -> Result<String> {
     if let Some(device_id) = c.cookies.signed("device_id") {
         return Ok(device_id);
     }
-    let device_id: String = rand::random::<[u8; 16]>()
+    let device_id = new_device_id();
+    set_device_cookie(c, &device_id)?;
+    Ok(device_id)
+}
+
+pub fn new_device_id() -> String {
+    rand::random::<[u8; 16]>()
         .iter()
         .map(|byte| format!("{byte:02x}"))
-        .collect();
-    let cookie = Cookie::new(device_id.clone())
+        .collect()
+}
+
+pub fn set_device_cookie(c: &mut Ctx, device_id: &str) -> Result<()> {
+    let cookie = Cookie::new(device_id)
         .permanent()
         .httponly()
         .same_site(Some(SameSite::Lax));
-    c.cookies.set_signed("device_id", cookie)?;
-    Ok(device_id)
+    c.cookies.set_signed("device_id", cookie)
 }
 
 /// `resume_session(session)`: refresh its activity (at most hourly), then authenticate as it.

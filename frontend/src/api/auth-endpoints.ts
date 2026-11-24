@@ -2,12 +2,20 @@ import { Effect, Schema } from "effect";
 import type { ChallengeSubmission } from "../gen/ChallengeSubmission.ts";
 import type { FirstRunSubmission } from "../gen/FirstRunSubmission.ts";
 import type { GoogleSignInStart } from "../gen/GoogleSignInStart.ts";
+import type { PasswordResetRequest } from "../gen/PasswordResetRequest.ts";
+import type { PasswordResetSubmission } from "../gen/PasswordResetSubmission.ts";
 import type { PasswordSignIn } from "../gen/PasswordSignIn.ts";
 import type { SignOut } from "../gen/SignOut.ts";
 import type { TransferSignIn } from "../gen/TransferSignIn.ts";
 import type { WorkspaceJoin } from "../gen/WorkspaceJoin.ts";
-import { ApiClient } from "./client.ts";
-import { AuthResponse, FirstRunState, JoinAnswer, SignedOutBoot } from "./schema/auth.ts";
+import { ApiClient, type ApiRequest } from "./client.ts";
+import {
+  AuthResponse,
+  FirstRunState,
+  JoinAnswer,
+  PasswordResetAnswer,
+  SignedOutBoot,
+} from "./schema/auth.ts";
 
 const decodeAuth = Schema.decodeUnknownEffect(AuthResponse);
 
@@ -16,6 +24,33 @@ const decodeBoot = Schema.decodeUnknownEffect(SignedOutBoot);
 const decodeFirstRun = Schema.decodeUnknownEffect(FirstRunState);
 
 const decodeJoin = Schema.decodeUnknownEffect(JoinAnswer);
+
+const decodePasswordReset = Schema.decodeUnknownEffect(PasswordResetAnswer);
+
+type PasswordResetRefusal = Extract<typeof PasswordResetAnswer.Type, { kind: "error" }> & {
+  readonly status: number;
+};
+
+const passwordResetRequest = (request: ApiRequest) =>
+  Effect.gen(function* () {
+    const client = yield* ApiClient;
+    const { status, body } = yield* client.executeWithStatus(request, decodePasswordReset);
+
+    return body.kind === "error" ? { ...body, status } : body;
+  }).pipe(
+    Effect.catchTag("ServerError", (failure) =>
+      failure.status >= 400
+        ? Effect.succeed<PasswordResetRefusal>({
+            kind: "error",
+            status: failure.status,
+            fieldErrors: {},
+          })
+        : Effect.fail(failure),
+    ),
+  );
+
+const passwordResetPath = (token: string): string =>
+  `/password_resets/${encodeURIComponent(token)}`;
 
 /** How a visitor joins: the workspace's join code, or a workspace invite's token. */
 export type JoinTarget =
@@ -82,6 +117,36 @@ export const consumeTransfer = Effect.fn("consumeTransfer")(function* (id: strin
     { method: "PUT", path: `/session/transfers/${encodeURIComponent(id)}`, body, auth: true },
     decodeAuth,
   );
+});
+
+/** `POST /password_resets`: the same `requested` answer whether or not the address has an account. */
+export const requestPasswordReset = Effect.fn("requestPasswordReset")(function* (
+  body: PasswordResetRequest,
+) {
+  return yield* passwordResetRequest({
+    method: "POST",
+    path: "/password_resets",
+    body,
+    auth: true,
+  });
+});
+
+/** `GET /password_resets/:token`: `ready` while the link works, else its refusal. */
+export const readPasswordReset = Effect.fn("readPasswordReset")(function* (token: string) {
+  return yield* passwordResetRequest({ method: "GET", path: passwordResetPath(token), auth: true });
+});
+
+/** `PUT /password_resets/:token`: the new password; success navigates to sign in. */
+export const submitPasswordReset = Effect.fn("submitPasswordReset")(function* (
+  token: string,
+  body: PasswordResetSubmission,
+) {
+  return yield* passwordResetRequest({
+    method: "PUT",
+    path: passwordResetPath(token),
+    body,
+    auth: true,
+  });
 });
 
 /** `GET /first_run`: open (adopting its token) or, once set up, where to go instead. */

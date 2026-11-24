@@ -91,6 +91,11 @@ export interface ApiRequest {
 /** Validates a success body; a failure becomes a `ServerError`. */
 export type ResponseDecoder<A> = (json: Schema.Json) => Effect.Effect<A, Schema.SchemaError>;
 
+interface ApiResponse<A> {
+  readonly status: number;
+  readonly body: A;
+}
+
 /**
  * The `/api/v1` client: JSON in and out, the CSRF token on every write (refreshed and retried once
  * when stale), a redirect to sign in on 401, a write held for a fresh confirmation replayed once
@@ -103,6 +108,10 @@ export class ApiClient extends Context.Service<
       request: ApiRequest,
       decode: ResponseDecoder<A>,
     ) => Effect.Effect<A, ApiFailure>;
+    readonly executeWithStatus: <A>(
+      request: ApiRequest,
+      decode: ResponseDecoder<A>,
+    ) => Effect.Effect<ApiResponse<A>, ApiFailure>;
     /** Adopts a CSRF token learned elsewhere (the dev boot endpoint carries one). */
     readonly setCsrfToken: (token: string) => Effect.Effect<void>;
     /**
@@ -143,7 +152,9 @@ export class ApiClient extends Context.Service<
         );
 
         if (response.status >= 200 && response.status < 300) {
-          return yield* readSuccess(response, decode);
+          const body = yield* readSuccess(response, decode);
+
+          return { status: response.status, body };
         }
 
         if (
@@ -158,6 +169,7 @@ export class ApiClient extends Context.Service<
 
               return Option.isSome(next) ? navigation.assign(next.value.location) : Effect.void;
             }),
+            Effect.map((body) => ({ status: response.status, body })),
             Effect.catchTag("ServerError", (error) =>
               [401, 403, 422].includes(response.status)
                 ? readFailure(response, navigation, request.ownsNavigation !== true)
@@ -180,10 +192,10 @@ export class ApiClient extends Context.Service<
         );
 
       // A write the server holds for a fresh confirmation waits for it, then goes again once.
-      const execute = <A>(
+      const executeWithStatus = <A>(
         request: ApiRequest,
         decode: ResponseDecoder<A>,
-      ): Effect.Effect<A, ApiFailure> => {
+      ): Effect.Effect<ApiResponse<A>, ApiFailure> => {
         if (Option.isNone(reauthentication) || request.method === "GET" || request.auth === true) {
           return once(request, decode);
         }
@@ -203,7 +215,13 @@ export class ApiClient extends Context.Service<
         held === null ? Effect.orElseSucceed(refreshToken(), () => null) : Effect.succeed(held),
       );
 
-      return ApiClient.of({ execute, setCsrfToken: (fresh) => Ref.set(token, fresh), csrfToken });
+      return ApiClient.of({
+        execute: (request, decode) =>
+          Effect.map(executeWithStatus(request, decode), (response) => response.body),
+        executeWithStatus,
+        setCsrfToken: (fresh) => Ref.set(token, fresh),
+        csrfToken,
+      });
     }),
   );
 

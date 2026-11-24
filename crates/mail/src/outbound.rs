@@ -14,6 +14,7 @@ use lettre::{
 
 pub const SIGN_IN_SUBJECT: &str = "New sign-in to your Smartfire account";
 pub const LOCKOUT_SUBJECT: &str = "Several wrong sign-in codes were entered";
+pub const PASSWORD_RESET_SUBJECT: &str = "Reset your Smartfire password";
 const LOCKOUT: &str = "Several wrong sign-in codes were entered for your account. If that was you, wait a little and try again; if it was not you, your password may be compromised, so change it and review your remembered devices on your profile.";
 #[derive(Debug, Clone)]
 pub struct User {
@@ -137,6 +138,29 @@ pub fn lockout_notice(user: &User) -> Message {
         )),
     }
 }
+/// "Forgot password?": the one-time link to choose a new password. Sent only when
+/// `Config::password_reset_available`, so `mailer_from` is set.
+pub fn password_reset(config: &Config, user: &User, url: &str) -> Message {
+    let text = format!(
+        "Hi {},\n\nSomeone asked to reset your Smartfire password. Open this link to choose a new one:\n\n{url}\n\nThis link works once and expires in 15 minutes. Resetting your password signs you out on every device.\n\nDidn't ask for this? You can ignore this email. Your password won't change.\n",
+        user.name
+    );
+    let body = format!(
+        "<p>Hi {},</p>\n\n<p>Someone asked to reset your Smartfire password.</p>\n\n<p><a href=\"{}\">Choose a new password</a></p>\n\n<p>This link works once and expires in 15 minutes. Resetting your password signs you out on every device.</p>\n\n<p>Didn't ask for this? You can ignore this email. Your password won't change.</p>\n",
+        h(&user.name),
+        h(url)
+    );
+    Message {
+        from: config
+            .mailer_from
+            .clone()
+            .unwrap_or_else(|| "Smartfire <noreply@example.com>".into()),
+        to: address_with_name(user),
+        subject: PASSWORD_RESET_SUBJECT.into(),
+        text,
+        html: layout(&body),
+    }
+}
 fn crlf(s: &str) -> String {
     s.replace("\r\n", "\n")
         .replace('\r', "\n")
@@ -233,7 +257,49 @@ impl Message {
         Ok(raw.into_bytes())
     }
 }
+enum SmtpMechanism {
+    Lettre(Mechanism),
+    CramMd5,
+}
+
+struct SmtpCredentials<'a> {
+    user: &'a str,
+    password: &'a str,
+    mechanism: SmtpMechanism,
+}
+
+fn smtp_credentials(settings: &Smtp) -> anyhow::Result<Option<SmtpCredentials<'_>>> {
+    let Some(user) = settings.user_name.as_deref() else {
+        return Ok(None);
+    };
+    let password = settings.password.as_deref().ok_or_else(|| {
+        anyhow::anyhow!("SMTP_PASSWORD is required when SMTP_USER_NAME is configured")
+    })?;
+    let mechanism = match settings.authentication.as_deref().unwrap_or("plain") {
+        "plain" => SmtpMechanism::Lettre(Mechanism::Plain),
+        "login" => SmtpMechanism::Lettre(Mechanism::Login),
+        "cram_md5" => SmtpMechanism::CramMd5,
+        other => anyhow::bail!("unsupported SMTP_AUTHENTICATION {other}"),
+    };
+    Ok(Some(SmtpCredentials {
+        user,
+        password,
+        mechanism,
+    }))
+}
+
+pub(crate) fn validate_smtp_credentials(settings: &Smtp) -> anyhow::Result<()> {
+    smtp_credentials(settings).map(drop)
+}
+
 pub fn transport(settings: &Smtp) -> anyhow::Result<AsyncSmtpTransport<Tokio1Executor>> {
+    build_transport(settings, smtp_credentials(settings)?)
+}
+
+fn build_transport(
+    settings: &Smtp,
+    credentials: Option<SmtpCredentials<'_>>,
+) -> anyhow::Result<AsyncSmtpTransport<Tokio1Executor>> {
     let mut builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&settings.address)
         .port(settings.port)
         .timeout(Some(std::time::Duration::from_secs(5)));
@@ -246,18 +312,17 @@ pub fn transport(settings: &Smtp) -> anyhow::Result<AsyncSmtpTransport<Tokio1Exe
     if settings.enable_starttls {
         builder = builder.tls(Tls::Required(TlsParameters::new(settings.address.clone())?));
     }
-    anyhow::ensure!(
-        settings.user_name.is_none() || settings.password.is_some(),
-        "SMTP_PASSWORD is required when SMTP_USER_NAME is configured"
-    );
-    if let (Some(user), Some(password)) = (&settings.user_name, &settings.password) {
-        let mechanism = match settings.authentication.as_deref().unwrap_or("plain") {
-            "plain" => Mechanism::Plain,
-            "login" => Mechanism::Login,
-            other => anyhow::bail!("unsupported SMTP_AUTHENTICATION {other}"),
+    if let Some(SmtpCredentials {
+        user,
+        password,
+        mechanism,
+    }) = credentials
+    {
+        let SmtpMechanism::Lettre(mechanism) = mechanism else {
+            anyhow::bail!("unsupported SMTP_AUTHENTICATION cram_md5");
         };
         builder = builder
-            .credentials(Credentials::new(user.clone(), password.clone()))
+            .credentials(Credentials::new(user.to_owned(), password.to_owned()))
             .authentication(vec![mechanism]);
     }
     Ok(builder.build())
@@ -274,28 +339,45 @@ pub async fn deliver(
         &format!("{:x}_{token}@{domain}.mail", now.as_second()),
         &format!("--==_mimepart_{token}"),
     )?;
-    let first_address = |header: &str| -> anyhow::Result<lettre::Address> {
-        let list = mailparse::addrparse(header)?.into_inner();
-        match list.into_iter().next() {
-            Some(mailparse::MailAddr::Single(info)) => Ok(info.addr.parse()?),
-            _ => anyhow::bail!("missing mail address"),
-        }
-    };
     let envelope = Envelope::new(
         Some(first_address(&message.from)?),
         vec![first_address(&message.to)?],
     )?;
-    if settings.user_name.is_some() && settings.authentication.as_deref() == Some("cram_md5") {
-        deliver_cram_md5(settings, &envelope, &raw).await?;
-    } else {
-        transport(settings)?.send_raw(&envelope, &raw).await?;
+    match smtp_credentials(settings)? {
+        Some(SmtpCredentials {
+            user,
+            password,
+            mechanism: SmtpMechanism::CramMd5,
+        }) => {
+            deliver_cram_md5(settings, &envelope, &raw, user, password).await?;
+        }
+        credentials => {
+            build_transport(settings, credentials)?
+                .send_raw(&envelope, &raw)
+                .await?;
+        }
     }
     Ok(())
 }
 
+/// The envelope address of a `From` or `To` header: its first address.
+pub fn first_address(header: &str) -> anyhow::Result<lettre::Address> {
+    let list = mailparse::addrparse(header)?.into_inner();
+    match list.into_iter().next() {
+        Some(mailparse::MailAddr::Single(info)) => Ok(info.addr.parse()?),
+        _ => anyhow::bail!("missing mail address"),
+    }
+}
+
 /// Mail/Net::SMTP also supports CRAM-MD5, which Lettre's high-level SASL enum omits.
 /// Its low-level connection still owns SMTP framing, STARTTLS and certificate verification.
-async fn deliver_cram_md5(settings: &Smtp, envelope: &Envelope, raw: &[u8]) -> anyhow::Result<()> {
+async fn deliver_cram_md5(
+    settings: &Smtp,
+    envelope: &Envelope,
+    raw: &[u8],
+    username: &str,
+    password: &str,
+) -> anyhow::Result<()> {
     let work = async {
         let hello = ClientId::Domain(
             settings
@@ -322,14 +404,6 @@ async fn deliver_cram_md5(settings: &Smtp, envelope: &Envelope, raw: &[u8]) -> a
             "SMTP did not issue a CRAM-MD5 challenge"
         );
         let challenge = STANDARD.decode(response.first_word().unwrap_or(""))?;
-        let username = settings
-            .user_name
-            .as_deref()
-            .ok_or_else(|| anyhow::anyhow!("missing SMTP_USER_NAME"))?;
-        let password = settings
-            .password
-            .as_deref()
-            .ok_or_else(|| anyhow::anyhow!("missing SMTP_PASSWORD"))?;
         let answer = cram_md5_response(username, password, &challenge);
         let response = connection.command(format!("{answer}\r\n")).await?;
         anyhow::ensure!(

@@ -78,6 +78,18 @@ impl Config {
     pub fn security_configured(&self) -> bool {
         self.smtp.is_some() && self.mailer_from.is_some() && self.app_url.is_some()
     }
+    /// Whether reset mail has acceptable SMTP credentials, a deliverable sender address
+    /// and a configured app origin for the link.
+    pub fn password_reset_available(&self) -> bool {
+        self.smtp
+            .as_ref()
+            .is_some_and(|smtp| crate::outbound::validate_smtp_credentials(smtp).is_ok())
+            && self
+                .mailer_from
+                .as_deref()
+                .is_some_and(|from| crate::outbound::first_address(from).is_ok())
+            && self.validated_app_url().is_some()
+    }
     pub fn two_factor_configured(&self) -> bool {
         self.smtp.is_some()
     }

@@ -387,6 +387,7 @@ pub const ACTIONS: &[&str] = &[
     "user.create",
     "user.email.change",
     "user.password.change",
+    "user.password.reset",
     "user.role.change",
     "user.ban",
     "user.unban",
