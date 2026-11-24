@@ -153,6 +153,10 @@ export function EmailAddressesGroup({
 }) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [removing, setRemoving] = useState<EmailAddressEntry | null>(null);
+  const [promoting, setPromoting] = useState<{
+    readonly entry: EmailAddressEntry;
+    readonly previous: string | null;
+  } | null>(null);
   const { busy, track } = useBusy();
 
   const fetchList = useCallback(() => {
@@ -169,7 +173,13 @@ export function EmailAddressesGroup({
     fetchList();
   };
 
-  const makePrimary = (entry: EmailAddressEntry) => {
+  const makePrimary = () => {
+    const entry = promoting?.entry;
+
+    setPromoting(null);
+
+    if (entry === undefined) return;
+
     void track(`address-${entry.id}`, settingsActions.setPrimaryEmailAddress(entry.id)).then(
       () => {
         toast({ title: `${entry.emailAddress} is now your primary address`, tone: "success" });
@@ -205,7 +215,7 @@ export function EmailAddressesGroup({
   return (
     <SettingsGroup
       title="Email addresses"
-      description="Sign in or reset your password with any of these. Notifications go to your primary address. If you switch your primary address, we'll email the old one a link to keep it linked."
+      description="Sign in or reset your password with any of these. Notifications go to your primary address. If you switch your primary address, we'll email the old one a link to link it again."
     >
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
@@ -227,7 +237,7 @@ export function EmailAddressesGroup({
                 key={entry.id}
                 entry={entry}
                 busy={busy(`address-${entry.id}`)}
-                onMakePrimary={() => makePrimary(entry)}
+                onMakePrimary={() => setPromoting({ entry, previous: load.list.primary })}
                 onRemove={() => setRemoving(entry)}
               />
             ))}
@@ -244,6 +254,35 @@ export function EmailAddressesGroup({
           )}
         </>
       ) : null}
+      <Dialog
+        open={promoting !== null}
+        onOpenChange={(open) => {
+          if (!open) setPromoting(null);
+        }}
+        role="alertdialog"
+        size="sm"
+        title={`Make ${promoting?.entry.emailAddress ?? "this address"} your primary address?`}
+        description={
+          promoting === null ? null : (
+            <span className="settings-email-address">
+              Notifications will go to {promoting.entry.emailAddress}.
+              {promoting.previous === null
+                ? ""
+                : ` ${promoting.previous} will be unlinked, and we'll email it a link to link it again.`}
+            </span>
+          )
+        }
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPromoting(null)} data-autofocus>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={makePrimary}>
+              Make primary
+            </Button>
+          </>
+        }
+      />
       <Dialog
         open={removing !== null}
         onOpenChange={(open) => {

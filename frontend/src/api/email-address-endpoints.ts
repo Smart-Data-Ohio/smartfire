@@ -41,7 +41,7 @@ export const removeEmailAddress = Effect.fn("api.removeEmailAddress")(function* 
   return yield* call({ method: "DELETE", path: `${ROOT}/${id}` }, noContent);
 });
 
-/** `POST /email_addresses/:id/primary` (204): it becomes primary; the old primary stays linked. */
+/** `POST /email_addresses/:id/primary` (204) releases the old primary and emails it a link to re-link it. */
 export const setPrimaryEmailAddress = Effect.fn("api.setPrimaryEmailAddress")(function* (
   id: number,
 ) {

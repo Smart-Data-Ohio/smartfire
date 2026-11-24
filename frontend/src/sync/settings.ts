@@ -240,7 +240,7 @@ export const settings = {
 
   removeEmailAddress: (id: number): Promise<void> => runAction(removeEmailAddress(id)),
 
-  /** The linked address becomes primary; the old primary stays linked. */
+  /** Makes the linked address primary, releases the old primary, and emails it a link to re-link it. */
   setPrimaryEmailAddress: (id: number): Promise<void> => runAction(setPrimaryEmailAddress(id)),
 
   /**

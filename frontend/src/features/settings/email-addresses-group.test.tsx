@@ -180,20 +180,37 @@ it("asks before removing an address, then removes it", async () => {
   expect(await screen.findByText("No other addresses linked yet.")).toBeTruthy();
 });
 
-it("makes a linked address primary and releases the old primary", async () => {
+it("asks before making a linked address primary and releasing the old primary", async () => {
   const makePrimary = vi.spyOn(settings, "setPrimaryEmailAddress");
   const onPrimaryChanged = renderGroup();
 
-  fireEvent.click(
-    await screen.findByRole("button", { name: `Make ${SEEDED_LINKED_ADDRESS} primary` }),
+  const button = await screen.findByRole("button", {
+    name: `Make ${SEEDED_LINKED_ADDRESS} primary`,
+  });
+  const dialogName = `Make ${SEEDED_LINKED_ADDRESS} your primary address?`;
+
+  fireEvent.click(button);
+
+  const dialog = await screen.findByRole("alertdialog", { name: dialogName });
+
+  expect(dialog.textContent).toContain(
+    `Notifications will go to ${SEEDED_LINKED_ADDRESS}. ${PRIMARY} will be unlinked, and we'll email it a link to link it again.`,
   );
+  expect(makePrimary).not.toHaveBeenCalled();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(makePrimary).not.toHaveBeenCalled();
+  fireEvent.click(button);
+  const reopened = await screen.findByRole("alertdialog", { name: dialogName });
+
+  fireEvent.click(within(reopened).getByRole("button", { name: "Make primary" }));
 
   expect(makePrimary).toHaveBeenCalledWith(1);
   await waitFor(() =>
     expect(screen.getAllByRole("listitem")[0]?.textContent).toBe(`${SEEDED_LINKED_ADDRESS}Primary`),
   );
   expect(screen.queryByText(PRIMARY)).toBeNull();
-  expect(screen.getByText(/we'll email the old one a link to keep it linked/)).toBeTruthy();
+  expect(screen.getByText(/we'll email the old one a link to link it again/)).toBeTruthy();
   expect(onPrimaryChanged).toHaveBeenCalledOnce();
 });
 
@@ -216,6 +233,11 @@ it("moves the profile's email field to the new primary", async () => {
   fireEvent.click(
     await screen.findByRole("button", { name: `Make ${SEEDED_LINKED_ADDRESS} primary` }),
   );
+  const dialog = await screen.findByRole("alertdialog", {
+    name: `Make ${SEEDED_LINKED_ADDRESS} your primary address?`,
+  });
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Make primary" }));
   await waitFor(() => expect(email).toHaveProperty("value", SEEDED_LINKED_ADDRESS));
   expect(screen.queryByLabelText("Current password")).toBeNull();
 });
