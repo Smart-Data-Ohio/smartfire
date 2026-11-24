@@ -180,6 +180,7 @@ export const SlackConversation = Schema.Struct({
   members: Schema.Int,
   messages: Schema.Int,
   threads: Schema.Int,
+  lastMessageAt: Schema.NullOr(Schema.String),
 });
 
 export type SlackConversationPin = Assert<

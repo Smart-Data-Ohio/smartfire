@@ -208,6 +208,8 @@ pub struct SlackConversation {
     pub members: i64,
     pub messages: i64,
     pub threads: i64,
+    /// The newest message or thread reply the dry run counted, or none.
+    pub last_message_at: Option<String>,
 }
 
 /// `GET .../runs/:id/status`: one run's progress, polled while it is active.

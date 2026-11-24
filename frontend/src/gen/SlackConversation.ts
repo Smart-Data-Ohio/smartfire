@@ -11,4 +11,8 @@ id: string, name: string,
 /**
  * "Public channel", "Private channel", "Direct message", "Group DM".
  */
-kind: string, archived: boolean, members: number, messages: number, threads: number, };
+kind: string, archived: boolean, members: number, messages: number, threads: number,
+/**
+ * The newest message or thread reply the dry run counted, or none.
+ */
+lastMessageAt: string | null, };

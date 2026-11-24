@@ -13,6 +13,7 @@ use axum::Router;
 use axum::routing::{get, post};
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
+use campfire_app::integrations::slack::writer::slack_time;
 use campfire_controllers::controllers::slack::{
     self as classic,
     runs::{self, DryRunForm, ImportForm, PersonalForm, Started},
@@ -288,6 +289,9 @@ fn conversation(value: &Value) -> api::SlackConversation {
         members: count(&value["members"]),
         messages: count(&value["messages"]),
         threads: count(&value["threads"]),
+        last_message_at: presence(&value["latest"])
+            .and_then(|ts| slack_time(&ts).ok())
+            .map(time),
     }
 }
 

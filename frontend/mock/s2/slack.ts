@@ -36,7 +36,10 @@ oauth_config:
       - groups:history
       - users:read`;
 
-/** What a workspace dry run finds. */
+/** A last message `days` before now, so the plan's past-year rule stays true as time passes. */
+const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
+/** What a workspace dry run finds; `leads` has been quiet for two years. */
 const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
   {
     id: "C100",
@@ -46,6 +49,7 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
     members: 12,
     messages: 340,
     threads: 22,
+    lastMessageAt: daysAgo(1),
   },
   {
     id: "C200",
@@ -55,6 +59,7 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
     members: 5,
     messages: 88,
     threads: 4,
+    lastMessageAt: daysAgo(9),
   },
   {
     id: "G300",
@@ -64,6 +69,7 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
     members: 3,
     messages: 12,
     threads: 0,
+    lastMessageAt: daysAgo(730),
   },
 ];
 
@@ -77,6 +83,7 @@ const PERSONAL_CONVERSATIONS: readonly SlackConversation[] = [
     members: 1,
     messages: 3,
     threads: 0,
+    lastMessageAt: daysAgo(2),
   },
   {
     id: "D100",
@@ -86,6 +93,7 @@ const PERSONAL_CONVERSATIONS: readonly SlackConversation[] = [
     members: 2,
     messages: 41,
     threads: 1,
+    lastMessageAt: daysAgo(4),
   },
   {
     id: "M200",
@@ -95,6 +103,7 @@ const PERSONAL_CONVERSATIONS: readonly SlackConversation[] = [
     members: 3,
     messages: 9,
     threads: 0,
+    lastMessageAt: daysAgo(30),
   },
 ];
 

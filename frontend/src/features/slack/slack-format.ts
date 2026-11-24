@@ -1,5 +1,6 @@
 /** The Slack import screens' words and the small rules behind them, as the classic pages have them. */
 import type { SlackConnectionState } from "../../gen/SlackConnectionState.ts";
+import type { SlackConversation } from "../../gen/SlackConversation.ts";
 import type { SlackCounts } from "../../gen/SlackCounts.ts";
 import type { SlackPeople } from "../../gen/SlackPeople.ts";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
@@ -117,6 +118,31 @@ export function optional(value: string): string | null {
   const trimmed = value.trim();
 
   return trimmed === "" ? null : trimmed;
+}
+
+const YEAR_MS = 365 * 86_400_000;
+
+/**
+ * A conversation nobody uses: no members, or no messages in the past year. The plan leaves it
+ * unchecked. A dry run from before last-message dates were recorded counts as active.
+ */
+export function inactive(conversation: SlackConversation, now: number): boolean {
+  if (conversation.members === 0 || conversation.messages === 0) return true;
+
+  if (conversation.lastMessageAt === null) return false;
+
+  return now - Date.parse(conversation.lastMessageAt) > YEAR_MS;
+}
+
+/** Why the plan left a conversation unchecked, or null when it didn't. */
+export function inactiveReason(conversation: SlackConversation, now: number): string | null {
+  if (!inactive(conversation, now)) return null;
+
+  if (conversation.members === 0) return "No members";
+
+  if (conversation.messages === 0) return "No messages";
+
+  return "No messages in the past year";
 }
 
 /** The plan form as the classic form posts it: the checked conversations in plan order, every row's target. */

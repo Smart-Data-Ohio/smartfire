@@ -138,6 +138,25 @@ test("a full import from the plan, then undoing it", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Undo import" })).toHaveCount(0);
 });
 
+test("the plan leaves channels nobody uses unchecked", async ({ page }) => {
+  await open(page, "admin/slack/runs/1/plan");
+
+  const leads = page.getByRole("checkbox", { name: "Import leads" });
+
+  await expect(page.getByRole("checkbox", { name: "Import general" })).toBeChecked();
+  await expect(leads).not.toBeChecked();
+  await expect(page.getByText("1 inactive channel is unchecked")).toBeVisible();
+  await expect(page.getByRole("row", { name: /leads/ })).toContainText(
+    "No messages in the past year",
+  );
+
+  await page.getByRole("button", { name: "Select all" }).click();
+  await expect(leads).toBeChecked();
+
+  await page.getByRole("button", { name: "Select active" }).click();
+  await expect(leads).not.toBeChecked();
+});
+
 test("an import needs a checked conversation", async ({ page }) => {
   await open(page, "admin/slack/runs/1/plan");
 

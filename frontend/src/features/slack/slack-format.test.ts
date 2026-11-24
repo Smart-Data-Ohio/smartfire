@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import type { SlackConversation } from "../../gen/SlackConversation.ts";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
 import {
   activeRunSentence,
   adminConnectionSentence,
   countLines,
   importBody,
+  inactive,
+  inactiveReason,
   keyed,
   modeLabel,
   optional,
@@ -22,6 +25,7 @@ const conversation = (id: string) => ({
   members: 1,
   messages: 1,
   threads: 0,
+  lastMessageAt: null,
 });
 
 const PLAN: SlackPlan = {
@@ -119,5 +123,38 @@ describe("a run page's query", () => {
     expect(parseRunSearch({ page: "x" })).toEqual({ page: undefined });
     expect(parseRunSearch({})).toEqual({ page: undefined });
     expect(parseRunSearch({ page: "1000000" })).toEqual({ page: MAX_ISSUE_PAGES });
+  });
+});
+
+describe("inactive", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+
+  const channel = (changes: Partial<SlackConversation>): SlackConversation => ({
+    ...conversation("C9"),
+    members: 4,
+    messages: 30,
+    lastMessageAt: "2026-06-01T09:00:00.000Z",
+    ...changes,
+  });
+
+  it("keeps a channel with members and a message in the past year", () => {
+    expect(inactive(channel({}), NOW)).toBe(false);
+    expect(inactiveReason(channel({}), NOW)).toBeNull();
+  });
+
+  it("leaves out a channel with no members or no messages", () => {
+    expect(inactiveReason(channel({ members: 0 }), NOW)).toBe("No members");
+    expect(inactiveReason(channel({ messages: 0, lastMessageAt: null }), NOW)).toBe("No messages");
+  });
+
+  it("leaves out a channel whose last message is over a year old", () => {
+    expect(inactiveReason(channel({ lastMessageAt: "2025-11-20T09:00:00.000Z" }), NOW)).toBe(
+      "No messages in the past year",
+    );
+    expect(inactive(channel({ lastMessageAt: "2025-11-30T09:00:00.000Z" }), NOW)).toBe(false);
+  });
+
+  it("counts an older dry run without last-message dates as active", () => {
+    expect(inactive(channel({ lastMessageAt: null }), NOW)).toBe(false);
   });
 });

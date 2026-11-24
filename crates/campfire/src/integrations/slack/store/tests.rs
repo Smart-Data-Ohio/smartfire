@@ -262,6 +262,14 @@ async fn slack_sql_store_dry_run_collects_samples_without_domain_rows_or_reply_f
     let row = import(&db, crypto, id, network).await;
     assert!(array(&row.stats["samples"]).len() <= 20);
     assert!(!array(&row.stats["samples"]).is_empty());
+    let latest = |id: &str| {
+        array(&row.stats["conversations"])
+            .iter()
+            .find(|c| c["id"] == id)
+            .map(|c| c["latest"].clone())
+    };
+    assert_eq!(latest("CCHAN"), Some(json!("1700000011.000011")));
+    assert_eq!(latest("CARCH"), Some(json!("1700000020.000020")));
     assert!(
         !server
             .received()

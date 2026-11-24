@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { SlackPlan } from "../../gen/SlackPlan.ts";
 import type { SlackPreset } from "../../gen/SlackPreset.ts";
+import { formatFull, formatListTime } from "../../lib/time.ts";
 import { slack } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
@@ -12,7 +13,7 @@ import { AdministratorsOnly, adminFailure, Confirm, useAdmin } from "../admin/ad
 import { BodyHtml } from "../messages/body-html.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
-import { CONFIRM, importBody, keyed } from "./slack-format.ts";
+import { CONFIRM, importBody, inactiveReason, keyed } from "./slack-format.ts";
 import { useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
 import "./slack.css";
@@ -34,8 +35,31 @@ interface Ask {
 function PlanForm({ plan }: { readonly plan: SlackPlan }) {
   const navigate = useNavigate();
   const id = useId();
+  const [now] = useState(Date.now);
+
+  const reasons = useMemo(
+    () =>
+      new Map(
+        plan.conversations.map(({ conversation }) => [
+          conversation.id,
+          inactiveReason(conversation, now),
+        ]),
+      ),
+    [plan, now],
+  );
+
+  const inactiveCount = [...reasons.values()].filter((reason) => reason !== null).length;
+
   const everything = () => new Set(plan.conversations.map(({ conversation }) => conversation.id));
-  const [checked, setChecked] = useState<ReadonlySet<string>>(everything);
+
+  const active = () =>
+    new Set(
+      plan.conversations.flatMap(({ conversation }) =>
+        reasons.get(conversation.id) === null ? [conversation.id] : [],
+      ),
+    );
+
+  const [checked, setChecked] = useState<ReadonlySet<string>>(active);
 
   const [targets, setTargets] = useState<Readonly<Record<string, string>>>(() =>
     Object.fromEntries(
@@ -91,10 +115,23 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
           <Button size="sm" onClick={() => setChecked(everything())}>
             Select all
           </Button>
+          {inactiveCount > 0 ? (
+            <Button size="sm" onClick={() => setChecked(active())}>
+              Select active
+            </Button>
+          ) : null}
           <Button size="sm" onClick={() => setChecked(new Set())}>
             Select none
           </Button>
         </div>
+        {inactiveCount > 0 ? (
+          <p className="settings-hint text-faint">
+            {inactiveCount === 1
+              ? "1 inactive channel is unchecked"
+              : `${inactiveCount} inactive channels are unchecked`}
+            : no members, or no messages in the past year. Check one to import it anyway.
+          </p>
+        ) : null}
         <section className="admin-audit-wrap" aria-label="Conversations to import">
           <table className="admin-audit-table">
             <thead>
@@ -108,6 +145,7 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
                 <th scope="col">Members</th>
                 <th scope="col">Messages</th>
                 <th scope="col">Threads</th>
+                <th scope="col">Last message</th>
               </tr>
             </thead>
             <tbody>
@@ -152,6 +190,21 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
                   <td>{conversation.members}</td>
                   <td>{conversation.messages}</td>
                   <td>{conversation.threads}</td>
+                  <td>
+                    {conversation.lastMessageAt === null ? (
+                      "—"
+                    ) : (
+                      <time
+                        dateTime={conversation.lastMessageAt}
+                        title={formatFull(conversation.lastMessageAt)}
+                      >
+                        {formatListTime(conversation.lastMessageAt, now)}
+                      </time>
+                    )}
+                    {reasons.get(conversation.id) ? (
+                      <span className="text-faint"> · {reasons.get(conversation.id)}</span>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -130,6 +130,11 @@ fn apply(
                 result.parents.len() as i64
             };
             add(&mut p.entry_mut()["threads"], thread_count);
+            if let Some(ts) = result.latest {
+                let mut latest = present(&p.entry_mut()["latest"]);
+                writer::keep_newer(&mut latest, &ts);
+                p.entry_mut()["latest"] = json!(latest);
+            }
             p.stats["samples"]
                 .as_array_mut()
                 .expect("samples")
