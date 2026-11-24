@@ -2002,7 +2002,7 @@ async fn password_reset_refuses_a_normalized_collision_between_primary_and_secon
     let (a, _) = app(&MAIL).await;
     let address = "Linked@example.test";
     let legacy_primary = "LINKED@example.test";
-    confirmed_secondary(&a, address).await;
+    let secondary = confirmed_secondary(&a, address).await;
     let now = a.booted.app.clock.now();
     assert!(
         reset_message(&a, "linked@example.test", now)
@@ -2021,14 +2021,68 @@ async fn password_reset_refuses_a_normalized_collision_between_primary_and_secon
         })
         .await
         .unwrap();
-    for input in ["linked@example.test", address] {
-        assert!(reset_message(&a, input, now).await.is_none(), "{input}");
-    }
+    assert!(
+        reset_message(&a, "linked@example.test", now)
+            .await
+            .is_none()
+    );
 
-    let exact = reset_message(&a, legacy_primary, now).await.unwrap();
-    let claim =
-        rails_compat::password_reset::verify(&a.booted.app.secrets, &link_token(&exact), now)
-            .unwrap();
-    assert_eq!(claim.user_id, JASON);
-    assert_eq!(claim.secondary_id, None);
+    for (input, user_id, secondary_id) in [
+        (legacy_primary, JASON, None),
+        (address, DAVID, Some(secondary.id)),
+    ] {
+        let exact = reset_message(&a, input, now).await.unwrap();
+        let claim =
+            rails_compat::password_reset::verify(&a.booted.app.secrets, &link_token(&exact), now)
+                .unwrap();
+        assert_eq!(claim.user_id, user_id);
+        assert_eq!(claim.secondary_id, secondary_id);
+    }
+}
+
+#[tokio::test]
+async fn password_reset_and_sign_in_require_an_exact_address_in_a_cross_account_collision() {
+    let (a, _) = app(&MAIL).await;
+    let secondary = "Straße@example.test";
+    let primary = "STRASSE@example.test";
+    let ambiguous = "straße@example.test";
+    confirmed_secondary(&a, secondary).await;
+    let digest = new_digest(&a, NEW_PASSWORD).await;
+    a.db()
+        .write(move |tx| {
+            // Import a legacy primary with the same Unicode case fold as David's secondary.
+            tx.conn().execute(
+                "UPDATE users SET email_address=?, password_digest=? WHERE id=?",
+                rusqlite::params![primary, digest.into_string(), JASON],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    let mut browser = a.anonymous();
+    let missing = browser
+        .password_sign_in("unknown@example.test", PASSWORD)
+        .await;
+    let refused = browser.password_sign_in(ambiguous, PASSWORD).await;
+    assert_eq!(refused.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(refused.json(), missing.json());
+    let now = a.booted.app.clock.now();
+    assert!(reset_message(&a, ambiguous, now).await.is_none());
+
+    for (address, password, user_id) in
+        [(secondary, PASSWORD, DAVID), (primary, NEW_PASSWORD, JASON)]
+    {
+        let reply = a.anonymous().password_sign_in(address, password).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        assert!(
+            ["signedIn", "secondFactorRequired"].contains(&reply.json()["kind"].as_str().unwrap())
+        );
+        let exact = reset_message(&a, address, now).await.unwrap();
+        assert!(exact.to.ends_with(&format!("<{address}>")), "{}", exact.to);
+        let claim =
+            rails_compat::password_reset::verify(&a.booted.app.secrets, &link_token(&exact), now)
+                .unwrap();
+        assert_eq!(claim.user_id, user_id);
+    }
 }

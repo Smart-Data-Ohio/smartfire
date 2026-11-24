@@ -12,7 +12,7 @@ use rusqlite::{Connection, Row, params};
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
-use crate::database::Tx;
+use crate::database::{Snapshot, Tx};
 use crate::error::{OptionalExt, Result};
 use crate::events::Event;
 use crate::models::{Ban, Membership, Message, Session, Webhook};
@@ -22,11 +22,6 @@ use crate::time::Timestamp;
 pub mod presentation;
 pub mod profile_settings;
 pub mod ui_preference;
-
-/// The address form shared by sign-in, password reset delivery and its inbox rate limit.
-pub fn normalize_email_address(address: &str) -> String {
-    rails_compat::unicode::fold(campfire_richtext::ruby::strip(address))
-}
 
 /// `enum :role, %i[ member administrator bot ]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -140,6 +135,12 @@ pub struct User {
     pub updated_at: Timestamp,
     pub pronouns: Option<String>,
     pub nickname: Option<String>,
+}
+
+pub struct ResolvedSignInAddress {
+    pub user: User,
+    pub email_address: String,
+    pub secondary_id: Option<i64>,
 }
 
 /// Attributes for `User.create!`.
@@ -306,28 +307,13 @@ impl User {
         )
     }
 
-    pub fn find_by_any_email_address(conn: &Connection, address: &str) -> Result<Option<Self>> {
-        Ok(email_addresses::matches(conn, &[address], false)?
-            .remove(address)
-            .and_then(|users| users.into_iter().next()))
-    }
-
-    pub fn find_active_by_any_email_address(
-        conn: &Connection,
-        address: &str,
-    ) -> Result<Option<Self>> {
-        Ok(email_addresses::matches(conn, &[address], false)?
-            .remove(address)
-            .and_then(|users| users.into_iter().find(Self::is_active)))
-    }
-
     /// Matching for callers that already lowercase primary addresses. Keep all matching legacy
     /// primaries in id order: Google rejects ambiguity and Slack takes the last primary match.
     pub fn find_by_any_lowercase_email_addresses(
         conn: &Connection,
         addresses: &[&str],
     ) -> Result<std::collections::HashMap<String, Vec<Self>>> {
-        email_addresses::matches(conn, addresses, true)
+        email_addresses::matches(conn, addresses)
     }
 
     pub fn all(conn: &Connection) -> Result<Vec<Self>> {
@@ -404,7 +390,7 @@ impl User {
             .or_not_found("User")
     }
 
-    /// `User.active.find_by(email_address:)`: the lookup half of `authenticate_by`.
+    /// `User.active.find_by(email_address:)`: an exact primary address lookup.
     pub fn find_active_by_email_address(
         conn: &Connection,
         email_address: &str,
@@ -417,37 +403,76 @@ impl User {
         )
     }
 
-    /// Prefer an exact address. Otherwise require a unique active user whose address matches
-    /// after stripping space and folding case. Callers check eligibility after resolving.
+    /// Resolve a primary or confirmed secondary for password sign-in and reset delivery.
+    /// Exact matches take precedence. A normalized match must name one active account across
+    /// both address sources. Callers check eligibility after resolving.
     pub fn find_active_by_sign_in_address(
-        conn: &Connection,
+        conn: &Snapshot<'_>,
         address: &str,
-    ) -> Result<Option<Self>> {
-        if let Some(user) = Self::find_active_by_email_address(conn, address)? {
-            return Ok(Some(user));
-        }
-        let normalized = normalize_email_address(address);
-        if normalized.is_empty() {
+    ) -> Result<Option<ResolvedSignInAddress>> {
+        if email_addresses::trim(address).is_empty() {
             return Ok(None);
         }
+        if let Some(user) = Self::find_active_by_email_address(conn, address)? {
+            return Ok(Some(ResolvedSignInAddress {
+                user,
+                email_address: address.to_owned(),
+                secondary_id: None,
+            }));
+        }
+        // Use the secondary NOCASE index and require exact spelling.
+        let exact_secondary = query_one(
+            conn,
+            "SELECT users.*, link.id AS secondary_id
+             FROM user_email_addresses link JOIN users ON users.id = link.user_id
+             WHERE link.email_address = ?1 COLLATE NOCASE AND link.email_address = ?1
+               AND users.status = 0",
+            [address],
+            |row| {
+                Ok(ResolvedSignInAddress {
+                    user: Self::from_row(row)?,
+                    email_address: address.to_owned(),
+                    secondary_id: Some(row.get("secondary_id")?),
+                })
+            },
+        )?;
+        if exact_secondary.is_some() {
+            return Ok(exact_secondary);
+        }
 
-        let mut query = conn
-            .prepare_cached("SELECT * FROM users WHERE status = 0 AND email_address IS NOT NULL")?;
+        let normalized = email_addresses::normalize(address);
+        let mut query = conn.prepare_cached(
+            "SELECT id AS user_id, email_address, NULL AS secondary_id
+             FROM users WHERE status = 0 AND email_address IS NOT NULL
+             UNION ALL
+             SELECT users.id, link.email_address, link.id
+             FROM user_email_addresses link JOIN users ON users.id = link.user_id
+             WHERE users.status = 0
+             ORDER BY secondary_id",
+        )?;
         let mut rows = query.query([])?;
         let mut candidate = None;
-        let mut matches = 0;
+        let mut ambiguous = false;
         // Scan every address so the position of a collision cannot shorten the lookup.
         while let Some(row) = rows.next()? {
-            let email: String = row.get("email_address")?;
-            if normalize_email_address(&email) != normalized {
+            let email_address: String = row.get("email_address")?;
+            if email_addresses::normalize(&email_address) != normalized {
                 continue;
             }
-            matches += 1;
-            if matches == 1 {
-                candidate = Some(Self::from_row(row)?);
+            let user_id: i64 = row.get("user_id")?;
+            match candidate {
+                Some((owner, _, _)) => ambiguous |= owner != user_id,
+                None => candidate = Some((user_id, email_address, row.get("secondary_id")?)),
             }
         }
-        Ok(candidate.filter(|_| matches == 1))
+        let Some((user_id, email_address, secondary_id)) = candidate.filter(|_| !ambiguous) else {
+            return Ok(None);
+        };
+        Ok(Some(ResolvedSignInAddress {
+            user: Self::find(conn, user_id)?,
+            email_address,
+            secondary_id,
+        }))
     }
 
     /// The password half of `User.active.authenticate_by(email_address:, password:)`, given

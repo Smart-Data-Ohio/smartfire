@@ -197,7 +197,7 @@ pub fn trim(address: &str) -> &str {
     address.trim_matches(|c: char| c.is_whitespace() || c == '\0')
 }
 
-/// Shared by address claims, reset delivery, and the per-inbox request limit.
+/// Shared by address claims, password sign-in, reset delivery, and the per-inbox request limit.
 pub fn normalize(address: &str) -> String {
     let address = trim(address);
     if address.is_ascii() {
@@ -209,39 +209,31 @@ pub fn normalize(address: &str) -> String {
 
 /// Load both address sources in one statement. JSON keeps the number of binds constant for
 /// Slack workspaces of any size. The two IN clauses let SQLite use each address index where
-/// the caller's primary comparison permits it.
+/// possible.
 pub(super) fn matches(
     conn: &Connection,
     addresses: &[&str],
-    lowercase_primary: bool,
 ) -> Result<std::collections::HashMap<String, Vec<User>>> {
     use std::collections::HashMap;
 
     if addresses.is_empty() {
         return Ok(HashMap::new());
     }
-    // Keep SQLite's indexed ASCII comparison for sign-in and provider lookups.
+    // Keep SQLite's ASCII comparison for provider lookups.
     let secondary_keys: Vec<_> = addresses
         .iter()
         .map(|address| address.trim().to_ascii_lowercase())
         .collect();
-    let primary = if lowercase_primary {
-        "LOWER(users.email_address)"
-    } else {
-        "users.email_address"
-    };
-    let sql = format!(
-        "SELECT users.*, {primary} AS matched_address, 0 AS secondary
-         FROM users WHERE {primary} IN (SELECT value FROM json_each(?1))
+    let sql = "SELECT users.*, LOWER(users.email_address) AS matched_address, 0 AS secondary
+         FROM users WHERE LOWER(users.email_address) IN (SELECT value FROM json_each(?1))
          UNION ALL
          SELECT users.*, LOWER(link.email_address) AS matched_address, 1 AS secondary
          FROM user_email_addresses link JOIN users ON users.id = link.user_id
          WHERE link.email_address COLLATE NOCASE IN (SELECT value FROM json_each(?2))
-         ORDER BY secondary, id"
-    );
+         ORDER BY secondary, id";
     let rows = query_all(
         conn,
-        &sql,
+        sql,
         params![
             serde_json::json!(addresses).to_string(),
             serde_json::json!(secondary_keys).to_string()
@@ -328,13 +320,16 @@ mod tests {
                 .unwrap_err();
             assert!(matches!(err, Error::RecordInvalid(errors)
                 if errors.on("email_address") == ["is already taken"]));
-            assert_eq!(
-                User::find_by_any_email_address(tx.conn(), "secondary@example.test")?
-                    .unwrap()
-                    .id,
-                first.id
-            );
-            assert!(User::find_by_any_email_address(tx.conn(), "primary@example.test")?.is_none());
+            let snapshot = crate::Snapshot::of_write(tx)?;
+            for address in ["secondary@example.test", "primary@example.test"] {
+                assert_eq!(
+                    User::find_active_by_sign_in_address(&snapshot, address)?
+                        .unwrap()
+                        .user
+                        .id,
+                    first.id
+                );
+            }
             Ok(())
         });
     }

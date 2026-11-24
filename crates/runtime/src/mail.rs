@@ -2,7 +2,8 @@
 //! shared Markdown renderer; WS11 installs webhook fanout. Mail owns neither trigger.
 use crate::app::{App, AppCtx};
 use crate::authentication::can_reset_password;
-use campfire_db::user::email_addresses::{EmailAddress, normalize, trim};
+use campfire_db::user::ResolvedSignInAddress;
+use campfire_db::user::email_addresses::{EmailAddress, trim};
 use campfire_db::{Attachment, Message, Room, Timestamp, User};
 use campfire_jobs::{JobError, JobResult, Outcome};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode};
@@ -142,16 +143,18 @@ pub async fn password_reset_message(
     let recipient = app
         .db
         .read_snapshot(move |conn| {
-            let Some(recipient) = reset_recipient(conn, &email_address)? else {
+            let Some(recipient) = User::find_active_by_sign_in_address(conn, &email_address)?
+                .filter(|matched| can_reset_password(&matched.user))
+            else {
                 return Ok(None);
             };
             let changed = password_changed_since(conn, recipient.user.id, requested_at)?;
             Ok((!changed).then_some(recipient))
         })
         .await?;
-    let Some(ResetRecipient {
+    let Some(ResolvedSignInAddress {
         user,
-        email,
+        email_address: email,
         secondary_id,
     }) = recipient
     else {
@@ -186,64 +189,6 @@ pub async fn password_reset_message(
         },
         &format!("{origin}/app/passwords/{token}"),
     )))
-}
-
-struct ResetRecipient {
-    user: User,
-    email: String,
-    secondary_id: Option<i64>,
-}
-
-/// An exact primary address takes precedence over a normalized match to a single active account.
-fn reset_recipient(
-    conn: &rusqlite::Connection,
-    address: &str,
-) -> campfire_db::Result<Option<ResetRecipient>> {
-    let normalized = normalize(address);
-    if normalized.is_empty() {
-        return Ok(None);
-    }
-    if let Some(user) = User::find_active_by_email_address(conn, address)? {
-        return Ok(can_reset_password(&user).then(|| ResetRecipient {
-            email: user.email_address.clone().unwrap_or_default(),
-            user,
-            secondary_id: None,
-        }));
-    }
-
-    let mut query = conn.prepare_cached(
-        "SELECT id AS user_id, email_address, NULL AS secondary_id
-         FROM users WHERE status = 0 AND email_address IS NOT NULL
-         UNION ALL
-         SELECT users.id, link.email_address, link.id
-         FROM user_email_addresses link JOIN users ON users.id = link.user_id
-         WHERE users.status = 0
-         ORDER BY secondary_id",
-    )?;
-    let mut rows = query.query([])?;
-    let mut candidate = None;
-    while let Some(row) = rows.next()? {
-        let email: String = row.get("email_address")?;
-        if normalize(&email) != normalized {
-            continue;
-        }
-        let user_id: i64 = row.get("user_id")?;
-        match candidate {
-            Some((matched_user, _, _)) if matched_user != user_id => return Ok(None),
-            Some(_) => {}
-            None => candidate = Some((user_id, email, row.get("secondary_id")?)),
-        }
-    }
-    let Some((user_id, email, secondary_id)) = candidate else {
-        return Ok(None);
-    };
-    Ok(User::find_by_id(conn, user_id)?
-        .filter(can_reset_password)
-        .map(|user| ResetRecipient {
-            user,
-            email,
-            secondary_id,
-        }))
 }
 
 /// Whether the user's password was changed or reset at or after `since`, by the audit log.

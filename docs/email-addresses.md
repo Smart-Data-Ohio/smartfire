@@ -49,9 +49,10 @@ has superseded the request. The link opens `/app/email_addresses/confirm/:token`
 24 hours after the request. A valid link can be retried while the address stays linked. Removing
 the address or changing the password retires earlier confirmation links.
 
-Secondary address claims ignore surrounding whitespace and use Unicode case folding. Sign-in
-and integrations keep their primary address comparisons. Password reset tries the exact primary
-first, then compares primary and secondary addresses using the claim rules. A fallback must
-identify one active account. A reset matched to a secondary goes to its confirmed spelling.
+Secondary address claims ignore surrounding whitespace and use Unicode case folding. Password
+sign-in and reset delivery first look for an exact primary or confirmed secondary address. If
+neither matches, they use the claim rules across both address sources and require one active
+account. Google sign-in and integrations keep their primary address comparisons. A reset matched
+to a secondary goes to its confirmed spelling.
 Removing the secondary retires reset links issued to that address, including after re-linking.
 Deactivation releases secondary addresses.
