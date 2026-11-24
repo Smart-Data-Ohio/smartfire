@@ -511,7 +511,9 @@ async fn requests_and_new_passwords_are_rate_limited() {
         let reply = b.write(request(email, &format!("198.18.0.{n}"))).await;
         assert_eq!(reply.status, StatusCode::OK, "{email}");
     }
-    let reply = b.write(request("INBOX@example.com", "198.18.0.9")).await;
+    let reply = b
+        .write(request("\u{a0}INBOX@example.com\t", "198.18.0.9"))
+        .await;
     assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
     assert_eq!(reply.json(), too_many);
 

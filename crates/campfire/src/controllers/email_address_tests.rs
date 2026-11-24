@@ -79,12 +79,19 @@ async fn request_is_sudo_gated_uniform_and_enqueues_once_per_valid_address() {
     capture_mail_jobs(&a).await;
     assert_sudo(b.write(add(LINKED)).await);
     b.grant_sudo().await;
-    let invalid = b.write(add("name <a@example.test>")).await;
-    assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(
-        invalid.json()["error"]["fields"]["emailAddress"],
-        json!(["isn't valid"])
-    );
+    for address in ["name <a@example.test>", "a..b@example.com"] {
+        let invalid = b.write(add(address)).await;
+        assert_eq!(
+            invalid.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{address}: {}",
+            invalid.text()
+        );
+        assert_eq!(
+            invalid.json()["error"]["fields"]["emailAddress"],
+            json!(["isn't valid"])
+        );
+    }
 
     let addresses = [
         LINKED.to_owned(),
@@ -254,11 +261,12 @@ async fn confirmation_refuses_bad_links_and_an_address_claimed_in_the_meantime()
 }
 
 #[tokio::test]
-async fn removal_and_promotion_require_sudo_and_ownership_and_write_audits() {
-    let a = app(MAIL).await;
+async fn promotion_releases_and_emails_the_old_primary_without_stamping_it() {
+    let a = app(MAIL).await.without_job_runner().await;
     let previous_primary = primary_of(&a, DAVID).await;
     let owned = link(&a, DAVID, LINKED).await;
     let foreign = link(&a, KEVIN, "foreign@example.test").await;
+    let removable = link(&a, DAVID, "removable@example.test").await;
     let remove = |id| Req::new(Method::DELETE, &format!("{ADDRESSES}/{id}"));
     let promote = |id| Req::new(Method::POST, &format!("{ADDRESSES}/{id}/primary"));
     let mut owner = a.sign_in(DAVID).await;
@@ -274,6 +282,7 @@ async fn removal_and_promotion_require_sudo_and_ownership_and_write_audits() {
         StatusCode::NOT_FOUND
     );
 
+    capture_mail_jobs(&a).await;
     let promoted = owner.write(promote(owned.id)).await;
     assert_eq!(
         promoted.status,
@@ -283,14 +292,16 @@ async fn removal_and_promotion_require_sudo_and_ownership_and_write_audits() {
     );
     let list = owner.get(ADDRESSES).await.json();
     assert_eq!(list["primary"], LINKED);
-    let previous = &list["secondary"][0];
-    assert_eq!(previous["emailAddress"], previous_primary);
-    assert_ne!(previous["id"], owned.id);
+    assert_eq!(list["secondary"].as_array().unwrap().len(), 1);
+    assert_eq!(list["secondary"][0]["id"], removable.id);
     assert_eq!(
-        owner
-            .write(remove(previous["id"].as_i64().unwrap()))
-            .await
-            .status,
+        captured_mail_jobs(&a).await,
+        [
+            json!({"notification":{"EmailAddressConfirmation":{"user_id":DAVID,"email_address":previous_primary}}})
+        ]
+    );
+    assert_eq!(
+        owner.write(remove(removable.id)).await.status,
         StatusCode::NO_CONTENT
     );
     assert_eq!(owner.get(ADDRESSES).await.json()["secondary"], json!([]));
@@ -312,7 +323,100 @@ async fn removal_and_promotion_require_sudo_and_ownership_and_write_audits() {
         })
         .await
         .unwrap();
-    assert!(self_changed);
+    assert!(!self_changed);
+
+    let relink = token(&a, DAVID, &previous_primary, jiff::SignedDuration::ZERO);
+    assert_eq!(
+        a.anonymous()
+            .write(confirmation(Method::PUT, &relink))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        owner.get(ADDRESSES).await.json()["secondary"][0]["emailAddress"],
+        previous_primary
+    );
+}
+
+#[tokio::test]
+async fn profile_refuses_owned_and_other_members_addresses() {
+    let a = app(MAIL).await;
+    let previous_primary = primary_of(&a, DAVID).await;
+    let own = link(&a, DAVID, LINKED).await;
+    let other = link(&a, KEVIN, "other@example.test").await;
+    let other_primary = primary_of(&a, KEVIN).await;
+    let mut owner = a.sign_in(DAVID).await;
+    for (address, problem) in [
+        (
+            LINKED,
+            "This address is already linked to your account. Use Make primary under Email addresses.",
+        ),
+        (&other.email_address, "is already taken"),
+        (&other_primary, "is already taken"),
+    ] {
+        let reply = owner
+            .write(
+                Req::new(Method::PATCH, "/api/v1/settings/profile").json_body(
+                    &json!({"emailAddress": address, "currentPassword": "secret123456"}),
+                ),
+            )
+            .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
+        assert_eq!(
+            reply.json()["error"]["fields"]["emailAddress"],
+            json!([problem])
+        );
+    }
+    let list = owner.get(ADDRESSES).await.json();
+    assert_eq!(list["primary"], previous_primary);
+    assert_eq!(list["secondary"][0]["id"], own.id);
+    assert!(audits(&a).await.is_empty());
+}
+
+#[tokio::test]
+async fn make_primary_refuses_a_legacy_shared_primary() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let previous = primary_of(&a, DAVID).await;
+    let shared = format!(" {}", previous.to_ascii_uppercase());
+    a.db()
+        .write(move |tx| {
+            // Legacy rows predate checks for equivalent spellings.
+            tx.conn().execute(
+                "UPDATE users SET email_address=? WHERE id=?",
+                rusqlite::params![shared, KEVIN],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let linked = link(&a, DAVID, LINKED).await;
+    capture_mail_jobs(&a).await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    let reply = owner
+        .write(Req::new(
+            Method::POST,
+            &format!("{ADDRESSES}/{}/primary", linked.id),
+        ))
+        .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert!(reply.json()["error"]["fields"]["emailAddress"].is_array());
+    let list = owner.get(ADDRESSES).await.json();
+    assert_eq!(list["primary"], previous);
+    assert_eq!(list["secondary"][0]["id"], linked.id);
+    assert!(captured_mail_jobs(&a).await.is_empty());
+    assert!(audits(&a).await.is_empty());
 }
 
 #[tokio::test]

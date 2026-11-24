@@ -54,6 +54,7 @@ async fn request_confirmation(c: &mut Ctx) -> Result {
     let email_address = request.email_address.trim().to_owned();
     if email_address.len() > 254
         || !campfire_db::models::drive_recipients::eligible_email(&email_address)
+        || campfire_mail::outbound::first_address(&email_address).is_err()
     {
         return Err(fail(c, validation("emailAddress", "isn't valid")));
     }

@@ -1,8 +1,8 @@
 //! App adapter for campfire_mail. WS9 emits its typed notification jobs; WS5/WS8 install the
 //! shared Markdown renderer; WS11 installs webhook fanout. Mail owns neither trigger.
 use crate::app::{App, AppCtx};
-use crate::authentication::{can_reset_password, normalize_password_reset_address};
-use campfire_db::user::email_addresses::EmailAddress;
+use crate::authentication::can_reset_password;
+use campfire_db::user::email_addresses::{EmailAddress, normalize, trim};
 use campfire_db::{Attachment, Message, Room, Timestamp, User};
 use campfire_jobs::{JobError, JobResult, Outcome};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode};
@@ -139,7 +139,7 @@ pub async fn password_reset_message(
     let expires_at = requested_at.jiff() + rails_compat::password_reset::EXPIRES_IN;
     let recipient = app
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             let Some(recipient) = reset_recipient(conn, &email_address)? else {
                 return Ok(None);
             };
@@ -175,7 +175,7 @@ pub async fn password_reset_message(
         config,
         &outbound::User {
             name: user.name,
-            email: campfire_richtext::ruby::strip(&email).to_owned(),
+            email: trim(&email).to_owned(),
         },
         &format!("{origin}/app/passwords/{token}"),
     )))
@@ -192,7 +192,7 @@ fn reset_recipient(
     conn: &rusqlite::Connection,
     address: &str,
 ) -> campfire_db::Result<Option<ResetRecipient>> {
-    let normalized = normalize_password_reset_address(address);
+    let normalized = normalize(address);
     if normalized.is_empty() {
         return Ok(None);
     }
@@ -217,7 +217,7 @@ fn reset_recipient(
     let mut candidate = None;
     while let Some(row) = rows.next()? {
         let email: String = row.get("email_address")?;
-        if normalize_password_reset_address(&email) != normalized {
+        if normalize(&email) != normalized {
             continue;
         }
         let user_id: i64 = row.get("user_id")?;

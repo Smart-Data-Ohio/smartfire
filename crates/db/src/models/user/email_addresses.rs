@@ -37,12 +37,16 @@ impl EmailAddress {
     }
 
     pub fn by_address(conn: &Connection, address: &str) -> Result<Option<(i64, Self)>> {
-        query_one(
-            conn,
-            "SELECT * FROM user_email_addresses WHERE email_address = ? COLLATE NOCASE",
-            [address.trim()],
-            |row| Ok((row.get("user_id")?, Self::from_row(row)?)),
-        )
+        let normalized = normalize(address);
+        let mut query = conn.prepare_cached("SELECT * FROM user_email_addresses ORDER BY id")?;
+        let mut rows = query.query([])?;
+        while let Some(row) = rows.next()? {
+            let email: String = row.get("email_address")?;
+            if normalize(&email) == normalized {
+                return Ok(Some((row.get("user_id")?, Self::from_row(row)?)));
+            }
+        }
+        Ok(None)
     }
 
     pub fn find_owned(conn: &Connection, user_id: i64, id: i64) -> Result<Option<Self>> {
@@ -83,7 +87,7 @@ impl EmailAddress {
         if user
             .email_address
             .as_deref()
-            .is_some_and(|primary| primary.trim().eq_ignore_ascii_case(address))
+            .is_some_and(|primary| normalize(primary) == normalize(address))
         {
             return Ok(Confirmation::AlreadyLinked);
         }
@@ -97,24 +101,32 @@ impl EmailAddress {
     }
 }
 
-fn primary_conflict(conn: &Connection, address: &str, except: Option<i64>) -> Result<bool> {
-    // SQLite's trim defaults to ASCII space. Use the same whitespace as str::trim.
-    const WHITESPACE: &str = concat!(
-        "\t\n\x0b\x0c\r \u{85}\u{a0}\u{1680}",
-        "\u{2000}\u{2001}\u{2002}\u{2003}\u{2004}\u{2005}\u{2006}\u{2007}\u{2008}\u{2009}\u{200a}",
-        "\u{2028}\u{2029}\u{202f}\u{205f}\u{3000}",
-    );
-    Ok(conn.query_row_cached(
-        "SELECT EXISTS (
-            SELECT 1 FROM users WHERE trim(email_address, ?3) = ?1 COLLATE NOCASE
-            AND (?2 IS NULL OR id != ?2)
-        )",
-        params![address.trim(), except, WHITESPACE],
-        |row| row.get(0),
-    )?)
+pub(super) fn primary_conflict(
+    conn: &Connection,
+    address: &str,
+    except: Option<i64>,
+) -> Result<bool> {
+    let normalized = normalize(address);
+    let mut query = conn.prepare_cached(
+        "SELECT email_address FROM users
+         WHERE email_address IS NOT NULL AND (?1 IS NULL OR id != ?1)",
+    )?;
+    let mut rows = query.query([except])?;
+    while let Some(row) = rows.next()? {
+        if normalize(&row.get::<_, String>(0)?) == normalized {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
-/// Returns an owned secondary for the primary write to consume after updating the user.
+pub(super) fn invalid_primary(message: &str) -> Error {
+    let mut errors = crate::Errors::default();
+    errors.add("email_address", message);
+    Error::RecordInvalid(errors)
+}
+
+/// Returns the linked row id if the submitted address is already a secondary of this user.
 pub(super) fn check_primary(tx: &Tx<'_>, owner: Option<i64>, address: &str) -> Result<Option<i64>> {
     let linked = EmailAddress::by_address(tx.conn(), address)?;
     if primary_conflict(tx.conn(), address, owner)?
@@ -127,6 +139,16 @@ pub(super) fn check_primary(tx: &Tx<'_>, owner: Option<i64>, address: &str) -> R
         )));
     }
     Ok(linked.map(|(_, secondary)| secondary.id))
+}
+
+/// Address comparisons ignore Unicode whitespace and the NUL padding stripped by Rails.
+pub fn trim(address: &str) -> &str {
+    address.trim_matches(|c: char| c.is_whitespace() || c == '\0')
+}
+
+/// Shared by address claims, reset delivery, and the per-inbox request limit.
+pub fn normalize(address: &str) -> String {
+    rails_compat::unicode::fold(trim(address))
 }
 
 /// Load both address sources in one statement. JSON keeps the number of binds constant for
@@ -142,10 +164,8 @@ pub(super) fn matches(
     if addresses.is_empty() {
         return Ok(HashMap::new());
     }
-    let normalized: Vec<_> = addresses
-        .iter()
-        .map(|address| address.trim().to_ascii_lowercase())
-        .collect();
+    // Keep SQLite's indexed ASCII comparison for sign-in and provider lookups.
+    let secondary_keys: Vec<_> = addresses.iter().map(|address| address.trim().to_ascii_lowercase()).collect();
     let primary = if lowercase_primary {
         "LOWER(users.email_address)"
     } else {
@@ -165,7 +185,7 @@ pub(super) fn matches(
         &sql,
         params![
             serde_json::json!(addresses).to_string(),
-            serde_json::json!(normalized).to_string()
+            serde_json::json!(secondary_keys).to_string()
         ],
         |row| {
             Ok((
@@ -184,7 +204,7 @@ pub(super) fn matches(
             primary_matches.entry(address).or_default().push(user);
         }
     }
-    for (&address, normalized) in addresses.iter().zip(normalized) {
+    for (&address, normalized) in addresses.iter().zip(secondary_keys) {
         if let Some(user) = secondary_matches.get(&normalized) {
             primary_matches
                 .entry(address.to_owned())
@@ -238,18 +258,17 @@ mod tests {
                     .unwrap_err()
                     .is_record_not_unique()
             );
-            assert!(
-                second
-                    .update(
-                        tx,
-                        UserChanges {
-                            email_address: Some(Some("SECONDARY@EXAMPLE.TEST".into())),
-                            ..Default::default()
-                        }
-                    )
-                    .unwrap_err()
-                    .is_record_not_unique()
-            );
+            let err = second
+                .update(
+                    tx,
+                    UserChanges {
+                        email_address: Some(Some("SECONDARY@EXAMPLE.TEST".into())),
+                        ..Default::default()
+                    },
+                )
+                .unwrap_err();
+            assert!(matches!(err, Error::RecordInvalid(errors)
+                if errors.on("email_address") == ["is already taken"]));
             assert_eq!(
                 User::find_by_any_email_address(tx.conn(), "secondary@example.test")?
                     .unwrap()
@@ -257,6 +276,28 @@ mod tests {
                 first.id
             );
             assert!(User::find_by_any_email_address(tx.conn(), "primary@example.test")?.is_none());
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn update_compares_email_against_the_reloaded_user() {
+        let db = TestDb::new();
+        db.write(|tx| {
+            let original = "original@example.test";
+            let changed = "new@example.test";
+            let make_change = |address: &str| UserChanges {
+                email_address: Some(Some(address.into())),
+                ..Default::default()
+            };
+            let mut stale = create(tx, original)?;
+            let mut fresh = stale.clone();
+            fresh.update(tx, make_change(changed))?;
+            stale.update(tx, make_change(original))?;
+            assert_eq!(
+                User::find(tx.conn(), stale.id)?.email_address.as_deref(),
+                Some(original)
+            );
             Ok(())
         });
     }

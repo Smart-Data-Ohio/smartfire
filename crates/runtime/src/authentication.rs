@@ -2,7 +2,7 @@
 //! Matches `app/controllers/two_factor/{setups,challenges,backup_codes,remembered_devices}_controller.rb`.
 //! No request, cookies or rendering enter this layer.
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target, pair};
-use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+use campfire_db::user::email_addresses::EmailAddress;
 use campfire_db::{
     ActivityItem, ChallengeFailure, Database, PasswordDigest, Result, Session, TwoFactorBackupCode,
     TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
@@ -45,29 +45,18 @@ pub fn update_profile(
 ) -> Result<bool> {
     let writes_digest = changes.password_digest.is_some();
     let submitted_email = changes.email_address.as_ref();
-    if submitted_email.is_some() || writes_digest || audit_email_change {
-        let current: Option<(Option<String>, Option<String>, bool)> = tx
-            .conn()
-            .query_row(
-                "SELECT email_address, password_digest,
-                        EXISTS(SELECT 1 FROM sessions WHERE user_id = users.id AND id = ?2)
-                 FROM users WHERE id = ?1",
-                rusqlite::params![user.id, session_id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-            )
-            .optional()?;
-        let Some((current_email, current_digest, has_session)) = current else {
-            return Ok(false);
-        };
-        if submitted_email.is_some() && current_email != user.email_address {
-            return Ok(false);
-        }
-        let writes_email = submitted_email.is_some_and(|email| *email != current_email);
-        if (writes_email || writes_digest || audit_email_change)
-            && (!has_session || current_digest != user.password_digest)
-        {
-            return Ok(false);
-        }
+    let writes_email = submitted_email.is_some_and(|email| *email != user.email_address);
+    let writes_credentials = writes_email || writes_digest || audit_email_change;
+    if (submitted_email.is_some() || writes_credentials)
+        && !profile_write_authorized(
+            tx,
+            user,
+            session_id,
+            submitted_email.is_some(),
+            writes_credentials,
+        )?
+    {
+        return Ok(false);
     }
     let previous_digest = writes_digest.then(|| user.password_digest.clone());
     let previous_email = user.email_address.clone();
@@ -76,19 +65,7 @@ pub fn update_profile(
     }
     user.update(tx, changes)?;
     if audit_email_change {
-        AuditLog::record(
-            tx,
-            NewAuditLog {
-                action: "user.email.change".into(),
-                actor: Some(Actor::from(&*user)),
-                target: Some(Target::from(&*user)),
-                changes: Some(
-                    json!({"email_address": pair(json!(previous_email), json!(user.email_address))}),
-                ),
-                ..Default::default()
-            },
-            context,
-        )?;
+        audit_primary_email_change(tx, user, previous_email.as_deref(), context)?;
     }
     // The retained form also audits non-scalar input that strong parameters discard.
     if legacy_raw_password_present
@@ -107,6 +84,51 @@ pub fn update_profile(
         TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
     }
     Ok(true)
+}
+
+fn profile_write_authorized(
+    tx: &Tx<'_>,
+    user: &User,
+    session_id: Option<i64>,
+    check_email_snapshot: bool,
+    writes_credentials: bool,
+) -> Result<bool> {
+    let current: Option<(Option<String>, Option<String>, bool)> = tx
+        .conn()
+        .query_row(
+            "SELECT email_address, password_digest,
+                    EXISTS(SELECT 1 FROM sessions WHERE user_id = users.id AND id = ?2)
+             FROM users WHERE id = ?1 AND status = 0",
+            rusqlite::params![user.id, session_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+    Ok(current.is_some_and(|(email, digest, has_session)| {
+        (!check_email_snapshot || email == user.email_address)
+            && (!writes_credentials || (has_session && digest == user.password_digest))
+    }))
+}
+
+fn audit_primary_email_change(
+    tx: &Tx<'_>,
+    user: &User,
+    previous_email: Option<&str>,
+    context: &Context,
+) -> Result<()> {
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "user.email.change".into(),
+            actor: Some(Actor::from(user)),
+            target: Some(Target::from(user)),
+            changes: Some(
+                json!({"email_address": pair(json!(previous_email), json!(user.email_address))}),
+            ),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
 }
 
 /// `Accounts::UsersController#update`: only a successful, changed role writes a row.
@@ -323,11 +345,6 @@ pub fn can_reset_password(user: &User) -> bool {
             .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
 }
 
-/// Shared by delivery and the per-inbox request limit.
-pub fn normalize_password_reset_address(email_address: &str) -> String {
-    rails_compat::unicode::fold(campfire_richtext::ruby::strip(email_address))
-}
-
 pub fn request_email_address_confirmation(tx: &mut Tx<'_>, user_id: i64, email_address: String) {
     campfire_mail::jobs::email_address_confirmation_later(tx, user_id, email_address);
 }
@@ -360,32 +377,18 @@ pub fn promote_email_address(
     session_id: Option<i64>,
     context: &Context,
 ) -> Result<bool> {
-    let linked = EmailAddress::find_owned(tx.conn(), user.id, id)?
-        .ok_or(campfire_db::Error::RecordNotFound("EmailAddress"))?;
-    let previous = user.email_address.clone();
-    if !update_profile(
-        tx,
-        user,
-        UserChanges {
-            email_address: Some(Some(linked.email_address)),
-            ..Default::default()
-        },
-        true,
-        session_id,
-        false,
-        context,
-    )? {
+    if !profile_write_authorized(tx, user, session_id, true, true)? {
         return Ok(false);
     }
-    if let Some(previous) = previous.filter(|address| !address.trim().is_empty())
-        && EmailAddress::confirm(tx, user, &previous)? == Confirmation::Taken
+    let previous = user.promote_email_address(tx, id)?;
+    audit_primary_email_change(tx, user, previous.as_deref(), context)?;
+    if let Some(address) = previous
+        .as_deref()
+        .map(str::trim)
+        .filter(|address| !address.is_empty())
+        && EmailAddress::is_available(tx.conn(), address)?
     {
-        let mut errors = campfire_db::Errors::default();
-        errors.add(
-            "email_address",
-            "can't be changed because another account uses your current primary address",
-        );
-        return errors.into_result();
+        request_email_address_confirmation(tx, user.id, address.to_owned());
     }
     campfire_db::user::profile_settings::bump_revision(tx, user.id)?;
     Ok(true)

@@ -8,9 +8,9 @@
 //! (`Config::password_reset_available`); otherwise every endpoint answers 404.
 
 use campfire_api_types::{PasswordResetRequest, PasswordResetState, PasswordResetSubmission};
-use campfire_db::models::{audit_log::Context, user::normalize_email_address};
+use campfire_db::models::audit_log::Context;
+use campfire_db::user::email_addresses::{EmailAddress, normalize, trim};
 use campfire_db::{PasswordDigest, Tx, User};
-use campfire_db::user::email_addresses::EmailAddress;
 use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, halt};
 use jiff::SignedDuration;
 use rails_compat::password_reset::{self, Claim};
@@ -59,7 +59,7 @@ async fn create_response(c: &mut Ctx) -> Result {
     let body: PasswordResetRequest = auth::body(c).await?;
     let email_address = body.email_address;
     rate_limit(c, &inbox_rate_limit(), Some(&inbox_key(&email_address)))?;
-    if campfire_richtext::ruby::strip(&email_address).len() <= MAX_EMAIL_BYTES {
+    if trim(&email_address).len() <= MAX_EMAIL_BYTES {
         c.app()
             .db
             .write(move |tx| {
@@ -149,7 +149,7 @@ fn rate_limit(c: &mut Ctx, limit: &RateLimit, by: Option<&str>) -> Result<()> {
 
 /// One bucket per address however it's capitalised or spaced, without keeping the address.
 fn inbox_key(email_address: &str) -> String {
-    let normalized = normalize_email_address(email_address);
+    let normalized = normalize(email_address);
     hex::encode(Sha256::digest(normalized.as_bytes()))
 }
 
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn inbox_buckets_ignore_case_and_surrounding_space() {
         assert_eq!(
-            inbox_key(" Ada@Example.com "),
+            inbox_key("\u{a0}Ada@Example.com\t"),
             inbox_key("ada@example.com")
         );
         assert_ne!(inbox_key("ada@example.com"), inbox_key("bob@example.com"));

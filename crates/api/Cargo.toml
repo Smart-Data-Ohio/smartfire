@@ -25,6 +25,7 @@ campfire_cable.workspace = true
 campfire_controllers.workspace = true
 campfire_db.workspace = true
 campfire_kit.workspace = true
+campfire_mail.workspace = true
 campfire_messages.workspace = true
 campfire_richtext.workspace = true
 campfire_rooms.workspace = true

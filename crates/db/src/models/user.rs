@@ -681,15 +681,6 @@ impl User {
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
-        let email_change = changes
-            .email_address
-            .filter(|email| *email != self.email_address);
-        let promoted = email_change
-            .as_ref()
-            .and_then(Option::as_deref)
-            .map(|address| email_addresses::check_primary(tx, Some(self.id), address))
-            .transpose()?
-            .flatten();
         let pronouns = changes
             .pronouns
             .map(|value| profile_text(value, "pronouns", 40))
@@ -702,6 +693,23 @@ impl User {
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
         self.ensure_account_user()?;
+        let email_change = changes
+            .email_address
+            .filter(|email| *email != self.email_address);
+        if let Some(address) = email_change.as_ref().and_then(Option::as_deref) {
+            match email_addresses::check_primary(tx, Some(self.id), address) {
+                Ok(None) => {}
+                Ok(Some(_)) => {
+                    return Err(email_addresses::invalid_primary(
+                        "This address is already linked to your account. Use Make primary under Email addresses.",
+                    ));
+                }
+                Err(error) if error.is_record_not_unique() => {
+                    return Err(email_addresses::invalid_primary("is already taken"));
+                }
+                Err(error) => return Err(error),
+            }
+        }
         if changes.role == Some(Role::WebhookAuthor) {
             return Err(crate::Error::RecordNotFound("User"));
         }
@@ -829,13 +837,37 @@ impl User {
         let mut values: Vec<&dyn rusqlite::ToSql> = sets.iter().map(|(_, v)| v.as_ref()).collect();
         values.push(&self.id);
         tx.conn().execute_cached(&sql, values.as_slice())?;
-        if let Some(id) = promoted {
-            email_addresses::EmailAddress::remove(tx, self.id, id)?;
-        }
         let plain_bot_token = self.plain_bot_token.clone();
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
         Ok(())
+    }
+
+    /// Consume the confirmed row in the same transaction as the primary email change.
+    pub fn promote_email_address(&mut self, tx: &mut Tx<'_>, id: i64) -> Result<Option<String>> {
+        self.reload(tx.conn())?;
+        self.ensure_account_user()?;
+        let linked = email_addresses::EmailAddress::find_owned(tx.conn(), self.id, id)?
+            .ok_or(crate::Error::RecordNotFound("EmailAddress"))?;
+        let previous = self.email_address.clone();
+        if let Some(address) = previous
+            .as_deref()
+            .filter(|address| !address.trim().is_empty())
+            && email_addresses::primary_conflict(tx.conn(), address, Some(self.id))?
+        {
+            return Err(email_addresses::invalid_primary(
+                "can't be changed because another account uses your current primary address",
+            ));
+        }
+        email_addresses::EmailAddress::remove(tx, self.id, id)?;
+        self.update(
+            tx,
+            UserChanges {
+                email_address: Some(Some(linked.email_address)),
+                ..Default::default()
+            },
+        )?;
+        Ok(previous)
     }
 
     pub(crate) fn revision_for_touch(
