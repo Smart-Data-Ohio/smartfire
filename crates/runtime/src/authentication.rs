@@ -7,19 +7,41 @@ use campfire_db::{
     TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
 };
 use rails_compat::{ar_encryption::ArEncryption, totp};
+use rusqlite::OptionalExtension;
 use serde_json::json;
 
 /// `app/controllers/users/profiles_controller.rb`: security audits and the rollback marker
 /// commit with the user update.
-/// The controller checks the existing password before constructing these changes.
+/// The authorizing session and password snapshot must still be current for credential changes.
+/// Returns false without writing when that authorization has gone stale.
 pub fn update_profile(
     tx: &mut Tx<'_>,
     user: &mut User,
     mut changes: UserChanges,
     email_changing: bool,
-    password_changing: bool,
+    session_id: Option<i64>,
+    legacy_raw_password_present: bool,
     context: &Context,
-) -> Result<()> {
+) -> Result<bool> {
+    let writes_digest = changes.password_digest.is_some();
+    if email_changing || writes_digest {
+        let Some(session_id) = session_id else {
+            return Ok(false);
+        };
+        let current_digest = tx
+            .conn()
+            .query_row(
+                "SELECT users.password_digest FROM users JOIN sessions ON sessions.user_id = users.id
+                 WHERE users.id = ?1 AND sessions.id = ?2",
+                rusqlite::params![user.id, session_id],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .optional()?;
+        if current_digest.as_ref() != Some(&user.password_digest) {
+            return Ok(false);
+        }
+    }
+    let previous_digest = writes_digest.then(|| user.password_digest.clone());
     let previous_email = user.email_address.clone();
     if email_changing {
         changes.email_self_changed_at = Some(tx.now());
@@ -40,7 +62,10 @@ pub fn update_profile(
             context,
         )?;
     }
-    if password_changing {
+    // The retained form also audits non-scalar input that strong parameters discard.
+    if legacy_raw_password_present
+        || previous_digest.is_some_and(|digest| digest != user.password_digest)
+    {
         AuditLog::record(
             tx,
             NewAuditLog {
@@ -53,7 +78,7 @@ pub fn update_profile(
         )?;
         TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
     }
-    Ok(())
+    Ok(true)
 }
 
 /// `Accounts::UsersController#update`: only a successful, changed role writes a row.
@@ -406,23 +431,63 @@ pub async fn enroll(
     })
 }
 
+pub(crate) fn password_proven(secrets: &rails_compat::Secrets, proof: &str, user: &User) -> bool {
+    rails_compat::password_reset::sign_in_proof_matches(
+        secrets,
+        proof,
+        user.password_digest.as_deref().unwrap_or_default(),
+    )
+}
+
 pub enum Challenge {
     Gone,
-    Accepted(&'static str),
+    Accepted {
+        session: Box<Session>,
+        remembered: Option<RememberedCookie>,
+    },
     Wrong,
     Locked(i64),
 }
 
+pub struct RememberedCookie {
+    pub token: String,
+    pub expires_at: campfire_db::Timestamp,
+}
+
+pub struct ChallengeSignIn<'a> {
+    pub user_id: i64,
+    pub password_proof: Option<&'a str>,
+    pub code: &'a str,
+    pub method: &'a str,
+    pub device_id: &'a str,
+    pub remember_device: bool,
+    pub notify_lockout: bool,
+    pub notify_new_sign_in: bool,
+}
+
+/// Check the first factor before consuming the second, and commit it with the session and
+/// remembered device, so a password reset can only precede or revoke the whole sign-in.
 pub fn challenge(
     tx: &mut Tx<'_>,
-    user_id: i64,
+    secrets: &rails_compat::Secrets,
     encryption: &ArEncryption,
-    code: &str,
-    method: &str,
+    attempt: ChallengeSignIn<'_>,
     context: &Context,
-    notify: bool,
 ) -> Result<Challenge> {
-    if campfire_db::User::find_by_id(tx.conn(), user_id)?.is_none_or(|u| !u.is_active()) {
+    let ChallengeSignIn {
+        user_id,
+        password_proof,
+        code,
+        method,
+        device_id,
+        remember_device,
+        notify_lockout,
+        notify_new_sign_in,
+    } = attempt;
+    let Some(user) = User::find_by_id(tx.conn(), user_id)?.filter(User::is_active) else {
+        return Ok(Challenge::Gone);
+    };
+    if password_proof.is_some_and(|proof| !password_proven(secrets, proof, &user)) {
         return Ok(Challenge::Gone);
     }
     let Some(mut credential) =
@@ -446,7 +511,32 @@ pub fn challenge(
     };
     if let Some(factor) = factor {
         credential.register_challenge_success(tx)?;
-        return Ok(Challenge::Accepted(factor));
+        let attributes = campfire_db::NewSession {
+            user_agent: context.user_agent.as_deref(),
+            ip_address: context.ip_address.as_deref(),
+            device_id: Some(device_id),
+            two_factor_verified: true,
+        };
+        let session = start_session(tx, user_id, attributes, notify_new_sign_in)?;
+        let remembered = if remember_device {
+            let (device, token) = TwoFactorRememberedDevice::create_for(
+                tx,
+                user_id,
+                context.user_agent.as_deref(),
+                context.ip_address.as_deref(),
+            )?;
+            Some(RememberedCookie {
+                token,
+                expires_at: device.expires_at,
+            })
+        } else {
+            None
+        };
+        record_sign_in(tx, &user, method, Some(factor), context)?;
+        return Ok(Challenge::Accepted {
+            session: Box::new(session),
+            remembered,
+        });
     }
     let locked = credential.register_challenge_failure(tx)? == ChallengeFailure::Locked;
     AuditLog::record(
@@ -480,7 +570,7 @@ pub fn challenge(
             "UPDATE activity_items SET updated_at=? WHERE id=?",
             rusqlite::params![tx.now(), item.id],
         )?;
-        if notify {
+        if notify_lockout {
             campfire_mail::jobs::lockout_notice_later(tx, user_id);
         }
         Ok(Challenge::Locked(minutes(&credential, tx.now())))

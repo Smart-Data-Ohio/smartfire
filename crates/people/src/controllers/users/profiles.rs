@@ -49,7 +49,7 @@ pub async fn update(c: &mut Ctx) -> Result {
 
     // Rails computes presence/key checks before strong parameters discard non-scalars.
     let raw = c.params.require("user")?;
-    let password_changing = raw.get("password").is_some_and(|p| p.is_present());
+    let legacy_raw_password_present = raw.get("password").is_some_and(|p| p.is_present());
     let time_zone_submitted = raw.get("time_zone").is_some();
     // `user_params.compact`: nil scalar values are dropped below.
     let mut permitted = permit_keys(&[
@@ -122,11 +122,12 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
     }
     let audit = crate::controllers::two_factor::audit_context(c)?;
+    let session_id = concerns::current_session(c).map(|session| session.id);
     let present = |key: &str| compact_string(&params, key);
     let changes = UserChanges {
         name: present("name"),
         email_address: present("email_address").map(Some),
-        // `password=` ignores a blank password.
+        // `password=` ignores an empty password.
         password_digest: concerns::password_digest(
             c,
             present("password").filter(|password| !password.is_empty()),
@@ -155,20 +156,28 @@ pub async fn update(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            crate::authentication::update_profile(
+            if !crate::authentication::update_profile(
                 tx,
                 &mut user,
                 changes,
                 email_changing,
-                password_changing,
+                session_id,
+                legacy_raw_password_present,
                 &audit,
-            )?;
+            )? {
+                return Ok(false);
+            }
             campfire_db::models::user::profile_settings::update(tx, user.id, settings)?;
-            attachments::assign(tx, Record::user(user.id), "avatar", avatar)
+            attachments::assign(tx, Record::user(user.id), "avatar", avatar)?;
+            Ok(true)
         })
         .await;
     match result {
-        Ok(()) => {}
+        Ok(true) => {}
+        Ok(false) => {
+            concerns::request_authentication(c).await?;
+            return Ok(c.head(StatusCode::UNAUTHORIZED));
+        }
         Err(campfire_db::Error::RecordInvalid(_errors)) => {
             return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
         }

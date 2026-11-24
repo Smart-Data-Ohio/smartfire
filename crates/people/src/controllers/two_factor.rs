@@ -334,11 +334,13 @@ async fn start_session_for(
     proof: Option<String>,
 ) -> Result<bool> {
     match proof {
-        Some(proof) => Ok(
-            concerns::start_password_session_for(c, user, two_factor_verified, proof)
-                .await?
-                .is_some(),
-        ),
+        Some(proof) => {
+            Ok(
+                concerns::start_password_session_for(c, user, two_factor_verified, proof)
+                    .await?
+                    .is_some(),
+            )
+        }
         None if two_factor_verified => {
             concerns::start_new_verified_session_for(c, user).await?;
             Ok(true)
@@ -489,41 +491,65 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     let code = scalar(c, "code");
     let method = concerns::session_keys::two_factor_pending_method(c.session());
     let proof = concerns::pending_password_proof(c);
-    let audit_method = method.clone();
     let mut context = audit_context(c)?;
     context.actor = Some(Actor::from(&user));
     let secrets = c.app().secrets.clone();
-    let notify = c.app().mail.config.two_factor_configured();
+    let encryption = c.app().ar_encryption.clone();
+    let notify_lockout = c.app().mail.config.two_factor_configured();
+    let notify_new_sign_in = c.app().mail.config.security_configured();
+    let remember_device = c.param_str("remember_device") == Some("1");
+    let existing_device_id = c.cookies.signed("device_id");
+    let device_id = existing_device_id
+        .clone()
+        .unwrap_or_else(concerns::new_device_id);
     let outcome = c
         .app()
         .db
         .write(move |tx| {
             crate::authentication::challenge(
                 tx,
-                user_id,
-                &ArEncryption::new(&secrets),
-                &code,
-                &audit_method,
+                &secrets,
+                &encryption,
+                crate::authentication::ChallengeSignIn {
+                    user_id,
+                    password_proof: proof.as_deref(),
+                    code: &code,
+                    method: &method,
+                    device_id: &device_id,
+                    remember_device,
+                    notify_lockout,
+                    notify_new_sign_in,
+                },
                 &context,
-                notify,
             )
         })
         .await
         .map_err(Error::internal)?;
     match outcome {
-        crate::authentication::Challenge::Gone => {
+        crate::authentication::Challenge::Gone => password_replaced(c, mode),
+        crate::authentication::Challenge::Accepted {
+            session,
+            remembered,
+        } => {
             concerns::session_keys::clear_two_factor_pending(c.session());
-            mode.navigate(c, &c.url_for("/app/session/new"))
-        }
-        crate::authentication::Challenge::Accepted(factor) => {
-            concerns::session_keys::clear_two_factor_pending(c.session());
-            if !start_session_for(c, user.clone(), true, proof).await? {
-                return password_replaced(c, mode);
+            concerns::session_keys::clear_confirmations(c.session());
+            if existing_device_id.is_none()
+                && let Some(device_id) = &session.device_id
+            {
+                concerns::set_device_cookie(c, device_id)?;
             }
-            if c.param_str("remember_device") == Some("1") {
-                remember_device(c, user_id).await?;
+            concerns::authenticated_as(c, *session, Some(user), true).await?;
+            c.form_authenticity_token();
+            if let Some(remembered) = remembered {
+                c.cookies.set_signed(
+                    "two_factor_remember",
+                    Cookie::new(remembered.token)
+                        .expires(remembered.expires_at.jiff())
+                        .httponly()
+                        .secure()
+                        .same_site(Some(SameSite::Lax)),
+                )?;
             }
-            sign_in_audit(c, user, method, Some(factor)).await?;
             let location = concerns::post_authenticating_url(c).await?;
             mode.signed_in(c, &location)
         }
@@ -566,27 +592,6 @@ async fn render_challenge(c: &mut Ctx, status: StatusCode, mode: ResponseMode) -
         ),
     }
 }
-async fn remember_device(c: &mut Ctx, user_id: i64) -> Result<()> {
-    let agent = c.request.user_agent().map(str::to_string);
-    let ip = c.request.remote_ip()?.to_string();
-    let (device, token) = c
-        .app()
-        .db
-        .write(move |tx| {
-            TwoFactorRememberedDevice::create_for(tx, user_id, agent.as_deref(), Some(&ip))
-        })
-        .await
-        .map_err(Error::internal)?;
-    c.cookies.set_signed(
-        "two_factor_remember",
-        Cookie::new(token)
-            .expires(device.expires_at.jiff())
-            .httponly()
-            .secure()
-            .same_site(Some(SameSite::Lax)),
-    )
-}
-
 async fn reauthenticated(c: &mut Ctx, user: &User, reauth: Option<&str>) -> Result<bool> {
     if let Some(value) = reauth {
         let value = value.to_owned();

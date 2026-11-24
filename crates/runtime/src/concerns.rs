@@ -972,7 +972,11 @@ pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
         .await
         .map_err(Error::internal)?;
     let secrets = &c.app().secrets;
-    Ok(user.filter(|user| proof.as_ref().is_none_or(|proof| password_proven(secrets, proof, user))))
+    Ok(user.filter(|user| {
+        proof
+            .as_ref()
+            .is_none_or(|proof| crate::authentication::password_proven(secrets, proof, user))
+    }))
 }
 
 /// What a pending sign-in must show of its password: `Some` for a password sign-in (empty when it
@@ -991,14 +995,6 @@ pub const PASSWORD_SIGN_IN: &str = "password";
 pub fn password_proof(c: &Ctx, user: &User) -> String {
     rails_compat::password_reset::sign_in_proof(
         &c.app().secrets,
-        user.password_digest.as_deref().unwrap_or_default(),
-    )
-}
-
-fn password_proven(secrets: &rails_compat::Secrets, proof: &str, user: &User) -> bool {
-    rails_compat::password_reset::sign_in_proof_matches(
-        secrets,
-        proof,
         user.password_digest.as_deref().unwrap_or_default(),
     )
 }
@@ -1096,7 +1092,9 @@ async fn start_session(
         .write(move |tx| {
             if let Some(proof) = proof {
                 let current = User::find_by_id(tx.conn(), user_id)?;
-                if !current.is_some_and(|user| password_proven(&secrets, &proof, &user)) {
+                if !current.is_some_and(|user| {
+                    crate::authentication::password_proven(&secrets, &proof, &user)
+                }) {
                     return Ok(None);
                 }
             }
@@ -1125,16 +1123,24 @@ pub fn ensure_device_cookie(c: &mut Ctx) -> Result<String> {
     if let Some(device_id) = c.cookies.signed("device_id") {
         return Ok(device_id);
     }
-    let device_id: String = rand::random::<[u8; 16]>()
+    let device_id = new_device_id();
+    set_device_cookie(c, &device_id)?;
+    Ok(device_id)
+}
+
+pub fn new_device_id() -> String {
+    rand::random::<[u8; 16]>()
         .iter()
         .map(|byte| format!("{byte:02x}"))
-        .collect();
-    let cookie = Cookie::new(device_id.clone())
+        .collect()
+}
+
+pub fn set_device_cookie(c: &mut Ctx, device_id: &str) -> Result<()> {
+    let cookie = Cookie::new(device_id)
         .permanent()
         .httponly()
         .same_site(Some(SameSite::Lax));
-    c.cookies.set_signed("device_id", cookie)?;
-    Ok(device_id)
+    c.cookies.set_signed("device_id", cookie)
 }
 
 /// `resume_session(session)`: refresh its activity (at most hourly), then authenticate as it.

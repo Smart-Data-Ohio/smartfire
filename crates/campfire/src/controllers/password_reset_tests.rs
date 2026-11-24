@@ -727,3 +727,287 @@ async fn requests_and_new_passwords_need_the_csrf_token() {
     assert_eq!(reset_state(&a).await, before);
     assert_eq!(b.send(check(&token)).await.status, StatusCode::OK);
 }
+
+#[tokio::test]
+async fn a_profile_password_change_rechecks_its_session_and_digest_after_authorization() {
+    use campfire_db::{NewSession, Session, User, UserChanges};
+    use campfire_runtime::authentication::{reset_password, update_profile};
+
+    for (replace_password, revoke_session) in [(true, true), (true, false), (false, true)] {
+        let (a, _) = app(&MAIL).await;
+        let (mut checked_user, session_id) = a
+            .db()
+            .write(|tx| {
+                let user = User::find(tx.conn(), DAVID)?;
+                let session = Session::start_with(
+                    tx,
+                    DAVID,
+                    NewSession {
+                        two_factor_verified: true,
+                        ..Default::default()
+                    },
+                )?;
+                Ok((user, session.id))
+            })
+            .await
+            .unwrap();
+        assert!(checked_user.current_password_confirmed(PASSWORD));
+        let changes = UserChanges {
+            email_address: Some(Some("other@example.com".into())),
+            password_digest: Some(new_digest(&a, "stale write").await),
+            ..Default::default()
+        };
+
+        let digest = new_digest(&a, NEW_PASSWORD).await;
+        a.db()
+            .write(move |tx| {
+                let mut user = User::find(tx.conn(), DAVID)?;
+                if !revoke_session {
+                    // Change the digest without revoking the session, isolating the digest check.
+                    return user.update(
+                        tx,
+                        UserChanges {
+                            password_digest: Some(digest),
+                            ..Default::default()
+                        },
+                    );
+                }
+                let previous = user.password_digest.clone();
+                reset_password(tx, &mut user, digest, &Default::default())?;
+                // Keep the old digest in one case to isolate the deleted-session check.
+                if !replace_password {
+                    tx.conn().execute(
+                        "UPDATE users SET password_digest=? WHERE id=?",
+                        rusqlite::params![previous, DAVID],
+                    )?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
+
+        let saved = a
+            .db()
+            .write(move |tx| {
+                update_profile(
+                    tx,
+                    &mut checked_user,
+                    changes,
+                    true,
+                    Some(session_id),
+                    false,
+                    &Default::default(),
+                )
+            })
+            .await
+            .unwrap();
+        assert!(!saved);
+        let user = a.db().read(|conn| User::find(conn, DAVID)).await.unwrap();
+        assert_eq!(user.email_address.as_deref(), Some("david@37signals.com"));
+        assert!(user.authenticate(if replace_password {
+            NEW_PASSWORD
+        } else {
+            PASSWORD
+        }));
+    }
+}
+
+#[tokio::test]
+async fn a_whitespace_profile_password_change_is_audited_and_supersedes_reset_mail() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let requested = a.booted.app.clock.now() - jiff::SignedDuration::from_secs(1);
+    assert!(reset_message(&a, &david, requested).await.is_some());
+    let reply = a
+        .david()
+        .write(
+            Req::new(Method::PATCH, "/api/v1/settings/profile")
+                .json_body(&json!({"password":"   "})),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let user = a
+        .db()
+        .read(|conn| campfire_db::User::find(conn, DAVID))
+        .await
+        .unwrap();
+    assert!(user.authenticate("   "));
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM audit_logs WHERE action='user.password.change' AND target_id=?",
+            DAVID
+        )
+        .await,
+        1
+    );
+    assert!(reset_message(&a, &david, requested).await.is_none());
+}
+
+const SESSIONS: &str = "SELECT count(*) FROM sessions WHERE user_id=?";
+const REMEMBERED: &str = "SELECT count(*) FROM two_factor_remembered_devices WHERE user_id=?";
+const BACKUP: &str = "23456-789ab";
+
+async fn add_backup_code(a: &TestApp) -> i64 {
+    a.db()
+        .write(|tx| {
+            use campfire_db::{TwoFactorBackupCode, TwoFactorCredential};
+            let credential = TwoFactorCredential::for_user(tx.conn(), DAVID)?.unwrap();
+            let code = TwoFactorBackupCode::create(
+                tx,
+                credential.id,
+                &TwoFactorBackupCode::digest(BACKUP),
+            )?;
+            Ok(code.id)
+        })
+        .await
+        .unwrap()
+}
+
+async fn used_backup(a: &TestApp, id: i64) -> i64 {
+    count(
+        a,
+        "SELECT count(*) FROM two_factor_backup_codes WHERE id=? AND used_at IS NOT NULL",
+        id,
+    )
+    .await
+}
+
+#[tokio::test]
+async fn a_reset_before_the_challenge_write_leaves_the_backup_code_unused() {
+    use campfire_runtime::authentication::{Challenge, ChallengeSignIn, challenge};
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let backup = add_backup_code(&a).await;
+    let old_user = a
+        .db()
+        .read(|conn| campfire_db::User::find(conn, DAVID))
+        .await
+        .unwrap();
+    let secrets = a.booted.app.secrets.clone();
+    let proof = rails_compat::password_reset::sign_in_proof(
+        &secrets,
+        old_user.password_digest.as_deref().unwrap(),
+    );
+    let token = emailed_token(&a, &david).await;
+    assert_eq!(
+        a.anonymous()
+            .write(submit(&token, NEW_PASSWORD))
+            .await
+            .status,
+        StatusCode::OK,
+    );
+
+    // A request has already checked the pending cookie, but the reset wins the writer lock.
+    let encryption = a.booted.app.ar_encryption.clone();
+    let outcome = a
+        .db()
+        .write(move |tx| {
+            challenge(
+                tx,
+                &secrets,
+                &encryption,
+                ChallengeSignIn {
+                    user_id: DAVID,
+                    password_proof: Some(&proof),
+                    code: BACKUP,
+                    method: "password",
+                    device_id: "reset-first",
+                    remember_device: true,
+                    notify_lockout: false,
+                    notify_new_sign_in: false,
+                },
+                &Default::default(),
+            )
+        })
+        .await
+        .unwrap();
+    assert!(matches!(outcome, Challenge::Gone));
+    assert_eq!(used_backup(&a, backup).await, 0);
+    assert_eq!(count(&a, SESSIONS, DAVID).await, 0);
+    assert_eq!(count(&a, REMEMBERED, DAVID).await, 0);
+}
+
+#[tokio::test]
+async fn a_reset_after_a_challenge_revokes_the_new_session_and_device() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let backup = add_backup_code(&a).await;
+    let token = emailed_token(&a, &david).await;
+    let before = count(&a, SESSIONS, DAVID).await;
+    let devices = count(&a, REMEMBERED, DAVID).await;
+    let mut b = a.anonymous();
+    let pending = b.password_sign_in(&david, PASSWORD).await;
+    assert_eq!(
+        pending.json()["kind"],
+        "secondFactorRequired",
+        "{}",
+        pending.text()
+    );
+    let reply = b
+        .write(
+            Req::new(Method::POST, "/api/v1/two_factor/challenge")
+                .header("x-forwarded-proto", "https")
+                .json_body(&json!({"code":BACKUP,"rememberDevice":true})),
+        )
+        .await;
+    assert_eq!(reply.json()["kind"], "signedIn", "{}", reply.text());
+    assert!(b.cookie_header().contains("two_factor_remember="));
+    assert_eq!(used_backup(&a, backup).await, 1);
+    assert_eq!(count(&a, SESSIONS, DAVID).await, before + 1);
+    assert_eq!(count(&a, REMEMBERED, DAVID).await, devices + 1);
+
+    assert_eq!(
+        a.anonymous()
+            .write(submit(&token, NEW_PASSWORD))
+            .await
+            .status,
+        StatusCode::OK,
+    );
+    assert_eq!(used_backup(&a, backup).await, 1);
+    assert_eq!(count(&a, SESSIONS, DAVID).await, 0);
+    assert_eq!(count(&a, REMEMBERED, DAVID).await, 0);
+    assert_eq!(
+        b.send(Req::new(Method::GET, "/api/v1/settings"))
+            .await
+            .status,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
+async fn a_remembered_device_write_failure_rolls_back_the_challenge() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let backup = add_backup_code(&a).await;
+    let before = count(&a, SESSIONS, DAVID).await;
+    let devices = count(&a, REMEMBERED, DAVID).await;
+    let mut b = a.anonymous();
+    let pending = b.password_sign_in(&david, PASSWORD).await;
+    assert_eq!(
+        pending.json()["kind"],
+        "secondFactorRequired",
+        "{}",
+        pending.text()
+    );
+    a.db()
+        .write(|tx| {
+            tx.conn().execute_batch(
+            "CREATE TRIGGER refuse_remembered_device BEFORE INSERT ON two_factor_remembered_devices
+             BEGIN SELECT RAISE(ABORT, 'test remembered-device write failed'); END;",
+        )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(
+        b.answer_challenge(BACKUP, true).await.status,
+        StatusCode::INTERNAL_SERVER_ERROR
+    );
+    assert_eq!(used_backup(&a, backup).await, 0);
+    assert_eq!(count(&a, SESSIONS, DAVID).await, before);
+    assert_eq!(count(&a, REMEMBERED, DAVID).await, devices);
+    assert!(!b.cookie_header().contains("session_token="));
+    assert!(!b.cookie_header().contains("two_factor_remember="));
+}
