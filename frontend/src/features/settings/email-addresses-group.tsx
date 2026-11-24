@@ -153,10 +153,12 @@ export function EmailAddressesGroup({
 }) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [removing, setRemoving] = useState<EmailAddressEntry | null>(null);
+
   const [promoting, setPromoting] = useState<{
     readonly entry: EmailAddressEntry;
     readonly previous: string | null;
   } | null>(null);
+
   const { busy, track } = useBusy();
 
   const fetchList = useCallback(() => {

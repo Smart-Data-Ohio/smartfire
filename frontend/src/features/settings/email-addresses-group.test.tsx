@@ -187,6 +187,7 @@ it("asks before making a linked address primary and releasing the old primary", 
   const button = await screen.findByRole("button", {
     name: `Make ${SEEDED_LINKED_ADDRESS} primary`,
   });
+
   const dialogName = `Make ${SEEDED_LINKED_ADDRESS} your primary address?`;
 
   fireEvent.click(button);
@@ -233,6 +234,7 @@ it("moves the profile's email field to the new primary", async () => {
   fireEvent.click(
     await screen.findByRole("button", { name: `Make ${SEEDED_LINKED_ADDRESS} primary` }),
   );
+
   const dialog = await screen.findByRole("alertdialog", {
     name: `Make ${SEEDED_LINKED_ADDRESS} your primary address?`,
   });
