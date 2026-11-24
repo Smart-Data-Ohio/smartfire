@@ -19,6 +19,8 @@ import { EMAIL_TRANSLATIONS } from "./translations.ts";
 
 const TITLE = "Reset your password";
 
+const TOO_MANY_ATTEMPTS = "Too many attempts. Try again in a few minutes.";
+
 /** What the reset pages say when this workspace can't email reset links. */
 export const RESET_UNAVAILABLE =
   "Reset emails aren't set up here. Ask a workspace administrator to reset your password.";
@@ -69,6 +71,7 @@ function RequestForm({
   const filled = useSearch({ strict: false, select: (search) => search.email_address });
   const [email, setEmail] = useState(filled ?? "");
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -89,7 +92,7 @@ function RequestForm({
     </Link>
   );
 
-  if (!boot.signInMethods.passwordReset) {
+  if (!boot.signInMethods.passwordReset || unavailable) {
     return (
       <AuthScreen labelledBy={titleId} below={<AuthFooter boot={boot} />} flash={flash}>
         <AuthHeader titleId={titleId} title={TITLE} logoUrl={workspace.logoUrl} />
@@ -139,13 +142,23 @@ function RequestForm({
         setSentTo(email.trim());
 
         return;
-      case "error":
-        refuse(
-          firstRefusalMessage(next.fieldErrors, "base", "emailAddress") ??
-            "Couldn't send the reset link. Try again.",
-        );
+      case "error": {
+        const message = firstRefusalMessage(next.fieldErrors, "base", "emailAddress");
+
+        if (message !== undefined) {
+          refuse(message);
+        } else if (next.status === 404) {
+          setBusy(false);
+          setUnavailable(true);
+        } else {
+          refuse(
+            next.status === 429 ? TOO_MANY_ATTEMPTS : "Couldn't send the reset link. Try again.",
+          );
+        }
 
         return;
+      }
+
       default:
         follow(next);
     }

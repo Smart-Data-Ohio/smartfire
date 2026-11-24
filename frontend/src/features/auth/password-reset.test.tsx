@@ -86,6 +86,33 @@ describe("asking for a link", () => {
     expect(await screen.findByText("Couldn't send the reset link. Try again.")).toBeTruthy();
   });
 
+  it("shows the administrator view when a request returns 404 with empty field errors", async () => {
+    await renderAuth("/app/passwords/new?email_address=ada%40x.test");
+    await screen.findByRole("textbox", { name: "Email address" });
+    vi.spyOn(network.server, "handle").mockResolvedValueOnce({
+      status: 404,
+      json: { kind: "error", fieldErrors: {} },
+    });
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText(RESET_UNAVAILABLE)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Send reset link" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to sign-in" })).toBeTruthy();
+  });
+
+  it("shows a rate limit message when a request returns a bare 429", async () => {
+    await renderAuth("/app/passwords/new?email_address=ada%40x.test");
+    await screen.findByRole("textbox", { name: "Email address" });
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 429 }));
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText(RESET_RATE_ALERT)).toBeTruthy();
+    expect(emailField()).toHaveProperty("value", "ada@x.test");
+    expect(screen.getByRole("button", { name: "Send reset link" })).toBeTruthy();
+  });
+
   it("points to an administrator when reset links can't be emailed", async () => {
     await resetSignIn(network, { passwordReset: false });
     await renderAuth("/app/passwords/new");
