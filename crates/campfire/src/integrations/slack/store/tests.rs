@@ -490,7 +490,11 @@ async fn slack_history_windows_full_catchup_finish_earlier_room_and_keep_forward
             .find(|c| c["id"] == "CCHAN")
             .map(|c| c["scanned_from"].as_f64())
     };
-    assert_eq!(scanned_from(&first), Some(None), "imports keep their recorded rows");
+    assert_eq!(
+        scanned_from(&first),
+        Some(None),
+        "imports keep their recorded rows"
+    );
     // A dry run after the full import reads only from the catch-up start, and says so.
     let dry = selected_run(&db, json!({"conversation_ids":["CCHAN"]})).await;
     db.write(move |tx| {

@@ -18,6 +18,7 @@ import {
   importBody,
   inactiveHint,
   inactiveReason,
+  judgedAt,
   keyed,
   partlyRead,
   planCoverage,
@@ -46,16 +47,17 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
   const [now] = useState(Date.now);
 
   const coverage = planCoverage(plan);
+  const since = judgedAt(plan, now);
 
   const reasons = useMemo(
     () =>
       new Map(
         plan.conversations.map(({ conversation }) => [
           conversation.id,
-          inactiveReason(conversation, now, coverage),
+          inactiveReason(conversation, since, coverage),
         ]),
       ),
-    [plan, now, coverage],
+    [plan, since, coverage],
   );
 
   const inactiveCount = [...reasons.values()].filter((reason) => reason !== null).length;

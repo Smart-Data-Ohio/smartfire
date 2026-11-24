@@ -19,4 +19,8 @@ defaultOldest: string,
 /**
  * The dry run's date bounds, when it had them: it counted only messages between them.
  */
-scannedFrom: string | null, scannedUntil: string | null, };
+scannedFrom: string | null, scannedUntil: string | null,
+/**
+ * When the dry run finished: the plan measures "the past year" back from it.
+ */
+finishedAt: string | null, };

@@ -382,13 +382,17 @@ async fn a_run_reads_as_its_classic_page() {
         "where a catch-up dry run started reading a channel"
     );
     assert_eq!((plan.scanned_from, plan.scanned_until), (None, None));
+    assert!(
+        plan.finished_at.is_some(),
+        "the plan measures the year from it"
+    );
 
     let bounded = self::run(
         &a,
         "workspace",
         "dry_run",
         "completed",
-        json!({"oldest": "2026-01-02T05:00:00Z", "latest": "2026-03-01T00:00:00Z"}),
+        json!({"oldest": "2026-01-02T00:00:00-05:00", "latest": "2026-03-01T00:00:00Z"}),
     )
     .await;
     let bounded: api::SlackPlan = parse(

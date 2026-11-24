@@ -274,6 +274,7 @@ export const SlackPlan = Schema.Struct({
   defaultOldest: Schema.String,
   scannedFrom: Schema.NullOr(Timestamp),
   scannedUntil: Schema.NullOr(Timestamp),
+  finishedAt: Schema.NullOr(Timestamp),
 });
 
 export type SlackPlanPin = Assert<Pinned<typeof SlackPlan, GeneratedSlackPlan>>;

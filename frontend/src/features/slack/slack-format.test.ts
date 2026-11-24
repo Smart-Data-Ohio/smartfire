@@ -9,6 +9,7 @@ import {
   inactive,
   inactiveHint,
   inactiveReason,
+  judgedAt,
   keyed,
   modeLabel,
   optional,
@@ -44,6 +45,7 @@ const PLAN: SlackPlan = {
   defaultOldest: "2026-09-22",
   scannedFrom: null,
   scannedUntil: null,
+  finishedAt: null,
 };
 
 describe("the Slack import words", () => {
@@ -207,6 +209,18 @@ describe("planCoverage", () => {
   it("is undated when any conversation with messages has no date", () => {
     expect(planCoverage(plan(null, null, [null]))).toBe("undated");
     expect(planCoverage(plan(null, null, ["2026-11-01T00:00:00.000Z", null]))).toBe("undated");
+  });
+});
+
+describe("judgedAt", () => {
+  const NOW = Date.parse("2026-11-24T12:00:00Z");
+
+  it("measures the past year from when the dry run finished", () => {
+    expect(judgedAt({ ...PLAN, finishedAt: null }, NOW)).toBe(NOW);
+    expect(judgedAt({ ...PLAN, finishedAt: "2026-08-01T00:00:00.000Z" }, NOW)).toBe(
+      Date.parse("2026-08-01T00:00:00.000Z"),
+    );
+    expect(judgedAt({ ...PLAN, finishedAt: "2026-12-01T00:00:00.000Z" }, NOW)).toBe(NOW);
   });
 });
 

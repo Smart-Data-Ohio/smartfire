@@ -140,6 +140,14 @@ export function planCoverage(plan: SlackPlan): Coverage {
   return undated ? "undated" : "full";
 }
 
+/**
+ * The time a plan measures "the past year" back from: when its dry run finished, so a channel
+ * that posted after an old dry run isn't called quiet.
+ */
+export function judgedAt(plan: SlackPlan, now: number): number {
+  return plan.finishedAt === null ? now : Math.min(now, Date.parse(plan.finishedAt));
+}
+
 /** A conversation the dry run read only part of: an earlier import's catch-up start. */
 export function partlyRead(conversation: SlackConversation): boolean {
   return conversation.scannedFrom !== null;
