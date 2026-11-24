@@ -12,7 +12,7 @@ fn fixture() -> TestDb {
     )
 }
 #[test]
-fn action_vocabulary_keeps_rails_actions_and_adds_invites_agents_and_password_reset() {
+fn action_vocabulary_keeps_rails_actions_and_includes_smartfire_additions() {
     let mut expected = golden()["actions"].as_array().unwrap().clone();
     expected.extend([
         json!("workspace_invite.create"),
@@ -37,6 +37,18 @@ fn action_vocabulary_keeps_rails_actions_and_adds_invites_agents_and_password_re
         .unwrap()
         + 1;
     expected.insert(at, json!("user.password.reset"));
+    let at = expected
+        .iter()
+        .position(|a| a == "user.email.change")
+        .unwrap()
+        + 1;
+    expected.splice(
+        at..at,
+        [
+            json!("user.email_address.add"),
+            json!("user.email_address.remove"),
+        ],
+    );
     assert_eq!(json!(audit::actions()), json!(expected));
 }
 #[test]

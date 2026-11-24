@@ -346,11 +346,18 @@ static WEBHOOK_TOKEN_IN_PATH: LazyLock<Regex> =
 static PASSWORD_RESET_TOKEN_IN_PATH: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(/passwords/|/password_resets/)([^/\s"?#<>]+)"#).unwrap());
 
+/// The confirmation URL carries a signed credential for the new address.
+static EMAIL_ADDRESS_TOKEN_IN_PATH: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(/email_addresses/confirm/|/email_addresses/confirmations/)[^/\s"?#<>]+"#)
+        .unwrap()
+});
+
 /// `LogScrubbingFormatter#scrub`
 pub fn scrub_log_line(line: &str) -> Cow<'_, str> {
     let scrubbed = BOT_KEY_IN_PATH.replace_all(line, "${1}[FILTERED]");
     let scrubbed = INVITE_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]");
     let scrubbed = WEBHOOK_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]");
+    let scrubbed = EMAIL_ADDRESS_TOKEN_IN_PATH.replace_all(&scrubbed, "${1}[FILTERED]");
     Cow::Owned(
         PASSWORD_RESET_TOKEN_IN_PATH
             .replace_all(&scrubbed, |captures: &regex::Captures| match &captures[2] {
@@ -689,6 +696,19 @@ mod tests {
             .write_all(b"POST /api/webhooks/12/abc123\nrequest failed path=\"/api/webhooks/34/def456\" /rooms/1/12-AbC /invite/ghi789\n")
             .unwrap();
         assert_eq!(out, b"POST /api/webhooks/12/[FILTERED]\nrequest failed path=\"/api/webhooks/34/[FILTERED]\" /rooms/1/[FILTERED] /invite/[FILTERED]\n");
+    }
+
+    #[test]
+    fn email_address_confirmation_tokens_are_scrubbed_from_log_lines() {
+        for path in [
+            "/app/email_addresses/confirm",
+            "/api/v1/email_addresses/confirmations",
+        ] {
+            assert_eq!(
+                scrub_log_line(&format!("GET {path}/signed--token?x=1")),
+                format!("GET {path}/[FILTERED]?x=1"),
+            );
+        }
     }
 
     #[test]

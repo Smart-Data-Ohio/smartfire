@@ -10,7 +10,13 @@ pub enum Notification {
     Lockout { user_id: i64 },
     /// "Forgot password?": the address as it was submitted. Delivery looks it up and mints the
     /// link, so the jobs table never holds one, and sends nothing to an address that can't reset.
-    PasswordReset { email_address: String },
+    PasswordReset {
+        email_address: String,
+    },
+    EmailAddressConfirmation {
+        user_id: i64,
+        email_address: String,
+    },
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeliveryJob {
@@ -43,6 +49,14 @@ pub fn lockout_notice_later(tx: &mut Tx<'_>, user_id: i64) {
 pub fn password_reset_later(tx: &mut Tx<'_>, email_address: String) {
     tx.emit_after_commit(Event::job(&DeliveryJob {
         notification: Notification::PasswordReset { email_address },
+    }));
+}
+pub fn email_address_confirmation_later(tx: &mut Tx<'_>, user_id: i64, email_address: String) {
+    tx.emit_after_commit(Event::job(&DeliveryJob {
+        notification: Notification::EmailAddressConfirmation {
+            user_id,
+            email_address,
+        },
     }));
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]

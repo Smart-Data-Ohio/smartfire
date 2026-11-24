@@ -2,6 +2,7 @@
 //! and Transferable are signed ids, which live in `rails_compat`).
 
 mod destruction;
+pub mod email_addresses;
 pub mod icon;
 pub mod lifecycle;
 pub mod removal;
@@ -305,6 +306,30 @@ impl User {
         )
     }
 
+    pub fn find_by_any_email_address(conn: &Connection, address: &str) -> Result<Option<Self>> {
+        Ok(email_addresses::matches(conn, &[address], false)?
+            .remove(address)
+            .and_then(|users| users.into_iter().next()))
+    }
+
+    pub fn find_active_by_any_email_address(
+        conn: &Connection,
+        address: &str,
+    ) -> Result<Option<Self>> {
+        Ok(email_addresses::matches(conn, &[address], false)?
+            .remove(address)
+            .and_then(|users| users.into_iter().find(Self::is_active)))
+    }
+
+    /// Matching for callers that already lowercase primary addresses. Keep all matching legacy
+    /// primaries in id order: Google rejects ambiguity and Slack takes the last primary match.
+    pub fn find_by_any_lowercase_email_addresses(
+        conn: &Connection,
+        addresses: &[&str],
+    ) -> Result<std::collections::HashMap<String, Vec<Self>>> {
+        email_addresses::matches(conn, addresses, true)
+    }
+
     pub fn all(conn: &Connection) -> Result<Vec<Self>> {
         query_all(conn, r#"SELECT * FROM "users""#, [], Self::from_row)
     }
@@ -543,6 +568,9 @@ impl User {
         attributes.icon_name = icon::normalize_name(attributes.icon_name.as_deref());
         icon::validate(tx.conn(), attributes.icon_name.as_deref())?.into_result()?;
         let now = tx.now();
+        if let Some(address) = attributes.email_address.as_deref() {
+            email_addresses::check_primary(tx, None, address)?;
+        }
         let password_digest = attributes.password_digest.map(PasswordDigest::into_string);
         let id: i64 = tx.conn().query_row_cached(
             INSERT,
@@ -653,6 +681,15 @@ impl User {
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
+        let email_change = changes
+            .email_address
+            .filter(|email| *email != self.email_address);
+        let promoted = email_change
+            .as_ref()
+            .and_then(Option::as_deref)
+            .map(|address| email_addresses::check_primary(tx, Some(self.id), address))
+            .transpose()?
+            .flatten();
         let pronouns = changes
             .pronouns
             .map(|value| profile_text(value, "pronouns", 40))
@@ -713,7 +750,7 @@ impl User {
             self.name = name.clone();
             sets.push(("name", Box::new(name)));
         }
-        if let Some(email) = changes.email_address.filter(|e| *e != self.email_address) {
+        if let Some(email) = email_change {
             self.email_address = email.clone();
             sets.push(("email_address", Box::new(email)));
         }
@@ -792,6 +829,9 @@ impl User {
         let mut values: Vec<&dyn rusqlite::ToSql> = sets.iter().map(|(_, v)| v.as_ref()).collect();
         values.push(&self.id);
         tx.conn().execute_cached(&sql, values.as_slice())?;
+        if let Some(id) = promoted {
+            email_addresses::EmailAddress::remove(tx, self.id, id)?;
+        }
         let plain_bot_token = self.plain_bot_token.clone();
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
@@ -925,6 +965,10 @@ impl User {
         }
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         lifecycle::deactivate(tx, self.id, audit)?;
+        conn.execute_cached(
+            "DELETE FROM user_email_addresses WHERE user_id = ?",
+            [self.id],
+        )?;
         let email = self.deactivated_email_address();
         // app/models/user.rb: manual OOO cannot survive account deactivation.
         conn.execute_cached(

@@ -161,6 +161,33 @@ pub fn password_reset(config: &Config, user: &User, url: &str) -> Message {
         html: layout(&body),
     }
 }
+pub fn email_address_confirmation(
+    config: &Config,
+    user: &User,
+    address: &str,
+    url: &str,
+) -> Message {
+    let text = format!(
+        "Hi {},\n\nOpen this link to confirm this email address for your Smartfire account.\n\n{url}\n\nThe link expires in 24 hours. You can ignore this email if you didn't request it.\n",
+        user.name
+    );
+    let body = format!(
+        "<p>Hi {},</p><p>Confirm this email address for your Smartfire account.</p><p><a href=\"{}\">Confirm email address</a></p><p>The link expires in 24 hours. You can ignore this email if you didn't request it.</p>",
+        h(&user.name),
+        h(url),
+    );
+    Message {
+        from: config
+            .mailer_from
+            .clone()
+            .unwrap_or_else(|| "Smartfire <noreply@example.com>".into()),
+        to: address.to_owned(),
+        subject: "Confirm your email address for Smartfire".into(),
+        text,
+        html: layout(&body),
+    }
+}
+
 fn crlf(s: &str) -> String {
     s.replace("\r\n", "\n")
         .replace('\r', "\n")

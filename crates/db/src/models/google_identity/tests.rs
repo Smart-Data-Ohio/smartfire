@@ -269,7 +269,10 @@ fn ambiguous_emails_and_subject_mismatches_are_refused() {
     db.clock.travel_to(db.now());
     db.write(|tx| {
         user(tx, "same@smartdata.net")?;
-        user(tx, "SAME@smartdata.net")?;
+        tx.conn().execute(
+            "INSERT INTO users (name, email_address, created_at, updated_at) VALUES ('Legacy', 'SAME@smartdata.net', ?1, ?1)",
+            [tx.now()],
+        )?;
         let linked = user(tx, "linked@smartdata.net")?;
         trust_fixture(tx, linked.id)?;
         GoogleIdentity::link_to_user(tx, &claims("old-sub", "linked@smartdata.net"), linked.id)?;
@@ -477,6 +480,31 @@ fn concurrent_first_sign_ins_provision_exactly_one_owner() {
             |r| r.get(0),
         )?;
         assert_eq!(count, 1);
+        Ok(())
+    });
+}
+
+#[test]
+fn google_matching_uses_confirmed_secondary_with_existing_link_policy() {
+    use crate::user::email_addresses::{Confirmation, EmailAddress};
+
+    let db = TestDb::new();
+    db.write(|tx| {
+        let member = user(tx, "primary@smartdata.net")?;
+        let address = "Linked@smartdata.net";
+        assert_eq!(
+            EmailAddress::confirm(tx, &member, address)?,
+            Confirmation::Added
+        );
+        reason(
+            GoogleIdentity::resolve(tx, &claims("linked-sub", address)),
+            "admin_link_required",
+        );
+        trust_fixture(tx, member.id)?;
+        let resolved = GoogleIdentity::resolve(tx, &claims("linked-sub", address))?;
+        assert_eq!(resolved.kind, ResolutionKind::Linked);
+        assert_eq!(resolved.user.id, member.id);
+        assert_eq!(resolved.user.email_address, member.email_address);
         Ok(())
     });
 }

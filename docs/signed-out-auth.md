@@ -17,10 +17,11 @@ The shell permits visitors without a session only at these auth paths:
 | `/app/two_factor/challenge` | `/two_factor_challenge` |
 | `/app/passwords/new` | None (new with the SPA) |
 | `/app/passwords/:token` | None (new with the SPA) |
+| `/app/email_addresses/confirm/:token` | None (new with the SPA) |
 
-The transfer ID and the password reset token must each occupy one nonempty path segment. Other paths under `/app/` still
-require authentication. These names follow the existing `/app/` prefix and retained
-resource names.
+Transfer IDs, password reset tokens, and email confirmation tokens each occupy one nonempty
+path segment. Other paths under `/app/` still require authentication. See
+[Linked email addresses](email-addresses.md) for the confirmation API.
 
 A signed-in visitor to the challenge gets the retained page's redirect to `/`. The retained
 sign-in and transfer GETs accept signed-in visitors without a redirect, so their SPA

@@ -185,39 +185,17 @@ fn matchable_users(conn: &Connection, members: &[&Value]) -> Result<HashMap<Stri
         .filter(|member| !placeholder_only(member))
         .filter_map(|member| email(member))
         .collect();
-    let mut users = HashMap::new();
-    if emails.is_empty() {
-        return Ok(users);
-    }
     let emails: Vec<_> = emails
         .iter()
         .map(|email| super::payload::downcase(email))
         .collect();
-    let bound = emails.len() <= 999;
-    let values = if bound {
-        vec!["?".to_owned(); emails.len()]
-    } else {
-        emails
-            .iter()
-            .map(|email| format!("'{}'", email.replace('\'', "''")))
-            .collect()
-    };
-    let sql = format!(
-        r#"SELECT "users".* FROM "users" WHERE (LOWER(email_address) IN ({})) ORDER BY "users"."id" ASC"#,
-        values.join(", ")
-    );
-    let bindings = if bound { emails } else { Vec::new() };
-    for user in conn
-        .prepare(&sql)?
-        .query_map(rusqlite::params_from_iter(bindings), User::from_row)?
-    {
-        let user = user?;
-        users.insert(
-            super::payload::downcase(user.email_address.as_deref().unwrap_or_default()),
-            user,
-        );
-    }
-    Ok(users)
+    let addresses: Vec<_> = emails.iter().map(String::as_str).collect();
+    Ok(
+        User::find_by_any_lowercase_email_addresses(conn, &addresses)?
+            .into_iter()
+            .filter_map(|(address, mut users)| users.pop().map(|user| (address, user)))
+            .collect(),
+    )
 }
 pub fn ensure_author(tx: &mut Tx<'_>, run: &SlackImport, key: &str) -> Result<User> {
     if let Some(id) = mapped_id(tx.conn(), run.slack_workspace_id, "user", key)?

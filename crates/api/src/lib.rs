@@ -32,6 +32,7 @@ mod cursor;
 pub mod directory;
 pub mod drive;
 mod dto;
+mod email_addresses;
 pub mod endpoints;
 mod error;
 pub mod events;
@@ -102,6 +103,18 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             get(action(public_pages::show_json)),
         )
         .route("/api/v1/me", get(action(endpoints::me)))
+        .route(
+            "/api/v1/email_addresses",
+            get(action(email_addresses::index)).post(unparsed_action(email_addresses::create)),
+        )
+        .route(
+            "/api/v1/email_addresses/{id}",
+            delete(action(email_addresses::destroy)),
+        )
+        .route(
+            "/api/v1/email_addresses/{id}/primary",
+            post(action(email_addresses::primary)),
+        )
         .route(
             "/api/v1/rooms/{room_id}/messages/{message_id}/fizzy_cards/new",
             get(action(fizzy::new)),

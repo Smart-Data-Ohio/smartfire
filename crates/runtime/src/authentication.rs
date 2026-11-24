@@ -2,6 +2,7 @@
 //! Matches `app/controllers/two_factor/{setups,challenges,backup_codes,remembered_devices}_controller.rb`.
 //! No request, cookies or rendering enter this layer.
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target, pair};
+use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
 use campfire_db::{
     ActivityItem, ChallengeFailure, Database, PasswordDigest, Result, Session, TwoFactorBackupCode,
     TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
@@ -312,23 +313,86 @@ pub fn reset_two_factor(tx: &mut Tx<'_>, user: &User, context: &Context) -> Resu
     Ok(())
 }
 
-/// Who "Forgot password?" can email a link to: someone password sign-in accepts (active, with an
-/// address), a person rather than a bot, with a password. Google-only members sign in with Google.
+/// Who can reset a password once an address has matched: active people with a password.
 pub fn can_reset_password(user: &User) -> bool {
     user.is_active()
         && !user.is_bot()
-        && user
-            .email_address
-            .as_deref()
-            .is_some_and(|email| !email.is_empty())
         && user
             .password_digest
             .as_deref()
             .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
 }
 
-/// "Forgot password?": queue the email. Delivery decides whether `email_address` gets one,
-/// so the request can answer independently of whether the account exists.
+/// Shared by delivery and the per-inbox request limit.
+pub fn normalize_password_reset_address(email_address: &str) -> String {
+    rails_compat::unicode::fold(campfire_richtext::ruby::strip(email_address))
+}
+
+pub fn request_email_address_confirmation(tx: &mut Tx<'_>, user_id: i64, email_address: String) {
+    campfire_mail::jobs::email_address_confirmation_later(tx, user_id, email_address);
+}
+
+pub fn audit_email_address(
+    tx: &Tx<'_>,
+    user: &User,
+    action: &str,
+    email_address: &str,
+    context: &Context,
+) -> Result<()> {
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: action.into(),
+            actor: Some(Actor::from(user)),
+            target: Some(Target::from(user)),
+            changes: Some(json!({ "email_address": email_address })),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
+}
+
+pub fn promote_email_address(
+    tx: &mut Tx<'_>,
+    user: &mut User,
+    id: i64,
+    session_id: Option<i64>,
+    context: &Context,
+) -> Result<bool> {
+    let linked = EmailAddress::find_owned(tx.conn(), user.id, id)?
+        .ok_or(campfire_db::Error::RecordNotFound("EmailAddress"))?;
+    let previous = user.email_address.clone();
+    if !update_profile(
+        tx,
+        user,
+        UserChanges {
+            email_address: Some(Some(linked.email_address)),
+            ..Default::default()
+        },
+        true,
+        session_id,
+        false,
+        context,
+    )? {
+        return Ok(false);
+    }
+    if let Some(previous) = previous.filter(|address| !address.trim().is_empty())
+        && EmailAddress::confirm(tx, user, &previous)? == Confirmation::Taken
+    {
+        let mut errors = campfire_db::Errors::default();
+        errors.add(
+            "email_address",
+            "cannot be swapped because the current primary address is shared by another account",
+        );
+        return errors.into_result();
+    }
+    campfire_db::user::profile_settings::bump_revision(tx, user.id)?;
+    Ok(true)
+}
+
+/// "Forgot password?": queue the email. Delivery decides whether `email_address` gets one, so
+/// the request can answer independently of whether the account exists.
 pub fn request_password_reset(tx: &mut Tx<'_>, email_address: String) {
     campfire_mail::jobs::password_reset_later(tx, email_address);
 }

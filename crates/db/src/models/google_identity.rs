@@ -110,13 +110,10 @@ impl GoogleIdentity {
                 kind: ResolutionKind::Existing,
             });
         }
-        let mut query = tx
-            .conn()
-            .prepare("SELECT * FROM users WHERE LOWER(email_address)=?")?;
-        let users = query
-            .query_map([downcase(&email)], User::from_row)?
-            .collect::<rusqlite::Result<Vec<_>>>()?;
-        drop(query);
+        let address = downcase(&email);
+        let users = User::find_by_any_lowercase_email_addresses(tx.conn(), &[&address])?
+            .remove(&address)
+            .unwrap_or_default();
         if users.len() > 1 {
             return reject("ambiguous");
         }

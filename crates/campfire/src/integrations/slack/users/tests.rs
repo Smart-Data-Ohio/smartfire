@@ -398,3 +398,31 @@ async fn slack_query_order_matches_rails_before_and_after_analyze() {
         failures.join(", ")
     );
 }
+
+#[tokio::test]
+async fn slack_import_maps_a_confirmed_secondary_to_the_existing_user() {
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+
+    let (db, _, _dir) = setup().await;
+    let job = start(&db).await;
+    let run = run(&db, job).await;
+    db.write(move |tx| {
+        let user = campfire_db::User::find(tx.conn(), 1)?;
+        assert_eq!(
+            EmailAddress::confirm(tx, &user, "Former@slack.example")?,
+            Confirmation::Added
+        );
+        let page = json!([{"id":"UALIAS","profile":{"email":"former@slack.example"}}]);
+        let delta = map_page(tx, &run, &page, false, &HashSet::new())?;
+        assert_eq!(delta["matched"], 1);
+        let record: (i64, bool) = tx.conn().query_row(
+            "SELECT record_id, created_record FROM slack_import_records WHERE slack_key = 'UALIAS'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        assert_eq!(record, (user.id, false));
+        Ok(())
+    })
+    .await
+    .unwrap();
+}

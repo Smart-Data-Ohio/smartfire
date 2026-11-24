@@ -10,6 +10,7 @@
 use campfire_api_types::{PasswordResetRequest, PasswordResetState, PasswordResetSubmission};
 use campfire_db::models::{audit_log::Context, user::normalize_email_address};
 use campfire_db::{PasswordDigest, Tx, User};
+use campfire_db::user::email_addresses::EmailAddress;
 use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, halt};
 use jiff::SignedDuration;
 use rails_compat::password_reset::{self, Claim};
@@ -95,7 +96,7 @@ async fn update_response(c: &mut Ctx) -> Result {
     before_actions(c, "password_resets#update").await?;
     rate_limit(c, &update_rate_limit(), None)?;
     let body: PasswordResetSubmission = auth::body(c).await?;
-    let Some((_, claim)) = resettable(c).await? else {
+    let Some(claim) = resettable(c).await? else {
         return refuse_link(c).await;
     };
     if let Some(problem) = password_problem(&body.password) {
@@ -153,22 +154,17 @@ fn inbox_key(email_address: &str) -> String {
 }
 
 /// The link's user, while the link verifies and still matches them.
-async fn resettable(c: &Ctx) -> Result<Option<(User, Claim)>> {
+async fn resettable(c: &Ctx) -> Result<Option<Claim>> {
     let token = c.param_str("token").unwrap_or_default();
     let secrets = c.app().secrets.clone();
     let Some(claim) = password_reset::verify(&secrets, token, c.now()) else {
         return Ok(None);
     };
-    let user_id = claim.user_id;
-    let user = c
-        .app()
+    c.app()
         .db
-        .read(move |conn| User::find_by_id(conn, user_id))
+        .read(move |conn| Ok(resettable_user(conn, &secrets, &claim)?.map(|_| claim)))
         .await
-        .map_err(Error::internal)?;
-    Ok(user
-        .filter(|user| still_resettable(&secrets, &claim, user, c.now()))
-        .map(|user| (user, claim)))
+        .map_err(Error::internal)
 }
 
 /// Sets the new password if the link still matches its user and is unexpired, checked again on the
@@ -181,9 +177,10 @@ pub fn reset_with_claim(
     digest: PasswordDigest,
     context: &Context,
 ) -> campfire_db::Result<bool> {
-    let now = tx.now().jiff();
-    let current = User::find_by_id(tx.conn(), claim.user_id)?
-        .filter(|user| still_resettable(secrets, claim, user, now));
+    if !claim.unexpired(secrets, tx.now().jiff()) {
+        return Ok(false);
+    }
+    let current = resettable_user(tx.conn(), secrets, claim)?;
     let Some(mut user) = current else {
         return Ok(false);
     };
@@ -191,19 +188,26 @@ pub fn reset_with_claim(
     Ok(true)
 }
 
-fn still_resettable(
+fn resettable_user(
+    conn: &campfire_db::Connection,
     secrets: &rails_compat::Secrets,
     claim: &Claim,
-    user: &User,
-    now: jiff::Timestamp,
-) -> bool {
-    claim.unexpired(secrets, now)
-        && can_reset_password(user)
-        && claim.matches(
-            secrets,
-            user.password_digest.as_deref().unwrap_or_default(),
-            user.email_address.as_deref().unwrap_or_default(),
-        )
+) -> campfire_db::Result<Option<User>> {
+    let Some(user) = User::find_by_id(conn, claim.user_id)?.filter(can_reset_password) else {
+        return Ok(None);
+    };
+    let digest = user.password_digest.as_deref().unwrap_or_default();
+    let matches = if let Some(id) = claim.secondary_id {
+        EmailAddress::find_owned(conn, user.id, id)?.is_some_and(|address| {
+            claim.matches_secondary(secrets, digest, id, &address.email_address)
+        })
+    } else {
+        user.email_address
+            .as_deref()
+            .filter(|address| !address.is_empty())
+            .is_some_and(|address| claim.matches(secrets, digest, address))
+    };
+    Ok(matches.then_some(user))
 }
 
 fn password_problem(password: &str) -> Option<&'static str> {

@@ -77,7 +77,7 @@ fn check(token: &str) -> Req {
 }
 
 /// Records the arguments of every mail delivery job as it's queued.
-async fn capture_mail_jobs(a: &TestApp) {
+pub(super) async fn capture_mail_jobs(a: &TestApp) {
     a.db()
         .write(|tx| {
             tx.conn().execute_batch(
@@ -92,7 +92,7 @@ async fn capture_mail_jobs(a: &TestApp) {
         .unwrap();
 }
 
-async fn captured_mail_jobs(a: &TestApp) -> Vec<Value> {
+pub(super) async fn captured_mail_jobs(a: &TestApp) -> Vec<Value> {
     a.db()
         .read(|conn| {
             let mut stmt = conn.prepare("SELECT args FROM reset_mail ORDER BY rowid")?;
@@ -1790,4 +1790,87 @@ async fn a_remembered_device_write_failure_rolls_back_the_challenge() {
     assert_eq!(count(&a, REMEMBERED, DAVID).await, devices);
     assert!(!b.cookie_header().contains("session_token="));
     assert!(!b.cookie_header().contains("two_factor_remember="));
+}
+
+#[tokio::test]
+async fn a_secondary_signs_in_and_receives_reset_until_that_confirmation_is_removed() {
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+
+    let (a, _) = app(&MAIL).await;
+    let address = "Linked@example.test";
+    let secondary = a
+        .db()
+        .write(move |tx| {
+            let user = campfire_db::User::find(tx.conn(), DAVID)?;
+            assert_eq!(
+                EmailAddress::confirm(tx, &user, address)?,
+                Confirmation::Added
+            );
+            Ok(EmailAddress::by_address(tx.conn(), address)?.unwrap().1)
+        })
+        .await
+        .unwrap();
+    let signed_in = a
+        .anonymous()
+        .password_sign_in(&address.to_ascii_lowercase(), PASSWORD)
+        .await;
+    assert_eq!(signed_in.status, StatusCode::OK, "{}", signed_in.text());
+    assert!(
+        ["signedIn", "secondFactorRequired"].contains(&signed_in.json()["kind"].as_str().unwrap())
+    );
+
+    capture_mail_jobs(&a).await;
+    let mut visitor = a.anonymous();
+    let reply = visitor
+        .write(request(&address.to_ascii_lowercase(), "198.51.100.1"))
+        .await;
+    assert_eq!(reply.json(), json!({"kind":"requested"}));
+    let queued = captured_mail_jobs(&a).await;
+    assert_eq!(
+        queued,
+        [json!({"notification":{"PasswordReset":{"email_address":address.to_ascii_lowercase()}}})]
+    );
+    let now = a.booted.app.clock.now();
+    let requested_at = now - jiff::SignedDuration::from_mins(10);
+    let message = reset_message(&a, &address.to_ascii_lowercase(), requested_at)
+        .await
+        .unwrap();
+    assert!(
+        message.to.ends_with(&format!("<{address}>")),
+        "{}",
+        message.to
+    );
+    let token = link_token(&message);
+    assert!(rails_compat::password_reset::verify(
+        &a.booted.app.secrets,
+        &token,
+        now + jiff::SignedDuration::from_mins(5),
+    ).is_none());
+    assert_eq!(
+        visitor.send(check(&token)).await.json(),
+        json!({"kind":"ready"})
+    );
+
+    a.db()
+        .write(move |tx| {
+            EmailAddress::remove(tx, DAVID, secondary.id)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    refused_link(&visitor.send(check(&token)).await);
+    refused_link(&visitor.write(submit(&token, NEW_PASSWORD)).await);
+    assert!(reset_message(&a, address, now).await.is_none());
+    a.db()
+        .write(move |tx| {
+            let user = campfire_db::User::find(tx.conn(), DAVID)?;
+            assert_eq!(
+                EmailAddress::confirm(tx, &user, address)?,
+                Confirmation::Added
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    refused_link(&visitor.send(check(&token)).await);
 }

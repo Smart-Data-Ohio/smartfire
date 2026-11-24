@@ -1265,7 +1265,15 @@ async fn google_sessions_ineligible_users_and_ambiguous_emails_never_create_iden
             match kind {
                 "deactivated"|"retained"=>user.deactivate(tx)?,"banned"=>user.ban(tx)?,
                 "agent"=>{tx.conn().execute("INSERT INTO agents(user_id,owner_id,created_at,updated_at) VALUES(?,?,?,?)",rusqlite::params![user.id,DAVID,tx.now(),tx.now()])?;},
-                "ambiguous"=>{User::create(tx,NewUser{name:"Case duplicate".into(),email_address:Some("Restricted@smartdata.net".into()),..Default::default()})?;},_=>{}
+                "ambiguous" => {
+                    // Historical primaries could differ only by ASCII case.
+                    tx.conn().execute(
+                        "INSERT INTO users (name, email_address, created_at, updated_at)
+                         VALUES ('Case duplicate', 'Restricted@smartdata.net', ?1, ?1)",
+                        [tx.now()],
+                    )?;
+                }
+                _ => {}
             }
             Ok(())
         }).await.unwrap();

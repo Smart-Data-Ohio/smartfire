@@ -1034,7 +1034,7 @@ pub async fn authenticate_by(
     let candidate = c
         .app()
         .db
-        .read(move |conn| User::find_active_by_sign_in_address(conn, &email_address))
+        .read(move |conn| User::find_active_by_any_email_address(conn, &email_address))
         .await
         .map_err(Error::internal)?;
     tokio::task::spawn_blocking(move || User::authenticated(candidate, &password))
