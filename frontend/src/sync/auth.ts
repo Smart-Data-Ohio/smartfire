@@ -4,7 +4,7 @@
  * that never reached a decision (the network, an unreadable body) rejects with an `ActionError`.
  */
 
-import { Option, Schema } from "effect";
+import { type Effect, Option, Schema } from "effect";
 import {
   consumeTransfer,
   googleSignIn,
@@ -26,7 +26,6 @@ import {
   type AuthResponse,
   type FirstRunState,
   type JoinAnswer,
-  type PasswordResetAnswer,
   SignedOutBoot,
 } from "../api/schema/auth.ts";
 import type { PublicPage } from "../api/schema/public-pages.ts";
@@ -50,7 +49,7 @@ export type JoinNext = typeof JoinAnswer.Type;
 export type { JoinTarget };
 
 /** A password reset endpoint's answer: its state, or a next action. */
-export type PasswordResetNext = typeof PasswordResetAnswer.Type;
+export type PasswordResetNext = Effect.Success<ReturnType<typeof readPasswordReset>>;
 
 /** Whether first run is still open. */
 export type FirstRunOpen = typeof FirstRunState.Type;

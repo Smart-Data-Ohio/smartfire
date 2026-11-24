@@ -8,7 +8,7 @@ import type { PasswordSignIn } from "../gen/PasswordSignIn.ts";
 import type { SignOut } from "../gen/SignOut.ts";
 import type { TransferSignIn } from "../gen/TransferSignIn.ts";
 import type { WorkspaceJoin } from "../gen/WorkspaceJoin.ts";
-import { ApiClient } from "./client.ts";
+import { ApiClient, type ApiRequest } from "./client.ts";
 import {
   AuthResponse,
   FirstRunState,
@@ -26,6 +26,28 @@ const decodeFirstRun = Schema.decodeUnknownEffect(FirstRunState);
 const decodeJoin = Schema.decodeUnknownEffect(JoinAnswer);
 
 const decodePasswordReset = Schema.decodeUnknownEffect(PasswordResetAnswer);
+
+type PasswordResetRefusal = Extract<typeof PasswordResetAnswer.Type, { kind: "error" }> & {
+  readonly status: number;
+};
+
+const passwordResetRequest = (request: ApiRequest) =>
+  Effect.gen(function* () {
+    const client = yield* ApiClient;
+    const { status, body } = yield* client.executeWithStatus(request, decodePasswordReset);
+
+    return body.kind === "error" ? { ...body, status } : body;
+  }).pipe(
+    Effect.catchTag("ServerError", (failure) =>
+      failure.status >= 400
+        ? Effect.succeed<PasswordResetRefusal>({
+            kind: "error",
+            status: failure.status,
+            fieldErrors: {},
+          })
+        : Effect.fail(failure),
+    ),
+  );
 
 const passwordResetPath = (token: string): string =>
   `/password_resets/${encodeURIComponent(token)}`;
@@ -101,22 +123,17 @@ export const consumeTransfer = Effect.fn("consumeTransfer")(function* (id: strin
 export const requestPasswordReset = Effect.fn("requestPasswordReset")(function* (
   body: PasswordResetRequest,
 ) {
-  const client = yield* ApiClient;
-
-  return yield* client.execute(
-    { method: "POST", path: "/password_resets", body, auth: true },
-    decodePasswordReset,
-  );
+  return yield* passwordResetRequest({
+    method: "POST",
+    path: "/password_resets",
+    body,
+    auth: true,
+  });
 });
 
 /** `GET /password_resets/:token`: `ready` while the link works, else its refusal. */
 export const readPasswordReset = Effect.fn("readPasswordReset")(function* (token: string) {
-  const client = yield* ApiClient;
-
-  return yield* client.execute(
-    { method: "GET", path: passwordResetPath(token), auth: true },
-    decodePasswordReset,
-  );
+  return yield* passwordResetRequest({ method: "GET", path: passwordResetPath(token), auth: true });
 });
 
 /** `PUT /password_resets/:token`: the new password; success navigates to sign in. */
@@ -124,12 +141,12 @@ export const submitPasswordReset = Effect.fn("submitPasswordReset")(function* (
   token: string,
   body: PasswordResetSubmission,
 ) {
-  const client = yield* ApiClient;
-
-  return yield* client.execute(
-    { method: "PUT", path: passwordResetPath(token), body, auth: true },
-    decodePasswordReset,
-  );
+  return yield* passwordResetRequest({
+    method: "PUT",
+    path: passwordResetPath(token),
+    body,
+    auth: true,
+  });
 });
 
 /** `GET /first_run`: open (adopting its token) or, once set up, where to go instead. */

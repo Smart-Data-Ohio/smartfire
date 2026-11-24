@@ -7,8 +7,6 @@ import { pageExit } from "./auth-navigation.ts";
 import {
   AuthHeader,
   AuthScreen,
-  GENERIC_REFUSAL,
-  refusalMessage,
   useDocumentTitle,
   useFollowNext,
   useInlineFlash,
@@ -17,6 +15,10 @@ import {
 import { RESET_UNAVAILABLE } from "./password-new.tsx";
 
 const TITLE = "Reset your password";
+
+const RESET_FAILED = "Couldn't reset your password. Try again.";
+
+const TOO_MANY_ATTEMPTS = "Too many attempts. Try again in a few minutes.";
 
 type Landing =
   | { readonly status: "checking" }
@@ -165,16 +167,14 @@ function NewPasswordForm({
   const answered = (next: PasswordResetNext) => {
     switch (next.kind) {
       case "error": {
-        const problem = next.fieldErrors.password?.[0];
-        const elsewhere = linkGone(next.fieldErrors);
+        const problem = next.status === 422 ? next.fieldErrors.password?.[0] : undefined;
 
-        if (problem !== undefined) {
+        if (next.status === 429) {
+          refuse(TOO_MANY_ATTEMPTS);
+        } else if (problem !== undefined) {
           refuse(problem);
-        } else if (elsewhere === null) {
-          // A rate limit, say: the form and the typed password stay for another try.
-          refuse(refusalMessage(next.fieldErrors, "base"));
         } else {
-          land(elsewhere);
+          land(checkRefusal(next));
         }
 
         return;
@@ -188,7 +188,7 @@ function NewPasswordForm({
         return;
       case "ready":
       case "requested":
-        refuse(GENERIC_REFUSAL);
+        refuse(RESET_FAILED);
 
         return;
       default:
@@ -245,24 +245,15 @@ function NewPasswordForm({
 
 /** Where a link check that didn't answer `ready` leaves the page. */
 function checkRefusal(next: PasswordResetNext): Landing {
-  if (next.kind !== "error") return { status: "refused", message: GENERIC_REFUSAL };
+  if (next.kind === "error") {
+    if (next.status === 404) return { status: "unavailable" };
 
-  return (
-    linkGone(next.fieldErrors) ?? {
-      status: "failed",
-      message: refusalMessage(next.fieldErrors, "base"),
-    }
-  );
-}
+    if (next.status === 429) return { status: "failed", message: TOO_MANY_ATTEMPTS };
 
-/**
- * The page for a dead link (the server's `token` error) or reset turned off (its 404, with no
- * field errors); `null` for a refusal worth trying again.
- */
-function linkGone(fieldErrors: Readonly<Record<string, readonly string[]>>): Landing | null {
-  const dead = fieldErrors.token?.[0];
+    const dead = next.status === 400 ? next.fieldErrors.token?.[0] : undefined;
 
-  if (dead !== undefined) return { status: "refused", message: dead };
+    if (dead !== undefined) return { status: "refused", message: dead };
+  }
 
-  return Object.keys(fieldErrors).length === 0 ? { status: "unavailable" } : null;
+  return { status: "failed", message: RESET_FAILED };
 }

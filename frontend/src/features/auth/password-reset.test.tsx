@@ -39,7 +39,7 @@ describe("asking for a link", () => {
   it("fills in the address from sign in and says the same whatever the answer", async () => {
     const requests = vi.spyOn(auth, "requestPasswordReset");
 
-    await renderAuth("/app/passwords/new?email_address=nobody%40x.test");
+    await renderAuth("/app/passwords/new?email_address=%20nobody%40x.test%20");
 
     expect(
       await screen.findByRole("heading", { level: 1, name: "Reset your password" }),
@@ -71,6 +71,19 @@ describe("asking for a link", () => {
     expect(await screen.findByText(RESET_RATE_ALERT)).toBeTruthy();
     expect(emailField().getAttribute("aria-invalid")).toBe("true");
     expect(screen.queryByRole("heading", { name: "Check your email" })).toBeNull();
+  });
+
+  it("shows a reset-specific message when the request is refused without field errors", async () => {
+    await renderAuth("/app/passwords/new?email_address=ada%40x.test");
+    await screen.findByRole("textbox", { name: "Email address" });
+    vi.spyOn(network.server, "handle").mockResolvedValueOnce({
+      status: 403,
+      json: { kind: "error", fieldErrors: {} },
+    });
+
+    await userEvent.setup().click(screen.getByRole("button", { name: "Send reset link" }));
+
+    expect(await screen.findByText("Couldn't send the reset link. Try again.")).toBeTruthy();
   });
 
   it("points to an administrator when reset links can't be emailed", async () => {
@@ -131,15 +144,15 @@ describe("choosing a new password", () => {
     expect(resets).not.toHaveBeenCalled();
   });
 
-  it("keeps the form and the typed password when a new password is refused for now", async () => {
+  it("keeps the form and typed password on a 429 with empty field errors", async () => {
     const user = userEvent.setup();
 
-    vi.spyOn(auth, "resetPassword").mockResolvedValueOnce({
-      kind: "error",
-      fieldErrors: { base: [RESET_RATE_ALERT] },
-    });
     await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
     await user.type(await screen.findByLabelText("New password"), "a new passphrase");
+    vi.spyOn(network.server, "handle").mockResolvedValueOnce({
+      status: 429,
+      json: { kind: "error", fieldErrors: {} },
+    });
     await user.click(screen.getByRole("button", { name: "Reset password" }));
 
     expect(await screen.findByText(RESET_RATE_ALERT)).toBeTruthy();
@@ -156,6 +169,7 @@ describe("choosing a new password", () => {
 
     vi.spyOn(auth, "resetPassword").mockResolvedValueOnce({
       kind: "error",
+      status: 400,
       fieldErrors: { token: [INVALID_RESET] },
     });
     await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
@@ -193,6 +207,40 @@ describe("choosing a new password", () => {
     expect(await screen.findByText(RESET_UNAVAILABLE)).toBeTruthy();
     expect(screen.queryByLabelText("New password")).toBeNull();
     expect(screen.getByRole("link", { name: "Go to sign in" })).toBeTruthy();
+  });
+
+  it("shows reset is off on a 404 after the password form has opened", async () => {
+    const user = userEvent.setup();
+
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+    await user.type(await screen.findByLabelText("New password"), "a new passphrase");
+    vi.spyOn(network.server, "handle").mockResolvedValueOnce({
+      status: 404,
+      json: { kind: "error", fieldErrors: {} },
+    });
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    expect(await screen.findByText(RESET_UNAVAILABLE)).toBeTruthy();
+    expect(screen.queryByLabelText("New password")).toBeNull();
+  });
+
+  it("offers to retry a 403 with a reset-specific error", async () => {
+    const user = userEvent.setup();
+
+    await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
+    await user.type(await screen.findByLabelText("New password"), "a new passphrase");
+    vi.spyOn(network.server, "handle").mockResolvedValueOnce({
+      status: 403,
+      json: { kind: "error", fieldErrors: {} },
+    });
+    await user.click(screen.getByRole("button", { name: "Reset password" }));
+
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Couldn't reset your password. Try again.",
+    );
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByLabelText("New password")).toBeTruthy();
   });
 
   it("doesn't check the link when the inlined boot says reset is off", async () => {

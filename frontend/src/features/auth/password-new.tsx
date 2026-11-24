@@ -7,7 +7,7 @@ import {
   AuthFooter,
   AuthHeader,
   AuthScreen,
-  refusalMessage,
+  firstRefusalMessage,
   type SignedOutFlash,
   TranslateButton,
   useDocumentTitle,
@@ -140,7 +140,10 @@ function RequestForm({
 
         return;
       case "error":
-        refuse(refusalMessage(next.fieldErrors, "base", "emailAddress"));
+        refuse(
+          firstRefusalMessage(next.fieldErrors, "base", "emailAddress") ??
+            "Couldn't send the reset link. Try again.",
+        );
 
         return;
       default:
@@ -154,7 +157,9 @@ function RequestForm({
     if (busy) return;
 
     setBusy(true);
-    auth.requestPasswordReset(email).then(answered, (failure: Error) => refuse(failure.message));
+    auth
+      .requestPasswordReset(email.trim())
+      .then(answered, (failure: Error) => refuse(failure.message));
   };
 
   return (
