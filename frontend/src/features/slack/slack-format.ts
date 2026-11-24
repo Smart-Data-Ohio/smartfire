@@ -135,7 +135,7 @@ export type Coverage = "full" | "bounded" | "undated";
 export function planCoverage(plan: SlackPlan): Coverage {
   if (plan.scannedFrom !== null || plan.scannedUntil !== null) return "bounded";
 
-  // A row that starts skipped (its mapped room is gone) was never scanned, so has no dates.
+  // A row that starts skipped was never scanned, so has no dates.
   const undated = plan.conversations.some(
     ({ conversation, target }) => target !== "skip" && !conversation.dated,
   );
