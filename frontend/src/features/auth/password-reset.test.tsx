@@ -144,7 +144,7 @@ describe("choosing a new password", () => {
 
     expect(await screen.findByText(RESET_RATE_ALERT)).toBeTruthy();
     expect(passwordField().value).toBe("a new passphrase");
-    expect(screen.queryByRole("link", { name: "Get a new link" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Request new link" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Reset password" }));
 
@@ -164,7 +164,7 @@ describe("choosing a new password", () => {
 
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", INVALID_RESET);
     expect(screen.queryByLabelText("New password")).toBeNull();
-    expect(screen.getByRole("link", { name: "Get a new link" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Request new link" })).toBeTruthy();
   });
 
   it("offers to try again when the network fails", async () => {
@@ -174,7 +174,7 @@ describe("choosing a new password", () => {
     await renderAuth(`/app/passwords/${MOCK_RESET_TOKEN}`);
 
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Network unreachable");
-    expect(screen.queryByRole("link", { name: "Get a new link" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Request new link" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
     await user.type(await screen.findByLabelText("New password"), "a new passphrase");
