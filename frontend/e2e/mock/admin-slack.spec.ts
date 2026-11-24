@@ -144,6 +144,8 @@ test("the plan leaves channels nobody uses unchecked", async ({ page }) => {
   const leads = page.getByRole("checkbox", { name: "Import leads" });
 
   await expect(page.getByRole("checkbox", { name: "Import general" })).toBeChecked();
+  // design last posted 380 days ago: over a year before today, but not before the dry run started.
+  await expect(page.getByRole("checkbox", { name: "Import design" })).toBeChecked();
   await expect(leads).not.toBeChecked();
   await expect(page.getByText("1 channel starts unchecked")).toBeVisible();
   await expect(page.getByRole("row", { name: /leads/ })).toContainText(

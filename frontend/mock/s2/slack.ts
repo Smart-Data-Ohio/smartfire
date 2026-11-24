@@ -60,7 +60,7 @@ const WORKSPACE_CONVERSATIONS: readonly SlackConversation[] = [
     members: 5,
     messages: 88,
     threads: 4,
-    lastMessageAt: daysAgo(9),
+    lastMessageAt: daysAgo(380),
     scannedFrom: null,
   },
   {
@@ -560,7 +560,7 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
           defaultOldest: timestamp(ctx.now() - 14 * 86_400_000).slice(0, 10),
           scannedFrom: null,
           scannedUntil: null,
-          startedAt: daysAgo(0),
+          startedAt: daysAgo(30),
         });
       }),
       route("POST", /^\/admin\/slack\/runs\/(\d+)\/import$/, (request) => {

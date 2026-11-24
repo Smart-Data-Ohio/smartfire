@@ -52,9 +52,10 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
   const reasons = useMemo(
     () =>
       new Map(
-        plan.conversations.map(({ conversation }) => [
+        plan.conversations.map(({ conversation, target }) => [
           conversation.id,
-          inactiveReason(conversation, since, coverage),
+          // A row the plan already skips (its mapped room is gone) wasn't read, so isn't quiet.
+          target === "skip" ? null : inactiveReason(conversation, since, coverage),
         ]),
       ),
     [plan, since, coverage],
