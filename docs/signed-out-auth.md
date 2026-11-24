@@ -15,8 +15,10 @@ The shell permits visitors without a session only at these auth paths:
 | `/app/session/new` | `/session/new` |
 | `/app/session/transfers/:id` | `/session/transfers/:id` |
 | `/app/two_factor/challenge` | `/two_factor_challenge` |
+| `/app/passwords/new` | None (new with the SPA) |
+| `/app/passwords/:token` | None (new with the SPA) |
 
-The transfer ID must occupy one nonempty path segment. Other paths under `/app/` still
+The transfer ID and the password reset token must each occupy one nonempty path segment. Other paths under `/app/` still
 require authentication. These names follow the existing `/app/` prefix and retained
 resource names.
 
@@ -36,7 +38,12 @@ no-store`.
 {
   "kind": "signedOut",
   "workspace": { "name": "Smart Data", "logoUrl": null, "description": "" },
-  "signInMethods": { "password": true, "google": false, "googleDomains": [] },
+  "signInMethods": {
+    "password": true,
+    "google": false,
+    "googleDomains": [],
+    "passwordReset": false
+  },
   "firstRunPending": false,
   "helpContact": { "name": "Ada", "emailAddress": "ada@example.com" },
   "version": "2.0.0",
@@ -47,7 +54,9 @@ no-store`.
 The workspace name is null before an account exists. The description is plain text from
 account settings. Password sign-in is always available. Google is available when its
 provider configuration is complete, and `googleDomains` lists the domains it accepts, as the
-retained note under the Google button names them. `firstRunPending` uses the retained sign-in
+retained note under the Google button names them. `passwordReset` is true when outbound mail
+can send a reset link (SMTP, `MAILER_FROM` and a valid `APP_URL`); the sign-in page shows
+"Forgot password?" only then. `firstRunPending` uses the retained sign-in
 page's check for no users. Unlike `/session/new`, the reserved SPA sign-in shell remains
 available before first run; the SPA page sends the visitor on to `/first_run`, as the retained
 page does. `helpContact` is the first administrator's name and email address and `version` the
@@ -70,6 +79,9 @@ creation, verification, cookie handling, rate limits, push-subscription removal 
 | `GET /api/v1/two_factor/challenge` | No body | Current challenge or a navigation action |
 | `POST /api/v1/two_factor/challenge` | `ChallengeSubmission`: `code`, `rememberDevice` | TOTP or recovery code |
 | `PUT /api/v1/session/transfers/:id` | `TransferSignIn`: `{}` | Verify transfer ID and begin sign-in |
+| `POST /api/v1/password_resets` | `PasswordResetRequest`: `emailAddress` | Email a reset link if the address can have one |
+| `GET /api/v1/password_resets/:token` | No body | Whether the reset link works |
+| `PUT /api/v1/password_resets/:token` | `PasswordResetSubmission`: `password` | Set the new password |
 | `DELETE /api/v1/session` | `SignOut`: `pushSubscriptionEndpoint`, nullable | Remove the browser's subscription and session |
 
 Google start uses the retained `/session/google/callback`. Its signed state, nonce, PKCE,
@@ -78,6 +90,16 @@ retained flow, including second-factor enforcement.
 
 Transfer IDs are signed user IDs with a four-hour expiry. They are reusable until expiry
 and require an active user. JSON preserves that behavior. Recovery codes are single use.
+
+Password reset tokens are signed for the purpose `user/password_reset` and expire after 15
+minutes. Each carries a fingerprint of the user's password digest and email address, so a used
+link, or one sent before the address changed, no longer verifies. `POST` always answers
+`{"kind":"requested"}` and enqueues one delivery job, which finds an active human account with
+a password at delivery time and mints the link then; other addresses get nothing. `GET` answers
+`{"kind":"ready"}` for a working link. A successful `PUT` signs the user out everywhere and
+answers `navigate` to `/app/session/new` with a notice; it does not sign in. When reset is
+unavailable all three answer 404. Rate limits: 5 requests per IP and 3 per address per 15
+minutes, and 10 new passwords per IP per 15 minutes, each a 429 `base` error.
 
 ## Next actions and errors
 
@@ -92,7 +114,8 @@ Successful responses use HTTP 200 and the discriminated `AuthResponse` union:
   returns an empty 400. Empty access-gate refusals have an empty field-error map.
 
 Password refusals keep HTTP 401, rate limits keep 429, invalid codes keep 422, and invalid
-transfer IDs keep 400. Invalid JSON bodies use 422. CSRF rejection keeps the kit's 422.
+transfer IDs and password reset tokens keep 400 (with a `base` error). A blank or over-72-byte
+new password is a 422 `password` error. Invalid JSON bodies use 422. CSRF rejection keeps the kit's 422.
 
 Return destinations come from `return_to_after_authenticating` in the cookie session and
 use the same SPA mapping and redirect checks as the retained flow. A `return_to` query on

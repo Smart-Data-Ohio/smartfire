@@ -117,6 +117,24 @@ absolute links); optional `SMTP_PORT` (default 25), `SMTP_DOMAIN`,
 `SMTP_ENABLE_STARTTLS` (`"false"` disables; on by default). Without
 them the inbox item is the whole alert and nothing is sent.
 
+## Password reset
+
+"Forgot password?" on the sign-in page emails a one-time link to choose a
+new password. It appears only when outbound mail can send a working link:
+`SMTP_ADDRESS`, `MAILER_FROM`, and a valid `APP_URL` (the same settings as
+the alert mail above). Without them the link is hidden and the reset
+endpoints answer 404; an administrator resets passwords instead.
+
+The link is a signed token that expires after 15 minutes. It names the
+user and a fingerprint of their current password digest and email
+address, so it stops working once it is used or the address changes;
+nothing is stored. Requesting a link answers the same for every address,
+and the delivery job decides whether to send. Requests are limited to 5
+per IP and 3 per address in 15 minutes. Setting the password signs the
+user out of every session, revokes remembered two-step devices, and is
+audit-logged (`user.password.reset`); the user then signs in again,
+second step included.
+
 ## Dependency updates
 
 `.github/dependabot.yml` runs weekly updates, with minor and patch
