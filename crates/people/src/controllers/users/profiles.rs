@@ -99,7 +99,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         ..Default::default()
     };
     // Rails checks the raw request before strong parameters discard non-scalars.
-    let email_changing = c
+    let email_change_requested = c
         .params
         .get("user")
         .and_then(|p| p.get("email_address"))
@@ -109,7 +109,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                     .unwrap_or_else(|| campfire_richtext::ruby::json_value_inspect(&p.to_json())),
             )
         });
-    if email_changing {
+    if email_change_requested {
         let current_password = c.params.get("user").and_then(|p| p.get("current_password"));
         let password = current_password.and_then(|p| p.to_s()).unwrap_or_default();
         let existing = user.clone();
@@ -160,7 +160,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                 tx,
                 &mut user,
                 changes,
-                email_changing,
+                email_change_requested,
                 session_id,
                 legacy_raw_password_present,
                 &audit,

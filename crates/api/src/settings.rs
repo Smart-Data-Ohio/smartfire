@@ -582,7 +582,7 @@ async fn write_profile(
     user: User,
     changes: UserChanges,
     settings: profile_settings::Changes,
-    email_changing: bool,
+    audit_email_change: bool,
 ) -> Result<()> {
     let audit = audit_context(c)?;
     let session_id = current_session(c).map(|session| session.id);
@@ -595,7 +595,7 @@ async fn write_profile(
                 tx,
                 &mut user,
                 changes,
-                email_changing,
+                audit_email_change,
                 session_id,
                 false,
                 &audit,
@@ -634,11 +634,11 @@ async fn save_profile(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let email_changing = update
+    let email_change_requested = update
         .email_address
         .as_deref()
         .is_some_and(|email| user.email_change_requested(email));
-    if email_changing {
+    if email_change_requested {
         let password = update.current_password.clone();
         let missing = password
             .as_deref()
@@ -680,7 +680,7 @@ async fn save_profile(c: &mut Ctx) -> Result {
         },
         ..profile_settings::Changes::default()
     };
-    write_profile(c, user, changes, settings, email_changing).await?;
+    write_profile(c, user, changes, settings, email_change_requested).await?;
     if identity_changing {
         publish_identity(c, id).await?;
     }

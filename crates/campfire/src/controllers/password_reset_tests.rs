@@ -1027,29 +1027,34 @@ async fn a_password_reset_link_is_refused_after_the_member_is_banned() {
     );
 }
 
+async fn profile_authorization(a: &TestApp) -> (campfire_db::User, i64) {
+    use campfire_db::{NewSession, Session, User};
+
+    a.db()
+        .write(|tx| {
+            let user = User::find(tx.conn(), DAVID)?;
+            let session = Session::start_with(
+                tx,
+                DAVID,
+                NewSession {
+                    two_factor_verified: true,
+                    ..Default::default()
+                },
+            )?;
+            Ok((user, session.id))
+        })
+        .await
+        .unwrap()
+}
+
 #[tokio::test]
 async fn a_profile_password_change_rechecks_its_session_and_digest_after_authorization() {
-    use campfire_db::{NewSession, Session, User, UserChanges};
+    use campfire_db::{User, UserChanges};
     use campfire_runtime::authentication::{reset_password, update_profile};
 
     for (replace_password, revoke_session) in [(true, true), (true, false), (false, true)] {
         let (a, _) = app(&MAIL).await;
-        let (mut checked_user, session_id) = a
-            .db()
-            .write(|tx| {
-                let user = User::find(tx.conn(), DAVID)?;
-                let session = Session::start_with(
-                    tx,
-                    DAVID,
-                    NewSession {
-                        two_factor_verified: true,
-                        ..Default::default()
-                    },
-                )?;
-                Ok((user, session.id))
-            })
-            .await
-            .unwrap();
+        let (mut checked_user, session_id) = profile_authorization(&a).await;
         assert!(checked_user.current_password_confirmed(PASSWORD));
         let changes = UserChanges {
             email_address: Some(Some("other@example.com".into())),
@@ -1109,6 +1114,78 @@ async fn a_profile_password_change_rechecks_its_session_and_digest_after_authori
             PASSWORD
         }));
     }
+}
+
+#[tokio::test]
+async fn a_case_only_profile_email_edit_cannot_write_after_password_reset() {
+    let (a, _) = app(&MAIL).await;
+    let (mut user, session_id) = profile_authorization(&a).await;
+    let email = user.email_address.clone().unwrap();
+    let submitted = email.to_ascii_uppercase();
+    assert_ne!(email, submitted);
+    let email_change_requested = user.email_change_requested(&submitted);
+    assert!(!email_change_requested);
+    let token = emailed_token(&a, &email).await;
+    let reset = a.anonymous().write(submit(&token, NEW_PASSWORD)).await;
+    assert_eq!(reset.status, StatusCode::OK, "{}", reset.text());
+
+    let saved = a
+        .db()
+        .write(move |tx| {
+            campfire_runtime::authentication::update_profile(
+                tx,
+                &mut user,
+                campfire_db::UserChanges {
+                    email_address: Some(Some(submitted)),
+                    ..Default::default()
+                },
+                email_change_requested,
+                Some(session_id),
+                false,
+                &Default::default(),
+            )
+        })
+        .await
+        .unwrap();
+    assert!(!saved);
+    assert_eq!(email_of(&a, DAVID).await, email);
+}
+
+#[tokio::test]
+async fn a_stale_profile_email_edit_cannot_restore_the_previous_address() {
+    let (a, _) = app(&MAIL).await;
+    let mut browser = a.david();
+    let (mut user, session_id) = profile_authorization(&a).await;
+    let submitted = user.email_address.clone();
+    let replacement = "new@example.com";
+    let updated = browser
+        .write(
+            Req::new(Method::PATCH, "/api/v1/settings/profile")
+                .json_body(&json!({"emailAddress": replacement, "currentPassword": PASSWORD})),
+        )
+        .await;
+    assert_eq!(updated.status, StatusCode::OK, "{}", updated.text());
+
+    let saved = a
+        .db()
+        .write(move |tx| {
+            campfire_runtime::authentication::update_profile(
+                tx,
+                &mut user,
+                campfire_db::UserChanges {
+                    email_address: Some(submitted),
+                    ..Default::default()
+                },
+                false,
+                Some(session_id),
+                false,
+                &Default::default(),
+            )
+        })
+        .await
+        .unwrap();
+    assert!(!saved);
+    assert_eq!(email_of(&a, DAVID).await, replacement);
 }
 
 #[tokio::test]

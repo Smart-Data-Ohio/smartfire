@@ -12,42 +12,51 @@ use serde_json::json;
 
 /// `app/controllers/users/profiles_controller.rb`: security audits and the rollback marker
 /// commit with the user update.
-/// The authorizing session and password snapshot must still be current for credential changes.
+/// Credential changes require the original session and digest, and email submissions must still
+/// agree with the address snapshot used to authorize them.
 /// Returns false without writing when that authorization has gone stale.
 pub fn update_profile(
     tx: &mut Tx<'_>,
     user: &mut User,
     mut changes: UserChanges,
-    email_changing: bool,
+    audit_email_change: bool,
     session_id: Option<i64>,
     legacy_raw_password_present: bool,
     context: &Context,
 ) -> Result<bool> {
     let writes_digest = changes.password_digest.is_some();
-    if email_changing || writes_digest {
-        let Some(session_id) = session_id else {
-            return Ok(false);
-        };
-        let current_digest = tx
+    let submitted_email = changes.email_address.as_ref();
+    if submitted_email.is_some() || writes_digest || audit_email_change {
+        let current: Option<(Option<String>, Option<String>, bool)> = tx
             .conn()
             .query_row(
-                "SELECT users.password_digest FROM users JOIN sessions ON sessions.user_id = users.id
-                 WHERE users.id = ?1 AND sessions.id = ?2",
+                "SELECT email_address, password_digest,
+                        EXISTS(SELECT 1 FROM sessions WHERE user_id = users.id AND id = ?2)
+                 FROM users WHERE id = ?1",
                 rusqlite::params![user.id, session_id],
-                |row| row.get::<_, Option<String>>(0),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )
             .optional()?;
-        if current_digest.as_ref() != Some(&user.password_digest) {
+        let Some((current_email, current_digest, has_session)) = current else {
+            return Ok(false);
+        };
+        if submitted_email.is_some() && current_email != user.email_address {
+            return Ok(false);
+        }
+        let writes_email = submitted_email.is_some_and(|email| *email != current_email);
+        if (writes_email || writes_digest || audit_email_change)
+            && (!has_session || current_digest != user.password_digest)
+        {
             return Ok(false);
         }
     }
     let previous_digest = writes_digest.then(|| user.password_digest.clone());
     let previous_email = user.email_address.clone();
-    if email_changing {
+    if audit_email_change {
         changes.email_self_changed_at = Some(tx.now());
     }
     user.update(tx, changes)?;
-    if email_changing {
+    if audit_email_change {
         AuditLog::record(
             tx,
             NewAuditLog {
