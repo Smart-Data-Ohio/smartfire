@@ -447,3 +447,58 @@ async fn requests_and_new_passwords_are_rate_limited() {
     assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
     assert_eq!(reply.json(), too_many);
 }
+
+async fn new_digest(a: &TestApp, password: &str) -> campfire_db::PasswordDigest {
+    campfire_db::PasswordDigest::hash(password.into(), a.db().env().bcrypt_cost)
+        .await
+        .unwrap()
+}
+
+/// David's password digest, audit rows and sessions, to show a refused reset changed none of them.
+async fn reset_state(a: &TestApp) -> Value {
+    a.db()
+        .read(|conn| {
+            let digest = campfire_db::User::find(conn, DAVID)?.password_digest;
+            let audits: i64 = conn.query_row("SELECT count(*) FROM audit_logs", [], |r| r.get(0))?;
+            let sessions: i64 = conn.query_row(
+                "SELECT count(*) FROM sessions WHERE user_id=?",
+                [DAVID],
+                |r| r.get(0),
+            )?;
+            Ok(json!([digest, audits, sessions]))
+        })
+        .await
+        .unwrap()
+}
+
+/// Two uses of one link can both pass the read-side check; the writer's recheck stops the second.
+#[tokio::test]
+async fn a_claim_checked_before_the_password_changed_resets_nothing() {
+    use campfire_people::controllers::password_resets::reset_with_claim;
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let token = emailed_token(&a, &david).await;
+    let secrets = a.booted.app.secrets.clone();
+    let claim = rails_compat::password_reset::verify(&secrets, &token, a.booted.app.clock.now())
+        .expect("a fresh link");
+
+    let first = new_digest(&a, NEW_PASSWORD).await;
+    let (s, c) = (secrets.clone(), claim.clone());
+    let reset = a
+        .db()
+        .write(move |tx| reset_with_claim(tx, &s, &c, first, &Default::default()))
+        .await
+        .unwrap();
+    assert!(reset);
+    let _signed_in = a.sign_in(DAVID).await;
+    let before = reset_state(&a).await;
+
+    let second = new_digest(&a, "the racing passphrase").await;
+    let reset = a
+        .db()
+        .write(move |tx| reset_with_claim(tx, &secrets, &claim, second, &Default::default()))
+        .await
+        .unwrap();
+    assert!(!reset);
+    assert_eq!(reset_state(&a).await, before);
+}

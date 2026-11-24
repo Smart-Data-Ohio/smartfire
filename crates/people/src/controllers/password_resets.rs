@@ -8,7 +8,8 @@
 //! (`Config::password_reset_available`); otherwise every endpoint answers 404.
 
 use campfire_api_types::{PasswordResetRequest, PasswordResetState, PasswordResetSubmission};
-use campfire_db::User;
+use campfire_db::models::audit_log::Context;
+use campfire_db::{PasswordDigest, Tx, User};
 use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, halt};
 use jiff::SignedDuration;
 use rails_compat::password_reset::{self, Claim};
@@ -91,7 +92,7 @@ async fn update_response(c: &mut Ctx) -> Result {
     before_actions(c, "password_resets#update").await?;
     rate_limit(c, &update_rate_limit(), None)?;
     let body: PasswordResetSubmission = auth::body(c).await?;
-    let Some((user, claim)) = resettable(c).await? else {
+    let Some((_, claim)) = resettable(c).await? else {
         return refuse_link(c).await;
     };
     if let Some(problem) = password_problem(&body.password) {
@@ -102,21 +103,10 @@ async fn update_response(c: &mut Ctx) -> Result {
         .expect("a password was given");
     let context = super::two_factor::audit_context(c)?;
     let secrets = c.app().secrets.clone();
-    // Checked again on the writer: a second use of the link racing this one finds the new digest.
     let reset = c
         .app()
         .db
-        .write(move |tx| {
-            let current = User::find_by_id(tx.conn(), user.id)?
-                .filter(|user| still_resettable(&secrets, &claim, user));
-            match current {
-                Some(mut user) => {
-                    authentication::reset_password(tx, &mut user, digest, &context)?;
-                    Ok(true)
-                }
-                None => Ok(false),
-            }
-        })
+        .write(move |tx| reset_with_claim(tx, &secrets, &claim, digest, &context))
         .await
         .map_err(Error::internal)?;
     if !reset {
@@ -176,6 +166,24 @@ async fn resettable(c: &Ctx) -> Result<Option<(User, Claim)>> {
     Ok(user
         .filter(|user| still_resettable(&secrets, &claim, user))
         .map(|user| (user, claim)))
+}
+
+/// Sets the new password if the link still matches its user, checked again on the writer: of two
+/// uses of one link racing each other, the second finds the first's digest and changes nothing.
+pub fn reset_with_claim(
+    tx: &mut Tx<'_>,
+    secrets: &rails_compat::Secrets,
+    claim: &Claim,
+    digest: PasswordDigest,
+    context: &Context,
+) -> campfire_db::Result<bool> {
+    let current = User::find_by_id(tx.conn(), claim.user_id)?
+        .filter(|user| still_resettable(secrets, claim, user));
+    let Some(mut user) = current else {
+        return Ok(false);
+    };
+    authentication::reset_password(tx, &mut user, digest, context)?;
+    Ok(true)
 }
 
 fn still_resettable(secrets: &rails_compat::Secrets, claim: &Claim, user: &User) -> bool {
