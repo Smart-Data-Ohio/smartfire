@@ -15,11 +15,11 @@ import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import {
   CONFIRM,
-  coversPastYear,
   importBody,
   inactiveHint,
   inactiveReason,
   keyed,
+  planCoverage,
 } from "./slack-format.ts";
 import { useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
@@ -44,22 +44,22 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
   const id = useId();
   const [now] = useState(Date.now);
 
-  const covered = coversPastYear(plan, now);
+  const coverage = planCoverage(plan, now);
 
   const reasons = useMemo(
     () =>
       new Map(
         plan.conversations.map(({ conversation }) => [
           conversation.id,
-          inactiveReason(conversation, now, covered),
+          inactiveReason(conversation, now, coverage),
         ]),
       ),
-    [plan, now, covered],
+    [plan, now, coverage],
   );
 
   const inactiveCount = [...reasons.values()].filter((reason) => reason !== null).length;
 
-  const hint = inactiveHint(inactiveCount, covered);
+  const hint = inactiveHint(inactiveCount, coverage);
 
   const everything = () => new Set(plan.conversations.map(({ conversation }) => conversation.id));
 
@@ -126,7 +126,7 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
           <Button size="sm" onClick={() => setChecked(everything())}>
             Select all
           </Button>
-          {inactiveCount > 0 ? (
+          {inactiveCount > 0 && inactiveCount < plan.conversations.length ? (
             <Button size="sm" onClick={() => setChecked(active())}>
               Select active
             </Button>

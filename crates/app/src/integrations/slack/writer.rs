@@ -378,13 +378,12 @@ pub struct History {
 }
 /// Keeps the newer of `latest` and `ts`, both Slack timestamps.
 pub fn keep_newer(latest: &mut Option<String>, ts: &str) {
-    let seconds = |ts: &str| ts.parse::<f64>().ok();
-    let Some(candidate) = seconds(ts) else {
+    let Ok(candidate) = slack_time(ts) else {
         return;
     };
     if latest
         .as_deref()
-        .and_then(seconds)
+        .and_then(|current| slack_time(current).ok())
         .is_none_or(|current| candidate > current)
     {
         *latest = Some(ts.to_owned());

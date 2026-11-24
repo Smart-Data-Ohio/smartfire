@@ -18,7 +18,7 @@ use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN, Req, T
 fn found() -> Value {
     json!({
         "conversations": [
-            {"id": "C1", "name": "general", "type": "public_channel", "members": 4, "messages": 12, "threads": 2},
+            {"id": "C1", "name": "general", "type": "public_channel", "members": 4, "messages": 12, "threads": 2, "latest": "1700000000.000100"},
             {"id": "G2", "name": "secret", "type": "private_channel", "members": 2, "messages": 3},
             {"id": "D3", "name": "Kevin", "type": "im", "messages": 1}
         ],
@@ -361,6 +361,36 @@ async fn a_run_reads_as_its_classic_page() {
         "the rooms a conversation can merge into"
     );
     assert!(!plan.default_oldest.is_empty());
+    let last_messages: Vec<_> = plan
+        .conversations
+        .iter()
+        .map(|each| each.conversation.last_message_at.as_deref())
+        .collect();
+    assert_eq!(
+        last_messages,
+        [Some("2023-11-14T22:13:20.000Z"), None, None],
+        "a dry run's newest Slack ts, on the wire"
+    );
+    assert_eq!((plan.scanned_from, plan.scanned_until), (None, None));
+
+    let bounded = self::run(
+        &a,
+        "workspace",
+        "dry_run",
+        "completed",
+        json!({"oldest": "2026-01-02T05:00:00Z", "latest": null}),
+    )
+    .await;
+    let bounded: api::SlackPlan = parse(
+        &david
+            .send(get(&format!("/api/v1/admin/slack/runs/{bounded}/plan")))
+            .await,
+    );
+    assert_eq!(
+        (bounded.scanned_from.as_deref(), bounded.scanned_until),
+        (Some("2026-01-02T05:00:00.000Z"), None),
+        "the dry run's date bounds, so the plan knows what it counted"
+    );
 
     let running = running_dry_run(&a).await;
     let early = david

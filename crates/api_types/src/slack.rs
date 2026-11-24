@@ -209,7 +209,7 @@ pub struct SlackConversation {
     pub messages: i64,
     pub threads: i64,
     /// The newest message or thread reply the dry run counted, or none.
-    pub last_message_at: Option<String>,
+    pub last_message_at: Option<Timestamp>,
 }
 
 /// `GET .../runs/:id/status`: one run's progress, polled while it is active.
@@ -331,8 +331,8 @@ pub struct SlackPlan {
     /// A test import's default oldest day (`YYYY-MM-DD`, two weeks back).
     pub default_oldest: String,
     /// The dry run's date bounds, when it had them: it counted only messages between them.
-    pub scanned_from: Option<String>,
-    pub scanned_until: Option<String>,
+    pub scanned_from: Option<Timestamp>,
+    pub scanned_until: Option<Timestamp>,
 }
 
 /// `POST /api/v1/admin/slack/runs` (`accounts/slack_import_runs#create`): a workspace dry run.
