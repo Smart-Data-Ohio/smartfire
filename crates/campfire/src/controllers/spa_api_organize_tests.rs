@@ -1574,3 +1574,239 @@ async fn workspace_room_moves_before_a_room_counting_rooms_the_admin_is_not_in()
     // that doesn't exist, so the answer doesn't tell him it is there.
     assert_eq!(refusals[3], refusals[2]);
 }
+
+#[tokio::test]
+async fn closing_a_direct_only_hides_its_sidebar_row_for_the_viewer() {
+    use super::api_tests::get;
+
+    let Some(a) = app(true).await else { return };
+    let room = DIRECT_DAVID_JASON;
+    let path = format!("/api/v1/rooms/{room}");
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let other_device = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut first = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    let mut second = Sync::connect(addr, &other_device.cookie_header(), &[]).await;
+    let mut peer = Sync::connect(addr, &jason.cookie_header(), &[]).await;
+    first.welcome().await;
+    second.welcome().await;
+    peer.welcome().await;
+
+    let reply = send(
+        &mut jason,
+        Method::POST,
+        &format!("{path}/messages"),
+        json!({"clientMessageId": "close-dm-history", "markdownSource": "closefixturehistory"}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let favorite = david
+        .write(Req::new(Method::POST, &format!("{path}/favorite")))
+        .await;
+    let before = ok::<api::SidebarRow>(&favorite).membership;
+    assert!(before.favorite_position.is_some());
+    assert!(before.unread_at.is_some());
+
+    let closed = format!("{path}/closed");
+    let change = ok::<api::DirectClosedChange>(
+        &send(&mut david, Method::PUT, &closed, json!({"closed": true})).await,
+    );
+    assert!(change.row.is_none());
+
+    let removed = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room);
+    for tab in [&mut first, &mut second] {
+        let event = tab.until(removed, |_| false).await;
+        assert_eq!(event.topic, "user");
+        assert!(
+            matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(row)
+            if row.closed == Some(true) && row.refresh_room.is_none())
+        );
+    }
+
+    let sidebar: api::Sidebar = ok(&david.send(get("/api/v1/sidebar")).await);
+    assert!(!sidebar.rows.iter().any(|row| row.room.id == room));
+    let peer_sidebar: api::Sidebar = ok(&jason.send(get("/api/v1/sidebar")).await);
+    assert!(peer_sidebar.rows.iter().any(|row| row.room.id == room));
+    // Fence the peer's socket after the two viewer deliveries.
+    a.booted.app.broadcasts.sync_row_removed(JASON, 1);
+    peer.until(
+        |e| matches!(&e.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == 1),
+        removed,
+    )
+    .await;
+
+    let detail: api::RoomDetail = ok(&david.send(get(&path)).await);
+    assert_eq!(detail.membership.closed, Some(true));
+    assert_eq!(
+        api::Membership {
+            closed: None,
+            ..detail.membership
+        },
+        before
+    );
+    let switcher: api::Switcher = ok(&david.send(get("/api/v1/switcher")).await);
+    assert!(switcher.rooms.iter().any(|entry| entry.room_id == room));
+    let search: api::SearchResults = ok(&david
+        .send(get("/api/v1/search?q=closefixturehistory"))
+        .await);
+    assert!(
+        search
+            .messages
+            .iter()
+            .any(|message| message.room_id == room)
+    );
+
+    assert_eq!(
+        send(&mut kevin, Method::PUT, &closed, json!({"closed": true}))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        send(
+            &mut david,
+            Method::PUT,
+            &format!("/api/v1/rooms/{ALL_TALK}/closed"),
+            json!({"closed": true})
+        )
+        .await
+        .status,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+
+    let change = ok::<api::DirectClosedChange>(
+        &send(&mut david, Method::PUT, &closed, json!({"closed": false})).await,
+    );
+    assert_eq!(change.row.unwrap().membership, before);
+    for tab in [&mut first, &mut second] {
+        tab.until(row_of(room), |_| false).await;
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn messages_reopen_closed_directs_using_the_existing_notification_policy() {
+    use super::api_tests::get;
+
+    let Some(a) = app(true).await else { return };
+    let room = DIRECT_DAVID_JASON;
+    let path = format!("/api/v1/rooms/{room}");
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut other_device = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    for (index, (level, expected)) in [
+        ("everything", api::Involvement::Everything),
+        ("muted", api::Involvement::Muted),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let reply = send(
+            &mut david,
+            Method::PUT,
+            &format!("{path}/involvement"),
+            json!({"involvement": level}),
+        )
+        .await;
+        assert_eq!(involvement(&reply).involvement, expected);
+        let close = send(
+            &mut david,
+            Method::PUT,
+            &format!("{path}/closed"),
+            json!({"closed": true}),
+        )
+        .await;
+        assert_eq!(close.status, StatusCode::OK);
+        sync.until(|event| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room && row.closed == Some(true)), |_| false).await;
+
+        let posted = send(
+            &mut jason,
+            Method::POST,
+            &format!("{path}/messages"),
+            json!({
+                "clientMessageId": format!("reopen-by-peer-{index}"),
+                "markdownSource": format!("A new message {index}"),
+            }),
+        )
+        .await;
+        assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+        let message: api::MessageDTO = parse(&posted);
+        let should_notify = expected == api::Involvement::Everything;
+        let event = sync.until(row_of(room), |_| false).await;
+        let api::SyncPayload::SidebarRowUpserted(row) = event.payload else {
+            unreachable!()
+        };
+        assert_eq!(row.membership.involvement, expected);
+        assert_eq!(row.membership.unread_at.is_some(), should_notify);
+        assert_eq!(row.notification_count > 0, should_notify);
+        let rich_text = a.db().env().rich_text.clone();
+        let now = a.db().env().now();
+        let recipients = a
+            .db()
+            .read(move |conn| {
+                let message = campfire_db::Message::find(conn, message.id)?;
+                campfire_db::PushSubscription::room_notified(conn, &*rich_text, &message, now)
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            recipients.iter().any(|member| member.user_id == DAVID),
+            should_notify
+        );
+    }
+
+    let reply = send(
+        &mut david,
+        Method::PUT,
+        &format!("{path}/closed"),
+        json!({"closed": true}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK);
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room && row.closed == Some(true)), |_| false).await;
+    let posted = send(
+        &mut other_device,
+        Method::POST,
+        &format!("{path}/messages"),
+        json!({
+            "clientMessageId": "reopen-by-own-device", "markdownSource": "From my phone",
+        }),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let event = sync.until(row_of(room), |_| false).await;
+    let api::SyncPayload::SidebarRowUpserted(row) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(row.membership.involvement, api::Involvement::Muted);
+    assert!(row.membership.unread_at.is_none());
+
+    let reply = send(
+        &mut david,
+        Method::PUT,
+        &format!("{path}/closed"),
+        json!({"closed": true}),
+    )
+    .await;
+    assert_eq!(reply.status, StatusCode::OK);
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room && row.closed == Some(true)), |_| false).await;
+    let revealed: api::SidebarRow = ok(&send(
+        &mut david,
+        Method::POST,
+        "/api/v1/directs",
+        json!({"userIds": [JASON]}),
+    )
+    .await);
+    assert_eq!(revealed.room.id, room);
+    assert_eq!(revealed.membership.involvement, api::Involvement::Muted);
+    sync.until(row_of(room), |_| false).await;
+    let sidebar: api::Sidebar = ok(&david.send(get("/api/v1/sidebar")).await);
+    assert!(sidebar.rows.iter().any(|row| row.room.id == room));
+    server.abort();
+}

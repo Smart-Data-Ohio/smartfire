@@ -19,6 +19,10 @@ lastReadMessageId: number | null, roomCategoryId: number | null,
  */
 favoritePosition: number | null,
 /**
+ * `true` while a direct conversation is closed in the viewer's sidebar.
+ */
+closed?: boolean,
+/**
  * Stage rooms only.
  */
 stageRole: StageRole | null, };

@@ -37,6 +37,10 @@ pub struct Sidebar {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub note_to_self_room_id: Option<i64>,
+    /// `true` while the viewer has closed their note-to-self.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub note_to_self_closed: Option<bool>,
     /// Whether the viewer may create channels: an administrator, or anyone when the account
     /// doesn't restrict room creation to administrators.
     pub can_create_rooms: bool,
@@ -125,12 +129,16 @@ pub struct RoomCategory {
 }
 
 /// The `sidebar.row.removed` event: the room left the person's sidebar (they left, were
-/// removed, set it invisible, or the room was deleted).
+/// removed, closed it, set it invisible, or the room was deleted).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SidebarRowRemoved {
     pub room_id: i64,
+    /// `true` when the viewer closed a direct conversation.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub closed: Option<bool>,
     /// Reload a loaded room: management changed a hidden row, or room access was lost.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]

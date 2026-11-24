@@ -623,6 +623,7 @@ mod tests {
         );
         let refreshed = crate::SidebarRowRemoved {
             room_id: 12,
+            closed: None,
             refresh_room: Some(true),
         };
         let wire = json!({"roomId": 12, "refreshRoom": true});

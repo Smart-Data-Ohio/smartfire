@@ -262,6 +262,7 @@ fn room_and_membership_round_trip() {
         last_read_message_id: Some(8999),
         room_category_id: None,
         favorite_position: Some(0),
+        closed: None,
         stage_role: Some(StageRole::Host),
     };
     assert_wire(
@@ -595,6 +596,7 @@ fn membership() -> Membership {
         last_read_message_id: Some(8999),
         room_category_id: Some(3),
         favorite_position: None,
+        closed: None,
         stage_role: None,
     }
 }
@@ -754,6 +756,7 @@ fn sidebar_round_trips() {
             rooms: vec![],
         },
         note_to_self_room_id: None,
+        note_to_self_closed: None,
     };
     let wire = serde_json::to_value(&sidebar).unwrap();
     assert_eq!(
@@ -865,6 +868,7 @@ fn s1_events_match_the_protocol() {
         (
             SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
                 room_id: 12,
+                closed: None,
                 refresh_room: None,
             }),
             json!({"type": "sidebar.row.removed", "data": {"roomId": 12}}),

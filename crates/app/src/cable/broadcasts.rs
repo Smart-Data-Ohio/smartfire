@@ -95,10 +95,8 @@ impl Broadcasts {
         sync::thread_indicator_later(&self.server, &self.sync, parent_message_id);
     }
 
-    /// `sidebar.row.upserted` for the people a new message made the room unread for, read
-    /// afresh later: their counts changed. For an unread ping a broadcast point outside this
-    /// type sent.
-    pub fn sync_unread_rows(&self, room_id: i64, user_ids: Vec<i64>) {
+    /// Refreshes the named members' sidebar rows after unread or direct visibility changes.
+    pub fn sync_sidebar_rows(&self, room_id: i64, user_ids: Vec<i64>) {
         sync::sidebar_rows_later(&self.server, &self.sync, room_id, Some(user_ids));
     }
 

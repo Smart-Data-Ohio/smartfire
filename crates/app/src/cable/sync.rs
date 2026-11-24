@@ -1748,7 +1748,12 @@ impl RoomRows {
         let mut row = match renderer.sidebar_row(conn, room, membership) {
             Ok(Some(row)) => row,
             Ok(None) => {
-                self.hidden(server, user_id, refresh_room);
+                self.hidden(
+                    server,
+                    user_id,
+                    refresh_room,
+                    membership.closed_at.is_some(),
+                );
                 return true;
             }
             Err(error) => {
@@ -1777,6 +1782,7 @@ impl RoomRows {
         let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
             room_id,
             refresh_room: Some(true),
+            closed: None,
         });
         send(server, Audience::User(user_id), &payload, |publication| {
             SyncPublication {
@@ -1786,12 +1792,12 @@ impl RoomRows {
         });
     }
 
-    /// The person hid the room (an invisible membership): `sidebar.row.removed` on their `user`
-    /// topic, while their connections go on following it.
-    fn hidden(&self, server: &Cable, user_id: i64, refresh_room: Option<bool>) {
+    /// The person hid the room: remove the sidebar row while their connections keep following it.
+    fn hidden(&self, server: &Cable, user_id: i64, refresh_room: Option<bool>, closed: bool) {
         let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
             room_id: self.room_id,
             refresh_room,
+            closed: closed.then_some(true),
         });
         send(server, Audience::User(user_id), &payload, |publication| {
             publication
@@ -1804,6 +1810,7 @@ impl RoomRows {
         let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
             room_id,
             refresh_room: Some(true),
+            closed: None,
         });
         send(server, Audience::Everyone, &payload, |publication| {
             SyncPublication {

@@ -2,9 +2,13 @@
 
 /**
  * The `sidebar.row.removed` event: the room left the person's sidebar (they left, were
- * removed, set it invisible, or the room was deleted).
+ * removed, closed it, set it invisible, or the room was deleted).
  */
 export type SidebarRowRemoved = { roomId: number,
+/**
+ * `true` when the viewer closed a direct conversation.
+ */
+closed?: boolean,
 /**
  * Reload a loaded room: management changed a hidden row, or room access was lost.
  */

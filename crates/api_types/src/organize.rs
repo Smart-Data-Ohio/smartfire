@@ -239,3 +239,20 @@ pub struct MoveWorkspaceRoom {
 pub struct ReorderWorkspaceCategories {
     pub category_ids: Vec<i64>,
 }
+
+/// `PUT /api/v1/rooms/:id/closed`: close or reopen a direct conversation in the viewer's
+/// sidebar. Membership, notifications and read position stay the same. 404 for a
+/// non-member, 422 for a room of any other kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct SetDirectClosed {
+    pub closed: bool,
+}
+
+/// The viewer's current sidebar row after setting `closed`, or `null` if it is hidden.
+/// Changes publish `sidebar.row.removed` or `sidebar.row.upserted` to that viewer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DirectClosedChange {
+    pub row: Option<SidebarRow>,
+}

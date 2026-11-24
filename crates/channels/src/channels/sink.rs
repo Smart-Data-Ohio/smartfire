@@ -344,7 +344,7 @@ pub(crate) fn messaging(
                 *author_id,
             );
             if let Some(app) = app {
-                app.broadcasts.sync_unread_rows(*room_id, user_ids.clone());
+                app.broadcasts.sync_sidebar_rows(*room_id, user_ids.clone());
             }
         }
         Broadcast::MessageCreated { message_id } | Broadcast::MessageUpdated { message_id } => {
@@ -383,6 +383,11 @@ pub(crate) fn messaging(
         Broadcast::ThreadRemoved { thread_id, room_id } => {
             if let Some(app) = app {
                 app.broadcasts.thread_removed(*thread_id, *room_id);
+            }
+        }
+        Broadcast::DirectSidebarChanged { room_id, user_ids } => {
+            if let Some(app) = app {
+                app.broadcasts.sync_sidebar_rows(*room_id, user_ids.clone());
             }
         }
         Broadcast::MembershipChanged { membership_id } => {

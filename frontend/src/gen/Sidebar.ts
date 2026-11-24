@@ -46,6 +46,10 @@ directPlaceholderUserIds: Array<number>,
  */
 noteToSelfRoomId?: number,
 /**
+ * `true` while the viewer has closed their note-to-self.
+ */
+noteToSelfClosed?: boolean,
+/**
  * Whether the viewer may create channels: an administrator, or anyone when the account
  * doesn't restrict room creation to administrators.
  */

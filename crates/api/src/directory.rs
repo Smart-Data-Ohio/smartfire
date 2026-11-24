@@ -151,6 +151,12 @@ async fn post_direct(c: &mut Ctx) -> Result {
             }
             let created = Room::find_direct_for(tx.conn(), &users)?.is_none();
             let room = Room::find_or_create_direct_for(tx, &users, viewer)?;
+            if !created
+                && let Some(membership) =
+                    Membership::find_by_room_and_user(tx.conn(), room.id, viewer)?
+            {
+                membership.set_direct_closed(tx, false)?;
+            }
             Ok(Some((room, created)))
         })
         .await

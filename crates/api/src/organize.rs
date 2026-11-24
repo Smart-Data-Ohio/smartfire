@@ -54,6 +54,43 @@ endpoint!(
     involvement => put_involvement
 );
 
+endpoint!(
+    /// `PUT /api/v1/rooms/:room_id/closed`
+    direct_closed => put_direct_closed
+);
+
+async fn put_direct_closed(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let (membership, room) = set_room(c).await?;
+    if !room.direct() {
+        return Err(fail(
+            c,
+            validation("closed", "can only be set on a direct conversation"),
+        ));
+    }
+    let api::SetDirectClosed { closed } = body(c).await?;
+    let row = c
+        .app()
+        .db
+        .write(move |tx| {
+            let room = membership.room(tx.conn())?;
+            if room.deleted() {
+                return Err(campfire_db::Error::RecordNotFound("Room"));
+            }
+            let membership = Membership::find(tx.conn(), membership.id)?;
+            membership.set_direct_closed(tx, closed)?;
+            if closed {
+                return Ok(None);
+            }
+            let conn = campfire_db::Snapshot::of_write(tx)?;
+            let membership = Membership::find(&conn, membership.id)?;
+            dto::sidebar_row(&conn, &room, &membership, tx.now())
+        })
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &api::DirectClosedChange { row })
+}
+
 fn path_category_id(c: &Ctx) -> Result<i64> {
     c.param_str("category_id")
         .and_then(cast_integer)

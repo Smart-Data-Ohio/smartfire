@@ -156,6 +156,10 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
     while let Some(row) = rows.next().unwrap() {
         let mut fields: Vec<(String, String)> = Vec::new();
         for (i, name) in names.iter().enumerate() {
+            if table == "memberships" && name == "closed_at" {
+                assert_eq!(row.get::<_, Option<String>>(i).unwrap(), None);
+                continue;
+            }
             if matches!(table, "push_subscriptions" | "workspace_presence_leases")
                 && name == "device_class"
             {

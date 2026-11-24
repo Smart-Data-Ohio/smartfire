@@ -28,6 +28,10 @@ pub(crate) fn snapshot(conn: &Connection, table: &str) -> crate::Result<Value> {
         .query_map([], |row| {
             let mut object = serde_json::Map::new();
             for (index, column) in columns.iter().enumerate() {
+                if table == "memberships" && column == "closed_at" {
+                    assert_eq!(row.get::<_, Option<String>>(index)?, None);
+                    continue;
+                }
                 if column == "identity" {
                     continue;
                 }

@@ -270,6 +270,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
                 .delete(action(organize::unfavorite)),
         )
         .route(
+            "/api/v1/rooms/{room_id}/closed",
+            put(unparsed_action(organize::direct_closed)),
+        )
+        .route(
             "/api/v1/rooms/{room_id}/involvement",
             put(unparsed_action(organize::involvement)),
         )

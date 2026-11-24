@@ -27,6 +27,10 @@ pub enum Broadcast {
         thread_id: i64,
         room_id: i64,
     },
+    DirectSidebarChanged {
+        room_id: i64,
+        user_ids: Vec<i64>,
+    },
     MembershipChanged {
         membership_id: i64,
     },

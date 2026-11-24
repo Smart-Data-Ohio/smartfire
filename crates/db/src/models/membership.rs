@@ -146,6 +146,7 @@ pub struct Membership {
     pub last_huddle_join_push_at: Option<Timestamp>,
     pub room_category_id: Option<i64>,
     pub favorite_position: Option<i64>,
+    pub closed_at: Option<Timestamp>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -167,6 +168,7 @@ impl Membership {
             last_huddle_join_push_at: row.get("last_huddle_join_push_at")?,
             room_category_id: row.get("room_category_id")?,
             favorite_position: row.get("favorite_position")?,
+            closed_at: row.get("closed_at")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
@@ -331,10 +333,28 @@ impl Membership {
 
     /// `user.memberships.visible.with_ordered_room`, each with its room.
     pub fn visible_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
+        Self::ordered_room(conn, user_id, "AND memberships.involvement != 'invisible'")
+    }
+
+    /// The visible membership rows in the sidebar, excluding closed direct conversations.
+    pub fn sidebar_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
+        Self::ordered_room(
+            conn,
+            user_id,
+            "AND memberships.involvement != 'invisible' AND memberships.closed_at IS NULL",
+        )
+    }
+
+    /// `user.memberships.with_ordered_room` (invisible included).
+    pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
+        Self::ordered_room(conn, user_id, "")
+    }
+
+    fn ordered_room(conn: &Connection, user_id: i64, filter: &str) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
             &format!(
-                r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#,
+                r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? {filter} ORDER BY LOWER(rooms.name)"#,
                 Self::policy_columns(),
                 Room::PREFIXED_COLUMNS
             ),
@@ -343,18 +363,36 @@ impl Membership {
         )
     }
 
-    /// `user.memberships.with_ordered_room` (invisible included).
-    pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
-        query_all(
-            conn,
-            &format!(
-                r#"SELECT {}, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#,
-                Self::policy_columns(),
-                Room::PREFIXED_COLUMNS
-            ),
-            [user_id],
-            |row| Ok((Self::from_policy_row(row)?, Room::from_prefixed_row(row)?)),
-        )
+    /// Close or reopen the viewer's sidebar row, touching only its closed timestamp.
+    pub fn set_direct_closed(&self, tx: &mut Tx<'_>, closed: bool) -> Result<()> {
+        let changed = tx.conn().execute_cached(
+            "UPDATE memberships SET closed_at = ?1 WHERE id = ?2 AND (closed_at IS NULL) = ?3",
+            params![closed.then(|| tx.now()), self.id, closed],
+        )?;
+        if changed != 0 {
+            Self::broadcast_direct_sidebar(tx, self.room_id, vec![self.user_id]);
+        }
+        Ok(())
+    }
+
+    /// A live message reopens a direct conversation for every closed member, including its author.
+    pub(crate) fn reopen_direct_for_message(tx: &mut Tx<'_>, room_id: i64) -> Result<()> {
+        let user_ids = query_all(
+            tx.conn(),
+            "UPDATE memberships SET closed_at = NULL WHERE room_id = (SELECT id FROM rooms WHERE id = ? AND type = 'Rooms::Direct') AND closed_at IS NOT NULL RETURNING user_id",
+            [room_id],
+            |row| row.get(0),
+        )?;
+        if !user_ids.is_empty() {
+            Self::broadcast_direct_sidebar(tx, room_id, user_ids);
+        }
+        Ok(())
+    }
+
+    fn broadcast_direct_sidebar(tx: &mut Tx<'_>, room_id: i64, user_ids: Vec<i64>) {
+        tx.emit_after_commit(Event::broadcast(
+            &crate::broadcasts::Broadcast::DirectSidebarChanged { room_id, user_ids },
+        ));
     }
 
     /// `user.memberships.without_direct_rooms.count`
@@ -527,11 +565,10 @@ impl Membership {
             .map(|m| m.id)
             .filter(|id| *id != self.id)
             .collect();
-        // What `visible_with_ordered_room` shows: rooms not deleted, and `involvement !=
-        // 'invisible'`, which leaves out NULL too.
+        // Count only the favourites the sidebar shows.
         let shown: Vec<i64> = query_all(
             tx.conn(),
-            r#"SELECT "memberships"."id" FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."favorite_position" IS NOT NULL AND "memberships"."involvement" != 'invisible' AND "memberships"."id" != ? ORDER BY "memberships"."favorite_position", "memberships"."id""#,
+            r#"SELECT "memberships"."id" FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."favorite_position" IS NOT NULL AND "memberships"."involvement" != 'invisible' AND "memberships"."closed_at" IS NULL AND "memberships"."id" != ? ORDER BY "memberships"."favorite_position", "memberships"."id""#,
             params![self.user_id, self.id],
             |row| row.get(0),
         )?;

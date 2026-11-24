@@ -856,7 +856,8 @@ impl Room {
         if message.system_note {
             return Ok(());
         }
-        Self::unread_memberships(tx, room_id, message)
+        Self::unread_memberships(tx, room_id, message)?;
+        Membership::reopen_direct_for_message(tx, room_id)
     }
 
     /// `push_later(message)`, the rest of `room.receive(message)`: `Room::PushMessageJob`. Rails

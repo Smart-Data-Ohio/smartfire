@@ -430,6 +430,7 @@ pub fn membership(membership: &Membership) -> api::Membership {
         last_read_message_id: membership.last_read_message_id,
         room_category_id: membership.room_category_id,
         favorite_position: membership.favorite_position,
+        closed: membership.closed_at.is_some().then_some(true),
         stage_role: membership.stage_role.map(|role| match role {
             StageRole::Listener => api::StageRole::Listener,
             StageRole::Speaker => api::StageRole::Speaker,
@@ -1196,6 +1197,7 @@ fn last_direct_messages(
 /// Whether the membership has a sidebar row (`memberships.visible`, of an alive room).
 fn visible(room: &Room, membership: &Membership) -> bool {
     !room.deleted()
+        && membership.closed_at.is_none()
         && membership
             .involvement
             .is_some_and(|involvement| involvement != Involvement::Invisible)
@@ -1312,7 +1314,7 @@ pub fn sidebar(
     can_create_rooms: bool,
     now: Timestamp,
 ) -> Result<api::Sidebar> {
-    let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
+    let all = Membership::sidebar_with_ordered_room(conn, viewer.id)?;
     #[cfg(feature = "test-support")]
     crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
     let counts = notification_counts(conn, viewer.id, None, now)?;
@@ -1351,7 +1353,14 @@ pub fn sidebar(
         .iter()
         .map(|user| user.id)
         .collect();
-    if !rows.iter().any(|row| row.note_to_self == Some(true)) {
+    let note_to_self_closed = match note_to_self {
+        Some(id) if !rows.iter().any(|row| row.room.id == id) => {
+            Membership::find_by_room_and_user(conn, id, viewer.id)?
+                .is_some_and(|membership| membership.closed_at.is_some())
+        }
+        _ => false,
+    };
+    if !note_to_self_closed && !rows.iter().any(|row| row.note_to_self == Some(true)) {
         placeholders.insert(0, viewer.id);
     }
     user_ids.extend(placeholders.iter().copied());
@@ -1365,6 +1374,7 @@ pub fn sidebar(
         users: users(conn, secrets, user_ids, now)?,
         direct_placeholder_user_ids: placeholders,
         note_to_self_room_id: note_to_self,
+        note_to_self_closed: note_to_self_closed.then_some(true),
         can_create_rooms,
         workspace_layout: crate::sync::workspace_layout(conn, viewer.id)?,
     })
@@ -1477,6 +1487,14 @@ pub fn me(
             end_minute: minute(end),
         }),
         _ => None,
+    };
+    let last_room_id = if let Some(id) = last_room_id
+        && Membership::find_by_room_and_user(conn, id, viewer.id)?
+            .is_some_and(|membership| membership.closed_at.is_some())
+    {
+        None
+    } else {
+        last_room_id
     };
     Ok(api::Me {
         user: user(

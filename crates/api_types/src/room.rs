@@ -55,6 +55,10 @@ pub struct Membership {
     pub room_category_id: Option<i64>,
     /// Position among favourites; `null` when not a favourite.
     pub favorite_position: Option<i64>,
+    /// `true` while a direct conversation is closed in the viewer's sidebar.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub closed: Option<bool>,
     /// Stage rooms only.
     pub stage_role: Option<StageRole>,
 }

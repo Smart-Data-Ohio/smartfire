@@ -191,10 +191,10 @@ pub use message::{
     MessageSource, SoundPresentation, UpdateMessage,
 };
 pub use organize::{
-    AssignRoomCategory, CreateRoomCategory, FavoriteList, InvolvementChange, MoveFavorite,
-    MoveWorkspaceRoom, ReorderRoomCategories, ReorderWorkspaceCategories, RoomCategoryList,
-    RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory, WorkspaceCategory, WorkspaceLayout,
-    WorkspaceRoomPosition, WriteWorkspaceCategory,
+    AssignRoomCategory, CreateRoomCategory, DirectClosedChange, FavoriteList, InvolvementChange,
+    MoveFavorite, MoveWorkspaceRoom, ReorderRoomCategories, ReorderWorkspaceCategories,
+    RoomCategoryList, RoomCategoryRemoved, SetDirectClosed, UpdateInvolvement, UpdateRoomCategory,
+    WorkspaceCategory, WorkspaceLayout, WorkspaceRoomPosition, WriteWorkspaceCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, RoomFilesChanged, StarState};
 pub use people::{

@@ -247,6 +247,10 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                     {
                         continue;
                     }
+                    if table == "memberships" && column == "closed_at" {
+                        assert_eq!(row.get::<_, Option<String>>(index)?, None);
+                        continue;
+                    }
                     // Port-only read boundary for the sidebar's thread pings.
                     if table == "thread_memberships" && column == "last_read_message_id" {
                         continue;
