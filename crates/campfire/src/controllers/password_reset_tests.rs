@@ -211,6 +211,13 @@ async fn every_request_answers_alike_and_queues_one_job() {
     }
     assert_eq!(answers[0].0, StatusCode::OK);
     assert_eq!(answers[0].1, r#"{"kind":"requested"}"#);
+    assert!(
+        answers[0]
+            .3
+            .as_deref()
+            .is_some_and(|value| value.contains("no-store")),
+        "{answers:?}"
+    );
     assert!(answers.iter().all(|answer| *answer == answers[0]), "{answers:?}");
     assert_eq!(
         captured_mail_jobs(&a).await,
@@ -913,6 +920,78 @@ async fn password_reset_addresses_are_trimmed_and_require_an_unambiguous_match()
     );
     let exact = reset_message(&a, &david, now).await.unwrap();
     assert!(exact.to.ends_with(&format!("<{david}>")));
+}
+
+async fn assert_reset_delivery_matches(stored: &'static str, submitted: &str, recipient: &str) {
+    let (a, _) = app(&MAIL).await;
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address=?1 WHERE id=?2",
+                rusqlite::params![stored, DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let message = reset_message(&a, submitted, a.booted.app.clock.now())
+        .await
+        .unwrap_or_else(|| panic!("expected a reset email to {stored:?}"));
+    assert_eq!(
+        campfire_mail::outbound::first_address(&message.to)
+            .unwrap()
+            .to_string(),
+        recipient
+    );
+    // The link must still verify against the stored address, with its case and spaces intact.
+    assert_eq!(
+        a.anonymous()
+            .send(check(&link_token(&message)))
+            .await
+            .status,
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
+async fn password_reset_delivery_matches_padded_stored_addresses() {
+    assert_reset_delivery_matches(
+        "  david@37signals.com  ",
+        "david@37signals.com",
+        "david@37signals.com",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn password_reset_delivery_matches_unicode_case() {
+    assert_reset_delivery_matches("JÖRG@x.com", "jörg@x.com", "JÖRG@x.com").await;
+}
+
+#[tokio::test]
+async fn password_reset_delivery_refuses_addresses_that_collide_after_trimming() {
+    let (a, _) = app(&MAIL).await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address='  DAVID@37SIGNALS.COM  ' WHERE id=?",
+                [JASON],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let now = a.booted.app.clock.now();
+    assert!(
+        reset_message(&a, "David@37signals.com", now)
+            .await
+            .is_none()
+    );
+    assert!(
+        reset_message(&a, "david@37signals.com", now)
+            .await
+            .is_some()
+    );
 }
 
 #[tokio::test]

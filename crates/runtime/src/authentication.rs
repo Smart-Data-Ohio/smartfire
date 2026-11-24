@@ -300,6 +300,11 @@ pub fn can_reset_password(user: &User) -> bool {
             .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
 }
 
+/// Shared by delivery and the per-inbox request limit.
+pub fn normalize_password_reset_address(email_address: &str) -> String {
+    rails_compat::unicode::fold(campfire_richtext::ruby::strip(email_address))
+}
+
 /// "Forgot password?": queue the email. Delivery decides whether `email_address` gets one, so
 /// every request does the same work and answers the same.
 pub fn request_password_reset(tx: &mut Tx<'_>, email_address: String) {

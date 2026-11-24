@@ -145,7 +145,7 @@ fn rate_limit(c: &mut Ctx, limit: &RateLimit, by: Option<&str>) -> Result<()> {
 
 /// One bucket per address however it's capitalised or spaced, without keeping the address.
 fn inbox_key(email_address: &str) -> String {
-    let normalized = rails_compat::unicode::fold(campfire_richtext::ruby::strip(email_address));
+    let normalized = authentication::normalize_password_reset_address(email_address);
     hex::encode(Sha256::digest(normalized.as_bytes()))
 }
 
