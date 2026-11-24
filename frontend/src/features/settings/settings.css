@@ -812,6 +812,25 @@
     min-width: 0;
   }
 
+  /* Email addresses: a long address wraps; on a narrow screen the buttons drop under it. */
+  .settings-email-row {
+    flex-wrap: wrap;
+  }
+
+  .settings-email-row > .settings-list-main {
+    flex-basis: 14rem;
+  }
+
+  .settings-email-address {
+    overflow-wrap: anywhere;
+  }
+
+  .settings-email-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
   /* This browser's push state: a quiet icon disc, accented only while notifications are on. */
   .settings-push-row {
     padding-block: var(--space-3);
