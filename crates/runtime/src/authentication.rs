@@ -388,19 +388,14 @@ pub async fn enroll(
 ) -> Result<Enrollment> {
     let user_id = user.id;
     let creation_encryption = encryption.clone();
-    let snapshot = db
+    let enrollment = db
         .write(move |tx| {
             let session = match Session::find(tx.conn(), session_id) {
                 Ok(session) if session.user_id == user_id => session,
                 Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
                 Err(error) => return Err(error),
             };
-            let existing = TwoFactorCredential::for_user(tx.conn(), user_id)?;
-            if let Some(credential) = existing.as_ref().filter(|c| c.enabled()) {
-                return Ok(Some((session, credential.clone(), None)));
-            }
-            let setup = TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?;
-            let credential = match existing {
+            let credential = match TwoFactorCredential::for_user(tx.conn(), user_id)? {
                 Some(credential) => credential,
                 None => TwoFactorCredential::create(
                     tx,
@@ -409,31 +404,29 @@ pub async fn enroll(
                     &totp::generate_secret(),
                 )?,
             };
-            Ok(Some((session, credential, setup)))
+            Ok(Some((session.token, credential)))
         })
         .await?;
-    let Some((session, credential, setup)) = snapshot else {
+    let Some((session_token, credential)) = enrollment else {
         return Ok(Enrollment::SessionGone);
     };
     if credential.enabled() {
         return Ok(Enrollment::Enabled);
     }
-    let Some(setup) = setup else {
-        return Ok(Enrollment::Wrong);
-    };
     let credential_id = credential.id;
     #[cfg(feature = "test-support")]
     test_hooks::run(&test_hooks::BEFORE_ENROLLMENT_CONFIRM).await;
     let confirmed = db
         .write(move |tx| {
-            if Session::find_by_token(tx.conn(), &session.token)?.as_ref() != Some(&session) {
+            if !Session::find_by_token(tx.conn(), &session_token)?
+                .is_some_and(|session| session.id == session_id && session.user_id == user_id)
+            {
                 return Ok(Err(Enrollment::SessionGone));
             }
-            if TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?.as_ref()
-                != Some(&setup)
-            {
+            let Some(setup) = TwoFactorSetupSecret::valid_for(tx.conn(), session_id, tx.now())?
+            else {
                 return Ok(Err(Enrollment::Wrong));
-            }
+            };
             let Some(mut credential) = TwoFactorCredential::for_user(tx.conn(), user_id)?
                 .filter(|current| current.id == credential_id)
             else {

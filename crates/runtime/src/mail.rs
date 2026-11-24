@@ -134,7 +134,7 @@ pub async fn password_reset_message(
         .read(move |conn| {
             let address = campfire_richtext::ruby::strip(&email_address);
             let Some(user) =
-                User::find_active_by_sign_in_address(conn, address, can_reset_password)?
+                User::find_active_by_sign_in_address(conn, address)?.filter(can_reset_password)
             else {
                 return Ok(None);
             };

@@ -27,6 +27,51 @@ fn create_new_user(t: &TestDb) -> User {
 }
 
 #[test]
+fn password_address_resolution_scans_every_normalized_candidate() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        for email in [
+            "collision@example.com",
+            "COLLISION@example.com",
+            "unique@example.com",
+        ] {
+            User::create(
+                tx,
+                NewUser {
+                    name: email.into(),
+                    email_address: Some(email.into()),
+                    ..Default::default()
+                },
+            )?;
+        }
+        // The final row's malformed address makes it observable whether the scan reaches it.
+        tx.conn().execute(
+            "INSERT INTO users (name, email_address, created_at, updated_at)
+             VALUES ('Scan sentinel', X'FF', ?1, ?1)",
+            [tx.now()],
+        )?;
+        Ok(())
+    });
+
+    t.read(|conn| {
+        for address in [
+            "Missing@example.com",
+            "Unique@example.com",
+            "Collision@example.com",
+        ] {
+            assert!(
+                matches!(
+                    User::find_active_by_sign_in_address(conn, address),
+                    Err(crate::Error::Sqlite(rusqlite::Error::InvalidColumnType(..)))
+                ),
+                "the lookup for {address} must reach the final row"
+            );
+        }
+        Ok(())
+    });
+}
+
+#[test]
 fn profile_identity_normalizes_counts_unicode_and_clears_to_the_account_name() {
     let t = TestDb::new();
     let original = user(&t, "david");

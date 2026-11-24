@@ -392,15 +392,14 @@ impl User {
         )
     }
 
-    /// Prefer an exact address, even when it is ineligible. Otherwise require a unique
-    /// eligible active user whose address matches after stripping space and folding case.
+    /// Prefer an exact address. Otherwise require a unique active user whose address matches
+    /// after stripping space and folding case. Callers check eligibility after resolving.
     pub fn find_active_by_sign_in_address(
         conn: &Connection,
         address: &str,
-        eligible: impl Fn(&Self) -> bool,
     ) -> Result<Option<Self>> {
         if let Some(user) = Self::find_active_by_email_address(conn, address)? {
-            return Ok(eligible(&user).then_some(user));
+            return Ok(Some(user));
         }
         let normalized = normalize_email_address(address);
         if normalized.is_empty() {
@@ -411,20 +410,19 @@ impl User {
             .prepare_cached("SELECT * FROM users WHERE status = 0 AND email_address IS NOT NULL")?;
         let mut rows = query.query([])?;
         let mut candidate = None;
+        let mut matches = 0;
+        // Scan every address so the position of a collision cannot shorten the lookup.
         while let Some(row) = rows.next()? {
             let email: String = row.get("email_address")?;
             if normalize_email_address(&email) != normalized {
                 continue;
             }
-            let user = Self::from_row(row)?;
-            if eligible(&user) {
-                if candidate.is_some() {
-                    return Ok(None);
-                }
-                candidate = Some(user);
+            matches += 1;
+            if matches == 1 {
+                candidate = Some(Self::from_row(row)?);
             }
         }
-        Ok(candidate)
+        Ok(candidate.filter(|_| matches == 1))
     }
 
     /// The password half of `User.active.authenticate_by(email_address:, password:)`, given

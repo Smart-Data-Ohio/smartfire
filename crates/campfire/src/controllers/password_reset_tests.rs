@@ -1,7 +1,7 @@
 //! "Forgot password?" over the frozen seed: availability, the uniform request, delivery, and the
 //! one-time link that sets a new password and signs the user out everywhere.
 use crate::controllers::presenters::test_support::{
-    BENDER, DAVID, JASON, KEVIN, Reply, Req, SEED_NOW, TestApp,
+    BENDER, Browser, DAVID, JASON, KEVIN, Reply, Req, SEED_NOW, TestApp,
 };
 use crate::controllers::spa::signed_out_contracts_tests::inline_boot;
 use axum::http::{Method, StatusCode};
@@ -17,6 +17,7 @@ const MAIL: [(&str, &str); 3] = [
 const PASSWORD: &str = "secret123456";
 const NEW_PASSWORD: &str = "a brand new passphrase";
 const INVALID_LINK: &str = "This reset link didn't work. It may have expired or already been used.";
+const ENROLLMENT_SETUP: &str = "/api/v1/two_factor/setup";
 
 async fn app(env: &[(&str, &str)]) -> (TestApp, Arc<campfire_kit::FrozenClock>) {
     let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
@@ -816,28 +817,123 @@ async fn a_sign_in_that_checked_the_replaced_password_starts_no_session() {
 }
 
 #[tokio::test]
+async fn two_factor_enrollment_accepts_the_code_after_another_tab_reloads_setup() {
+    use campfire_runtime::authentication::test_hooks::BEFORE_ENROLLMENT_CONFIRM;
+    use std::cell::RefCell;
+
+    let (a, clock) = app(&MAIL).await;
+    let a = Arc::new(a);
+    let (mut browser, secret, code) = prepare_enrollment(&a).await;
+    let cookies = browser.cookie_header();
+    let reload = {
+        let a = a.clone();
+        let secret = secret.clone();
+        async move {
+            clock.advance(jiff::SignedDuration::from_secs(1));
+            let mut tab = a.anonymous();
+            tab.absorb_cookie_header(&cookies);
+            let reply = tab.get(ENROLLMENT_SETUP).await;
+            assert_eq!(reply.status, StatusCode::OK);
+            assert_eq!(reply.json()["setup"]["secret"], secret);
+        }
+    };
+    let reply = BEFORE_ENROLLMENT_CONFIRM
+        .scope(
+            RefCell::new(Some(Box::pin(reload))),
+            browser.write(enrollment_submission(&code)),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.json()["kind"], "recoveryCodes");
+}
+
+#[tokio::test]
+async fn two_factor_enrollment_accepts_the_code_after_session_activity_refreshes() {
+    use campfire_db::{Session, Timestamp, models::session::ACTIVITY_REFRESH_RATE};
+    use campfire_runtime::authentication::test_hooks::BEFORE_ENROLLMENT_CONFIRM;
+    use std::cell::RefCell;
+
+    let (a, clock) = app(&MAIL).await;
+    let (mut browser, _, code) = prepare_enrollment(&a).await;
+    let session_id = a
+        .db()
+        .write(|tx| {
+            let conn = tx.conn();
+            let id: i64 = conn.query_row(
+                "SELECT session_id FROM two_factor_setup_secrets
+                 JOIN sessions ON sessions.id = session_id WHERE user_id = ?",
+                [DAVID],
+                |row| row.get(0),
+            )?;
+            conn.execute(
+                "UPDATE sessions SET last_active_at = ?1 WHERE id = ?2",
+                rusqlite::params![tx.now().ago(ACTIVITY_REFRESH_RATE), id],
+            )?;
+            Ok(id)
+        })
+        .await
+        .unwrap();
+    let db = a.db().clone();
+    let refresh = async move {
+        clock.advance(jiff::SignedDuration::from_secs(1));
+        db.write(move |tx| {
+            let mut session = Session::find(tx.conn(), session_id)?;
+            assert!(session.needs_resume(tx.now()));
+            session.resume(tx, None, None)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    };
+    let reply = BEFORE_ENROLLMENT_CONFIRM
+        .scope(
+            RefCell::new(Some(Box::pin(refresh))),
+            browser.write(enrollment_submission(&code)),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.json()["kind"], "recoveryCodes");
+    let now = Timestamp::from_jiff(a.booted.app.clock.now());
+    assert_eq!(
+        a.db()
+            .read(move |conn| Ok(Session::find(conn, session_id)?.last_active_at))
+            .await
+            .unwrap(),
+        now
+    );
+}
+
+async fn prepare_enrollment(a: &TestApp) -> (Browser<'_>, String, String) {
+    a.db()
+        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
+        .await
+        .unwrap();
+    let mut browser = a.sign_in(DAVID).await;
+    let reply = browser.get(ENROLLMENT_SETUP).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let secret = reply.json()["setup"]["secret"].as_str().unwrap().to_owned();
+    let code = rails_compat::totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
+    (browser, secret, code)
+}
+
+fn enrollment_submission(code: &str) -> Req {
+    Req::new(Method::POST, ENROLLMENT_SETUP).json_body(&json!({"code":code}))
+}
+
+#[tokio::test]
 async fn a_password_reset_before_enrollment_confirm_leaves_two_factor_disabled() {
     use campfire_db::TwoFactorCredential;
     use campfire_runtime::authentication::test_hooks::BEFORE_ENROLLMENT_CONFIRM;
     use std::cell::RefCell;
 
     let (a, _) = app(&MAIL).await;
-    a.db()
-        .write(|tx| campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
-        .await
-        .unwrap();
-    let mut browser = a.sign_in(DAVID).await;
-    let setup = "/api/v1/two_factor/setup";
-    let state = browser.get(setup).await.json();
-    let secret = state["setup"]["secret"].as_str().unwrap();
-    let code = rails_compat::totp::at(secret, a.booted.app.clock.now().as_second()).unwrap();
-    let confirm = Req::new(Method::POST, setup).json_body(&json!({"code":code}));
+    let (mut browser, _, code) = prepare_enrollment(&a).await;
     let reply = BEFORE_ENROLLMENT_CONFIRM
         .scope(
             RefCell::new(Some(Box::pin(reset_password_during_request(
                 a.db().clone(),
             )))),
-            browser.write(confirm),
+            browser.write(enrollment_submission(&code)),
         )
         .await;
     assert_eq!(count(&a, SESSIONS, DAVID).await, 0);
@@ -1133,6 +1229,38 @@ async fn password_reset_delivery_refuses_addresses_that_collide_after_trimming()
             .await
             .is_some()
     );
+}
+
+#[tokio::test]
+async fn password_reset_and_sign_in_refuse_a_normalized_collision_with_google_only() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let google_only = "DAVID@37SIGNALS.COM";
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address = ?, password_digest = NULL WHERE id = ?",
+                rusqlite::params![google_only, KEVIN],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let now = a.booted.app.clock.now();
+    let mut browser = a.anonymous();
+    let ambiguous = "David@37signals.com";
+    let refused = browser.password_sign_in(ambiguous, PASSWORD).await;
+    assert_eq!(refused.status, StatusCode::UNAUTHORIZED);
+    assert!(reset_message(&a, ambiguous, now).await.is_none());
+
+    let exact = browser.password_sign_in(&david, PASSWORD).await;
+    assert_eq!(exact.json()["kind"], "secondFactorRequired");
+    let message = reset_message(&a, &david, now).await.unwrap();
+    assert!(message.to.ends_with(&format!("<{david}>")));
+
+    let exact_google = a.anonymous().password_sign_in(google_only, PASSWORD).await;
+    assert_eq!(exact_google.status, StatusCode::UNAUTHORIZED);
+    assert!(reset_message(&a, google_only, now).await.is_none());
 }
 
 #[tokio::test]
