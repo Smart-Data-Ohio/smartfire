@@ -27,9 +27,15 @@ const FINGERPRINT_BYTES: usize = 16;
 pub struct Claim {
     pub user_id: i64,
     fingerprint: String,
+    token: String,
 }
 
 impl Claim {
+    /// Whether the link is still unexpired at `now`, for a check made later than [`verify`]'s.
+    pub fn unexpired(&self, secrets: &Secrets, now: Timestamp) -> bool {
+        verify(secrets, &self.token, now).is_some()
+    }
+
     /// Whether the user still has the password digest and email address the link was made for.
     pub fn matches(&self, secrets: &Secrets, password_digest: &str, email_address: &str) -> bool {
         let current = fingerprint(secrets, password_digest, email_address);
@@ -59,6 +65,7 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
             [Value::Number(id), Value::String(fingerprint)] => Some(Claim {
                 user_id: id.as_i64()?,
                 fingerprint: fingerprint.clone(),
+                token: token.to_owned(),
             }),
             _ => None,
         },
@@ -104,6 +111,8 @@ mod tests {
             .expect("unexpired");
         assert_eq!(claim.user_id, 7);
         assert!(claim.matches(&secrets, DIGEST, "ada@example.com"));
+        assert!(claim.unexpired(&secrets, now() + EXPIRES_IN - SignedDuration::from_secs(1)));
+        assert!(!claim.unexpired(&secrets, now() + EXPIRES_IN));
         assert_eq!(verify(&secrets, &token, now() + EXPIRES_IN), None);
         assert_eq!(verify(&Secrets::new(&"b".repeat(128)), &token, now()), None);
         assert_eq!(verify(&secrets, "garbage", now()), None);

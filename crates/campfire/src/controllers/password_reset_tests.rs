@@ -502,3 +502,27 @@ async fn a_claim_checked_before_the_password_changed_resets_nothing() {
     assert!(!reset);
     assert_eq!(reset_state(&a).await, before);
 }
+
+/// A link checked just before it expired changes nothing once hashing the new password has taken
+/// it past its expiry: the writer checks the expiry again by its own clock.
+#[tokio::test]
+async fn a_link_that_expires_before_the_write_resets_nothing() {
+    use campfire_people::controllers::password_resets::reset_with_claim;
+    let (a, clock) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let token = emailed_token(&a, &david).await;
+    let secrets = a.booted.app.secrets.clone();
+    clock.advance(rails_compat::password_reset::EXPIRES_IN - jiff::SignedDuration::from_secs(1));
+    let claim = rails_compat::password_reset::verify(&secrets, &token, a.booted.app.clock.now())
+        .expect("a second from expiry");
+    let digest = new_digest(&a, NEW_PASSWORD).await;
+    let before = reset_state(&a).await;
+    clock.advance(jiff::SignedDuration::from_secs(1));
+    let reset = a
+        .db()
+        .write(move |tx| reset_with_claim(tx, &secrets, &claim, digest, &Default::default()))
+        .await
+        .unwrap();
+    assert!(!reset);
+    assert_eq!(reset_state(&a).await, before);
+}

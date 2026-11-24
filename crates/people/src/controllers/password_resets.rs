@@ -164,12 +164,13 @@ async fn resettable(c: &Ctx) -> Result<Option<(User, Claim)>> {
         .await
         .map_err(Error::internal)?;
     Ok(user
-        .filter(|user| still_resettable(&secrets, &claim, user))
+        .filter(|user| still_resettable(&secrets, &claim, user, c.now()))
         .map(|user| (user, claim)))
 }
 
-/// Sets the new password if the link still matches its user, checked again on the writer: of two
-/// uses of one link racing each other, the second finds the first's digest and changes nothing.
+/// Sets the new password if the link still matches its user and is unexpired, checked again on the
+/// writer: of two uses of one link racing each other, the second finds the first's digest and
+/// changes nothing, and a link that expired while the password was hashed changes nothing either.
 pub fn reset_with_claim(
     tx: &mut Tx<'_>,
     secrets: &rails_compat::Secrets,
@@ -177,8 +178,9 @@ pub fn reset_with_claim(
     digest: PasswordDigest,
     context: &Context,
 ) -> campfire_db::Result<bool> {
+    let now = tx.now().jiff();
     let current = User::find_by_id(tx.conn(), claim.user_id)?
-        .filter(|user| still_resettable(secrets, claim, user));
+        .filter(|user| still_resettable(secrets, claim, user, now));
     let Some(mut user) = current else {
         return Ok(false);
     };
@@ -186,8 +188,14 @@ pub fn reset_with_claim(
     Ok(true)
 }
 
-fn still_resettable(secrets: &rails_compat::Secrets, claim: &Claim, user: &User) -> bool {
-    can_reset_password(user)
+fn still_resettable(
+    secrets: &rails_compat::Secrets,
+    claim: &Claim,
+    user: &User,
+    now: jiff::Timestamp,
+) -> bool {
+    claim.unexpired(secrets, now)
+        && can_reset_password(user)
         && claim.matches(
             secrets,
             user.password_digest.as_deref().unwrap_or_default(),
