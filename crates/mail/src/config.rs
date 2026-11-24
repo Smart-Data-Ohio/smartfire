@@ -78,10 +78,12 @@ impl Config {
     pub fn security_configured(&self) -> bool {
         self.smtp.is_some() && self.mailer_from.is_some() && self.app_url.is_some()
     }
-    /// Whether a password reset email can go out with a working link: SMTP, a real sender (not
-    /// the placeholder) that delivery can address mail from, and the app's URL.
+    /// Whether reset mail has acceptable SMTP credentials, a deliverable sender address
+    /// and a configured app origin for the link.
     pub fn password_reset_available(&self) -> bool {
-        self.smtp.is_some()
+        self.smtp
+            .as_ref()
+            .is_some_and(|smtp| crate::outbound::validate_smtp_credentials(smtp).is_ok())
             && self
                 .mailer_from
                 .as_deref()

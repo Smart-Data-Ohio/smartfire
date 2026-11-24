@@ -160,6 +160,32 @@ fn refused_link(reply: &Reply) {
 async fn reset_is_offered_only_when_mail_can_send_a_working_link() {
     for (env, available) in [
         (&MAIL[..], true),
+        (
+            &[MAIL[0], MAIL[1], MAIL[2], ("SMTP_USER_NAME", "user")][..],
+            false,
+        ),
+        (
+            &[
+                MAIL[0],
+                MAIL[1],
+                MAIL[2],
+                ("SMTP_USER_NAME", "user"),
+                ("SMTP_PASSWORD", "password"),
+                ("SMTP_AUTHENTICATION", "unsupported"),
+            ][..],
+            false,
+        ),
+        (
+            &[
+                MAIL[0],
+                MAIL[1],
+                MAIL[2],
+                ("SMTP_USER_NAME", "user"),
+                ("SMTP_PASSWORD", "password"),
+                ("SMTP_AUTHENTICATION", "cram_md5"),
+            ][..],
+            true,
+        ),
         (&MAIL[..2], false),
         (&[MAIL[0], MAIL[2]][..], false),
         (&[][..], false),
