@@ -285,7 +285,7 @@ async fn oversized_password_reset_addresses_spend_both_limits_without_queuing() 
     );
     assert_eq!(
         captured_mail_jobs(&a).await,
-        [at_limit.trim(), "unknown@example.com"]
+        [at_limit.as_str(), "unknown@example.com"]
             .map(|email| json!({"notification":{"PasswordReset":{"email_address":email}}}))
     );
 }
@@ -654,11 +654,50 @@ async fn capture_smtp_message(
     }
 }
 
+async fn app_with_smtp() -> (
+    TestApp,
+    Arc<campfire_kit::FrozenClock>,
+    tokio::sync::mpsc::UnboundedReceiver<String>,
+    tokio::task::JoinHandle<()>,
+) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port().to_string();
+    let (sent, received) = tokio::sync::mpsc::unbounded_channel();
+    let smtp = tokio::spawn(async move {
+        while let Ok((stream, _)) = listener.accept().await {
+            capture_smtp_message(stream, &sent).await;
+        }
+    });
+    let (a, clock) = app(&[
+        ("SMTP_ADDRESS", "127.0.0.1"),
+        ("SMTP_PORT", &port),
+        ("SMTP_ENABLE_STARTTLS", "false"),
+        MAIL[1],
+        MAIL[2],
+    ])
+    .await;
+    (a.without_job_runner().await, clock, received, smtp)
+}
+
+fn start_mail_runner(a: &TestApp) -> campfire_jobs::Runner {
+    use campfire_jobs::{QueueConfig, Registry, RunnerConfig};
+
+    let mut registry = Registry::new();
+    campfire_runtime::mail::register(&mut registry);
+    let config = RunnerConfig::new(vec![QueueConfig::new("default", 1)]);
+    campfire_jobs::start(
+        a.db().clone(),
+        a.booted.app.jobs.queue.clone(),
+        registry,
+        a.booted.app.clone(),
+        config,
+    )
+}
+
 /// Drive the registered handler, whose Execution takes enqueued_at from the job's created_at.
 async fn run_password_reset_delivery(a: &TestApp, email: &str, age: jiff::SignedDuration) {
     use campfire_jobs::{Job, JobRequest};
     use campfire_mail::jobs::{DeliveryJob, Notification};
-    use std::time::Duration;
 
     let queue = a.booted.app.jobs.queue.clone();
     let email_address = email.to_owned();
@@ -680,6 +719,12 @@ async fn run_password_reset_delivery(a: &TestApp, email: &str, age: jiff::Signed
         .await
         .unwrap();
     a.booted.app.jobs.queue.wake(DeliveryJob::CLASS);
+    wait_for_delivery(a, id).await;
+}
+
+async fn wait_for_delivery(a: &TestApp, id: i64) {
+    use std::time::Duration;
+
     tokio::time::timeout(Duration::from_secs(5), async {
         while count(a, "SELECT count(*) FROM background_jobs WHERE id=?", id).await != 0 {
             tokio::time::sleep(Duration::from_millis(10)).await;
@@ -691,38 +736,12 @@ async fn run_password_reset_delivery(a: &TestApp, email: &str, age: jiff::Signed
 
 #[tokio::test]
 async fn password_reset_delivery_job_uses_enqueue_time_and_skips_stale_requests() {
-    use campfire_jobs::{QueueConfig, Registry, RunnerConfig};
     use jiff::SignedDuration;
     use rails_compat::password_reset::{EXPIRES_IN, verify};
     use std::time::Duration;
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = listener.local_addr().unwrap().port().to_string();
-    let (sent, mut received) = tokio::sync::mpsc::unbounded_channel();
-    let smtp = tokio::spawn(async move {
-        while let Ok((stream, _)) = listener.accept().await {
-            capture_smtp_message(stream, &sent).await;
-        }
-    });
-    let (a, clock) = app(&[
-        ("SMTP_ADDRESS", "127.0.0.1"),
-        ("SMTP_PORT", &port),
-        ("SMTP_ENABLE_STARTTLS", "false"),
-        MAIL[1],
-        MAIL[2],
-    ])
-    .await;
-    let a = a.without_job_runner().await;
-    let mut registry = Registry::new();
-    campfire_runtime::mail::register(&mut registry);
-    let config = RunnerConfig::new(vec![QueueConfig::new("default", 1)]);
-    let runner = campfire_jobs::start(
-        a.db().clone(),
-        a.booted.app.jobs.queue.clone(),
-        registry,
-        a.booted.app.clone(),
-        config,
-    );
+    let (a, clock, mut received, smtp) = app_with_smtp().await;
+    let runner = start_mail_runner(&a);
     let david = email_of(&a, DAVID).await;
     let secrets = &a.booted.app.secrets;
     let now = a.booted.app.clock.now();
@@ -770,6 +789,91 @@ async fn password_reset_delivery_job_uses_enqueue_time_and_skips_stale_requests(
     runner.shutdown(Duration::from_secs(1)).await;
     smtp.abort();
     assert!(smtp.await.unwrap_err().is_cancelled());
+}
+
+#[tokio::test]
+async fn password_reset_and_sign_in_prefer_the_exact_padded_address() {
+    use std::time::Duration;
+
+    let (a, _, mut received, smtp) = app_with_smtp().await;
+    let padded = " Ada@example.com ";
+    let ambiguous = "ada@example.com";
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address = ? WHERE id = ?",
+                rusqlite::params![padded, DAVID],
+            )?;
+            tx.conn().execute(
+                "UPDATE users SET email_address = 'ADA@example.com', password_digest = NULL WHERE id = ?",
+                [KEVIN],
+            )?;
+            campfire_db::User::find(tx.conn(), DAVID)?.reset_two_factor(tx)
+        })
+        .await
+        .unwrap();
+
+    let mut browser = a.anonymous();
+    let refused = browser.password_sign_in(ambiguous, PASSWORD).await;
+    assert_eq!(
+        refused.status,
+        StatusCode::UNAUTHORIZED,
+        "{}",
+        refused.text()
+    );
+
+    let ip = "198.51.100.20";
+    let reply = browser.write(request(ambiguous, ip)).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(reply.json(), json!({"kind":"requested"}));
+    let id = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT id FROM background_jobs WHERE job_class = 'Smartfire::MailDeliveryJob'",
+                [],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    let runner = start_mail_runner(&a);
+    wait_for_delivery(&a, id).await;
+    assert!(
+        received.try_recv().is_err(),
+        "mail sent for an ambiguous address"
+    );
+
+    let reply = browser.write(request(padded, ip)).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(reply.json(), json!({"kind":"requested"}));
+    let raw = tokio::time::timeout(Duration::from_secs(5), received.recv())
+        .await
+        .expect("reset mail for the exact padded address")
+        .expect("SMTP capture is running");
+    assert!(
+        raw.lines()
+            .any(|line| line.starts_with("To: ") && line.ends_with("<Ada@example.com>"))
+    );
+    let token = raw
+        .lines()
+        .find_map(|line| line.strip_prefix("http://campfire.test/app/passwords/"))
+        .expect("reset URL");
+    let claim = rails_compat::password_reset::verify(
+        &a.booted.app.secrets,
+        token,
+        a.booted.app.clock.now(),
+    )
+    .expect("valid reset token");
+    assert_eq!(claim.user_id, DAVID);
+
+    runner.shutdown(Duration::from_secs(1)).await;
+    smtp.abort();
+    assert!(smtp.await.unwrap_err().is_cancelled());
+
+    let signed_in = browser.password_sign_in(padded, PASSWORD).await;
+    assert_eq!(signed_in.status, StatusCode::OK, "{}", signed_in.text());
+    assert_eq!(signed_in.json()["kind"], "signedIn");
 }
 
 async fn reset_password_during_request(db: campfire_db::Database) {
@@ -1106,7 +1210,7 @@ async fn requests_and_new_passwords_need_the_csrf_token() {
 }
 
 #[tokio::test]
-async fn password_reset_addresses_are_trimmed_and_require_an_unambiguous_match() {
+async fn password_reset_addresses_preserve_spelling_and_require_an_unambiguous_match() {
     let (a, _) = app(&MAIL).await;
     let a = a.without_job_runner().await;
     let david = email_of(&a, DAVID).await;
@@ -1123,7 +1227,7 @@ async fn password_reset_addresses_are_trimmed_and_require_an_unambiguous_match()
     let jobs = captured_mail_jobs(&a).await;
     for (job, expected) in jobs
         .iter()
-        .zip(["David@37signals.com", "david@37signals.com"])
+        .zip(["David@37signals.com", " david@37signals.com "])
     {
         let address = job["notification"]["PasswordReset"]["email_address"]
             .as_str()
