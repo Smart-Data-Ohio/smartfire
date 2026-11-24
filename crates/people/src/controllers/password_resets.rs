@@ -55,8 +55,8 @@ async fn create_response(c: &mut Ctx) -> Result {
     before_actions(c, "password_resets#create").await?;
     rate_limit(c, &request_rate_limit(), None)?;
     let body: PasswordResetRequest = auth::body(c).await?;
-    rate_limit(c, &inbox_rate_limit(), Some(&inbox_key(&body.email_address)))?;
-    let email_address = body.email_address;
+    let email_address = campfire_richtext::ruby::strip(&body.email_address).to_owned();
+    rate_limit(c, &inbox_rate_limit(), Some(&inbox_key(&email_address)))?;
     c.app()
         .db
         .write(move |tx| {

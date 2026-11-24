@@ -113,8 +113,8 @@ async fn delivery(app: App, job: DeliveryJob, execution: campfire_jobs::Executio
 /// The reset email for the account `email_address` signs in with, its link minted now from the
 /// current password and expiring 15 minutes after the request (`requested_at`, when the job was
 /// queued). `None` (nothing is sent) when reset isn't available, the address has no account that
-/// can reset, the request's 15 minutes are over (a delivery delayed or retried that long), or the
-/// password has changed since the request.
+/// can reset, fewer than two minutes remain in which to use the link, or the password has changed
+/// since the request.
 pub async fn password_reset_message(
     app: &App,
     email_address: String,
@@ -128,14 +128,12 @@ pub async fn password_reset_message(
         return Ok(None);
     };
     let expires_at = requested_at.jiff() + rails_compat::password_reset::EXPIRES_IN;
-    if app.db.env().now().jiff() >= expires_at {
-        return Ok(None);
-    }
     let user = app
         .db
         .read(move |conn| {
-            let Some(user) = User::find_active_by_email_address(conn, &email_address)?
-                .filter(crate::authentication::can_reset_password)
+            let address = campfire_richtext::ruby::strip(&email_address);
+            let Some(user) =
+                reset_recipient(conn, address)?.filter(crate::authentication::can_reset_password)
             else {
                 return Ok(None);
             };
@@ -146,6 +144,9 @@ pub async fn password_reset_message(
     let Some(user) = user else {
         return Ok(None);
     };
+    if app.db.env().now().jiff() > expires_at - jiff::SignedDuration::from_mins(2) {
+        return Ok(None);
+    }
     let email = user.email_address.clone().unwrap_or_default();
     let token = rails_compat::password_reset::token(
         &app.secrets,
@@ -163,6 +164,25 @@ pub async fn password_reset_message(
         &format!("{origin}/app/passwords/{token}"),
     )))
 }
+/// An exact primary address takes precedence over a unique case-insensitive match.
+fn reset_recipient(
+    conn: &rusqlite::Connection,
+    address: &str,
+) -> campfire_db::Result<Option<User>> {
+    if let Some(user) = User::find_active_by_email_address(conn, address)? {
+        return Ok(Some(user));
+    }
+    let mut query = conn.prepare_cached(
+        "SELECT * FROM users WHERE status = 0 AND LOWER(email_address) = ? LIMIT 2",
+    )?;
+    let mut rows = query.query([rails_compat::unicode::downcase(address)])?;
+    let candidate = rows.next()?.map(User::from_row).transpose()?;
+    if rows.next()?.is_some() {
+        return Ok(None);
+    }
+    Ok(candidate)
+}
+
 /// Whether the user's password was changed or reset at or after `since`, by the audit log.
 fn password_changed_since(
     conn: &rusqlite::Connection,

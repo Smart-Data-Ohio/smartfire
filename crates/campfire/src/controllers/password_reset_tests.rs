@@ -534,34 +534,173 @@ async fn a_link_that_expires_before_the_write_resets_nothing() {
     assert_eq!(reset_state(&a).await, before);
 }
 
-/// Delivery runs when the queue gets to it, perhaps after downtime or SMTP retries: the link still
-/// expires 15 minutes after the request, nothing goes out once those are over, and nothing goes
-/// out once the password has changed since the request.
+/// Captures one SMTP delivery, including the original MIME body.
+async fn capture_smtp_message(
+    stream: tokio::net::TcpStream,
+    sent: &tokio::sync::mpsc::UnboundedSender<String>,
+) {
+    use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _, BufReader};
+    let mut stream = BufReader::new(stream);
+    stream
+        .write_all(b"220 localhost test SMTP\r\n")
+        .await
+        .unwrap();
+    loop {
+        let mut command = String::new();
+        if stream.read_line(&mut command).await.unwrap() == 0 {
+            return;
+        }
+        let response: &[u8] = match command.trim_end() {
+            "DATA" => {
+                let mut message = String::new();
+                stream
+                    .write_all(b"354 End with <CRLF>.<CRLF>\r\n")
+                    .await
+                    .unwrap();
+                loop {
+                    let mut line = String::new();
+                    assert_ne!(stream.read_line(&mut line).await.unwrap(), 0);
+                    if line == ".\r\n" {
+                        break;
+                    }
+                    message.push_str(&line);
+                }
+                sent.send(message).unwrap();
+                b"250 Stored\r\n"
+            }
+            "QUIT" => {
+                stream.write_all(b"221 Bye\r\n").await.unwrap();
+                return;
+            }
+            command
+                if command.starts_with("EHLO ")
+                    || command.starts_with("MAIL FROM:")
+                    || command.starts_with("RCPT TO:") =>
+            {
+                b"250 OK\r\n"
+            }
+            command => panic!("unexpected SMTP command: {command}"),
+        };
+        stream.write_all(response).await.unwrap();
+    }
+}
+
+/// Drive the registered handler, whose Execution takes enqueued_at from the job's created_at.
+async fn run_password_reset_delivery(a: &TestApp, email: &str, age: jiff::SignedDuration) {
+    use campfire_jobs::{Job, JobRequest};
+    use campfire_mail::jobs::{DeliveryJob, Notification};
+    use std::time::Duration;
+
+    let queue = a.booted.app.jobs.queue.clone();
+    let email_address = email.to_owned();
+    let id = a
+        .db()
+        .write(move |tx| {
+            let id = queue.enqueue(
+                tx,
+                &JobRequest::new(&DeliveryJob {
+                    notification: Notification::PasswordReset { email_address },
+                }),
+            )?;
+            tx.conn().execute(
+                "UPDATE background_jobs SET created_at = ? WHERE id = ?",
+                rusqlite::params![tx.now().since(-age), id],
+            )?;
+            Ok(id)
+        })
+        .await
+        .unwrap();
+    a.booted.app.jobs.queue.wake(DeliveryJob::CLASS);
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while count(a, "SELECT count(*) FROM background_jobs WHERE id=?", id).await != 0 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("delivery job {id} did not complete"));
+}
+
 #[tokio::test]
-async fn late_and_superseded_deliveries_keep_the_request_s_fifteen_minutes() {
+async fn password_reset_delivery_job_uses_enqueue_time_and_skips_stale_requests() {
+    use campfire_jobs::{QueueConfig, Registry, RunnerConfig};
     use jiff::SignedDuration;
     use rails_compat::password_reset::{EXPIRES_IN, verify};
-    let (a, clock) = app(&MAIL).await;
+    use std::time::Duration;
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port().to_string();
+    let (sent, mut received) = tokio::sync::mpsc::unbounded_channel();
+    let smtp = tokio::spawn(async move {
+        while let Ok((stream, _)) = listener.accept().await {
+            capture_smtp_message(stream, &sent).await;
+        }
+    });
+    let (a, clock) = app(&[
+        ("SMTP_ADDRESS", "127.0.0.1"),
+        ("SMTP_PORT", &port),
+        ("SMTP_ENABLE_STARTTLS", "false"),
+        MAIL[1],
+        MAIL[2],
+    ])
+    .await;
+    let a = a.without_job_runner().await;
+    let mut registry = Registry::new();
+    campfire_runtime::mail::register(&mut registry);
+    let config = RunnerConfig::new(vec![QueueConfig::new("default", 1)]);
+    let runner = campfire_jobs::start(
+        a.db().clone(),
+        a.booted.app.jobs.queue.clone(),
+        registry,
+        a.booted.app.clone(),
+        config,
+    );
     let david = email_of(&a, DAVID).await;
-    let secrets = a.booted.app.secrets.clone();
+    let secrets = &a.booted.app.secrets;
     let now = a.booted.app.clock.now();
 
-    assert!(reset_message(&a, &david, now - EXPIRES_IN).await.is_none());
+    let age = SignedDuration::from_mins(13);
+    run_password_reset_delivery(&a, &david, age).await;
+    let raw = tokio::time::timeout(Duration::from_secs(5), received.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    let prefix = "http://campfire.test/app/passwords/";
+    let token = raw
+        .lines()
+        .find_map(|line| line.strip_prefix(prefix))
+        .expect("reset URL");
+    let expires_at = now - age + EXPIRES_IN;
+    assert!(verify(secrets, token, expires_at - SignedDuration::from_secs(1)).is_some());
+    assert!(verify(secrets, token, expires_at).is_none());
 
-    let requested = now - SignedDuration::from_mins(10);
-    let token = link_token(&reset_message(&a, &david, requested).await.expect("still in time"));
-    let left = SignedDuration::from_mins(5);
-    assert!(verify(&secrets, &token, now + left - SignedDuration::from_secs(1)).is_some());
-    assert!(verify(&secrets, &token, now + left).is_none());
+    for age in [EXPIRES_IN, age + SignedDuration::from_secs(1)] {
+        run_password_reset_delivery(&a, &david, age).await;
+        assert!(
+            received.try_recv().is_err(),
+            "mail sent for a request aged {age}"
+        );
+    }
 
-    let reply = a.anonymous().write(submit(&token, NEW_PASSWORD)).await;
+    let reply = a.anonymous().write(submit(token, NEW_PASSWORD)).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert!(reset_message(&a, &david, requested).await.is_none());
-    assert!(reset_message(&a, &david, now).await.is_none(), "changed at the request's instant");
+    for age in [SignedDuration::from_secs(1), SignedDuration::ZERO] {
+        run_password_reset_delivery(&a, &david, age).await;
+        assert!(
+            received.try_recv().is_err(),
+            "mail sent for a superseded request"
+        );
+    }
 
     clock.advance(SignedDuration::from_secs(1));
-    let later = a.booted.app.clock.now();
-    assert!(reset_message(&a, &david, later).await.is_some(), "a request after the change");
+    run_password_reset_delivery(&a, &david, SignedDuration::ZERO).await;
+    let raw = tokio::time::timeout(Duration::from_secs(5), received.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(raw.lines().any(|line| line.starts_with(prefix)));
+    runner.shutdown(Duration::from_secs(1)).await;
+    smtp.abort();
+    assert!(smtp.await.unwrap_err().is_cancelled());
 }
 
 /// A password sign-in as `POST /api/v1/session` makes one, except that with `?reset=1` the
@@ -726,6 +865,87 @@ async fn requests_and_new_passwords_need_the_csrf_token() {
     assert_eq!(captured_mail_jobs(&a).await, Vec::<Value>::new());
     assert_eq!(reset_state(&a).await, before);
     assert_eq!(b.send(check(&token)).await.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn password_reset_addresses_are_trimmed_and_require_an_unambiguous_match() {
+    let (a, _) = app(&MAIL).await;
+    let a = a.without_job_runner().await;
+    let david = email_of(&a, DAVID).await;
+    let now = a.booted.app.clock.now();
+    let mut b = a.anonymous();
+    capture_mail_jobs(&a).await;
+
+    for email in ["David@37signals.com", " david@37signals.com "] {
+        assert_eq!(
+            b.write(request(email, "198.51.100.20")).await.status,
+            StatusCode::OK
+        );
+    }
+    let jobs = captured_mail_jobs(&a).await;
+    for (job, expected) in jobs
+        .iter()
+        .zip(["David@37signals.com", "david@37signals.com"])
+    {
+        let address = job["notification"]["PasswordReset"]["email_address"]
+            .as_str()
+            .unwrap();
+        assert_eq!(address, expected);
+        let message = reset_message(&a, address, now).await.unwrap();
+        assert!(message.to.ends_with(&format!("<{david}>")));
+    }
+    assert_eq!(jobs.len(), 2);
+
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE users SET email_address = 'DAVID@37signals.com' WHERE id = ?",
+                [JASON],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        reset_message(&a, "David@37signals.com", now)
+            .await
+            .is_none()
+    );
+    let exact = reset_message(&a, &david, now).await.unwrap();
+    assert!(exact.to.ends_with(&format!("<{david}>")));
+}
+
+#[tokio::test]
+async fn a_password_reset_link_is_refused_after_the_member_is_banned() {
+    let (a, _) = app(&MAIL).await;
+    let david = email_of(&a, DAVID).await;
+    let token = emailed_token(&a, &david).await;
+    let mut b = a.anonymous();
+    assert_eq!(b.send(check(&token)).await.status, StatusCode::OK);
+
+    a.db()
+        .write(|tx| {
+            // Keep the request out of the IP-ban gate so it reaches the account check.
+            tx.conn().execute(
+                "UPDATE sessions SET ip_address=NULL WHERE user_id=?",
+                [DAVID],
+            )?;
+            campfire_db::User::find(tx.conn(), DAVID)?.ban(tx)
+        })
+        .await
+        .unwrap();
+    let before = reset_state(&a).await;
+    refused_link(&b.write(submit(&token, NEW_PASSWORD)).await);
+    assert_eq!(reset_state(&a).await[0], before[0]);
+    assert_eq!(
+        count(
+            &a,
+            "SELECT count(*) FROM audit_logs WHERE action='user.password.reset' AND target_id=?",
+            DAVID
+        )
+        .await,
+        0
+    );
 }
 
 #[tokio::test]
