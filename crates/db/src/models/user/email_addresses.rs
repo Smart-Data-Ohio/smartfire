@@ -74,16 +74,20 @@ impl EmailAddress {
         address: &str,
         since: Timestamp,
     ) -> Result<bool> {
-        Ok(conn.query_row_cached(
-            "SELECT EXISTS (
-                SELECT 1 FROM audit_logs
-                WHERE target_type = 'User' AND target_id = ?1
-                  AND action = 'user.email_address.remove' AND created_at >= ?3
-                  AND json_extract(details, '$.email_address') = ?2 COLLATE NOCASE
-            )",
-            params![user_id, normalize(address), since],
-            |row| row.get(0),
-        )?)
+        let normalized = normalize(address);
+        let mut query = conn.prepare_cached(
+            "SELECT json_extract(details, '$.email_address') FROM audit_logs
+             WHERE target_type = 'User' AND target_id = ?1
+               AND action = 'user.email_address.remove' AND created_at >= ?2",
+        )?;
+        let mut rows = query.query(params![user_id, since])?;
+        while let Some(row) = rows.next()? {
+            let removed: Option<String> = row.get(0)?;
+            if removed.is_some_and(|address| normalize(&address) == normalized) {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     pub fn is_available(conn: &Connection, address: &str) -> Result<bool> {
@@ -167,7 +171,12 @@ pub fn trim(address: &str) -> &str {
 
 /// Shared by address claims, reset delivery, and the per-inbox request limit.
 pub fn normalize(address: &str) -> String {
-    rails_compat::unicode::fold(trim(address))
+    let address = trim(address);
+    if address.is_ascii() {
+        address.to_ascii_lowercase()
+    } else {
+        rails_compat::unicode::fold(address)
+    }
 }
 
 /// Load both address sources in one statement. JSON keeps the number of binds constant for
@@ -184,7 +193,10 @@ pub(super) fn matches(
         return Ok(HashMap::new());
     }
     // Keep SQLite's indexed ASCII comparison for sign-in and provider lookups.
-    let secondary_keys: Vec<_> = addresses.iter().map(|address| address.trim().to_ascii_lowercase()).collect();
+    let secondary_keys: Vec<_> = addresses
+        .iter()
+        .map(|address| address.trim().to_ascii_lowercase())
+        .collect();
     let primary = if lowercase_primary {
         "LOWER(users.email_address)"
     } else {

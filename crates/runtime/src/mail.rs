@@ -154,7 +154,12 @@ pub async fn password_reset_message(
             Ok((!changed).then_some(recipient))
         })
         .await?;
-    let Some(ResetRecipient { user, email, secondary_id }) = recipient else {
+    let Some(ResetRecipient {
+        user,
+        email,
+        secondary_id,
+    }) = recipient
+    else {
         return Ok(None);
     };
     if app.db.env().now().jiff() > expires_at - jiff::SignedDuration::from_mins(2) {
@@ -239,7 +244,11 @@ fn reset_recipient(
     };
     Ok(User::find_by_id(conn, user_id)?
         .filter(can_reset_password)
-        .map(|user| ResetRecipient { user, email, secondary_id }))
+        .map(|user| ResetRecipient {
+            user,
+            email,
+            secondary_id,
+        }))
 }
 
 /// Whether the user's password was changed or reset at or after `since`, by the audit log.

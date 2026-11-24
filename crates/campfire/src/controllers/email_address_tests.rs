@@ -425,7 +425,7 @@ async fn setting_a_password_retires_a_passwordless_confirmation_and_queued_deliv
     let reply = owner
         .write(
             Req::new(Method::PATCH, "/api/v1/settings/profile")
-                .json_body(&json!({"password": "new test passphrase"})),
+                .json_body(&json!({"password": "   "})),
         )
         .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
@@ -588,6 +588,38 @@ async fn profile_refuses_owned_and_other_members_addresses() {
     let list = owner.get(ADDRESSES).await.json();
     assert_eq!(list["primary"], previous_primary);
     assert_eq!(list["secondary"][0]["id"], own.id);
+    assert!(audits(&a).await.is_empty());
+}
+
+#[tokio::test]
+async fn profile_refuses_a_case_variant_of_its_own_secondary_with_make_primary_guidance() {
+    let a = app(MAIL).await;
+    let previous = primary_of(&a, DAVID).await;
+    let linked = link(&a, DAVID, LINKED).await;
+    let mut owner = a.sign_in(DAVID).await;
+    let reply = owner
+        .write(
+            Req::new(Method::PATCH, "/api/v1/settings/profile").json_body(&json!({
+                "emailAddress": LINKED.to_ascii_uppercase(),
+                "currentPassword": "secret123456",
+            })),
+        )
+        .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert_eq!(
+        reply.json()["error"]["fields"]["emailAddress"],
+        json!([
+            "This address is already linked to your account. Use Make primary under Email addresses."
+        ]),
+    );
+    let list = owner.get(ADDRESSES).await.json();
+    assert_eq!(list["primary"], previous);
+    assert_eq!(list["secondary"][0]["id"], linked.id);
     assert!(audits(&a).await.is_empty());
 }
 

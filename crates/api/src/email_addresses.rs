@@ -117,7 +117,8 @@ async fn promote(c: &mut Ctx) -> Result {
     let id = address_id(c)?;
     let context = admin::audit_context(c)?;
     let session_id = campfire_runtime::concerns::sudo::session_id(c);
-    let saved = c.app()
+    let saved = c
+        .app()
         .db
         .write(move |tx| {
             authentication::promote_email_address(tx, &mut user, id, session_id, &context)

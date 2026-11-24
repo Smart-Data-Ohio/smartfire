@@ -1147,6 +1147,8 @@ async fn a_pending_second_step_from_the_old_password_ends_at_a_reset() {
     use rails_compat::{ar_encryption::ArEncryption, totp};
     let (a, clock) = app(&MAIL).await;
     let david = email_of(&a, DAVID).await;
+    let secondary = "linked@example.test";
+    confirmed_secondary(&a, secondary).await;
     let enc = ArEncryption::new(&a.booted.app.secrets);
     let secret = a
         .db()
@@ -1161,8 +1163,13 @@ async fn a_pending_second_step_from_the_old_password_ends_at_a_reset() {
     let sessions = "SELECT count(*) FROM sessions WHERE user_id=?";
 
     let mut b = a.anonymous();
-    let pending = b.password_sign_in(&david, PASSWORD).await;
-    assert_eq!(pending.json()["kind"], "secondFactorRequired", "{}", pending.text());
+    let pending = b.password_sign_in(secondary, PASSWORD).await;
+    assert_eq!(
+        pending.json()["kind"],
+        "secondFactorRequired",
+        "{}",
+        pending.text()
+    );
     let token = emailed_token(&a, &david).await;
     let reply = a.anonymous().write(submit(&token, NEW_PASSWORD)).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
@@ -1177,8 +1184,13 @@ async fn a_pending_second_step_from_the_old_password_ends_at_a_reset() {
     assert_eq!(count(&a, sessions, DAVID).await, 0);
 
     clock.advance(jiff::SignedDuration::from_secs(30));
-    let pending = b.password_sign_in(&david, NEW_PASSWORD).await;
-    assert_eq!(pending.json()["kind"], "secondFactorRequired", "{}", pending.text());
+    let pending = b.password_sign_in(secondary, NEW_PASSWORD).await;
+    assert_eq!(
+        pending.json()["kind"],
+        "secondFactorRequired",
+        "{}",
+        pending.text()
+    );
     let reply = b.answer_challenge(&code(), false).await;
     assert_eq!(reply.json()["kind"], "signedIn", "{}", reply.text());
     assert_eq!(count(&a, sessions, DAVID).await, 1);
@@ -1595,6 +1607,70 @@ async fn a_stale_profile_email_edit_cannot_restore_the_previous_address() {
 }
 
 #[tokio::test]
+async fn make_primary_rechecks_the_session_digest_and_email_snapshot() {
+    use campfire_db::{User, UserChanges};
+
+    for (revoke_session, replace_password, replace_email) in
+        [(true, false, false), (false, true, false), (false, false, true)]
+    {
+        let (a, _) = app(&MAIL).await;
+        let secondary = confirmed_secondary(&a, "linked@example.test").await;
+        let (mut user, session_id) = profile_authorization(&a).await;
+        let digest = if replace_password {
+            Some(new_digest(&a, NEW_PASSWORD).await)
+        } else {
+            None
+        };
+        let email = replace_email.then(|| Some("replacement@example.test".into()));
+        a.db()
+            .write(move |tx| {
+                if revoke_session {
+                    tx.conn()
+                        .execute("DELETE FROM sessions WHERE id=?", [session_id])?;
+                }
+                User::find(tx.conn(), DAVID)?.update(
+                    tx,
+                    UserChanges {
+                        password_digest: digest,
+                        email_address: email,
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+
+        let expected_email = email_of(&a, DAVID).await;
+        capture_mail_jobs(&a).await;
+        let saved = a
+            .db()
+            .write(move |tx| {
+                campfire_runtime::authentication::promote_email_address(
+                    tx,
+                    &mut user,
+                    secondary.id,
+                    Some(session_id),
+                    &Default::default(),
+                )
+            })
+            .await
+            .unwrap();
+        assert!(!saved);
+        assert_eq!(email_of(&a, DAVID).await, expected_email);
+        assert_eq!(
+            count(
+                &a,
+                "SELECT count(*) FROM user_email_addresses WHERE user_id=?",
+                DAVID,
+            )
+            .await,
+            1
+        );
+        assert!(captured_mail_jobs(&a).await.is_empty());
+    }
+}
+
+#[tokio::test]
 async fn a_whitespace_profile_password_change_is_audited_and_supersedes_reset_mail() {
     let (a, _) = app(&MAIL).await;
     let david = email_of(&a, DAVID).await;
@@ -1800,18 +1876,7 @@ async fn a_secondary_signs_in_and_receives_reset_until_that_confirmation_is_remo
 
     let (a, _) = app(&MAIL).await;
     let address = "Linked@example.test";
-    let secondary = a
-        .db()
-        .write(move |tx| {
-            let user = campfire_db::User::find(tx.conn(), DAVID)?;
-            assert_eq!(
-                EmailAddress::confirm(tx, &user, address)?,
-                Confirmation::Added
-            );
-            Ok(EmailAddress::by_address(tx.conn(), address)?.unwrap().1)
-        })
-        .await
-        .unwrap();
+    let secondary = confirmed_secondary(&a, address).await;
     let signed_in = a
         .anonymous()
         .password_sign_in(&address.to_ascii_lowercase(), PASSWORD)
@@ -1843,11 +1908,14 @@ async fn a_secondary_signs_in_and_receives_reset_until_that_confirmation_is_remo
         message.to
     );
     let token = link_token(&message);
-    assert!(rails_compat::password_reset::verify(
-        &a.booted.app.secrets,
-        &token,
-        now + jiff::SignedDuration::from_mins(5),
-    ).is_none());
+    assert!(
+        rails_compat::password_reset::verify(
+            &a.booted.app.secrets,
+            &token,
+            now + jiff::SignedDuration::from_mins(5),
+        )
+        .is_none()
+    );
     assert_eq!(
         visitor.send(check(&token)).await.json(),
         json!({"kind":"ready"})
@@ -1875,4 +1943,92 @@ async fn a_secondary_signs_in_and_receives_reset_until_that_confirmation_is_remo
         .await
         .unwrap();
     refused_link(&visitor.send(check(&token)).await);
+}
+
+async fn confirmed_secondary(
+    a: &TestApp,
+    address: &'static str,
+) -> campfire_db::user::email_addresses::EmailAddress {
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+
+    a.db()
+        .write(move |tx| {
+            let user = campfire_db::User::find(tx.conn(), DAVID)?;
+            assert_eq!(
+                EmailAddress::confirm(tx, &user, address)?,
+                Confirmation::Added
+            );
+            Ok(EmailAddress::by_address(tx.conn(), address)?.unwrap().1)
+        })
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn password_reset_delivers_a_padded_mixed_case_request_to_the_confirmed_secondary() {
+    let (a, _) = app(&MAIL).await;
+    let a = a.without_job_runner().await;
+    let address = "Linked@example.test";
+    let secondary = confirmed_secondary(&a, address).await;
+    capture_mail_jobs(&a).await;
+
+    let mut visitor = a.anonymous();
+    let submitted = "\u{a0} lInKeD@example.test\t";
+    let reply = visitor.write(request(submitted, "198.51.100.21")).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let jobs = captured_mail_jobs(&a).await;
+    assert_eq!(jobs.len(), 1);
+    let queued = jobs[0]["notification"]["PasswordReset"]["email_address"]
+        .as_str()
+        .unwrap();
+    assert_eq!(queued, submitted);
+
+    let now = a.booted.app.clock.now();
+    let message = reset_message(&a, queued, now).await.unwrap();
+    assert!(
+        message.to.ends_with(&format!("<{address}>")),
+        "{}",
+        message.to
+    );
+    let token = link_token(&message);
+    let claim = rails_compat::password_reset::verify(&a.booted.app.secrets, &token, now).unwrap();
+    assert_eq!(claim.user_id, DAVID);
+    assert_eq!(claim.secondary_id, Some(secondary.id));
+    assert_eq!(visitor.send(check(&token)).await.status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn password_reset_refuses_a_normalized_collision_between_primary_and_secondary() {
+    let (a, _) = app(&MAIL).await;
+    let address = "Linked@example.test";
+    let legacy_primary = "LINKED@example.test";
+    confirmed_secondary(&a, address).await;
+    let now = a.booted.app.clock.now();
+    assert!(
+        reset_message(&a, "linked@example.test", now)
+            .await
+            .is_some()
+    );
+
+    a.db()
+        .write(move |tx| {
+            // Legacy or imported rows can predate the cross-table claim check.
+            tx.conn().execute(
+                "UPDATE users SET email_address=? WHERE id=?",
+                rusqlite::params![legacy_primary, JASON],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    for input in ["linked@example.test", address] {
+        assert!(reset_message(&a, input, now).await.is_none(), "{input}");
+    }
+
+    let exact = reset_message(&a, legacy_primary, now).await.unwrap();
+    let claim =
+        rails_compat::password_reset::verify(&a.booted.app.secrets, &link_token(&exact), now)
+            .unwrap();
+    assert_eq!(claim.user_id, JASON);
+    assert_eq!(claim.secondary_id, None);
 }
