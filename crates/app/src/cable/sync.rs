@@ -288,6 +288,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("Broadcasts::closed_room_update", &["sidebar.row.upserted"]),
     ("Broadcasts::direct_room_create", &["sidebar.row.upserted"]),
     (
+        "Broadcasts::sync_direct_sidebar",
+        &["sidebar.row.upserted", "sidebar.row.removed"],
+    ),
+    (
         "Broadcasts::involvement_change",
         &["sidebar.row.upserted", "sidebar.row.removed"],
     ),
@@ -370,6 +374,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "thread.updated",
             "thread.removed",
             "sidebar.row.upserted",
+            "sidebar.row.removed",
             "huddle.notice",
             "huddle.ring",
             "message.cards",
@@ -1514,6 +1519,19 @@ enum Viewers<'a> {
     Users(&'a [i64]),
 }
 
+#[derive(Clone, Copy)]
+enum RowChange {
+    Refresh,
+    Management,
+    CloseDirect,
+}
+
+impl RowChange {
+    fn refresh_room(self) -> Option<bool> {
+        matches!(self, Self::Management).then_some(true)
+    }
+}
+
 /// Proof that the room's lock is held: only [`room_locked`] makes one, for as long as it holds
 /// the lock, and every sidebar row (upsert or removal) is published through it.
 struct RoomRows {
@@ -1622,7 +1640,7 @@ impl RoomRows {
         slot: &RendererSlot,
         conn: &Connection,
         viewers: Viewers<'_>,
-        refresh_room: Option<bool>,
+        change: RowChange,
     ) {
         const TRIES: usize = 8;
         if !server.sync_wanted() {
@@ -1633,7 +1651,7 @@ impl RoomRows {
         // published since (see `row`).
         let since = server.sync_head();
         let Some(mut refused) = in_snapshot(conn, self.room_id, |conn| {
-            self.rows(server, renderer, conn, viewers, since, refresh_room)
+            self.rows(server, renderer, conn, viewers, since, change)
         }) else {
             return;
         };
@@ -1649,7 +1667,7 @@ impl RoomRows {
                     conn,
                     Viewers::Users(&refused),
                     since,
-                    refresh_room,
+                    change,
                 )
             }) else {
                 return;
@@ -1670,7 +1688,7 @@ impl RoomRows {
         conn: &Snapshot<'_>,
         viewers: Viewers<'_>,
         since: u64,
-        refresh_room: Option<bool>,
+        change: RowChange,
     ) -> Vec<i64> {
         let room_id = self.room_id;
         let room = match Room::find_by_id(conn, room_id) {
@@ -1699,7 +1717,7 @@ impl RoomRows {
                     conn,
                     (room, membership),
                     since,
-                    refresh_room,
+                    change,
                 );
                 if !published {
                     refused.push(membership.user_id);
@@ -1734,7 +1752,7 @@ impl RoomRows {
         conn: &Snapshot<'_>,
         (room, membership): (&Room, &Membership),
         since: u64,
-        refresh_room: Option<bool>,
+        change: RowChange,
     ) -> bool {
         let user_id = membership.user_id;
         if room.deleted() {
@@ -1748,13 +1766,13 @@ impl RoomRows {
         let mut row = match renderer.sidebar_row(conn, room, membership) {
             Ok(Some(row)) => row,
             Ok(None) => {
-                self.hidden(
+                return self.hidden(
                     server,
                     user_id,
-                    refresh_room,
+                    change,
                     membership.closed_at.is_some(),
+                    since,
                 );
-                return true;
             }
             Err(error) => {
                 tracing::warn!(
@@ -1766,7 +1784,7 @@ impl RoomRows {
                 return true;
             }
         };
-        row.refresh_room = refresh_room;
+        row.refresh_room = change.refresh_room();
         let payload = serde_json::to_string(&SyncPayload::SidebarRowUpserted(row))
             .expect("sync payloads serialize");
         let publication = SyncPublication::new(Audience::User(user_id), payload);
@@ -1793,15 +1811,29 @@ impl RoomRows {
     }
 
     /// The person hid the room: remove the sidebar row while their connections keep following it.
-    fn hidden(&self, server: &Cable, user_id: i64, refresh_room: Option<bool>, closed: bool) {
+    fn hidden(
+        &self,
+        server: &Cable,
+        user_id: i64,
+        change: RowChange,
+        closed: bool,
+        since: u64,
+    ) -> bool {
         let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
             room_id: self.room_id,
-            refresh_room,
-            closed: closed.then_some(true),
+            refresh_room: change.refresh_room(),
+            closed: (closed && matches!(change, RowChange::CloseDirect)).then_some(true),
         });
-        send(server, Audience::User(user_id), &payload, |publication| {
-            publication
-        });
+        let payload = serde_json::to_string(&payload).expect("sync payloads serialize");
+        let mut publication = SyncPublication::new(Audience::User(user_id), payload);
+        if closed && matches!(change, RowChange::Refresh) {
+            // A closed direct has no row to refresh. Keep the same sequence slot as an
+            // upsert so a private ignore that keeps it closed cannot be inferred by the author.
+            publication.except_user = Some(user_id);
+        }
+        server
+            .sync_publish_fresh(publication, &unread_fence(user_id, self.room_id), since)
+            .is_ok()
     }
     /// The room is gone: `sidebar.row.removed` for everyone, and nobody follows it any more.
     /// Sent to everyone rather than to members read now, since the records may be gone.
@@ -1831,7 +1863,7 @@ pub fn sidebar_rows_later(
     room_id: i64,
     user_ids: Option<Vec<i64>>,
 ) {
-    sidebar_rows_later_with_refresh(server, slot, room_id, user_ids, None);
+    defer_sidebar_rows(server, slot, room_id, user_ids, RowChange::Refresh);
 }
 
 /// [`sidebar_rows_later`] for a management change: the rows ask a loaded room to reload.
@@ -1841,20 +1873,36 @@ pub fn management_sidebar_rows_later(
     room_id: i64,
     user_ids: Option<Vec<i64>>,
 ) {
-    sidebar_rows_later_with_refresh(server, slot, room_id, user_ids, Some(true));
+    defer_sidebar_rows(server, slot, room_id, user_ids, RowChange::Management);
 }
 
-fn sidebar_rows_later_with_refresh(
+/// Refresh the members named by a direct close or reopen.
+pub fn direct_sidebar_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    room_id: i64,
+    user_ids: Vec<i64>,
+    closed: bool,
+) {
+    let change = if closed {
+        RowChange::CloseDirect
+    } else {
+        RowChange::Refresh
+    };
+    defer_sidebar_rows(server, slot, room_id, Some(user_ids), change);
+}
+
+fn defer_sidebar_rows(
     server: &Cable,
     slot: &RendererSlot,
     room_id: i64,
     user_ids: Option<Vec<i64>>,
-    refresh_room: Option<bool>,
+    change: RowChange,
 ) {
     defer_rows(server, slot, move |server, slot, reader| {
         let viewers = user_ids.as_deref().map_or(Viewers::Members, Viewers::Users);
         room_rows(slot, reader, room_id, |rows, conn| {
-            rows.publish(server, slot, conn, viewers, refresh_room);
+            rows.publish(server, slot, conn, viewers, change);
         });
     });
 }
@@ -1900,7 +1948,13 @@ pub fn membership_row_later(server: &Cable, slot: &RendererSlot, membership_id: 
             return;
         };
         room_rows(slot, reader, room_id, |rows, conn| {
-            rows.publish(server, slot, conn, Viewers::Users(&[user_id]), Some(true));
+            rows.publish(
+                server,
+                slot,
+                conn,
+                Viewers::Users(&[user_id]),
+                RowChange::Management,
+            );
         });
     });
 }
@@ -1919,7 +1973,7 @@ pub fn direct_preview_later(server: &Cable, slot: &RendererSlot, message: &Messa
                 |row| row.get::<_, bool>(0),
             );
             match newer {
-                Ok(false) => rows.publish(server, slot, conn, Viewers::Members, None),
+                Ok(false) => rows.publish(server, slot, conn, Viewers::Members, RowChange::Refresh),
                 Ok(true) => {}
                 Err(error) => tracing::warn!(%error, room_id, "sync: direct preview not read"),
             }
@@ -1962,7 +2016,13 @@ pub fn organized_later(
                 continue;
             };
             room_rows(slot, reader, room_id, |rows, conn| {
-                rows.publish(server, slot, conn, Viewers::Users(&[user_id]), None);
+                rows.publish(
+                    server,
+                    slot,
+                    conn,
+                    Viewers::Users(&[user_id]),
+                    RowChange::Refresh,
+                );
             });
         }
         reader.read(&mut |conn| {
@@ -2008,7 +2068,13 @@ pub fn organized_later(
 pub fn sidebar_row_removed_later(server: &Cable, slot: &RendererSlot, user_id: i64, room_id: i64) {
     defer_rows(server, slot, move |server, slot, reader| {
         room_rows(slot, reader, room_id, |rows, conn| {
-            rows.publish(server, slot, conn, Viewers::Users(&[user_id]), None);
+            rows.publish(
+                server,
+                slot,
+                conn,
+                Viewers::Users(&[user_id]),
+                RowChange::Refresh,
+            );
         });
     });
 }
@@ -2397,6 +2463,16 @@ mod tests {
             assert!(!NOT_YET_TWINNED.contains(kind), "{kind} is in both lists");
             assert!(!events.is_empty(), "{kind} has no events");
         }
+    }
+
+    #[test]
+    fn direct_sidebar_removals_have_a_broadcast_twin() {
+        assert!(
+            TWINS
+                .iter()
+                .any(|(kind, events)| *kind == "broadcasts::Broadcast"
+                    && events.contains(&"sidebar.row.removed"))
+        );
     }
 
     #[test]

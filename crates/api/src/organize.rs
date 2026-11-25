@@ -68,7 +68,10 @@ async fn put_direct_closed(c: &mut Ctx) -> Result {
             validation("closed", "can only be set on a direct conversation"),
         ));
     }
-    let api::SetDirectClosed { closed } = body(c).await?;
+    let api::SetDirectClosed {
+        closed,
+        last_message_id,
+    } = body(c).await?;
     let row = c
         .app()
         .db
@@ -78,10 +81,23 @@ async fn put_direct_closed(c: &mut Ctx) -> Result {
                 return Err(campfire_db::Error::RecordNotFound("Room"));
             }
             let membership = Membership::find(tx.conn(), membership.id)?;
-            membership.set_direct_closed(tx, closed)?;
             if closed {
-                return Ok(None);
+                let newer = match last_message_id {
+                    Some(id) => tx.conn().query_row(
+                        "SELECT EXISTS (SELECT 1 FROM messages WHERE room_id = ?1 AND id > ?2 AND creator_id != ?3 AND thread_id IS NULL AND NOT system_note)",
+                        rusqlite::params![room.id, id, membership.user_id],
+                        |row| row.get::<_, bool>(0),
+                    )?,
+                    None => false,
+                };
+                if !newer || membership.closed_at.is_some() {
+                    membership.set_direct_closed(tx, true)?;
+                    return Ok(None);
+                }
+                let conn = campfire_db::Snapshot::of_write(tx)?;
+                return dto::membership_row(&conn, &room, &membership, tx.now()).map(Some);
             }
+            membership.set_direct_closed(tx, false)?;
             let conn = campfire_db::Snapshot::of_write(tx)?;
             let membership = Membership::find(&conn, membership.id)?;
             dto::sidebar_row(&conn, &room, &membership, tx.now())

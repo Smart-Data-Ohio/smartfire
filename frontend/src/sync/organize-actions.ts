@@ -109,30 +109,35 @@ const organizing = <E, R>(request: Effect.Effect<readonly SidebarRow[], E, R>) =
 export const setDirectClosed = Effect.fn("organize.setDirectClosed")(function* (
   roomId: number,
   closed: boolean,
+  lastMessageId?: number,
 ) {
-  yield* serialized(
+  return yield* serialized(
     withRowTicket((since) =>
       Effect.gen(function* () {
-        const { row } = yield* api.setDirectClosed(roomId, { closed });
+        const { row } = yield* api.setDirectClosed(
+          roomId,
+          lastMessageId === undefined ? { closed } : { closed, lastMessageId },
+        );
 
-        if (row !== null) {
-          yield* landRows([row], since);
-        } else if (closed) {
-          const state = store.getState();
-          const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
-          mutations.landReplyRows(
-            [
-              {
-                seq: 0,
-                topic: `user:${viewerId}`,
-                type: "sidebar.row.removed",
-                data: { roomId, closed },
-              },
-            ],
-            yield* Clock.currentTimeMillis,
-            since,
-          );
+        if (row?.membership.involvement === "invisible" || (row === null && !closed)) {
+          return false;
         }
+
+        const state = store.getState();
+        const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
+
+        const event =
+          row === null
+            ? { type: "sidebar.row.removed" as const, data: { roomId, closed } }
+            : { type: "sidebar.row.upserted" as const, data: row };
+
+        mutations.landReplyRows(
+          [{ seq: 0, topic: `user:${viewerId}`, ...event }],
+          yield* Clock.currentTimeMillis,
+          since,
+        );
+
+        return row === null;
       }),
     ),
   );

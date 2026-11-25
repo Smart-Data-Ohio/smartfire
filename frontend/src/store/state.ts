@@ -71,7 +71,7 @@ export interface State {
   readonly sidebar: SidebarState;
   /** When the sync path last changed each sidebar row, so an older HTTP reply leaves it be. */
   readonly rowTouches: RowTouches;
-  /** The direct rows explicitly closed by the latest batch that closed any. */
+  /** The direct rooms known to be closed for this viewer. */
   readonly directClosures: ReadonlySet<number>;
   readonly rooms: Readonly<Record<number, RoomState>>;
   readonly messages: Readonly<Record<number, MessageDTO>>;

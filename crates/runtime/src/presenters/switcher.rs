@@ -14,6 +14,8 @@ pub struct Switcher {
 pub struct SwitcherRoom {
     pub id: i64,
     pub name: Option<String>,
+    #[serde(skip)]
+    pub custom_direct_name: Option<String>,
     pub kind: &'static str,
     pub url: String,
     pub icon_name: Option<String>,
@@ -62,6 +64,11 @@ pub fn load(
                 .get(&room.id)
                 .map(Vec::as_slice)
                 .unwrap_or_default();
+            let custom_direct_name = room
+                .name
+                .as_deref()
+                .filter(|name| room.direct() && !campfire_richtext::ruby::is_blank(name))
+                .map(str::to_owned);
             let name = if room.direct() {
                 let names: Vec<String> = members
                     .iter()
@@ -93,6 +100,7 @@ pub fn load(
             SwitcherRoom {
                 id: room.id,
                 name,
+                custom_direct_name,
                 kind,
                 url: campfire_routes::room(room.id),
                 icon_name: room.icon_name,

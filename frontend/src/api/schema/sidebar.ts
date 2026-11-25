@@ -4,7 +4,7 @@ import type { Sidebar as GeneratedSidebar } from "../../gen/Sidebar.ts";
 import type { SidebarLastMessage as GeneratedSidebarLastMessage } from "../../gen/SidebarLastMessage.ts";
 import type { SidebarRow as GeneratedSidebarRow } from "../../gen/SidebarRow.ts";
 import type { SidebarRowRemoved as GeneratedSidebarRowRemoved } from "../../gen/SidebarRowRemoved.ts";
-import { RoomCategoryId, RoomId, UserId } from "./ids.ts";
+import { MessageId, RoomCategoryId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Membership, Room } from "./room.ts";
 import { EvaluationTimestamp, Timestamp } from "./time.ts";
@@ -13,6 +13,7 @@ import { WorkspaceLayout } from "./workspace-layout.ts";
 
 /** A direct room's newest root message, previewed under its row on phones. */
 export const SidebarLastMessage = Schema.Struct({
+  messageId: MessageId,
   creatorId: UserId,
   excerpt: Schema.String,
   createdAt: Timestamp,
@@ -62,6 +63,7 @@ export const Sidebar = Schema.Struct({
   categories: Schema.Array(RoomCategory),
   users: Schema.Array(User),
   directPlaceholderUserIds: Schema.Array(UserId),
+  closedDirectRoomIds: Schema.optionalKey(Schema.Array(RoomId)),
   noteToSelfRoomId: Schema.optionalKey(RoomId),
   noteToSelfClosed: Schema.optionalKey(Schema.Boolean),
   canCreateRooms: Schema.Boolean,

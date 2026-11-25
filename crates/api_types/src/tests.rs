@@ -757,6 +757,7 @@ fn sidebar_round_trips() {
         },
         note_to_self_room_id: None,
         note_to_self_closed: None,
+        closed_direct_room_ids: None,
     };
     let wire = serde_json::to_value(&sidebar).unwrap();
     assert_eq!(

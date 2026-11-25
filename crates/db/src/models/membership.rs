@@ -345,6 +345,16 @@ impl Membership {
         )
     }
 
+    /// The live direct rooms the viewer explicitly closed.
+    pub fn closed_direct_room_ids(conn: &Connection, user_id: i64) -> Result<Vec<i64>> {
+        query_all(
+            conn,
+            "SELECT rooms.id FROM memberships JOIN rooms ON rooms.id = memberships.room_id WHERE memberships.user_id = ? AND memberships.closed_at IS NOT NULL AND rooms.type = 'Rooms::Direct' AND rooms.deleted_at IS NULL ORDER BY rooms.id",
+            [user_id],
+            |row| row.get(0),
+        )
+    }
+
     /// `user.memberships.with_ordered_room` (invisible included).
     pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         Self::ordered_room(conn, user_id, "")
@@ -370,7 +380,7 @@ impl Membership {
             params![closed.then(|| tx.now()), self.id, closed],
         )?;
         if changed != 0 {
-            Self::broadcast_direct_sidebar(tx, self.room_id, vec![self.user_id]);
+            Self::broadcast_direct_sidebar(tx, self.room_id, vec![self.user_id], closed);
         }
         Ok(())
     }
@@ -381,24 +391,35 @@ impl Membership {
         room_id: i64,
         author_id: i64,
     ) -> Result<()> {
-        let visible = super::ignore_policy::visible_sql("memberships.user_id", "?2");
         let user_ids = query_all(
             tx.conn(),
-            &format!(
-                "UPDATE memberships SET closed_at = NULL WHERE room_id = (SELECT id FROM rooms WHERE id = ?1 AND type = 'Rooms::Direct') AND closed_at IS NOT NULL AND {visible} RETURNING user_id"
-            ),
-            [room_id, author_id],
+            "SELECT user_id FROM memberships WHERE room_id = (SELECT id FROM rooms WHERE id = ?1 AND type = 'Rooms::Direct') ORDER BY id",
+            [room_id],
             |row| row.get(0),
         )?;
         if !user_ids.is_empty() {
-            Self::broadcast_direct_sidebar(tx, room_id, user_ids);
+            let visible = super::ignore_policy::visible_sql("memberships.user_id", "?2");
+            tx.conn().execute_cached(
+                &format!(
+                    "UPDATE memberships SET closed_at = NULL WHERE room_id = ?1 AND closed_at IS NOT NULL AND {visible}"
+                ),
+                [room_id, author_id],
+            )?;
+            // Refresh everyone, including those closed before the post. On the next post
+            // those who could see this author are now open, so using closed_at to select
+            // the audience would disclose the previous post's private ignore outcome.
+            Self::broadcast_direct_sidebar(tx, room_id, user_ids, false);
         }
         Ok(())
     }
 
-    fn broadcast_direct_sidebar(tx: &mut Tx<'_>, room_id: i64, user_ids: Vec<i64>) {
+    fn broadcast_direct_sidebar(tx: &mut Tx<'_>, room_id: i64, user_ids: Vec<i64>, closed: bool) {
         tx.emit_after_commit(Event::broadcast(
-            &crate::broadcasts::Broadcast::DirectSidebarChanged { room_id, user_ids },
+            &crate::broadcasts::Broadcast::DirectSidebarChanged {
+                room_id,
+                user_ids,
+                closed,
+            },
         ));
     }
 

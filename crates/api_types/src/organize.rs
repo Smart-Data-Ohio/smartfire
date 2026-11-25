@@ -244,12 +244,19 @@ pub struct ReorderWorkspaceCategories {
 /// sidebar. Membership, notifications and read position stay the same. 404 for a
 /// non-member, 422 for a room of any other kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SetDirectClosed {
     pub closed: bool,
+    /// The newest message the viewer saw in the sidebar, or zero for an empty conversation.
+    /// Omitted by older clients and when reopening.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub last_message_id: Option<i64>,
 }
 
 /// The viewer's current sidebar row after setting `closed`, or `null` if it is hidden.
+/// A close refused because of a newer message returns the current membership row.
 /// Changes publish `sidebar.row.removed` or `sidebar.row.upserted` to that viewer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]

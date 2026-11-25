@@ -526,7 +526,7 @@ async fn show_switcher(c: &mut Ctx) -> Result {
                     .into_iter()
                     .map(|room| api::SwitcherRoom {
                         room_id: room.id,
-                        name: room.name.unwrap_or_default(),
+                        name: room.custom_direct_name.or(room.name).unwrap_or_default(),
                         kind: match room.kind {
                             "dm" => api::SwitcherRoomKind::Dm,
                             "group" => api::SwitcherRoomKind::Group,

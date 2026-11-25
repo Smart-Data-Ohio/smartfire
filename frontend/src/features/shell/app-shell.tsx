@@ -145,9 +145,17 @@ export function AppShell() {
     if (roomId === null) return;
 
     return store.subscribe((state, previous) => {
+      // The first sidebar read can discover a room that was already closed when its link opened.
+      const opened = previous.rooms[roomId]?.detail;
+
+      const wasOpen =
+        previous.sidebar.rows[roomId] !== undefined ||
+        (opened != null && opened.membership.closed !== true);
+
       if (
-        state.directClosures !== previous.directClosures &&
+        wasOpen &&
         state.directClosures.has(roomId) &&
+        !previous.directClosures.has(roomId) &&
         router.state.matches.some(
           (match) => "roomId" in match.params && match.params.roomId === roomId,
         )

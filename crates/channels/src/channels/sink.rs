@@ -385,9 +385,14 @@ pub(crate) fn messaging(
                 app.broadcasts.thread_removed(*thread_id, *room_id);
             }
         }
-        Broadcast::DirectSidebarChanged { room_id, user_ids } => {
+        Broadcast::DirectSidebarChanged {
+            room_id,
+            user_ids,
+            closed,
+        } => {
             if let Some(app) = app {
-                app.broadcasts.sync_sidebar_rows(*room_id, user_ids.clone());
+                app.broadcasts
+                    .sync_direct_sidebar(*room_id, user_ids.clone(), *closed);
             }
         }
         Broadcast::MembershipChanged { membership_id } => {

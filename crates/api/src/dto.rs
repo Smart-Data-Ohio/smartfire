@@ -1169,22 +1169,24 @@ fn last_direct_messages(
 ) -> Result<HashMap<i64, api::SidebarLastMessage>> {
     let rows = ids_query(
         conn,
-        r#"SELECT "messages"."room_id", "messages"."creator_id", COALESCE("message_search_index"."body", ''), "messages"."created_at" FROM "messages" LEFT JOIN "message_search_index" ON "message_search_index"."rowid" = "messages"."id" WHERE "messages"."id" IN (SELECT (SELECT "newest"."id" FROM "messages" AS "newest" WHERE "newest"."room_id" = "rooms"."id" AND "newest"."thread_id" IS NULL AND NOT "newest"."system_note" ORDER BY "newest"."created_at" DESC, "newest"."id" DESC LIMIT 1) FROM "rooms" WHERE "rooms"."id" IN ({}))"#,
+        r#"SELECT "messages"."room_id", "messages"."id", "messages"."creator_id", COALESCE("message_search_index"."body", ''), "messages"."created_at" FROM "messages" LEFT JOIN "message_search_index" ON "message_search_index"."rowid" = "messages"."id" WHERE "messages"."id" IN (SELECT (SELECT "newest"."id" FROM "messages" AS "newest" WHERE "newest"."room_id" = "rooms"."id" AND "newest"."thread_id" IS NULL AND NOT "newest"."system_note" ORDER BY "newest"."created_at" DESC, "newest"."id" DESC LIMIT 1) FROM "rooms" WHERE "rooms"."id" IN ({}))"#,
         room_ids,
         |row| {
             Ok((
                 row.get::<_, i64>(0)?,
                 row.get::<_, i64>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, Timestamp>(3)?,
+                row.get::<_, i64>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, Timestamp>(4)?,
             ))
         },
     )?;
     Ok(rows
         .into_iter()
-        .map(|(room_id, creator_id, body, created_at)| {
+        .map(|(room_id, message_id, creator_id, body, created_at)| {
             let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
             let last = api::SidebarLastMessage {
+                message_id,
                 creator_id,
                 excerpt: campfire_presentation::helpers::truncate(&text, 140, "…"),
                 created_at: time(created_at),
@@ -1353,13 +1355,8 @@ pub fn sidebar(
         .iter()
         .map(|user| user.id)
         .collect();
-    let note_to_self_closed = match note_to_self {
-        Some(id) if !rows.iter().any(|row| row.room.id == id) => {
-            Membership::find_by_room_and_user(conn, id, viewer.id)?
-                .is_some_and(|membership| membership.closed_at.is_some())
-        }
-        _ => false,
-    };
+    let closed_direct_room_ids = Membership::closed_direct_room_ids(conn, viewer.id)?;
+    let note_to_self_closed = note_to_self.is_some_and(|id| closed_direct_room_ids.contains(&id));
     if !note_to_self_closed && !rows.iter().any(|row| row.note_to_self == Some(true)) {
         placeholders.insert(0, viewer.id);
     }
@@ -1375,6 +1372,8 @@ pub fn sidebar(
         direct_placeholder_user_ids: placeholders,
         note_to_self_room_id: note_to_self,
         note_to_self_closed: note_to_self_closed.then_some(true),
+        closed_direct_room_ids: (!closed_direct_room_ids.is_empty())
+            .then_some(closed_direct_room_ids),
         can_create_rooms,
         workspace_layout: crate::sync::workspace_layout(conn, viewer.id)?,
     })

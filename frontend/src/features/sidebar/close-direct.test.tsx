@@ -157,7 +157,11 @@ it("the keyboard close button leaves the active direct and focuses its next row"
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   expect(request).toHaveBeenCalledWith(
-    expect.objectContaining({ method: "PUT", path: CLOSED_ENDPOINT, body: { closed: true } }),
+    expect.objectContaining({
+      method: "PUT",
+      path: CLOSED_ENDPOINT,
+      body: { closed: true, lastMessageId: row.lastMessage?.messageId ?? 0 },
+    }),
   );
   expect(sidebarView.queryByRole("link", { name: new RegExp(row.sidebarDisplayName) })).toBeNull();
   expect(store.getState().sidebar.rows[DM]).toBeUndefined();
@@ -211,7 +215,11 @@ it("closing the only direct from its menu focuses the Direct messages heading", 
     ),
   );
   expect(request).toHaveBeenCalledWith(
-    expect.objectContaining({ method: "PUT", path: CLOSED_ENDPOINT, body: { closed: true } }),
+    expect.objectContaining({
+      method: "PUT",
+      path: CLOSED_ENDPOINT,
+      body: { closed: true, lastMessageId: row.lastMessage?.messageId ?? 0 },
+    }),
   );
 });
 
@@ -340,4 +348,183 @@ it("a sidebar snapshot without the active direct does not imply a close", async 
 
   expect(router.state.location.pathname).toBe(`/r/${DM}`);
   expect(store.getState().me?.lastRoomId).toBe(DM);
+});
+
+it("a late plain removal after reopening leaves the direct route in place", async () => {
+  mutations.loadSidebar(
+    {
+      ...sidebar,
+      rows: sidebar.rows.filter((row) => row.room.id !== DM),
+      closedDirectRoomIds: [DM],
+    },
+    sidebarRowClock(),
+  );
+  const router = await mount(`/r/${DM}`);
+  const navigate = vi.spyOn(router, "navigate");
+
+  act(() =>
+    mutations.applyEvents(
+      [
+        { seq: 1, topic: "user", type: "sidebar.row.upserted", data: directRow() },
+        { seq: 2, topic: "user", type: "sidebar.row.removed", data: { roomId: DM } },
+      ],
+      0,
+    ),
+  );
+
+  expect(navigate).not.toHaveBeenCalled();
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+});
+
+it("the first sidebar snapshot leaves a closed direct link open", async () => {
+  mutations.reset();
+
+  const router = await mount(`/r/${DM}`);
+  const navigate = vi.spyOn(router, "navigate");
+
+  act(() =>
+    mutations.loadSidebar(
+      {
+        ...sidebar,
+        rows: sidebar.rows.filter((row) => row.room.id !== DM),
+        closedDirectRoomIds: [DM],
+      },
+      sidebarRowClock(),
+    ),
+  );
+
+  expect(navigate).not.toHaveBeenCalled();
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+});
+
+it("a sidebar resync reconciles a missed close and clears the last room", async () => {
+  const router = await mount(`/r/${DM}`);
+
+  act(() =>
+    mutations.resyncSidebar(
+      {
+        ...sidebar,
+        rows: sidebar.rows.filter((entry) => entry.room.id !== DM),
+        closedDirectRoomIds: [DM],
+      },
+      sidebarRowClock(),
+    ),
+  );
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  expect(store.getState().me?.lastRoomId).toBeNull();
+});
+
+it("a sidebar resync preserves the unavailable screen for a revoked direct", async () => {
+  const router = await mount(`/r/${DM}`, true);
+  const navigate = vi.spyOn(router, "navigate");
+  await waitFor(() => expect(store.getState().rooms[DM]?.detail).toBeTruthy());
+
+  act(() => {
+    mutations.setRoomUnavailable(DM, beginRoomRequest(), sidebarRowClock());
+    mutations.resyncSidebar(
+      {
+        ...sidebar,
+        rows: sidebar.rows.filter((entry) => entry.room.id !== DM),
+        closedDirectRoomIds: [],
+      },
+      sidebarRowClock(),
+    );
+  });
+
+  expect(await screen.findByRole("region", { name: "Room unavailable" })).toBeTruthy();
+  expect(navigate).not.toHaveBeenCalled();
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+});
+
+it("a stale me reply cannot restore a last room that was closed", () => {
+  const stale = store.getState().me;
+
+  if (stale === null) throw new Error("The test needs a signed-in viewer");
+  const since = mutations.openRowTicket();
+
+  mutations.landReplyRows(
+    [{ seq: 1, topic: "user", type: "sidebar.row.removed", data: { roomId: DM, closed: true } }],
+    0,
+    since,
+  );
+  expect(store.getState().me?.lastRoomId).toBeNull();
+
+  mutations.loadSidebar(sidebar, since);
+  mutations.closeRowTicket(since);
+  mutations.setMe(stale);
+
+  expect(store.getState().me?.lastRoomId).toBeNull();
+  expect(store.getState().sidebar.rows[DM]).toBeUndefined();
+});
+
+it("a refused close shows the current unread row and keeps the room open", async () => {
+  const row = directRow();
+  const handle = network.server.handle.bind(network.server);
+
+  vi.spyOn(network.server, "handle").mockImplementation((request) =>
+    request.path === CLOSED_ENDPOINT && request.method === "PUT"
+      ? Promise.resolve({
+          status: 200,
+          json: { row: { ...row, unreadCount: row.unreadCount + 1 } },
+        })
+      : handle(request),
+  );
+
+  const router = await mount(`/r/${DM}`);
+  const user = userEvent.setup();
+  const sidebarView = within(screen.getByRole("complementary", { name: "Conversations" }));
+
+  await user.click(
+    sidebarView.getByRole("button", {
+      name: `Close conversation with ${row.sidebarDisplayName}`,
+    }),
+  );
+
+  await waitFor(() =>
+    expect(store.getState().sidebar.rows[DM]?.unreadCount).toBe(row.unreadCount + 1),
+  );
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+  expect(store.getState().me?.lastRoomId).toBe(DM);
+});
+
+it("a successful close retains focus handoff until its sync removal arrives", async () => {
+  const row = directRow();
+  const handle = network.server.handle.bind(network.server);
+  const reply = Promise.withResolvers<Awaited<ReturnType<typeof handle>>>();
+  vi.spyOn(network.server, "handle").mockImplementation((request) =>
+    request.path === CLOSED_ENDPOINT && request.method === "PUT" ? reply.promise : handle(request),
+  );
+  const close = vi.spyOn(actions.organize, "closeDirect");
+
+  await mount(`/r/${SEED_IDS.rooms.general}`);
+  const user = userEvent.setup();
+  const sidebarView = within(screen.getByRole("complementary", { name: "Conversations" }));
+  const link = sidebarView.getByRole("link", { name: new RegExp(row.sidebarDisplayName) });
+
+  const button = sidebarView.getByRole("button", {
+    name: `Close conversation with ${row.sidebarDisplayName}`,
+  });
+
+  await user.hover(link);
+  act(() => link.focus());
+  await user.tab();
+  await user.keyboard("{Enter}");
+  expect(document.activeElement).toBe(button);
+
+  await act(async () => {
+    // A fresher sync row supersedes the HTTP reply, while the live removal is still on its way.
+    mutations.applyEvents([{ seq: 1, topic: "user", type: "sidebar.row.upserted", data: row }], 0);
+    reply.resolve({ status: 200, json: { row: null } });
+    await close.mock.results[0]?.value;
+  });
+  expect(store.getState().sidebar.rows[DM]).toBeDefined();
+
+  act(() =>
+    mutations.applyEvents(
+      [{ seq: 2, topic: "user", type: "sidebar.row.removed", data: { roomId: DM, closed: true } }],
+      0,
+    ),
+  );
+  expect(document.activeElement).toBe(sidebarView.getByRole("link", { name: "engineering" }));
 });

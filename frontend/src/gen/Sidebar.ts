@@ -41,6 +41,10 @@ users: Array<User>,
  */
 directPlaceholderUserIds: Array<number>,
 /**
+ * Direct rooms the viewer closed and can still access.
+ */
+closedDirectRoomIds?: Array<number>,
+/**
  * The viewer's note-to-self, shown or hidden; absent until they first open it. Labels
  * elsewhere (saved, scheduled, search, forward) name it "(you)" by this id.
  */

@@ -3,6 +3,7 @@ import type { SidebarRow } from "./SidebarRow";
 
 /**
  * The viewer's current sidebar row after setting `closed`, or `null` if it is hidden.
+ * A close refused because of a newer message returns the current membership row.
  * Changes publish `sidebar.row.removed` or `sidebar.row.upserted` to that viewer.
  */
 export type DirectClosedChange = { row: SidebarRow | null, };

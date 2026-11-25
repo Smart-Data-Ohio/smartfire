@@ -95,9 +95,13 @@ impl Broadcasts {
         sync::thread_indicator_later(&self.server, &self.sync, parent_message_id);
     }
 
-    /// Refreshes the named members' sidebar rows after unread or direct visibility changes.
+    /// Refreshes the named members' sidebar rows after unread changes.
     pub fn sync_sidebar_rows(&self, room_id: i64, user_ids: Vec<i64>) {
         sync::sidebar_rows_later(&self.server, &self.sync, room_id, Some(user_ids));
+    }
+
+    pub fn sync_direct_sidebar(&self, room_id: i64, user_ids: Vec<i64>, closed: bool) {
+        sync::direct_sidebar_later(&self.server, &self.sync, room_id, user_ids, closed);
     }
 
     /// `activity.item` for an `ActivityChannel` frame (`user_<id>_activity`) a broadcast point

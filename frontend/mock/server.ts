@@ -508,6 +508,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const plain = text === "" ? (last.attachment?.filename ?? "") : text;
 
     return {
+      messageId: last.id,
       creatorId: last.creatorId,
       excerpt: plain.length > 140 ? `${plain.slice(0, 139)}…` : plain,
       createdAt: last.createdAt,

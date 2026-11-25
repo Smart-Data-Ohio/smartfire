@@ -5,4 +5,9 @@
  * sidebar. Membership, notifications and read position stay the same. 404 for a
  * non-member, 422 for a room of any other kind.
  */
-export type SetDirectClosed = { closed: boolean, };
+export type SetDirectClosed = { closed: boolean,
+/**
+ * The newest message the viewer saw in the sidebar, or zero for an empty conversation.
+ * Omitted by older clients and when reopening.
+ */
+lastMessageId?: number, };

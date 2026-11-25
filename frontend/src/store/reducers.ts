@@ -62,6 +62,20 @@ import { setWorkspaceBranding, setWorkspaceStyles } from "./workspace.ts";
 
 export { compareMessages };
 
+function withoutClosedLastRoom(me: Me, closedRooms: ReadonlySet<number>): Me {
+  return me.lastRoomId !== null && closedRooms.has(me.lastRoomId)
+    ? { ...me, lastRoomId: null }
+    : me;
+}
+
+function setDirectClosures(state: State, directClosures: ReadonlySet<number>): State {
+  return {
+    ...state,
+    directClosures,
+    me: state.me === null ? null : withoutClosedLastRoom(state.me, directClosures),
+  };
+}
+
 export function setMe(state: State, me: Me): State {
   if (
     state.me?.user.id === me.user.id &&
@@ -79,7 +93,11 @@ export function setMe(state: State, me: Me): State {
     };
   }
 
-  return { ...state, me, users: mergeUserList(state.users, [me.user]) };
+  return {
+    ...state,
+    me: withoutClosedLastRoom(me, state.directClosures),
+    users: mergeUserList(state.users, [me.user]),
+  };
 }
 
 export function mergeUsers(state: State, users: readonly User[]): State {
@@ -194,7 +212,17 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
     if (rows[row.room.id] === undefined) next = keepRowFlag(next, row);
   }
 
-  return next;
+  const directClosures = new Set<number>();
+
+  for (const id of sidebar.closedDirectRoomIds ?? []) {
+    if (!touchedSince(state, id, since)) directClosures.add(id);
+  }
+
+  for (const id of state.directClosures) {
+    if (touchedSince(state, id, since)) directClosures.add(id);
+  }
+
+  return setDirectClosures(next, directClosures);
 }
 
 function updateRow(state: State, roomId: number, change: (row: SidebarRow) => SidebarRow): State {
@@ -1198,8 +1226,8 @@ function roomUnread(
 /**
  * Applies one batch of sync events, in order, as a single state change. Rows the batch changes
  * are touched, so an HTTP reply older than them leaves them be. A `reply` batch is an HTTP
- * reply's rows put through the same reducers (already filtered by `untouchedReplyEvents`), so it
- * touches nothing.
+ * reply's rows put through the same reducers (already filtered by `untouchedReplyEvents`).
+ * A confirmed close or reopen also supersedes earlier sidebar reads.
  */
 export function applyEvents(
   state: State,
@@ -1304,25 +1332,24 @@ export function applyEvents(
       case "sidebar.row.upserted":
         next = upsertRow(next, event.data);
 
-        if (next.sidebar.rows[event.data.room.id] !== undefined) {
-          directClosures?.delete(event.data.room.id);
+        if ((directClosures ?? next.directClosures).has(event.data.room.id)) {
+          directClosures ??= new Set(next.directClosures);
+          directClosures.delete(event.data.room.id);
         }
 
         break;
       case "sidebar.row.removed": {
         const { roomId, closed } = event.data;
 
-        if (closed !== true) {
-          directClosures?.delete(roomId);
-        } else if (next.sidebar.rows[roomId]?.room.kind === "direct") {
-          directClosures ??= new Set();
+        if (closed === true) {
+          directClosures ??= new Set(next.directClosures);
           directClosures.add(roomId);
         }
 
         next = removeRow(next, roomId);
 
-        if (roomId === next.sidebar.noteToSelfRoomId) {
-          next = { ...next, sidebar: { ...next.sidebar, noteToSelfClosed: closed === true } };
+        if (closed === true && roomId === next.sidebar.noteToSelfRoomId) {
+          next = { ...next, sidebar: { ...next.sidebar, noteToSelfClosed: true } };
         }
 
         break;
@@ -1384,27 +1411,20 @@ export function applyEvents(
     }
   }
 
-  if (directClosures !== undefined && directClosures.size > 0) {
-    const me = next.me;
+  if (directClosures !== undefined) next = setDirectClosures(next, directClosures);
 
-    next = {
-      ...next,
-      directClosures,
-      me:
-        me?.lastRoomId != null && directClosures.has(me.lastRoomId)
-          ? { ...me, lastRoomId: null }
-          : me,
-    };
+  if (source === "reply") {
+    return directClosures === undefined
+      ? next
+      : touchRows(next, syncTouchedRooms(state, next, events));
   }
 
-  return source === "sync"
-    ? touchRows(
-        next,
-        syncTouchedRooms(state, next, events),
-        syncTouchedCategories(events),
-        syncReadRooms(events),
-      )
-    : next;
+  return touchRows(
+    next,
+    syncTouchedRooms(state, next, events),
+    syncTouchedCategories(events),
+    syncReadRooms(events),
+  );
 }
 
 /**

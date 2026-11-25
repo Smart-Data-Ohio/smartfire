@@ -32,6 +32,10 @@ pub struct Sidebar {
     /// (one marked `noteToSelf`), so every client can offer it before it exists or after it was
     /// hidden: `POST /api/v1/directs` with no `userIds` opens it, creating it on first use.
     pub direct_placeholder_user_ids: Vec<i64>,
+    /// Direct rooms the viewer closed and can still access.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub closed_direct_room_ids: Option<Vec<i64>>,
     /// The viewer's note-to-self, shown or hidden; absent until they first open it. Labels
     /// elsewhere (saved, scheduled, search, forward) name it "(you)" by this id.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -109,6 +113,7 @@ pub struct SidebarRow {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SidebarLastMessage {
+    pub message_id: i64,
     pub creator_id: i64,
     /// The message's plain text (its search-index body), cut to 140 characters.
     pub excerpt: String,

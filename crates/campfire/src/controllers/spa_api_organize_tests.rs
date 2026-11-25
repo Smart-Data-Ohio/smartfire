@@ -1609,6 +1609,18 @@ async fn closing_a_direct_only_hides_its_sidebar_row_for_the_viewer() {
     assert!(before.favorite_position.is_some());
     assert!(before.unread_at.is_some());
 
+    assert!(
+        david
+            .get(&format!("/rooms/directs/{room}"))
+            .await
+            .status
+            .is_redirection()
+    );
+    assert_eq!(
+        ok::<api::Me>(&david.send(get("/api/v1/me")).await).last_room_id,
+        Some(room)
+    );
+
     let closed = format!("{path}/closed");
     let change = ok::<api::DirectClosedChange>(
         &send(&mut david, Method::PUT, &closed, json!({"closed": true})).await,
@@ -1627,6 +1639,38 @@ async fn closing_a_direct_only_hides_its_sidebar_row_for_the_viewer() {
 
     let sidebar: api::Sidebar = ok(&david.send(get("/api/v1/sidebar")).await);
     assert!(!sidebar.rows.iter().any(|row| row.room.id == room));
+    assert_eq!(sidebar.closed_direct_room_ids, Some(vec![room]));
+    let me: serde_json::Value = ok(&david.send(get("/api/v1/me")).await);
+    assert_eq!(me.get("lastRoomId"), Some(&serde_json::Value::Null));
+
+    let reply = send(
+        &mut david,
+        Method::POST,
+        "/api/v1/directs",
+        json!({"userIds": []}),
+    )
+    .await;
+    assert!(reply.status.is_success(), "{}", reply.text());
+    let notes_id = parse::<api::SidebarRow>(&reply).room.id;
+    assert!(
+        ok::<api::DirectClosedChange>(
+            &send(
+                &mut david,
+                Method::PUT,
+                &format!("/api/v1/rooms/{notes_id}/closed"),
+                json!({"closed": true, "lastMessageId": 0}),
+            )
+            .await
+        )
+        .row
+        .is_none()
+    );
+    let sidebar: api::Sidebar = ok(&david.send(get("/api/v1/sidebar")).await);
+    assert_eq!(sidebar.note_to_self_room_id, Some(notes_id));
+    assert_eq!(sidebar.note_to_self_closed, Some(true));
+    assert!(!sidebar.rows.iter().any(|row| row.room.id == notes_id));
+    assert_ne!(sidebar.direct_placeholder_user_ids.first(), Some(&DAVID));
+
     let peer_sidebar: api::Sidebar = ok(&jason.send(get("/api/v1/sidebar")).await);
     assert!(peer_sidebar.rows.iter().any(|row| row.room.id == room));
     // Fence the peer's socket after the two viewer deliveries.
@@ -1809,4 +1853,219 @@ async fn messages_reopen_closed_directs_using_the_existing_notification_policy()
     let sidebar: api::Sidebar = ok(&david.send(get("/api/v1/sidebar")).await);
     assert!(sidebar.rows.iter().any(|row| row.room.id == room));
     server.abort();
+}
+
+#[tokio::test]
+async fn present_on_a_closed_direct_does_not_publish_a_close() {
+    let Some(a) = app(true).await else { return };
+    let room = DIRECT_DAVID_JASON;
+    let mut david = a.sign_in(DAVID).await;
+    let closed = format!("/api/v1/rooms/{room}/closed");
+    assert!(
+        ok::<api::DirectClosedChange>(
+            &send(&mut david, Method::PUT, &closed, json!({"closed": true})).await,
+        )
+        .row
+        .is_none()
+    );
+    a.booted.app.broadcasts.settle_sync().await;
+
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{room}")]).await;
+    sync.welcome().await;
+    sync.send(json!({"t": "present", "room": room})).await;
+    sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::RoomRead(read) if read.room_id == room),
+        |_| false,
+    )
+    .await;
+    // Fence the deferred work while the membership is still closed, before the reopen write.
+    a.booted.app.broadcasts.settle_sync().await;
+    assert!(
+        ok::<api::DirectClosedChange>(
+            &send(&mut david, Method::PUT, &closed, json!({"closed": false})).await,
+        )
+        .row
+        .is_some()
+    );
+    sync.until(row_of(room), |event| matches!(&event.payload,
+        api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room && row.closed == Some(true)
+    )).await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn direct_close_snapshot_cannot_remove_a_row_after_an_incoming_unread() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let room = DIRECT_DAVID_JASON;
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    a.booted.app.broadcasts.settle_sync().await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let path = format!("/api/v1/rooms/{room}");
+    assert!(
+        ok::<api::DirectClosedChange>(
+            &send(
+                &mut david,
+                Method::PUT,
+                &format!("{path}/closed"),
+                json!({"closed": true})
+            )
+            .await,
+        )
+        .row
+        .is_none()
+    );
+    tokio::time::timeout(std::time::Duration::from_secs(5), hold.reached)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let posted = send(
+        &mut jason,
+        Method::POST,
+        &format!("{path}/messages"),
+        json!({"clientMessageId": "fence-close", "markdownSource": "Reopen during close render"}),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    sync.until(|event| matches!(&event.payload, api::SyncPayload::RoomUnread(unread) if unread.room_id == room), |_| false).await;
+    hold.release.send(()).unwrap();
+    let row = sync
+        .until(row_of(room), |event| {
+            matches!(&event.payload,
+                api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room
+            )
+        })
+        .await;
+    assert!(
+        matches!(row.payload, api::SyncPayload::SidebarRowUpserted(row) if row.unread_count > 0)
+    );
+    server.abort();
+}
+
+#[tokio::test]
+async fn a_new_peer_message_refuses_a_stale_direct_close() {
+    use super::api_tests::get;
+
+    let Some(a) = app(true).await else { return };
+    let room = DIRECT_DAVID_JASON;
+    let path = format!("/api/v1/rooms/{room}");
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let sidebar: api::Sidebar = ok(&david.send(get("/api/v1/sidebar")).await);
+    let seen = sidebar
+        .rows
+        .into_iter()
+        .find(|row| row.room.id == room)
+        .unwrap()
+        .last_message
+        .map_or(0, |message| message.message_id);
+    let posted = send(&mut jason, Method::POST, &format!("{path}/messages"),
+        json!({"clientMessageId": "late-for-close", "markdownSource": "Posted after your sidebar read"}),
+    ).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let change: api::DirectClosedChange = ok(&send(
+        &mut david,
+        Method::PUT,
+        &format!("{path}/closed"),
+        json!({"closed": true, "lastMessageId": seen}),
+    )
+    .await);
+    let row = change.row.expect("the direct stays open");
+    assert_eq!(row.membership.closed, None);
+    assert!(row.unread_count > 0);
+    assert_eq!(
+        row.last_message.unwrap().message_id,
+        parse::<serde_json::Value>(&posted)["id"].as_i64().unwrap()
+    );
+    a.booted.app.broadcasts.settle_sync().await;
+    a.booted.app.broadcasts.sync_row_removed(DAVID, 1);
+    sync.until(
+        |e| matches!(&e.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == 1),
+        |e| matches!(&e.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room),
+    )
+    .await;
+    assert_eq!(
+        involvement(
+            &send(
+                &mut david,
+                Method::PUT,
+                &format!("{path}/involvement"),
+                json!({"involvement": "invisible"}),
+            )
+            .await
+        )
+        .involvement,
+        api::Involvement::Invisible,
+    );
+    let hidden_by_involvement: api::DirectClosedChange = ok(&send(
+        &mut david,
+        Method::PUT,
+        &format!("{path}/closed"),
+        json!({"closed": true, "lastMessageId": seen}),
+    )
+    .await);
+    let row = hidden_by_involvement
+        .row
+        .expect("a refusal stays distinct from a close");
+    assert_eq!(row.membership.involvement, api::Involvement::Invisible);
+    assert_eq!(row.membership.closed, None);
+    server.abort();
+}
+
+#[tokio::test]
+async fn switcher_finds_a_closed_group_direct_by_its_custom_name() {
+    use super::api_tests::get;
+
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let reply = send(
+        &mut david,
+        Method::POST,
+        "/api/v1/directs",
+        json!({"userIds": [JASON, KEVIN]}),
+    )
+    .await;
+    assert!(reply.status.is_success(), "{}", reply.text());
+    let id = parse::<api::SidebarRow>(&reply).room.id;
+    ok::<api::RoomDetail>(
+        &send(
+            &mut david,
+            Method::PATCH,
+            &format!("/api/v1/directs/{id}"),
+            json!({"name": "Weekend"}),
+        )
+        .await,
+    );
+    assert!(
+        ok::<api::DirectClosedChange>(
+            &send(
+                &mut david,
+                Method::PUT,
+                &format!("/api/v1/rooms/{id}/closed"),
+                json!({"closed": true}),
+            )
+            .await
+        )
+        .row
+        .is_none()
+    );
+    let switcher: api::Switcher = ok(&david.send(get("/api/v1/switcher")).await);
+    let hit = switcher
+        .rooms
+        .iter()
+        .find(|entry| entry.name == "Weekend")
+        .unwrap();
+    assert_eq!(hit.room_id, id);
+    assert_eq!(hit.kind, api::SwitcherRoomKind::Group);
 }

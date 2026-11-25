@@ -30,6 +30,7 @@ pub enum Broadcast {
     DirectSidebarChanged {
         room_id: i64,
         user_ids: Vec<i64>,
+        closed: bool,
     },
     MembershipChanged {
         membership_id: i64,

@@ -653,6 +653,9 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
             ThreadMembership::join(tx, thread.id, DAVID)?.update_involvement(tx, ThreadInvolvement::Everything)?;
             Membership::find_by_room_and_user(tx.conn(), room.id, DAVID)?.unwrap().read(tx)?;
             tx.conn().execute("UPDATE memberships SET connected_at=NULL,connections=0 WHERE room_id=? AND user_id=?", [room.id, DAVID])?;
+            let direct = Membership::find_by_room_and_user(tx.conn(), DIRECT_DAVID_JASON, DAVID)?.unwrap();
+            direct.set_direct_closed(tx, true)?;
+            tx.conn().execute("UPDATE memberships SET connected_at=NULL,connections=0 WHERE id=?", [direct.id])?;
             campfire_db::models::user_block::UserBlock::set(tx, DAVID, JASON, ignored)?;
             Ok((room.id, board.id, thread.id))
         }).await.unwrap();
@@ -664,6 +667,7 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
             format!("room:{room}"),
             format!("room:{board}"),
             format!("thread:{thread}"),
+            format!("room:{DIRECT_DAVID_JASON}"),
         ];
         let mut author = Sync::connect(addr, &jason.cookie_header(), &topics).await;
         let mut blocker = Sync::connect(addr, &david.cookie_header(), &topics).await;
@@ -794,6 +798,16 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
                 format!("/api/v1/threads/{thread}"),
                 json!({}),
             ),
+            (
+                Method::POST,
+                format!("/api/v1/rooms/{DIRECT_DAVID_JASON}/messages"),
+                json!({"clientMessageId": "sequence-direct", "markdownSource": "First direct post"}),
+            ),
+            (
+                Method::POST,
+                format!("/api/v1/rooms/{DIRECT_DAVID_JASON}/messages"),
+                json!({"clientMessageId": "sequence-direct-two", "markdownSource": "Second direct post"}),
+            ),
         ] {
             let client = if path.ends_with("/involvement") {
                 &mut david
@@ -825,6 +839,20 @@ async fn ignore_mixed_workload_preserves_the_authors_sequences_and_event_types()
                 .await;
             checkpoints.push(checkpoint.seq - start);
         }
+        assert_eq!(
+            a.db()
+                .read(|conn| {
+                    Ok(
+                        Membership::find_by_room_and_user(conn, DIRECT_DAVID_JASON, DAVID)?
+                            .unwrap()
+                            .closed_at
+                            .is_some(),
+                    )
+                })
+                .await
+                .unwrap(),
+            ignored
+        );
         assert!(events.borrow().iter().any(|kind| kind == "message.created"));
         assert!(events.borrow().iter().any(|kind| kind == "message.updated"));
         assert!(

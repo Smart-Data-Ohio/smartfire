@@ -967,8 +967,8 @@ export function Sidebar() {
       ifLost: true,
     });
 
-    void commands.closeConversation(row).finally(() => {
-      if (!rowIsGone()) cancelFocus();
+    void commands.closeConversation(row).then((closed) => {
+      if (!closed) cancelFocus();
     });
   };
 
