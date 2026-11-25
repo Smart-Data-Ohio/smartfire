@@ -462,28 +462,44 @@ impl<U: Send + Sync + 'static> Server<U> {
         Some(seq)
     }
 
-    /// [`Server::sync_publish`], recording the event's sequence under `fence`: a publication
-    /// read before it is refused by [`Server::sync_publish_fresh`].
+    /// [`Server::sync_publish`], advancing `fence` at publication time.
     pub fn sync_publish_fencing(&self, publication: SyncPublication, fence: String) -> Option<u64> {
         let engine = self.inner.sync.get()?;
         Some(self.inner.hub.sequenced(|seq| {
+            let mut fences = engine.fences.lock().unwrap();
             engine.ring.push(seq, publication);
-            engine.fences.lock().unwrap().record(fence, seq);
+            fences.record(fence);
             seq
         }))
     }
 
-    /// The latest sequence taken. Read it before reading what a publication carries, and hand
-    /// it to [`Server::sync_publish_fresh`].
+    /// The latest publication sequence taken.
     pub fn sync_head(&self) -> u64 {
         self.inner.hub.sequence()
     }
 
-    /// [`Server::sync_publish`], unless an event under `fence` was published after `since` (a
-    /// [`Server::sync_head`] read before the publication's inputs were). The publication may
-    /// then carry state older than that event, which clients have already applied: `Err`, and
-    /// the caller reads afresh and tries again. The check and the publication are one step, so
-    /// no fencing event can come between them.
+    /// The current fence generation. Take it before reading a publication's inputs.
+    pub fn sync_fence_head(&self) -> u64 {
+        self.inner
+            .sync
+            .get()
+            .map_or(0, |engine| engine.fences.lock().unwrap().head())
+    }
+
+    /// Fence committed changes even when they publish no immediate event.
+    pub fn sync_advance_fences(&self, keys: impl IntoIterator<Item = String>) {
+        let Some(engine) = self.inner.sync.get() else {
+            return;
+        };
+        let mut fences = engine.fences.lock().unwrap();
+        for key in keys {
+            fences.record(key);
+        }
+    }
+
+    /// [`Server::sync_publish`], unless `fence` advanced after `since` (a
+    /// [`Server::sync_fence_head`] read before the publication's inputs). The caller reads
+    /// afresh and tries again on `Err`. Fence changes cannot come between the check and publish.
     pub fn sync_publish_fresh(
         &self,
         publication: SyncPublication,
@@ -494,7 +510,8 @@ impl<U: Send + Sync + 'static> Server<U> {
             return Ok(None);
         };
         self.inner.hub.try_sequenced(|seq| {
-            if engine.fences.lock().unwrap().crossed(fence, since) {
+            let fences = engine.fences.lock().unwrap();
+            if fences.crossed(fence, since) {
                 return Err(Stale);
             }
             engine.ring.push(seq, publication);

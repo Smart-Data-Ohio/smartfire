@@ -69,13 +69,11 @@ export function moveRoom(row: SidebarRow, slot: RoomSlot): void {
 }
 
 export function closeConversation(row: SidebarRow): Promise<boolean> {
-  return actions.organize
-    .closeDirect(row.room.id, row.lastMessage?.messageId ?? 0)
-    .catch((error) => {
-      failed("Couldn't close the conversation")(error);
+  return actions.organize.closeDirect(row.room.id, row.lastMessage?.messageId).catch((error) => {
+    failed("Couldn't close the conversation")(error);
 
-      return false;
-    });
+    return false;
+  });
 }
 
 export function toggleFavorite(row: SidebarRow): void {

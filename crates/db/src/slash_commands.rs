@@ -555,6 +555,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
             room_id: room.id,
             message_id: Some(message.id),
             author_id: message.creator_id,
+            direct: room.direct(),
         }));
         crate::models::bot_webhook_fanout::deliver(tx, &message)?;
     }

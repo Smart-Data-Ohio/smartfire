@@ -857,7 +857,7 @@ impl Room {
             return Ok(());
         }
         Self::unread_memberships(tx, room_id, message)?;
-        Membership::reopen_direct_for_message(tx, room_id, message.creator_id)
+        Membership::reopen_direct_for_message(tx, message)
     }
 
     /// `push_later(message)`, the rest of `room.receive(message)`: `Room::PushMessageJob`. Rails

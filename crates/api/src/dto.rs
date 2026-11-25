@@ -1186,7 +1186,7 @@ fn last_direct_messages(
         .map(|(room_id, message_id, creator_id, body, created_at)| {
             let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
             let last = api::SidebarLastMessage {
-                message_id,
+                message_id: Some(message_id),
                 creator_id,
                 excerpt: campfire_presentation::helpers::truncate(&text, 140, "…"),
                 created_at: time(created_at),

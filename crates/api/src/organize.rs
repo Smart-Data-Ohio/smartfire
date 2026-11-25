@@ -83,11 +83,26 @@ async fn put_direct_closed(c: &mut Ctx) -> Result {
             let membership = Membership::find(tx.conn(), membership.id)?;
             if closed {
                 let newer = match last_message_id {
-                    Some(id) => tx.conn().query_row(
-                        "SELECT EXISTS (SELECT 1 FROM messages WHERE room_id = ?1 AND id > ?2 AND creator_id != ?3 AND thread_id IS NULL AND NOT system_note)",
-                        rusqlite::params![room.id, id, membership.user_id],
-                        |row| row.get::<_, bool>(0),
-                    )?,
+                    Some(id) => {
+                        let visible = campfire_db::models::ignore_policy::visible_sql("?3", "creator_id");
+                        let candidates = format!(
+                            "SELECT 1 FROM messages WHERE room_id = ?1 AND creator_id != ?3
+                             AND thread_id IS NULL AND NOT system_note AND {visible}"
+                        );
+                        tx.conn().query_row(
+                            &format!(
+                                "SELECT CASE WHEN EXISTS (SELECT 1 FROM messages WHERE id = ?2)
+                                    THEN EXISTS (
+                                        {candidates}
+                                        AND (created_at, id) > (SELECT created_at, id FROM messages WHERE id = ?2)
+                                    )
+                                    ELSE EXISTS ({candidates} AND id > ?2)
+                                 END"
+                            ),
+                            rusqlite::params![room.id, id, membership.user_id],
+                            |row| row.get::<_, bool>(0),
+                        )?
+                    }
                     None => false,
                 };
                 if !newer || membership.closed_at.is_some() {

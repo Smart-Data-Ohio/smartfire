@@ -476,7 +476,8 @@ pub fn broadcast_create(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
 
 pub fn broadcast_unread_room(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
     use crate::broadcasts::Broadcast;
-    let memberships = crate::Room::find(tx.conn(), message.room_id)?.memberships(tx.conn())?;
+    let room = crate::Room::find(tx.conn(), message.room_id)?;
+    let memberships = room.memberships(tx.conn())?;
     let mentions = if memberships
         .iter()
         .any(|m| m.involvement == Some(crate::Involvement::Muted))
@@ -501,6 +502,7 @@ pub fn broadcast_unread_room(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
         room_id: message.room_id,
         message_id: Some(message.id),
         author_id: message.creator_id,
+        direct: room.direct(),
     }));
     Ok(())
 }

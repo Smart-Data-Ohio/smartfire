@@ -311,6 +311,7 @@ impl ChannelThread {
                 room_id: room.id,
                 message_id: None,
                 author_id: thread.creator_id,
+                direct: false,
             }));
             Ok(())
         });

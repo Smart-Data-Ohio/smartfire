@@ -113,7 +113,10 @@ pub struct SidebarRow {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SidebarLastMessage {
-    pub message_id: i64,
+    /// Absent from sidebar previews served by older versions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub message_id: Option<i64>,
     pub creator_id: i64,
     /// The message's plain text (its search-index body), cut to 140 characters.
     pub excerpt: String,

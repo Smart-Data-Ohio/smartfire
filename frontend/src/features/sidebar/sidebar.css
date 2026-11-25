@@ -757,7 +757,7 @@
 
   .sidebar-row-item:hover .sidebar-row-more,
   .sidebar-row-more[aria-expanded="true"],
-  .sidebar-row-item:where([data-direct]):has(:focus-visible)
+  .sidebar-row-item:where([data-direct]:has(:is(.sidebar-row-more, .sidebar-row-close):focus))
     :is(.sidebar-row-more, .sidebar-row-close) {
     opacity: 1;
   }
@@ -780,7 +780,11 @@
       min-width: 48px;
     }
 
-    .sidebar-row-item[data-direct]:where(:hover, :has(:focus-visible)) .sidebar-row-status {
+    .sidebar-row-item[data-direct]:where(
+        :hover,
+        :has(:is(.sidebar-row-more, .sidebar-row-close):focus)
+      )
+      .sidebar-row-status {
       opacity: 0;
     }
 

@@ -139,6 +139,7 @@ pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
     ("rooms", "voice_user_limit"),
     ("rooms", "workspace_category_id"),
     ("rooms", "workspace_position"),
+    ("memberships", "closed_at"),
     ("thread_memberships", "last_read_message_id"),
     ("users", "appearance_preferences"),
     ("users", "pronouns"),

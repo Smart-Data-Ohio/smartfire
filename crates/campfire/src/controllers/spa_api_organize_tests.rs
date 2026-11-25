@@ -1950,6 +1950,208 @@ async fn direct_close_snapshot_cannot_remove_a_row_after_an_incoming_unread() {
 }
 
 #[tokio::test]
+async fn direct_reopen_fences_an_in_flight_close_without_spending_a_sequence() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let room = DIRECT_DAVID_JASON;
+    let path = format!("/api/v1/rooms/{room}/closed");
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    a.booted.app.broadcasts.settle_sync().await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let change: api::DirectClosedChange =
+        ok(&send(&mut david, Method::PUT, &path, json!({"closed": true})).await);
+    assert!(change.row.is_none());
+    tokio::time::timeout(std::time::Duration::from_secs(5), hold.reached)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let cable = &a.booted.app.cable;
+    let before = cable.sync_head();
+    let change: api::DirectClosedChange =
+        ok(&send(&mut david, Method::PUT, &path, json!({"closed": false})).await);
+    assert!(change.row.is_some());
+    assert_eq!(cable.sync_head(), before);
+    hold.release.send(()).unwrap();
+
+    let row = sync.until(row_of(room), |event| {
+        matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(row) if row.room_id == room)
+    }).await;
+    assert!(matches!(
+        row.payload,
+        api::SyncPayload::SidebarRowUpserted(_)
+    ));
+    server.abort();
+}
+
+#[tokio::test]
+async fn direct_close_uses_preview_order_after_a_historical_import() {
+    use super::api_tests::get;
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = app(true).await else { return };
+    let room = DIRECT_DAVID_JASON;
+    let path = format!("/api/v1/rooms/{room}");
+    let mut david = a.sign_in(DAVID).await;
+    let posted = send(
+        &mut david,
+        Method::POST,
+        &format!("{path}/messages"),
+        json!({"clientMessageId": "native-before-import", "markdownSource": "Latest by time"}),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let native = parse::<serde_json::Value>(&posted)["id"].as_i64().unwrap();
+
+    let imported = a
+        .db()
+        .write(move |tx| {
+            Message::create_imported(
+                tx,
+                NewMessage {
+                    room_id: room,
+                    creator_id: JASON,
+                    body: Some("Historical import".into()),
+                    ..Default::default()
+                },
+                tx.now().ago(jiff::SignedDuration::from_hours(24)),
+                None,
+            )
+        })
+        .await
+        .unwrap();
+    assert!(imported.id > native);
+    let sidebar: api::Sidebar = ok(&david.send(get("/api/v1/sidebar")).await);
+    let preview = sidebar
+        .rows
+        .into_iter()
+        .find(|row| row.room.id == room)
+        .unwrap()
+        .last_message
+        .unwrap();
+    assert_eq!(preview.message_id, Some(native));
+
+    let change: api::DirectClosedChange = ok(&send(
+        &mut david,
+        Method::PUT,
+        &format!("{path}/closed"),
+        json!({"closed": true, "lastMessageId": native}),
+    )
+    .await);
+    assert!(change.row.is_none());
+}
+
+#[tokio::test]
+async fn ignored_peer_messages_do_not_refuse_a_direct_close() {
+    use campfire_db::{Message, models::user_block::UserBlock};
+
+    let Some(a) = app(true).await else { return };
+    let room = DIRECT_DAVID_JASON;
+    let path = format!("/api/v1/rooms/{room}");
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let posted = send(
+        &mut david,
+        Method::POST,
+        &format!("{path}/messages"),
+        json!({"clientMessageId": "before-ignored-peer", "markdownSource": "Seen preview"}),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let seen = parse::<serde_json::Value>(&posted)["id"].as_i64().unwrap();
+
+    a.db()
+        .write(|tx| UserBlock::set(tx, DAVID, JASON, true))
+        .await
+        .unwrap();
+    let posted = send(
+        &mut jason,
+        Method::POST,
+        &format!("{path}/messages"),
+        json!({"clientMessageId": "ignored-peer-post", "markdownSource": "Hidden from David"}),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let newer = parse::<serde_json::Value>(&posted)["id"].as_i64().unwrap();
+    assert!(newer > seen);
+    assert!(
+        a.db()
+            .read(move |conn| {
+                let before = Message::find(conn, seen)?;
+                let after = Message::find(conn, newer)?;
+                Ok((after.created_at, after.id) > (before.created_at, before.id))
+            })
+            .await
+            .unwrap()
+    );
+
+    let change: api::DirectClosedChange = ok(&send(
+        &mut david,
+        Method::PUT,
+        &format!("{path}/closed"),
+        json!({"closed": true, "lastMessageId": seen}),
+    )
+    .await);
+    assert!(change.row.is_none());
+}
+
+#[tokio::test]
+async fn one_direct_post_refreshes_each_members_sidebar_row_once() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    let room = DIRECT_DAVID_JASON;
+    let (addr, server) = serve(&a).await;
+    let david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    a.booted.app.broadcasts.settle_sync().await;
+    let mut recipient = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    let mut author = Sync::connect(addr, &jason.cookie_header(), &[]).await;
+    recipient.welcome().await;
+    author.welcome().await;
+
+    let posted = send(
+        &mut jason,
+        Method::POST,
+        &format!("/api/v1/rooms/{room}/messages"),
+        json!({"clientMessageId": "one-direct-refresh", "markdownSource": "Refresh once"}),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    a.booted.app.broadcasts.settle_sync().await;
+
+    for (client, user_id) in [(&mut recipient, DAVID), (&mut author, JASON)] {
+        a.booted.app.broadcasts.sync_row_removed(user_id, 1);
+        let count = std::cell::Cell::new(0);
+        let unread = std::cell::Cell::new(false);
+        client
+            .until(
+                |event| match &event.payload {
+                    api::SyncPayload::SidebarRowRemoved(row) if row.room_id == 1 => true,
+                    api::SyncPayload::RoomUnread(event) if event.room_id == room => {
+                        assert_eq!(count.get(), 0, "the unread ping must precede the row");
+                        assert!(!unread.replace(true), "one unread ping per recipient");
+                        false
+                    }
+                    api::SyncPayload::SidebarRowUpserted(row) if row.room.id == room => {
+                        count.set(count.get() + 1);
+                        false
+                    }
+                    _ => false,
+                },
+                |_| false,
+            )
+            .await;
+        assert_eq!(count.get(), 1, "sidebar refreshes for {user_id}");
+        assert_eq!(unread.get(), user_id == DAVID);
+    }
+    server.abort();
+}
+
+#[tokio::test]
 async fn a_new_peer_message_refuses_a_stale_direct_close() {
     use super::api_tests::get;
 
@@ -1965,7 +2167,8 @@ async fn a_new_peer_message_refuses_a_stale_direct_close() {
         .find(|row| row.room.id == room)
         .unwrap()
         .last_message
-        .map_or(0, |message| message.message_id);
+        .and_then(|message| message.message_id)
+        .unwrap_or(0);
     let posted = send(&mut jason, Method::POST, &format!("{path}/messages"),
         json!({"clientMessageId": "late-for-close", "markdownSource": "Posted after your sidebar read"}),
     ).await;
@@ -1986,7 +2189,7 @@ async fn a_new_peer_message_refuses_a_stale_direct_close() {
     assert!(row.unread_count > 0);
     assert_eq!(
         row.last_message.unwrap().message_id,
-        parse::<serde_json::Value>(&posted)["id"].as_i64().unwrap()
+        parse::<serde_json::Value>(&posted)["id"].as_i64()
     );
     a.booted.app.broadcasts.settle_sync().await;
     a.booted.app.broadcasts.sync_row_removed(DAVID, 1);

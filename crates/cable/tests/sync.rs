@@ -433,7 +433,7 @@ async fn a_publication_read_before_a_fencing_event_is_refused() {
             json!({ "type": "test", "data": data }).to_string(),
         )
     };
-    let read = server.sync_head();
+    let read = server.sync_fence_head();
     let fence = server
         .sync_publish_fencing(event("read"), "unread:1:7".into())
         .unwrap();
@@ -453,7 +453,7 @@ async fn a_publication_read_before_a_fencing_event_is_refused() {
         .unwrap()
         .unwrap();
     let fresh = server
-        .sync_publish_fresh(event("fresh row"), "unread:1:7", server.sync_head())
+        .sync_publish_fresh(event("fresh row"), "unread:1:7", server.sync_fence_head())
         .unwrap()
         .unwrap();
     assert_eq!(

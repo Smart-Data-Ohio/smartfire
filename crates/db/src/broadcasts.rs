@@ -29,8 +29,13 @@ pub enum Broadcast {
     },
     DirectSidebarChanged {
         room_id: i64,
-        user_ids: Vec<i64>,
+        user_id: i64,
         closed: bool,
+    },
+    DirectMessageReceived {
+        room_id: i64,
+        message_id: i64,
+        reopened_user_ids: Vec<i64>,
     },
     MembershipChanged {
         membership_id: i64,
@@ -47,6 +52,7 @@ pub enum Broadcast {
         room_id: i64,
         message_id: Option<i64>,
         author_id: i64,
+        direct: bool,
     },
 }
 impl Broadcast {

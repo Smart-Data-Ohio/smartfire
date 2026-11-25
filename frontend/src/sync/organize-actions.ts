@@ -135,6 +135,7 @@ export const setDirectClosed = Effect.fn("organize.setDirectClosed")(function* (
           [{ seq: 0, topic: `user:${viewerId}`, ...event }],
           yield* Clock.currentTimeMillis,
           since,
+          !closed || row === null ? "direct-reply" : "reply",
         );
 
         return row === null;

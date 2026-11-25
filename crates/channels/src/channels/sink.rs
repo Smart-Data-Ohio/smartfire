@@ -328,6 +328,7 @@ pub(crate) fn messaging(
             room_id,
             message_id,
             author_id,
+            direct,
         } => {
             for &user_id in user_ids {
                 cable.broadcast(
@@ -335,16 +336,18 @@ pub(crate) fn messaging(
                     &serde_json::json!({"roomId":room_id}),
                 );
             }
-            crate::cable::sync::unread_room(
-                cable,
-                app.map(|app| &app.db),
-                user_ids,
-                *room_id,
-                *message_id,
-                *author_id,
-            );
-            if let Some(app) = app {
-                app.broadcasts.sync_sidebar_rows(*room_id, user_ids.clone());
+            if !direct {
+                crate::cable::sync::unread_room(
+                    cable,
+                    app.map(|app| &app.db),
+                    user_ids,
+                    *room_id,
+                    *message_id,
+                    *author_id,
+                );
+                if let Some(app) = app {
+                    app.broadcasts.sync_sidebar_rows(*room_id, user_ids.clone());
+                }
             }
         }
         Broadcast::MessageCreated { message_id } | Broadcast::MessageUpdated { message_id } => {
@@ -387,12 +390,26 @@ pub(crate) fn messaging(
         }
         Broadcast::DirectSidebarChanged {
             room_id,
-            user_ids,
+            user_id,
             closed,
         } => {
             if let Some(app) = app {
                 app.broadcasts
-                    .sync_direct_sidebar(*room_id, user_ids.clone(), *closed);
+                    .sync_direct_sidebar(*room_id, *user_id, *closed);
+            }
+        }
+        Broadcast::DirectMessageReceived {
+            room_id,
+            message_id,
+            reopened_user_ids,
+        } => {
+            if let Some(app) = app {
+                app.broadcasts.sync_direct_message_received(
+                    &app.db,
+                    *room_id,
+                    *message_id,
+                    reopened_user_ids,
+                );
             }
         }
         Broadcast::MembershipChanged { membership_id } => {

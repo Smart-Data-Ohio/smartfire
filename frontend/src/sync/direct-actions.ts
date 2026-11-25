@@ -15,7 +15,11 @@ import { withRowTicket } from "./row-ticket.ts";
  * Upserts `row` through the same reducer the `sidebar.row.upserted` event uses, unless the sync
  * path changed the room's row after `since` (the request's row ticket).
  */
-const upsertRow = Effect.fn("directs.upsertRow")(function* (row: SidebarRow, since: number) {
+const upsertRow = Effect.fn("directs.upsertRow")(function* (
+  row: SidebarRow,
+  since: number,
+  source: "reply" | "direct-reply" = "reply",
+) {
   const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
 
   // A local event: `seq` only matters to the sync cursor, which never sees this one.
@@ -23,6 +27,7 @@ const upsertRow = Effect.fn("directs.upsertRow")(function* (row: SidebarRow, sin
     [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted", data: row }],
     yield* Clock.currentTimeMillis,
     since,
+    source,
   );
 });
 
@@ -69,7 +74,7 @@ export const create = Effect.fn("directs.create")(function* (userIds: readonly n
     Effect.gen(function* () {
       const row = yield* api.createDirect(userIds);
 
-      yield* upsertRow(row, since);
+      yield* upsertRow(row, since, "direct-reply");
 
       return row;
     }),

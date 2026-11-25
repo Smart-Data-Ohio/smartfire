@@ -30,6 +30,8 @@ export interface RowTouches {
    * older than the touch is in flight (`pruneTouches`).
    */
   readonly at: Touches;
+  /** The latest row upsert or removal, independent of changes to its counts. */
+  readonly visibility: Touches;
   /** The same for sidebar categories, by category id. */
   readonly categories: Touches;
   /**
@@ -48,6 +50,7 @@ export const noRowTouches: RowTouches = {
   clock: 0,
   resyncEpoch: 0,
   at: {},
+  visibility: {},
   categories: {},
   dividers: {},
   reads: {},
@@ -73,6 +76,11 @@ export function markResynced(state: State): State {
 /** Whether the sync path changed `roomId`'s row after `since` (a ticket still held). */
 export function touchedSince(state: State, roomId: number, since: number): boolean {
   return (state.rowTouches.at[roomId] ?? 0) > since;
+}
+
+/** Whether the room's visibility was established after `since`. */
+export function visibilityTouchedSince(state: State, roomId: number, since: number): boolean {
+  return (state.rowTouches.visibility[roomId] ?? 0) > since;
 }
 
 /** Whether the sync path changed (or removed) category `categoryId` after `since`. */
@@ -110,18 +118,25 @@ export function touchRows(
   roomIds: Iterable<number>,
   categoryIds: Iterable<number> = [],
   readRoomIds: Iterable<number> = [],
+  visibilityRoomIds: Iterable<number> = [],
 ): State {
   const touches = state.rowTouches;
   const clock = touches.clock + 1;
   const at = stamped(touches.at, roomIds, clock);
+  const visibility = stamped(touches.visibility, visibilityRoomIds, clock);
   const categories = stamped(touches.categories, categoryIds, clock);
   const reads = stamped(touches.reads, readRoomIds, clock);
 
-  if (at === touches.at && categories === touches.categories && reads === touches.reads) {
+  if (
+    at === touches.at &&
+    visibility === touches.visibility &&
+    categories === touches.categories &&
+    reads === touches.reads
+  ) {
     return state;
   }
 
-  return { ...state, rowTouches: { ...touches, clock, at, categories, reads } };
+  return { ...state, rowTouches: { ...touches, clock, at, visibility, categories, reads } };
 }
 
 /** A mark-unread reply just moved `roomId`'s divider. */
@@ -150,12 +165,14 @@ function pruned(touches: Touches, oldest: number | undefined): Touches {
 export function pruneTouches(state: State, oldest: number | undefined): State {
   const touches = state.rowTouches;
   const at = pruned(touches.at, oldest);
+  const visibility = pruned(touches.visibility, oldest);
   const categories = pruned(touches.categories, oldest);
   const dividers = pruned(touches.dividers, oldest);
   const reads = pruned(touches.reads, oldest);
 
   if (
     at === touches.at &&
+    visibility === touches.visibility &&
     categories === touches.categories &&
     dividers === touches.dividers &&
     reads === touches.reads
@@ -163,7 +180,7 @@ export function pruneTouches(state: State, oldest: number | undefined): State {
     return state;
   }
 
-  return { ...state, rowTouches: { ...touches, at, categories, dividers, reads } };
+  return { ...state, rowTouches: { ...touches, at, visibility, categories, dividers, reads } };
 }
 
 /**

@@ -505,11 +505,16 @@ export const mutations = {
    * request's ticket: a room the sync path changed after it keeps the store's row, and none land
    * once a resync made the reply stale.
    */
-  landReplyRows: (events: readonly SyncEvent[], now: number, since: number) => {
+  landReplyRows: (
+    events: readonly SyncEvent[],
+    now: number,
+    since: number,
+    source: "reply" | "direct-reply" = "reply",
+  ) => {
     const fresh = untouchedReplyEvents(store.getState(), events, since);
 
     noteRowEvents(fresh);
-    apply((state) => (fresh.length === 0 ? state : reduce.applyEvents(state, fresh, now, "reply")));
+    apply((state) => (fresh.length === 0 ? state : reduce.applyEvents(state, fresh, now, source)));
   },
   prune: (now: number) => apply((state) => reduce.prune(state, now)),
   /** An edit's reply (the `message.updated` event may beat it; the newer copy wins). */

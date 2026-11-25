@@ -292,6 +292,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["sidebar.row.upserted", "sidebar.row.removed"],
     ),
     (
+        "Broadcasts::sync_direct_message_received",
+        &["room.unread", "sidebar.row.upserted", "sidebar.row.removed"],
+    ),
+    (
         "Broadcasts::involvement_change",
         &["sidebar.row.upserted", "sidebar.row.removed"],
     ),
@@ -842,10 +846,9 @@ pub fn room_read(server: &Cable, user_id: i64, room_id: i64) {
     );
 }
 
-/// The fence for a person's unread state in a room: `room.read` and `room.unread` change it on
-/// the client, and a sidebar row read before one of them carries the state from before it.
-fn unread_fence(user_id: i64, room_id: i64) -> String {
-    format!("unread:{user_id}:{room_id}")
+/// The fence for a person's unread and direct-closure state in a room.
+fn sidebar_fence(user_id: i64, room_id: i64) -> String {
+    format!("sidebar:{user_id}:{room_id}")
 }
 
 /// Publishes a change to the person's unread state of the room on their `user` topic, fencing
@@ -855,7 +858,7 @@ fn send_unread_change(server: &Cable, user_id: i64, room_id: i64, payload: &Sync
     let payload = serde_json::to_string(payload).expect("sync payloads serialize");
     server.sync_publish_fencing(
         SyncPublication::new(Audience::User(user_id), payload),
-        unread_fence(user_id, room_id),
+        sidebar_fence(user_id, room_id),
     );
 }
 
@@ -1627,7 +1630,7 @@ impl RoomRows {
     ///
     /// One snapshot, so a row only shows what its membership could see: a membership read
     /// before a revocation renders the room as it was before it, never a message posted after
-    /// it. A row refused for a newer unread change (see [`Self::row`]) is read again from a
+    /// it. A row refused for a newer change (see [`Self::row`]) is read again from a
     /// fresh snapshot, membership and all; nothing read in one snapshot is used in another.
     ///
     /// Only members with a sync socket open get a row: a row costs a few reads, and a big room
@@ -1647,9 +1650,7 @@ impl RoomRows {
             return;
         }
         let renderer = slot.get(server);
-        // Before anything is read: a row is published only if no change to its unread state was
-        // published since (see `row`).
-        let since = server.sync_head();
+        let since = server.sync_fence_head();
         let Some(mut refused) = in_snapshot(conn, self.room_id, |conn| {
             self.rows(server, renderer, conn, viewers, since, change)
         }) else {
@@ -1659,7 +1660,7 @@ impl RoomRows {
             if refused.is_empty() {
                 return;
             }
-            let since = server.sync_head();
+            let since = server.sync_fence_head();
             let Some(again) = in_snapshot(conn, self.room_id, |conn| {
                 self.rows(
                     server,
@@ -1674,7 +1675,7 @@ impl RoomRows {
             };
             refused = again;
         }
-        // Their unread state keeps changing faster than a row renders: they refetch the sidebar.
+        // Their state keeps changing faster than a row renders: they refetch the sidebar.
         for user_id in refused {
             server.sync_skipped_for(user_id);
         }
@@ -1740,11 +1741,9 @@ impl RoomRows {
     }
 
     /// The person's row, read from `membership` in the caller's snapshot, which started after
-    /// `since` (a [`Cable::sync_head`](campfire_cable::Server::sync_head)). A `room.read` or
-    /// `room.unread` of theirs published after that has already changed the row's unread state
-    /// on the client, and this row may predate it: the publication is refused, and `false` asks
-    /// the caller to read it again from a fresh snapshot. `true` otherwise (published, hidden,
-    /// skipped, or not rendered).
+    /// `since` (a [`Cable::sync_fence_head`](campfire_cable::Server::sync_fence_head)). A
+    /// newer read, unread, or direct visibility change invalidates this snapshot. `false`
+    /// asks the caller to retry from a fresh snapshot.
     fn row(
         &self,
         server: &Cable,
@@ -1789,7 +1788,7 @@ impl RoomRows {
             .expect("sync payloads serialize");
         let publication = SyncPublication::new(Audience::User(user_id), payload);
         server
-            .sync_publish_fresh(publication, &unread_fence(user_id, room.id), since)
+            .sync_publish_fresh(publication, &sidebar_fence(user_id, room.id), since)
             .is_ok()
     }
 
@@ -1832,7 +1831,7 @@ impl RoomRows {
             publication.except_user = Some(user_id);
         }
         server
-            .sync_publish_fresh(publication, &unread_fence(user_id, self.room_id), since)
+            .sync_publish_fresh(publication, &sidebar_fence(user_id, self.room_id), since)
             .is_ok()
     }
     /// The room is gone: `sidebar.row.removed` for everyone, and nobody follows it any more.
@@ -1876,20 +1875,30 @@ pub fn management_sidebar_rows_later(
     defer_sidebar_rows(server, slot, room_id, user_ids, RowChange::Management);
 }
 
-/// Refresh the members named by a direct close or reopen.
+/// Fence and refresh the member's row after an explicit direct close or reopen.
 pub fn direct_sidebar_later(
     server: &Cable,
     slot: &RendererSlot,
     room_id: i64,
-    user_ids: Vec<i64>,
+    user_id: i64,
     closed: bool,
 ) {
+    server.sync_advance_fences([sidebar_fence(user_id, room_id)]);
     let change = if closed {
         RowChange::CloseDirect
     } else {
         RowChange::Refresh
     };
-    defer_sidebar_rows(server, slot, room_id, Some(user_ids), change);
+    defer_sidebar_rows(server, slot, room_id, Some(vec![user_id]), change);
+}
+
+/// Fence the rows the message reopened before its other publications are ready.
+pub fn fence_reopened_directs(server: &Cable, room_id: i64, reopened_user_ids: &[i64]) {
+    server.sync_advance_fences(
+        reopened_user_ids
+            .iter()
+            .map(|&id| sidebar_fence(id, room_id)),
+    );
 }
 
 fn defer_sidebar_rows(
@@ -1959,10 +1968,7 @@ pub fn membership_row_later(server: &Cable, slot: &RendererSlot, membership_id: 
     });
 }
 
-/// Every member's row of a direct room, read afresh later under the room's lock, after a root
-/// message was created, edited or removed: when it is (or, removed, was) the room's newest
-/// root, the row's preview (`SidebarRow.lastMessage`) follows it or falls back to the one
-/// before. An older root's edit leaves the preview as it was, so no row is read for it.
+/// Refresh every direct member's preview after an edit to its newest root message.
 pub fn direct_preview_later(server: &Cable, slot: &RendererSlot, message: &Message) {
     let (room_id, message_id, created_at) = (message.room_id, message.id, message.created_at);
     defer_rows(server, slot, move |server, slot, reader| {

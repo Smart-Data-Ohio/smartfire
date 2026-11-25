@@ -13,7 +13,7 @@ import { WorkspaceLayout } from "./workspace-layout.ts";
 
 /** A direct room's newest root message, previewed under its row on phones. */
 export const SidebarLastMessage = Schema.Struct({
-  messageId: MessageId,
+  messageId: Schema.optionalKey(MessageId),
   creatorId: UserId,
   excerpt: Schema.String,
   createdAt: Timestamp,

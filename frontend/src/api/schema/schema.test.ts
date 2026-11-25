@@ -227,6 +227,23 @@ describe("DTO schemas", () => {
     });
   });
 
+  it("decodes a sidebar from before direct previews included message IDs", () => {
+    roundTrips(Sidebar, {
+      rows: [
+        {
+          ...sidebarRowJson,
+          room: { ...sidebarRowJson.room, kind: "direct" },
+          lastMessage: { creatorId: 7, excerpt: "Hello", createdAt: messageJson.createdAt },
+        },
+      ],
+      categories: [],
+      users: [userJson],
+      directPlaceholderUserIds: [],
+      canCreateRooms: true,
+      workspaceLayout: { categories: [], rooms: [] },
+    });
+  });
+
   it("rejects an omitted nullable key, a fractional id and an unknown literal", () => {
     const { bio: _bio, ...withoutBio } = userJson;
 

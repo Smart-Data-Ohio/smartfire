@@ -100,8 +100,33 @@ impl Broadcasts {
         sync::sidebar_rows_later(&self.server, &self.sync, room_id, Some(user_ids));
     }
 
-    pub fn sync_direct_sidebar(&self, room_id: i64, user_ids: Vec<i64>, closed: bool) {
-        sync::direct_sidebar_later(&self.server, &self.sync, room_id, user_ids, closed);
+    pub fn sync_direct_sidebar(&self, room_id: i64, user_id: i64, closed: bool) {
+        sync::direct_sidebar_later(&self.server, &self.sync, room_id, user_id, closed);
+    }
+
+    /// A direct's unread pings must precede its authoritative row counts.
+    pub fn sync_direct_message_received(
+        &self,
+        db: &campfire_db::Database,
+        room_id: i64,
+        message_id: i64,
+        reopened_user_ids: &[i64],
+    ) {
+        if !self.server.sync_wanted() {
+            return;
+        }
+        sync::fence_reopened_directs(&self.server, room_id, reopened_user_ids);
+        let result = db.read_blocking(|conn| {
+            let room = Room::find(conn, room_id)?;
+            let message = Message::find(conn, message_id)?;
+            let rich_text = &*db.env().rich_text;
+            let user_ids = unread_user_ids(conn, &room, &message, rich_text, self.clock.now())?;
+            self.sync_message_unreads(conn, &room, &message, rich_text, &user_ids)
+        });
+        if let Err(error) = result {
+            tracing::warn!(%error, room_id, message_id, "sync: direct unread policy not read");
+        }
+        sync::sidebar_rows_later(&self.server, &self.sync, room_id, None);
     }
 
     /// `activity.item` for an `ActivityChannel` frame (`user_<id>_activity`) a broadcast point
@@ -330,33 +355,37 @@ impl Broadcasts {
                 &UnreadRoom { room_id: room.id },
             );
         }
-        if self.server.sync_wanted() {
-            let mentioned: Vec<i64> = message
-                .mentionees(conn, rich_text)?
-                .iter()
-                .map(|user| user.id)
-                .collect();
-            let blockers =
-                campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
-            // The author's own message never makes the room unread for them (`unread_memberships`
-            // leaves them out), so their other devices hear nothing either; the classic stream
-            // above keeps every member, as `broadcast_unread_room` did.
-            for &user_id in user_ids.iter().filter(|id| **id != message.creator_id) {
-                sync::room_unread_with_policy(
-                    &self.server,
-                    user_id,
-                    room.id,
-                    Some(message.id),
-                    mentioned.contains(&user_id),
-                    blockers.contains(&user_id),
-                );
-            }
-            // A direct row previews its newest root, so every member's row changes with one.
-            if room.direct() && previews(message) {
-                self.direct_preview_later(room, message);
-            } else {
-                sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
-            }
+        if self.server.sync_wanted() && !room.direct() {
+            self.sync_message_unreads(conn, room, message, rich_text, &user_ids)?;
+            sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
+        }
+        Ok(())
+    }
+
+    fn sync_message_unreads(
+        &self,
+        conn: &Connection,
+        room: &Room,
+        message: &Message,
+        rich_text: &dyn RichText,
+        user_ids: &[i64],
+    ) -> campfire_db::Result<()> {
+        let mentioned: Vec<i64> = message
+            .mentionees(conn, rich_text)?
+            .iter()
+            .map(|user| user.id)
+            .collect();
+        let blockers = campfire_db::models::ignore_policy::blockers_of(conn, message.creator_id)?;
+        // The author's own message never makes the room unread for them.
+        for &user_id in user_ids.iter().filter(|id| **id != message.creator_id) {
+            sync::room_unread_with_policy(
+                &self.server,
+                user_id,
+                room.id,
+                Some(message.id),
+                mentioned.contains(&user_id),
+                blockers.contains(&user_id),
+            );
         }
         Ok(())
     }
@@ -373,9 +402,7 @@ impl Broadcasts {
         sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
-    /// A direct row previews its newest root message (`SidebarRow.lastMessage`): after one is
-    /// created, edited or removed, every member's row is read afresh if it is (or was) the
-    /// newest, so the preview follows (or falls back to the message before).
+    /// Editing a direct message refreshes its preview if it is the newest root.
     fn direct_preview_later(&self, room: &Room, message: &Message) {
         if room.direct() && previews(message) {
             sync::direct_preview_later(&self.server, &self.sync, message);

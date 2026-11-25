@@ -380,7 +380,13 @@ impl Membership {
             params![closed.then(|| tx.now()), self.id, closed],
         )?;
         if changed != 0 {
-            Self::broadcast_direct_sidebar(tx, self.room_id, vec![self.user_id], closed);
+            tx.emit_after_commit(Event::broadcast(
+                &crate::broadcasts::Broadcast::DirectSidebarChanged {
+                    room_id: self.room_id,
+                    user_id: self.user_id,
+                    closed,
+                },
+            ));
         }
         Ok(())
     }
@@ -388,39 +394,36 @@ impl Membership {
     /// A live message reopens a direct conversation for closed members who can see its author.
     pub(crate) fn reopen_direct_for_message(
         tx: &mut Tx<'_>,
-        room_id: i64,
-        author_id: i64,
+        message: &crate::Message,
     ) -> Result<()> {
-        let user_ids = query_all(
+        let room_id = message.room_id;
+        if !sql::exists(
             tx.conn(),
-            "SELECT user_id FROM memberships WHERE room_id = (SELECT id FROM rooms WHERE id = ?1 AND type = 'Rooms::Direct') ORDER BY id",
+            "SELECT 1 FROM rooms WHERE id = ? AND type = 'Rooms::Direct'",
             [room_id],
+        )? {
+            return Ok(());
+        }
+        let visible = super::ignore_policy::visible_sql("memberships.user_id", "?2");
+        let reopened_user_ids = query_all(
+            tx.conn(),
+            &format!(
+                "UPDATE memberships SET closed_at = NULL
+                 WHERE room_id = ?1 AND closed_at IS NOT NULL AND {visible} RETURNING user_id"
+            ),
+            [room_id, message.creator_id],
             |row| row.get(0),
         )?;
-        if !user_ids.is_empty() {
-            let visible = super::ignore_policy::visible_sql("memberships.user_id", "?2");
-            tx.conn().execute_cached(
-                &format!(
-                    "UPDATE memberships SET closed_at = NULL WHERE room_id = ?1 AND closed_at IS NOT NULL AND {visible}"
-                ),
-                [room_id, author_id],
-            )?;
-            // Refresh everyone, including those closed before the post. On the next post
-            // those who could see this author are now open, so using closed_at to select
-            // the audience would disclose the previous post's private ignore outcome.
-            Self::broadcast_direct_sidebar(tx, room_id, user_ids, false);
-        }
-        Ok(())
-    }
-
-    fn broadcast_direct_sidebar(tx: &mut Tx<'_>, room_id: i64, user_ids: Vec<i64>, closed: bool) {
+        // Publish one row per member. Choosing the publication audience from the reopened
+        // memberships would expose their private ignore preferences in the sync sequence.
         tx.emit_after_commit(Event::broadcast(
-            &crate::broadcasts::Broadcast::DirectSidebarChanged {
+            &crate::broadcasts::Broadcast::DirectMessageReceived {
                 room_id,
-                user_ids,
-                closed,
+                message_id: message.id,
+                reopened_user_ids,
             },
         ));
+        Ok(())
     }
 
     /// `user.memberships.without_direct_rooms.count`

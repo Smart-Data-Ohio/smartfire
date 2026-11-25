@@ -1303,6 +1303,7 @@ async fn a_database_unread_carries_its_message_and_mention() {
                     room_id,
                     message_id,
                     author_id: JASON,
+                    direct: false,
                 }));
             }
             Ok(())

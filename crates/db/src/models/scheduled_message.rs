@@ -844,7 +844,9 @@ impl ScheduledMessage {
                 .iter()
                 .map(|user| user.id)
                 .collect();
-            let user_ids = Membership::for_room(tx.conn(), message.room_id)?
+            let room = crate::Room::find(tx.conn(), message.room_id)?;
+            let user_ids = room
+                .memberships(tx.conn())?
                 .into_iter()
                 .filter(|member| {
                     member.involvement != Some(crate::Involvement::Muted)
@@ -857,6 +859,7 @@ impl ScheduledMessage {
                 room_id: message.room_id,
                 message_id: Some(message.id),
                 author_id: message.creator_id,
+                direct: room.direct(),
             }));
         }
         // Human root posts fan out to legacy bots; thread posts never do.

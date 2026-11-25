@@ -72,7 +72,9 @@ test("DM sidebar labels keep full names and expose clipped labels on hover", asy
   await expect(name).toHaveText(label);
 });
 
-test("direct status sits at the trailing edge without moving on hover", async ({ page }) => {
+test("direct status stays visible on link focus without shifting on focus or hover", async ({
+  page,
+}) => {
   const roomId = ROOM_IDS.dmMaya;
   const state = await (await page.request.get("/__mock/state")).json();
   const headers = { "X-CSRF-Token": state.csrfToken };
@@ -115,8 +117,21 @@ test("direct status sits at the trailing edge without moving on hover", async ({
   const nameBefore = await name.boundingBox();
   expect(before.inset).toBeLessThan(12);
   expect(before.gap).toBeGreaterThanOrEqual(0);
+  const status = row.locator(".sidebar-row-status");
+  const close = row.locator(".sidebar-row-close");
+
+  await link.focus();
+  await expect(link).toBeFocused();
+  await expect(status).toHaveCSS("opacity", "1");
+  expect(await geometry()).toEqual(before);
+
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await expect(status).toHaveCSS("opacity", "0");
+  expect(await geometry()).toEqual(before);
+
   await link.hover();
-  await expect(row.locator(".sidebar-row-close")).toHaveCSS("opacity", "1");
+  await expect(close).toHaveCSS("opacity", "1");
   expect(await geometry()).toEqual(before);
   expect(await name.boundingBox()).toEqual(nameBefore);
 });

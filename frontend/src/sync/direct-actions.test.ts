@@ -52,6 +52,24 @@ describe("direct actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("creating an existing direct outranks a sidebar snapshot listing it closed", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const row = sidebarRowFixture(30, "Ana", "direct", [5]);
+      const fake = yield* FakeApi;
+      const since = mutations.openRowTicket();
+
+      yield* fake.reply("POST /directs", row);
+      yield* directs.create([5]);
+      mutations.loadSidebar({ ...sidebarFixture([]), closedDirectRoomIds: [30] }, since);
+      mutations.closeRowTicket(since);
+
+      expect(store.getState().sidebar.rows[30]).toEqual(row);
+      expect(store.getState().directClosures.has(30)).toBe(false);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("mirror a rename onto the header and the sidebar row", () =>
     Effect.gen(function* () {
       seed();

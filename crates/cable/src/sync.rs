@@ -407,7 +407,7 @@ pub(crate) struct Engine<U> {
     /// Who has a sync socket open (from its `hello` until it closes), and who has a gap marker
     /// in the ring since their last one opened.
     pub people: Mutex<People>,
-    /// The latest event published for each fence key: see [`crate::Server::sync_publish_fresh`].
+    /// The latest change for each fence key: see [`crate::Server::sync_publish_fresh`].
     pub fences: Mutex<Fences>,
 }
 
@@ -417,16 +417,17 @@ pub(crate) struct PresencePublications {
     pub last_by_user: HashMap<i64, campfire_api_types::UserPresence>,
 }
 
-/// [`crate::Server::sync_publish_fresh`] refused a publication read before an event under its
+/// [`crate::Server::sync_publish_fresh`] refused a publication read before a change under its
 /// fence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Stale;
 
-/// [`Engine::fences`]: for each key, the sequence of the latest event published under it.
+/// [`Engine::fences`]: a change clock independent of the publication sequence.
 #[derive(Default)]
 pub(crate) struct Fences {
     latest: HashMap<String, u64>,
-    /// Keys forgotten to bound the map: their latest event was at or before this sequence.
+    generation: u64,
+    /// Keys forgotten to bound the map: their latest change was at or before this generation.
     forgotten_through: u64,
 }
 
@@ -434,18 +435,22 @@ impl Fences {
     /// Keys remembered at most; when full, the older half is forgotten.
     const LIMIT: usize = 4096;
 
-    /// An event was published under `key` at `seq`. The caller holds the hub lock.
-    pub fn record(&mut self, key: String, seq: u64) {
+    pub fn head(&self) -> u64 {
+        self.generation
+    }
+
+    pub fn record(&mut self, key: String) {
+        self.generation += 1;
         if self.latest.len() >= Self::LIMIT && !self.latest.contains_key(&key) {
             let mut seqs: Vec<u64> = self.latest.values().copied().collect();
             let (_, &mut cutoff, _) = seqs.select_nth_unstable(Self::LIMIT / 2);
             self.latest.retain(|_, seq| *seq > cutoff);
             self.forgotten_through = cutoff;
         }
-        self.latest.insert(key, seq);
+        self.latest.insert(key, self.generation);
     }
 
-    /// Whether an event under `key` may have been published after `since`.
+    /// Whether `key` may have changed after `since`.
     pub fn crossed(&self, key: &str, since: u64) -> bool {
         since < self.forgotten_through || self.latest.get(key).is_some_and(|&seq| seq > since)
     }
@@ -484,20 +489,20 @@ mod tests {
     #[test]
     fn fences_forget_the_older_half_by_fencing_everything_read_before_it() {
         let mut fences = Fences::default();
-        fences.record("a".into(), 5);
-        assert!(fences.crossed("a", 4));
-        assert!(!fences.crossed("a", 5));
+        fences.record("a".into());
+        assert!(fences.crossed("a", 0));
+        assert!(!fences.crossed("a", 1));
         assert!(!fences.crossed("b", 0));
         for n in 0..Fences::LIMIT as u64 {
-            fences.record(format!("k{n}"), 10 + n);
+            fences.record(format!("k{n}"));
         }
         // The last key found the map full: the older half went ("a" among them), so a read from
         // before the newest forgotten one is fenced under any key, and the newer half stays.
-        let cutoff = 10 + (Fences::LIMIT / 2) as u64 - 1;
+        let cutoff = 1 + (Fences::LIMIT / 2) as u64;
         assert!(fences.latest.len() <= Fences::LIMIT / 2 + 1);
         assert!(fences.crossed("a", cutoff - 1));
         assert!(!fences.crossed("a", cutoff));
-        let newest = 10 + Fences::LIMIT as u64 - 2;
+        let newest = Fences::LIMIT as u64;
         assert!(fences.crossed(&format!("k{}", Fences::LIMIT - 2), newest - 1));
         assert!(!fences.crossed(&format!("k{}", Fences::LIMIT - 2), newest));
     }

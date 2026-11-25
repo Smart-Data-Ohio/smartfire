@@ -51,6 +51,7 @@ import {
   readSince,
   touchedSince,
   touchRows,
+  visibilityTouchedSince,
 } from "./row-touches.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
@@ -155,6 +156,16 @@ export function resyncSidebar(state: State, sidebar: Sidebar, since: number): St
  * added that the snapshot predates stays too. Categories are guarded the same way.
  */
 function installSidebar(state: State, sidebar: Sidebar, since: number): State {
+  const directClosures = new Set<number>();
+
+  for (const id of sidebar.closedDirectRoomIds ?? []) {
+    if (!visibilityTouchedSince(state, id, since)) directClosures.add(id);
+  }
+
+  for (const id of state.directClosures) {
+    if (visibilityTouchedSince(state, id, since)) directClosures.add(id);
+  }
+
   const rows: Record<number, SidebarRow> = {};
   const installed: SidebarRow[] = [];
 
@@ -168,7 +179,7 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
   }
 
   for (const row of Object.values(state.sidebar.rows)) {
-    if (touchedSince(state, row.room.id, since)) {
+    if (!directClosures.has(row.room.id) && touchedSince(state, row.room.id, since)) {
       rows[row.room.id] = row;
     }
   }
@@ -177,7 +188,7 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
   const noteToSelfRoomId = sidebar.noteToSelfRoomId ?? state.sidebar.noteToSelfRoomId;
 
   const noteToSelfClosed =
-    noteToSelfRoomId !== null && touchedSince(state, noteToSelfRoomId, since)
+    noteToSelfRoomId !== null && visibilityTouchedSince(state, noteToSelfRoomId, since)
       ? state.sidebar.noteToSelfClosed
       : sidebar.noteToSelfClosed === true;
 
@@ -210,16 +221,6 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
   // A row the snapshot dropped leaves the same way a removal does.
   for (const row of Object.values(state.sidebar.rows)) {
     if (rows[row.room.id] === undefined) next = keepRowFlag(next, row);
-  }
-
-  const directClosures = new Set<number>();
-
-  for (const id of sidebar.closedDirectRoomIds ?? []) {
-    if (!touchedSince(state, id, since)) directClosures.add(id);
-  }
-
-  for (const id of state.directClosures) {
-    if (touchedSince(state, id, since)) directClosures.add(id);
   }
 
   return setDirectClosures(next, directClosures);
@@ -1233,11 +1234,12 @@ export function applyEvents(
   state: State,
   events: readonly SyncEvent[],
   now: number,
-  source: "sync" | "reply" = "sync",
+  source: "sync" | "reply" | "direct-reply" = "sync",
 ): State {
   const meId = state.me?.user.id ?? state.boot?.user.id ?? null;
   let next = state;
   let directClosures: Set<number> | undefined;
+  const visibility: number[] = [];
 
   for (const event of events) {
     switch (event.type) {
@@ -1330,6 +1332,7 @@ export function applyEvents(
         next = markRoomRead(next, event.data.roomId);
         break;
       case "sidebar.row.upserted":
+        visibility.push(event.data.room.id);
         next = upsertRow(next, event.data);
 
         if ((directClosures ?? next.directClosures).has(event.data.room.id)) {
@@ -1340,6 +1343,7 @@ export function applyEvents(
         break;
       case "sidebar.row.removed": {
         const { roomId, closed } = event.data;
+        visibility.push(roomId);
 
         if (closed === true) {
           directClosures ??= new Set(next.directClosures);
@@ -1413,10 +1417,10 @@ export function applyEvents(
 
   if (directClosures !== undefined) next = setDirectClosures(next, directClosures);
 
-  if (source === "reply") {
-    return directClosures === undefined
-      ? next
-      : touchRows(next, syncTouchedRooms(state, next, events));
+  if (source !== "sync") {
+    return source === "direct-reply" || directClosures !== undefined
+      ? touchRows(next, visibility, [], [], visibility)
+      : next;
   }
 
   return touchRows(
@@ -1424,6 +1428,7 @@ export function applyEvents(
     syncTouchedRooms(state, next, events),
     syncTouchedCategories(events),
     syncReadRooms(events),
+    visibility,
   );
 }
 
