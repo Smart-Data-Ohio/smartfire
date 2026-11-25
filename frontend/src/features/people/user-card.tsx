@@ -27,7 +27,7 @@ import { useViewerId } from "../messages/use-message.ts";
 import { AgentBadge } from "./agent-badge.tsx";
 import { agentKindLabel, agentTone, identityOf, toneLabel } from "./agent-identity.ts";
 import { UNKNOWN_NAME, useIgnored, usePresenceStatus, useUser } from "./people.ts";
-import { presenceOf } from "./people-format.ts";
+import { newerUser, presenceOf } from "./people-format.ts";
 import { ProfileHero } from "./profile-banner.tsx";
 import { UserAvatar } from "./user-avatar.tsx";
 import {
@@ -52,12 +52,32 @@ const PRESENCE_WORDS = {
 /** How long a fetched profile (an administrator's view of the email, the status line) stays fresh. */
 const PROFILE_TTL_MS = 60_000;
 
-const profiles = new Map<number, { readonly at: number; readonly profile: PersonProfile }>();
+const MAX_CACHED_PROFILES = 100;
 
-function freshProfile(userId: number): PersonProfile | null {
+const profiles = new Map<
+  number,
+  { readonly viewerId: number | null; readonly at: number; readonly profile: PersonProfile }
+>();
+
+function freshProfile(userId: number, viewerId: number | null): PersonProfile | null {
   const hit = profiles.get(userId);
 
-  return hit !== undefined && Date.now() - hit.at < PROFILE_TTL_MS ? hit.profile : null;
+  return hit !== undefined && hit.viewerId === viewerId && Date.now() - hit.at < PROFILE_TTL_MS
+    ? hit.profile
+    : null;
+}
+
+function storeProfile(userId: number, viewerId: number | null, profile: PersonProfile): void {
+  profiles.delete(userId);
+  profiles.set(userId, { viewerId, at: Date.now(), profile });
+
+  if (profiles.size > MAX_CACHED_PROFILES) {
+    const oldest = profiles.keys().next().value;
+
+    if (oldest !== undefined) {
+      profiles.delete(oldest);
+    }
+  }
 }
 
 /** Forgets the fetched profiles (tests). */
@@ -71,11 +91,11 @@ export function clearUserCardProfiles(): void {
  * sees, a status line not yet in presence, or the whole person when the store has never seen
  * them). A failure leaves the card as it is.
  */
-function useCardProfile(userId: number): PersonProfile | null {
-  const [loaded, setLoaded] = useState<PersonProfile | null>(() => freshProfile(userId));
+function useCardProfile(userId: number, viewerId: number | null): PersonProfile | null {
+  const [loaded, setLoaded] = useState<PersonProfile | null>(() => freshProfile(userId, viewerId));
 
   useEffect(() => {
-    const fresh = freshProfile(userId);
+    const fresh = freshProfile(userId, viewerId);
 
     if (fresh !== null) {
       setLoaded(fresh);
@@ -87,7 +107,7 @@ function useCardProfile(userId: number): PersonProfile | null {
 
     peoplePages.profile(userId, controller.signal).then(
       (profile) => {
-        profiles.set(userId, { at: Date.now(), profile });
+        storeProfile(userId, viewerId, profile);
 
         if (!controller.signal.aborted) {
           setLoaded(profile);
@@ -97,7 +117,7 @@ function useCardProfile(userId: number): PersonProfile | null {
     );
 
     return () => controller.abort();
-  }, [userId]);
+  }, [userId, viewerId]);
 
   return loaded;
 }
@@ -232,8 +252,13 @@ function UserCard({ userId, titleId }: CardProps) {
   const navigate = useNavigate();
   const viewerId = useViewerId();
   const held = useUser(userId);
-  const profile = useCardProfile(userId);
-  const user = held ?? profile?.user;
+  const profile = useCardProfile(userId, viewerId);
+
+  const user =
+    held !== undefined && profile !== null
+      ? newerUser(profile.user, held)
+      : (held ?? profile?.user);
+
   const ignoredNow = useIgnored(userId, profile?.ignoredByMe);
   const [messaging, setMessaging] = useState(false);
   const name = user?.name ?? UNKNOWN_NAME;

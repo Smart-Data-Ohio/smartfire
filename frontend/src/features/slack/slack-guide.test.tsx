@@ -374,9 +374,10 @@ describe("PersonalSlackSection walkthrough", () => {
     const fact = (await screen.findByText(`${LINKED_EMAIL_FACT_TITLE}:`)).closest("li");
 
     expect(fact?.textContent).toContain(
-      "If your Slack account uses another email address, add it under Email addresses in Profile settings before you import.",
+      "If your Slack account uses another email address, add it under Email addresses in Profile settings.",
     );
-    expect(fact?.textContent).toContain("instead of a placeholder");
+    expect(fact?.textContent).toContain("moves over any unclaimed placeholder");
+    expect(fact?.textContent).toContain("Connecting Slack also moves your unclaimed placeholder");
 
     const profile = within(fact ?? document.body).getByRole("link", { name: "Profile settings" });
 

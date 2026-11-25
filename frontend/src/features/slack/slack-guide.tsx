@@ -264,8 +264,9 @@ export function SlackImportFacts() {
         <strong>{LINKED_EMAIL_FACT_TITLE}:</strong>{" "}
         <span className="text-muted">
           If your Slack account uses another email address, add it under Email addresses in{" "}
-          <Link to="/settings">Profile settings</Link> before you import. Your Slack messages then
-          land under your account instead of a placeholder.
+          <Link to="/settings">Profile settings</Link>. Confirming it matches your Slack history to
+          your account and moves over any unclaimed placeholder from an earlier import. Connecting
+          Slack also moves your unclaimed placeholder over.
         </span>
       </li>
       {PERSONAL_IMPORT_FACTS.map((fact) => (
