@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
+import { messageFixture, sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
 import { beginRoomRequest } from "./join-state.ts";
 import type { SidebarRow, SyncEvent } from "./model.ts";
 import {
@@ -337,6 +337,46 @@ describe("sidebar row tickets in the store", () => {
   beforeEach(() => mutations.reset());
 
   const rows = () => store.getState().sidebar.rows;
+
+  it.each([
+    { ignored: false, remainsOpen: true },
+    { ignored: true, remainsOpen: false },
+  ])(
+    "a root message can keep a direct open during a close (ignored: $ignored)",
+    ({ ignored, remainsOpen }) => {
+      const direct = sidebarRowFixture(3, "Ada and Maya", "direct", [7, 8]);
+      mutations.loadSidebar(sidebarFixture([direct]), rowClock(store.getState()));
+      const since = mutations.openRowTicket();
+
+      mutations.applyEvents(
+        [
+          {
+            seq: 1,
+            topic: "room:3",
+            type: "message.created",
+            data: messageFixture(31, 3, { creatorId: 8, ignored }),
+          },
+        ],
+        0,
+      );
+      mutations.landReplyRows(
+        [
+          {
+            seq: 0,
+            topic: "user:7",
+            type: "sidebar.row.removed",
+            data: { roomId: 3, closed: true },
+          },
+        ],
+        0,
+        since,
+        "direct-reply",
+      );
+      mutations.closeRowTicket(since);
+
+      expect(rows()[3]).toBe(remainsOpen ? direct : undefined);
+    },
+  );
 
   it("a 404 from before access came back doesn't block the restored row", () => {
     // Room 2 was lost. Its 404 read goes out; access comes back during a gap; a resync reads.

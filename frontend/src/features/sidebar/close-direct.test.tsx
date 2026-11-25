@@ -638,6 +638,67 @@ it("a refused close shows the current unread row and keeps the room open", async
   expect(store.getState().me?.lastRoomId).toBe(DM);
 });
 
+it("an incoming unread keeps the active direct open when the close reply beats its sidebar upsert", async () => {
+  const row = directRow();
+  const handle = network.server.handle.bind(network.server);
+  const reply = Promise.withResolvers<Awaited<ReturnType<typeof handle>>>();
+  vi.spyOn(network.server, "handle").mockImplementation((request) =>
+    request.path === CLOSED_ENDPOINT && request.method === "PUT" ? reply.promise : handle(request),
+  );
+  const close = vi.spyOn(actions.organize, "closeDirect");
+  mutations.markRoomRead(DM);
+
+  const router = await mount(`/r/${DM}`);
+  const navigate = vi.spyOn(router, "navigate");
+
+  await userEvent.click(
+    screen.getByRole("button", { name: `Close conversation with ${row.sidebarDisplayName}` }),
+  );
+
+  const messageId = (row.lastMessage?.messageId ?? 0) + 1;
+
+  act(() =>
+    mutations.applyEvents(
+      [
+        {
+          seq: 1,
+          topic: "user",
+          type: "room.unread",
+          data: { roomId: DM, messageId, mentioned: false },
+        },
+      ],
+      0,
+    ),
+  );
+  expect(store.getState().sidebar.rows[DM]?.unreadCount).toBe(1);
+
+  await act(async () => {
+    reply.resolve({ status: 200, json: { row: null } });
+    await expect(close.mock.results[0]?.value).resolves.toBe(true);
+  });
+
+  expect(store.getState().sidebar.rows[DM]?.unreadCount).toBe(1);
+  expect(store.getState().me?.lastRoomId).toBe(DM);
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+
+  const unread = {
+    ...row,
+    unreadCount: 1,
+    notificationCount: 1,
+    membership: { ...row.membership, unreadAt: row.evaluatedAt },
+  };
+
+  act(() =>
+    mutations.applyEvents(
+      [{ seq: 2, topic: "user", type: "sidebar.row.upserted", data: unread }],
+      0,
+    ),
+  );
+  expect(store.getState().sidebar.rows[DM]?.unreadCount).toBe(1);
+  expect(navigate).not.toHaveBeenCalled();
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+});
+
 it("a successful close leaves the direct after a local mark-read while sync is offline", async () => {
   const row = directRow();
 

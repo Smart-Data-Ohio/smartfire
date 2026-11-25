@@ -5,6 +5,7 @@ import {
   applyBlockChange,
   applyBlockSnapshot,
   invalidateIgnores as invalidateIgnoresIn,
+  messageIgnored,
 } from "./ignores.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
@@ -1240,6 +1241,7 @@ export function applyEvents(
   let next = state;
   let directClosures: Set<number> | undefined;
   const visibility: number[] = [];
+  const reopeningMessages: number[] = [];
 
   for (const event of events) {
     switch (event.type) {
@@ -1250,9 +1252,26 @@ export function applyEvents(
         next = applyBlockState(next, event.data);
         break;
 
-      case "message.created":
-        next = stopTypingFor(receiveMessage(next, event.data), event.topic, event.data.creatorId);
+      case "message.created": {
+        const message = event.data;
+
+        const room =
+          next.sidebar.rows[message.roomId]?.room ?? next.rooms[message.roomId]?.detail?.room;
+
+        if (
+          room?.kind === "direct" &&
+          message.threadId === null &&
+          !message.systemNote &&
+          !message.streaming &&
+          !messageIgnored(next.ignores, message)
+        ) {
+          reopeningMessages.push(message.roomId);
+        }
+
+        next = stopTypingFor(receiveMessage(next, message), event.topic, message.creatorId);
         break;
+      }
+
       case "message.updated":
         next = updateMessage(next, event.data);
         break;
@@ -1326,6 +1345,8 @@ export function applyEvents(
         break;
       case "room.unread":
         if (event.data.unchanged) break;
+
+        if (event.data.messageId !== null) reopeningMessages.push(event.data.roomId);
         next = roomUnread(next, event.data.roomId, event.data.messageId, event.data.mentioned, now);
         break;
       case "room.read":
@@ -1429,6 +1450,7 @@ export function applyEvents(
     syncTouchedCategories(events),
     syncReadRooms(events),
     visibility,
+    reopeningMessages,
   );
 }
 

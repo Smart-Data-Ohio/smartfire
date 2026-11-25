@@ -32,6 +32,8 @@ export interface RowTouches {
   readonly at: Touches;
   /** The latest row upsert or removal, independent of changes to its counts. */
   readonly visibility: Touches;
+  /** The latest message that could reopen each direct, even before its row arrives. */
+  readonly reopeningMessages: Touches;
   /** The same for sidebar categories, by category id. */
   readonly categories: Touches;
   /**
@@ -51,6 +53,7 @@ export const noRowTouches: RowTouches = {
   resyncEpoch: 0,
   at: {},
   visibility: {},
+  reopeningMessages: {},
   categories: {},
   dividers: {},
   reads: {},
@@ -110,8 +113,8 @@ function stamped(touches: Touches, ids: Iterable<number>, clock: number): Touche
 }
 
 /**
- * Records that the sync path (or a read made here) just changed these rooms' rows and these
- * categories, and that sync said these rooms were read.
+ * Records the rooms and categories changed, along with reads, visibility changes and messages
+ * that can reopen a direct.
  */
 export function touchRows(
   state: State,
@@ -119,24 +122,30 @@ export function touchRows(
   categoryIds: Iterable<number> = [],
   readRoomIds: Iterable<number> = [],
   visibilityRoomIds: Iterable<number> = [],
+  reopeningRoomIds: Iterable<number> = [],
 ): State {
   const touches = state.rowTouches;
   const clock = touches.clock + 1;
   const at = stamped(touches.at, roomIds, clock);
   const visibility = stamped(touches.visibility, visibilityRoomIds, clock);
+  const reopeningMessages = stamped(touches.reopeningMessages, reopeningRoomIds, clock);
   const categories = stamped(touches.categories, categoryIds, clock);
   const reads = stamped(touches.reads, readRoomIds, clock);
 
   if (
     at === touches.at &&
     visibility === touches.visibility &&
+    reopeningMessages === touches.reopeningMessages &&
     categories === touches.categories &&
     reads === touches.reads
   ) {
     return state;
   }
 
-  return { ...state, rowTouches: { ...touches, clock, at, visibility, categories, reads } };
+  return {
+    ...state,
+    rowTouches: { ...touches, clock, at, visibility, reopeningMessages, categories, reads },
+  };
 }
 
 /** A mark-unread reply just moved `roomId`'s divider. */
@@ -166,6 +175,7 @@ export function pruneTouches(state: State, oldest: number | undefined): State {
   const touches = state.rowTouches;
   const at = pruned(touches.at, oldest);
   const visibility = pruned(touches.visibility, oldest);
+  const reopeningMessages = pruned(touches.reopeningMessages, oldest);
   const categories = pruned(touches.categories, oldest);
   const dividers = pruned(touches.dividers, oldest);
   const reads = pruned(touches.reads, oldest);
@@ -173,6 +183,7 @@ export function pruneTouches(state: State, oldest: number | undefined): State {
   if (
     at === touches.at &&
     visibility === touches.visibility &&
+    reopeningMessages === touches.reopeningMessages &&
     categories === touches.categories &&
     dividers === touches.dividers &&
     reads === touches.reads
@@ -180,7 +191,10 @@ export function pruneTouches(state: State, oldest: number | undefined): State {
     return state;
   }
 
-  return { ...state, rowTouches: { ...touches, at, visibility, categories, dividers, reads } };
+  return {
+    ...state,
+    rowTouches: { ...touches, at, visibility, reopeningMessages, categories, dividers, reads },
+  };
 }
 
 /**
@@ -225,7 +239,7 @@ export function changedRowIds(
 /**
  * An HTTP reply's rows as local sync events, less any row event for a room the sync path changed
  * after `since` (the request's ticket); none at all once a resync made the reply stale.
- * A confirmed direct close only checks visibility because a read only changes counts.
+ * A confirmed direct close yields to visibility changes and messages that can reopen the direct.
  */
 export function untouchedReplyEvents(
   state: State,
@@ -240,10 +254,15 @@ export function untouchedReplyEvents(
     switch (event.type) {
       case "sidebar.row.upserted":
         return !touchedSince(state, event.data.room.id, since);
-      case "sidebar.row.removed":
-        return event.data.closed === true
-          ? !visibilityTouchedSince(state, event.data.roomId, since)
-          : !touchedSince(state, event.data.roomId, since);
+      case "sidebar.row.removed": {
+        const { roomId, closed } = event.data;
+
+        return closed === true
+          ? !visibilityTouchedSince(state, roomId, since) &&
+              (state.rowTouches.reopeningMessages[roomId] ?? 0) <= since
+          : !touchedSince(state, roomId, since);
+      }
+
       default:
         return true;
     }
