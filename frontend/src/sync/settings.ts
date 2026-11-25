@@ -6,6 +6,12 @@
  */
 
 import { Effect } from "effect";
+import {
+  addEmailAddress,
+  emailAddresses,
+  removeEmailAddress,
+  setPrimaryEmailAddress,
+} from "../api/email-address-endpoints.ts";
 import { me, sidebar } from "../api/endpoints.ts";
 import {
   createMeAgent,
@@ -55,6 +61,8 @@ import type { BackupCodes } from "../gen/BackupCodes.ts";
 import type { BotRemoved } from "../gen/BotRemoved.ts";
 import type { CreatePersonalAgent } from "../gen/CreatePersonalAgent.ts";
 import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
+import type { EmailAddressList } from "../gen/EmailAddressList.ts";
+import type { EmailAddressRequestResult } from "../gen/EmailAddressRequestResult.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
 import type { OAuthConsent } from "../gen/OAuthConsent.ts";
 import type { OAuthRedirect } from "../gen/OAuthRedirect.ts";
@@ -222,6 +230,18 @@ export const settings = {
     settingsSnapshot(() => runAction(setDndAllowance(userId, allowed))),
 
   sessions: (): Promise<SessionList> => runAction(sessions()),
+
+  /** The primary address, the linked ones, and whether new ones can be emailed a link. */
+  emailAddresses: (): Promise<EmailAddressList> => runAction(emailAddresses()),
+
+  /** Emails a confirmation link to the address; the answer never says whether it's taken. */
+  addEmailAddress: (emailAddress: string): Promise<EmailAddressRequestResult> =>
+    runAction(addEmailAddress(emailAddress)),
+
+  removeEmailAddress: (id: number): Promise<void> => runAction(removeEmailAddress(id)),
+
+  /** Makes the linked address primary, releases the old primary, and emails it a link to re-link it. */
+  setPrimaryEmailAddress: (id: number): Promise<void> => runAction(setPrimaryEmailAddress(id)),
 
   /**
    * Signs a session out. For this browser's own session pass its push subscription's endpoint;

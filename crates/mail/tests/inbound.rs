@@ -1984,3 +1984,64 @@ async fn stage_email_bot_membership_defaults_to_listener() {
         .unwrap();
     assert_eq!(role, "listener");
 }
+
+#[tokio::test]
+async fn authenticated_secondary_sender_posts_as_the_member() {
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+
+    let h = Harness::new().await;
+    let user_id = fixtures::identify("david");
+    h.db.write(move |tx| {
+        let user = User::find(tx.conn(), user_id)?;
+        assert_eq!(
+            EmailAddress::confirm(tx, &user, "Linked@example.com")?,
+            Confirmation::Added
+        );
+        Ok(())
+    })
+    .await
+    .unwrap();
+    let raw = h.raw(
+        "linked@example.com",
+        &["mx.mail.test; dkim=pass header.d=example.com"],
+        "Secondary sender",
+        "Hello",
+    );
+    let routed = h.deliver(raw).await;
+    assert_eq!(h.message(routed).await.creator_id, user_id);
+}
+
+#[tokio::test]
+async fn authenticated_sender_with_different_unicode_spelling_posts_as_email_bot() {
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+
+    let h = Harness::new().await;
+    let user_id = fixtures::identify("david");
+    h.db.write(move |tx| {
+        let user = User::find(tx.conn(), user_id)?;
+        for address in ["strasse@example.com", "équipe@example.com"] {
+            assert_eq!(
+                EmailAddress::confirm(tx, &user, address)?,
+                Confirmation::Added
+            );
+        }
+        Ok(())
+    })
+    .await
+    .unwrap();
+    for sender in ["straße@example.com", "Équipe@example.com"] {
+        let raw = h.raw(
+            sender,
+            &["mx.mail.test; dkim=pass header.d=example.com"],
+            "Secondary sender",
+            "Hello",
+        );
+        let message = h.message(h.deliver(raw).await).await;
+        let author =
+            h.db.read(move |conn| User::find(conn, message.creator_id))
+                .await
+                .unwrap();
+        assert_eq!(author.name, "Email", "{sender}");
+        assert!(author.is_bot(), "{sender}");
+    }
+}

@@ -386,6 +386,8 @@ pub const ACTIONS: &[&str] = &[
     "sudo.confirm.failure",
     "user.create",
     "user.email.change",
+    "user.email_address.add",
+    "user.email_address.remove",
     "user.password.change",
     "user.password.reset",
     "user.role.change",

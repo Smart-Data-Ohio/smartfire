@@ -37,6 +37,7 @@ mod composer;
 mod conversation;
 mod direct;
 mod drive;
+mod email_addresses;
 mod error;
 mod events;
 mod fizzy;
@@ -165,6 +166,7 @@ pub use drive::{
     DriveApprovedRecipient, DriveFile, DriveFileList, DrivePickerConfig, DriveRecipient,
     DriveRecipientList, DriveShare, DriveShareResult, ShareDriveFile, ValidateDriveRecipients,
 };
+pub use email_addresses::*;
 pub use error::{ApiError, ApiErrorResponse, ThreadAccessRefusal};
 pub use events::{
     CancelEvent, ChannelEvent, CreateEvent, EventAttendee, EventCounts, EventDetail, EventForm,

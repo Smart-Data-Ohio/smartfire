@@ -33,7 +33,9 @@ use crate::controllers::presenters;
 use campfire_api_types::{
     FlashMessage, FlashMessageKind, SignInHelpContact, SignInMethods, SignedOut, SignedOutBoot,
 };
-use campfire_people::controllers::{auth, password_resets, sessions, two_factor, users};
+use campfire_people::controllers::{
+    auth, email_address_confirmations, password_resets, sessions, two_factor, users,
+};
 use campfire_spa::{SignedOutRoute, is_public_page, signed_out_route};
 
 /// The SPA routes. `immutable_cache_control` is the policy for digest-stamped assets.
@@ -93,6 +95,12 @@ pub fn routes(immutable_cache_control: &'static str) -> Router<Kit> {
             "/api/v1/password_resets/{token}",
             axum::routing::get(campfire_kit::action(password_resets::show_json))
                 .put(campfire_kit::unparsed_action(password_resets::update_json)),
+        )
+        .route(
+            "/api/v1/email_addresses/confirmations/{token}",
+            axum::routing::get(campfire_kit::action(email_address_confirmations::show_json)).put(
+                campfire_kit::unparsed_action(email_address_confirmations::update_json),
+            ),
         )
         .route(
             "/api/v1/join/{join_code}",
@@ -195,6 +203,13 @@ pub async fn show(c: &mut Ctx) -> Result {
                 "password_resets#new",
                 Before::default().allow_unauthenticated_access(),
             ),
+            SignedOutRoute::ConfirmEmailAddress => {
+                c.set_header("referrer-policy", "no-referrer");
+                (
+                    "email_address_confirmations#show",
+                    Before::default().allow_unauthenticated_access(),
+                )
+            }
             SignedOutRoute::EditPassword => (
                 "password_resets#edit",
                 Before::default().allow_unauthenticated_access(),
@@ -216,7 +231,14 @@ pub async fn show(c: &mut Ctx) -> Result {
             SignedOutRoute::Invite => users::page_status(c, true).await?,
             _ => StatusCode::OK,
         };
-        let (boot, favicon) = load_signed_out_boot(c, true).await?;
+        let signed_in = if route == SignedOutRoute::ConfirmEmailAddress {
+            concerns::restore_authentication(c).await?;
+            Some(concerns::current_user(c).is_some())
+        } else {
+            None
+        };
+        let (mut boot, favicon) = load_signed_out_boot(c, true).await?;
+        boot.signed_in = signed_in;
         let nonce = c.content_security_policy_nonce();
         let html = campfire_spa::render_signed_out_shell(&boot, nonce.as_deref(), &favicon);
         c.no_store();
@@ -297,6 +319,7 @@ async fn load_signed_out_boot(c: &mut Ctx, take_flash: bool) -> Result<(SignedOu
     };
     let boot = SignedOutBoot {
         kind: SignedOut::SignedOut,
+        signed_in: None,
         workspace,
         sign_in_methods: {
             let provider = c.app().google.sign_in();

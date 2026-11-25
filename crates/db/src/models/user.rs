@@ -2,6 +2,7 @@
 //! and Transferable are signed ids, which live in `rails_compat`).
 
 mod destruction;
+pub mod email_addresses;
 pub mod icon;
 pub mod lifecycle;
 pub mod removal;
@@ -11,7 +12,7 @@ use rusqlite::{Connection, Row, params};
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
-use crate::database::Tx;
+use crate::database::{Snapshot, Tx};
 use crate::error::{OptionalExt, Result};
 use crate::events::Event;
 use crate::models::{Ban, Membership, Message, Session, Webhook};
@@ -21,11 +22,6 @@ use crate::time::Timestamp;
 pub mod presentation;
 pub mod profile_settings;
 pub mod ui_preference;
-
-/// The address form shared by sign-in, password reset delivery and its inbox rate limit.
-pub fn normalize_email_address(address: &str) -> String {
-    rails_compat::unicode::fold(campfire_richtext::ruby::strip(address))
-}
 
 /// `enum :role, %i[ member administrator bot ]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -139,6 +135,12 @@ pub struct User {
     pub updated_at: Timestamp,
     pub pronouns: Option<String>,
     pub nickname: Option<String>,
+}
+
+pub struct ResolvedSignInAddress {
+    pub user: User,
+    pub email_address: String,
+    pub secondary_id: Option<i64>,
 }
 
 /// Attributes for `User.create!`.
@@ -379,7 +381,7 @@ impl User {
             .or_not_found("User")
     }
 
-    /// `User.active.find_by(email_address:)`: the lookup half of `authenticate_by`.
+    /// `User.active.find_by(email_address:)`: an exact primary address lookup.
     pub fn find_active_by_email_address(
         conn: &Connection,
         email_address: &str,
@@ -392,37 +394,76 @@ impl User {
         )
     }
 
-    /// Prefer an exact address. Otherwise require a unique active user whose address matches
-    /// after stripping space and folding case. Callers check eligibility after resolving.
+    /// Resolve a primary or confirmed secondary for password sign-in and reset delivery.
+    /// Exact matches take precedence. A normalized match must name one active account across
+    /// both address sources. Callers check eligibility after resolving.
     pub fn find_active_by_sign_in_address(
-        conn: &Connection,
+        conn: &Snapshot<'_>,
         address: &str,
-    ) -> Result<Option<Self>> {
-        if let Some(user) = Self::find_active_by_email_address(conn, address)? {
-            return Ok(Some(user));
-        }
-        let normalized = normalize_email_address(address);
-        if normalized.is_empty() {
+    ) -> Result<Option<ResolvedSignInAddress>> {
+        if email_addresses::trim(address).is_empty() {
             return Ok(None);
         }
+        if let Some(user) = Self::find_active_by_email_address(conn, address)? {
+            return Ok(Some(ResolvedSignInAddress {
+                user,
+                email_address: address.to_owned(),
+                secondary_id: None,
+            }));
+        }
+        // Use the secondary NOCASE index and require exact spelling.
+        let exact_secondary = query_one(
+            conn,
+            "SELECT users.*, link.id AS secondary_id
+             FROM user_email_addresses link JOIN users ON users.id = link.user_id
+             WHERE link.email_address = ?1 COLLATE NOCASE AND link.email_address = ?1
+               AND users.status = 0",
+            [address],
+            |row| {
+                Ok(ResolvedSignInAddress {
+                    user: Self::from_row(row)?,
+                    email_address: address.to_owned(),
+                    secondary_id: Some(row.get("secondary_id")?),
+                })
+            },
+        )?;
+        if exact_secondary.is_some() {
+            return Ok(exact_secondary);
+        }
 
-        let mut query = conn
-            .prepare_cached("SELECT * FROM users WHERE status = 0 AND email_address IS NOT NULL")?;
+        let normalized = email_addresses::normalize(address);
+        let mut query = conn.prepare_cached(
+            "SELECT id AS user_id, email_address, NULL AS secondary_id
+             FROM users WHERE status = 0 AND email_address IS NOT NULL
+             UNION ALL
+             SELECT users.id, link.email_address, link.id
+             FROM user_email_addresses link JOIN users ON users.id = link.user_id
+             WHERE users.status = 0
+             ORDER BY secondary_id",
+        )?;
         let mut rows = query.query([])?;
         let mut candidate = None;
-        let mut matches = 0;
+        let mut ambiguous = false;
         // Scan every address so the position of a collision cannot shorten the lookup.
         while let Some(row) = rows.next()? {
-            let email: String = row.get("email_address")?;
-            if normalize_email_address(&email) != normalized {
+            let email_address: String = row.get("email_address")?;
+            if email_addresses::normalize(&email_address) != normalized {
                 continue;
             }
-            matches += 1;
-            if matches == 1 {
-                candidate = Some(Self::from_row(row)?);
+            let user_id: i64 = row.get("user_id")?;
+            match candidate {
+                Some((owner, _, _)) => ambiguous |= owner != user_id,
+                None => candidate = Some((user_id, email_address, row.get("secondary_id")?)),
             }
         }
-        Ok(candidate.filter(|_| matches == 1))
+        let Some((user_id, email_address, secondary_id)) = candidate.filter(|_| !ambiguous) else {
+            return Ok(None);
+        };
+        Ok(Some(ResolvedSignInAddress {
+            user: Self::find(conn, user_id)?,
+            email_address,
+            secondary_id,
+        }))
     }
 
     /// The password half of `User.active.authenticate_by(email_address:, password:)`, given
@@ -543,6 +584,9 @@ impl User {
         attributes.icon_name = icon::normalize_name(attributes.icon_name.as_deref());
         icon::validate(tx.conn(), attributes.icon_name.as_deref())?.into_result()?;
         let now = tx.now();
+        if let Some(address) = attributes.email_address.as_deref() {
+            email_addresses::check_primary(tx, None, address)?;
+        }
         let password_digest = attributes.password_digest.map(PasswordDigest::into_string);
         let id: i64 = tx.conn().query_row_cached(
             INSERT,
@@ -665,6 +709,23 @@ impl User {
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
         self.ensure_account_user()?;
+        let email_change = changes
+            .email_address
+            .filter(|email| *email != self.email_address);
+        if let Some(address) = email_change.as_ref().and_then(Option::as_deref) {
+            match email_addresses::check_primary(tx, Some(self.id), address) {
+                Ok(None) => {}
+                Ok(Some(_)) => {
+                    return Err(email_addresses::invalid_primary(
+                        "This address is already linked to your account. Use Make primary under Email addresses.",
+                    ));
+                }
+                Err(error) if error.is_record_not_unique() => {
+                    return Err(email_addresses::invalid_primary("is already taken"));
+                }
+                Err(error) => return Err(error),
+            }
+        }
         if changes.role == Some(Role::WebhookAuthor) {
             return Err(crate::Error::RecordNotFound("User"));
         }
@@ -713,7 +774,7 @@ impl User {
             self.name = name.clone();
             sets.push(("name", Box::new(name)));
         }
-        if let Some(email) = changes.email_address.filter(|e| *e != self.email_address) {
+        if let Some(email) = email_change {
             self.email_address = email.clone();
             sets.push(("email_address", Box::new(email)));
         }
@@ -796,6 +857,40 @@ impl User {
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
         Ok(())
+    }
+
+    /// Consume the confirmed row in the same transaction as the primary email change.
+    pub fn promote_email_address(&mut self, tx: &mut Tx<'_>, id: i64) -> Result<Option<String>> {
+        self.reload(tx.conn())?;
+        self.ensure_account_user()?;
+        let linked = email_addresses::EmailAddress::find_owned(tx.conn(), self.id, id)?
+            .ok_or(crate::Error::RecordNotFound("EmailAddress"))?;
+        let previous = self.email_address.clone();
+        if let Some(address) = previous
+            .as_deref()
+            .filter(|address| !address.trim().is_empty())
+            && email_addresses::primary_conflict_for_secondary(tx.conn(), address, Some(self.id))?
+        {
+            return Err(email_addresses::invalid_primary(
+                "can't be changed because another account uses your current primary address",
+            ));
+        }
+        if email_addresses::primary_conflict_for_secondary(
+            tx.conn(),
+            &linked.email_address,
+            Some(self.id),
+        )? {
+            return Err(email_addresses::invalid_primary("is already taken"));
+        }
+        email_addresses::EmailAddress::remove(tx, self.id, id)?;
+        self.update(
+            tx,
+            UserChanges {
+                email_address: Some(Some(linked.email_address)),
+                ..Default::default()
+            },
+        )?;
+        Ok(previous)
     }
 
     pub(crate) fn revision_for_touch(
@@ -925,7 +1020,24 @@ impl User {
         }
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         lifecycle::deactivate(tx, self.id, audit)?;
-        let email = self.deactivated_email_address();
+        let mut released_addresses: Vec<String> = query_all(
+            conn,
+            "DELETE FROM user_email_addresses WHERE user_id = ? RETURNING email_address",
+            [self.id],
+            |row| row.get(0),
+        )?;
+        let previous: Option<String> = conn.query_row_cached(
+            "SELECT email_address FROM users WHERE id=?",
+            [self.id],
+            |row| row.get(0),
+        )?;
+        let email = previous.as_ref().map(|address| {
+            let uuid = sql::uuid();
+            address.replace('@', &format!("-deactivated-{uuid}@"))
+        });
+        if previous != email {
+            released_addresses.extend(previous);
+        }
         // app/models/user.rb: manual OOO cannot survive account deactivation.
         conn.execute_cached(
             "UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?",
@@ -938,14 +1050,8 @@ impl User {
                 email_address: Some(email),
                 ..Default::default()
             },
-        )
-    }
-
-    fn deactivated_email_address(&self) -> Option<String> {
-        let uuid = sql::uuid();
-        self.email_address
-            .as_ref()
-            .map(|e| e.replace('@', &format!("-deactivated-{uuid}@")))
+        )?;
+        email_addresses::record_deactivation(tx, self.id, &released_addresses)
     }
 
     /// `User::Bannable#ban`

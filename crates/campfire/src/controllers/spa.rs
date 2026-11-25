@@ -9,6 +9,9 @@ pub use campfire_controllers::controllers::spa::*;
 pub(crate) mod signed_out_contracts_tests;
 
 #[cfg(test)]
+#[path = "email_address_tests.rs"]
+mod email_address_tests;
+#[cfg(test)]
 #[path = "password_reset_tests.rs"]
 mod password_reset_tests;
 

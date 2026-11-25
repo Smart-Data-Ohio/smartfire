@@ -1,9 +1,8 @@
 //! Self-service password reset links, after Rails 8's `generates_token_for :password_reset,
 //! expires_in: 15.minutes { password_salt.last(10) }`. The token is the user's id and a fingerprint
-//! of their current password digest and email address, signed by the signed-id verifier
-//! ([`crate::signed_id::verifier`]) for the purpose `user/password_reset` with an expiry. Nothing
-//! is stored: a new password or email address changes the fingerprint, so the link stops working
-//! once it has been used or the address it was sent to is replaced.
+//! of their current password digest and delivery address, signed by the signed-id verifier
+//! ([`crate::signed_id::verifier`]) for the purpose `user/password_reset` with an expiry. Secondary
+//! links also bind to the id of the confirmed row, so removal invalidates them even after re-linking.
 use hmac::{Hmac, Mac};
 use jiff::{SignedDuration, Timestamp};
 use serde_json::{Value, json};
@@ -30,6 +29,7 @@ const FINGERPRINT_BYTES: usize = 16;
 pub struct Claim {
     pub user_id: i64,
     fingerprint: String,
+    pub secondary_id: Option<i64>,
     token: String,
 }
 
@@ -41,7 +41,27 @@ impl Claim {
 
     /// Whether the user still has the password digest and email address the link was made for.
     pub fn matches(&self, secrets: &Secrets, password_digest: &str, email_address: &str) -> bool {
-        let current = fingerprint(secrets, password_digest, email_address);
+        self.secondary_id.is_none()
+            && self.matches_fingerprint(secrets, password_digest, email_address)
+    }
+
+    pub fn matches_secondary(
+        &self,
+        secrets: &Secrets,
+        password_digest: &str,
+        secondary_id: i64,
+        email_address: &str,
+    ) -> bool {
+        self.secondary_id == Some(secondary_id)
+            && self.matches_fingerprint(
+                secrets,
+                password_digest,
+                &secondary_binding(secondary_id, email_address),
+            )
+    }
+
+    fn matches_fingerprint(&self, secrets: &Secrets, digest: &str, binding: &str) -> bool {
+        let current = fingerprint(secrets, digest, binding);
         bool::from(current.as_bytes().ct_eq(self.fingerprint.as_bytes()))
     }
 }
@@ -56,19 +76,62 @@ pub fn token(
     requested_at: Timestamp,
 ) -> String {
     verifier(secrets).generate(
-        &json!([user_id, fingerprint(secrets, password_digest, email_address)]),
+        &json!([
+            user_id,
+            fingerprint(secrets, password_digest, email_address)
+        ]),
         Some(&purpose()),
         Some(requested_at + EXPIRES_IN),
     )
 }
 
+/// A reset link for one particular confirmation, expiring [`EXPIRES_IN`] after `requested_at`.
+/// Re-linking an address gets a fresh row id.
+pub fn token_for_secondary(
+    secrets: &Secrets,
+    user_id: i64,
+    password_digest: &str,
+    secondary_id: i64,
+    email_address: &str,
+    requested_at: Timestamp,
+) -> String {
+    let binding = secondary_binding(secondary_id, email_address);
+    verifier(secrets).generate(
+        &json!([
+            user_id,
+            fingerprint(secrets, password_digest, &binding),
+            secondary_id
+        ]),
+        Some(&purpose()),
+        Some(requested_at + EXPIRES_IN),
+    )
+}
+
+fn secondary_binding(secondary_id: i64, email_address: &str) -> String {
+    format!("linked\0{secondary_id}\0{email_address}")
+}
+
 /// The link's claim while it is unexpired and was signed for a password reset, else `None`.
 pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
-    match verifier(secrets).verify(token, Some(&purpose()), now).ok()? {
+    match verifier(secrets)
+        .verify(token, Some(&purpose()), now)
+        .ok()?
+    {
         Value::Array(parts) => match parts.as_slice() {
             [Value::Number(id), Value::String(fingerprint)] => Some(Claim {
                 user_id: id.as_i64()?,
                 fingerprint: fingerprint.clone(),
+                token: token.to_owned(),
+                secondary_id: None,
+            }),
+            [
+                Value::Number(id),
+                Value::String(fingerprint),
+                Value::Number(secondary_id),
+            ] => Some(Claim {
+                user_id: id.as_i64()?,
+                fingerprint: fingerprint.clone(),
+                secondary_id: Some(secondary_id.as_i64()?),
                 token: token.to_owned(),
             }),
             _ => None,
@@ -101,7 +164,7 @@ fn fingerprint(secrets: &Secrets, password_digest: &str, email_address: &str) ->
 }
 
 /// HMAC-SHA256 of `parts`, NUL-separated, under the key for `salt`, truncated and hex-encoded.
-fn keyed_fingerprint(secrets: &Secrets, salt: &str, parts: &[&str]) -> String {
+pub(crate) fn keyed_fingerprint(secrets: &Secrets, salt: &str, parts: &[&str]) -> String {
     let key = secrets.key_generator.generate_key(salt, 32);
     let mut mac = Hmac::<Sha256>::new_from_slice(&key).expect("HMAC accepts any key length");
     for (n, part) in parts.iter().enumerate() {

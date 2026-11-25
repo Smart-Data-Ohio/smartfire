@@ -1189,6 +1189,69 @@ async fn google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_co
     assert!(actions(&a).await.is_empty());
 }
 #[tokio::test]
+async fn google_sign_in_refuses_folded_collisions_and_matches_ascii_case() {
+    use campfire_db::models::google_identity::GoogleIdentity;
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+    use campfire_db::{User, UserChanges};
+
+    let (a, recorded) = app().await;
+    a.db()
+        .write(|tx| {
+            let mut user = User::find(tx.conn(), DAVID)?;
+            user.update(
+                tx,
+                UserChanges {
+                    email_address: Some(Some("Équipe@smartdata.net".into())),
+                    allow_google_email_link: true,
+                    ..Default::default()
+                },
+            )?;
+            assert_eq!(
+                EmailAddress::confirm(tx, &user, "strasse@smartdata.net")?,
+                Confirmation::Added
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let before = counts(&a).await;
+    for email in ["straße@smartdata.net", "équipe@smartdata.net"] {
+        let mut browser = a.anonymous();
+        let query = start(&mut browser, "/session/google").await;
+        answer(&recorded, claims(&a, &query, email, email));
+
+        let reply = callback(&mut browser, &query["state"]).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+        assert_eq!(
+            reply.location(),
+            Some("http://campfire.test/app/session/new")
+        );
+        assert!(sign_in_flash(&mut browser).await.contains("already in use"));
+        assert_eq!(counts(&a).await, before);
+    }
+
+    let mut browser = a.anonymous();
+    let query = start(&mut browser, "/session/google").await;
+    answer(
+        &recorded,
+        claims(&a, &query, "ascii-address", "STRASSE@smartdata.net"),
+    );
+    let reply = callback(&mut browser, &query["state"]).await;
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/app/two_factor/challenge")
+    );
+    let identity = a
+        .db()
+        .read(|conn| GoogleIdentity::for_user(conn, DAVID))
+        .await
+        .unwrap()
+        .expect("Google links to the existing member");
+    assert_eq!(identity.subject, "ascii-address");
+    assert_eq!(counts(&a).await.0, before.0);
+}
+
+#[tokio::test]
 async fn google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity()
 {
     let (a, r) = app().await;
@@ -1265,11 +1328,21 @@ async fn google_sessions_ineligible_users_and_ambiguous_emails_never_create_iden
             match kind {
                 "deactivated"|"retained"=>user.deactivate(tx)?,"banned"=>user.ban(tx)?,
                 "agent"=>{tx.conn().execute("INSERT INTO agents(user_id,owner_id,created_at,updated_at) VALUES(?,?,?,?)",rusqlite::params![user.id,DAVID,tx.now(),tx.now()])?;},
-                "ambiguous"=>{User::create(tx,NewUser{name:"Case duplicate".into(),email_address:Some("Restricted@smartdata.net".into()),..Default::default()})?;},_=>{}
+                "ambiguous" => {
+                    // Historical primaries could differ only by ASCII case.
+                    tx.conn().execute(
+                        "INSERT INTO users (name, email_address, created_at, updated_at)
+                         VALUES ('Case duplicate', 'Restricted@smartdata.net', ?1, ?1)",
+                        [tx.now()],
+                    )?;
+                }
+                _ => {}
             }
             Ok(())
         }).await.unwrap();
         let before = counts(&a).await;
+        let mut expected_actions = actions(&a).await;
+        expected_actions.push("session.sign_in.failure".into());
         let mut b = a.anonymous();
         b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
@@ -1301,7 +1374,7 @@ async fn google_sessions_ineligible_users_and_ambiguous_emails_never_create_iden
             }),
             "{kind}"
         );
-        assert_eq!(actions(&a).await, vec!["session.sign_in.failure"]);
+        assert_eq!(actions(&a).await, expected_actions);
     }
 }
 #[tokio::test]

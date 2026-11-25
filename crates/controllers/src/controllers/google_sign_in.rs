@@ -172,6 +172,7 @@ async fn rejected(c: &mut Ctx, reason: &str) -> Result {
     let message=match reason {
         "wrong_domain"=>format!("Google sign-in is only available for {}. Other email addresses can sign in with email and password.",domain_list(c)),
         "ambiguous"|"subject_mismatch"=>"Google sign-in could not pick your account. Contact your administrator or sign in with email and password.".into(),
+        "email_in_use"=>"This email address is already in use. Contact your administrator or sign in with email and password.".into(),
         "admin_link_required"=>"An administrator must link this account to Google before you can sign in with Google. Contact your administrator or sign in with email and password.".into(),
         "deactivated"|"banned"=>"This account is no longer active. Contact your administrator or sign in with email and password.".into(),
         _=>"Google sign-in failed. Try again or sign in with email and password.".into()

@@ -161,6 +161,33 @@ pub fn password_reset(config: &Config, user: &User, url: &str) -> Message {
         html: layout(&body),
     }
 }
+pub fn email_address_confirmation(
+    config: &Config,
+    name: &str,
+    address: &str,
+    url: &str,
+) -> Message {
+    let text = format!(
+        "Someone asked to link {address} to {name}'s Smartfire account. Open this link to confirm the address:\n\n{url}\n\nOnce linked, this address can be used to sign in and reset the password. The link expires in 24 hours. If you didn't ask to link this address, you can ignore this email.\n"
+    );
+    let body = format!(
+        "<p>Someone asked to link {} to {}'s Smartfire account.</p>\n\n<p><a href=\"{}\">Confirm email address</a></p>\n\n<p>Once linked, this address can be used to sign in and reset the password. The link expires in 24 hours. If you didn't ask to link this address, you can ignore this email.</p>\n",
+        h(address),
+        h(name),
+        h(url),
+    );
+    Message {
+        from: config
+            .mailer_from
+            .clone()
+            .unwrap_or_else(|| "Smartfire <noreply@example.com>".into()),
+        to: address.to_owned(),
+        subject: "Confirm your Smartfire email address".into(),
+        text,
+        html: layout(&body),
+    }
+}
+
 fn crlf(s: &str) -> String {
     s.replace("\r\n", "\n")
         .replace('\r', "\n")
@@ -367,6 +394,22 @@ pub fn first_address(header: &str) -> anyhow::Result<lettre::Address> {
         Some(mailparse::MailAddr::Single(info)) => Ok(info.addr.parse()?),
         _ => anyhow::bail!("missing mail address"),
     }
+}
+
+/// The address used for ownership checks must be exactly the mailbox delivery will use.
+pub fn bare_confirmation_address(address: &str) -> Option<&str> {
+    let address = address.trim();
+    if address.len() > 254 || !campfire_db::models::drive_recipients::eligible_email(address) {
+        return None;
+    }
+    let parsed = mailparse::addrparse(address).ok()?;
+    let [mailparse::MailAddr::Single(info)] = parsed.as_slice() else {
+        return None;
+    };
+    (info.display_name.is_none()
+        && info.addr == address
+        && info.addr.parse::<lettre::Address>().is_ok())
+    .then_some(address)
 }
 
 /// Mail/Net::SMTP also supports CRAM-MD5, which Lettre's high-level SASL enum omits.

@@ -5,6 +5,7 @@ use crate::{
     jobs::{IncinerationJob, MessageCreated, RoutingJob},
     parse::{Email, MAX_MIME_DEPTH, Verdict, authenticated_sender},
 };
+use campfire_db::user::email_addresses::{ExternalEmailMatch, match_external_addresses};
 use campfire_db::{
     Attachment, Connection, Database, Event, Membership, Message, NewMessage, Room, Timestamp, Tx,
     User,
@@ -197,12 +198,21 @@ fn creator(
 ) -> campfire_db::Result<(User, bool)> {
     if email.single_from
         && let Some(address) = &email.from
+        && let Some(ExternalEmailMatch::Existing(users)) =
+            match_external_addresses(tx.conn(), &[address], unicode::downcase)?.remove(address)
     {
-        let user = tx.conn().query_row("SELECT users.id FROM users JOIN memberships ON memberships.user_id = users.id WHERE users.status = 0 AND users.role != 2 AND memberships.room_id = ? AND LOWER(users.email_address) = ? LIMIT 1", params![room.id, unicode::downcase(address)], |r| r.get::<_, i64>(0)).optional()?;
-        if let Some(id) = user
-            && authenticated_sender(&email.auth_headers, cfg.authserv_id.as_deref(), address)
-        {
-            return Ok((User::find(tx.conn(), id)?, true));
+        for user in users {
+            if user.is_active()
+                && user.role != campfire_db::Role::Bot
+                && tx.conn().query_row(
+                    "SELECT EXISTS(SELECT 1 FROM memberships WHERE room_id = ? AND user_id = ?)",
+                    params![room.id, user.id],
+                    |row| row.get::<_, bool>(0),
+                )?
+                && authenticated_sender(&email.auth_headers, cfg.authserv_id.as_deref(), address)
+            {
+                return Ok((user, true));
+            }
         }
     }
     let id = tx

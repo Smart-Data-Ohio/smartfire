@@ -30,6 +30,7 @@ import {
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { VIEWER_TIME_ZONE } from "./composer.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
+import type { PrimaryAddress } from "./email-addresses.ts";
 import { checkProfileImage, type ProfileImage } from "./profile-image.ts";
 import type { Uploads } from "./uploads.ts";
 
@@ -237,6 +238,8 @@ export interface SettingsModule {
     readonly appearancePreferences: Json;
   };
   readonly explicitRoomNotification: (roomId: number, changed: boolean) => Settings;
+  /** The viewer's primary email address, which linked addresses can replace. */
+  readonly primaryAddress: PrimaryAddress;
 }
 
 /** A value of `body[key]` when the key is present and not null. */
@@ -923,6 +926,12 @@ export function createSettings(
       return page();
     },
     revision: () => current().settings.revision,
+    primaryAddress: {
+      get: () => current().settings.profile.emailAddress,
+      set: (emailAddress) => {
+        update((held) => ({ ...held, profile: { ...held.profile, emailAddress } }));
+      },
+    },
     appearance: () => {
       const { theme, textSize, appearancePreferences } = current().settings.appearance;
 

@@ -12,6 +12,7 @@ pub mod ar_encryption;
 pub mod blob_branding;
 pub mod calendar_credentials;
 pub mod cookies;
+pub mod email_address_confirmation;
 pub mod global_id;
 pub mod jwt;
 pub mod key_generator;

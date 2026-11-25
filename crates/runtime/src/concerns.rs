@@ -59,6 +59,7 @@ use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, Us
 use campfire_kit::{Cookie, Ctx, Error, Result, SameSite, StatusCode, halt};
 
 use crate::app::AppCtx;
+use crate::authentication::{PASSWORD_SIGN_IN, PasswordSignInProof};
 pub use crate::ruby::ruby_to_i;
 
 /// The route that matched the current request (`request.path_parameters` plus the endpoint),
@@ -953,50 +954,36 @@ fn bounce_back_after_sign_in(c: &mut Ctx) -> Result<bool> {
 }
 
 /// `two_factor_pending_user`: the active user a still-valid pending second factor names. A pending
-/// password sign-in also needs the password it checked to be the user's password still: one that
-/// a reset replaced, or one from before the proof was kept, is no longer pending.
+/// password sign-in needs the checked password and any matched secondary address to stay valid.
 pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
     let now = c.now();
     let Some(user_id) = session_keys::two_factor_pending_user_id(c.session(), now) else {
         return Ok(None);
     };
-    let proof = pending_password_proof(c);
-    let user = c
-        .app()
+    let session = c.session();
+    let is_password = session_keys::two_factor_pending_method(session) == PASSWORD_SIGN_IN;
+    let proof = session_keys::two_factor_pending_password(session);
+    let secrets = c.app().secrets.clone();
+    c.app()
         .db
-        .read(move |conn| match User::find_active(conn, user_id) {
-            Ok(user) => Ok(Some(user)),
-            Err(campfire_db::Error::RecordNotFound(_)) => Ok(None),
-            Err(error) => Err(error),
+        .read(move |conn| {
+            let user = match User::find_active(conn, user_id) {
+                Ok(user) => user,
+                Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
+                Err(error) => return Err(error),
+            };
+            if is_password {
+                let Some(proof) = proof else {
+                    return Ok(None);
+                };
+                if !proof.still_valid(conn, &secrets, &user)? {
+                    return Ok(None);
+                }
+            }
+            Ok(Some(user))
         })
         .await
-        .map_err(Error::internal)?;
-    let secrets = &c.app().secrets;
-    Ok(user.filter(|user| {
-        proof
-            .as_ref()
-            .is_none_or(|proof| crate::authentication::password_proven(secrets, proof, user))
-    }))
-}
-
-/// What a pending sign-in must show of its password: `Some` for a password sign-in (empty when it
-/// kept no proof, which then matches no password), `None` for other methods.
-pub fn pending_password_proof(c: &mut Ctx) -> Option<String> {
-    let session = c.session();
-    (session_keys::two_factor_pending_method(session) == PASSWORD_SIGN_IN)
-        .then(|| session_keys::two_factor_pending_password(session).unwrap_or_default())
-}
-
-/// The sign-in method whose pending state and session are bound to the password it checked.
-pub const PASSWORD_SIGN_IN: &str = "password";
-
-/// A password sign-in's proof of the password it checked, for `start_sign_in_session_for` and a
-/// pending second factor.
-pub fn password_proof(c: &Ctx, user: &User) -> String {
-    rails_compat::password_reset::sign_in_proof(
-        &c.app().secrets,
-        user.password_digest.as_deref().unwrap_or_default(),
-    )
+        .map_err(Error::internal)
 }
 
 /// `redirect_signed_in_user_to_root`
@@ -1026,7 +1013,7 @@ pub async fn authenticate_by(
     c: &Ctx,
     email_address: String,
     password: String,
-) -> Result<Option<User>> {
+) -> Result<Option<(User, PasswordSignInProof)>> {
     // `authenticate_by` returns nil for a blank password before looking anything up.
     if password.is_empty() {
         return Ok(None);
@@ -1034,17 +1021,24 @@ pub async fn authenticate_by(
     let candidate = c
         .app()
         .db
-        .read(move |conn| User::find_active_by_sign_in_address(conn, &email_address))
+        .read_snapshot(move |conn| User::find_active_by_sign_in_address(conn, &email_address))
         .await
         .map_err(Error::internal)?;
-    tokio::task::spawn_blocking(move || User::authenticated(candidate, &password))
-        .await
-        .map_err(Error::internal)
+    let secondary_id = candidate.as_ref().and_then(|matched| matched.secondary_id);
+    let user = tokio::task::spawn_blocking(move || {
+        User::authenticated(candidate.map(|matched| matched.user), &password)
+    })
+    .await
+    .map_err(Error::internal)?;
+    Ok(user.map(|user| {
+        let proof = PasswordSignInProof::new(&c.app().secrets, &user, secondary_id);
+        (user, proof)
+    }))
 }
 
 pub enum SessionStart {
     Started(Box<Session>),
-    PasswordReplaced,
+    PasswordSignInInvalid,
     ChallengeRequired,
 }
 
@@ -1069,7 +1063,7 @@ pub async fn start_new_verified_session_for(c: &mut Ctx, user: User) -> Result<S
 pub async fn start_sign_in_session_for(
     c: &mut Ctx,
     user: User,
-    proof: Option<String>,
+    proof: Option<PasswordSignInProof>,
     remembered_token: Option<String>,
 ) -> Result<SessionStart> {
     start_session(c, user, remembered_token.is_some(), proof, remembered_token).await
@@ -1079,7 +1073,7 @@ async fn start_session(
     c: &mut Ctx,
     user: User,
     two_factor_verified: bool,
-    proof: Option<String>,
+    proof: Option<PasswordSignInProof>,
     remembered_token: Option<String>,
 ) -> Result<SessionStart> {
     let existing_device_id = c.cookies.signed("device_id");
@@ -1101,11 +1095,11 @@ async fn start_session(
         .db
         .write(move |tx| {
             if let Some(proof) = proof {
-                let current = User::find_by_id(tx.conn(), user_id)?;
-                if !current.is_some_and(|user| {
-                    crate::authentication::password_proven(&secrets, &proof, &user)
-                }) {
-                    return Ok(SessionStart::PasswordReplaced);
+                let Some(user) = User::find_by_id(tx.conn(), user_id)? else {
+                    return Ok(SessionStart::PasswordSignInInvalid);
+                };
+                if !proof.still_valid(tx.conn(), &secrets, &user)? {
+                    return Ok(SessionStart::PasswordSignInInvalid);
                 }
             }
             if let Some(token) = remembered_token

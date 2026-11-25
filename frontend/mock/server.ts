@@ -58,6 +58,7 @@ import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
 import { createDrive, pickerFiles } from "./s2/drive.ts";
+import { createEmailAddresses } from "./s2/email-addresses.ts";
 import { createGifs } from "./s2/gifs.ts";
 import { createInvites } from "./s2/invites.ts";
 import { createJoin, type MockJoined } from "./s2/join.ts";
@@ -1286,6 +1287,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const join = createJoin(ctx, admin, invites);
   // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
   const settings = createSettings(ctx, uploads, admin.requireSudo);
+  const emailAddresses = createEmailAddresses(ctx, settings.primaryAddress, admin.requireSudo);
   const gifs = createGifs(options.gifsEnabled ?? true);
   const stickers = createStickers(ctx);
   const threads = createThreads(ctx, uploads, whenReleased, stickers.reference, gifs.attachment);
@@ -1377,6 +1379,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...saved.routes,
     ...work.routes,
     ...settings.routes,
+    ...emailAddresses.routes,
     ...account.routes,
     ...admin.routes,
     ...invites.routes,

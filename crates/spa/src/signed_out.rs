@@ -13,6 +13,7 @@ pub enum SignedOutRoute {
     NewPassword,
     /// `/app/passwords/:token`: choosing a new password with a reset link.
     EditPassword,
+    ConfirmEmailAddress,
 }
 
 pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
@@ -24,6 +25,10 @@ pub fn signed_out_route(path: &str) -> Option<SignedOutRoute> {
         _ => [
             ("/app/session/transfers/", SignedOutRoute::Transfer),
             ("/app/passwords/", SignedOutRoute::EditPassword),
+            (
+                "/app/email_addresses/confirm/",
+                SignedOutRoute::ConfirmEmailAddress,
+            ),
             ("/app/join/", SignedOutRoute::Join),
             ("/app/invite/", SignedOutRoute::Invite),
         ]

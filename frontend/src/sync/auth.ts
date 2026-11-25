@@ -21,6 +21,7 @@ import {
   submitJoin,
   submitPasswordReset,
 } from "../api/auth-endpoints.ts";
+import { confirmEmailAddress, readEmailConfirmation } from "../api/email-address-endpoints.ts";
 import { readPublicPage } from "../api/public-page-endpoints.ts";
 import {
   type AuthResponse,
@@ -28,6 +29,7 @@ import {
   type JoinAnswer,
   SignedOutBoot,
 } from "../api/schema/auth.ts";
+import type { EmailAddressConfirmationAnswer } from "../api/schema/email-addresses.ts";
 import type { PublicPage } from "../api/schema/public-pages.ts";
 import type { FirstRunSubmission } from "../gen/FirstRunSubmission.ts";
 import type { PublicPageName } from "../gen/PublicPageName.ts";
@@ -50,6 +52,9 @@ export type { JoinTarget };
 
 /** A password reset endpoint's answer: its state, or a next action. */
 export type PasswordResetNext = Effect.Success<ReturnType<typeof readPasswordReset>>;
+
+/** An email confirmation link's answer: its address, or a next action. */
+export type EmailConfirmationNext = typeof EmailAddressConfirmationAnswer.Type;
 
 /** Whether first run is still open. */
 export type FirstRunOpen = typeof FirstRunState.Type;
@@ -100,6 +105,12 @@ export const auth = {
   /** Sets the new password; the answer goes to sign in. */
   resetPassword: (token: string, password: string): Promise<PasswordResetNext> =>
     runAction(submitPasswordReset(token, { password })),
+  /** Whether an email confirmation link works, and for which address. */
+  emailConfirmation: (token: string): Promise<EmailConfirmationNext> =>
+    runAction(readEmailConfirmation(token)),
+  /** Links the confirmed address; the answer names the page to load next. */
+  confirmEmailAddress: (token: string): Promise<EmailConfirmationNext> =>
+    runAction(confirmEmailAddress(token)),
   /** About, Privacy or Terms, for anyone. */
   publicPage: (page: PublicPageName): Promise<PublicPageData> => runAction(readPublicPage(page)),
 };

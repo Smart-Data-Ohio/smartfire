@@ -2,6 +2,7 @@
 //! Matches `app/controllers/two_factor/{setups,challenges,backup_codes,remembered_devices}_controller.rb`.
 //! No request, cookies or rendering enter this layer.
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target, pair};
+use campfire_db::user::email_addresses::EmailAddress;
 use campfire_db::{
     ActivityItem, ChallengeFailure, Database, PasswordDigest, Result, Session, TwoFactorBackupCode,
     TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret, Tx, User, UserChanges,
@@ -21,7 +22,7 @@ pub mod test_hooks {
         pub static BEFORE_SESSION_WRITE: Hook;
     }
 
-    pub(crate) async fn run(key: &'static tokio::task::LocalKey<Hook>) {
+    pub async fn run(key: &'static tokio::task::LocalKey<Hook>) {
         if let Ok(Some(hook)) = key.try_with(|hook| hook.borrow_mut().take()) {
             hook.await;
         }
@@ -44,29 +45,18 @@ pub fn update_profile(
 ) -> Result<bool> {
     let writes_digest = changes.password_digest.is_some();
     let submitted_email = changes.email_address.as_ref();
-    if submitted_email.is_some() || writes_digest || audit_email_change {
-        let current: Option<(Option<String>, Option<String>, bool)> = tx
-            .conn()
-            .query_row(
-                "SELECT email_address, password_digest,
-                        EXISTS(SELECT 1 FROM sessions WHERE user_id = users.id AND id = ?2)
-                 FROM users WHERE id = ?1",
-                rusqlite::params![user.id, session_id],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-            )
-            .optional()?;
-        let Some((current_email, current_digest, has_session)) = current else {
-            return Ok(false);
-        };
-        if submitted_email.is_some() && current_email != user.email_address {
-            return Ok(false);
-        }
-        let writes_email = submitted_email.is_some_and(|email| *email != current_email);
-        if (writes_email || writes_digest || audit_email_change)
-            && (!has_session || current_digest != user.password_digest)
-        {
-            return Ok(false);
-        }
+    let writes_email = submitted_email.is_some_and(|email| *email != user.email_address);
+    let writes_credentials = writes_email || writes_digest || audit_email_change;
+    if (submitted_email.is_some() || writes_credentials)
+        && !profile_write_authorized(
+            tx,
+            user,
+            session_id,
+            submitted_email.is_some(),
+            writes_credentials,
+        )?
+    {
+        return Ok(false);
     }
     let previous_digest = writes_digest.then(|| user.password_digest.clone());
     let previous_email = user.email_address.clone();
@@ -75,19 +65,7 @@ pub fn update_profile(
     }
     user.update(tx, changes)?;
     if audit_email_change {
-        AuditLog::record(
-            tx,
-            NewAuditLog {
-                action: "user.email.change".into(),
-                actor: Some(Actor::from(&*user)),
-                target: Some(Target::from(&*user)),
-                changes: Some(
-                    json!({"email_address": pair(json!(previous_email), json!(user.email_address))}),
-                ),
-                ..Default::default()
-            },
-            context,
-        )?;
+        audit_primary_email_change(tx, user, previous_email.as_deref(), context)?;
     }
     // The retained form also audits non-scalar input that strong parameters discard.
     if legacy_raw_password_present
@@ -106,6 +84,60 @@ pub fn update_profile(
         TwoFactorRememberedDevice::revoke_all(tx, user.id)?;
     }
     Ok(true)
+}
+
+fn profile_write_authorized(
+    tx: &Tx<'_>,
+    user: &User,
+    session_id: Option<i64>,
+    check_email_snapshot: bool,
+    writes_credentials: bool,
+) -> Result<bool> {
+    let current: Option<(Option<String>, Option<String>, bool)> = tx
+        .conn()
+        .query_row(
+            "SELECT email_address, password_digest,
+                    EXISTS(SELECT 1 FROM sessions WHERE user_id = users.id AND id = ?2)
+             FROM users WHERE id = ?1 AND status = 0",
+            rusqlite::params![user.id, session_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+    Ok(current.is_some_and(|(email, digest, has_session)| {
+        (!check_email_snapshot || email == user.email_address)
+            && (!writes_credentials || (has_session && digest == user.password_digest))
+    }))
+}
+
+/// Recheck the session and password observed before authorizing a credential write.
+pub fn credential_write_authorized(
+    tx: &Tx<'_>,
+    user: &User,
+    session_id: Option<i64>,
+) -> Result<bool> {
+    profile_write_authorized(tx, user, session_id, false, true)
+}
+
+fn audit_primary_email_change(
+    tx: &Tx<'_>,
+    user: &User,
+    previous_email: Option<&str>,
+    context: &Context,
+) -> Result<()> {
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "user.email.change".into(),
+            actor: Some(Actor::from(user)),
+            target: Some(Target::from(user)),
+            changes: Some(
+                json!({"email_address": pair(json!(previous_email), json!(user.email_address))}),
+            ),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
 }
 
 /// `Accounts::UsersController#update`: only a successful, changed role writes a row.
@@ -312,23 +344,74 @@ pub fn reset_two_factor(tx: &mut Tx<'_>, user: &User, context: &Context) -> Resu
     Ok(())
 }
 
-/// Who "Forgot password?" can email a link to: someone password sign-in accepts (active, with an
-/// address), a person rather than a bot, with a password. Google-only members sign in with Google.
+/// Who can reset a password once an address has matched: active people with a password.
 pub fn can_reset_password(user: &User) -> bool {
     user.is_active()
         && !user.is_bot()
-        && user
-            .email_address
-            .as_deref()
-            .is_some_and(|email| !email.is_empty())
         && user
             .password_digest
             .as_deref()
             .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
 }
 
-/// "Forgot password?": queue the email. Delivery decides whether `email_address` gets one,
-/// so the request can answer independently of whether the account exists.
+pub fn request_email_address_confirmation(
+    tx: &mut Tx<'_>,
+    user: &User,
+    email_address: String,
+) -> Result<()> {
+    let cursor = EmailAddress::confirmation_cursor(tx.conn())?;
+    campfire_mail::jobs::email_address_confirmation_later(tx, user, email_address, cursor);
+    Ok(())
+}
+
+pub fn audit_email_address(
+    tx: &Tx<'_>,
+    user: &User,
+    action: &str,
+    email_address: &str,
+    context: &Context,
+) -> Result<()> {
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: action.into(),
+            actor: Some(Actor::from(user)),
+            target: Some(Target::from(user)),
+            changes: Some(json!({ "email_address": email_address })),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
+}
+
+pub fn promote_email_address(
+    tx: &mut Tx<'_>,
+    user: &mut User,
+    id: i64,
+    session_id: Option<i64>,
+    mail_available: bool,
+    context: &Context,
+) -> Result<bool> {
+    if !profile_write_authorized(tx, user, session_id, true, true)? {
+        return Ok(false);
+    }
+    let previous = user.promote_email_address(tx, id)?;
+    audit_primary_email_change(tx, user, previous.as_deref(), context)?;
+    if mail_available
+        && let Some(address) = previous
+            .as_deref()
+            .and_then(campfire_mail::outbound::bare_confirmation_address)
+        && EmailAddress::is_available(tx.conn(), address)?
+    {
+        request_email_address_confirmation(tx, user, address.to_owned())?;
+    }
+    campfire_db::user::profile_settings::bump_revision(tx, user.id)?;
+    Ok(true)
+}
+
+/// "Forgot password?": queue the email. Delivery decides whether `email_address` gets one, so
+/// the request can answer independently of whether the account exists.
 pub fn request_password_reset(tx: &mut Tx<'_>, email_address: String) {
     campfire_mail::jobs::password_reset_later(tx, email_address);
 }
@@ -480,12 +563,47 @@ pub async fn enroll(
     })
 }
 
-pub(crate) fn password_proven(secrets: &rails_compat::Secrets, proof: &str, user: &User) -> bool {
-    rails_compat::password_reset::sign_in_proof_matches(
-        secrets,
-        proof,
-        user.password_digest.as_deref().unwrap_or_default(),
-    )
+pub const PASSWORD_SIGN_IN: &str = "password";
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct PasswordSignInProof {
+    digest_proof: String,
+    secondary_id: Option<i64>,
+}
+
+impl PasswordSignInProof {
+    pub(crate) fn new(
+        secrets: &rails_compat::Secrets,
+        user: &User,
+        secondary_id: Option<i64>,
+    ) -> Self {
+        Self {
+            digest_proof: rails_compat::password_reset::sign_in_proof(
+                secrets,
+                user.password_digest.as_deref().unwrap_or_default(),
+            ),
+            secondary_id,
+        }
+    }
+
+    pub(crate) fn still_valid(
+        &self,
+        conn: &campfire_db::Connection,
+        secrets: &rails_compat::Secrets,
+        user: &User,
+    ) -> Result<bool> {
+        if !rails_compat::password_reset::sign_in_proof_matches(
+            secrets,
+            &self.digest_proof,
+            user.password_digest.as_deref().unwrap_or_default(),
+        ) {
+            return Ok(false);
+        }
+        if let Some(id) = self.secondary_id {
+            return Ok(EmailAddress::find_owned(conn, user.id, id)?.is_some());
+        }
+        Ok(true)
+    }
 }
 
 pub enum Challenge {
@@ -505,7 +623,7 @@ pub struct RememberedCookie {
 
 pub struct ChallengeSignIn<'a> {
     pub user_id: i64,
-    pub password_proof: Option<&'a str>,
+    pub password_proof: Option<&'a PasswordSignInProof>,
     pub code: &'a str,
     pub method: &'a str,
     pub device_id: &'a str,
@@ -536,8 +654,13 @@ pub fn challenge(
     let Some(user) = User::find_by_id(tx.conn(), user_id)?.filter(User::is_active) else {
         return Ok(Challenge::Gone);
     };
-    if password_proof.is_some_and(|proof| !password_proven(secrets, proof, &user)) {
-        return Ok(Challenge::Gone);
+    if method == PASSWORD_SIGN_IN {
+        let Some(proof) = password_proof else {
+            return Ok(Challenge::Gone);
+        };
+        if !proof.still_valid(tx.conn(), secrets, &user)? {
+            return Ok(Challenge::Gone);
+        }
     }
     let Some(mut credential) =
         TwoFactorCredential::for_user(tx.conn(), user_id)?.filter(|v| v.enabled())

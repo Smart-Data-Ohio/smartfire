@@ -214,6 +214,78 @@ pub(crate) async fn import(
     panic!("fixture import did not finish");
 }
 #[tokio::test]
+async fn slack_import_records_folded_email_collisions_without_creating_users() {
+    use campfire_db::User;
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+
+    for (stored, incoming, secondary) in [
+        ("strasse@slack.example", "straße@slack.example", true),
+        ("Équipe@example.com", "équipe@example.com", false),
+    ] {
+        let (db, crypto, _dir) = setup().await;
+        let id = start(&db).await;
+        db.write(move |tx| {
+            if secondary {
+                let user = User::find(tx.conn(), 1)?;
+                assert_eq!(
+                    EmailAddress::confirm(tx, &user, stored)?,
+                    Confirmation::Added
+                );
+            } else {
+                tx.conn()
+                    .execute("UPDATE users SET email_address = ? WHERE id = 1", [stored])?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+        let before = db.read(User::count).await.unwrap();
+        let (_server, network) = fake(vec![
+            Route::new("GET", "slack.com", "/api/users.list?limit=200", 200).body(
+                json!({"ok":true,"members":[{"id":"UCOLLISION","profile":{"email":incoming}}]})
+                    .to_string()
+                    .into_bytes(),
+            ),
+        ])
+        .await;
+        let store_db = db.clone();
+        perform_import(db.clone(), crypto, id, |run, lease, token| async move {
+            Runner::new(
+                SqlStore {
+                    db: store_db,
+                    lease: Some(lease),
+                    allowed_domains: HashSet::new(),
+                },
+                Client::with_network(token, None, false, network),
+                run,
+            )
+            .with_budget(Duration::ZERO)
+            .step()
+            .await
+        })
+        .await
+        .unwrap();
+
+        let row = run(&db, id).await;
+        assert_eq!(row.status, "failed", "{incoming}");
+        let error = row.error.unwrap();
+        assert!(error.contains("email address is already in use"), "{error}");
+        assert_eq!(db.read(User::count).await.unwrap(), before);
+        assert_eq!(
+            db.read(move |conn| users::mapped_id(
+                conn,
+                row.slack_workspace_id,
+                "user",
+                "UCOLLISION"
+            ))
+            .await
+            .unwrap(),
+            None
+        );
+    }
+}
+
+#[tokio::test]
 async fn slack_sql_store_full_workspace_import_persists_pages_and_finishes_all_rooms() {
     let (db, crypto, _dir) = setup().await;
     let id = start(&db).await;

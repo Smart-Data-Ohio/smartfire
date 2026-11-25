@@ -69,7 +69,7 @@ pub struct WriteHold {
     pub release: Arc<Barrier>,
 }
 
-type Holds = Mutex<Option<HashMap<i64, WriteHold>>>;
+type Holds<K = i64> = Mutex<Option<HashMap<K, WriteHold>>>;
 
 static BEFORE_CATEGORY_WRITE: Holds = Mutex::new(None);
 static BEFORE_INVOLVEMENT_WRITE: Holds = Mutex::new(None);
@@ -77,8 +77,9 @@ static BEFORE_POLL_VOTE_WRITE: Holds = Mutex::new(None);
 static BEFORE_ATTENDANCE_WRITE: Holds = Mutex::new(None);
 static BEFORE_PROFILE_READ: Holds = Mutex::new(None);
 static AFTER_APPROVAL_PAGE_READ: Holds = Mutex::new(None);
+static BEFORE_EMAIL_ADDRESS_WRITE: Holds<(PathBuf, i64)> = Mutex::new(None);
 
-fn hold(holds: &Holds, id: i64) -> WriteHold {
+fn hold<K: Eq + std::hash::Hash>(holds: &Holds<K>, id: K) -> WriteHold {
     let held = WriteHold {
         reached: Arc::new(Barrier::new(2)),
         release: Arc::new(Barrier::new(2)),
@@ -95,7 +96,7 @@ fn hold(holds: &Holds, id: i64) -> WriteHold {
     copy
 }
 
-async fn wait(holds: &Holds, id: i64) {
+async fn wait<K: Eq + std::hash::Hash>(holds: &Holds<K>, id: K) {
     let held = holds
         .lock()
         .unwrap()
@@ -105,6 +106,15 @@ async fn wait(holds: &Holds, id: i64) {
         held.reached.wait().await;
         held.release.wait().await;
     }
+}
+
+/// Holds this account's next email-address write after its request authorization.
+pub fn hold_before_email_address_write(database: &Path, user_id: i64) -> WriteHold {
+    hold(&BEFORE_EMAIL_ADDRESS_WRITE, (database.to_owned(), user_id))
+}
+
+pub(crate) async fn before_email_address_write(database: &Path, user_id: i64) {
+    wait(&BEFORE_EMAIL_ADDRESS_WRITE, (database.to_owned(), user_id)).await;
 }
 
 /// Holds the next `PATCH /api/v1/room_categories/:id` of this category just before its write

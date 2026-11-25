@@ -82,7 +82,16 @@ async fn create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     };
 
     match user {
-        Some(user) => super::two_factor::begin_session_response(c, user, "password", mode).await,
+        Some((user, proof)) => {
+            super::two_factor::begin_session_response(
+                c,
+                user,
+                crate::authentication::PASSWORD_SIGN_IN,
+                Some(proof),
+                mode,
+            )
+            .await
+        }
         None => render_rejection(c, StatusCode::UNAUTHORIZED, mode).await,
     }
 }

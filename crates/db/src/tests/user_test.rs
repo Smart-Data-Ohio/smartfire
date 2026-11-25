@@ -30,30 +30,25 @@ fn create_new_user(t: &TestDb) -> User {
 fn password_address_resolution_scans_every_normalized_candidate() {
     let t = TestDb::new();
     t.write(|tx| {
-        for email in [
-            "collision@example.com",
-            "COLLISION@example.com",
-            "unique@example.com",
-        ] {
-            User::create(
-                tx,
-                NewUser {
-                    name: email.into(),
-                    email_address: Some(email.into()),
-                    ..Default::default()
-                },
-            )?;
-        }
-        // The final row's malformed address makes it observable whether the scan reaches it.
+        // Legacy primaries can collide even though User::create would reject these today.
         tx.conn().execute(
             "INSERT INTO users (name, email_address, created_at, updated_at)
-             VALUES ('Scan sentinel', X'FF', ?1, ?1)",
+             VALUES ('Lowercase', 'collision@example.com', ?1, ?1),
+                    ('Uppercase', 'COLLISION@example.com', ?1, ?1),
+                    ('Unique', 'unique@example.com', ?1, ?1)",
             [tx.now()],
+        )?;
+        // The final secondary's malformed address makes it observable whether the scan reaches it.
+        tx.conn().execute(
+            "INSERT INTO user_email_addresses (user_id, email_address, created_at, updated_at)
+             VALUES (?1, X'FF', ?2, ?2)",
+            rusqlite::params![id("david"), tx.now()],
         )?;
         Ok(())
     });
 
     t.read(|conn| {
+        let snapshot = crate::Snapshot::begin(conn)?;
         for address in [
             "Missing@example.com",
             "Unique@example.com",
@@ -61,7 +56,7 @@ fn password_address_resolution_scans_every_normalized_candidate() {
         ] {
             assert!(
                 matches!(
-                    User::find_active_by_sign_in_address(conn, address),
+                    User::find_active_by_sign_in_address(&snapshot, address),
                     Err(crate::Error::Sqlite(rusqlite::Error::InvalidColumnType(..)))
                 ),
                 "the lookup for {address} must reach the final row"

@@ -2,13 +2,18 @@
 //! shared Markdown renderer; WS11 installs webhook fanout. Mail owns neither trigger.
 use crate::app::{App, AppCtx};
 use crate::authentication::can_reset_password;
+use campfire_db::user::ResolvedSignInAddress;
+use campfire_db::user::email_addresses::{EmailAddress, trim};
 use campfire_db::{Attachment, Message, Room, Timestamp, User};
 use campfire_jobs::{JobError, JobResult, Outcome};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode};
 use campfire_mail::{
     config::RelayAuth,
     inbound,
-    jobs::{DeliveryJob, IncinerationJob, MessageCreated, Notification, RoutingJob},
+    jobs::{
+        DeliveryJob, EmailAddressConfirmation, IncinerationJob, MessageCreated, Notification,
+        RoutingJob,
+    },
     outbound::{self, SignIn},
 };
 use rusqlite::OptionalExtension;
@@ -91,6 +96,12 @@ async fn delivery(app: App, job: DeliveryJob, execution: campfire_jobs::Executio
                 None => return Ok(Outcome::Done),
             }
         }
+        Notification::EmailAddressConfirmation(job) => {
+            match email_address_confirmation_message(&app, job, execution.enqueued_at).await? {
+                Some(message) => message,
+                None => return Ok(Outcome::Done),
+            }
+        }
         Notification::NewSignIn { activity_item_id } => {
             let item = app.db.read(move |conn| {
                 let row = conn.query_row("SELECT user_id, source_id, source_type, created_at FROM activity_items WHERE id = ?", [activity_item_id], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?, r.get::<_, String>(2)?, r.get::<_, Timestamp>(3)?))).optional()?.ok_or(campfire_db::Error::RecordNotFound("ActivityItem"))?;
@@ -129,41 +140,57 @@ pub async fn password_reset_message(
         return Ok(None);
     };
     let expires_at = requested_at.jiff() + rails_compat::password_reset::EXPIRES_IN;
-    let user = app
+    let recipient = app
         .db
-        .read(move |conn| {
-            let Some(user) = User::find_active_by_sign_in_address(conn, &email_address)?
-                .filter(can_reset_password)
+        .read_snapshot(move |conn| {
+            let Some(recipient) = User::find_active_by_sign_in_address(conn, &email_address)?
+                .filter(|matched| can_reset_password(&matched.user))
             else {
                 return Ok(None);
             };
-            let changed = password_changed_since(conn, user.id, requested_at)?;
-            Ok((!changed).then_some(user))
+            let changed = password_changed_since(conn, recipient.user.id, requested_at)?;
+            Ok((!changed).then_some(recipient))
         })
         .await?;
-    let Some(user) = user else {
+    let Some(ResolvedSignInAddress {
+        user,
+        email_address: email,
+        secondary_id,
+    }) = recipient
+    else {
         return Ok(None);
     };
     if app.db.env().now().jiff() > expires_at - jiff::SignedDuration::from_mins(2) {
         return Ok(None);
     }
-    let email = user.email_address.clone().unwrap_or_default();
-    let token = rails_compat::password_reset::token(
-        &app.secrets,
-        user.id,
-        user.password_digest.as_deref().unwrap_or_default(),
-        &email,
-        requested_at.jiff(),
-    );
+    let digest = user.password_digest.as_deref().unwrap_or_default();
+    let token = match secondary_id {
+        Some(id) => rails_compat::password_reset::token_for_secondary(
+            &app.secrets,
+            user.id,
+            digest,
+            id,
+            &email,
+            requested_at.jiff(),
+        ),
+        None => rails_compat::password_reset::token(
+            &app.secrets,
+            user.id,
+            digest,
+            &email,
+            requested_at.jiff(),
+        ),
+    };
     Ok(Some(outbound::password_reset(
         config,
         &outbound::User {
             name: user.name,
-            email: campfire_richtext::ruby::strip(&email).to_owned(),
+            email: trim(&email).to_owned(),
         },
         &format!("{origin}/app/passwords/{token}"),
     )))
 }
+
 /// Whether the user's password was changed or reset at or after `since`, by the audit log.
 fn password_changed_since(
     conn: &rusqlite::Connection,
@@ -177,6 +204,68 @@ fn password_changed_since(
         |row| row.get(0),
     )?)
 }
+
+pub async fn email_address_confirmation_message(
+    app: &App,
+    job: EmailAddressConfirmation,
+    requested_at: Timestamp,
+) -> campfire_db::Result<Option<outbound::Message>> {
+    let config = &app.mail.config;
+    let Some(origin) = config
+        .validated_app_url()
+        .filter(|_| config.password_reset_available())
+    else {
+        return Ok(None);
+    };
+    let Some(cursor) = job.cursor() else {
+        return Ok(None);
+    };
+    let expires_at = requested_at.jiff() + rails_compat::email_address_confirmation::EXPIRES_IN;
+    let Some(address) = outbound::bare_confirmation_address(&job.email_address) else {
+        return Ok(None);
+    };
+    if app.db.env().now().jiff() >= expires_at {
+        return Ok(None);
+    }
+    let email_address = address.to_owned();
+    let user_id = job.user_id;
+    let candidate = app
+        .db
+        .read_snapshot(move |conn| {
+            let Some(user) =
+                User::find_by_id(conn, user_id)?.filter(|user| user.is_active() && !user.is_bot())
+            else {
+                return Ok(None);
+            };
+            if !job.matches_password(&user)
+                || !EmailAddress::is_available(conn, &email_address)?
+                || EmailAddress::confirmation_retired(conn, user_id, &email_address, cursor)?
+                || password_changed_since(conn, user_id, requested_at)?
+            {
+                return Ok(None);
+            }
+            Ok(Some((user, email_address)))
+        })
+        .await?;
+    let Some((user, email_address)) = candidate else {
+        return Ok(None);
+    };
+    let token = rails_compat::email_address_confirmation::token(
+        &app.secrets,
+        user.id,
+        &email_address,
+        user.password_digest.as_deref().unwrap_or_default(),
+        requested_at.jiff(),
+        cursor,
+    );
+    Ok(Some(outbound::email_address_confirmation(
+        config,
+        user.display_name(),
+        &email_address,
+        &format!("{origin}/app/email_addresses/confirm/{token}"),
+    )))
+}
+
 async fn routing(app: App, job: RoutingJob, _: campfire_jobs::Execution) -> JobResult {
     let renderer = app
         .mail

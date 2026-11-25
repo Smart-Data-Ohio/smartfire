@@ -7,6 +7,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { USER_AVATAR_SLOT, USER_BANNER_SLOT } from "../admin/profile-format.ts";
 import { ProfileSlot, type Shown, useImageSlot, useShownSrc } from "../admin/profile-slot.tsx";
 import { ProfileHero } from "../people/profile-banner.tsx";
+import { EmailAddressesGroup } from "./email-addresses-group.tsx";
 import { fieldError } from "./settings-format.ts";
 import {
   FieldError,
@@ -149,6 +150,7 @@ export function ProfileSection() {
   const [nickname, setNickname] = useState(profile.nickname ?? "");
   const [pronouns, setPronouns] = useState(profile.pronouns ?? "");
   const [email, setEmail] = useState(profile.emailAddress ?? "");
+  const [savedEmail, setSavedEmail] = useState(profile.emailAddress ?? "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [bio, setBio] = useState(profile.bio ?? "");
@@ -156,6 +158,13 @@ export function ProfileSection() {
   const [fields, setFields] = useState<Fields>({});
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  // Another address made primary below: the field follows it unless an edit is under way.
+  if ((profile.emailAddress ?? "") !== savedEmail) {
+    setSavedEmail(profile.emailAddress ?? "");
+
+    if (email === savedEmail) setEmail(profile.emailAddress ?? "");
+  }
 
   const emailChanged = email !== (profile.emailAddress ?? "");
   const githubChanged = !profile.githubVerified && github !== (profile.githubLogin ?? "");
@@ -193,6 +202,7 @@ export function ProfileSection() {
           setNickname(next.profile.nickname ?? "");
           setPronouns(next.profile.pronouns ?? "");
           setEmail(next.profile.emailAddress ?? "");
+          setSavedEmail(next.profile.emailAddress ?? "");
           setBio(next.profile.bio ?? "");
           setGithub(next.profile.githubLogin ?? "");
           toast({ title: "Profile saved", tone: "success" });
@@ -250,7 +260,10 @@ export function ProfileSection() {
           value={email}
           autoComplete="username"
           placeholder="Enter your email address"
-          error={fieldError(fields, "emailAddress", "Email address")}
+          error={
+            fields.emailAddress?.find((message) => message.endsWith(".")) ??
+            fieldError(fields, "emailAddress", "Email address")
+          }
           attempt={attempt}
           onChange={(event) => setEmail(event.target.value)}
         />
@@ -314,6 +327,14 @@ export function ProfileSection() {
           </Button>
         </div>
       </form>
+      <EmailAddressesGroup
+        key={profile.emailAddress}
+        onPrimaryChanged={() => {
+          settingsActions
+            .load()
+            .then(replace, (error: Error) => toastFailure("Couldn't refresh your profile", error));
+        }}
+      />
     </SettingsPage>
   );
 }

@@ -2265,3 +2265,120 @@ fn event_sink_does_not_keep_a_stopped_cable_server_alive() {
         reconnect: false,
     });
 }
+
+#[tokio::test]
+async fn email_address_confirmation_worker_delivers_only_the_available_address() {
+    use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, SEED_NOW, TestApp};
+    use campfire_db::User;
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::TcpListener;
+
+    let smtp = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = smtp.local_addr().unwrap().port().to_string();
+    let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let app = TestApp::boot_with_clock_and_env(
+        clock.clone(),
+        &[
+            ("SMTP_ADDRESS", "127.0.0.1"),
+            ("SMTP_PORT", &port),
+            ("SMTP_ENABLE_STARTTLS", "false"),
+            ("MAILER_FROM", "Smartfire <alerts@example.test>"),
+            ("APP_URL", "http://campfire.test"),
+        ],
+    )
+    .await
+    .expect("restored default seed")
+    .without_job_runner()
+    .await;
+    let app = app.booted.app.clone();
+    app.db
+        .write(|tx| {
+            use campfire_runtime::authentication::request_email_address_confirmation as request;
+
+            let david = User::find(tx.conn(), DAVID)?;
+            let mut jason = User::find(tx.conn(), JASON)?;
+            request(tx, &david, "free@example.test".into())?;
+            request(tx, &david, "claimed@example.test".into())?;
+            request(tx, &jason, "inactive@example.test".into())?;
+            request(tx, &david, "removed@example.test".into())?;
+
+            assert_eq!(
+                EmailAddress::confirm(tx, &david, "Removed@example.test")?,
+                Confirmation::Added
+            );
+            let other = User::find(tx.conn(), KEVIN)?;
+            assert_eq!(
+                EmailAddress::confirm(tx, &other, "claimed@example.test")?,
+                Confirmation::Added
+            );
+            jason.deactivate(tx)
+        })
+        .await
+        .unwrap();
+
+    clock.advance(jiff::SignedDuration::from_secs(1));
+    app.db
+        .write(|tx| {
+            let david = User::find(tx.conn(), DAVID)?;
+            let (_, address) =
+                EmailAddress::by_address(tx.conn(), "removed@example.test")?.unwrap();
+            EmailAddress::remove(tx, david.id, address.id)?;
+            campfire_runtime::authentication::audit_email_address(
+                tx,
+                &david,
+                "user.email_address.remove",
+                &address.email_address,
+                &Default::default(),
+            )
+        })
+        .await
+        .unwrap();
+
+    let mut registry = Registry::new();
+    campfire_runtime::mail::register(&mut registry);
+    let runner = campfire_jobs::start(
+        app.db.clone(),
+        app.jobs.queue.clone(),
+        registry,
+        app.clone(),
+        RunnerConfig::new(vec![campfire_jobs::QueueConfig::new("default", 1)]),
+    );
+    wait("confirmation delivery over loopback SMTP", async {
+        let (socket, _) = smtp.accept().await.unwrap();
+        let mut peer = BufReader::new(socket);
+        for (command, response) in [
+            ("EHLO ", "220 test SMTP\r\n"),
+            ("MAIL FROM:<alerts@example.test>", "250 test SMTP\r\n"),
+            ("RCPT TO:<free@example.test>", "250 Sender accepted\r\n"),
+            ("DATA", "250 Recipient accepted\r\n"),
+        ] {
+            peer.get_mut().write_all(response.as_bytes()).await.unwrap();
+            let mut line = String::new();
+            peer.read_line(&mut line).await.unwrap();
+            assert!(line.starts_with(command), "{line}");
+        }
+        peer.get_mut()
+            .write_all(b"354 Send mail\r\n")
+            .await
+            .unwrap();
+        let mut saw_subject = false;
+        loop {
+            let mut line = String::new();
+            assert_ne!(peer.read_line(&mut line).await.unwrap(), 0);
+            if line == ".\r\n" {
+                break;
+            }
+            saw_subject |= line.starts_with("Subject: Confirm your Smartfire email address");
+        }
+        assert!(saw_subject);
+        peer.get_mut().write_all(b"250 Accepted\r\n").await.unwrap();
+    })
+    .await;
+    wait_for(&app, "all address confirmations to finish", |rows| {
+        rows.iter()
+            .all(|row| row.class != "Smartfire::MailDeliveryJob")
+    })
+    .await;
+    runner.shutdown(Duration::from_secs(1)).await;
+}

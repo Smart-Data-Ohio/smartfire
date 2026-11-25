@@ -231,7 +231,7 @@ pub(crate) async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
 }
 
 /// `two_factor#audit_context`: who did it, from where.
-fn audit_context(c: &Ctx) -> Result<Context> {
+pub(crate) fn audit_context(c: &Ctx) -> Result<Context> {
     campfire_people::controllers::two_factor::audit_context(c)
 }
 

@@ -4,8 +4,8 @@ version = "0.1.0"
 edition.workspace = true
 
 [features]
-# Hooks the campfire crate's tests use (the audit log export limit override).
-test-support = []
+# Hooks the campfire crate's tests use.
+test-support = ["campfire_runtime/test-support"]
 
 [dependencies]
 campfire_api_types.workspace = true

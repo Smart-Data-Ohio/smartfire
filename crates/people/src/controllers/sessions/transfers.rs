@@ -66,7 +66,8 @@ async fn update_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     };
     match user {
         Some(user) => {
-            crate::controllers::two_factor::begin_session_response(c, user, "transfer", mode).await
+            crate::controllers::two_factor::begin_session_response(c, user, "transfer", None, mode)
+                .await
         }
         None => {
             super::record_sign_in_failure(c, "transfer", String::new()).await?;
