@@ -1989,6 +1989,108 @@ async fn direct_reopen_fences_an_in_flight_close_without_spending_a_sequence() {
 }
 
 #[tokio::test]
+async fn a_first_peer_message_refuses_an_empty_direct_close() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let created = send(
+        &mut david,
+        Method::POST,
+        "/api/v1/directs",
+        json!({"userIds": [JASON, KEVIN]}),
+    )
+    .await;
+    assert!(created.status.is_success(), "{}", created.text());
+    let empty: api::SidebarRow = parse(&created);
+    assert!(empty.last_message.is_none());
+
+    let path = format!("/api/v1/rooms/{}", empty.room.id);
+    let posted = send(
+        &mut jason,
+        Method::POST,
+        &format!("{path}/messages"),
+        json!({"clientMessageId": "first-before-close", "markdownSource": "First message"}),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+
+    let change: api::DirectClosedChange = ok(&send(
+        &mut david,
+        Method::PUT,
+        &format!("{path}/closed"),
+        json!({"closed": true, "lastMessageId": 0}),
+    )
+    .await);
+    let row = change.row.expect("the first message keeps the direct open");
+    assert_eq!(row.membership.closed, None);
+    assert_eq!(
+        row.last_message.unwrap().message_id,
+        parse::<serde_json::Value>(&posted)["id"].as_i64()
+    );
+}
+
+#[tokio::test]
+async fn a_direct_close_treats_a_message_from_another_room_like_a_missing_reference() {
+    use campfire_db::{Message, NewMessage};
+
+    let Some(a) = TestApp::boot_frozen_with_env(&[("SPA_ENABLED", "1")]).await else {
+        return;
+    };
+    let room = DIRECT_DAVID_JASON;
+    let mut david = a.sign_in(DAVID).await;
+    let foreign_id = a
+        .db()
+        .write(move |tx| {
+            let foreign = Message::create_imported(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    body: Some("Another room".into()),
+                    ..Default::default()
+                },
+                tx.now(),
+                None,
+            )?;
+            // A later id with an earlier timestamp distinguishes id order from preview order.
+            let direct = Message::create_imported(
+                tx,
+                NewMessage {
+                    room_id: room,
+                    creator_id: JASON,
+                    body: Some("Imported peer message".into()),
+                    ..Default::default()
+                },
+                tx.now().ago(jiff::SignedDuration::from_hours(24)),
+                None,
+            )?;
+            assert!(direct.id > foreign.id);
+            Ok(foreign.id)
+        })
+        .await
+        .unwrap();
+
+    let path = format!("/api/v1/rooms/{room}/closed");
+    let missing: api::DirectClosedChange = ok(&send(
+        &mut david,
+        Method::PUT,
+        &path,
+        json!({"closed": true, "lastMessageId": 0}),
+    )
+    .await);
+    assert!(missing.row.is_some());
+
+    let foreign: api::DirectClosedChange = ok(&send(
+        &mut david,
+        Method::PUT,
+        &path,
+        json!({"closed": true, "lastMessageId": foreign_id}),
+    )
+    .await);
+    assert_eq!(foreign, missing);
+}
+
+#[tokio::test]
 async fn direct_close_uses_preview_order_after_a_historical_import() {
     use super::api_tests::get;
     use campfire_db::{Message, NewMessage};

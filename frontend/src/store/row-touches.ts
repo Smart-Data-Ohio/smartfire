@@ -225,6 +225,7 @@ export function changedRowIds(
 /**
  * An HTTP reply's rows as local sync events, less any row event for a room the sync path changed
  * after `since` (the request's ticket); none at all once a resync made the reply stale.
+ * A confirmed direct close only checks visibility because a read only changes counts.
  */
 export function untouchedReplyEvents(
   state: State,
@@ -240,7 +241,9 @@ export function untouchedReplyEvents(
       case "sidebar.row.upserted":
         return !touchedSince(state, event.data.room.id, since);
       case "sidebar.row.removed":
-        return !touchedSince(state, event.data.roomId, since);
+        return event.data.closed === true
+          ? !visibilityTouchedSince(state, event.data.roomId, since)
+          : !touchedSince(state, event.data.roomId, since);
       default:
         return true;
     }

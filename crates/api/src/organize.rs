@@ -91,10 +91,14 @@ async fn put_direct_closed(c: &mut Ctx) -> Result {
                         );
                         tx.conn().query_row(
                             &format!(
-                                "SELECT CASE WHEN EXISTS (SELECT 1 FROM messages WHERE id = ?2)
+                                "SELECT CASE WHEN EXISTS (
+                                        SELECT 1 FROM messages WHERE room_id = ?1 AND id = ?2
+                                    )
                                     THEN EXISTS (
                                         {candidates}
-                                        AND (created_at, id) > (SELECT created_at, id FROM messages WHERE id = ?2)
+                                        AND (created_at, id) > (
+                                            SELECT created_at, id FROM messages WHERE room_id = ?1 AND id = ?2
+                                        )
                                     )
                                     ELSE EXISTS ({candidates} AND id > ?2)
                                  END"

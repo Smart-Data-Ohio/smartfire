@@ -198,6 +198,31 @@ it("closing a direct with a legacy preview omits the message precondition", asyn
   );
 });
 
+it("closing an empty direct sends zero as the message precondition", async () => {
+  const { lastMessage: _lastMessage, ...row } = directRow();
+  const request = interceptClose();
+
+  mutations.loadSidebar(
+    { ...sidebar, rows: sidebar.rows.map((entry) => (entry.room.id === DM ? row : entry)) },
+    sidebarRowClock(),
+  );
+  await mount(`/r/${DM}`);
+
+  await userEvent.click(
+    screen.getByRole("button", { name: `Close conversation with ${row.sidebarDisplayName}` }),
+  );
+
+  await waitFor(() =>
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "PUT",
+        path: CLOSED_ENDPOINT,
+        body: { closed: true, lastMessageId: 0 },
+      }),
+    ),
+  );
+});
+
 it("closing the only direct from its menu focuses the Direct messages heading", async () => {
   const row = directRow();
 
@@ -611,6 +636,54 @@ it("a refused close shows the current unread row and keeps the room open", async
   );
   expect(router.state.location.pathname).toBe(`/r/${DM}`);
   expect(store.getState().me?.lastRoomId).toBe(DM);
+});
+
+it("a successful close leaves the direct after a local mark-read while sync is offline", async () => {
+  const row = directRow();
+
+  const unread = {
+    ...row,
+    unreadCount: 3,
+    membership: { ...row.membership, unreadAt: row.evaluatedAt },
+  };
+
+  mutations.loadSidebar(
+    { ...sidebar, rows: sidebar.rows.map((entry) => (entry.room.id === DM ? unread : entry)) },
+    sidebarRowClock(),
+  );
+
+  const handle = network.server.handle.bind(network.server);
+  const reply = Promise.withResolvers<Awaited<ReturnType<typeof handle>>>();
+
+  const request = vi
+    .spyOn(network.server, "handle")
+    .mockImplementation((request) =>
+      request.path === CLOSED_ENDPOINT && request.method === "PUT"
+        ? reply.promise
+        : handle(request),
+    );
+
+  const router = await mount(`/r/${DM}`);
+
+  await userEvent.click(
+    screen.getByRole("button", { name: `Close conversation with ${row.sidebarDisplayName}` }),
+  );
+  await waitFor(() =>
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "PUT", path: CLOSED_ENDPOINT }),
+    ),
+  );
+  await act(() => actions.markRead(DM));
+  expect(store.getState().sidebar.rows[DM]?.unreadCount).toBe(0);
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+
+  await act(async () => {
+    reply.resolve({ status: 200, json: { row: null } });
+  });
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+  expect(store.getState().sidebar.rows[DM]).toBeUndefined();
+  expect(store.getState().directClosures.has(DM)).toBe(true);
 });
 
 it("a successful close retains focus handoff until its sync removal arrives", async () => {

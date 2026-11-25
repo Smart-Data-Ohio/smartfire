@@ -69,7 +69,9 @@ export function moveRoom(row: SidebarRow, slot: RoomSlot): void {
 }
 
 export function closeConversation(row: SidebarRow): Promise<boolean> {
-  return actions.organize.closeDirect(row.room.id, row.lastMessage?.messageId).catch((error) => {
+  const lastMessageId = row.lastMessage === undefined ? 0 : row.lastMessage.messageId;
+
+  return actions.organize.closeDirect(row.room.id, lastMessageId).catch((error) => {
     failed("Couldn't close the conversation")(error);
 
     return false;
