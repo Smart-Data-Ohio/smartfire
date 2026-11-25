@@ -22,7 +22,7 @@ pub mod test_hooks {
         pub static BEFORE_SESSION_WRITE: Hook;
     }
 
-    pub(crate) async fn run(key: &'static tokio::task::LocalKey<Hook>) {
+    pub async fn run(key: &'static tokio::task::LocalKey<Hook>) {
         if let Ok(Some(hook)) = key.try_with(|hook| hook.borrow_mut().take()) {
             hook.await;
         }
@@ -167,24 +167,6 @@ pub fn update_role(
             context,
         )?;
     }
-    Ok(())
-}
-
-/// `Accounts::UsersController#destroy`: snapshot the label before deactivation rewrites email.
-pub fn deactivate_user(tx: &mut Tx<'_>, user: &mut User, context: &Context) -> Result<()> {
-    let before = user.status;
-    let target = Target::from(&*user);
-    user.deactivate_with_audit(tx, context)?;
-    AuditLog::record(
-        tx,
-        NewAuditLog {
-            action: "user.deactivate".into(),
-            target: Some(target),
-            changes: Some(json!({"status": pair(json!(before.name()), json!("deactivated"))})),
-            ..Default::default()
-        },
-        context,
-    )?;
     Ok(())
 }
 
@@ -354,8 +336,14 @@ pub fn can_reset_password(user: &User) -> bool {
             .is_some_and(|digest| !campfire_richtext::ruby::is_blank(digest))
 }
 
-pub fn request_email_address_confirmation(tx: &mut Tx<'_>, user: &User, email_address: String) {
-    campfire_mail::jobs::email_address_confirmation_later(tx, user, email_address);
+pub fn request_email_address_confirmation(
+    tx: &mut Tx<'_>,
+    user: &User,
+    email_address: String,
+) -> Result<()> {
+    let audit_id = AuditLog::latest_id(tx.conn())?;
+    campfire_mail::jobs::email_address_confirmation_later(tx, user, email_address, audit_id);
+    Ok(())
 }
 
 pub fn audit_email_address(
@@ -396,7 +384,7 @@ pub fn promote_email_address(
         .and_then(campfire_mail::outbound::bare_confirmation_address)
         && EmailAddress::is_available(tx.conn(), address)?
     {
-        request_email_address_confirmation(tx, user, address.to_owned());
+        request_email_address_confirmation(tx, user, address.to_owned())?;
     }
     campfire_db::user::profile_settings::bump_revision(tx, user.id)?;
     Ok(true)
@@ -555,12 +543,47 @@ pub async fn enroll(
     })
 }
 
-pub(crate) fn password_proven(secrets: &rails_compat::Secrets, proof: &str, user: &User) -> bool {
-    rails_compat::password_reset::sign_in_proof_matches(
-        secrets,
-        proof,
-        user.password_digest.as_deref().unwrap_or_default(),
-    )
+pub const PASSWORD_SIGN_IN: &str = "password";
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct PasswordSignInProof {
+    digest_proof: String,
+    secondary_id: Option<i64>,
+}
+
+impl PasswordSignInProof {
+    pub(crate) fn new(
+        secrets: &rails_compat::Secrets,
+        user: &User,
+        secondary_id: Option<i64>,
+    ) -> Self {
+        Self {
+            digest_proof: rails_compat::password_reset::sign_in_proof(
+                secrets,
+                user.password_digest.as_deref().unwrap_or_default(),
+            ),
+            secondary_id,
+        }
+    }
+
+    pub(crate) fn still_valid(
+        &self,
+        conn: &campfire_db::Connection,
+        secrets: &rails_compat::Secrets,
+        user: &User,
+    ) -> Result<bool> {
+        if !rails_compat::password_reset::sign_in_proof_matches(
+            secrets,
+            &self.digest_proof,
+            user.password_digest.as_deref().unwrap_or_default(),
+        ) {
+            return Ok(false);
+        }
+        if let Some(id) = self.secondary_id {
+            return Ok(EmailAddress::find_owned(conn, user.id, id)?.is_some());
+        }
+        Ok(true)
+    }
 }
 
 pub enum Challenge {
@@ -580,7 +603,7 @@ pub struct RememberedCookie {
 
 pub struct ChallengeSignIn<'a> {
     pub user_id: i64,
-    pub password_proof: Option<&'a str>,
+    pub password_proof: Option<&'a PasswordSignInProof>,
     pub code: &'a str,
     pub method: &'a str,
     pub device_id: &'a str,
@@ -611,8 +634,13 @@ pub fn challenge(
     let Some(user) = User::find_by_id(tx.conn(), user_id)?.filter(User::is_active) else {
         return Ok(Challenge::Gone);
     };
-    if password_proof.is_some_and(|proof| !password_proven(secrets, proof, &user)) {
-        return Ok(Challenge::Gone);
+    if method == PASSWORD_SIGN_IN {
+        let Some(proof) = password_proof else {
+            return Ok(Challenge::Gone);
+        };
+        if !proof.still_valid(tx.conn(), secrets, &user)? {
+            return Ok(Challenge::Gone);
+        }
     }
     let Some(mut credential) =
         TwoFactorCredential::for_user(tx.conn(), user_id)?.filter(|v| v.enabled())

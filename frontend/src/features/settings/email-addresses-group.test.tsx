@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { EMAIL_RATE_LIMITED, SEEDED_LINKED_ADDRESS } from "../../../mock/s2/email-addresses.ts";
+import type { EmailAddressList } from "../../gen/EmailAddressList.ts";
 import type { Settings } from "../../gen/Settings.ts";
 import { mutations } from "../../store/store.ts";
 import { confirmationGate } from "../../sync/runtime.ts";
@@ -178,6 +179,67 @@ it("asks before removing an address, then removes it", async () => {
   expect(remove).toHaveBeenCalledWith(1);
   await waitFor(() => expect(screen.queryByText(SEEDED_LINKED_ADDRESS)).toBeNull());
   expect(await screen.findByText("No other addresses linked yet.")).toBeTruthy();
+});
+
+it("keeps the latest list when two removal refreshes finish out of order", async () => {
+  const initial = await settings.emailAddresses();
+  const first = initial.secondary[0];
+
+  if (first === undefined) throw new Error("Expected the mock's linked address");
+
+  const second = { ...first, id: first.id + 1, emailAddress: "second@example.test" };
+  const firstRefresh = Promise.withResolvers<EmailAddressList>();
+  const secondRefresh = Promise.withResolvers<EmailAddressList>();
+
+  const listRequests = vi
+    .spyOn(settings, "emailAddresses")
+    .mockResolvedValueOnce({ ...initial, secondary: [first, second] })
+    .mockReturnValueOnce(firstRefresh.promise)
+    .mockReturnValueOnce(secondRefresh.promise);
+
+  vi.spyOn(settings, "removeEmailAddress").mockResolvedValue(undefined);
+  renderGroup();
+
+  for (const address of [first.emailAddress, second.emailAddress]) {
+    fireEvent.click(await screen.findByRole("button", { name: `Remove ${address}` }));
+    const dialog = await screen.findByRole("alertdialog", { name: "Remove this email address?" });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  }
+
+  expect(listRequests).toHaveBeenCalledTimes(3);
+
+  await act(async () => secondRefresh.resolve({ ...initial, secondary: [] }));
+  expect(screen.getByText("No other addresses linked yet.")).toBeTruthy();
+
+  await act(async () => firstRefresh.resolve({ ...initial, secondary: [second] }));
+  expect(screen.getByText("No other addresses linked yet.")).toBeTruthy();
+  expect(screen.queryByText(second.emailAddress)).toBeNull();
+});
+
+it("describes unlinking the old primary when outgoing email is off", async () => {
+  const initial = await settings.emailAddresses();
+
+  vi.spyOn(settings, "emailAddresses").mockResolvedValue({ ...initial, canAdd: false });
+  renderGroup();
+
+  const button = await screen.findByRole("button", {
+    name: `Make ${SEEDED_LINKED_ADDRESS} primary`,
+  });
+
+  expect(
+    screen.getByText(/If you switch your primary address, the old one will be unlinked/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/we'll email the old one/)).toBeNull();
+  fireEvent.click(button);
+
+  const dialog = await screen.findByRole("alertdialog");
+
+  expect(dialog.textContent).toContain(
+    `Notifications will go to ${SEEDED_LINKED_ADDRESS}. ${PRIMARY} will be unlinked.`,
+  );
+  expect(dialog.textContent).not.toContain("we'll email");
 });
 
 it("asks before making a linked address primary and releasing the old primary", async () => {

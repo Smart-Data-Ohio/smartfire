@@ -801,7 +801,7 @@ async fn deactivate_person(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     c.app()
         .db
-        .write(move |tx| campfire_runtime::authentication::deactivate_user(tx, &mut user, &audit))
+        .write(move |tx| user.deactivate_with_audit(tx, &audit))
         .await
         .map_err(Error::internal)?;
     c.json(StatusCode::OK, &api::PersonRemoved { id })

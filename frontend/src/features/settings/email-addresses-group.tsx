@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { EmailAddressEntry } from "../../gen/EmailAddressEntry.ts";
 import type { EmailAddressList } from "../../gen/EmailAddressList.ts";
 import { ActionError } from "../../sync/run.ts";
@@ -160,11 +160,19 @@ export function EmailAddressesGroup({
   } | null>(null);
 
   const { busy, track } = useBusy();
+  const listRequest = useRef(0);
+  const canAdd = load.status === "ready" && load.list.canAdd;
 
   const fetchList = useCallback(() => {
+    const request = ++listRequest.current;
+
     settingsActions.emailAddresses().then(
-      (list) => setLoad({ status: "ready", list }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
+      (list) => {
+        if (request === listRequest.current) setLoad({ status: "ready", list });
+      },
+      (error: Error) => {
+        if (request === listRequest.current) setLoad({ status: "error", message: error.message });
+      },
     );
   }, []);
 
@@ -217,7 +225,11 @@ export function EmailAddressesGroup({
   return (
     <SettingsGroup
       title="Email addresses"
-      description="Sign in or reset your password with any of these. Notifications go to your primary address. If you switch your primary address, we'll email the old one a link to link it again."
+      description={`Sign in or reset your password with any of these. Notifications go to your primary address. ${
+        canAdd
+          ? "If you switch your primary address, we'll email the old one a link to link it again."
+          : "If you switch your primary address, the old one will be unlinked."
+      }`}
     >
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
@@ -247,7 +259,7 @@ export function EmailAddressesGroup({
           {load.list.secondary.length === 0 ? (
             <p className="settings-hint text-faint">No other addresses linked yet.</p>
           ) : null}
-          {load.list.canAdd ? (
+          {canAdd ? (
             <AddEmailAddress onSent={fetchList} />
           ) : (
             <p className="settings-hint text-faint">
@@ -268,9 +280,12 @@ export function EmailAddressesGroup({
           promoting === null ? null : (
             <span className="settings-email-address">
               Notifications will go to {promoting.entry.emailAddress}.
-              {promoting.previous === null
-                ? ""
-                : ` ${promoting.previous} will be unlinked, and we'll email it a link to link it again.`}
+              {promoting.previous === null ? null : (
+                <>
+                  {` ${promoting.previous} will be unlinked`}
+                  {canAdd ? ", and we'll email it a link to link it again." : "."}
+                </>
+              )}
             </span>
           )
         }

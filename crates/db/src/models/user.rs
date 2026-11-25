@@ -878,11 +878,18 @@ impl User {
         if let Some(address) = previous
             .as_deref()
             .filter(|address| !address.trim().is_empty())
-            && email_addresses::primary_conflict(tx.conn(), address, Some(self.id))?
+            && email_addresses::primary_conflict_for_secondary(tx.conn(), address, Some(self.id))?
         {
             return Err(email_addresses::invalid_primary(
                 "can't be changed because another account uses your current primary address",
             ));
+        }
+        if email_addresses::primary_conflict_for_secondary(
+            tx.conn(),
+            &linked.email_address,
+            Some(self.id),
+        )? {
+            return Err(email_addresses::invalid_primary("is already taken"));
         }
         email_addresses::EmailAddress::remove(tx, self.id, id)?;
         self.update(
@@ -979,6 +986,10 @@ impl User {
         tx: &mut Tx<'_>,
         audit: &super::audit_log::Context,
     ) -> Result<()> {
+        use super::audit_log::{AuditLog, NewAuditLog, Target, pair};
+
+        let before = self.status;
+        let target = Target::from(&*self);
         self.close_remote_connections(tx, false);
         // An agent's approvals leave their owners' and admins' inboxes with its user.
         let approvals = crate::sql::query_all(
@@ -1039,7 +1050,20 @@ impl User {
                 email_address: Some(email),
                 ..Default::default()
             },
-        )
+        )?;
+        AuditLog::record(
+            tx,
+            NewAuditLog {
+                action: "user.deactivate".into(),
+                target: Some(target),
+                changes: Some(serde_json::json!({
+                    "status": pair(serde_json::json!(before.name()), serde_json::json!("deactivated"))
+                })),
+                ..Default::default()
+            },
+            audit,
+        )?;
+        Ok(())
     }
 
     fn deactivated_email_address(&self) -> Option<String> {

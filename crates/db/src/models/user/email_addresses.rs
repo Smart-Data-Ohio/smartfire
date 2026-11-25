@@ -1,4 +1,6 @@
 //! Confirmed addresses attached to a user. The primary address lives on users.
+use std::collections::{HashMap, HashSet};
+
 use rusqlite::{Connection, Row, params};
 
 use crate::sql::{CachedStatements, query_all, query_one};
@@ -16,7 +18,10 @@ pub enum Confirmation {
     Added,
     AlreadyLinked,
     Taken,
+    LimitReached,
 }
+
+const MAX_SECONDARIES: i64 = 10;
 
 impl EmailAddress {
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
@@ -67,27 +72,31 @@ impl EmailAddress {
         )
     }
 
-    /// A primary change can request a re-link at the same instant the old address is released.
-    pub fn released_after(
+    /// A release retires older requests for its address, even from a previous owner.
+    pub fn confirmation_retired(
         conn: &Connection,
         user_id: i64,
         address: &str,
-        since: Timestamp,
+        after_audit_id: i64,
     ) -> Result<bool> {
         let normalized = normalize(address);
         let mut query = conn.prepare_cached(
-            "SELECT CASE action
+            "SELECT action, CASE action
                       WHEN 'user.email_address.remove' THEN json_extract(details, '$.email_address')
                       WHEN 'user.email.change' THEN json_extract(details, '$.email_address.before')
                     END
              FROM audit_logs
-             WHERE target_type = 'User' AND target_id = ?1
-               AND action IN ('user.email_address.remove', 'user.email.change') AND created_at > ?2",
+             WHERE id > ?2 AND target_type = 'User'
+               AND (action IN ('user.email_address.remove', 'user.email.change')
+                    OR (action = 'user.deactivate' AND target_id = ?1))",
         )?;
-        let mut rows = query.query(params![user_id, since])?;
+        let mut rows = query.query(params![user_id, after_audit_id])?;
         while let Some(row) = rows.next()? {
-            let removed: Option<String> = row.get(0)?;
-            if removed.is_some_and(|address| normalize(&address) == normalized) {
+            let action: String = row.get(0)?;
+            let removed: Option<String> = row.get(1)?;
+            if action == "user.deactivate"
+                || removed.is_some_and(|address| normalize(&address) == normalized)
+            {
                 return Ok(true);
             }
         }
@@ -118,6 +127,14 @@ impl EmailAddress {
             .is_some_and(|primary| normalize(primary) == normalize(address))
         {
             return Ok(Confirmation::AlreadyLinked);
+        }
+        let count: i64 = tx.conn().query_row_cached(
+            "SELECT count(*) FROM user_email_addresses WHERE user_id = ?",
+            [user.id],
+            |row| row.get(0),
+        )?;
+        if count >= MAX_SECONDARIES {
+            return Ok(Confirmation::LimitReached);
         }
         let now = tx.now();
         tx.conn().execute_cached(
@@ -152,7 +169,7 @@ pub(super) fn primary_conflict(
 }
 
 /// Secondary claims must also be unambiguous under password-reset matching.
-fn primary_conflict_for_secondary(
+pub(super) fn primary_conflict_for_secondary(
     conn: &Connection,
     address: &str,
     except: Option<i64>,
@@ -207,56 +224,40 @@ pub fn normalize(address: &str) -> String {
     }
 }
 
-/// Load both address sources in one statement. JSON keeps the number of binds constant for
-/// Slack workspaces of any size. The two IN clauses let SQLite use each address index where
-/// possible.
-pub(super) fn matches(
-    conn: &Connection,
-    addresses: &[&str],
-) -> Result<std::collections::HashMap<String, Vec<User>>> {
-    use std::collections::HashMap;
-
+/// Read both sources in one statement. Providers keep their primary comparison and fall back
+/// to the same Unicode-folded secondary keys used for address claims.
+pub(super) fn matches(conn: &Connection, addresses: &[&str]) -> Result<HashMap<String, Vec<User>>> {
     if addresses.is_empty() {
         return Ok(HashMap::new());
     }
-    // Keep SQLite's ASCII comparison for provider lookups.
-    let secondary_keys: Vec<_> = addresses
-        .iter()
-        .map(|address| address.trim().to_ascii_lowercase())
-        .collect();
-    let sql = "SELECT users.*, LOWER(users.email_address) AS matched_address, 0 AS secondary
+    let secondary_keys: HashSet<_> = addresses.iter().map(|address| normalize(address)).collect();
+    let mut query = conn.prepare_cached(
+        "SELECT users.*, LOWER(users.email_address) AS matched_address, 0 AS secondary
          FROM users WHERE LOWER(users.email_address) IN (SELECT value FROM json_each(?1))
          UNION ALL
-         SELECT users.*, LOWER(link.email_address) AS matched_address, 1 AS secondary
+         SELECT users.*, link.email_address AS matched_address, 1 AS secondary
          FROM user_email_addresses link JOIN users ON users.id = link.user_id
-         WHERE link.email_address COLLATE NOCASE IN (SELECT value FROM json_each(?2))
-         ORDER BY secondary, id";
-    let rows = query_all(
-        conn,
-        sql,
-        params![
-            serde_json::json!(addresses).to_string(),
-            serde_json::json!(secondary_keys).to_string()
-        ],
-        |row| {
-            Ok((
-                row.get::<_, bool>("secondary")?,
-                row.get::<_, String>("matched_address")?,
-                User::from_row(row)?,
-            ))
-        },
+         ORDER BY secondary, id",
     )?;
+    let mut rows = query.query([serde_json::json!(addresses).to_string()])?;
     let mut primary_matches = HashMap::<_, Vec<_>>::new();
     let mut secondary_matches = HashMap::new();
-    for (secondary, address, user) in rows {
-        if secondary {
-            secondary_matches.insert(address, user);
+    while let Some(row) = rows.next()? {
+        let address: String = row.get("matched_address")?;
+        if row.get::<_, bool>("secondary")? {
+            let normalized = normalize(&address);
+            if secondary_keys.contains(&normalized) {
+                secondary_matches.insert(normalized, User::from_row(row)?);
+            }
         } else {
-            primary_matches.entry(address).or_default().push(user);
+            primary_matches
+                .entry(address)
+                .or_default()
+                .push(User::from_row(row)?);
         }
     }
-    for (&address, normalized) in addresses.iter().zip(secondary_keys) {
-        if let Some(user) = secondary_matches.get(&normalized) {
+    for &address in addresses {
+        if let Some(user) = secondary_matches.get(&normalize(address)) {
             primary_matches
                 .entry(address.to_owned())
                 .or_insert_with(|| vec![user.clone()]);

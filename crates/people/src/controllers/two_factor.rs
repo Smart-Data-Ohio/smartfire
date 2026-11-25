@@ -1,6 +1,7 @@
 //! `app/controllers/two_factor`: domain writes are transactional; page rendering stays separate.
 use super::auth::{self, ResponseMode};
 use crate::app::AppCtx;
+use crate::authentication::PasswordSignInProof;
 use crate::concerns::{self, Before, current_session, require_current_user};
 use campfire_api_types::{TwoFactorSetupResponse, TwoFactorSetupState, TwoFactorSetupSubmission};
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
@@ -275,18 +276,18 @@ async fn render_setup(c: &mut Ctx, status: StatusCode) -> Result {
 
 /// Shared password/transfer/WS14 Google first-factor seam. Pending state grants no session.
 pub async fn begin_session_for(c: &mut Ctx, user: User, method: &str) -> Result {
-    begin_session_response(c, user, method, ResponseMode::Html).await
+    begin_session_response(c, user, method, None, ResponseMode::Html).await
 }
 
 pub async fn begin_session_response(
     c: &mut Ctx,
     user: User,
     method: &str,
+    proof: Option<PasswordSignInProof>,
     mode: ResponseMode,
 ) -> Result {
     let return_url = concerns::post_authenticating_url(c).await?;
     let user_id = user.id;
-    let proof = (method == concerns::PASSWORD_SIGN_IN).then(|| concerns::password_proof(c, &user));
     let enabled = c
         .app()
         .db
@@ -306,7 +307,7 @@ pub async fn begin_session_response(
     };
     match started {
         concerns::SessionStart::Started(_) => sign_in_audit(c, user, method.into(), factor).await?,
-        concerns::SessionStart::PasswordReplaced => return password_replaced(c, mode),
+        concerns::SessionStart::PasswordSignInInvalid => return restart_sign_in(c, mode),
         concerns::SessionStart::ChallengeRequired => {
             let now = c.now();
             c.session()
@@ -319,9 +320,8 @@ pub async fn begin_session_response(
     let return_url = concerns::post_authentication_destination(c, return_url).await?;
     mode.signed_in(c, &return_url)
 }
-/// A sign-in whose password was reset before it finished: back to sign in, as when a pending
-/// second factor has gone.
-fn password_replaced(c: &mut Ctx, mode: ResponseMode) -> Result {
+/// Return to sign in when its first factor or pending challenge is no longer valid.
+fn restart_sign_in(c: &mut Ctx, mode: ResponseMode) -> Result {
     concerns::session_keys::clear_two_factor_pending(c.session());
     mode.navigate(c, &c.url_for("/app/session/new"))
 }
@@ -458,7 +458,7 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     let user_id = user.id;
     let code = scalar(c, "code");
     let method = concerns::session_keys::two_factor_pending_method(c.session());
-    let proof = concerns::pending_password_proof(c);
+    let proof = concerns::session_keys::two_factor_pending_password(c.session());
     let mut context = audit_context(c)?;
     context.actor = Some(Actor::from(&user));
     let secrets = c.app().secrets.clone();
@@ -470,6 +470,11 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
     let device_id = existing_device_id
         .clone()
         .unwrap_or_else(concerns::new_device_id);
+    #[cfg(feature = "test-support")]
+    crate::authentication::test_hooks::run(
+        &crate::authentication::test_hooks::BEFORE_SESSION_WRITE,
+    )
+    .await;
     let outcome = c
         .app()
         .db
@@ -480,7 +485,7 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
                 &encryption,
                 crate::authentication::ChallengeSignIn {
                     user_id,
-                    password_proof: proof.as_deref(),
+                    password_proof: proof.as_ref(),
                     code: &code,
                     method: &method,
                     device_id: &device_id,
@@ -494,7 +499,7 @@ async fn challenge_create_response(c: &mut Ctx, mode: ResponseMode) -> Result {
         .await
         .map_err(Error::internal)?;
     match outcome {
-        crate::authentication::Challenge::Gone => password_replaced(c, mode),
+        crate::authentication::Challenge::Gone => restart_sign_in(c, mode),
         crate::authentication::Challenge::Accepted {
             session,
             remembered,

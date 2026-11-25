@@ -1733,54 +1733,28 @@ async fn used_backup(a: &TestApp, id: i64) -> i64 {
 
 #[tokio::test]
 async fn a_reset_before_the_challenge_write_leaves_the_backup_code_unused() {
-    use campfire_runtime::authentication::{Challenge, ChallengeSignIn, challenge};
+    use campfire_runtime::authentication::test_hooks::BEFORE_SESSION_WRITE;
+    use std::cell::RefCell;
+
     let (a, _) = app(&MAIL).await;
     let david = email_of(&a, DAVID).await;
     let backup = add_backup_code(&a).await;
-    let old_user = a
-        .db()
-        .read(|conn| campfire_db::User::find(conn, DAVID))
-        .await
-        .unwrap();
-    let secrets = a.booted.app.secrets.clone();
-    let proof = rails_compat::password_reset::sign_in_proof(
-        &secrets,
-        old_user.password_digest.as_deref().unwrap(),
-    );
-    let token = emailed_token(&a, &david).await;
-    assert_eq!(
-        a.anonymous()
-            .write(submit(&token, NEW_PASSWORD))
-            .await
-            .status,
-        StatusCode::OK,
-    );
+    let mut browser = a.anonymous();
+    let pending = browser.password_sign_in(&david, PASSWORD).await;
+    assert_eq!(pending.json()["kind"], "secondFactorRequired");
 
-    // A request has already checked the pending cookie, but the reset wins the writer lock.
-    let encryption = a.booted.app.ar_encryption.clone();
-    let outcome = a
-        .db()
-        .write(move |tx| {
-            challenge(
-                tx,
-                &secrets,
-                &encryption,
-                ChallengeSignIn {
-                    user_id: DAVID,
-                    password_proof: Some(&proof),
-                    code: BACKUP,
-                    method: "password",
-                    device_id: "reset-first",
-                    remember_device: true,
-                    notify_lockout: false,
-                    notify_new_sign_in: false,
-                },
-                &Default::default(),
-            )
-        })
-        .await
-        .unwrap();
-    assert!(matches!(outcome, Challenge::Gone));
+    let reply = BEFORE_SESSION_WRITE
+        .scope(
+            RefCell::new(Some(Box::pin(reset_password_during_request(
+                a.db().clone(),
+            )))),
+            browser.answer_challenge(BACKUP, true),
+        )
+        .await;
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new"})
+    );
     assert_eq!(used_backup(&a, backup).await, 0);
     assert_eq!(count(&a, SESSIONS, DAVID).await, 0);
     assert_eq!(count(&a, REMEMBERED, DAVID).await, 0);

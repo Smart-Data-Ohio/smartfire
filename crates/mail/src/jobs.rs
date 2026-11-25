@@ -30,14 +30,17 @@ pub struct EmailAddressConfirmation {
     // Jobs queued before fingerprints were recorded deserialize and skip delivery.
     #[serde(default)]
     password_fingerprint: Option<String>,
+    #[serde(default)]
+    pub after_audit_id: Option<i64>,
 }
 
 impl EmailAddressConfirmation {
-    pub fn new(user: &User, email_address: String) -> Self {
+    pub fn new(user: &User, email_address: String, after_audit_id: i64) -> Self {
         Self {
             user_id: user.id,
             email_address,
             password_fingerprint: Some(password_fingerprint(user)),
+            after_audit_id: Some(after_audit_id),
         }
     }
 
@@ -89,11 +92,17 @@ pub fn password_reset_later(tx: &mut Tx<'_>, email_address: String) {
         notification: Notification::PasswordReset { email_address },
     }));
 }
-pub fn email_address_confirmation_later(tx: &mut Tx<'_>, user: &User, email_address: String) {
+pub fn email_address_confirmation_later(
+    tx: &mut Tx<'_>,
+    user: &User,
+    email_address: String,
+    after_audit_id: i64,
+) {
     tx.emit_after_commit(Event::job(&DeliveryJob {
         notification: Notification::EmailAddressConfirmation(EmailAddressConfirmation::new(
             user,
             email_address,
+            after_audit_id,
         )),
     }));
 }

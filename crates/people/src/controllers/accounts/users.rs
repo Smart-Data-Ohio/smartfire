@@ -54,7 +54,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     c.app()
         .db
-        .write(move |tx| crate::authentication::deactivate_user(tx, &mut user, &audit))
+        .write(move |tx| user.deactivate_with_audit(tx, &audit))
         .await
         .map_err(Error::internal)?;
     redirect_to_edit_account(c)

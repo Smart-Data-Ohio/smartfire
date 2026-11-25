@@ -112,6 +112,14 @@ impl AuditLog {
             updated_at: row.get("updated_at")?,
         })
     }
+    pub fn latest_id(conn: &Connection) -> Result<i64> {
+        Ok(
+            conn.query_row("SELECT coalesce(max(id), 0) FROM audit_logs", [], |row| {
+                row.get(0)
+            })?,
+        )
+    }
+
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         query_one(
             conn,

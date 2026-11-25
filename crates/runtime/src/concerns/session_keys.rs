@@ -4,7 +4,7 @@
 //! - the pending second factor (`Authentication`, app/controllers/concerns/authentication.rb):
 //!   `two_factor_pending_user_id`, `two_factor_pending_expires_at` (epoch seconds) and
 //!   `two_factor_pending_method`, and, from a password sign-in, `two_factor_pending_password`
-//!   (Smartfire's: the proof of the password it checked, `password_reset::sign_in_proof`);
+//!   (Smartfire's proof of the checked password and the matched secondary address, if any);
 //! - sudo mode (`SudoMode`, app/controllers/concerns/sudo_mode.rb): `sudo_verified_at` (epoch
 //!   seconds) and the stashed `sudo_pending_request`;
 //! - Google step-up (`TwoFactorReauthentication`): `two_factor_reauthenticated_at`;
@@ -23,6 +23,7 @@ use serde_json::{Map, Value, json};
 use std::sync::LazyLock;
 
 use super::ruby_to_i;
+use crate::authentication::PasswordSignInProof;
 
 pub const TWO_FACTOR_PENDING_USER_KEY: &str = "two_factor_pending_user_id";
 pub const TWO_FACTOR_PENDING_EXPIRY_KEY: &str = "two_factor_pending_expires_at";
@@ -66,9 +67,12 @@ pub fn stash_two_factor_pending(session: &mut Session, user_id: i64, method: &st
 
 /// A password sign-in's proof of the password it checked, kept with its pending second factor;
 /// `None` for a sign-in by another method.
-pub fn stash_two_factor_pending_password(session: &mut Session, proof: Option<String>) {
+pub fn stash_two_factor_pending_password(
+    session: &mut Session,
+    proof: Option<PasswordSignInProof>,
+) {
     match proof {
-        Some(proof) => session.insert(TWO_FACTOR_PENDING_PASSWORD_KEY, proof),
+        Some(proof) => session.insert(TWO_FACTOR_PENDING_PASSWORD_KEY, json!(proof)),
         None => {
             session.remove(TWO_FACTOR_PENDING_PASSWORD_KEY);
         }
@@ -76,11 +80,8 @@ pub fn stash_two_factor_pending_password(session: &mut Session, proof: Option<St
 }
 
 /// The pending password sign-in's proof, if it has one.
-pub fn two_factor_pending_password(session: &Session) -> Option<String> {
-    session
-        .get(TWO_FACTOR_PENDING_PASSWORD_KEY)
-        .map(to_s)
-        .filter(|proof| !proof.is_empty())
+pub fn two_factor_pending_password(session: &Session) -> Option<PasswordSignInProof> {
+    serde_json::from_value(session.get(TWO_FACTOR_PENDING_PASSWORD_KEY)?.clone()).ok()
 }
 
 /// `two_factor_pending_user` up to its `User.active.find_by(id:)`: the id to look up, or `None`

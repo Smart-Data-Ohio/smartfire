@@ -17,6 +17,7 @@ pub struct Claim {
     pub user_id: i64,
     pub email_address: String,
     pub issued_at: Timestamp,
+    pub after_audit_id: i64,
     fingerprint: String,
 }
 
@@ -33,11 +34,18 @@ pub fn token(
     email_address: &str,
     password_digest: &str,
     issued_at: Timestamp,
+    after_audit_id: i64,
 ) -> String {
     let fingerprint = keyed_fingerprint(secrets, FINGERPRINT_SALT, &[password_digest]);
     let expires_at = issued_at + EXPIRES_IN;
     verifier(secrets).generate(
-        &json!([user_id, email_address, fingerprint, expires_at.to_string()]),
+        &json!([
+            user_id,
+            email_address,
+            fingerprint,
+            expires_at.to_string(),
+            after_audit_id
+        ]),
         Some(PURPOSE),
         None,
     )
@@ -50,6 +58,7 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
         Value::String(address),
         Value::String(fingerprint),
         Value::String(expiry),
+        Value::Number(audit_id),
     ] = claim.as_array()?.as_slice()
     else {
         return None;
@@ -62,6 +71,7 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
         user_id: id.as_i64()?,
         email_address: address.clone(),
         issued_at: expires_at.checked_sub(EXPIRES_IN).ok()?,
+        after_audit_id: audit_id.as_i64()?,
         fingerprint: fingerprint.clone(),
     })
 }
@@ -73,11 +83,29 @@ mod tests {
     use crate::signed_id::{avatar_token, transfer_id, verify_avatar_token, verify_transfer_id};
 
     #[test]
+    fn confirmation_without_an_audit_id_is_refused() {
+        let now = "2026-01-01T12:00:00Z".parse::<Timestamp>().unwrap();
+        let secrets = Secrets::new(&"a".repeat(128));
+        let fingerprint = keyed_fingerprint(&secrets, FINGERPRINT_SALT, &[""]);
+        let old_link = verifier(&secrets).generate(
+            &json!([
+                42,
+                "other@example.test",
+                fingerprint,
+                (now + EXPIRES_IN).to_string()
+            ]),
+            Some(PURPOSE),
+            None,
+        );
+        assert_eq!(verify(&secrets, &old_link, now), None);
+    }
+
+    #[test]
     fn confirmation_proves_the_address_until_expiry_and_has_its_own_purpose() {
         let now = "2026-01-01T12:00:00Z".parse::<Timestamp>().unwrap();
         let secrets = Secrets::new(&"a".repeat(128));
         let address = "other@example.test";
-        let link = token(&secrets, 42, address, "", now);
+        let link = token(&secrets, 42, address, "", now, 123);
         let claim = verify(
             &secrets,
             &link,
@@ -87,6 +115,7 @@ mod tests {
         assert_eq!(claim.user_id, 42);
         assert_eq!(claim.email_address, address);
         assert_eq!(claim.issued_at, now);
+        assert_eq!(claim.after_audit_id, 123);
         assert!(claim.matches_password(&secrets, ""));
         assert!(!claim.matches_password(&secrets, "new digest"));
         assert_eq!(verify(&secrets, &link, now + EXPIRES_IN), None);

@@ -41,7 +41,7 @@ async fn create_test_session(c: &mut campfire_kit::Ctx) -> campfire_kit::Result 
     .await?;
     let email = c.param_str("email_address").unwrap_or_default().to_owned();
     let password = c.param_str("password").unwrap_or_default().to_owned();
-    if let Some(user) = crate::concerns::authenticate_by(c, email, password).await? {
+    if let Some((user, _)) = crate::concerns::authenticate_by(c, email, password).await? {
         crate::concerns::start_new_verified_session_for(c, user).await?;
         let location = crate::concerns::post_authenticating_url(c).await?;
         c.redirect_to(&location)

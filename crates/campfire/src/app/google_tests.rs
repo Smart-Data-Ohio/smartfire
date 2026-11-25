@@ -1189,6 +1189,55 @@ async fn google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_co
     assert!(actions(&a).await.is_empty());
 }
 #[tokio::test]
+async fn google_sign_in_matches_a_unicode_folded_secondary_email_address() {
+    use campfire_db::models::google_identity::GoogleIdentity;
+    use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+    use campfire_db::{User, UserChanges};
+
+    let (a, recorded) = app().await;
+    a.db()
+        .write(|tx| {
+            let mut user = User::find(tx.conn(), DAVID)?;
+            user.update(
+                tx,
+                UserChanges {
+                    allow_google_email_link: true,
+                    ..Default::default()
+                },
+            )?;
+            assert_eq!(
+                EmailAddress::confirm(tx, &user, "strasse@smartdata.net")?,
+                Confirmation::Added
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut browser = a.anonymous();
+    let query = start(&mut browser, "/session/google").await;
+    let before = counts(&a).await;
+    answer(
+        &recorded,
+        claims(&a, &query, "folded-address", "straße@smartdata.net"),
+    );
+
+    let reply = callback(&mut browser, &query["state"]).await;
+    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+    assert_eq!(
+        reply.location(),
+        Some("http://campfire.test/app/two_factor/challenge")
+    );
+    let identity = a
+        .db()
+        .read(|conn| GoogleIdentity::for_user(conn, DAVID))
+        .await
+        .unwrap()
+        .expect("Google links to the existing member");
+    assert_eq!(identity.subject, "folded-address");
+    assert_eq!(counts(&a).await.0, before.0);
+}
+
+#[tokio::test]
 async fn google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity()
 {
     let (a, r) = app().await;
@@ -1278,6 +1327,8 @@ async fn google_sessions_ineligible_users_and_ambiguous_emails_never_create_iden
             Ok(())
         }).await.unwrap();
         let before = counts(&a).await;
+        let mut expected_actions = actions(&a).await;
+        expected_actions.push("session.sign_in.failure".into());
         let mut b = a.anonymous();
         b.get("/app/session/new").await;
         let q = start(&mut b, "/session/google").await;
@@ -1309,7 +1360,7 @@ async fn google_sessions_ineligible_users_and_ambiguous_emails_never_create_iden
             }),
             "{kind}"
         );
-        assert_eq!(actions(&a).await, vec!["session.sign_in.failure"]);
+        assert_eq!(actions(&a).await, expected_actions);
     }
 }
 #[tokio::test]

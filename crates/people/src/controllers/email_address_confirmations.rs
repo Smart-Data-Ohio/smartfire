@@ -1,7 +1,7 @@
 //! The link is sufficient to attach its address to its account, including from another device.
 use campfire_api_types::EmailAddressConfirmation;
 use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
-use campfire_db::{Connection, Timestamp, User};
+use campfire_db::{Connection, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use rails_compat::email_address_confirmation::{self, Claim};
 
@@ -17,6 +17,7 @@ enum Applied {
     Invalid,
     AccountMismatch,
     Taken,
+    LimitReached,
     Linked { viewer_is_owner: bool },
 }
 
@@ -104,6 +105,7 @@ async fn update(c: &mut Ctx) -> Result {
             }
             Ok(match result {
                 Confirmation::Taken => Applied::Taken,
+                Confirmation::LimitReached => Applied::LimitReached,
                 Confirmation::Added | Confirmation::AlreadyLinked => Applied::Linked {
                     viewer_is_owner: viewer == Some(claim.user_id),
                 },
@@ -121,6 +123,12 @@ async fn update(c: &mut Ctx) -> Result {
             StatusCode::UNPROCESSABLE_ENTITY,
             "emailAddress",
             "This email address is already linked to another account.",
+        ),
+        Applied::LimitReached => auth::field_error(
+            c,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "base",
+            "You can link up to 10 additional email addresses. Remove one and try again.",
         ),
         Applied::Linked { viewer_is_owner } => {
             c.flash()
@@ -146,11 +154,11 @@ fn confirmable_user(
         return Ok(None);
     };
     if !claim.matches_password(secrets, user.password_digest.as_deref().unwrap_or_default())
-        || EmailAddress::released_after(
+        || EmailAddress::confirmation_retired(
             conn,
             user.id,
             &claim.email_address,
-            Timestamp::from_jiff(claim.issued_at),
+            claim.after_audit_id,
         )?
     {
         return Ok(None);

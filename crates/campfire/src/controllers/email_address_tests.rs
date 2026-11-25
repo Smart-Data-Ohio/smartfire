@@ -119,12 +119,15 @@ async fn password_reset_between_authorization_and_promotion_returns_json_unautho
 }
 
 async fn token(a: &TestApp, user_id: i64, email: &str, age: SignedDuration) -> String {
-    let digest = a
+    let (digest, audit_id) = a
         .db()
-        .read(move |conn| {
-            Ok(User::find(conn, user_id)?
-                .password_digest
-                .unwrap_or_default())
+        .read_snapshot(move |conn| {
+            Ok((
+                User::find(conn, user_id)?
+                    .password_digest
+                    .unwrap_or_default(),
+                audit_log::AuditLog::latest_id(conn)?,
+            ))
         })
         .await
         .unwrap();
@@ -134,6 +137,7 @@ async fn token(a: &TestApp, user_id: i64, email: &str, age: SignedDuration) -> S
         email,
         &digest,
         a.booted.app.clock.now() - age,
+        audit_id,
     )
 }
 
@@ -157,7 +161,8 @@ async fn confirmation_job(a: &TestApp, user_id: i64, address: &str) -> EmailAddr
     a.db()
         .read(move |conn| {
             let user = User::find(conn, user_id)?;
-            Ok(EmailAddressConfirmation::new(&user, address))
+            let audit_id = audit_log::AuditLog::latest_id(conn)?;
+            Ok(EmailAddressConfirmation::new(&user, address, audit_id))
         })
         .await
         .unwrap()
@@ -521,8 +526,9 @@ async fn confirmation_names_the_account_and_refuses_a_different_viewer() {
 }
 
 #[tokio::test]
-async fn removing_an_address_retires_its_confirmation_and_queued_delivery() {
+async fn email_address_removal_retires_links_and_jobs_even_when_the_clock_goes_back() {
     let (a, clock) = app_with_clock(MAIL).await;
+    let a = a.without_job_runner().await;
     let requested_at = a.db().env().now();
     let token = token(&a, DAVID, LINKED, SignedDuration::ZERO).await;
     let mut owner = a.sign_in(DAVID).await;
@@ -533,16 +539,27 @@ async fn removing_an_address_retires_its_confirmation_and_queued_delivery() {
     );
     let listed = owner.get(ADDRESSES).await.json();
     let id = listed["secondary"][0]["id"].as_i64().unwrap();
+    capture_mail_jobs(&a).await;
+    assert_eq!(
+        owner.write(add(&LINKED.to_ascii_lowercase())).await.status,
+        StatusCode::OK
+    );
+    let job = queued_confirmation(&a).await;
 
-    clock.advance(SignedDuration::from_secs(1));
+    clock.advance(SignedDuration::from_secs(-1));
     let delete = Req::new(Method::DELETE, &format!("{ADDRESSES}/{id}"));
     assert_eq!(owner.write(delete).await.status, StatusCode::NO_CONTENT);
     let mut phone = a.anonymous();
     assert_invalid_confirmation(&mut phone, &token).await;
     assert!(
-        confirmation_message(&a, DAVID, &LINKED.to_ascii_lowercase(), requested_at)
-            .await
-            .is_none()
+        campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            job,
+            requested_at
+        )
+        .await
+        .unwrap()
+        .is_none()
     );
     assert_eq!(owner.get(ADDRESSES).await.json()["secondary"], json!([]));
 
@@ -558,6 +575,269 @@ async fn removing_an_address_retires_its_confirmation_and_queued_delivery() {
         StatusCode::OK
     );
     assert_invalid_confirmation(&mut phone, &token).await;
+}
+
+#[tokio::test]
+async fn email_address_release_by_another_owner_retires_links_and_jobs() {
+    let (a, clock) = app_with_clock(MAIL).await;
+    let a = a.without_job_runner().await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    capture_mail_jobs(&a).await;
+    let requested_at = a.db().env().now();
+    assert_eq!(
+        owner.write(add("strasse@example.test")).await.status,
+        StatusCode::OK
+    );
+    let job = queued_confirmation(&a).await;
+    let message = campfire_runtime::mail::email_address_confirmation_message(
+        &a.booted.app,
+        job.clone(),
+        requested_at,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+
+    clock.advance(SignedDuration::from_secs(1));
+    let address = link(&a, KEVIN, "straße@example.test").await;
+    let mut other = a.sign_in(KEVIN).await;
+    other.grant_sudo().await;
+    let delete = Req::new(Method::DELETE, &format!("{ADDRESSES}/{}", address.id));
+    assert_eq!(other.write(delete).await.status, StatusCode::NO_CONTENT);
+
+    assert_invalid_confirmation(&mut a.anonymous(), link_token(&message)).await;
+    assert!(
+        campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            job,
+            requested_at
+        )
+        .await
+        .unwrap()
+        .is_none()
+    );
+}
+
+#[tokio::test]
+async fn email_address_deactivation_retires_links_and_jobs_after_unban() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let mut owner = a.sign_in(KEVIN).await;
+    owner.grant_sudo().await;
+    capture_mail_jobs(&a).await;
+    let requested_at = a.db().env().now();
+    assert_eq!(owner.write(add(LINKED)).await.status, StatusCode::OK);
+    let job = queued_confirmation(&a).await;
+    let message = campfire_runtime::mail::email_address_confirmation_message(
+        &a.booted.app,
+        job.clone(),
+        requested_at,
+    )
+    .await
+    .unwrap()
+    .unwrap();
+
+    a.db()
+        .write(|tx| User::find(tx.conn(), KEVIN)?.deactivate(tx))
+        .await
+        .unwrap();
+    let mut admin = a.sign_in(DAVID).await;
+    admin.grant_sudo().await;
+    let unban = admin
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/api/v1/people/{KEVIN}/ban"),
+        ))
+        .await;
+    assert_eq!(unban.status, StatusCode::OK, "{}", unban.text());
+    assert!(
+        a.db()
+            .read(|conn| Ok(User::find(conn, KEVIN)?.is_active()))
+            .await
+            .unwrap()
+    );
+
+    assert_invalid_confirmation(&mut a.anonymous(), link_token(&message)).await;
+    assert!(
+        campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            job,
+            requested_at
+        )
+        .await
+        .unwrap()
+        .is_none()
+    );
+}
+
+#[tokio::test]
+async fn email_address_confirmation_job_without_an_audit_id_is_skipped() {
+    let a = app(MAIL).await;
+    let mut data = serde_json::to_value(confirmation_job(&a, DAVID, LINKED).await).unwrap();
+    assert!(
+        data.as_object_mut()
+            .unwrap()
+            .remove("after_audit_id")
+            .is_some()
+    );
+    let old_job = serde_json::from_value(data).unwrap();
+
+    let delivery = campfire_runtime::mail::email_address_confirmation_message(
+        &a.booted.app,
+        old_job,
+        a.db().env().now(),
+    )
+    .await
+    .unwrap();
+    assert!(delivery.is_none());
+}
+
+async fn session_count(a: &TestApp) -> i64 {
+    a.db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT count(*) FROM sessions WHERE user_id=?",
+                [DAVID],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap()
+}
+
+async fn remove_secondary(db: campfire_db::Database, id: i64) {
+    db.write(move |tx| {
+        assert!(EmailAddress::remove(tx, DAVID, id)?.is_some());
+        Ok(())
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn email_address_removed_after_password_check_starts_no_session() {
+    use campfire_runtime::authentication::test_hooks::BEFORE_SESSION_WRITE;
+    use std::cell::RefCell;
+
+    let a = app(&[]).await;
+    a.db()
+        .write(|tx| User::find(tx.conn(), DAVID)?.reset_two_factor(tx))
+        .await
+        .unwrap();
+    let linked = link(&a, DAVID, LINKED).await;
+    let before = session_count(&a).await;
+    let reply = BEFORE_SESSION_WRITE
+        .scope(
+            RefCell::new(Some(Box::pin(remove_secondary(a.db().clone(), linked.id)))),
+            a.anonymous().password_sign_in(LINKED, "secret123456"),
+        )
+        .await;
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new"})
+    );
+    assert_eq!(session_count(&a).await, before);
+}
+
+#[tokio::test]
+async fn email_address_removed_before_second_factor_write_starts_no_session() {
+    use campfire_runtime::authentication::test_hooks::BEFORE_SESSION_WRITE;
+    use std::cell::RefCell;
+
+    let a = app(&[]).await;
+    let linked = link(&a, DAVID, LINKED).await;
+    let mut browser = a.anonymous();
+    let started = browser.password_sign_in(LINKED, "secret123456").await;
+    assert_eq!(started.json()["kind"], "secondFactorRequired");
+    let encryption = a.booted.app.ar_encryption.clone();
+    let secret = a
+        .db()
+        .read(move |conn| {
+            campfire_db::TwoFactorCredential::for_user(conn, DAVID)?
+                .expect("David has two-step sign-in")
+                .secret(&encryption)
+        })
+        .await
+        .unwrap();
+    let code = rails_compat::totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
+    let before = session_count(&a).await;
+
+    let reply = BEFORE_SESSION_WRITE
+        .scope(
+            RefCell::new(Some(Box::pin(remove_secondary(a.db().clone(), linked.id)))),
+            browser.answer_challenge(&code, true),
+        )
+        .await;
+    assert_eq!(
+        reply.json(),
+        json!({"kind":"navigate","location":"http://campfire.test/app/session/new"})
+    );
+    assert_eq!(session_count(&a).await, before);
+    assert!(
+        browser.answer_challenge(&code, true).await.json()["location"]
+            .as_str()
+            .unwrap()
+            .ends_with("/app/session/new")
+    );
+}
+
+#[tokio::test]
+async fn email_address_confirmation_checks_the_ten_secondary_limit() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    capture_mail_jobs(&a).await;
+    assert_eq!(owner.write(add(LINKED)).await.status, StatusCode::OK);
+    let candidate = token(&a, DAVID, LINKED, SignedDuration::ZERO).await;
+    let tenth = token(&a, DAVID, "tenth@example.test", SignedDuration::ZERO).await;
+    a.db()
+        .write(|tx| {
+            let user = User::find(tx.conn(), DAVID)?;
+            for n in 1..=9 {
+                assert_eq!(
+                    EmailAddress::confirm(tx, &user, &format!("linked-{n}@example.test"))?,
+                    Confirmation::Added,
+                );
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut phone = a.anonymous();
+    for _ in 0..2 {
+        assert_eq!(
+            phone.write(confirmation(Method::PUT, &tenth)).await.status,
+            StatusCode::OK
+        );
+    }
+    let reply = phone.write(confirmation(Method::PUT, &candidate)).await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert_eq!(
+        reply.json()["fieldErrors"]["base"],
+        json!(["You can link up to 10 additional email addresses. Remove one and try again."]),
+    );
+    assert_eq!(
+        owner.write(add("extra@example.test")).await.status,
+        StatusCode::OK
+    );
+    let list = owner.get(ADDRESSES).await.json();
+    let secondaries = list["secondary"].as_array().unwrap();
+    assert_eq!(secondaries.len(), 10);
+    let id = secondaries[0]["id"].as_i64().unwrap();
+    let delete = Req::new(Method::DELETE, &format!("{ADDRESSES}/{id}"));
+    assert_eq!(owner.write(delete).await.status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        phone
+            .write(confirmation(Method::PUT, &candidate))
+            .await
+            .status,
+        StatusCode::OK
+    );
 }
 
 #[tokio::test]
@@ -874,17 +1154,18 @@ async fn profile_refuses_a_case_variant_of_its_own_secondary_with_make_primary_g
 }
 
 #[tokio::test]
-async fn make_primary_refuses_a_legacy_shared_primary() {
+async fn email_address_promotion_refuses_unicode_equivalent_legacy_primaries() {
     let a = app(MAIL).await.without_job_runner().await;
-    let previous = primary_of(&a, DAVID).await;
-    let shared = format!(" {}", previous.to_ascii_uppercase());
+    let previous = "strasse@example.test";
     a.db()
         .write(move |tx| {
             // Legacy rows predate checks for equivalent spellings.
-            tx.conn().execute(
-                "UPDATE users SET email_address=? WHERE id=?",
-                rusqlite::params![shared, KEVIN],
-            )?;
+            for (id, email) in [(DAVID, previous), (KEVIN, "straße@example.test")] {
+                tx.conn().execute(
+                    "UPDATE users SET email_address=? WHERE id=?",
+                    rusqlite::params![email, id],
+                )?;
+            }
             Ok(())
         })
         .await

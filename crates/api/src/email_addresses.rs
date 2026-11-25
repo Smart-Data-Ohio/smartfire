@@ -83,7 +83,7 @@ async fn request_confirmation(c: &mut Ctx) -> Result {
             if !authentication::credential_write_authorized(tx, &user, session_id)? {
                 return Ok(false);
             }
-            authentication::request_email_address_confirmation(tx, &user, destination);
+            authentication::request_email_address_confirmation(tx, &user, destination)?;
             Ok(true)
         })
         .await

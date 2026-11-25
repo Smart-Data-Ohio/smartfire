@@ -2298,10 +2298,10 @@ async fn email_address_confirmation_worker_delivers_only_the_available_address()
 
             let david = User::find(tx.conn(), DAVID)?;
             let mut jason = User::find(tx.conn(), JASON)?;
-            request(tx, &david, "free@example.test".into());
-            request(tx, &david, "claimed@example.test".into());
-            request(tx, &jason, "inactive@example.test".into());
-            request(tx, &david, "removed@example.test".into());
+            request(tx, &david, "free@example.test".into())?;
+            request(tx, &david, "claimed@example.test".into())?;
+            request(tx, &jason, "inactive@example.test".into())?;
+            request(tx, &david, "removed@example.test".into())?;
 
             assert_eq!(
                 EmailAddress::confirm(tx, &david, "Removed@example.test")?,
