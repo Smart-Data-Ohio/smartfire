@@ -1,6 +1,7 @@
 //! Typed durable jobs and the API consumed by WS9 security triggers.
 use campfire_db::{Event, Job, Tx, User};
 use campfire_jobs::{JobKind, RetryPolicy};
+use rails_compat::email_address_confirmation::ConfirmationCursor;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -31,17 +32,27 @@ pub struct EmailAddressConfirmation {
     #[serde(default)]
     password_fingerprint: Option<String>,
     #[serde(default)]
-    pub after_audit_id: Option<i64>,
+    after_audit_id: Option<i64>,
+    #[serde(default)]
+    after_deactivation_id: i64,
 }
 
 impl EmailAddressConfirmation {
-    pub fn new(user: &User, email_address: String, after_audit_id: i64) -> Self {
+    pub fn new(user: &User, email_address: String, cursor: ConfirmationCursor) -> Self {
         Self {
             user_id: user.id,
             email_address,
             password_fingerprint: Some(password_fingerprint(user)),
-            after_audit_id: Some(after_audit_id),
+            after_audit_id: Some(cursor.audit_id),
+            after_deactivation_id: cursor.deactivation_id,
         }
+    }
+
+    pub fn cursor(&self) -> Option<ConfirmationCursor> {
+        Some(ConfirmationCursor {
+            audit_id: self.after_audit_id?,
+            deactivation_id: self.after_deactivation_id,
+        })
     }
 
     pub fn matches_password(&self, user: &User) -> bool {
@@ -96,13 +107,13 @@ pub fn email_address_confirmation_later(
     tx: &mut Tx<'_>,
     user: &User,
     email_address: String,
-    after_audit_id: i64,
+    cursor: ConfirmationCursor,
 ) {
     tx.emit_after_commit(Event::job(&DeliveryJob {
         notification: Notification::EmailAddressConfirmation(EmailAddressConfirmation::new(
             user,
             email_address,
-            after_audit_id,
+            cursor,
         )),
     }));
 }

@@ -12,12 +12,18 @@ const FINGERPRINT_SALT: &str = "smartfire/email_address_confirmation/password_fi
 const PURPOSE: &str = "user/email_address_confirmation";
 pub const EXPIRES_IN: SignedDuration = SignedDuration::from_hours(24);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ConfirmationCursor {
+    pub audit_id: i64,
+    pub deactivation_id: i64,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Claim {
     pub user_id: i64,
     pub email_address: String,
     pub issued_at: Timestamp,
-    pub after_audit_id: i64,
+    pub cursor: ConfirmationCursor,
     fingerprint: String,
 }
 
@@ -34,7 +40,7 @@ pub fn token(
     email_address: &str,
     password_digest: &str,
     issued_at: Timestamp,
-    after_audit_id: i64,
+    cursor: ConfirmationCursor,
 ) -> String {
     let fingerprint = keyed_fingerprint(secrets, FINGERPRINT_SALT, &[password_digest]);
     let expires_at = issued_at + EXPIRES_IN;
@@ -44,7 +50,8 @@ pub fn token(
             email_address,
             fingerprint,
             expires_at.to_string(),
-            after_audit_id
+            cursor.audit_id,
+            cursor.deactivation_id
         ]),
         Some(PURPOSE),
         None,
@@ -59,9 +66,15 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
         Value::String(fingerprint),
         Value::String(expiry),
         Value::Number(audit_id),
+        trailing @ ..,
     ] = claim.as_array()?.as_slice()
     else {
         return None;
+    };
+    let deactivation_id = match trailing {
+        [] => 0,
+        [Value::Number(id)] => id.as_i64()?,
+        _ => return None,
     };
     let expires_at: Timestamp = expiry.parse().ok()?;
     if now >= expires_at {
@@ -71,7 +84,10 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
         user_id: id.as_i64()?,
         email_address: address.clone(),
         issued_at: expires_at.checked_sub(EXPIRES_IN).ok()?,
-        after_audit_id: audit_id.as_i64()?,
+        cursor: ConfirmationCursor {
+            audit_id: audit_id.as_i64()?,
+            deactivation_id,
+        },
         fingerprint: fingerprint.clone(),
     })
 }
@@ -101,11 +117,41 @@ mod tests {
     }
 
     #[test]
+    fn confirmation_with_only_an_audit_id_predates_deactivation_records() {
+        let now = "2026-01-01T12:00:00Z".parse::<Timestamp>().unwrap();
+        let secrets = Secrets::new(&"a".repeat(128));
+        let fingerprint = keyed_fingerprint(&secrets, FINGERPRINT_SALT, &[""]);
+        let link = verifier(&secrets).generate(
+            &json!([
+                42,
+                "other@example.test",
+                fingerprint,
+                (now + EXPIRES_IN).to_string(),
+                123
+            ]),
+            Some(PURPOSE),
+            None,
+        );
+        let claim = verify(&secrets, &link, now).unwrap();
+        assert_eq!(
+            claim.cursor,
+            ConfirmationCursor {
+                audit_id: 123,
+                deactivation_id: 0
+            }
+        );
+    }
+
+    #[test]
     fn confirmation_proves_the_address_until_expiry_and_has_its_own_purpose() {
         let now = "2026-01-01T12:00:00Z".parse::<Timestamp>().unwrap();
         let secrets = Secrets::new(&"a".repeat(128));
         let address = "other@example.test";
-        let link = token(&secrets, 42, address, "", now, 123);
+        let cursor = ConfirmationCursor {
+            audit_id: 123,
+            deactivation_id: 456,
+        };
+        let link = token(&secrets, 42, address, "", now, cursor);
         let claim = verify(
             &secrets,
             &link,
@@ -115,7 +161,7 @@ mod tests {
         assert_eq!(claim.user_id, 42);
         assert_eq!(claim.email_address, address);
         assert_eq!(claim.issued_at, now);
-        assert_eq!(claim.after_audit_id, 123);
+        assert_eq!(claim.cursor, cursor);
         assert!(claim.matches_password(&secrets, ""));
         assert!(!claim.matches_password(&secrets, "new digest"));
         assert_eq!(verify(&secrets, &link, now + EXPIRES_IN), None);

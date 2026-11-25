@@ -1200,3 +1200,8 @@ CREATE TABLE user_email_addresses (
 CREATE UNIQUE INDEX index_user_email_addresses_on_email_address
   ON user_email_addresses (email_address COLLATE NOCASE);
 CREATE INDEX index_user_email_addresses_on_user_id ON user_email_addresses (user_id);
+CREATE TABLE email_address_deactivations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  user_id INTEGER NOT NULL,
+  released_addresses TEXT NOT NULL
+);

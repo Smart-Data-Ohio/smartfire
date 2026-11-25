@@ -1,6 +1,7 @@
 //! Confirmed addresses attached to a user. The primary address lives on users.
 use std::collections::{HashMap, HashSet};
 
+use rails_compat::email_address_confirmation::ConfirmationCursor;
 use rusqlite::{Connection, Row, params};
 
 use crate::sql::{CachedStatements, query_all, query_one};
@@ -78,14 +79,40 @@ impl EmailAddress {
         )
     }
 
+    pub fn confirmation_cursor(conn: &Connection) -> Result<ConfirmationCursor> {
+        Ok(conn.query_row_cached(
+            "SELECT coalesce((SELECT max(id) FROM audit_logs), 0),
+                    coalesce((SELECT max(id) FROM email_address_deactivations), 0)",
+            [],
+            |row| {
+                Ok(ConfirmationCursor {
+                    audit_id: row.get(0)?,
+                    deactivation_id: row.get(1)?,
+                })
+            },
+        )?)
+    }
+
     /// A release retires older requests for its address, even from a previous owner.
     pub fn confirmation_retired(
         conn: &Connection,
         user_id: i64,
         address: &str,
-        after_audit_id: i64,
+        cursor: ConfirmationCursor,
     ) -> Result<bool> {
         let normalized = normalize(address);
+        let deactivated: bool = conn.query_row_cached(
+            "SELECT EXISTS (
+               SELECT 1 FROM email_address_deactivations
+               WHERE id > ?1 AND (user_id = ?2 OR ?3 IN (SELECT value FROM json_each(released_addresses)))
+             )",
+            params![cursor.deactivation_id, user_id, normalized],
+            |row| row.get(0),
+        )?;
+        if deactivated {
+            return Ok(true);
+        }
+        // Older releases can also be recorded in the audit log's deactivation details.
         let mut query = conn.prepare_cached(
             "SELECT action = 'user.deactivate' AND target_id IS ?1, CASE action
                       WHEN 'user.email_address.remove' THEN json_extract(details, '$.email_address')
@@ -98,7 +125,7 @@ impl EmailAddress {
              WHERE audit_logs.id > ?2 AND target_type = 'User'
                AND action IN ('user.email_address.remove', 'user.email.change', 'user.deactivate')",
         )?;
-        let mut rows = query.query(params![user_id, after_audit_id])?;
+        let mut rows = query.query(params![user_id, cursor.audit_id])?;
         while let Some(row) = rows.next()? {
             let owner_deactivated: bool = row.get(0)?;
             let removed: Option<String> = row.get(1)?;
@@ -151,6 +178,22 @@ impl EmailAddress {
         )?;
         Ok(Confirmation::Added)
     }
+}
+
+pub(super) fn record_deactivation(
+    tx: &Tx<'_>,
+    user_id: i64,
+    released_addresses: &[String],
+) -> Result<()> {
+    let addresses: Vec<_> = released_addresses
+        .iter()
+        .map(|address| normalize(address))
+        .collect();
+    tx.conn().execute_cached(
+        "INSERT INTO email_address_deactivations (user_id, released_addresses) VALUES (?, ?)",
+        params![user_id, serde_json::json!(addresses).to_string()],
+    )?;
+    Ok(())
 }
 
 /// Primary writes retain SQLite's ASCII comparison between primary addresses.

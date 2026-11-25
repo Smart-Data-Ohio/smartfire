@@ -444,7 +444,6 @@
           "target_id": 712064548,
           "target_label": "Kevin <kevin@37signals.com>",
           "details": {
-            "released_email_addresses": ["kevin@37signals.com"],
             "status": {
               "before": "active",
               "after": "deactivated"

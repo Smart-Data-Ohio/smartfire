@@ -217,7 +217,7 @@ pub async fn email_address_confirmation_message(
     else {
         return Ok(None);
     };
-    let Some(after_audit_id) = job.after_audit_id else {
+    let Some(cursor) = job.cursor() else {
         return Ok(None);
     };
     let expires_at = requested_at.jiff() + rails_compat::email_address_confirmation::EXPIRES_IN;
@@ -239,12 +239,7 @@ pub async fn email_address_confirmation_message(
             };
             if !job.matches_password(&user)
                 || !EmailAddress::is_available(conn, &email_address)?
-                || EmailAddress::confirmation_retired(
-                    conn,
-                    user_id,
-                    &email_address,
-                    after_audit_id,
-                )?
+                || EmailAddress::confirmation_retired(conn, user_id, &email_address, cursor)?
                 || password_changed_since(conn, user_id, requested_at)?
             {
                 return Ok(None);
@@ -261,7 +256,7 @@ pub async fn email_address_confirmation_message(
         &email_address,
         user.password_digest.as_deref().unwrap_or_default(),
         requested_at.jiff(),
-        after_audit_id,
+        cursor,
     );
     Ok(Some(outbound::email_address_confirmation(
         config,

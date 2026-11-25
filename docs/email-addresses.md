@@ -51,8 +51,9 @@ member is still active, the address is free, and the request is still valid. The
 retires earlier requests. Removing a secondary or replacing a primary retires earlier requests
 for that address across accounts. Smartfire compares audit IDs and folds address spelling.
 Deactivation retires every earlier request for the member, even after an unban. It also retires
-earlier requests from other members for every secondary and any primary it releases. Smartfire
-refuses jobs and links issued before it recorded audit IDs.
+earlier requests from other members for every secondary and any primary it releases. Deactivation
+records have their own sequence, which links and queued jobs also carry. Smartfire refuses jobs
+and links issued before it recorded audit IDs.
 
 Secondary address claims ignore surrounding whitespace and use Unicode case folding. Password
 sign-in and reset delivery first look for an exact primary or confirmed secondary address. If

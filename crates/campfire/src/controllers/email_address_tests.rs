@@ -119,14 +119,14 @@ async fn password_reset_between_authorization_and_promotion_returns_json_unautho
 }
 
 async fn token(a: &TestApp, user_id: i64, email: &str, age: SignedDuration) -> String {
-    let (digest, audit_id) = a
+    let (digest, cursor) = a
         .db()
         .read_snapshot(move |conn| {
             Ok((
                 User::find(conn, user_id)?
                     .password_digest
                     .unwrap_or_default(),
-                audit_log::AuditLog::latest_id(conn)?,
+                EmailAddress::confirmation_cursor(conn)?,
             ))
         })
         .await
@@ -137,7 +137,7 @@ async fn token(a: &TestApp, user_id: i64, email: &str, age: SignedDuration) -> S
         email,
         &digest,
         a.booted.app.clock.now() - age,
-        audit_id,
+        cursor,
     )
 }
 
@@ -161,8 +161,8 @@ async fn confirmation_job(a: &TestApp, user_id: i64, address: &str) -> EmailAddr
     a.db()
         .read(move |conn| {
             let user = User::find(conn, user_id)?;
-            let audit_id = audit_log::AuditLog::latest_id(conn)?;
-            Ok(EmailAddressConfirmation::new(&user, address, audit_id))
+            let cursor = EmailAddress::confirmation_cursor(conn)?;
+            Ok(EmailAddressConfirmation::new(&user, address, cursor))
         })
         .await
         .unwrap()
@@ -621,9 +621,8 @@ async fn email_address_release_by_another_owner_retires_links_and_jobs() {
 
 #[tokio::test]
 async fn email_address_deactivation_retires_another_owners_links_and_jobs() {
-    for primary in [false, true] {
-        let (a, clock) = app_with_clock(MAIL).await;
-        let a = a.without_job_runner().await;
+    for (primary, bot) in [(false, false), (true, false), (false, true), (true, true)] {
+        let a = app(MAIL).await.without_job_runner().await;
         let mut owner = a.sign_in(DAVID).await;
         owner.grant_sudo().await;
         capture_mail_jobs(&a).await;
@@ -642,11 +641,18 @@ async fn email_address_deactivation_retires_another_owners_links_and_jobs() {
         .unwrap()
         .unwrap();
 
-        clock.advance(SignedDuration::from_secs(1));
+        let removed_id = if bot {
+            a.db()
+                .write(|tx| Ok(User::create_bot(tx, "Removed bot", None)?.id))
+                .await
+                .unwrap()
+        } else {
+            KEVIN
+        };
         if primary {
             a.db()
-                .write(|tx| {
-                    User::find(tx.conn(), KEVIN)?.update(
+                .write(move |tx| {
+                    User::find(tx.conn(), removed_id)?.update(
                         tx,
                         UserChanges {
                             email_address: Some(Some("straße@example.test".into())),
@@ -657,12 +663,22 @@ async fn email_address_deactivation_retires_another_owners_links_and_jobs() {
                 .await
                 .unwrap();
         } else {
-            link(&a, KEVIN, "straße@example.test").await;
+            link(&a, removed_id, "straße@example.test").await;
         }
-        a.db()
-            .write(|tx| User::find(tx.conn(), KEVIN)?.deactivate(tx))
-            .await
-            .unwrap();
+        if bot {
+            let removed = owner
+                .write(Req::new(
+                    Method::DELETE,
+                    &format!("/account/bots/{removed_id}"),
+                ))
+                .await;
+            assert!(removed.status.is_redirection(), "{}", removed.text());
+        } else {
+            a.db()
+                .write(move |tx| User::find(tx.conn(), removed_id)?.deactivate(tx))
+                .await
+                .unwrap();
+        }
 
         let delivery = campfire_runtime::mail::email_address_confirmation_message(
             &a.booted.app,
@@ -677,9 +693,19 @@ async fn email_address_deactivation_retires_another_owners_links_and_jobs() {
         assert_eq!(
             (delivery.is_none(), replay.status),
             (true, StatusCode::BAD_REQUEST),
-            "primary={primary}"
+            "primary={primary}, bot={bot}"
         );
         assert_invalid_confirmation(&mut phone, token).await;
+        let fresh = confirmation_message(&a, DAVID, "strasse@example.test", requested_at)
+            .await
+            .expect("a request made after deactivation can send");
+        assert_eq!(
+            phone
+                .write(confirmation(Method::PUT, link_token(&fresh)))
+                .await
+                .status,
+            StatusCode::OK
+        );
     }
 }
 

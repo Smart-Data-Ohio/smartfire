@@ -170,6 +170,24 @@ pub fn update_role(
     Ok(())
 }
 
+/// `Accounts::UsersController#destroy`: snapshot the label before deactivation rewrites email.
+pub fn deactivate_user(tx: &mut Tx<'_>, user: &mut User, context: &Context) -> Result<()> {
+    let before = user.status;
+    let target = Target::from(&*user);
+    user.deactivate_with_audit(tx, context)?;
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "user.deactivate".into(),
+            target: Some(target),
+            changes: Some(json!({"status": pair(json!(before.name()), json!("deactivated"))})),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
+}
+
 /// `Users::BansController`: both actions accept every status; replays write no audit row.
 pub fn set_user_banned(
     tx: &mut Tx<'_>,
@@ -341,8 +359,8 @@ pub fn request_email_address_confirmation(
     user: &User,
     email_address: String,
 ) -> Result<()> {
-    let audit_id = AuditLog::latest_id(tx.conn())?;
-    campfire_mail::jobs::email_address_confirmation_later(tx, user, email_address, audit_id);
+    let cursor = EmailAddress::confirmation_cursor(tx.conn())?;
+    campfire_mail::jobs::email_address_confirmation_later(tx, user, email_address, cursor);
     Ok(())
 }
 

@@ -977,10 +977,6 @@ impl User {
         tx: &mut Tx<'_>,
         audit: &super::audit_log::Context,
     ) -> Result<()> {
-        use super::audit_log::{AuditLog, NewAuditLog, Target, pair};
-
-        let before = self.status;
-        let target = Target::from(&*self);
         self.close_remote_connections(tx, false);
         // An agent's approvals leave their owners' and admins' inboxes with its user.
         let approvals = crate::sql::query_all(
@@ -1042,7 +1038,6 @@ impl User {
         if previous != email {
             released_addresses.extend(previous);
         }
-        released_addresses.sort_unstable();
         // app/models/user.rb: manual OOO cannot survive account deactivation.
         conn.execute_cached(
             "UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?",
@@ -1056,20 +1051,7 @@ impl User {
                 ..Default::default()
             },
         )?;
-        AuditLog::record(
-            tx,
-            NewAuditLog {
-                action: "user.deactivate".into(),
-                target: Some(target),
-                changes: Some(serde_json::json!({
-                    "status": pair(serde_json::json!(before.name()), serde_json::json!("deactivated")),
-                    "released_email_addresses": released_addresses,
-                })),
-                ..Default::default()
-            },
-            audit,
-        )?;
-        Ok(())
+        email_addresses::record_deactivation(tx, self.id, &released_addresses)
     }
 
     /// `User::Bannable#ban`

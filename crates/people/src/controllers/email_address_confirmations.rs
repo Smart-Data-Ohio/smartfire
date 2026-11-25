@@ -154,12 +154,7 @@ fn confirmable_user(
         return Ok(None);
     };
     if !claim.matches_password(secrets, user.password_digest.as_deref().unwrap_or_default())
-        || EmailAddress::confirmation_retired(
-            conn,
-            user.id,
-            &claim.email_address,
-            claim.after_audit_id,
-        )?
+        || EmailAddress::confirmation_retired(conn, user.id, &claim.email_address, claim.cursor)?
     {
         return Ok(None);
     }
