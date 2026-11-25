@@ -275,21 +275,28 @@ async fn slack_review_email_matching_keeps_sqlite_lower_and_ruby_downcase() {
             review_owner_id(tx)?;
             tx.conn().execute("INSERT INTO users(id,name,email_address,created_at,updated_at) VALUES(812,'Existing',?,?,?)",params![case["existing"].as_str().unwrap(),tx.now(),tx.now()])?;
             let members = json!([{"id":"UREVIEW","name":"Incoming","profile":{"email":case["incoming"]}}]);
-            assert_eq!(map_page(tx,&run,&members,true,&HashSet::new())?,case["preview"],"{} preview",case["incoming"]);
-            let imported = map_page(tx,&run,&members,false,&HashSet::new());
-            if let Some(error) = case["error"].as_str() {
-                assert!(imported.unwrap_err().to_string().contains(error), "{} error", case["incoming"]);
-                let counts = tx.conn().query_row("SELECT (SELECT count(*) FROM slack_import_records),(SELECT count(*) FROM users)",[],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,i64>(1)?)))?;
-                assert_eq!(counts,(case["records"].as_i64().unwrap(),case["users"].as_i64().unwrap()));
+            if case["smartfire_email_in_use"] == true {
+                for dry in [true, false] {
+                    let error = map_page(tx, &run, &members, dry, &HashSet::new()).unwrap_err();
+                    assert_eq!(error.to_string(), "Slack user UREVIEW's email address is already in use");
+                }
+                let counts = tx.conn().query_row(
+                    "SELECT (SELECT count(*) FROM slack_import_records), (SELECT count(*) FROM users)",
+                    [],
+                    |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)),
+                )?;
+                assert_eq!(counts, (0, 2));
                 return Ok(());
             }
+            assert_eq!(map_page(tx,&run,&members,true,&HashSet::new())?,case["preview"],"{} preview",case["incoming"]);
+            let imported = map_page(tx,&run,&members,false,&HashSet::new());
             assert_eq!(imported?,case["stats"],"{} import",case["incoming"]);
             let actual = tx.conn().query_row("SELECT u.id,u.name,u.email_address,r.created_record FROM slack_import_records r JOIN users u ON u.id=r.record_id WHERE r.slack_key='UREVIEW'",[],|r|Ok(json!({"id":r.get::<_,i64>(0)?,"name":r.get::<_,String>(1)?,"email":r.get::<_,Option<String>>(2)?,"created":r.get::<_,bool>(3)?})))?;
             assert_eq!(actual,case["user"],"{} row",case["incoming"]);
             Ok(())
         }).await.unwrap();
     }
-    println!("Slack review email parity: 7 Rails preview/import cases matched");
+    println!("Slack review email checks: 4 Rails matches and 3 refused collisions");
 }
 
 #[tokio::test]

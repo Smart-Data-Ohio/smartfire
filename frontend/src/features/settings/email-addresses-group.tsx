@@ -222,15 +222,18 @@ export function EmailAddressesGroup({
     );
   };
 
+  const description =
+    "Sign in or reset your password with any of these. Notifications go to your primary address.";
+
+  const promotionDescription =
+    load.status !== "ready"
+      ? ""
+      : canAdd
+        ? " If you switch your primary address, we'll email the old one a link to link it again."
+        : " If you switch your primary address, the old one will be unlinked.";
+
   return (
-    <SettingsGroup
-      title="Email addresses"
-      description={`Sign in or reset your password with any of these. Notifications go to your primary address. ${
-        canAdd
-          ? "If you switch your primary address, we'll email the old one a link to link it again."
-          : "If you switch your primary address, the old one will be unlinked."
-      }`}
-    >
+    <SettingsGroup title="Email addresses" description={description + promotionDescription}>
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
       {load.status === "ready" ? (

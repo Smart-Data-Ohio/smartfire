@@ -620,6 +620,70 @@ async fn email_address_release_by_another_owner_retires_links_and_jobs() {
 }
 
 #[tokio::test]
+async fn email_address_deactivation_retires_another_owners_links_and_jobs() {
+    for primary in [false, true] {
+        let (a, clock) = app_with_clock(MAIL).await;
+        let a = a.without_job_runner().await;
+        let mut owner = a.sign_in(DAVID).await;
+        owner.grant_sudo().await;
+        capture_mail_jobs(&a).await;
+        let requested_at = a.db().env().now();
+        assert_eq!(
+            owner.write(add("strasse@example.test")).await.status,
+            StatusCode::OK
+        );
+        let job = queued_confirmation(&a).await;
+        let message = campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            job.clone(),
+            requested_at,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+        clock.advance(SignedDuration::from_secs(1));
+        if primary {
+            a.db()
+                .write(|tx| {
+                    User::find(tx.conn(), KEVIN)?.update(
+                        tx,
+                        UserChanges {
+                            email_address: Some(Some("straße@example.test".into())),
+                            ..Default::default()
+                        },
+                    )
+                })
+                .await
+                .unwrap();
+        } else {
+            link(&a, KEVIN, "straße@example.test").await;
+        }
+        a.db()
+            .write(|tx| User::find(tx.conn(), KEVIN)?.deactivate(tx))
+            .await
+            .unwrap();
+
+        let delivery = campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            job,
+            requested_at,
+        )
+        .await
+        .unwrap();
+        let mut phone = a.anonymous();
+        let token = link_token(&message);
+        let replay = phone.write(confirmation(Method::PUT, token)).await;
+        assert_eq!(
+            (delivery.is_none(), replay.status),
+            (true, StatusCode::BAD_REQUEST),
+            "primary={primary}"
+        );
+        assert_invalid_confirmation(&mut phone, token).await;
+    }
+}
+
+#[tokio::test]
 async fn email_address_deactivation_retires_links_and_jobs_after_unban() {
     let a = app(MAIL).await.without_job_runner().await;
     let mut owner = a.sign_in(KEVIN).await;
@@ -996,6 +1060,21 @@ async fn promotion_releases_a_legacy_mailbox_without_queuing_or_sending_confirma
     let queued = captured_mail_jobs(&a).await;
     let delivery = confirmation_message(&a, DAVID, &legacy, a.db().env().now()).await;
     assert_eq!((queued.len(), delivery.is_none()), (0, true));
+}
+
+#[tokio::test]
+async fn email_address_promotion_queues_no_confirmation_when_mail_is_disabled() {
+    let a = app(&[]).await.without_job_runner().await;
+    let owned = link(&a, DAVID, LINKED).await;
+    let mut owner = a.sign_in(DAVID).await;
+    owner.grant_sudo().await;
+    assert_eq!(owner.get(ADDRESSES).await.json()["canAdd"], false);
+    capture_mail_jobs(&a).await;
+
+    let reply = owner.write(promote(owned.id)).await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    assert_eq!(primary_of(&a, DAVID).await, LINKED);
+    assert!(captured_mail_jobs(&a).await.is_empty());
 }
 
 #[tokio::test]

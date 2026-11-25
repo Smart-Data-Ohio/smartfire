@@ -21,6 +21,12 @@ pub enum Confirmation {
     LimitReached,
 }
 
+#[derive(Debug)]
+pub enum ExternalEmailMatch {
+    Existing(Vec<User>),
+    Taken,
+}
+
 const MAX_SECONDARIES: i64 = 10;
 
 impl EmailAddress {
@@ -81,21 +87,22 @@ impl EmailAddress {
     ) -> Result<bool> {
         let normalized = normalize(address);
         let mut query = conn.prepare_cached(
-            "SELECT action, CASE action
+            "SELECT action = 'user.deactivate' AND target_id IS ?1, CASE action
                       WHEN 'user.email_address.remove' THEN json_extract(details, '$.email_address')
                       WHEN 'user.email.change' THEN json_extract(details, '$.email_address.before')
+                      WHEN 'user.deactivate' THEN released.value
                     END
              FROM audit_logs
-             WHERE id > ?2 AND target_type = 'User'
-               AND (action IN ('user.email_address.remove', 'user.email.change')
-                    OR (action = 'user.deactivate' AND target_id = ?1))",
+             LEFT JOIN json_each(CASE WHEN action = 'user.deactivate'
+                  THEN json_extract(details, '$.released_email_addresses') END) AS released
+             WHERE audit_logs.id > ?2 AND target_type = 'User'
+               AND action IN ('user.email_address.remove', 'user.email.change', 'user.deactivate')",
         )?;
         let mut rows = query.query(params![user_id, after_audit_id])?;
         while let Some(row) = rows.next()? {
-            let action: String = row.get(0)?;
+            let owner_deactivated: bool = row.get(0)?;
             let removed: Option<String> = row.get(1)?;
-            if action == "user.deactivate"
-                || removed.is_some_and(|address| normalize(&address) == normalized)
+            if owner_deactivated || removed.is_some_and(|address| normalize(&address) == normalized)
             {
                 return Ok(true);
             }
@@ -224,46 +231,76 @@ pub fn normalize(address: &str) -> String {
     }
 }
 
-/// Read both sources in one statement. Providers keep their primary comparison and fall back
-/// to the same Unicode-folded secondary keys used for address claims.
-pub(super) fn matches(conn: &Connection, addresses: &[&str]) -> Result<HashMap<String, Vec<User>>> {
+/// Use the provider's legacy lookup key for primaries and compare the original spelling for
+/// secondaries. The broader address-claim fold can block provisioning but can't match a user.
+pub fn match_external_addresses(
+    conn: &Connection,
+    addresses: &[&str],
+    primary_key: impl Fn(&str) -> String,
+) -> Result<HashMap<String, ExternalEmailMatch>> {
     if addresses.is_empty() {
         return Ok(HashMap::new());
     }
-    let secondary_keys: HashSet<_> = addresses.iter().map(|address| normalize(address)).collect();
+    let keys: Vec<_> = addresses
+        .iter()
+        .map(|&address| {
+            (
+                address,
+                primary_key(address),
+                trim(address).to_ascii_lowercase(),
+                normalize(address),
+            )
+        })
+        .collect();
+    let primary_keys: HashSet<_> = keys.iter().map(|(_, key, _, _)| key.as_str()).collect();
+    let secondary_keys: HashSet<_> = keys.iter().map(|(_, _, key, _)| key.as_str()).collect();
+    let collision_keys: HashSet<_> = keys.iter().map(|(_, _, _, key)| key.as_str()).collect();
+
     let mut query = conn.prepare_cached(
-        "SELECT users.*, LOWER(users.email_address) AS matched_address, 0 AS secondary
-         FROM users WHERE LOWER(users.email_address) IN (SELECT value FROM json_each(?1))
+        "SELECT users.*, users.email_address AS matched_address, LOWER(users.email_address) AS primary_key
+         FROM users WHERE users.email_address IS NOT NULL
          UNION ALL
-         SELECT users.*, link.email_address AS matched_address, 1 AS secondary
+         SELECT users.*, link.email_address AS matched_address, NULL AS primary_key
          FROM user_email_addresses link JOIN users ON users.id = link.user_id
-         ORDER BY secondary, id",
+         ORDER BY id",
     )?;
-    let mut rows = query.query([serde_json::json!(addresses).to_string()])?;
-    let mut primary_matches = HashMap::<_, Vec<_>>::new();
-    let mut secondary_matches = HashMap::new();
+    let mut rows = query.query([])?;
+    let mut primaries = HashMap::<_, Vec<_>>::new();
+    let mut secondaries = HashMap::new();
+    let mut taken = HashSet::new();
     while let Some(row) = rows.next()? {
         let address: String = row.get("matched_address")?;
-        if row.get::<_, bool>("secondary")? {
-            let normalized = normalize(&address);
-            if secondary_keys.contains(&normalized) {
-                secondary_matches.insert(normalized, User::from_row(row)?);
+        let folded = normalize(&address);
+        if collision_keys.contains(folded.as_str()) {
+            taken.insert(folded);
+        }
+        if let Some(key) = row.get::<_, Option<String>>("primary_key")? {
+            if primary_keys.contains(key.as_str()) {
+                primaries.entry(key).or_default().push(User::from_row(row)?);
             }
         } else {
-            primary_matches
-                .entry(address)
-                .or_default()
-                .push(User::from_row(row)?);
+            let key = trim(&address).to_ascii_lowercase();
+            if secondary_keys.contains(key.as_str()) {
+                secondaries.insert(key, User::from_row(row)?);
+            }
         }
     }
-    for &address in addresses {
-        if let Some(user) = secondary_matches.get(&normalize(address)) {
-            primary_matches
-                .entry(address.to_owned())
-                .or_insert_with(|| vec![user.clone()]);
-        }
-    }
-    Ok(primary_matches)
+
+    Ok(keys
+        .into_iter()
+        .filter_map(|(address, primary, secondary, folded)| {
+            let outcome = if let Some(users) = primaries.get(&primary) {
+                ExternalEmailMatch::Existing(users.clone())
+            } else if let Some(user) = secondaries.get(&secondary) {
+                ExternalEmailMatch::Existing(vec![user.clone()])
+            } else if taken.contains(&folded) {
+                ExternalEmailMatch::Taken
+            } else {
+                return None;
+            };
+            Some((address.to_owned(), outcome))
+        })
+        .collect())
 }
 
 #[cfg(test)]

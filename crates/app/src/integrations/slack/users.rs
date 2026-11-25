@@ -4,7 +4,8 @@ use std::collections::{HashMap, HashSet};
 use super::runner::{present, string, truthy};
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
-use campfire_db::{Connection, NewUser, Result, Room, Tx, User};
+use campfire_db::user::email_addresses::{ExternalEmailMatch, match_external_addresses, normalize};
+use campfire_db::{Connection, Error, NewUser, Result, Room, Tx, User};
 use indexmap::{IndexMap, IndexSet};
 use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
@@ -177,7 +178,10 @@ fn existing_keys(conn: &Connection, workspace: i64, members: &[Value]) -> Result
         .collect::<rusqlite::Result<_>>()?)
 }
 
-fn matchable_users(conn: &Connection, members: &[&Value]) -> Result<HashMap<String, User>> {
+fn matchable_users(
+    conn: &Connection,
+    members: &[&Value],
+) -> Result<HashMap<String, ExternalEmailMatch>> {
     // Rails deduplicates the original emails before String#downcase, and indexes
     // users in id order so the last matching user wins, including deactivated rows.
     let emails: IndexSet<_> = members
@@ -185,18 +189,10 @@ fn matchable_users(conn: &Connection, members: &[&Value]) -> Result<HashMap<Stri
         .filter(|member| !placeholder_only(member))
         .filter_map(|member| email(member))
         .collect();
-    let emails: Vec<_> = emails
-        .iter()
-        .map(|email| super::payload::downcase(email))
-        .collect();
     let addresses: Vec<_> = emails.iter().map(String::as_str).collect();
-    Ok(
-        User::find_by_any_lowercase_email_addresses(conn, &addresses)?
-            .into_iter()
-            .filter_map(|(address, mut users)| users.pop().map(|user| (address, user)))
-            .collect(),
-    )
+    match_external_addresses(conn, &addresses, super::payload::downcase)
 }
+
 pub fn ensure_author(tx: &mut Tx<'_>, run: &SlackImport, key: &str) -> Result<User> {
     if let Some(id) = mapped_id(tx.conn(), run.slack_workspace_id, "user", key)?
         && let Some(user) = User::find_by_id(tx.conn(), id)?
@@ -294,8 +290,7 @@ pub fn map_page(
     for member in &members {
         super::payload::at(member, "id")?;
     }
-    // Rails preloads known keys and email matches once, before creating any new placeholder.
-    // Duplicate fresh Slack ids/emails therefore remain genuine uniqueness failures.
+    // Load existing mappings and matches once for the page, before creating any placeholder.
     let known = existing_keys(tx.conn(), run.slack_workspace_id, &members)?;
     // Rails excludes already mapped identities before looking up profile emails. Dry
     // previews also inspect blank-id rows while building their email index; real imports
@@ -354,6 +349,7 @@ pub fn map_page(
         .map(|c| User::find_by_id(tx.conn(), c.user_id))
         .transpose()?
         .flatten();
+    let mut new_claims = HashSet::new();
     for member in fresh {
         let key = string(&member["id"]);
         let name = member_name(member);
@@ -366,12 +362,14 @@ pub fn map_page(
             ("bots", None)
         } else if placeholder_only(member) || email.as_ref().is_none_or(|s| s.trim().is_empty()) {
             ("deactivated", None)
-        } else if let Some(user) =
-            email_index.get(&super::payload::downcase(email.as_ref().unwrap()))
-        {
-            ("matched", Some(user.clone()))
         } else {
-            ("placeholders", None)
+            let address = email.as_deref().expect("nonempty email");
+            match email_index.get(address) {
+                Some(ExternalEmailMatch::Existing(users)) => ("matched", users.last().cloned()),
+                Some(ExternalEmailMatch::Taken) => return Err(email_in_use(&key)),
+                None if new_claims.insert(normalize(address)) => ("placeholders", None),
+                None => return Err(email_in_use(&key)),
+            }
         };
         if !dry {
             let created = existing.is_none();
@@ -424,4 +422,10 @@ pub fn map_page(
         super::runner::add(&mut delta["total"], 1);
     }
     Ok(delta)
+}
+
+fn email_in_use(key: &str) -> Error {
+    Error::Other(format!(
+        "Slack user {key}'s email address is already in use"
+    ))
 }

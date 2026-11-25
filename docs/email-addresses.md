@@ -19,7 +19,7 @@ the account the address will join.
 | `GET /confirmations/:token` | Empty | 200 `{emailAddress: string, accountName: string, requiresSignIn: boolean, accountMismatch: boolean}`. A signed-in viewer whose account differs from the link's sees `accountMismatch: true`. |
 | `PUT /confirmations/:token` | Empty | 200 `{kind: "navigate", location: string}`. Goes to `/app/settings` with a session for the link's account or `/app/session/new` without a session. Both carry a flash notice. |
 | `DELETE /:id` | Empty | 204. Requires sudo and an owned secondary address. |
-| `POST /:id/primary` | Empty | 204. Requires sudo and an owned secondary address. The old primary is released. With outgoing mail configured, Smartfire sends a confirmation link if the old primary is free. |
+| `POST /:id/primary` | Empty | 204. Requires sudo and an owned secondary address. The old primary is released. Smartfire queues a confirmation link for a free old primary when outgoing mail is available at promotion. Delivery checks mail availability again. |
 
 Management failures use `{error: {_tag, message, ...}}`. The request determines the tag and
 status.
@@ -50,16 +50,20 @@ member is still active, the address is free, and the request is still valid. The
 `/app/email_addresses/confirm/:token` and expires 24 hours after the request. A password change
 retires earlier requests. Removing a secondary or replacing a primary retires earlier requests
 for that address across accounts. Smartfire compares audit IDs and folds address spelling.
-Deactivation retires every earlier request for the member, even after an unban. Smartfire refuses
-jobs and links issued before it recorded audit IDs.
+Deactivation retires every earlier request for the member, even after an unban. It also retires
+earlier requests from other members for every secondary and any primary it releases. Smartfire
+refuses jobs and links issued before it recorded audit IDs.
 
 Secondary address claims ignore surrounding whitespace and use Unicode case folding. Password
 sign-in and reset delivery first look for an exact primary or confirmed secondary address. If
 neither matches, they use the claim rules across both address sources and require one active
-account. Google sign-in and integrations keep their primary address comparisons and use Unicode
-folding for secondary matches. A password sign-in through a secondary checks that its linked row
-still belongs to the member when the session is created, including after two-step verification.
-A password sign-in still waiting for its second step when this check is deployed must start again.
-A reset matched to a secondary goes to its confirmed spelling. Removing the secondary retires
-reset links issued to that address, including after re-linking. Deactivation releases secondary
-addresses.
+account. Google sign-in, Slack import, and inbound mail keep their primary address comparisons.
+They match a confirmed secondary by its spelling, ignoring surrounding whitespace and ASCII case.
+If a lookup misses and the claim rules find an address already in use, Google refuses sign-in
+and Slack marks the import failed. Inbound mail treats a sender with a missed lookup as unknown.
+
+A password sign-in through a secondary checks that its linked row still belongs to the member
+when the session is created, including after two-step verification. A password sign-in still
+waiting for its second step when this check is deployed must start again. A reset matched to a
+secondary goes to its confirmed spelling. Removing the secondary retires reset links issued to
+that address, including after re-linking.

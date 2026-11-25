@@ -137,6 +137,7 @@ async fn promote(c: &mut Ctx) -> Result {
     require_sudo(c).await?;
     let id = address_id(c)?;
     let context = admin::audit_context(c)?;
+    let mail_available = c.app().mail.config.password_reset_available();
     let session_id = session_id(c);
     #[cfg(feature = "test-support")]
     crate::test_hooks::before_email_address_write(c.app().db.path(), user.id).await;
@@ -144,7 +145,14 @@ async fn promote(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            authentication::promote_email_address(tx, &mut user, id, session_id, &context)
+            authentication::promote_email_address(
+                tx,
+                &mut user,
+                id,
+                session_id,
+                mail_available,
+                &context,
+            )
         })
         .await
         .map_err(Error::internal)?;

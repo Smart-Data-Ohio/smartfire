@@ -372,6 +372,7 @@ pub fn promote_email_address(
     user: &mut User,
     id: i64,
     session_id: Option<i64>,
+    mail_available: bool,
     context: &Context,
 ) -> Result<bool> {
     if !profile_write_authorized(tx, user, session_id, true, true)? {
@@ -379,9 +380,10 @@ pub fn promote_email_address(
     }
     let previous = user.promote_email_address(tx, id)?;
     audit_primary_email_change(tx, user, previous.as_deref(), context)?;
-    if let Some(address) = previous
-        .as_deref()
-        .and_then(campfire_mail::outbound::bare_confirmation_address)
+    if mail_available
+        && let Some(address) = previous
+            .as_deref()
+            .and_then(campfire_mail::outbound::bare_confirmation_address)
         && EmailAddress::is_available(tx.conn(), address)?
     {
         request_email_address_confirmation(tx, user, address.to_owned())?;

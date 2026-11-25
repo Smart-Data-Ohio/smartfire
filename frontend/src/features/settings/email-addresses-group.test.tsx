@@ -218,6 +218,20 @@ it("keeps the latest list when two removal refreshes finish out of order", async
   expect(screen.queryByText(second.emailAddress)).toBeNull();
 });
 
+it("waits for the email address list before describing what happens to the old primary", async () => {
+  const initial = await settings.emailAddresses();
+  const list = Promise.withResolvers<EmailAddressList>();
+
+  vi.spyOn(settings, "emailAddresses").mockReturnValue(list.promise);
+  renderGroup();
+
+  expect(screen.getByText(/Notifications go to your primary address/)).toBeTruthy();
+  expect(screen.queryByText(/If you switch your primary address/)).toBeNull();
+
+  await act(async () => list.resolve(initial));
+  expect(screen.getByText(/we'll email the old one a link/)).toBeTruthy();
+});
+
 it("describes unlinking the old primary when outgoing email is off", async () => {
   const initial = await settings.emailAddresses();
 

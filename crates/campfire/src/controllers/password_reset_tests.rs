@@ -1650,6 +1650,7 @@ async fn make_primary_rechecks_the_session_digest_and_email_snapshot() {
                     &mut user,
                     secondary.id,
                     Some(session_id),
+                    true,
                     &Default::default(),
                 )
             })

@@ -5,6 +5,7 @@ use crate::{
     jobs::{IncinerationJob, MessageCreated, RoutingJob},
     parse::{Email, MAX_MIME_DEPTH, Verdict, authenticated_sender},
 };
+use campfire_db::user::email_addresses::{ExternalEmailMatch, match_external_addresses};
 use campfire_db::{
     Attachment, Connection, Database, Event, Membership, Message, NewMessage, Room, Timestamp, Tx,
     User,
@@ -197,10 +198,10 @@ fn creator(
 ) -> campfire_db::Result<(User, bool)> {
     if email.single_from
         && let Some(address) = &email.from
+        && let Some(ExternalEmailMatch::Existing(users)) =
+            match_external_addresses(tx.conn(), &[address], unicode::downcase)?.remove(address)
     {
-        let normalized = unicode::downcase(address);
-        let mut users = User::find_by_any_lowercase_email_addresses(tx.conn(), &[&normalized])?;
-        for user in users.remove(&normalized).into_iter().flatten() {
+        for user in users {
             if user.is_active()
                 && user.role != campfire_db::Role::Bot
                 && tx.conn().query_row(

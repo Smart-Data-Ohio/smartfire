@@ -5,6 +5,7 @@ use rails_compat::unicode::downcase;
 use rusqlite::{OptionalExtension, Row, params};
 use serde_json::{Map, Value};
 
+use crate::user::email_addresses::{ExternalEmailMatch, match_external_addresses};
 use crate::{Connection, Error, NewUser, Result, Role, Status, Timestamp, Tx, User};
 
 #[derive(Debug, Clone)]
@@ -110,10 +111,11 @@ impl GoogleIdentity {
                 kind: ResolutionKind::Existing,
             });
         }
-        let address = downcase(&email);
-        let users = User::find_by_any_lowercase_email_addresses(tx.conn(), &[&address])?
-            .remove(&address)
-            .unwrap_or_default();
+        let users = match match_external_addresses(tx.conn(), &[&email], downcase)?.remove(&email) {
+            Some(ExternalEmailMatch::Existing(users)) => users,
+            Some(ExternalEmailMatch::Taken) => return reject("email_in_use"),
+            None => Vec::new(),
+        };
         if users.len() > 1 {
             return reject("ambiguous");
         }

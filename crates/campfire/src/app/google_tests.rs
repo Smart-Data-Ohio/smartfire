@@ -1189,7 +1189,7 @@ async fn google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_co
     assert!(actions(&a).await.is_empty());
 }
 #[tokio::test]
-async fn google_sign_in_matches_a_unicode_folded_secondary_email_address() {
+async fn google_sign_in_refuses_folded_collisions_and_matches_ascii_case() {
     use campfire_db::models::google_identity::GoogleIdentity;
     use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
     use campfire_db::{User, UserChanges};
@@ -1201,6 +1201,7 @@ async fn google_sign_in_matches_a_unicode_folded_secondary_email_address() {
             user.update(
                 tx,
                 UserChanges {
+                    email_address: Some(Some("Équipe@smartdata.net".into())),
                     allow_google_email_link: true,
                     ..Default::default()
                 },
@@ -1213,16 +1214,29 @@ async fn google_sign_in_matches_a_unicode_folded_secondary_email_address() {
         })
         .await
         .unwrap();
+    let before = counts(&a).await;
+    for email in ["straße@smartdata.net", "équipe@smartdata.net"] {
+        let mut browser = a.anonymous();
+        let query = start(&mut browser, "/session/google").await;
+        answer(&recorded, claims(&a, &query, email, email));
+
+        let reply = callback(&mut browser, &query["state"]).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+        assert_eq!(
+            reply.location(),
+            Some("http://campfire.test/app/session/new")
+        );
+        assert!(sign_in_flash(&mut browser).await.contains("already in use"));
+        assert_eq!(counts(&a).await, before);
+    }
+
     let mut browser = a.anonymous();
     let query = start(&mut browser, "/session/google").await;
-    let before = counts(&a).await;
     answer(
         &recorded,
-        claims(&a, &query, "folded-address", "straße@smartdata.net"),
+        claims(&a, &query, "ascii-address", "STRASSE@smartdata.net"),
     );
-
     let reply = callback(&mut browser, &query["state"]).await;
-    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
     assert_eq!(
         reply.location(),
         Some("http://campfire.test/app/two_factor/challenge")
@@ -1233,7 +1247,7 @@ async fn google_sign_in_matches_a_unicode_folded_secondary_email_address() {
         .await
         .unwrap()
         .expect("Google links to the existing member");
-    assert_eq!(identity.subject, "folded-address");
+    assert_eq!(identity.subject, "ascii-address");
     assert_eq!(counts(&a).await.0, before.0);
 }
 

@@ -307,15 +307,6 @@ impl User {
         )
     }
 
-    /// Matching for callers that already lowercase primary addresses. Keep all matching legacy
-    /// primaries in id order: Google rejects ambiguity and Slack takes the last primary match.
-    pub fn find_by_any_lowercase_email_addresses(
-        conn: &Connection,
-        addresses: &[&str],
-    ) -> Result<std::collections::HashMap<String, Vec<Self>>> {
-        email_addresses::matches(conn, addresses)
-    }
-
     pub fn all(conn: &Connection) -> Result<Vec<Self>> {
         query_all(conn, r#"SELECT * FROM "users""#, [], Self::from_row)
     }
@@ -1033,11 +1024,25 @@ impl User {
         }
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         lifecycle::deactivate(tx, self.id, audit)?;
-        conn.execute_cached(
-            "DELETE FROM user_email_addresses WHERE user_id = ?",
+        let mut released_addresses: Vec<String> = query_all(
+            conn,
+            "DELETE FROM user_email_addresses WHERE user_id = ? RETURNING email_address",
             [self.id],
+            |row| row.get(0),
         )?;
-        let email = self.deactivated_email_address();
+        let previous: Option<String> = conn.query_row_cached(
+            "SELECT email_address FROM users WHERE id=?",
+            [self.id],
+            |row| row.get(0),
+        )?;
+        let email = previous.as_ref().map(|address| {
+            let uuid = sql::uuid();
+            address.replace('@', &format!("-deactivated-{uuid}@"))
+        });
+        if previous != email {
+            released_addresses.extend(previous);
+        }
+        released_addresses.sort_unstable();
         // app/models/user.rb: manual OOO cannot survive account deactivation.
         conn.execute_cached(
             "UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?",
@@ -1057,20 +1062,14 @@ impl User {
                 action: "user.deactivate".into(),
                 target: Some(target),
                 changes: Some(serde_json::json!({
-                    "status": pair(serde_json::json!(before.name()), serde_json::json!("deactivated"))
+                    "status": pair(serde_json::json!(before.name()), serde_json::json!("deactivated")),
+                    "released_email_addresses": released_addresses,
                 })),
                 ..Default::default()
             },
             audit,
         )?;
         Ok(())
-    }
-
-    fn deactivated_email_address(&self) -> Option<String> {
-        let uuid = sql::uuid();
-        self.email_address
-            .as_ref()
-            .map(|e| e.replace('@', &format!("-deactivated-{uuid}@")))
     }
 
     /// `User::Bannable#ban`

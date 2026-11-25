@@ -171,6 +171,7 @@
     {
       "incoming": "équipe@example.com",
       "existing": "Équipe@example.com",
+      "smartfire_email_in_use": true,
       "preview": {
         "matched": 0,
         "placeholders": 1,
@@ -219,6 +220,7 @@
     {
       "incoming": "Équipe@example.com",
       "existing": "Équipe@example.com",
+      "smartfire_email_in_use": true,
       "preview": {
         "matched": 0,
         "placeholders": 1,
@@ -281,6 +283,7 @@
     {
       "incoming": "οσ@example.com",
       "existing": "ΟΣ@example.com",
+      "smartfire_email_in_use": true,
       "preview": {
         "matched": 0,
         "placeholders": 1,
