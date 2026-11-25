@@ -759,6 +759,233 @@ async fn slack_placeholder_claim_preserves_mention_activity_and_existing_state()
 }
 
 #[tokio::test]
+async fn slack_placeholder_claim_preserves_calendar_and_board_activity() {
+    use campfire_db::{
+        ActivityItem, BoardSlaNudge, CalendarEvent, ChannelThread, EventAttendance,
+        NewBoardSlaNudge, NewCalendarEvent, NewChannelThread,
+    };
+
+    let a = app(MAIL).await.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let from = placeholder.id;
+    let (events, nudges, expected_collision) = a
+        .db()
+        .write(move |tx| {
+            let mut events = Vec::new();
+            for (name, collision) in [
+                ("Calendar", false),
+                ("Team calendar", true),
+                ("Events", false),
+            ] {
+                let members = if collision {
+                    vec![KEVIN, from, DAVID]
+                } else {
+                    vec![KEVIN, from]
+                };
+                let room = Room::create_for(tx, RoomType::Closed, Some(name), KEVIN, &members)?;
+                for user_id in members {
+                    Membership::find_by_room_and_user(tx.conn(), room.id, user_id)?
+                        .unwrap()
+                        .update_involvement(tx, Involvement::Everything)?;
+                }
+                let event = CalendarEvent::create(
+                    tx,
+                    NewCalendarEvent {
+                        room_id: room.id,
+                        organizer_id: KEVIN,
+                        title: "Planning".into(),
+                        starts_at: Some(tx.now().since(SignedDuration::from_secs(3600))),
+                        time_zone: "UTC".into(),
+                        ..Default::default()
+                    },
+                )?;
+                events.push(event);
+            }
+            let board = Room::create_for(
+                tx,
+                RoomType::Board,
+                Some("Engineering"),
+                KEVIN,
+                &[KEVIN, from, DAVID],
+            )?;
+            let thread = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: board.id,
+                    creator_id: KEVIN,
+                    name: Some("Board task".into()),
+                    work_status: Some("in_progress".into()),
+                    work_owner_id: Some(from),
+                    ..Default::default()
+                },
+            )?;
+            let mut nudges = Vec::new();
+            for stage in ["nudge", "escalation"] {
+                nudges.push(BoardSlaNudge::claim_and_notify(
+                    tx,
+                    NewBoardSlaNudge {
+                        room_id: board.id,
+                        channel_thread_id: thread.id,
+                        recipient_id: from,
+                        work_status: Some("in_progress".into()),
+                        stage: Some(stage.into()),
+                        status_entered_at: Some(tx.now()),
+                    },
+                    false,
+                )?);
+            }
+            // Model a pre-existing destination row for the same persisted nudge.
+            let collision =
+                ActivityItem::refresh_unread(tx, DAVID, "BoardSlaNudge", nudges[1].id, "work_sla")?
+                    .mark_read(tx)?
+                    .mark_handled(tx)?;
+            Ok((events, nudges, collision))
+        })
+        .await
+        .unwrap();
+    let sources = [
+        ("Event", events[0].id, "event_invitation"),
+        ("Event", events[1].id, "event_invitation"),
+        ("Event", events[2].id, "event_invitation"),
+        ("BoardSlaNudge", nudges[0].id, "work_sla"),
+        ("BoardSlaNudge", nudges[1].id, "work_sla"),
+    ];
+    let expected = a
+        .db()
+        .write(move |tx| {
+            // The third invite has an RSVP. The first has neither an RSVP nor a collision.
+            EventAttendance::create(tx, sources[2].1, from, "maybe")?;
+            let existing =
+                ActivityItem::find_by_user_and_source(tx.conn(), DAVID, "Event", sources[1].1)?
+                    .unwrap()
+                    .mark_read(tx)?
+                    .mark_handled(tx)?;
+            let mut expected = Vec::new();
+            for (source_type, source_id, event_type) in sources {
+                let item =
+                    ActivityItem::find_by_user_and_source(tx.conn(), from, source_type, source_id)?
+                        .unwrap();
+                assert_eq!(item.event_type, event_type);
+                assert!(item.unread());
+                expected.push(item);
+            }
+            expected[1] = existing;
+            expected[4] = expected_collision;
+            Ok(expected)
+        })
+        .await
+        .unwrap();
+
+    confirm_claim(&a).await;
+    a.db()
+        .read(move |conn| {
+            let recipient = User::find(conn, DAVID)?;
+            for before in expected {
+                let item = ActivityItem::find_accessible(conn, &recipient, before.id)?
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "missing {} activity for {}",
+                            before.source_type, before.source_id
+                        )
+                    });
+                assert_eq!(
+                    (item.id, item.event_type, item.read_at, item.handled_at),
+                    (
+                        before.id,
+                        before.event_type,
+                        before.read_at,
+                        before.handled_at
+                    )
+                );
+            }
+            assert_eq!(
+                EventAttendance::find_for(conn, events[2].id, DAVID)?
+                    .unwrap()
+                    .response,
+                "maybe"
+            );
+            for nudge in nudges {
+                assert_eq!(BoardSlaNudge::find(conn, nudge.id)?.recipient_id, DAVID);
+            }
+            assert!(
+                conn.prepare("PRAGMA foreign_key_check")?
+                    .query([])?
+                    .next()?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_preserves_incoming_huddle_activity() {
+    use campfire_db::ActivityItem;
+    use campfire_db::models::{huddle_grant::HuddleGrant, room_delete::HuddleConfig};
+
+    let a = app(MAIL).await.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let from = placeholder.id;
+    let grant = a
+        .db()
+        .write(move |tx| {
+            let room = Room::create_for(
+                tx,
+                RoomType::Direct,
+                Some("Huddle invitation"),
+                KEVIN,
+                &[
+                    KEVIN,
+                    from,
+                    crate::controllers::presenters::test_support::JASON,
+                ],
+            )?;
+            let membership = Membership::find_by_room_and_user(tx.conn(), room.id, KEVIN)?.unwrap();
+            let session = Session::start(tx, KEVIN, None, None)?;
+            HuddleGrant::issue(
+                tx,
+                session.id,
+                membership.id,
+                room.id,
+                &HuddleConfig {
+                    api_secret: Some("slack-claim-huddle-test".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let expected = a
+        .db()
+        .read(move |conn| {
+            Ok(
+                ActivityItem::find_by_user_and_source(conn, from, "HuddleGrant", grant.id)?
+                    .expect("placeholder received a huddle invitation"),
+            )
+        })
+        .await
+        .unwrap();
+
+    confirm_claim(&a).await;
+    a.db()
+        .read(move |conn| {
+            let actual = ActivityItem::find_by_user_and_source(
+                conn,
+                DAVID,
+                "HuddleGrant",
+                expected.source_id,
+            )?
+            .expect("incoming huddle invitation survived the claim");
+            assert_eq!(actual.id, expected.id);
+            assert_eq!(actual.event_type, "huddle_started");
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
 async fn slack_placeholder_claim_preserves_markdown_mentions_on_edit() {
     use campfire_db::models::message::MessageChanges;
     use campfire_richtext::markdown::{mention_token, user_mention_token};
@@ -812,4 +1039,125 @@ async fn slack_placeholder_claim_preserves_markdown_mentions_on_edit() {
         })
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_preserves_literal_mentions_and_broadcasts_retargeted_body() {
+    use crate::controllers::spa::api_tests::{Sync, serve};
+    use campfire_api_types::{MessageSource, SyncPayload};
+    use campfire_richtext::markdown::user_mention_token;
+
+    let (a, clock) = app_with_clock(MAIL).await;
+    let a = a.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let from = placeholder.id;
+    let (room, message, updated_at) = a
+        .db()
+        .write(move |tx| {
+            for id in [from, KEVIN, DAVID] {
+                let mut user = User::find(tx.conn(), id)?;
+                user.update(
+                    tx,
+                    UserChanges {
+                        nickname: Some(Some("Sam".into())),
+                        ..Default::default()
+                    },
+                )?;
+            }
+            // The old and new roster each have two Sams.
+            let room = Room::create_for(
+                tx,
+                RoomType::Closed,
+                Some("Ambiguous mentions"),
+                KEVIN,
+                &[KEVIN, from],
+            )?;
+            let message = Message::create_markdown(
+                tx,
+                NewMessage {
+                    room_id: room.id,
+                    creator_id: KEVIN,
+                    ..Default::default()
+                },
+                &format!("Literal @[Sam] and explicit {}", user_mention_token(from)),
+            )?;
+            let body = message.body(tx.conn())?.unwrap().body.unwrap();
+            assert!(body.contains("@[Sam]"), "{body}");
+            assert_eq!(
+                tx.rich_text()
+                    .try_mentioned_user_ids(tx.conn(), &body)
+                    .unwrap(),
+                [from]
+            );
+            Ok((room.id, message.id, message.updated_at.to_wire()))
+        })
+        .await
+        .unwrap();
+
+    let (addr, server) = serve(&a).await;
+    let mut author = a.sign_in(KEVIN).await;
+    let topic = format!("room:{room}");
+    let mut sync = Sync::connect(addr, &author.cookie_header(), std::slice::from_ref(&topic)).await;
+    sync.welcome().await;
+    let updated = |event: &campfire_api_types::SyncEvent| matches!(&event.payload, SyncPayload::MessageUpdated(item) if item.id == message);
+
+    confirm_claim(&a).await;
+    let publication = sync.until(updated, |_| false).await;
+    assert_eq!(publication.topic, topic);
+    let SyncPayload::MessageUpdated(body) = publication.payload else {
+        unreachable!()
+    };
+    assert!(body.body_html.contains("@[Sam]"), "{}", body.body_html);
+    assert!(
+        body.body_html
+            .contains(&format!(r#"data-user-id="{DAVID}""#))
+    );
+    assert!(
+        !body
+            .body_html
+            .contains(&format!(r#"data-user-id="{from}""#))
+    );
+    assert!(body.updated_at > updated_at);
+    assert!(body.edited_at.is_none());
+
+    let path = format!("/api/v1/messages/{message}");
+    let response = author
+        .send(Req::new(Method::GET, &format!("{path}/source")))
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let source: MessageSource = serde_json::from_str(&response.text()).unwrap();
+    assert_eq!(
+        source.markdown_source,
+        format!("Literal @[Sam] and explicit {}", user_mention_token(DAVID))
+    );
+    clock.set("2026-03-02T16:00:01Z".parse().unwrap());
+    let response = author
+        .write(Req::new(Method::PATCH, &path).json_body(&json!({
+            "markdownSource": format!("{}\n\nAn unrelated edit.", source.markdown_source),
+        })))
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let publication = sync.until(updated, |_| false).await;
+    let SyncPayload::MessageUpdated(edited) = publication.payload else {
+        unreachable!()
+    };
+    // The next update for this message is the author's edit, so the claim published once.
+    assert!(
+        edited.body_html.contains("An unrelated edit."),
+        "{}",
+        edited.body_html
+    );
+    assert!(edited.body_html.contains("@[Sam]"), "{}", edited.body_html);
+    assert_eq!(
+        edited.body_html.matches("data-user-id=").count(),
+        1,
+        "{}",
+        edited.body_html
+    );
+    assert!(
+        edited
+            .body_html
+            .contains(&format!(r#"data-user-id="{DAVID}""#))
+    );
+    server.abort();
 }

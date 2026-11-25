@@ -379,19 +379,21 @@ pub fn user_mention_token(id: i64) -> String {
 const NON_MENTION_TAGS: &[&str] = &["a", "code", "pre"];
 
 /// Rewrite a user's mention tokens while retaining the original Markdown around them.
-/// The caller has already found a reference to this user in the stored HTML.
+/// `html_mentions` counts the stored attachments that reference this user.
 pub fn retarget_user_mentions(
     source: &str,
     from: i64,
     display_name: &str,
     to: i64,
+    html_mentions: usize,
 ) -> Result<Option<String>, Error> {
     let old_id = user_mention_token(from);
     let old_name = mention_token(display_name);
     let matches_user = |token: &str| token == old_id || old_name.as_deref() == Some(token);
-    if !MENTION_RE
-        .find_iter(source)
-        .any(|m| matches_user(m.as_str()))
+    if html_mentions == 0
+        || !MENTION_RE
+            .find_iter(source)
+            .any(|m| matches_user(m.as_str()))
     {
         return Ok(None);
     }
@@ -407,11 +409,24 @@ pub fn retarget_user_mentions(
             }
         }
     }
+    let mut rendered_ids = 0;
+    let mut rendered_names = 0;
+    for (token, rendered) in tokens.iter().zip(&rendered) {
+        if *rendered {
+            rendered_ids += usize::from(token.as_str() == old_id);
+            rendered_names += usize::from(old_name.as_deref() == Some(token.as_str()));
+        }
+    }
+    // An exact name resolved to the same user everywhere in the original render, if at all.
+    let retarget_name = rendered_names > 0 && html_mentions >= rendered_ids + rendered_names;
     let replacement = user_mention_token(to);
     let mut rewritten = String::with_capacity(source.len());
     let mut cursor = 0;
     for (token, rendered) in tokens.into_iter().zip(rendered) {
-        if rendered && matches_user(token.as_str()) {
+        let token_text = token.as_str();
+        if rendered
+            && (token_text == old_id || (retarget_name && old_name.as_deref() == Some(token_text)))
+        {
             rewritten.push_str(&source[cursor..token.start()]);
             rewritten.push_str(&replacement);
             cursor = token.end();

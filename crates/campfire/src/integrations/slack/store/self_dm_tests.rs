@@ -879,7 +879,7 @@ async fn slack_self_dm_keeps_missing_peer_skips_numeric_target_issue_and_canonic
     db.write(move |tx| {
         let group = Room::create_for(tx, RoomType::Direct, Some("Former group"), user, &[user])?;
         tx.conn().execute(
-            "UPDATE rooms SET direct_member_key=direct_member_key || ':group' WHERE id=?",
+            "UPDATE rooms SET direct_member_key=direct_member_key || '#' || id WHERE id=?",
             [group.id],
         )?;
         let target = conversations::resolve(

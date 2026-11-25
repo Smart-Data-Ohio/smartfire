@@ -776,13 +776,7 @@ impl<'a> Presenter<'a> {
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
         campfire_richtext::Content::load(body, &ctx)
-            .and_then(|content| {
-                if markdown {
-                    content.to_rendered_markdown_html_with_layout(&ctx)
-                } else {
-                    content.to_rendered_html_with_layout(&ctx)
-                }
-            })
+            .and_then(|content| content.to_rendered_message_html_with_layout(&ctx, markdown))
             .map_err(|error| campfire_db::Error::Other(error.to_string()))
     }
 

@@ -351,11 +351,10 @@ fn move_direct_membership(
     members.sort_unstable();
     members.dedup();
     // A room-specific key identifies a group that shares a member set with another DM.
-    let group_suffix = room.direct_member_key.as_deref().and_then(|key| {
-        key.find('#')
-            .or_else(|| key.find(":group"))
-            .map(|start| &key[start..])
-    });
+    let group_suffix = room
+        .direct_member_key
+        .as_deref()
+        .and_then(|key| key.find('#').map(|start| &key[start..]));
     let named = room.name.as_deref().is_some_and(|name| !is_blank(name));
     let mut needs_group_suffix = false;
     if group_suffix.is_none()
@@ -386,12 +385,8 @@ fn move_direct_membership(
         needs_group_suffix = exists(
             tx.conn(),
             "SELECT 1 FROM rooms WHERE id != ?1 AND deleted_at IS NULL AND type = 'Rooms::Direct'
-             AND (direct_member_key GLOB ?2 OR direct_member_key GLOB ?3)",
-            params![
-                room.id,
-                format!("{member_key}#*"),
-                format!("{member_key}:group*")
-            ],
+             AND direct_member_key GLOB ?2",
+            params![room.id, format!("{member_key}#*")],
         )?;
     }
     move_membership(tx, source, to)?;
@@ -543,6 +538,7 @@ fn broadcast_membership(tx: &mut Tx<'_>, membership_id: i64) {
 fn move_activity(tx: &mut Tx<'_>, from: i64, to: i64) -> Result<()> {
     // Activity is unique per user and source, even when the event types differ. Let the
     // recipient's existing row win. Authors and actors already have their post-claim IDs.
+    // Calendar invitations can precede an RSVP, so authorize them by room membership.
     let moved = query_all(
         tx.conn(),
         "UPDATE activity_items AS src SET user_id = ?2
@@ -550,7 +546,15 @@ fn move_activity(tx: &mut Tx<'_>, from: i64, to: i64) -> Result<()> {
              (src.source_type = 'Message' AND EXISTS (
                  SELECT 1 FROM messages WHERE id = src.source_id AND creator_id != ?2))
              OR (src.source_type = 'WorkThreadEvent' AND EXISTS (
-                 SELECT 1 FROM work_thread_events WHERE id = src.source_id AND actor_id IS NOT ?2)))
+                 SELECT 1 FROM work_thread_events WHERE id = src.source_id AND actor_id IS NOT ?2))
+             OR (src.source_type = 'Event' AND EXISTS (
+                 SELECT 1 FROM events e JOIN memberships m ON m.room_id = e.room_id
+                 WHERE e.id = src.source_id AND e.organizer_id != ?2 AND m.user_id = ?2))
+             OR (src.source_type = 'BoardSlaNudge' AND EXISTS (
+                 SELECT 1 FROM board_sla_nudges WHERE id = src.source_id AND recipient_id = ?2))
+             OR (src.source_type = 'HuddleGrant' AND EXISTS (
+                 SELECT 1 FROM huddle_grants g JOIN memberships m ON m.room_id = g.room_id
+                 WHERE g.id = src.source_id AND g.user_id != ?2 AND m.user_id = ?2)))
            AND NOT EXISTS (
              SELECT 1 FROM activity_items dst WHERE dst.user_id = ?2
                AND dst.source_type = src.source_type AND dst.source_id = src.source_id)
@@ -567,20 +571,19 @@ fn move_activity(tx: &mut Tx<'_>, from: i64, to: i64) -> Result<()> {
     Ok(())
 }
 
-fn retarget_mentions(tx: &Tx<'_>, from: &User, to: &User) -> Result<()> {
-    let conn = tx.conn();
+fn retarget_mentions(tx: &mut Tx<'_>, from: &User, to: &User) -> Result<()> {
     let replacement = tx.rich_text().user_attachable_sgid(to.id);
     let fragments = user_sgid_fragments(from.id);
     let predicates = vec!["instr(body, ?) > 0"; fragments.len()].join(" OR ");
     let sql = format!(
         "SELECT id, record_id, body FROM action_text_rich_texts
-         WHERE id > ? AND record_type = 'Message' AND ({predicates})
+         WHERE id > ? AND record_type = 'Message' AND instr(body, 'sgid=') > 0 AND ({predicates})
          ORDER BY id LIMIT 250"
     );
     let mut cursor = 0;
     loop {
         let rows = query_all(
-            conn,
+            tx.conn(),
             &sql,
             params_from_iter(
                 std::iter::once(&cursor as &dyn rusqlite::ToSql).chain(
@@ -604,7 +607,7 @@ fn retarget_mentions(tx: &Tx<'_>, from: &User, to: &User) -> Result<()> {
             cursor = id;
             let mut content =
                 Content::wrap(&html).map_err(|error| Error::Other(error.to_string()))?;
-            let mut changed = false;
+            let mut html_mentions = 0;
             for node in attachment_nodes(&content.dom, content.root) {
                 if unverified_attachable_user(content.dom.attr(node, "sgid"))
                     .ok()
@@ -612,30 +615,44 @@ fn retarget_mentions(tx: &Tx<'_>, from: &User, to: &User) -> Result<()> {
                     .is_some_and(|gid| gid.id.parse::<i64>() == Ok(from.id))
                 {
                     content.dom.set_attr(node, "sgid", &replacement);
-                    changed = true;
+                    html_mentions += 1;
                 }
             }
-            if changed {
+            if html_mentions > 0 {
+                let conn = tx.conn();
                 conn.execute(
                     "UPDATE action_text_rich_texts SET body = ? WHERE id = ?",
                     params![content.to_html(), id],
                 )?;
                 if let Some(message) = Message::find_by_id(conn, message_id)? {
-                    if let Some(source) = message.markdown_source.as_deref()
-                        && let Some(rewritten) = markdown::retarget_user_mentions(
-                            source,
-                            from.id,
-                            from.display_name(),
-                            to.id,
-                        )
+                    let rewritten = message
+                        .markdown_source
+                        .as_deref()
+                        .map(|source| {
+                            markdown::retarget_user_mentions(
+                                source,
+                                from.id,
+                                from.display_name(),
+                                to.id,
+                                html_mentions,
+                            )
+                        })
+                        .transpose()
                         .map_err(|error| Error::Other(error.to_string()))?
-                    {
-                        conn.execute(
-                            "UPDATE messages SET markdown_source = ? WHERE id = ?",
-                            params![rewritten, message.id],
-                        )?;
-                    }
+                        .flatten();
+                    // Sync clients keep the held body on an updated_at tie at millisecond precision.
+                    let updated_at = tx.now().max(
+                        message
+                            .updated_at
+                            .since(jiff::SignedDuration::from_millis(1)),
+                    );
+                    conn.execute(
+                        "UPDATE messages SET markdown_source = coalesce(?, markdown_source),
+                         updated_at = ? WHERE id = ?",
+                        params![rewritten, updated_at, message_id],
+                    )?;
                     message.update_in_index(tx)?;
+                    tx.broadcast_after_commit_once(&Broadcast::MessageUpdated { message_id });
                 }
             }
         }
