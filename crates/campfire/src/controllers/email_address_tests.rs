@@ -1356,3 +1356,6 @@ async fn audits(a: &TestApp) -> Vec<Value> {
         .await
         .unwrap()
 }
+
+#[path = "email_address_tests/slack_placeholder.rs"]
+mod slack_placeholder;

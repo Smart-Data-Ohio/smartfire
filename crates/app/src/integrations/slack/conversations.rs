@@ -1,7 +1,6 @@
 //! Slack channel/DM targets (`app/models/slack/conversation_mapper.rb`).
 use super::runner::{conversation_type, present, string, truthy};
 use super::users::{self, SLACKBOT_ID};
-use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Result, Room, RoomType, Tx, User};
 use indexmap::IndexMap;
@@ -272,11 +271,7 @@ pub fn resolve(
     }
     match conversation_type(c) {
         "im" => {
-            let owner = run
-                .slack_connection_id
-                .map(|id| SlackConnection::find(tx.conn(), id))
-                .transpose()?
-                .flatten();
+            let owner = users::run_connection(tx.conn(), run)?;
             let owner_key = owner.map(|c| c.slack_user_id).unwrap_or_default();
             let mut peers: Vec<_> = member_ids
                 .iter()
@@ -527,19 +522,30 @@ pub fn dry_users(
 ) -> Result<IndexMap<String, User>> {
     let owner = User::find(tx.conn(), run.user_id)?;
     let mapped = users::users_for(tx.conn(), run, member_ids)?;
+    let connection = users::run_connection(tx.conn(), run)?;
+    let verified_key = if let Some(connection) = &connection
+        && (mapped
+            .get(&connection.slack_user_id)
+            .is_none_or(|user| user.id == owner.id)
+            || users::mapped_placeholder(tx.conn(), connection)?.is_some())
+    {
+        Some(&connection.slack_user_id)
+    } else {
+        None
+    };
     Ok(member_ids
         .iter()
         .enumerate()
         .map(|(i, id)| {
             let mut user = owner.clone();
-            if mapped
-                .get(&string(id))
-                .is_none_or(|user| user.id != run.user_id)
+            let key = string(id);
+            if verified_key != Some(&key)
+                && mapped.get(&key).is_none_or(|user| user.id != run.user_id)
             {
                 user.id = -(i as i64 + 1);
             }
             user.name.clear();
-            (string(id), user)
+            (key, user)
         })
         .collect())
 }

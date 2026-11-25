@@ -656,7 +656,7 @@ async fn capture_smtp_message(
     }
 }
 
-async fn app_with_smtp() -> (
+pub(super) async fn app_with_smtp() -> (
     TestApp,
     Arc<campfire_kit::FrozenClock>,
     tokio::sync::mpsc::UnboundedReceiver<String>,
@@ -681,7 +681,7 @@ async fn app_with_smtp() -> (
     (a.without_job_runner().await, clock, received, smtp)
 }
 
-fn start_mail_runner(a: &TestApp) -> campfire_jobs::Runner {
+pub(super) fn start_mail_runner(a: &TestApp) -> campfire_jobs::Runner {
     use campfire_jobs::{QueueConfig, Registry, RunnerConfig};
 
     let mut registry = Registry::new();

@@ -422,3 +422,102 @@ async fn slack_oauth_replay_unique_constraint_and_setup_csrf_are_rejected() {
 mod run_tests;
 
 mod ui_return;
+
+#[tokio::test]
+async fn slack_oauth_claims_a_placeholder_and_preserves_a_real_mapping() {
+    use campfire_app::integrations::slack::{oauth, users};
+    use campfire_db::models::slack_import::{Kind, Mode, NewImport, SlackImport};
+    use campfire_db::{NewUser, User, models::slack::SlackWorkspace};
+
+    for (claimable, active_import) in [(true, false), (true, true), (false, false)] {
+        let exchange = json!({
+            "ok":true,"team":{"id":"TFIXTURE","name":"Fixture"},
+            "authed_user":{"id":"UJAY","access_token":"fixture","scope":oauth::USER_SCOPES.join(",")}
+        });
+        let f = Fresh::new(
+            0,
+            vec![
+                Route::new("POST", "slack.com", "/api/oauth.v2.access", 200)
+                    .body(exchange.to_string()),
+            ],
+        )
+        .await;
+        f.workspace().await;
+        let prior = f
+            .app
+            .db
+            .write(move |tx| {
+                let workspace = SlackWorkspace::current(tx.conn())?.unwrap();
+                let run = SlackImport::create(
+                    tx,
+                    NewImport {
+                        workspace_id: workspace.id,
+                        connection_id: None,
+                        user_id: 812,
+                        kind: Kind::Workspace,
+                        mode: Mode::Import,
+                        options: json!({}),
+                    },
+                )?;
+                let status = if active_import {
+                    "running"
+                } else {
+                    "completed"
+                };
+                tx.conn().execute(
+                    "UPDATE slack_imports SET status=? WHERE id=?",
+                    rusqlite::params![status, run.id],
+                )?;
+                let prior = if claimable {
+                    User::create_slack_placeholder(
+                        tx,
+                        NewUser {
+                            name: "Slack owner".into(),
+                            email_address: Some("jayslack@example.test".into()),
+                            ..Default::default()
+                        },
+                        true,
+                        None,
+                        false,
+                    )?
+                    .id
+                } else {
+                    812
+                };
+                users::record(tx, &run, "user", "UJAY", "User", prior, claimable)?;
+                Ok(prior)
+            })
+            .await
+            .unwrap();
+
+        let signed = oauth::sign_state(&f.app.secrets, "fixture-state");
+        let query = url::form_urlencoded::Serializer::new(String::new())
+            .append_pair("code", "fixture-code")
+            .append_pair("state", &signed)
+            .finish();
+        let mut session = sudo();
+        session["slack_oauth_state"] = json!({"state":"fixture-state","user_id":811});
+        let (status, _, body) = request(
+            &f,
+            "GET",
+            &format!("/slack/oauth/callback?{query}"),
+            Value::Null,
+            session,
+        )
+        .await;
+        assert_eq!(status, 302, "{body}");
+
+        let claimed = claimable && !active_import;
+        f.app.db.read(move |conn| {
+            let workspace = SlackWorkspace::current(conn)?.unwrap();
+            assert_eq!(users::mapped_id(conn, workspace.id, "user", "UJAY")?, Some(if claimed { 811 } else { prior }));
+            assert_eq!(User::find_by_id(conn, prior)?.is_none(), claimed);
+            let connection = campfire_db::models::slack::SlackConnection::for_user(conn, 811)?.unwrap();
+            assert_eq!(connection.slack_user_id, "UJAY");
+            assert!(campfire_db::user::email_addresses::EmailAddress::for_user(conn, 811)?.is_empty());
+            assert_eq!(conn.query_row("SELECT count(*) FROM audit_logs WHERE action='user.slack_placeholder.claim' AND target_id=811", [], |r|r.get::<_,i64>(0))?, i64::from(claimed));
+            assert!(conn.prepare("PRAGMA foreign_key_check")?.query([])?.next()?.is_none());
+            Ok(())
+        }).await.unwrap();
+    }
+}

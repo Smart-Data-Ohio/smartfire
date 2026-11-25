@@ -41,12 +41,18 @@ also returns 400 with `base`. If another account claims the address before confi
 An account can confirm up to 10 secondary addresses. Confirming another address at that limit
 returns 422 with `base`. An existing confirmation can be retried while its address stays linked.
 
+Confirming a secondary address held by an unclaimed Slack placeholder links the address and
+transfers the placeholder's imported history and room memberships to the member. While a Slack
+import is queued, running, or being undone, confirmation returns 422 with `base`. Wait for the
+import or undo to finish, then use the same link before it expires.
+
 ## Confirmation and mail
 
 Adding requires SMTP, a valid `APP_URL` and `MAILER_FROM`. Otherwise the list shows
 `canAdd: false` and the add request returns 404. Valid add requests are limited to five per member
-per hour. Each response echoes the trimmed address and queues a job. The job sends only if the
-member is still active, the address is free, and the request is still valid. The link opens
+per hour. Each response echoes the trimmed address and queues a job. The job sends if the
+member is still active, the request is still valid, and the address is free or held by an
+unclaimed Slack placeholder. The link opens
 `/app/email_addresses/confirm/:token` and expires 24 hours after the request. A password change
 retires earlier requests. Removing a secondary or replacing a primary retires earlier requests
 for that address across accounts. Smartfire compares audit IDs and folds address spelling.

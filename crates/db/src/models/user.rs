@@ -21,6 +21,7 @@ use crate::time::Timestamp;
 
 pub mod presentation;
 pub mod profile_settings;
+pub mod slack_placeholder;
 pub mod ui_preference;
 
 /// `enum :role, %i[ member administrator bot ]`

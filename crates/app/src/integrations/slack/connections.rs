@@ -1,6 +1,10 @@
 //! Slack grant persistence and revocation from the OAuth and connection controllers.
 //! HTTP calls stay outside the database writer; each Rails save keeps its commit boundary.
 use super::oauth::{self, OAuth};
+use super::users::mapped_placeholder;
+use campfire_db::user::slack_placeholder::{
+    audit_claim, claim_slack_placeholder, has_active_slack_import,
+};
 use campfire_db::{
     Database, Error, Result, User,
     audit_log::{AuditLog, Context, NewAuditLog},
@@ -99,10 +103,11 @@ impl Service<'_> {
         }
         let crypto = self.encryption.clone();
         let t = token.clone();
+        let claim_context = context.clone();
         let connection = self
             .db
             .write(move |tx| {
-                SlackConnection::relink(
+                let connection = match SlackConnection::relink(
                     tx,
                     &crypto,
                     NewConnection {
@@ -112,13 +117,24 @@ impl Service<'_> {
                         access_token: t.as_deref(),
                         scopes: Some(&scopes),
                     },
-                )
+                ) {
+                    Ok(connection) => connection,
+                    Err(error) if error.is_record_not_unique() => return Ok(None),
+                    Err(error) => return Err(error),
+                };
+                if connection.connected(&crypto)?
+                    && !has_active_slack_import(tx.conn(), None)?
+                    && let Some(placeholder) = mapped_placeholder(tx.conn(), &connection)?
+                {
+                    let owner = User::find(tx.conn(), uid)?;
+                    claim_slack_placeholder(tx, &owner, &placeholder)?;
+                    audit_claim(tx, &owner, placeholder.id, &claim_context)?;
+                }
+                Ok(Some(connection))
             })
-            .await;
-        let connection = match connection {
-            Ok(c) => c,
-            Err(e) if e.is_record_not_unique() => return Ok(Some(ALREADY_CONNECTED.into())),
-            Err(e) => return Err(e),
+            .await?;
+        let Some(connection) = connection else {
+            return Ok(Some(ALREADY_CONNECTED.into()));
         };
         if workspace
             .team_id

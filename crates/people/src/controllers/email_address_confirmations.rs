@@ -1,6 +1,7 @@
 //! The link is sufficient to attach its address to its account, including from another device.
 use campfire_api_types::EmailAddressConfirmation;
 use campfire_db::user::email_addresses::{Confirmation, EmailAddress};
+use campfire_db::user::slack_placeholder;
 use campfire_db::{Connection, User};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use rails_compat::email_address_confirmation::{self, Claim};
@@ -18,6 +19,7 @@ enum Applied {
     AccountMismatch,
     Taken,
     LimitReached,
+    ImportInProgress,
     Linked { viewer_is_owner: bool },
 }
 
@@ -94,7 +96,13 @@ async fn update(c: &mut Ctx) -> Result {
                 return Ok(Applied::AccountMismatch);
             }
             let result = EmailAddress::confirm(tx, &user, &claim.email_address)?;
-            if result == Confirmation::Added {
+            if let Confirmation::AddedAndClaimed { placeholder_id } = result {
+                slack_placeholder::audit_claim(tx, &user, placeholder_id, &context)?;
+            }
+            if matches!(
+                result,
+                Confirmation::Added | Confirmation::AddedAndClaimed { .. }
+            ) {
                 authentication::audit_email_address(
                     tx,
                     &user,
@@ -106,7 +114,10 @@ async fn update(c: &mut Ctx) -> Result {
             Ok(match result {
                 Confirmation::Taken => Applied::Taken,
                 Confirmation::LimitReached => Applied::LimitReached,
-                Confirmation::Added | Confirmation::AlreadyLinked => Applied::Linked {
+                Confirmation::ImportInProgress => Applied::ImportInProgress,
+                Confirmation::Added
+                | Confirmation::AddedAndClaimed { .. }
+                | Confirmation::AlreadyLinked => Applied::Linked {
                     viewer_is_owner: viewer == Some(claim.user_id),
                 },
             })
@@ -129,6 +140,12 @@ async fn update(c: &mut Ctx) -> Result {
             StatusCode::UNPROCESSABLE_ENTITY,
             "base",
             "You can link up to 10 additional email addresses. Remove one and try again.",
+        ),
+        Applied::ImportInProgress => auth::field_error(
+            c,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "base",
+            "A Slack import is in progress. Wait for it to finish, then confirm again.",
         ),
         Applied::Linked { viewer_is_owner } => {
             c.flash()
