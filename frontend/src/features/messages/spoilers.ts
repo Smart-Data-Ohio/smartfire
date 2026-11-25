@@ -13,6 +13,11 @@ const SPOILER = "span[data-spoiler]";
 /** A spoiler that is still covered. */
 const COVERED = "span[data-spoiler]:not([data-revealed])";
 
+/** Whether `element` sits inside a spoiler that is still covered (a mention in one has no card). */
+export function inCoveredSpoiler(element: Element): boolean {
+  return element.closest(COVERED) !== null;
+}
+
 /**
  * A link whose label holds a covered spoiler (`[||ending||](url "title")`). Its URL and title
  * would give the words away, so it is no link at all until every spoiler in it is revealed.

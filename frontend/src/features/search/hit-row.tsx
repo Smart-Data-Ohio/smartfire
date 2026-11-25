@@ -15,6 +15,7 @@ import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { StickerMessage } from "../messages/sticker-message.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger, UserCardHover } from "../people/user-card-trigger.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { hitTime } from "./format.ts";
 import { highlightHtml } from "./highlight.ts";
@@ -170,31 +171,35 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
 
   return (
     <article className="search-hit" data-search-hit>
-      <UserAvatar userId={message.creatorId} size={36} decorative />
+      <AuthorCardTrigger userId={message.creatorId} placement="right-start" duplicate>
+        <UserAvatar userId={message.creatorId} size={36} decorative />
+      </AuthorCardTrigger>
       <div className="search-hit-main">
         <div className="search-hit-head">
-          {message.threadId === null ? (
-            <Link
-              to="/r/$roomId/m/$messageId"
-              params={{ roomId: message.roomId, messageId: message.id }}
-              className="search-hit-link"
-              aria-label={label}
-              data-search-hit-link
-            >
-              {name}
-            </Link>
-          ) : (
-            <Link
-              to="/r/$roomId/t/$threadId"
-              params={{ roomId: message.roomId, threadId: message.threadId }}
-              search={{ m: message.id }}
-              className="search-hit-link"
-              aria-label={label}
-              data-search-hit-link
-            >
-              {name}
-            </Link>
-          )}
+          <UserCardHover userId={message.creatorId}>
+            {message.threadId === null ? (
+              <Link
+                to="/r/$roomId/m/$messageId"
+                params={{ roomId: message.roomId, messageId: message.id }}
+                className="search-hit-link"
+                aria-label={label}
+                data-search-hit-link
+              >
+                {name}
+              </Link>
+            ) : (
+              <Link
+                to="/r/$roomId/t/$threadId"
+                params={{ roomId: message.roomId, threadId: message.threadId }}
+                search={{ m: message.id }}
+                className="search-hit-link"
+                aria-label={label}
+                data-search-hit-link
+              >
+                {name}
+              </Link>
+            )}
+          </UserCardHover>
           <time
             className="search-hit-time"
             dateTime={message.createdAt}

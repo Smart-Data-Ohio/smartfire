@@ -3,6 +3,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { NOTE_TO_SELF_LINE, useNoteToSelf, useViewerName } from "../directs/note-to-self.ts";
 import { YouLabel } from "../directs/you-label.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { GroupAvatars } from "../sidebar/group-avatars.tsx";
 import { ROOM_KIND_ICON } from "./room-icon.ts";
 
@@ -33,6 +34,7 @@ export function UnreadDivider({ count }: { readonly count: number }) {
  * The start of a room's history (and, for a room with no messages, its whole empty state): a big
  * glyph, the other person's avatar or a group's pair, and a line that says where you are. A DM
  * names its people in full, as the sidebar does: a 1:1 DM's header name can be a stale first name.
+ * A 1:1 DM's avatar and name open the other person's card.
  */
 export function RoomIntro({ roomId }: { readonly roomId: number }) {
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
@@ -71,9 +73,19 @@ export function RoomIntro({ roomId }: { readonly roomId: number }) {
           <Icon name={ROOM_KIND_ICON[room.kind]} size={28} />
         </span>
       ) : (
-        <UserAvatar userId={otherId} size={64} presence decorative />
+        <AuthorCardTrigger userId={otherId} placement="right-start" duplicate>
+          <UserAvatar userId={otherId} size={64} presence decorative />
+        </AuthorCardTrigger>
       )}
-      <h2 className="room-intro-title">{direct ? name : `Welcome to #${name}`}</h2>
+      <h2 className="room-intro-title">
+        {otherId !== undefined && !group ? (
+          <AuthorCardTrigger userId={otherId}>{name}</AuthorCardTrigger>
+        ) : direct ? (
+          name
+        ) : (
+          `Welcome to #${name}`
+        )}
+      </h2>
       <p className="room-intro-text">
         {direct
           ? `This is the very beginning of your conversation with ${name}.`

@@ -3,6 +3,7 @@ import { enhanceCodeBlocks } from "../../lib/code-highlight/code-blocks.ts";
 import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 // The message body styles, for pages outside a room (the Slack plan's samples).
 import "../room/room.css";
+import { bindMentionCards } from "../people/mention-cards.ts";
 import { useSpoilerReveal } from "./spoilers.ts";
 
 type BodyHtmlProps = {
@@ -23,6 +24,9 @@ type BodyHtmlProps = {
  * that one spoiler and does not bubble into the message row's actions. The composer preview uses
  * this same body, so spoilers there behave the same way. Spoilers bind through the same
  * `useSpoilerReveal` ref as every other place that inserts message HTML.
+ *
+ * A person's mention chip opens their user card on hover or a click; one inside a covered spoiler
+ * waits until the spoiler is revealed.
  *
  * Under reduced motion an animated workspace icon shows its first frame.
  */
@@ -49,6 +53,16 @@ export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
     }
 
     return enhanceCodeBlocks(root);
+  }, [shown]);
+
+  useLayoutEffect(() => {
+    const root = ref.current;
+
+    if (root === null || !shown.includes("data-user-id")) {
+      return;
+    }
+
+    return bindMentionCards(root);
   }, [shown]);
 
   return (

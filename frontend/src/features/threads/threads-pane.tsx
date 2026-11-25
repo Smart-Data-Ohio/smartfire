@@ -10,6 +10,7 @@ import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { usePaneNavigation } from "../panes/use-right-pane.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { UserCardHover } from "../people/user-card-trigger.tsx";
 import { WorkLinks, WorkSummary } from "../work/work-facts.tsx";
 import { PrivateGlyph } from "./private-thread.tsx";
 import {
@@ -66,7 +67,9 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
         data-unread={unread || undefined}
         onClick={onOpen}
       >
-        <UserAvatar userId={thread.creatorId} size={32} decorative />
+        <UserCardHover userId={thread.creatorId} placement="right-start">
+          <UserAvatar userId={thread.creatorId} size={32} decorative />
+        </UserCardHover>
         <span className="thread-row-main">
           <span className="thread-row-name">
             {thread.visibility === "private" ? <PrivateGlyph /> : null}
@@ -74,7 +77,9 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
             {unread ? <span className="thread-row-dot" aria-label="Unread" role="img" /> : null}
           </span>
           <span className="thread-row-meta">
-            <span>{creator?.name ?? "Someone"}</span>
+            <UserCardHover userId={thread.creatorId}>
+              <span>{creator?.name ?? "Someone"}</span>
+            </UserCardHover>
             <span aria-hidden="true">·</span>
             <span className="tabular">{replyCountLabel(thread.replyCount)}</span>
             <span aria-hidden="true">·</span>

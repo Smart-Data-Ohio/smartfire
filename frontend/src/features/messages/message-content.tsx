@@ -7,6 +7,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { CardSlot } from "../cards/card-slot.tsx";
 import { AppTag } from "../people/agent-badge.tsx";
 import { UNKNOWN_NAME, useIgnored, useUser } from "../people/people.ts";
+import { UserCardHover } from "../people/user-card-trigger.tsx";
 import { AttachmentGallery } from "./attachments.tsx";
 import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
@@ -190,7 +191,14 @@ export function ReplyQuote({
     <div className="message-reply">
       <Icon name="corner-up-left" size={12} className="message-reply-icon" />
       <QuoteLink source={source}>
-        <span className="message-reply-author">{author}</span>
+        {shown?.kind === "person" ? (
+          // The quote is a link to the message, so the author's card opens on hover alone.
+          <UserCardHover userId={shown.userId}>
+            <span className="message-reply-author">{author}</span>
+          </UserCardHover>
+        ) : (
+          <span className="message-reply-author">{author}</span>
+        )}
         <span className="message-reply-text">{snippet(source)}</span>
       </QuoteLink>
     </div>

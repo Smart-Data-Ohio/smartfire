@@ -11,6 +11,7 @@ import { useAgentIdOf } from "../agents/agent-link.tsx";
 import { useWorkingPresence } from "../agents/working.ts";
 import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { UserCardHover } from "../people/user-card-trigger.tsx";
 import { canStar, groupMembers, type MemberEntry } from "./members.ts";
 import { PaneFrame } from "./pane-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton, PaneSearch } from "./pane-states.tsx";
@@ -55,10 +56,14 @@ function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
         aria-label={label}
         onClick={() => onOpen(member)}
       >
-        <UserAvatar userId={member.userId} size={32} presence decorative />
+        <UserCardHover userId={member.userId} placement="left">
+          <UserAvatar userId={member.userId} size={32} presence decorative />
+        </UserCardHover>
         <span className="member-row-text">
           <span className="member-row-name">
-            <span className="member-row-label">{member.name}</span>
+            <UserCardHover userId={member.userId} placement="left">
+              <span className="member-row-label">{member.name}</span>
+            </UserCardHover>
             {member.viewer ? <span className="member-row-you">(you)</span> : null}
             {member.bot ? <AgentBadge userId={member.userId} status /> : null}
           </span>

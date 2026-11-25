@@ -13,6 +13,7 @@ import { ProductTour } from "../help/tour.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { HuddleRoot } from "../huddle/huddle-root.tsx";
 import { playMessageChime } from "../huddle/sounds.ts";
+import { UserCardHost } from "../people/user-card.tsx";
 import { SearchHotkey } from "../search/search-hotkey.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
@@ -214,6 +215,7 @@ export function AppShell() {
       </main>
       <HuddleRoot />
       <GlobalOverlays />
+      <UserCardHost />
       <ProductTour />
       <SearchHotkey />
       <ReauthenticateDialog />

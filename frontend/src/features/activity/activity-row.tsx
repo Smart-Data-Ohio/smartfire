@@ -15,6 +15,7 @@ import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
 import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { UserCardHover } from "../people/user-card-trigger.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import { EVENT_ICON, EVENT_LABEL, EVENT_TONE, statusChip } from "./activity-format.ts";
 
@@ -75,7 +76,9 @@ function ActivityGlyph({ item }: { readonly item: ActivityItem }) {
 
   return (
     <span className="activity-glyph" data-tone={tone}>
-      <UserAvatar userId={creatorId} size={36} decorative />
+      <UserCardHover userId={creatorId} placement="right-start">
+        <UserAvatar userId={creatorId} size={36} decorative />
+      </UserCardHover>
       <span className="activity-kind-badge">
         <Icon name={icon} size={11} />
       </span>
@@ -258,7 +261,11 @@ function ActivityContents({
             <span className="activity-title">{title}</span>
           </span>
           <span className="activity-body">
-            {creator === undefined ? null : <span className="activity-author">{creator.name}</span>}
+            {creator === undefined ? null : (
+              <UserCardHover userId={creator.id}>
+                <span className="activity-author">{creator.name}</span>
+              </UserCardHover>
+            )}
             <span id={bodyId}>{source.body}</span>
           </span>
           {chip === null && !handled ? null : (

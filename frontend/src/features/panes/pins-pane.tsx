@@ -14,6 +14,7 @@ import { BodyHtml } from "../messages/body-html.tsx";
 import { messageFiles, stickerText } from "../messages/message-files.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
 import { PaneFrame, RoomName } from "./pane-frame.tsx";
@@ -70,8 +71,12 @@ function PinCard({ entry, now, onJump, onUnpin }: PinCardProps) {
   return (
     <li className="pin-card enter-fade">
       <header className="pin-card-header">
-        <UserAvatar userId={message.creatorId} size={24} decorative />
-        <span className="pin-card-author">{author?.name ?? UNKNOWN_NAME}</span>
+        <AuthorCardTrigger userId={message.creatorId} duplicate>
+          <UserAvatar userId={message.creatorId} size={24} decorative />
+        </AuthorCardTrigger>
+        <AuthorCardTrigger userId={message.creatorId}>
+          <span className="pin-card-author">{author?.name ?? UNKNOWN_NAME}</span>
+        </AuthorCardTrigger>
         <Tooltip content={formatFull(message.createdAt)} describe={false}>
           <time className="pin-card-time" dateTime={message.createdAt} tabIndex={-1}>
             {timeAgo(message.createdAt, now)}

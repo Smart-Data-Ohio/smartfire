@@ -20,6 +20,7 @@ import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { StickerMessage } from "../messages/sticker-message.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import { ReminderItems } from "./reminder-items.tsx";
 
@@ -208,10 +209,23 @@ export function SavedRow({
         onClick={() => handlers.onOpen(item)}
       />
       <div className="saved-row" data-message-id={item.messageId}>
-        <UserAvatar userId={message?.creatorId ?? 0} size={36} decorative />
+        {message === null ? (
+          <UserAvatar userId={0} size={36} decorative />
+        ) : (
+          // The row's cover opens the message and holds the keyboard; these are for the pointer.
+          <AuthorCardTrigger userId={message.creatorId} placement="right-start" duplicate>
+            <UserAvatar userId={message.creatorId} size={36} decorative />
+          </AuthorCardTrigger>
+        )}
         <div className="saved-main">
           <div className="saved-line">
-            <span className="saved-author">{authorName}</span>
+            {message === null ? (
+              <span className="saved-author">{authorName}</span>
+            ) : (
+              <AuthorCardTrigger userId={message.creatorId} duplicate>
+                <span className="saved-author">{authorName}</span>
+              </AuthorCardTrigger>
+            )}
             <ConversationLabel conversation={conversation} />
             <Tooltip content={`Saved ${formatFull(item.createdAt)}`} describe={false}>
               <time className="saved-time list-row-time" dateTime={item.createdAt}>
