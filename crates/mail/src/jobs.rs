@@ -28,13 +28,14 @@ pub enum Notification {
 pub struct EmailAddressConfirmation {
     pub user_id: i64,
     pub email_address: String,
-    // Jobs queued before fingerprints were recorded deserialize and skip delivery.
+    // Jobs queued before fingerprints or either cursor id were recorded deserialize and skip
+    // delivery.
     #[serde(default)]
     password_fingerprint: Option<String>,
     #[serde(default)]
     after_audit_id: Option<i64>,
     #[serde(default)]
-    after_deactivation_id: i64,
+    after_deactivation_id: Option<i64>,
 }
 
 impl EmailAddressConfirmation {
@@ -44,14 +45,14 @@ impl EmailAddressConfirmation {
             email_address,
             password_fingerprint: Some(password_fingerprint(user)),
             after_audit_id: Some(cursor.audit_id),
-            after_deactivation_id: cursor.deactivation_id,
+            after_deactivation_id: Some(cursor.deactivation_id),
         }
     }
 
     pub fn cursor(&self) -> Option<ConfirmationCursor> {
         Some(ConfirmationCursor {
             audit_id: self.after_audit_id?,
-            deactivation_id: self.after_deactivation_id,
+            deactivation_id: self.after_deactivation_id?,
         })
     }
 

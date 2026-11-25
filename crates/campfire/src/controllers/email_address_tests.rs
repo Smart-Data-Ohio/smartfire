@@ -761,25 +761,31 @@ async fn email_address_deactivation_retires_links_and_jobs_after_unban() {
 }
 
 #[tokio::test]
-async fn email_address_confirmation_job_without_an_audit_id_is_skipped() {
+async fn email_address_confirmation_jobs_without_either_cursor_id_are_skipped() {
     let a = app(MAIL).await;
-    let mut data = serde_json::to_value(confirmation_job(&a, DAVID, LINKED).await).unwrap();
-    assert!(
-        data.as_object_mut()
-            .unwrap()
-            .remove("after_audit_id")
-            .is_some()
-    );
-    let old_job = serde_json::from_value(data).unwrap();
-
-    let delivery = campfire_runtime::mail::email_address_confirmation_message(
+    let job = confirmation_job(&a, DAVID, LINKED).await;
+    let current = campfire_runtime::mail::email_address_confirmation_message(
         &a.booted.app,
-        old_job,
+        job.clone(),
         a.db().env().now(),
     )
     .await
     .unwrap();
-    assert!(delivery.is_none());
+    assert!(current.is_some());
+
+    for field in ["after_audit_id", "after_deactivation_id"] {
+        let mut data = serde_json::to_value(&job).unwrap();
+        assert!(data.as_object_mut().unwrap().remove(field).is_some());
+        let old_job = serde_json::from_value(data).unwrap();
+        let delivery = campfire_runtime::mail::email_address_confirmation_message(
+            &a.booted.app,
+            old_job,
+            a.db().env().now(),
+        )
+        .await
+        .unwrap();
+        assert!(delivery.is_none(), "{field}");
+    }
 }
 
 async fn session_count(a: &TestApp) -> i64 {

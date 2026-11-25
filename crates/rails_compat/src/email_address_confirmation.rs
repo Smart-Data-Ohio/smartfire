@@ -66,15 +66,10 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
         Value::String(fingerprint),
         Value::String(expiry),
         Value::Number(audit_id),
-        trailing @ ..,
+        Value::Number(deactivation_id),
     ] = claim.as_array()?.as_slice()
     else {
         return None;
-    };
-    let deactivation_id = match trailing {
-        [] => 0,
-        [Value::Number(id)] => id.as_i64()?,
-        _ => return None,
     };
     let expires_at: Timestamp = expiry.parse().ok()?;
     if now >= expires_at {
@@ -86,7 +81,7 @@ pub fn verify(secrets: &Secrets, token: &str, now: Timestamp) -> Option<Claim> {
         issued_at: expires_at.checked_sub(EXPIRES_IN).ok()?,
         cursor: ConfirmationCursor {
             audit_id: audit_id.as_i64()?,
-            deactivation_id,
+            deactivation_id: deactivation_id.as_i64()?,
         },
         fingerprint: fingerprint.clone(),
     })
@@ -117,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn confirmation_with_only_an_audit_id_predates_deactivation_records() {
+    fn confirmation_without_a_deactivation_id_is_refused() {
         let now = "2026-01-01T12:00:00Z".parse::<Timestamp>().unwrap();
         let secrets = Secrets::new(&"a".repeat(128));
         let fingerprint = keyed_fingerprint(&secrets, FINGERPRINT_SALT, &[""]);
@@ -132,14 +127,20 @@ mod tests {
             Some(PURPOSE),
             None,
         );
-        let claim = verify(&secrets, &link, now).unwrap();
-        assert_eq!(
-            claim.cursor,
-            ConfirmationCursor {
-                audit_id: 123,
-                deactivation_id: 0
-            }
-        );
+        // Deactivation releases before the cursor's second id existed aren't in the table.
+        assert_eq!(verify(&secrets, &link, now), None);
+    }
+
+    #[test]
+    fn confirmation_with_a_recorded_zero_deactivation_id_is_valid() {
+        let now = "2026-01-01T12:00:00Z".parse::<Timestamp>().unwrap();
+        let secrets = Secrets::new(&"a".repeat(128));
+        let cursor = ConfirmationCursor {
+            audit_id: 123,
+            deactivation_id: 0,
+        };
+        let link = token(&secrets, 42, "other@example.test", "", now, cursor);
+        assert_eq!(verify(&secrets, &link, now).unwrap().cursor, cursor);
     }
 
     #[test]
