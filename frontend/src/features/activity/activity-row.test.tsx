@@ -121,7 +121,10 @@ describe("an activity row", () => {
     act(() => mutations.mergeUsers([userFixture(8, "Lucía Fernández")]));
 
     expect(screen.getByText("Lucía Fernández")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Lucía Fernández/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Unread, .*Lucía Fernández/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Lucía Fernández" }).dataset.userCardTrigger).toBe(
+      "8",
+    );
   });
 
   it("shows the kind, title and excerpt, and opens on click", () => {

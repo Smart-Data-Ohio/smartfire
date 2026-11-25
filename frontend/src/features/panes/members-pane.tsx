@@ -11,7 +11,7 @@ import { useAgentIdOf } from "../agents/agent-link.tsx";
 import { useWorkingPresence } from "../agents/working.ts";
 import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
-import { UserCardHover } from "../people/user-card-trigger.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { canStar, groupMembers, type MemberEntry } from "./members.ts";
 import { PaneFrame } from "./pane-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton, PaneSearch } from "./pane-states.tsx";
@@ -34,7 +34,7 @@ interface MemberRowProps {
   readonly onStar: (member: MemberEntry) => void;
 }
 
-function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
+export function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
   const working = useWorkingPresence(member.bot ? member.userId : undefined);
   const agentId = useAgentIdOf(member.bot ? member.userId : undefined);
 
@@ -43,40 +43,32 @@ function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
 
   const label = agentId === null ? `Message ${member.name}` : `Open ${member.name}'s profile`;
 
-  const contents = (
-    <>
-      <UserCardHover userId={member.userId} placement="left">
-        <UserAvatar userId={member.userId} size={32} presence decorative />
-      </UserCardHover>
-      <span className="member-row-text">
-        <span className="member-row-name">
-          <UserCardHover userId={member.userId} placement="left">
-            <span className="member-row-label">{member.name}</span>
-          </UserCardHover>
-          {member.viewer ? <span className="member-row-you">(you)</span> : null}
-          {member.bot ? <AgentBadge userId={member.userId} status /> : null}
-        </span>
-        {status === null ? null : <span className="member-row-status">{status}</span>}
-      </span>
-    </>
-  );
-
   return (
     <li className="member-row" data-offline={member.presence === "offline" || undefined}>
-      {member.viewer ? (
-        // Your own row opens nothing. Not a disabled button: browsers send a disabled button's
-        // contents no pointer events, and its avatar and name still show your card on hover.
-        <div className="member-row-main">{contents}</div>
-      ) : (
+      {/* The row's cover opens the conversation (an agent's profile); your own opens nothing. */}
+      {member.viewer ? null : (
         <button
           type="button"
-          className="member-row-main"
+          className="member-row-cover"
           aria-label={label}
           onClick={() => onOpen(member)}
-        >
-          {contents}
-        </button>
+        />
       )}
+      <div className="member-row-main">
+        <AuthorCardTrigger userId={member.userId} placement="left" duplicate>
+          <UserAvatar userId={member.userId} size={32} presence decorative />
+        </AuthorCardTrigger>
+        <span className="member-row-text">
+          <span className="member-row-name">
+            <AuthorCardTrigger userId={member.userId} placement="left">
+              <span className="member-row-label">{member.name}</span>
+            </AuthorCardTrigger>
+            {member.viewer ? <span className="member-row-you">(you)</span> : null}
+            {member.bot ? <AgentBadge userId={member.userId} status /> : null}
+          </span>
+          {status === null ? null : <span className="member-row-status">{status}</span>}
+        </span>
+      </div>
       {canStar(member) ? (
         <IconButton
           icon="star"

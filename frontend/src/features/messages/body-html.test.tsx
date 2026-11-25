@@ -26,7 +26,7 @@ function inlined(className: string, stale?: true): string {
 
   return container.innerHTML.replace(
     'data-user-id="7">',
-    'data-user-id="7" tabindex="0" role="button" aria-haspopup="dialog">',
+    'data-user-id="7" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">',
   );
 }
 

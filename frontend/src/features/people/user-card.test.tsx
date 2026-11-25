@@ -6,9 +6,17 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
+import userEvent from "@testing-library/user-event";
+import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { meFixture, messageFixture, sidebarRowFixture, userFixture } from "../../api/testing.ts";
+import {
+  meFixture,
+  messageFixture,
+  pageFixture,
+  sidebarRowFixture,
+  userFixture,
+} from "../../api/testing.ts";
+import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { PersonProfile } from "../../gen/PersonProfile.ts";
 import type { User } from "../../gen/User.ts";
 import type { UserRole } from "../../gen/UserRole.ts";
@@ -16,11 +24,17 @@ import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
 import { peoplePages } from "../../sync/admin.ts";
 import { directs } from "../../sync/directs.ts";
+import { ActivityRow } from "../activity/activity-row.tsx";
 import { BodyHtml } from "../messages/body-html.tsx";
+import { ReplyQuote } from "../messages/message-content.tsx";
+import { MemberRow } from "../panes/members-pane.tsx";
 import { MessageRow } from "../room/message-row.tsx";
+import { SavedRow } from "../saved/saved-row.tsx";
 import { HitRow } from "../search/hit-row.tsx";
-import { clearUserCardProfiles, UserCardHost } from "./user-card.tsx";
-import { OPEN_DELAY_MS, resetUserCard } from "./user-card-store.ts";
+import { threadFixture } from "../threads/test-fixtures.ts";
+import { ThreadRow } from "../threads/threads-pane.tsx";
+import { cachedUserCardProfile, clearUserCardProfiles, UserCardHost } from "./user-card.tsx";
+import { CLOSE_DELAY_MS, OPEN_DELAY_MS, resetUserCard } from "./user-card-store.ts";
 import { UserCardTrigger } from "./user-card-trigger.tsx";
 
 const PERSON = 8;
@@ -112,7 +126,7 @@ beforeEach(() => {
       removeListener: () => undefined,
     });
 
-  vi.spyOn(peoplePages, "profile").mockImplementation((userId) => {
+  vi.spyOn(peoplePages, "cardProfile").mockImplementation((userId) => {
     const user = store.getState().users[userId];
 
     return user === undefined
@@ -169,7 +183,7 @@ describe("the user card", () => {
 
     signInAs("administrator");
     mutations.mergeUsers([user]);
-    vi.mocked(peoplePages.profile).mockResolvedValue(
+    vi.mocked(peoplePages.cardProfile).mockResolvedValue(
       profileOf(user, { emailAddress: "ashley@example.com" }),
     );
     await renderWithCard(<UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>);
@@ -181,7 +195,7 @@ describe("the user card", () => {
     const email = await within(card).findByRole("link", { name: "ashley@example.com" });
 
     expect(email.getAttribute("href")).toBe("mailto:ashley@example.com");
-    expect(peoplePages.profile).toHaveBeenCalledWith(PERSON, expect.any(AbortSignal));
+    expect(peoplePages.cardProfile).toHaveBeenCalledWith(PERSON, expect.any(AbortSignal));
   });
 
   it("badges an agent and shows what it is doing instead of presence", async () => {
@@ -275,7 +289,7 @@ describe("the user card", () => {
 
     signInAs("administrator");
     mutations.mergeUsers([user]);
-    vi.mocked(peoplePages.profile).mockResolvedValue(
+    vi.mocked(peoplePages.cardProfile).mockResolvedValue(
       profileOf(user, { emailAddress: "ashley@example.com" }),
     );
     await renderWithCard(<UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>);
@@ -292,7 +306,7 @@ describe("the user card", () => {
 
     signInAs("administrator");
     mutations.mergeUsers([user]);
-    vi.mocked(peoplePages.profile).mockResolvedValue(
+    vi.mocked(peoplePages.cardProfile).mockResolvedValue(
       profileOf(user, { emailAddress: "ashley@example.com" }),
     );
     await renderWithCard(<UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>);
@@ -611,5 +625,440 @@ describe("where the card opens from", () => {
     expect(revealed.tabIndex).toBe(0);
     fireEvent.keyDown(revealed, { key: "Enter" });
     expect(await screen.findByRole("dialog")).toBeTruthy();
+  });
+});
+
+describe("what the card fetches and keeps", () => {
+  it("hides the email at once when a sync demotes the viewer, and stops serving the admin's copy", async () => {
+    const user = person();
+    const viewer = { ...userFixture(VIEWER, "Viewer"), role: "administrator" as const };
+
+    signInAs("administrator");
+    mutations.mergeUsers([user, viewer]);
+    vi.mocked(peoplePages.cardProfile).mockImplementation(() =>
+      Promise.resolve(
+        profileOf(user, {
+          emailAddress:
+            store.getState().users[VIEWER]?.role === "administrator" ? "ashley@example.com" : null,
+        }),
+      ),
+    );
+    await renderWithCard(<UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>);
+
+    const card = await openCard("Ashley");
+
+    await within(card).findByRole("link", { name: "ashley@example.com" });
+
+    // The demotion lands in `users` by revision, as sync delivers it; `me` still says administrator.
+    act(() =>
+      mutations.mergeUsers([
+        { ...viewer, role: "member", updatedAt: "2026-02-01T00:00:00.000000Z" },
+      ]),
+    );
+    expect(store.getState().me?.user.role).toBe("administrator");
+    expect(within(card).queryByRole("link", { name: "ashley@example.com" })).toBeNull();
+
+    // The administrator's copy no longer answers for the viewer: a member's read replaces it.
+    await waitFor(() => expect(peoplePages.cardProfile).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(cachedUserCardProfile(PERSON)?.emailAddress).toBeNull());
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await expectClosed();
+
+    const again = await openCard("Ashley");
+
+    expect(peoplePages.cardProfile).toHaveBeenCalledTimes(2);
+    expect(within(again).queryByRole("link", { name: "ashley@example.com" })).toBeNull();
+  });
+
+  it("reads the card's profile, keeping only what it shows and never a sign-in link", async () => {
+    const user = person();
+
+    signInAs("administrator");
+    mutations.mergeUsers([user]);
+    vi.mocked(peoplePages.cardProfile).mockResolvedValue(
+      profileOf(user, {
+        emailAddress: "ashley@example.com",
+        transferUrl: "https://chat.example/session/transfers/t",
+        transferQrSvg: "<svg/>",
+        canBan: true,
+      }),
+    );
+    await renderWithCard(<UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>);
+
+    const card = await openCard("Ashley");
+
+    await within(card).findByRole("link", { name: "ashley@example.com" });
+    expect(peoplePages.cardProfile).toHaveBeenCalledWith(PERSON, expect.any(AbortSignal));
+    expect(Object.keys(cachedUserCardProfile(PERSON) ?? {}).sort()).toEqual([
+      "emailAddress",
+      "ignoredByMe",
+      "status",
+      "user",
+    ]);
+  });
+
+  it("forgets a cached profile once it is stale, and fetches it again", async () => {
+    mutations.mergeUsers([person()]);
+    await renderWithCard(<UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>);
+
+    await openCard("Ashley");
+    await waitFor(() => expect(cachedUserCardProfile(PERSON)).toBeDefined());
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await expectClosed();
+
+    const later = Date.now() + 60_000;
+
+    vi.spyOn(Date, "now").mockReturnValue(later);
+    vi.mocked(peoplePages.cardProfile).mockReturnValue(new Promise(() => undefined));
+    await openCard("Ashley");
+
+    expect(cachedUserCardProfile(PERSON)).toBeUndefined();
+    expect(peoplePages.cardProfile).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("Message on a card", () => {
+  /** A direct-message create the test lands when it chooses. */
+  function heldCreate(): (row: ReturnType<typeof sidebarRowFixture>) => void {
+    let land: (row: ReturnType<typeof sidebarRowFixture>) => void = () => undefined;
+
+    vi.spyOn(directs, "create").mockReturnValue(
+      new Promise((resolve) => {
+        land = resolve;
+      }),
+    );
+
+    return (row) => land(row);
+  }
+
+  it("still opens the conversation when the pointer leaves a hover-opened card after Message", async () => {
+    mutations.mergeUsers([person()]);
+
+    const land = heldCreate();
+
+    const pathname = await renderWithCard(
+      <UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Ashley" });
+
+    fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
+
+    const card = await screen.findByRole("dialog", {}, { timeout: OPEN_DELAY_MS * 3 });
+
+    fireEvent.pointerLeave(trigger, { pointerType: "mouse" });
+    fireEvent.pointerEnter(card, { pointerType: "mouse" });
+    fireEvent.click(within(card).getByRole("button", { name: "Message" }));
+    fireEvent.pointerLeave(card, { pointerType: "mouse" });
+    await act(() => new Promise((resolve) => setTimeout(resolve, CLOSE_DELAY_MS + 100)));
+    expect(screen.getByRole("dialog")).toBe(card);
+
+    await act(async () => land(sidebarRowFixture(55, "Ashley", "direct", [PERSON])));
+    await waitFor(() => expect(pathname()).toBe("/r/55"));
+    await expectClosed();
+  });
+
+  it("stays put when the same person's card is dismissed and opened again before it lands", async () => {
+    mutations.mergeUsers([person()]);
+
+    const land = heldCreate();
+
+    const pathname = await renderWithCard(
+      <UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>,
+    );
+
+    const card = await openCard("Ashley");
+
+    fireEvent.click(within(card).getByRole("button", { name: "Message" }));
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await expectClosed();
+
+    const fresh = await openCard("Ashley");
+
+    expect(within(fresh).getByRole("button", { name: "Message" }).hasAttribute("aria-busy")).toBe(
+      false,
+    );
+    await act(async () => land(sidebarRowFixture(55, "Ashley", "direct", [PERSON])));
+    expect(pathname()).toBe("/");
+    expect(screen.getByRole("dialog")).toBe(fresh);
+  });
+});
+
+describe("a card off a mention whose body changes", () => {
+  it("closes when the body's markup is replaced in place", async () => {
+    mutations.mergeUsers([userFixture(7, "Maya Okafor")]);
+
+    const mention =
+      '<span class="mention" data-user-id="7"><span class="profile-card-name">Maya Okafor</span></span>';
+
+    let edit: (html: string) => void = () => undefined;
+
+    function Editable() {
+      const [html, setHtml] = useState(`<p>Ship it, ${mention}</p>`);
+
+      edit = setHtml;
+
+      return <BodyHtml html={html} className="message-body" />;
+    }
+
+    await renderWithCard(<Editable />);
+    fireEvent.click(screen.getByText("Maya Okafor"));
+    await screen.findByRole("dialog");
+
+    act(() => edit(`<p>Ship it today, ${mention}</p>`));
+    await expectClosed();
+  });
+});
+
+/** A mention of Maya Okafor (7) in message HTML, as the server writes it. */
+const MAYA_MENTION =
+  '<p>Ask <span class="mention" data-user-id="7"><span class="profile-card-name">Maya Okafor' +
+  "</span></span> first</p>";
+
+const LATER = Date.parse("2026-10-06T16:00:00.000Z");
+
+/** Expects the card for `name` to be up, then dismisses it. */
+async function expectCardFor(name: string): Promise<void> {
+  const card = await screen.findByRole("dialog");
+
+  expect(within(card).getByRole("heading", { name })).toBeTruthy();
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  await expectClosed();
+}
+
+/**
+ * The author's name button for `name` opens their card on a click and from the keyboard, and the
+ * avatar beside it on a click; `onOpen` (the row's own action) never runs for any of them.
+ */
+async function expectNameOpensCard(
+  name: string,
+  onOpen: ReturnType<typeof vi.fn> | null,
+): Promise<void> {
+  const user = userEvent.setup();
+  const button = screen.getByRole("button", { name });
+
+  expect(button.dataset.userCardTrigger).toBeDefined();
+  expect(button.tabIndex).toBe(0);
+  expect(button.getAttribute("aria-hidden")).toBeNull();
+
+  await user.click(button);
+  await expectCardFor(name);
+
+  for (const key of ["{Enter}", " "]) {
+    button.focus();
+    await user.keyboard(key);
+    await expectCardFor(name);
+  }
+
+  const avatar = document.querySelector<HTMLElement>(
+    `[data-user-card-trigger="${button.dataset.userCardTrigger}"][aria-hidden="true"]`,
+  );
+
+  if (avatar !== null) {
+    await user.click(avatar);
+    await expectCardFor(name);
+  }
+
+  if (onOpen !== null) {
+    expect(onOpen).not.toHaveBeenCalled();
+  }
+}
+
+/** The mention chip for Maya opens her card on a click and from the keyboard, marking itself open. */
+async function expectMentionOpensCard(onOpen: ReturnType<typeof vi.fn> | null): Promise<void> {
+  const user = userEvent.setup();
+  const chip = screen.getByRole("button", { name: "Maya Okafor" });
+
+  expect(chip.tagName).toBe("SPAN");
+  expect(chip.getAttribute("aria-expanded")).toBe("false");
+
+  await user.click(screen.getByText("Maya Okafor"));
+  await screen.findByRole("dialog");
+  expect(chip.getAttribute("aria-expanded")).toBe("true");
+  await expectCardFor("Maya Okafor");
+  expect(chip.getAttribute("aria-expanded")).toBe("false");
+
+  chip.focus();
+  fireEvent.keyDown(chip, { key: "Enter" });
+  await expectCardFor("Maya Okafor");
+
+  if (onOpen !== null) {
+    expect(onOpen).not.toHaveBeenCalled();
+  }
+}
+
+describe("cards from lists, results and quotes", () => {
+  beforeEach(() => {
+    mutations.mergeUsers([userFixture(7, "Maya Okafor"), userFixture(8, "Lucía Fernández")]);
+  });
+
+  it("opens from a saved item's author and its mentions, and the row still opens the message", async () => {
+    const handlers = {
+      onOpen: vi.fn(),
+      onToggleDone: vi.fn(),
+      onRemind: vi.fn(),
+      onCustomRemind: vi.fn(),
+      onRemove: vi.fn(),
+      onMenu: vi.fn(),
+    };
+
+    await renderWithCard(
+      <SavedRow
+        item={{
+          id: 1,
+          messageId: 3,
+          status: "in_progress",
+          remindAt: null,
+          remindedAt: null,
+          createdAt: "2026-10-06T09:00:00.000Z",
+        }}
+        message={messageFixture(3, 1, { creatorId: 8, bodyHtml: MAYA_MENTION })}
+        conversation={null}
+        now={LATER}
+        motion={undefined}
+        celebrate={false}
+        handlers={handlers}
+      />,
+    );
+
+    await expectNameOpensCard("Lucía Fernández", handlers.onOpen);
+    await expectMentionOpensCard(handlers.onOpen);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Open Lucía Fernández's message/ }));
+    expect(handlers.onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens from a search result's author and its mentions, its link still jumping to the message", async () => {
+    const pathname = await renderWithCard(
+      <HitRow
+        hit={messageFixture(41, 1, { creatorId: 8, bodyHtml: MAYA_MENTION })}
+        conversation={undefined}
+        terms={[]}
+        now={LATER}
+      />,
+    );
+
+    await expectNameOpensCard("Lucía Fernández", null);
+    expect(pathname()).toBe("/");
+    await expectMentionOpensCard(null);
+    expect(pathname()).toBe("/");
+
+    const link = document.querySelector<HTMLElement>("[data-search-hit-link]");
+
+    expect(link?.getAttribute("aria-label")).toMatch(/^Lucía Fernández, /);
+    expect(link?.textContent).toBe("");
+    fireEvent.click(link ?? document.body);
+    await waitFor(() => expect(pathname()).toBe("/r/1/m/41"));
+  });
+
+  it("opens your own card from your member row, and someone else's without messaging them", async () => {
+    const onOpen = vi.fn();
+
+    const member = {
+      userId: 8,
+      name: "Lucía Fernández",
+      presence: "online",
+      statusText: null,
+      starred: false,
+      bot: false,
+      viewer: false,
+    } as const;
+
+    await renderWithCard(
+      <ul>
+        <MemberRow member={member} onOpen={onOpen} onStar={vi.fn()} />
+        <MemberRow
+          member={{ ...member, userId: 7, name: "Maya Okafor", viewer: true }}
+          onOpen={onOpen}
+          onStar={vi.fn()}
+        />
+      </ul>,
+    );
+
+    await expectNameOpensCard("Lucía Fernández", onOpen);
+    await expectNameOpensCard("Maya Okafor", onOpen);
+    expect(screen.queryByRole("button", { name: "Message Maya Okafor" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Message Lucía Fernández" }));
+    expect(onOpen).toHaveBeenCalledWith(member);
+  });
+
+  it("opens from an activity row's creator, and the row still opens the item", async () => {
+    const onOpen = vi.fn();
+
+    const item: ActivityItem = {
+      id: 7,
+      eventType: "mention",
+      state: "unread",
+      readAt: null,
+      handledAt: null,
+      createdAt: "2026-10-06T11:00:00.000Z",
+      updatedAt: "2026-10-06T11:00:00.000Z",
+      source: {
+        sourceType: "message",
+        sourceId: 9001,
+        roomId: 12,
+        threadId: null,
+        messageId: 9001,
+        eventId: null,
+        creatorId: 8,
+        title: "general",
+        body: "Can you review the launch plan?",
+        occurredAt: "2026-10-06T11:00:00.000Z",
+        approvalStatus: null,
+        budgetCap: null,
+        path: "/rooms/12/@9001",
+      },
+    };
+
+    await renderWithCard(
+      <ActivityRow
+        item={item}
+        now={LATER}
+        motion={undefined}
+        celebrate={false}
+        onOpen={onOpen}
+        onAction={vi.fn()}
+        onMenu={vi.fn()}
+      />,
+    );
+
+    await expectNameOpensCard("Lucía Fernández", onOpen);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Unread, Mention, general/ }));
+    expect(onOpen).toHaveBeenCalledWith(item);
+  });
+
+  it("opens from a thread row's starter, and the row still opens the thread", async () => {
+    const onOpen = vi.fn();
+
+    await renderWithCard(
+      <ul>
+        <ThreadRow thread={threadFixture(5, { creatorId: 8, name: "Launch" })} onOpen={onOpen} />
+      </ul>,
+    );
+
+    await expectNameOpensCard("Lucía Fernández", onOpen);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Launch, Lucía Fernández, 1 reply/ }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens from a reply quote's author, and the quote still jumps to the original", async () => {
+    const source = messageFixture(21, 1, { creatorId: 8 });
+
+    mutations.applyPage(1, pageFixture([source]), "replace");
+
+    const pathname = await renderWithCard(
+      <ReplyQuote message={messageFixture(22, 1, { replyToMessageId: source.id })} />,
+    );
+
+    await expectNameOpensCard("Lucía Fernández", null);
+    expect(pathname()).toBe("/");
+
+    const link = document.querySelector<HTMLElement>(".message-reply-link");
+
+    expect(link?.getAttribute("href")).toBe("/app/r/1/m/21");
+    expect(link?.querySelector("[data-user-card-trigger]")).toBeNull();
   });
 });

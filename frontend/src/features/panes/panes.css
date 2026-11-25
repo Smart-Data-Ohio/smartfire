@@ -521,7 +521,21 @@
     transition-duration: var(--duration-micro);
   }
 
+  /* The row's open target, under its contents: only the avatar, the name and the star sit above. */
+  .member-row-cover {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .member-row-cover:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
   .member-row-main {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex: 1;
     align-items: center;
@@ -530,11 +544,16 @@
     padding: var(--space-1-5) var(--space-2);
     border-radius: inherit;
     text-align: left;
+    pointer-events: none;
   }
 
-  .member-row-main:focus-visible {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: -2px;
+  .member-row-main :is(button, a) {
+    pointer-events: auto;
+  }
+
+  .member-row-main > :is(.user-card-trigger, .user-card-hover > .agent-link) {
+    flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .member-row[data-offline] .member-row-main .avatar {
@@ -583,6 +602,8 @@
   }
 
   .member-star {
+    position: relative;
+    z-index: 1;
     margin-right: var(--space-1-5);
     opacity: 0;
     transition: opacity var(--duration-micro-exit) var(--ease-exit);
@@ -642,6 +663,13 @@
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
+  }
+
+  /* The avatar keeps its size beside a long name, at the top of the header. */
+  .pin-card-header > .user-card-trigger:first-child,
+  .pin-card-header > .user-card-hover:first-child > .agent-link {
+    flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .pin-card-author {

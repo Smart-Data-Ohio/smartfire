@@ -308,6 +308,19 @@
     text-decoration: none;
   }
 
+  /* The link to the original stretches over the whole line; the author's name sits above it. */
+  .message-reply-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .message-reply > :is(.user-card-trigger, .user-card-hover > .agent-link) {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+  }
+
   .message-reply-author {
     flex-shrink: 0;
     color: var(--text);

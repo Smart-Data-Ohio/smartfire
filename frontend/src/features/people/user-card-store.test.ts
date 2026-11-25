@@ -8,8 +8,10 @@ import {
   getUserCardState,
   hoverEnter,
   hoverLeave,
+  isUserCardOpening,
   OPEN_DELAY_MS,
   openByClick,
+  pinUserCard,
   releaseAnchor,
   resetUserCard,
   WARM_DELAY_MS,
@@ -34,7 +36,20 @@ beforeEach(() => {
 afterEach(() => {
   resetUserCard();
   vi.useRealTimers();
+  document.body.replaceChildren();
 });
+
+/** An element in the document, as a mounted trigger is. */
+function mounted(tag = "span"): HTMLElement {
+  return document.body.appendChild(document.createElement(tag));
+}
+
+/** The opening the card shows, or `null` when none does. */
+function openingId(): number | null {
+  const state = getUserCardState();
+
+  return state.kind === "open" || state.kind === "closing" ? state.openingId : null;
+}
 
 describe("user card lifecycle", () => {
   it("waits out the cold delay before a hover opens a card", () => {
@@ -197,15 +212,103 @@ describe("user card lifecycle", () => {
   });
 
   it("closes when the element it hangs off goes away", () => {
-    const body = document.createElement("div");
+    const body = mounted("div");
     const mention = document.createElement("span");
 
     body.append(mention);
     openByClick(target(8, mention));
-    releaseAnchor(document.createElement("div"));
+    releaseAnchor(mounted("div"));
     expect(shown()).toBe("open:8");
 
     releaseAnchor(body);
+    expect(shown()).toBe("closed");
+  });
+
+  it("closes when its anchor already left the document, as a replaced mention has", () => {
+    const body = mounted("div");
+    const mention = document.createElement("span");
+
+    body.append(mention);
+    openByClick(target(8, mention));
+    mention.remove();
+    releaseAnchor(body);
+
+    expect(shown()).toBe("closed");
+  });
+
+  it("calls off a swap to a trigger going away, and the card it would replace still closes", () => {
+    const first = mounted();
+    const second = mounted();
+
+    hoverEnter(target(8, first), "mouse");
+    vi.advanceTimersByTime(OPEN_DELAY_MS);
+    hoverEnter(target(9, second), "mouse");
+    releaseAnchor(second);
+    vi.advanceTimersByTime(WARM_DELAY_MS * 3);
+    expect(shown()).toBe("open:8");
+
+    hoverLeave();
+    hoverEnter(target(9, second), "mouse");
+    expect(shown()).toBe("closing:8");
+    releaseAnchor(second);
+    vi.advanceTimersByTime(CLOSE_DELAY_MS - 1);
+    expect(shown()).toBe("closing:8");
+    vi.advanceTimersByTime(1);
+    expect(shown()).toBe("closed");
+  });
+
+  it("numbers every opening, even of the same person's card, and keeps it while it shows", () => {
+    const anchor = mounted();
+
+    openByClick(target(8, anchor));
+
+    const first = openingId();
+
+    hoverLeave();
+    openByClick(target(8, mounted()));
+    expect(openingId()).toBe(first);
+    expect(isUserCardOpening(first ?? 0)).toBe(true);
+
+    closeUserCard();
+    expect(isUserCardOpening(first ?? 0)).toBe(false);
+
+    openByClick(target(8, anchor));
+    expect(openingId()).not.toBe(first);
+    expect(isUserCardOpening(first ?? 0)).toBe(false);
+
+    const second = openingId();
+
+    hoverEnter(target(9), "mouse");
+    closeUserCard();
+    hoverEnter(target(9), "mouse");
+    vi.advanceTimersByTime(OPEN_DELAY_MS);
+    expect(openingId()).not.toBe(second);
+  });
+
+  it("pins a hover-opened card through the pointer leaving it", () => {
+    hoverEnter(target(8), "mouse");
+    vi.advanceTimersByTime(OPEN_DELAY_MS);
+
+    const opening = openingId();
+
+    cardEnter();
+    pinUserCard();
+    cardLeave();
+    vi.advanceTimersByTime(CLOSE_DELAY_MS * 2);
+
+    expect(getUserCardState()).toMatchObject({ kind: "open", via: "click", openingId: opening });
+  });
+
+  it("pins a card in its close grace, and pins nothing when none shows", () => {
+    hoverEnter(target(8), "mouse");
+    vi.advanceTimersByTime(OPEN_DELAY_MS);
+    hoverLeave();
+    pinUserCard();
+    vi.advanceTimersByTime(CLOSE_DELAY_MS * 2);
+    expect(shown()).toBe("open:8");
+
+    closeUserCard();
+    pinUserCard();
     expect(shown()).toBe("closed");
   });
 });

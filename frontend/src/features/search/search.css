@@ -431,29 +431,38 @@
   }
 
   /*
-   * The author's name is the card's link; its ::after stretches over the whole card. The name and
-   * the avatar sit above it, so they (and not the rest of the card) hover or open the user card.
+   * The card's link stretches over the whole card, out of the head's flow. The author's avatar and
+   * name sit above it, so they (and not the rest of the card) hover or open the user card.
    */
   .search-hit-link {
-    color: var(--text);
-    font-size: var(--text-ui);
-    font-weight: var(--weight-semibold);
-    text-decoration: none;
-    outline: none;
-  }
-
-  .search-hit-link::after {
-    content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
+    outline: none;
   }
 
-  .search-hit-author,
+  .search-hit-author {
+    position: relative;
+    z-index: 1;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .search-hit-head .user-card-trigger,
+  .search-hit-head .user-card-hover > .agent-link {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The avatar keeps its own size at the top of a tall hit: no gutter above or below it opens the card. */
   .search-hit > .user-card-trigger,
   .search-hit > .user-card-hover > .agent-link {
     position: relative;
     z-index: 1;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .search-hit-time,
@@ -471,8 +480,12 @@
     line-clamp: 5;
   }
 
-  /* Links, code and mentions in the body stay usable above the card's stretched link. */
+  /*
+   * Links, code and mentions in the body stay usable above the card's stretched link. A mention a
+   * covered spoiler hides rides on its spoiler, which takes the click that reveals it.
+   */
   .search-hit-body a,
+  .search-hit-body .mention[data-user-id],
   .search-hit-body span[data-spoiler],
   .search-hit-file .attachment-spoiler,
   .search-hit-drive,

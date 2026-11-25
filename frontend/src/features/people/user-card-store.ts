@@ -19,13 +19,23 @@ export interface CardTarget {
   readonly placement: Placement;
 }
 
+/**
+ * A showing card's opening: `openingId` numbers each time a card comes up (from closed, or swapped
+ * for someone else's), so work one opening started (a Message on its way) can tell whether the
+ * card it belongs to still shows, even after the same person's card was dismissed and reopened.
+ */
+interface Opening {
+  readonly via: CardVia;
+  readonly openingId: number;
+}
+
 export type UserCardState =
   | { readonly kind: "closed" }
   /** Hover intent: the cold delay is running. Nothing shows yet. */
   | ({ readonly kind: "pending" } & CardTarget)
-  | ({ readonly kind: "open"; readonly via: CardVia } & CardTarget)
+  | ({ readonly kind: "open" } & Opening & CardTarget)
   /** The pointer left: still showing through the grace delay, back to open if it returns. */
-  | ({ readonly kind: "closing"; readonly via: CardVia } & CardTarget);
+  | ({ readonly kind: "closing" } & Opening & CardTarget);
 
 /** Before a hover opens a card from cold. */
 export const OPEN_DELAY_MS = 300;
@@ -52,6 +62,15 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let incoming: CardTarget | undefined;
 
 let closedAt = Number.NEGATIVE_INFINITY;
+
+let openings = 0;
+
+/** The next opening's number. */
+function nextOpening(): number {
+  openings += 1;
+
+  return openings;
+}
 
 const listeners = new Set<() => void>();
 
@@ -92,7 +111,7 @@ function scheduleOpen(ms: number, target: CardTarget): void {
     const latest = incoming ?? target;
 
     incoming = undefined;
-    set({ kind: "open", via: "hover", ...latest });
+    set({ kind: "open", via: "hover", openingId: nextOpening(), ...latest });
   });
   incoming = target;
 }
@@ -129,9 +148,9 @@ export function useUserCardExpanded(ref: { readonly current: Element | null }): 
   return useSyncExternalStore(subscribeUserCard, expanded, expanded);
 }
 
-/** Whether the card still shows `userId` (open, or in its close grace). */
-export function userCardShows(userId: number): boolean {
-  return shown(state) && state.userId === userId;
+/** Whether the card from opening `openingId` still shows (open, or in its close grace). */
+export function isUserCardOpening(openingId: number): boolean {
+  return shown(state) && state.openingId === openingId;
 }
 
 /** The pointer came onto a trigger. Only a mouse hovers; touch and pen wait for the tap. */
@@ -149,7 +168,7 @@ export function hoverEnter(target: CardTarget, pointerType: string): void {
 
   if (shown(current) && current.userId === target.userId) {
     clearTimer();
-    set({ kind: "open", via: "hover", ...target });
+    set({ kind: "open", via: "hover", openingId: current.openingId, ...target });
 
     return;
   }
@@ -229,7 +248,26 @@ export function openByClick(target: CardTarget): void {
     return;
   }
 
-  set({ kind: "open", via: "click", ...target });
+  // Clicking the trigger of the person whose card shows keeps that card up, pinned.
+  const openingId =
+    shown(current) && current.userId === target.userId ? current.openingId : nextOpening();
+
+  set({ kind: "open", via: "click", openingId, ...target });
+}
+
+/**
+ * Keeps the card that shows up until it is dismissed, as a click would have opened it: the pointer
+ * leaving it (on its way to the conversation Message opens, say) no longer closes it.
+ */
+export function pinUserCard(): void {
+  const current = state;
+
+  if (!shown(current)) {
+    return;
+  }
+
+  clearTimer();
+  set({ ...current, kind: "open", via: "click" });
 }
 
 /** Closes the card at once (Esc, an outside press, navigation, a scroll). */
@@ -238,13 +276,30 @@ export function closeUserCard(): void {
   set(CLOSED);
 }
 
+/** Whether `anchor` goes with `element`: inside it, or already out of the document. */
+function goesWith(element: Element, anchor: HTMLElement): boolean {
+  return element.contains(anchor) || !anchor.isConnected;
+}
+
 /**
  * A trigger or a body of message HTML is going away: a card hanging off it (or anything inside
- * it) closes, as it would otherwise float over nothing.
+ * it) closes, as it would otherwise float over nothing. So does one hanging off an element already
+ * gone, as a mention is when its body's markup is replaced in place before this runs. A swap to a
+ * trigger going away is called off, and a card in its close grace goes on closing.
  */
 export function releaseAnchor(element: Element): void {
-  if (state.kind !== "closed" && element.contains(state.anchor)) {
+  if (state.kind !== "closed" && goesWith(element, state.anchor)) {
     closeUserCard();
+
+    return;
+  }
+
+  if (incoming !== undefined && goesWith(element, incoming.anchor)) {
+    clearTimer();
+
+    if (state.kind === "closing") {
+      schedule(CLOSE_DELAY_MS, () => set(CLOSED));
+    }
   }
 }
 

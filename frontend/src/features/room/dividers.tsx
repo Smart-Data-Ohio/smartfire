@@ -32,9 +32,10 @@ export function UnreadDivider({ count }: { readonly count: number }) {
 
 /**
  * The start of a room's history (and, for a room with no messages, its whole empty state): a big
- * glyph, the other person's avatar or a group's pair, and a line that says where you are. A DM
- * names its people in full, as the sidebar does: a 1:1 DM's header name can be a stale first name.
- * A 1:1 DM's avatar and name open the other person's card.
+ * glyph, the other person's avatar or a group's pair, and a line that says where you are. A 1:1
+ * DM names the other person in full, as the sidebar does (its header name can be a stale first
+ * name); an unnamed group DM keeps the sorted first names its header and sidebar row show. A 1:1
+ * DM's avatar and name open the other person's card.
  */
 export function RoomIntro({ roomId }: { readonly roomId: number }) {
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
@@ -50,7 +51,7 @@ export function RoomIntro({ roomId }: { readonly roomId: number }) {
   const direct = room.kind === "direct";
   const otherId = direct ? directMemberIds[0] : undefined;
   const group = direct && directMemberIds.length > 1;
-  const name = direct ? sidebarDisplayName || displayName : displayName;
+  const name = direct && !group ? sidebarDisplayName || displayName : displayName;
 
   if (self && otherId !== undefined) {
     return (

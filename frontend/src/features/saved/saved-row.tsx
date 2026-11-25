@@ -16,8 +16,8 @@ import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
 import { messageFiles } from "../messages/message-files.ts";
-import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { StickerMessage } from "../messages/sticker-message.tsx";
+import { useMessageBodyRef } from "../people/mention-cards.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
@@ -120,7 +120,7 @@ export function SavedRow({
 }: SavedRowProps) {
   const author = useUser(message?.creatorId);
   const bodyHtml = useMotionSafeHtml(message?.bodyHtml ?? "");
-  const bodyRef = useSpoilerReveal(bodyHtml);
+  const bodyRef = useMessageBodyRef(bodyHtml);
   const done = item.status === "done";
   const reminder = reminderLabel(item, now);
   const authorName = author?.name ?? UNKNOWN_NAME;
@@ -212,7 +212,7 @@ export function SavedRow({
         {message === null ? (
           <UserAvatar userId={0} size={36} decorative />
         ) : (
-          // The row's cover opens the message and holds the keyboard; these are for the pointer.
+          // The row's cover opens the message; the avatar is for the pointer, the name a stop too.
           <AuthorCardTrigger userId={message.creatorId} placement="right-start" duplicate>
             <UserAvatar userId={message.creatorId} size={36} decorative />
           </AuthorCardTrigger>
@@ -222,7 +222,7 @@ export function SavedRow({
             {message === null ? (
               <span className="saved-author">{authorName}</span>
             ) : (
-              <AuthorCardTrigger userId={message.creatorId} duplicate>
+              <AuthorCardTrigger userId={message.creatorId}>
                 <span className="saved-author">{authorName}</span>
               </AuthorCardTrigger>
             )}

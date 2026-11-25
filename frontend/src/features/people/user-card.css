@@ -16,8 +16,18 @@
   }
 
   .user-card-trigger:hover
-    :is(.message-author, .message-reply-author, .pin-card-author, .saved-author),
-  .user-card-hover:hover :is(.message-reply-author, .activity-author, .member-row-label) {
+    :is(
+      .message-author,
+      .message-reply-author,
+      .pin-card-author,
+      .saved-author,
+      .search-hit-author,
+      .activity-author,
+      .member-row-label,
+      .thread-row-author
+    ),
+  .user-card-hover:hover
+    :is(.message-reply-author, .activity-author, .member-row-label, .search-hit-author) {
     text-decoration: underline;
   }
 

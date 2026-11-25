@@ -37,7 +37,8 @@ import {
   cardEnter,
   cardLeave,
   closeUserCard,
-  userCardShows,
+  isUserCardOpening,
+  pinUserCard,
   useUserCard,
 } from "./user-card-store.ts";
 import "../../ui/floating.css";
@@ -63,23 +64,36 @@ interface Viewer {
   readonly role: UserRole | null;
 }
 
-const profiles = new Map<
-  number,
-  { readonly viewer: Viewer; readonly at: number; readonly profile: PersonProfile }
->();
+/** What the card shows of a fetched profile, and all it keeps: never a sign-in link. */
+export type CardProfile = Pick<PersonProfile, "user" | "status" | "emailAddress" | "ignoredByMe">;
 
-function freshProfile(userId: number, viewer: Viewer): PersonProfile | null {
-  const hit = profiles.get(userId);
-
-  return hit !== undefined &&
-    hit.viewer.id === viewer.id &&
-    hit.viewer.role === viewer.role &&
-    Date.now() - hit.at < PROFILE_TTL_MS
-    ? hit.profile
-    : null;
+function cardFields({ user, status, emailAddress, ignoredByMe }: PersonProfile): CardProfile {
+  return { user, status, emailAddress, ignoredByMe };
 }
 
-function storeProfile(userId: number, viewer: Viewer, profile: PersonProfile): void {
+const profiles = new Map<
+  number,
+  { readonly viewer: Viewer; readonly at: number; readonly profile: CardProfile }
+>();
+
+/** The cached card profile for `userId` as `viewer` sees it, forgetting one gone stale. */
+function freshProfile(userId: number, viewer: Viewer): CardProfile | null {
+  const hit = profiles.get(userId);
+
+  if (hit === undefined) {
+    return null;
+  }
+
+  if (Date.now() - hit.at >= PROFILE_TTL_MS) {
+    profiles.delete(userId);
+
+    return null;
+  }
+
+  return hit.viewer.id === viewer.id && hit.viewer.role === viewer.role ? hit.profile : null;
+}
+
+function storeProfile(userId: number, viewer: Viewer, profile: CardProfile): void {
   profiles.delete(userId);
   profiles.set(userId, { viewer, at: Date.now(), profile });
 
@@ -97,18 +111,34 @@ export function clearUserCardProfiles(): void {
   profiles.clear();
 }
 
+/** What the card keeps of `userId`'s fetched profile, if anything (tests). */
+export function cachedUserCardProfile(userId: number): CardProfile | undefined {
+  return profiles.get(userId)?.profile;
+}
+
 /**
- * Their profile as the people page reads it, fetched quietly once the card is up: the card draws
- * from the store at once and this only adds what the store lacks (the email an administrator
- * sees, a status line not yet in presence, or the whole person when the store has never seen
- * them). A failure leaves the card as it is.
+ * The viewer's role as the store has it now: their row in `users`, which every later copy of them
+ * (a demotion arriving by sync) lands in, before the sign-in's copy in `me`.
+ */
+function useViewerRole(viewerId: number | null): UserRole | null {
+  return useStore(
+    (state) =>
+      (viewerId === null ? undefined : state.users[viewerId]?.role) ?? state.me?.user.role ?? null,
+  );
+}
+
+/**
+ * Their profile as the card reads it (`?card=1`, without the sign-in link), fetched quietly once
+ * the card is up: the card draws from the store at once and this only adds what the store lacks
+ * (the email an administrator sees, a status line not yet in presence, or the whole person when
+ * the store has never seen them). A failure leaves the card as it is.
  */
 function useCardProfile(
   userId: number,
   viewerId: number | null,
   viewerRole: UserRole | null,
-): PersonProfile | null {
-  const [loaded, setLoaded] = useState<PersonProfile | null>(() =>
+): CardProfile | null {
+  const [loaded, setLoaded] = useState<CardProfile | null>(() =>
     freshProfile(userId, { id: viewerId, role: viewerRole }),
   );
 
@@ -124,8 +154,10 @@ function useCardProfile(
 
     const controller = new AbortController();
 
-    peoplePages.profile(userId, controller.signal).then(
-      (profile) => {
+    peoplePages.cardProfile(userId, controller.signal).then(
+      (reply) => {
+        const profile = cardFields(reply);
+
         storeProfile(userId, viewer, profile);
 
         if (!controller.signal.aborted) {
@@ -184,7 +216,7 @@ function PresenceLine({
 }: {
   readonly userId: number;
   readonly customStatus: CustomStatus | null;
-  readonly profile: PersonProfile | null;
+  readonly profile: CardProfile | null;
 }) {
   const live = usePresenceStatus(userId);
   const liveText = useStore((state) => state.presence[userId]?.statusText ?? null);
@@ -214,6 +246,8 @@ function PresenceLine({
 
 interface CardProps {
   readonly userId: number;
+  /** The card's opening, which a Message on its way checks still shows before it navigates. */
+  readonly openingId: number;
   readonly titleId: string;
 }
 
@@ -267,10 +301,10 @@ function ProfileLink({ userId, own }: { readonly userId: number; readonly own: b
  * account name when a nickname differs, and pronouns), badges, presence or agent status, the email
  * an administrator sees, their bio, and Message and View profile.
  */
-function UserCard({ userId, titleId }: CardProps) {
+function UserCard({ userId, openingId, titleId }: CardProps) {
   const navigate = useNavigate();
   const viewerId = useViewerId();
-  const viewerRole = useStore((state) => state.me?.user.role ?? null);
+  const viewerRole = useViewerRole(viewerId);
   const held = useUser(userId);
   const profile = useCardProfile(userId, viewerId, viewerRole);
 
@@ -296,12 +330,14 @@ function UserCard({ userId, titleId }: CardProps) {
       : null;
 
   const message = () => {
+    // The pointer leaving a hover-opened card on its way somewhere must not drop the conversation.
+    pinUserCard();
     setMessaging(true);
     // Nobody else opens your note-to-self, as the sidebar's "Message yourself" does.
     directs.create(own ? [] : [userId]).then(
       (row) => {
-        // Dismissed (or swapped for someone else's) while it was on its way: stay put.
-        if (!userCardShows(userId)) {
+        // Dismissed (or swapped, or closed and opened again) while it was on its way: stay put.
+        if (!isUserCardOpening(openingId)) {
           return;
         }
 
@@ -403,6 +439,7 @@ function restoreFocus(anchor: HTMLElement): void {
 /** What the card last showed: kept through its exit so it doesn't go blank as it fades. */
 interface Shown {
   readonly userId: number;
+  readonly openingId: number;
   readonly anchor: HTMLElement;
   readonly placement: Placement;
   readonly via: CardVia;
@@ -428,12 +465,14 @@ export function UserCardHost() {
     visible &&
     (shown === null ||
       shown.userId !== card.userId ||
+      shown.openingId !== card.openingId ||
       shown.anchor !== card.anchor ||
       shown.placement !== card.placement ||
       shown.via !== card.via)
   ) {
     setShown({
       userId: card.userId,
+      openingId: card.openingId,
       anchor: card.anchor,
       placement: card.placement,
       via: card.via,
@@ -584,7 +623,12 @@ export function UserCardHost() {
       onKeyDown={onKeyDown}
       onBlur={onBlur}
     >
-      <UserCard key={shown.userId} userId={shown.userId} titleId={titleId} />
+      <UserCard
+        key={shown.openingId}
+        userId={shown.userId}
+        openingId={shown.openingId}
+        titleId={titleId}
+      />
     </div>
   );
 }

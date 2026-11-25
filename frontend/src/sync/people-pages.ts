@@ -10,7 +10,8 @@ import { mutations, store } from "../store/store.ts";
 /** The requests the people pages make, as promises (the runtime's in the app, fakes in tests). */
 export interface PeopleRequests {
   readonly directory: () => Promise<PeopleDirectory>;
-  readonly profile: (userId: number) => Promise<PersonProfile>;
+  /** `card`: the user card's read, with no sign-in link. */
+  readonly profile: (userId: number, card: boolean) => Promise<PersonProfile>;
   readonly setBanned: (userId: number, banned: boolean) => Promise<PersonProfile>;
   readonly setDndAllowance: (userId: number, allowed: boolean) => Promise<Settings>;
 }
@@ -81,6 +82,29 @@ export function peoplePagesOver(requests: PeopleRequests) {
     return !landsOver(held, user) || (held !== undefined && !sameUserRow(held, user));
   }
 
+  async function readProfile(
+    userId: number,
+    card: boolean,
+    signal: AbortSignal | undefined,
+  ): Promise<PersonProfile> {
+    for (let refetches = 0; ; refetches += 1) {
+      const mark = dndMark(userId);
+      const profile = await requests.profile(userId, card);
+
+      mutations.mergeUsers([profile.user]);
+
+      if (!overtaken(profile.user)) {
+        landReadAllowance(userId, mark, profile.dndAllowed);
+
+        return { ...profile, user: store.getState().users[userId] ?? profile.user };
+      }
+
+      if (signal?.aborted === true) throw new Error("The page was left");
+
+      if (refetches >= PROFILE_REFETCHES) throw new Error(PROFILE_OUT_OF_DATE);
+    }
+  }
+
   const pages = {
     directory: (): Promise<readonly DirectoryPerson[]> =>
       requests.directory().then((list) => {
@@ -95,24 +119,12 @@ export function peoplePagesOver(requests: PeopleRequests) {
      * clock that stepped back can keep every reply older. `signal` stops the refetching when the
      * page goes.
      */
-    profile: async (userId: number, signal?: AbortSignal): Promise<PersonProfile> => {
-      for (let refetches = 0; ; refetches += 1) {
-        const mark = dndMark(userId);
-        const profile = await requests.profile(userId);
+    profile: (userId: number, signal?: AbortSignal): Promise<PersonProfile> =>
+      readProfile(userId, false, signal),
 
-        mutations.mergeUsers([profile.user]);
-
-        if (!overtaken(profile.user)) {
-          landReadAllowance(userId, mark, profile.dndAllowed);
-
-          return { ...profile, user: store.getState().users[userId] ?? profile.user };
-        }
-
-        if (signal?.aborted === true) throw new Error("The page was left");
-
-        if (refetches >= PROFILE_REFETCHES) throw new Error(PROFILE_OUT_OF_DATE);
-      }
-    },
+    /** What the user card shows of them: their page without the sign-in link, read the same way. */
+    cardProfile: (userId: number, signal?: AbortSignal): Promise<PersonProfile> =>
+      readProfile(userId, true, signal),
 
     /** Bans them (`true`) or removes the ban (`false`); answers their page as it now stands. */
     setBanned: async (

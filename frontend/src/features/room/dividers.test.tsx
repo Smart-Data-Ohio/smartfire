@@ -37,27 +37,24 @@ afterEach(() => mutations.reset());
 
 describe("RoomIntro", () => {
   it("names a 1:1 DM's other person in full, even when the header name is only their first", () => {
-    show(direct([8], "Ashley", "Ashley Brown"));
+    show(direct([8], "Ashley", "Ashley Brooks"));
 
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Ashley Brown");
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Ashley Brooks");
     expect(
-      screen.getByText("This is the very beginning of your conversation with Ashley Brown.", {
+      screen.getByText("This is the very beginning of your conversation with Ashley Brooks.", {
         exact: false,
       }),
     ).toBeTruthy();
   });
 
-  it("lists an unnamed group DM's people with their last names, over the pair of avatars", () => {
+  it("names an unnamed group DM by its people's sorted first names, over the pair of avatars", () => {
     show(direct([8, 9], "Ada, Grace", "Ada Lovelace, Grace Hopper"));
 
-    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
-      "Ada Lovelace, Grace Hopper",
-    );
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Ada, Grace");
     expect(
-      screen.getByText(
-        "This is the very beginning of your conversation with Ada Lovelace, Grace Hopper.",
-        { exact: false },
-      ),
+      screen.getByText("This is the very beginning of your conversation with Ada, Grace.", {
+        exact: false,
+      }),
     ).toBeTruthy();
     expect(document.querySelector(".room-intro .group-avatars")).not.toBeNull();
   });

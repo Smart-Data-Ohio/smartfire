@@ -1,7 +1,10 @@
 /* The activity inbox: Slack's activity rows on the pane surface. */
 @layer app {
+  /* The row's contents, over its cover: the creator's avatar and name open their card above it. */
   .activity-row {
     position: relative;
+    display: flex;
+    width: 100%;
     align-items: flex-start;
     gap: var(--space-3);
     padding: 10px var(--space-3) 10px var(--space-4);
