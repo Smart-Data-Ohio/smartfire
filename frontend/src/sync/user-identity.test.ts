@@ -68,16 +68,24 @@ describe("public identity updates", () => {
           seq: 2,
           topic: "user",
           type: "sidebar.row.upserted",
-          data: { ...row, displayName: "Nick", sidebarDisplayName: "Nick Example", revision: 1 },
+          // A 1:1 DM is named for the other person in full, in the header as in the sidebar.
+          data: {
+            ...row,
+            displayName: "Nick Example",
+            sidebarDisplayName: "Nick Example",
+            revision: 1,
+          },
         },
       ],
       0,
     );
 
     expect(next.users[8]).toEqual(changed);
+    expect(next.sidebar.rows[20]?.displayName).toBe("Nick Example");
     expect(next.sidebar.rows[20]?.sidebarDisplayName).toBe("Nick Example");
-    expect(next.rooms[20]?.detail?.displayName).toBe("Nick");
-    expect(conversationNameOf(next, 20, null)?.roomName).toBe("Nick");
+    expect(next.rooms[20]?.detail?.displayName).toBe("Nick Example");
+    expect(next.rooms[20]?.detail?.sidebarDisplayName).toBe("Nick Example");
+    expect(conversationNameOf(next, 20, null)?.roomName).toBe("Nick Example");
     expect(mergeUsers(next, [original]).users[8]?.name).toBe("Nick Example");
     expect(loadSidebar(next, sidebar, rowClock(loaded)).sidebar.rows[20]?.sidebarDisplayName).toBe(
       "Nick Example",
