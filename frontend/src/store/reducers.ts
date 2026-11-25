@@ -163,19 +163,8 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
       ? state.sidebar.noteToSelfClosed
       : sidebar.noteToSelfClosed === true;
 
-  const lastRoom = state.me?.lastRoomId;
-
-  const me =
-    state.me !== null &&
-    lastRoom != null &&
-    state.sidebar.rows[lastRoom]?.room.kind === "direct" &&
-    rows[lastRoom] === undefined
-      ? { ...state.me, lastRoomId: null }
-      : state.me;
-
   let next: State = {
     ...state,
-    me,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
       ...state.sidebar,
@@ -1220,6 +1209,7 @@ export function applyEvents(
 ): State {
   const meId = state.me?.user.id ?? state.boot?.user.id ?? null;
   let next = state;
+  let directClosures: Set<number> | undefined;
 
   for (const event of events) {
     switch (event.type) {
@@ -1313,14 +1303,23 @@ export function applyEvents(
         break;
       case "sidebar.row.upserted":
         next = upsertRow(next, event.data);
+
+        if (next.sidebar.rows[event.data.room.id] !== undefined) {
+          directClosures?.delete(event.data.room.id);
+        }
+
         break;
       case "sidebar.row.removed": {
         const { roomId, closed } = event.data;
-        next = removeRow(next, roomId);
 
-        if (closed === true && next.me?.lastRoomId === roomId) {
-          next = { ...next, me: { ...next.me, lastRoomId: null } };
+        if (closed !== true) {
+          directClosures?.delete(roomId);
+        } else if (next.sidebar.rows[roomId]?.room.kind === "direct") {
+          directClosures ??= new Set();
+          directClosures.add(roomId);
         }
+
+        next = removeRow(next, roomId);
 
         if (roomId === next.sidebar.noteToSelfRoomId) {
           next = { ...next, sidebar: { ...next.sidebar, noteToSelfClosed: closed === true } };
@@ -1383,6 +1382,19 @@ export function applyEvents(
         next = setWorkspaceStyles(next, event.data.css);
         break;
     }
+  }
+
+  if (directClosures !== undefined && directClosures.size > 0) {
+    const me = next.me;
+
+    next = {
+      ...next,
+      directClosures,
+      me:
+        me?.lastRoomId != null && directClosures.has(me.lastRoomId)
+          ? { ...me, lastRoomId: null }
+          : me,
+    };
   }
 
   return source === "sync"

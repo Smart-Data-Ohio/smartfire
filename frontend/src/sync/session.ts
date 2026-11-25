@@ -293,9 +293,17 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
         visits.set(roomId, { ...visit, revealDirect: false });
 
         if (loaded.success.membership.closed === true) {
-          yield* setDirectClosed(roomId, false).pipe(
-            Effect.catch((error) =>
-              Effect.logWarning("direct conversation did not reopen", error.message),
+          yield* Effect.forkDetach(
+            setDirectClosed(roomId, false).pipe(
+              Effect.catch((error) => {
+                const current = visits.get(roomId);
+
+                if (current?.token === token) {
+                  visits.set(roomId, { ...current, revealDirect: true });
+                }
+
+                return Effect.logWarning("direct conversation did not reopen", error.message);
+              }),
             ),
           );
         }

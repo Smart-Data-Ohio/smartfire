@@ -375,12 +375,19 @@ impl Membership {
         Ok(())
     }
 
-    /// A live message reopens a direct conversation for every closed member, including its author.
-    pub(crate) fn reopen_direct_for_message(tx: &mut Tx<'_>, room_id: i64) -> Result<()> {
+    /// A live message reopens a direct conversation for closed members who can see its author.
+    pub(crate) fn reopen_direct_for_message(
+        tx: &mut Tx<'_>,
+        room_id: i64,
+        author_id: i64,
+    ) -> Result<()> {
+        let visible = super::ignore_policy::visible_sql("memberships.user_id", "?2");
         let user_ids = query_all(
             tx.conn(),
-            "UPDATE memberships SET closed_at = NULL WHERE room_id = (SELECT id FROM rooms WHERE id = ? AND type = 'Rooms::Direct') AND closed_at IS NOT NULL RETURNING user_id",
-            [room_id],
+            &format!(
+                "UPDATE memberships SET closed_at = NULL WHERE room_id = (SELECT id FROM rooms WHERE id = ?1 AND type = 'Rooms::Direct') AND closed_at IS NOT NULL AND {visible} RETURNING user_id"
+            ),
+            [room_id, author_id],
             |row| row.get(0),
         )?;
         if !user_ids.is_empty() {
@@ -409,7 +416,7 @@ impl Membership {
     pub fn unread_count(conn: &Connection, user_id: i64, now: Timestamp) -> Result<i64> {
         let preferences = super::notification_policy::NotificationPreferences::load(conn, user_id)?;
         let counts = super::room_counts::notification_counts(conn, user_id, None, now)?;
-        Ok(Self::visible_with_ordered_room(conn, user_id)?
+        Ok(Self::sidebar_with_ordered_room(conn, user_id)?
             .into_iter()
             .filter(|(membership, room)| {
                 !preferences.muted(room.id, now)

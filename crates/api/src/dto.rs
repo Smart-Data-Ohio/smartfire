@@ -1997,7 +1997,8 @@ mod tests {
                (3,'Muted','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (4,'Invisible','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (5,'Deleted','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
-               (6,'Timed mute','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00');
+               (6,'Timed mute','Rooms::Open',2,'2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (7,'Closed direct','Rooms::Direct',2,'2035-01-01 00:00:00','2035-01-01 00:00:00');
              UPDATE rooms SET deleted_at='2035-01-01 00:00:00' WHERE id=5;
              UPDATE users SET inbox_preferences='{\"room_mute_until\":{\"6\":\"2035-01-01T13:00:00Z\"}}' WHERE id=1;
              INSERT INTO memberships(room_id,user_id,involvement,unread_at,created_at,updated_at) VALUES
@@ -2006,7 +2007,9 @@ mod tests {
                (3,1,'muted','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (4,1,'invisible','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
                (5,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
-               (6,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
+               (6,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00'),
+               (7,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
+             UPDATE memberships SET closed_at='2035-01-01 00:00:00' WHERE room_id=7;
              INSERT INTO channel_threads(id,room_id,creator_id,name,last_activity_at,created_at,updated_at) VALUES(1,2,2,'Thread','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
              INSERT INTO thread_memberships(thread_id,user_id,involvement,unread_at,joined_at,created_at,updated_at) VALUES(1,1,'everything','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00','2035-01-01 00:00:00');
              INSERT INTO messages(id,room_id,thread_id,creator_id,client_message_id,created_at,updated_at) VALUES(1,2,1,2,'badge-thread','2035-01-01 00:00:00','2035-01-01 00:00:00');
@@ -2034,6 +2037,13 @@ mod tests {
         assert!(unread.contains(&2));
         assert!(unread.contains(&3));
         assert!(!unread.contains(&6));
+        assert!(sidebar.rows.iter().all(|row| row.room.id != 7));
+        assert!(
+            Membership::find_by_room_and_user(&snapshot, 7, 1)
+                .unwrap()
+                .unwrap()
+                .unread()
+        );
         assert_eq!(sidebar.rows.len(), 4);
         assert_eq!(
             Membership::unread_count(&snapshot, 1, now).unwrap(),

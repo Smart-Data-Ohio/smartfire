@@ -146,8 +146,8 @@ export function AppShell() {
 
     return store.subscribe((state, previous) => {
       if (
-        previous.sidebar.rows[roomId]?.room.kind === "direct" &&
-        state.sidebar.rows[roomId] === undefined &&
+        state.directClosures !== previous.directClosures &&
+        state.directClosures.has(roomId) &&
         router.state.matches.some(
           (match) => "roomId" in match.params && match.params.roomId === roomId,
         )

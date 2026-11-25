@@ -766,14 +766,22 @@
     pointer-events: auto;
   }
 
+  .sidebar-row-status {
+    display: contents;
+  }
+
   @media (hover: hover) {
-    .sidebar-row-item[data-direct] .sidebar-row {
-      padding-right: calc(var(--space-1-5) + 48px);
+    .sidebar-row-item[data-direct] .sidebar-row-status {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-2);
+      min-width: 48px;
     }
 
-    .sidebar-row-item[data-direct] .sidebar-row .badge {
-      position: absolute;
-      right: var(--space-1-5);
+    .sidebar-row-item[data-direct]:where(:hover, :has(:focus-visible)) .sidebar-row-status {
+      opacity: 0;
     }
 
     .sidebar-row-item:hover .sidebar-row-close {
@@ -787,14 +795,14 @@
   }
 
   .sidebar-row-item:hover .sidebar-row .badge,
-  .sidebar-row-item:hover .sidebar-row-muted,
-  .sidebar-row-item[data-direct]:has(:focus-visible) .sidebar-row :is(.badge, .sidebar-row-muted) {
+  .sidebar-row-item:hover .sidebar-row-muted {
     opacity: 0;
   }
 
   /* Touch opens the menu with a long press; a dragging pointer has no use for it either. */
   @media (hover: none) {
     .sidebar-row-more,
+    .sidebar-row-close,
     .sidebar-category-grip {
       display: none;
     }

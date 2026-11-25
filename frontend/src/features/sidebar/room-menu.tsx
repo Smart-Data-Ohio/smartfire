@@ -30,7 +30,6 @@ import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import { toastFailure } from "../settings/settings-parts.tsx";
 import {
-  closeConversation,
   markRead,
   moveRoom,
   moveSharedRoom,
@@ -263,6 +262,7 @@ interface RoomMenuItemsProps {
   readonly shared?: SharedMenu;
   /** "Move to → New category…": opens the name field, the room to move in once it exists. */
   readonly onNewCategory: (row: SidebarRow) => void;
+  readonly onCloseConversation: () => void;
 }
 
 /**
@@ -277,6 +277,7 @@ export function RoomMenuItems({
   categories,
   shared = NO_SHARED,
   onNewCategory,
+  onCloseConversation,
 }: RoomMenuItemsProps) {
   const navigate = useNavigate();
   const preferences = useStore((state) => state.sidebar.notificationPreferences);
@@ -395,7 +396,7 @@ export function RoomMenuItems({
       )}
       <MenuSeparator />
       {kind === "direct" ? (
-        <MenuItem icon="x" onSelect={() => closeConversation(row)}>
+        <MenuItem icon="x" onSelect={onCloseConversation}>
           Close conversation
         </MenuItem>
       ) : (
@@ -515,6 +516,7 @@ export function RoomContextMenu({
   categories,
   shared,
   onNewCategory,
+  onCloseConversation,
   onClosed,
 }: RoomContextMenuProps) {
   return (
@@ -530,6 +532,7 @@ export function RoomContextMenu({
         categories={categories}
         {...(shared === undefined ? {} : { shared })}
         onNewCategory={onNewCategory}
+        onCloseConversation={onCloseConversation}
       />
     </Menu>
   );

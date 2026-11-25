@@ -15,6 +15,7 @@ import { sidebarRowFixture } from "../../api/testing.ts";
 import type { Me } from "../../gen/Me.ts";
 import type { RoomDetail } from "../../gen/RoomDetail.ts";
 import type { Sidebar } from "../../gen/Sidebar.ts";
+import { beginRoomRequest } from "../../store/join-state.ts";
 import { mutations, sidebarRowClock, store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
@@ -123,8 +124,21 @@ function interceptClose() {
   });
 }
 
-it("the direct close button follows keyboard focus, closes the row and leaves its active route", async () => {
+it("the keyboard close button leaves the active direct and focuses its next row", async () => {
   const row = directRow();
+
+  mutations.loadSidebar(
+    {
+      ...sidebar,
+      rows: sidebar.rows.map((entry) =>
+        entry.room.id === DM
+          ? { ...row, membership: { ...row.membership, favoritePosition: null } }
+          : entry,
+      ),
+    },
+    sidebarRowClock(),
+  );
+
   const request = interceptClose();
   const router = await mount(`/r/${DM}`);
   const user = userEvent.setup();
@@ -148,10 +162,26 @@ it("the direct close button follows keyboard focus, closes the row and leaves it
   expect(sidebarView.queryByRole("link", { name: new RegExp(row.sidebarDisplayName) })).toBeNull();
   expect(store.getState().sidebar.rows[DM]).toBeUndefined();
   expect(store.getState().me?.lastRoomId).toBeNull();
+  expect(document.activeElement).toBe(sidebarView.getByRole("link", { name: "Ember" }));
 });
 
-it("only direct rows and their options menus offer close conversation", async () => {
+it("closing the only direct from its menu focuses the Direct messages heading", async () => {
   const row = directRow();
+
+  mutations.loadSidebar(
+    {
+      ...sidebar,
+      rows: sidebar.rows.flatMap((entry) => {
+        if (entry.room.id === DM) {
+          return [{ ...row, membership: { ...row.membership, favoritePosition: null } }];
+        }
+
+        return entry.room.kind === "direct" ? [] : [entry];
+      }),
+    },
+    sidebarRowClock(),
+  );
+
   const request = interceptClose();
   await mount(`/r/${SEED_IDS.rooms.general}`);
   const user = userEvent.setup();
@@ -170,22 +200,35 @@ it("only direct rows and their options menus offer close conversation", async ()
   );
   expect(screen.queryByRole("menuitem", { name: "Close conversation" })).toBeNull();
   await user.keyboard("{Escape}");
-  await user.click(sidebarView.getByRole("button", { name: `${row.sidebarDisplayName} options` }));
-  await user.click(screen.getByRole("menuitem", { name: "Close conversation" }));
+  act(() => sidebarView.getByRole("link", { name: new RegExp(row.sidebarDisplayName) }).focus());
+  await user.keyboard("{Shift>}{F10}{/Shift}");
+  act(() => screen.getByRole("menuitem", { name: "Close conversation" }).focus());
+  await user.keyboard("{Enter}");
   await waitFor(() => expect(store.getState().sidebar.rows[DM]).toBeUndefined());
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      sidebarView.getByRole("button", { name: "Direct messages" }),
+    ),
+  );
   expect(request).toHaveBeenCalledWith(
     expect.objectContaining({ method: "PUT", path: CLOSED_ENDPOINT, body: { closed: true } }),
   );
 });
 
-it("a link to a closed direct reopens the room and restores its sidebar row", async () => {
+it("a closed direct loads its timeline during a reopen write and retries a refusal", async () => {
   const row = directRow();
   const detail = await get<RoomDetail>(network.server, `/api/v1/rooms/${DM}`);
   const handle = network.server.handle.bind(network.server);
+  const reopen = Promise.withResolvers<Awaited<ReturnType<typeof handle>>>();
+  let reopenAttempts = 0;
 
   const request = vi.spyOn(network.server, "handle").mockImplementation((input) => {
     if (input.path === CLOSED_ENDPOINT && input.method === "PUT") {
-      return Promise.resolve({ status: 200, json: { row } });
+      reopenAttempts += 1;
+
+      return reopenAttempts === 1
+        ? reopen.promise
+        : Promise.resolve({ status: 200, json: { row } });
     }
 
     if (input.path === `/api/v1/rooms/${DM}` && input.method === "GET") {
@@ -204,11 +247,21 @@ it("a link to a closed direct reopens the room and restores its sidebar row", as
   );
   const router = await mount(`/r/${DM}`, true);
 
-  await waitFor(() => expect(store.getState().sidebar.rows[DM]).toBeDefined());
   expect(router.state.location.pathname).toBe(`/r/${DM}`);
-  expect(request).toHaveBeenCalledWith(
-    expect.objectContaining({ method: "PUT", path: CLOSED_ENDPOINT, body: { closed: false } }),
-  );
+
+  try {
+    await waitFor(() => expect(store.getState().timelines[DM]?.ids.length).toBeGreaterThan(0));
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "PUT", path: CLOSED_ENDPOINT, body: { closed: false } }),
+    );
+    expect(store.getState().sidebar.rows[DM]).toBeUndefined();
+  } finally {
+    await act(async () => reopen.resolve({ status: 500, json: null }));
+  }
+
+  await act(() => actions.reloadRoom(DM, null));
+  await waitFor(() => expect(store.getState().sidebar.rows[DM]).toBeDefined());
+  expect(reopenAttempts).toBe(2);
 });
 
 it("group directs and the note-to-self have their own labelled close buttons", async () => {
@@ -243,4 +296,48 @@ it("a close from another tab leaves the active direct", async () => {
 
   await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   expect(store.getState().sidebar.rows[DM]).toBeUndefined();
+  expect(store.getState().me?.lastRoomId).toBeNull();
+});
+
+it("losing access to a group direct keeps its unavailable room on screen", async () => {
+  const roomId = SEED_IDS.rooms.groupDm;
+  const me = await get<Me>(network.server, "/api/v1/me");
+  mutations.setMe({ ...me, lastRoomId: roomId });
+  const router = await mount(`/r/${roomId}`, true);
+  const navigate = vi.spyOn(router, "navigate");
+  await waitFor(() => expect(store.getState().timelines[roomId]?.ids.length).toBeGreaterThan(0));
+
+  act(() => {
+    mutations.applyEvents(
+      [
+        {
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.removed",
+          data: { roomId, refreshRoom: true },
+        },
+      ],
+      0,
+    );
+    mutations.setRoomUnavailable(roomId, beginRoomRequest(), sidebarRowClock());
+  });
+
+  expect(await screen.findByRole("region", { name: "Room unavailable" })).toBeTruthy();
+  expect(navigate).not.toHaveBeenCalledWith(expect.objectContaining({ to: "/" }));
+  expect(router.state.location.pathname).toBe(`/r/${roomId}`);
+  expect(store.getState().me?.lastRoomId).toBe(roomId);
+});
+
+it("a sidebar snapshot without the active direct does not imply a close", async () => {
+  const router = await mount(`/r/${DM}`);
+
+  act(() =>
+    mutations.loadSidebar(
+      { ...sidebar, rows: sidebar.rows.filter((entry) => entry.room.id !== DM) },
+      sidebarRowClock(),
+    ),
+  );
+
+  expect(router.state.location.pathname).toBe(`/r/${DM}`);
+  expect(store.getState().me?.lastRoomId).toBe(DM);
 });

@@ -1,6 +1,52 @@
 use super::*;
 
 #[test]
+fn ignored_messages_keep_pair_and_group_directs_closed() {
+    use crate::{Membership, Message, NewMessage, Room, models::user_block::UserBlock};
+
+    let t = TestDb::new();
+    let (viewer, ignored, other) = (id("david"), id("jason"), id("kevin"));
+
+    for members in [vec![viewer, ignored], vec![viewer, ignored, other]] {
+        let room = t.write({
+            let members = members.clone();
+            move |tx| Room::find_or_create_direct_for(tx, &members, viewer)
+        });
+        let room_id = room.id;
+        t.write(move |tx| {
+            UserBlock::set(tx, viewer, ignored, true)?;
+            Membership::find_by_room_and_user(tx.conn(), room_id, viewer)?
+                .unwrap()
+                .set_direct_closed(tx, true)
+        });
+
+        let visible_author = if members.len() == 2 { viewer } else { other };
+        for (author, closed) in [(ignored, true), (visible_author, false)] {
+            t.write(move |tx| {
+                Message::create(
+                    tx,
+                    NewMessage {
+                        room_id,
+                        creator_id: author,
+                        body: Some("A direct message".into()),
+                        ..Default::default()
+                    },
+                )
+            });
+            t.read(|conn| {
+                let sidebar = Membership::sidebar_with_ordered_room(conn, viewer)?;
+                assert_eq!(
+                    sidebar.iter().all(|(_, room)| room.id != room_id),
+                    closed,
+                    "sidebar visibility after a message from {author} in {members:?}"
+                );
+                Ok(())
+            });
+        }
+    }
+}
+
+#[test]
 fn ignore_non_message_notification_sources_suppress_current_and_queued_delivery() {
     use crate::models::{notification_push, user_block::UserBlock};
     use crate::{CalendarEvent, NewCalendarEvent, PushPayload};

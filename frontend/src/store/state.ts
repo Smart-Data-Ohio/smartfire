@@ -71,6 +71,8 @@ export interface State {
   readonly sidebar: SidebarState;
   /** When the sync path last changed each sidebar row, so an older HTTP reply leaves it be. */
   readonly rowTouches: RowTouches;
+  /** The direct rows explicitly closed by the latest batch that closed any. */
+  readonly directClosures: ReadonlySet<number>;
   readonly rooms: Readonly<Record<number, RoomState>>;
   readonly messages: Readonly<Record<number, MessageDTO>>;
   readonly timelines: Readonly<Record<number, Timeline>>;
@@ -195,6 +197,7 @@ export const initialState: State = {
     overlay: emptyOverlay,
   },
   rowTouches: noRowTouches,
+  directClosures: new Set(),
   rooms: {},
   messages: {},
   timelines: {},

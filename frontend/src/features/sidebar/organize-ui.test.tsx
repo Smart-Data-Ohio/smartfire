@@ -215,7 +215,12 @@ describe("a room's menu", () => {
         label={`${entry.displayName} options`}
         trigger={(props) => <Button {...props}>Open</Button>}
       >
-        <RoomMenuItems row={entry} categories={CATEGORIES} onNewCategory={() => {}} />
+        <RoomMenuItems
+          row={entry}
+          categories={CATEGORIES}
+          onNewCategory={() => {}}
+          onCloseConversation={() => {}}
+        />
       </Menu>,
     );
     await user.click(screen.getByRole("button", { name: "Open" }));
@@ -314,6 +319,7 @@ describe("a room's menu", () => {
           categories={CATEGORIES}
           shared={{ admin: true, categories: [], home: null, siblings: null }}
           onNewCategory={() => {}}
+          onCloseConversation={() => {}}
         />
       </Menu>,
     );

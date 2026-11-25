@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Exit, Fiber } from "effect";
 import { TestClock } from "effect/testing";
+import { field } from "../../mock/json.ts";
 import { createMockServer } from "../../mock/server.ts";
 import { Conflict, NetworkError, Validation } from "../api/errors.ts";
 import {
@@ -75,6 +76,67 @@ describe("organize actions", () => {
       expect(store.getState().sidebar.rows[1]?.membership.favoritePosition).toBe(4);
       expect(favoriteRows(view()).map((row) => row.room.id)).toEqual([3, 1]);
       expect(overlayIsEmpty()).toBe(true);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("wait for a pending favorite before closing a direct", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const favoriteReply = yield* Deferred.make<void>();
+      const favoriteStarted = yield* Deferred.make<void>();
+
+      yield* fake.route("POST /rooms/4/favorite", () =>
+        Deferred.succeed(favoriteStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(favoriteReply)),
+          Effect.as(withMembership(ada, { favoritePosition: 1 })),
+        ),
+      );
+      yield* fake.reply("PUT /rooms/4/closed", { row: null });
+
+      const favorite = yield* Effect.forkChild(organize.favorite(4));
+      yield* Deferred.await(favoriteStarted);
+      const closing = yield* Effect.forkChild(organize.setDirectClosed(4, true));
+      yield* TestClock.adjust("1 millis");
+
+      const inFlight = (yield* fake.requests).map((request) => request.path);
+
+      yield* Deferred.succeed(favoriteReply, undefined);
+      yield* Fiber.join(favorite);
+      yield* Fiber.join(closing);
+
+      expect(store.getState().sidebar.rows[4]).toBeUndefined();
+      expect(inFlight).toEqual(["/rooms/4/favorite"]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("reopen a direct after its pending close", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const closeReply = yield* Deferred.make<void>();
+      const closeStarted = yield* Deferred.make<void>();
+
+      yield* fake.route("PUT /rooms/4/closed", (request) =>
+        field(request.body, "closed") === true
+          ? Deferred.succeed(closeStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(closeReply)),
+              Effect.as({ row: null }),
+            )
+          : Effect.succeed({ row: ada }),
+      );
+
+      const closing = yield* Effect.forkChild(organize.setDirectClosed(4, true));
+      yield* Deferred.await(closeStarted);
+      const reopening = yield* Effect.forkChild(organize.setDirectClosed(4, false));
+      yield* TestClock.adjust("1 millis");
+      yield* Deferred.succeed(closeReply, undefined);
+      yield* Fiber.join(closing);
+      yield* Fiber.join(reopening);
+
+      expect(store.getState().sidebar.rows[4]).toEqual(ada);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

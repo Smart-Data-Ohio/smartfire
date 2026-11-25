@@ -55,6 +55,12 @@ const categories = (entries: SidebarOverlay["categories"]): SidebarOverlay => ({
  */
 export const SERVER_TIMEOUT = "15 seconds";
 
+const serialized = <A, E, R>(change: Effect.Effect<A, E, R>) =>
+  Semaphore.withPermit(
+    lock,
+    change.pipe(Effect.timeoutOrElse({ duration: SERVER_TIMEOUT, orElse: () => stalled })),
+  );
+
 /**
  * Shows `entry` from now until `change` settles; the change waits its turn for the server. The
  * entry goes either way: the reply has landed by then, or the refusal leaves the old state. A
@@ -64,12 +70,7 @@ export const SERVER_TIMEOUT = "15 seconds";
  */
 const pending = <A, E, R>(entry: SidebarOverlay, change: Effect.Effect<A, E, R>) =>
   Effect.sync(() => mutations.addSidebarOverlay(entry)).pipe(
-    Effect.andThen(
-      Semaphore.withPermit(
-        lock,
-        change.pipe(Effect.timeoutOrElse({ duration: SERVER_TIMEOUT, orElse: () => stalled })),
-      ),
-    ),
+    Effect.andThen(serialized(change)),
     Effect.ensuring(Effect.sync(() => mutations.dropSidebarOverlay(entry))),
   );
 
@@ -109,29 +110,31 @@ export const setDirectClosed = Effect.fn("organize.setDirectClosed")(function* (
   roomId: number,
   closed: boolean,
 ) {
-  yield* withRowTicket((since) =>
-    Effect.gen(function* () {
-      const { row } = yield* api.setDirectClosed(roomId, { closed });
+  yield* serialized(
+    withRowTicket((since) =>
+      Effect.gen(function* () {
+        const { row } = yield* api.setDirectClosed(roomId, { closed });
 
-      if (row !== null) {
-        yield* landRows([row], since);
-      } else if (closed) {
-        const state = store.getState();
-        const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
-        mutations.landReplyRows(
-          [
-            {
-              seq: 0,
-              topic: `user:${viewerId}`,
-              type: "sidebar.row.removed",
-              data: { roomId, closed },
-            },
-          ],
-          yield* Clock.currentTimeMillis,
-          since,
-        );
-      }
-    }),
+        if (row !== null) {
+          yield* landRows([row], since);
+        } else if (closed) {
+          const state = store.getState();
+          const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
+          mutations.landReplyRows(
+            [
+              {
+                seq: 0,
+                topic: `user:${viewerId}`,
+                type: "sidebar.row.removed",
+                data: { roomId, closed },
+              },
+            ],
+            yield* Clock.currentTimeMillis,
+            since,
+          );
+        }
+      }),
+    ),
   );
 });
 

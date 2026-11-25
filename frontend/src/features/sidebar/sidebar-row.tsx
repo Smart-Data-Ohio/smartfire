@@ -30,7 +30,6 @@ import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { GroupAvatars } from "./group-avatars.tsx";
-import { closeConversation } from "./organize-commands.ts";
 import { notificationLabel, rowPillCount, rowState, rowUnread } from "./sections.ts";
 
 /** What a row can ask of the sidebar: drag it, or open its menu somewhere. */
@@ -40,6 +39,7 @@ export interface RowActions {
   readonly onPointerDown: (event: ReactPointerEvent<HTMLElement>, row: Row) => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLElement>, row: Row) => void;
   readonly onBlur: () => void;
+  readonly closeConversation: (row: Row, source: HTMLElement) => void;
   /** Opens the row's menu at a viewport point (a right click, a long press). */
   readonly openMenuAt: (row: Row, x: number, y: number) => void;
   /** Opens it from an element (the "⋯" button, or the row itself for Shift+F10). */
@@ -53,6 +53,7 @@ export const RowActionsContext = createContext<RowActions>({
   onPointerDown: noop,
   onKeyDown: noop,
   onBlur: noop,
+  closeConversation: noop,
   openMenuAt: noop,
   openMenuFrom: noop,
 });
@@ -362,9 +363,11 @@ export function SidebarRow({
         {state === "unread" || (selected && rowUnread(row)) ? (
           <span className="visually-hidden">, unread</span>
         ) : null}
-        {muted ? <Icon name="bell-off" size={14} className="sidebar-row-muted" /> : null}
-        <CallMark roomId={room.id} />
-        <Badge count={pill} tone="danger" label={`, ${notificationLabel(pill)}`} />
+        <span className="sidebar-row-status">
+          {muted ? <Icon name="bell-off" size={14} className="sidebar-row-muted" /> : null}
+          <CallMark roomId={room.id} />
+          <Badge count={pill} tone="danger" label={`, ${notificationLabel(pill)}`} />
+        </span>
       </Link>
       {room.kind === "direct" ? (
         <IconButton
@@ -373,7 +376,7 @@ export function SidebarRow({
           size="sm"
           tooltipPlacement="right"
           className="sidebar-row-close"
-          onClick={() => closeConversation(row)}
+          onClick={(event) => actions.closeConversation(row, event.currentTarget)}
         />
       ) : null}
       <IconButton

@@ -17,7 +17,7 @@ import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import type { RoomCategory, SidebarRow as Row } from "../../store/model.ts";
 import { organizedSidebar } from "../../store/organize.ts";
 import type { State } from "../../store/state.ts";
-import { useStore } from "../../store/store.ts";
+import { store, useStore } from "../../store/store.ts";
 import { groupRooms, sharedCategories, sharedLayout } from "../../store/workspace-layout.ts";
 import { saveAccountTheme } from "../../sync/settings.ts";
 import { Badge } from "../../ui/badge.tsx";
@@ -42,7 +42,7 @@ import { openOverlay } from "../switcher/overlay-store.ts";
 import { SidebarWelcome, useShowWelcome } from "../welcome/sidebar-welcome.tsx";
 import { CategoryNameField } from "./category-name-field.tsx";
 import { DeleteCategoryDialog } from "./delete-category-dialog.tsx";
-import { headingTrigger, movedRowFocus } from "./focus-targets.ts";
+import { headingTrigger, liveHandle, movedRowFocus } from "./focus-targets.ts";
 import * as commands from "./organize-commands.ts";
 import {
   acceptsRoom,
@@ -759,7 +759,7 @@ function focusIsLost(): boolean {
  * Hands focus over after the next render that has the element: a category's heading back from
  * its name field, a moved category's heading, a new category's heading once the server named it.
  */
-function useFocusAfterRender(): (request: FocusRequest) => void {
+function useFocusAfterRender(): (request: FocusRequest) => () => void {
   const pending = useRef<FocusRequest | null>(null);
   const [, rerender] = useState(0);
 
@@ -781,6 +781,10 @@ function useFocusAfterRender(): (request: FocusRequest) => void {
   return (request) => {
     pending.current = request;
     rerender((count) => count + 1);
+
+    return () => {
+      if (pending.current === request) pending.current = null;
+    };
   };
 }
 
@@ -936,11 +940,44 @@ export function Sidebar() {
     setMenu({ ...request, id: menuIds.current });
   };
 
+  const closeConversation = (
+    row: Row,
+    source = liveHandle(scrollRef.current, `room-${row.room.id}`),
+  ) => {
+    const item = source?.closest(".sidebar-row-item");
+
+    const next =
+      item?.nextElementSibling?.querySelector<HTMLAnchorElement>(":scope > a.sidebar-row");
+
+    const previous =
+      item?.previousElementSibling?.querySelector<HTMLAnchorElement>(":scope > a.sidebar-row");
+
+    const rowIsGone = () => store.getState().sidebar.rows[row.room.id] === undefined;
+
+    const cancelFocus = focusAfterRender({
+      find: () => {
+        if (!rowIsGone() || item?.isConnected === true) return null;
+
+        return (
+          [next, previous].find(
+            (link) => link?.isConnected === true && link.closest("[inert]") === null,
+          ) ?? headingTrigger(scrollRef.current, "direct")
+        );
+      },
+      ifLost: true,
+    });
+
+    void commands.closeConversation(row).finally(() => {
+      if (!rowIsGone()) cancelFocus();
+    });
+  };
+
   const rowActions: RowActions = {
     hintId,
     onPointerDown: (event, row) => dnd.onPointerDown(event, { kind: "room", row }),
     onKeyDown: (event, row) => dnd.onKeyDown(event, { kind: "room", row }),
     onBlur: dnd.onBlur,
+    closeConversation,
     openMenuAt: (row, x, y) => {
       if (menu?.roomId !== row.room.id) {
         openMenu({
@@ -1403,6 +1440,7 @@ export function Sidebar() {
           categories={categories}
           shared={sharedMenuFor(menuRow)}
           onNewCategory={(row) => newCategory(row)}
+          onCloseConversation={() => closeConversation(menuRow)}
           onClosed={(id) => setMenu((current) => (current?.id === id ? null : current))}
         />
       ) : null}

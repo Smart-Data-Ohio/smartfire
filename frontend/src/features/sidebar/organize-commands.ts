@@ -68,8 +68,8 @@ export function moveRoom(row: SidebarRow, slot: RoomSlot): void {
     .catch(failed(`Couldn't move ${row.sidebarDisplayName}`));
 }
 
-export function closeConversation(row: SidebarRow): void {
-  actions.organize.closeDirect(row.room.id).catch(failed("Couldn't close the conversation"));
+export function closeConversation(row: SidebarRow): Promise<void> {
+  return actions.organize.closeDirect(row.room.id).catch(failed("Couldn't close the conversation"));
 }
 
 export function toggleFavorite(row: SidebarRow): void {
