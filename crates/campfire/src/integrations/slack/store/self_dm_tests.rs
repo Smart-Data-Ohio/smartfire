@@ -977,7 +977,7 @@ async fn slack_self_dm_owner_from_conversation_needs_no_placeholder_when_members
 }
 
 #[tokio::test]
-async fn slack_personal_import_claims_a_known_placeholder_before_importing_conversations() {
+async fn slack_personal_import_claims_a_known_placeholder_while_another_import_is_queued() {
     let (db, crypto, _dir) = setup().await;
     let user = owner(&db, false).await;
     let previous = start(&db).await;
@@ -1034,8 +1034,10 @@ async fn slack_personal_import_claims_a_known_placeholder_before_importing_conve
     .unwrap();
 
     let live = personal(&db, user, false).await;
+    let queued = start(&db).await;
     import(&db, crypto, live, network).await;
     db.read(move |c| {
+        assert_eq!(SlackImport::find(c, queued)?.unwrap().status, "queued");
         assert!(User::find_by_id(c, placeholder)?.is_none());
         assert_eq!(users::mapped_id(c, 1, "user", "UOWNER")?, Some(user));
         for (conversation, key) in [
@@ -1047,6 +1049,12 @@ async fn slack_personal_import_claims_a_known_placeholder_before_importing_conve
             assert!(campfire_db::Membership::find_by_room_and_user(c, room, user)?.is_some());
             assert_eq!(Message::find(c, message)?.creator_id, user);
         }
+        assert!(
+            c.prepare("PRAGMA foreign_key_check")?
+                .query([])?
+                .next()?
+                .is_none()
+        );
         Ok(())
     })
     .await

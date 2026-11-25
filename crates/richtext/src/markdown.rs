@@ -211,6 +211,15 @@ pub fn render(
         return Err(Error::SourceTooLong);
     }
     let (protected, tokens, pattern) = protect_mentions(source);
+    let (mut dom, root) = render_dom(&protected)?;
+    if !tokens.is_empty() {
+        restore_mentions(&mut dom, root, &tokens, &pattern, mentions);
+    }
+    expand_shortcodes(&mut dom, root, icons);
+    Ok(dom.to_html(root))
+}
+
+fn render_dom(protected: &str) -> Result<(Dom, NodeId), Error> {
     let mut options = Options::default();
     options.extension.autolink = true;
     options.extension.spoiler = true;
@@ -225,17 +234,13 @@ pub fn render(
     options.render.r#unsafe = false;
     options.render.hardbreaks = false;
     options.render.github_pre_lang = false;
-    let protected = end_autolinks_at_spoilers(&protected, &options);
+    let protected = end_autolinks_at_spoilers(protected, &options);
     let html = comrak::markdown_to_html(&protected, &options);
     let safe = sanitizer::sanitize(&html, &markdown_allowlist()).map_err(Error::Parse)?;
     let mut dom = Dom::new();
     let root = dom.parse_fragment(&safe).map_err(Error::Parse)?;
     constrain_generated_markup(&mut dom, root);
-    if !tokens.is_empty() {
-        restore_mentions(&mut dom, root, &tokens, &pattern, mentions);
-    }
-    expand_shortcodes(&mut dom, root, icons);
-    Ok(dom.to_html(root))
+    Ok((dom, root))
 }
 
 /// What ends a bare URL before a `||` (`AUTOLINK_BREAK`): comrak's autolinks stop at `<`, and
@@ -371,7 +376,55 @@ pub fn user_mention_token(id: i64) -> String {
     format!("<@{id}>")
 }
 
-fn protect_mentions(source: &str) -> (String, Vec<String>, Regex) {
+const NON_MENTION_TAGS: &[&str] = &["a", "code", "pre"];
+
+/// Rewrite a user's mention tokens while retaining the original Markdown around them.
+/// The caller has already found a reference to this user in the stored HTML.
+pub fn retarget_user_mentions(
+    source: &str,
+    from: i64,
+    display_name: &str,
+    to: i64,
+) -> Result<Option<String>, Error> {
+    let old_id = user_mention_token(from);
+    let old_name = mention_token(display_name);
+    let matches_user = |token: &str| token == old_id || old_name.as_deref() == Some(token);
+    if !MENTION_RE
+        .find_iter(source)
+        .any(|m| matches_user(m.as_str()))
+    {
+        return Ok(None);
+    }
+    let (protected, tokens, pattern) = protect_mentions(source);
+    let (dom, root) = render_dom(&protected)?;
+    let mut rendered = vec![false; tokens.len()];
+    for node in dom.descendants(root) {
+        if let Some(text) = dom.text(node)
+            && !skipped(&dom, node, NON_MENTION_TAGS)
+        {
+            for capture in pattern.captures_iter(text) {
+                rendered[capture[1].parse::<usize>().unwrap()] = true;
+            }
+        }
+    }
+    let replacement = user_mention_token(to);
+    let mut rewritten = String::with_capacity(source.len());
+    let mut cursor = 0;
+    for (token, rendered) in tokens.into_iter().zip(rendered) {
+        if rendered && matches_user(token.as_str()) {
+            rewritten.push_str(&source[cursor..token.start()]);
+            rewritten.push_str(&replacement);
+            cursor = token.end();
+        }
+    }
+    if cursor == 0 {
+        return Ok(None);
+    }
+    rewritten.push_str(&source[cursor..]);
+    Ok(Some(rewritten))
+}
+
+fn protect_mentions(source: &str) -> (String, Vec<regex::Match<'_>>, Regex) {
     // Unpredictable and absent from the input, so a user cannot forge an attachment placeholder.
     let prefix = loop {
         let bytes: [u8; 12] = rand::random();
@@ -387,14 +440,13 @@ fn protect_mentions(source: &str) -> (String, Vec<String>, Regex) {
     let mut protected = String::with_capacity(source.len());
     let mut tokens = Vec::new();
     let mut cursor = 0;
-    for c in MENTION_RE.captures_iter(source) {
-        let m = c.get(0).unwrap();
+    for m in MENTION_RE.find_iter(source) {
         if m.start() > 0 && source.as_bytes()[m.start() - 1] == b'\\' {
             continue;
         }
         protected.push_str(&source[cursor..m.start()]);
         protected.push_str(&format!("{prefix}{}TOKEN", tokens.len()));
-        tokens.push(m.as_str().to_owned());
+        tokens.push(m);
         cursor = m.end();
     }
     protected.push_str(&source[cursor..]);
@@ -620,13 +672,14 @@ fn skipped(dom: &Dom, node: NodeId, tags: &[&str]) -> bool {
 fn restore_mentions(
     dom: &mut Dom,
     root: NodeId,
-    tokens: &[String],
+    tokens: &[regex::Match<'_>],
     pattern: &Regex,
     mentions: &dyn MentionResolver,
 ) {
     let users = tokens
         .iter()
         .map(|token| {
+            let token = token.as_str();
             let user = if token.starts_with("@[") {
                 mentions.unique_active_member(&token[2..token.len() - 1])
             } else {
@@ -641,7 +694,7 @@ fn restore_mentions(
     for node in dom.descendants(root) {
         for (key, value) in dom.attrs(node) {
             let restored = pattern.replace_all(&value, |c: &regex::Captures| {
-                tokens[c[1].parse::<usize>().unwrap()].clone()
+                tokens[c[1].parse::<usize>().unwrap()].as_str()
             });
             dom.set_attr(node, &key, &restored);
         }
@@ -651,7 +704,7 @@ fn restore_mentions(
         if !pattern.is_match(&text) {
             continue;
         }
-        let skip = skipped(dom, node, &["a", "code", "pre"]);
+        let skip = skipped(dom, node, NON_MENTION_TAGS);
         let mut replacements = Vec::new();
         // Nokogiri coalesces adjacent inserted text nodes. Keep unresolved mentions in the
         // same text run: shortcode expansion must not see its preceding space as a blank tail.
@@ -662,7 +715,7 @@ fn restore_mentions(
             if cursor < m.start() {
                 pending_text.push_str(&text[cursor..m.start()]);
             }
-            let token = &tokens[c[1].parse::<usize>().unwrap()];
+            let token = tokens[c[1].parse::<usize>().unwrap()].as_str();
             let user = if skip {
                 None
             } else {

@@ -388,3 +388,428 @@ async fn claiming_a_slack_placeholder_keeps_note_keys_private_and_undoable() {
         .await
         .unwrap();
 }
+
+async fn confirm_claim(a: &TestApp) {
+    let token = token(a, DAVID, SLACK_EMAIL, SignedDuration::ZERO).await;
+    let reply = a.anonymous().write(confirmation(Method::PUT, &token)).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+}
+
+#[tokio::test]
+async fn slack_placeholder_first_notes_room_survives_import_undo() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let (run, placeholder) = prior_import(&a, "completed").await;
+    let run_id = run.id;
+    let (notes, message, member) = a
+        .db()
+        .write(move |tx| {
+            assert!(Room::note_to_self_for(tx.conn(), DAVID)?.is_none());
+            let room = Room::find_or_create_direct_for(tx, &[DAVID, placeholder.id], DAVID)?;
+            let message = Message::create_imported(
+                tx,
+                NewMessage {
+                    room_id: room.id,
+                    creator_id: placeholder.id,
+                    markdown_source: Some("imported note".into()),
+                    ..Default::default()
+                },
+                tx.now(),
+                None,
+            )?;
+            users::record(tx, &run, "conversation", "DFIRST", "Room", room.id, true)?;
+            users::record(tx, &run, "message", "DFIRST:1", "Message", message.id, true)?;
+            let memberships = room.memberships(tx.conn())?;
+            for member in &memberships {
+                users::record(
+                    tx,
+                    &run,
+                    "membership",
+                    &format!("DFIRST:user-{}", member.user_id),
+                    "Membership",
+                    member.id,
+                    true,
+                )?;
+            }
+            let survivor = memberships.iter().find(|m| m.user_id == DAVID).unwrap().id;
+            Ok((room.id, message.id, survivor))
+        })
+        .await
+        .unwrap();
+
+    confirm_claim(&a).await;
+    a.db()
+        .read(move |conn| {
+            assert_eq!(Room::note_to_self_for(conn, DAVID)?.unwrap().id, notes);
+            assert_eq!(Message::find(conn, message)?.room_id, notes);
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    undo(a.db(), run_id).await;
+    a.db()
+        .read(move |conn| {
+            assert!(Message::find_by_id(conn, message)?.is_none());
+            assert_eq!(Room::note_to_self_for(conn, DAVID)?.unwrap().id, notes);
+            assert_eq!(
+                Membership::find_by_room_and_user(conn, notes, DAVID)?
+                    .unwrap()
+                    .id,
+                member
+            );
+            assert!(
+                conn.prepare("PRAGMA foreign_key_check")?
+                    .query([])?
+                    .next()?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_preserves_both_named_group_dms() {
+    use crate::controllers::presenters::test_support::JASON;
+
+    const JZ: i64 = 773523953;
+    let a = app(MAIL).await.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let groups = a
+        .db()
+        .write(move |tx| {
+            let mut groups = Vec::new();
+            for (name, member, peer, already_suffixed) in [
+                ("Planning", placeholder.id, JZ, false),
+                ("Launch", DAVID, JZ, false),
+                ("Planning again", placeholder.id, JASON, false),
+                ("Launch again", DAVID, JASON, true),
+            ] {
+                let members = [member, KEVIN, peer];
+                let room = Room::create_for(tx, RoomType::Direct, Some(name), KEVIN, &members)?;
+                let key = Room::direct_member_key_for(&members);
+                assert_eq!(room.direct_member_key.as_deref(), Some(key.as_str()));
+                if already_suffixed {
+                    tx.conn().execute(
+                        "UPDATE rooms SET direct_member_key=? WHERE id=?",
+                        params![format!("{key}#{}", room.id), room.id],
+                    )?;
+                }
+                let message = Message::create_markdown(
+                    tx,
+                    NewMessage {
+                        room_id: room.id,
+                        creator_id: member,
+                        ..Default::default()
+                    },
+                    &format!("{name} history"),
+                )?;
+                groups.push((
+                    room.id,
+                    message.id,
+                    name,
+                    peer,
+                    already_suffixed || member == placeholder.id,
+                ));
+            }
+            Ok(groups)
+        })
+        .await
+        .unwrap();
+
+    confirm_claim(&a).await;
+    a.db()
+        .read(move |conn| {
+            for (id, message, name, peer, suffixed) in groups {
+                let mut members = [DAVID, KEVIN, peer];
+                members.sort_unstable();
+                let canonical = Room::direct_member_key_for(&members);
+                let room = Room::find(conn, id)?;
+                assert_eq!(room.name.as_deref(), Some(name));
+                let mut actual = room.user_ids(conn)?;
+                actual.sort_unstable();
+                assert_eq!(actual, members);
+                let expected = if suffixed {
+                    format!("{canonical}#{id}")
+                } else {
+                    canonical
+                };
+                assert_eq!(room.direct_member_key.as_deref(), Some(expected.as_str()));
+                let message = Message::find(conn, message)?;
+                assert_eq!(message.room_id, id);
+                assert_eq!(message.creator_id, DAVID);
+                assert_eq!(
+                    message.markdown_source.as_deref(),
+                    Some(format!("{name} history").as_str())
+                );
+            }
+            assert!(
+                conn.prepare("PRAGMA foreign_key_check")?
+                    .query([])?
+                    .next()?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_keeps_native_rooms_hidden() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let native = a
+        .db()
+        .write(|tx| {
+            let room = Room::create_for(tx, RoomType::Open, Some("Native open"), KEVIN, &[DAVID])?;
+            let mut member = Membership::find_by_room_and_user(tx.conn(), room.id, DAVID)?.unwrap();
+            member.update_involvement(tx, Involvement::Invisible)?;
+            Ok(room.id)
+        })
+        .await
+        .unwrap();
+    let (run, placeholder) = prior_import(&a, "completed").await;
+    let imported = a
+        .db()
+        .write(move |tx| {
+            let conn = tx.conn();
+            assert_eq!(
+                Membership::find_by_room_and_user(conn, native, placeholder.id)?
+                    .unwrap()
+                    .involvement,
+                Some(Involvement::Mentions)
+            );
+            let room = Room::create_for(
+                tx,
+                RoomType::Open,
+                Some("Imported open"),
+                KEVIN,
+                &[DAVID, placeholder.id],
+            )?;
+            let mut member = Membership::find_by_room_and_user(tx.conn(), room.id, DAVID)?.unwrap();
+            member.update_involvement(tx, Involvement::Invisible)?;
+            let mut source =
+                Membership::find_by_room_and_user(tx.conn(), room.id, placeholder.id)?.unwrap();
+            source.update_involvement(tx, Involvement::Everything)?;
+            users::record(
+                tx,
+                &run,
+                "membership",
+                &format!("CIMPORTED:user-{}", placeholder.id),
+                "Membership",
+                source.id,
+                true,
+            )?;
+            Ok(room.id)
+        })
+        .await
+        .unwrap();
+
+    confirm_claim(&a).await;
+    a.db()
+        .read(move |conn| {
+            for (room, involvement) in [
+                (native, Involvement::Invisible),
+                (imported, Involvement::Everything),
+            ] {
+                assert_eq!(
+                    Membership::find_by_room_and_user(conn, room, DAVID)?
+                        .unwrap()
+                        .involvement,
+                    Some(involvement)
+                );
+            }
+            assert!(
+                conn.prepare("PRAGMA foreign_key_check")?
+                    .query([])?
+                    .next()?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_preserves_mention_activity_and_existing_state() {
+    use campfire_db::ActivityItem;
+
+    let a = app(MAIL).await.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let (transferred, duplicate, own, revision) = a
+        .db()
+        .write(move |tx| {
+            let room = Room::create_for(
+                tx,
+                RoomType::Open,
+                Some("Mentions"),
+                KEVIN,
+                &[DAVID, KEVIN, placeholder.id],
+            )?;
+            let mention = campfire_richtext::markdown::user_mention_token;
+            let message = Message::create_markdown(
+                tx,
+                NewMessage {
+                    room_id: room.id,
+                    creator_id: KEVIN,
+                    ..Default::default()
+                },
+                &format!("hi {}", mention(placeholder.id)),
+            )?;
+            let source = ActivityItem::find_by_user_and_source(
+                tx.conn(),
+                placeholder.id,
+                "Message",
+                message.id,
+            )?
+            .unwrap();
+            assert_eq!(source.event_type, "mention");
+            assert!(source.unread());
+            let own = Message::create_markdown(
+                tx,
+                NewMessage {
+                    room_id: room.id,
+                    creator_id: DAVID,
+                    ..Default::default()
+                },
+                &format!("hi {}", mention(placeholder.id)),
+            )?;
+            assert!(
+                ActivityItem::find_by_user_and_source(
+                    tx.conn(),
+                    placeholder.id,
+                    "Message",
+                    own.id
+                )?
+                .is_some()
+            );
+            let reply = Message::create_markdown(
+                tx,
+                NewMessage {
+                    room_id: room.id,
+                    creator_id: KEVIN,
+                    reply_to_message_id: Some(own.id),
+                    ..Default::default()
+                },
+                &format!("hi {}", mention(placeholder.id)),
+            )?;
+            let mentioned = ActivityItem::find_by_user_and_source(
+                tx.conn(),
+                placeholder.id,
+                "Message",
+                reply.id,
+            )?
+            .unwrap();
+            assert_eq!(mentioned.event_type, "mention");
+            let state =
+                ActivityItem::find_by_user_and_source(tx.conn(), DAVID, "Message", reply.id)?
+                    .unwrap();
+            assert_eq!(state.event_type, "reply");
+            let state = state.mark_read(tx)?.mark_handled(tx)?;
+            let revision = tx.conn().query_row(
+                "SELECT activity_revision FROM users WHERE id=?",
+                [DAVID],
+                |r| r.get::<_, i64>(0),
+            )?;
+            Ok((source, state, own.id, revision))
+        })
+        .await
+        .unwrap();
+
+    confirm_claim(&a).await;
+    a.db()
+        .read(move |conn| {
+            let item = ActivityItem::find_by_user_and_source(
+                conn,
+                DAVID,
+                "Message",
+                transferred.source_id,
+            )?
+            .unwrap();
+            assert_eq!(item.id, transferred.id);
+            assert_eq!(item.event_type, "mention");
+            assert!(item.unread());
+            let existing =
+                ActivityItem::find_by_user_and_source(conn, DAVID, "Message", duplicate.source_id)?
+                    .unwrap();
+            assert_eq!(
+                (existing.id, existing.read_at, existing.handled_at),
+                (duplicate.id, duplicate.read_at, duplicate.handled_at)
+            );
+            assert_eq!(existing.event_type, "reply");
+            assert!(ActivityItem::find_by_user_and_source(conn, DAVID, "Message", own)?.is_none());
+            let after = conn.query_row(
+                "SELECT activity_revision FROM users WHERE id=?",
+                [DAVID],
+                |r| r.get::<_, i64>(0),
+            )?;
+            assert!(after > revision);
+            assert!(
+                conn.prepare("PRAGMA foreign_key_check")?
+                    .query([])?
+                    .next()?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_preserves_markdown_mentions_on_edit() {
+    use campfire_db::models::message::MessageChanges;
+    use campfire_richtext::markdown::{mention_token, user_mention_token};
+
+    let a = app(MAIL).await.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let (message, expected) = a.db().write(move |tx| {
+        assert_ne!(placeholder.display_name(), User::find(tx.conn(), DAVID)?.display_name());
+        let room = Room::create_for(tx, RoomType::Open, Some("Editable mentions"), KEVIN, &[DAVID, KEVIN, placeholder.id])?;
+        let old_name = mention_token(placeholder.display_name()).unwrap();
+        let old_id = user_mention_token(placeholder.id);
+        let preserved = format!("`{old_id} {old_name}`\n\n```text\n{old_id} {old_name}\n```\n\n[{old_name}](/) and \\{old_name}");
+        let source = format!("hi {old_name} and {old_id}\n\n{preserved}");
+        let message = Message::create_markdown(tx, NewMessage {
+            room_id: room.id, creator_id: KEVIN, ..Default::default()
+        }, &source)?;
+        let body = message.body(tx.conn())?.unwrap().body.unwrap();
+        assert_eq!(tx.rich_text().try_mentioned_user_ids(tx.conn(), &body).unwrap(), [placeholder.id]);
+        let new_id = user_mention_token(DAVID);
+        Ok((message.id, format!("hi {new_id} and {new_id}\n\n{preserved}")))
+    }).await.unwrap();
+
+    confirm_claim(&a).await;
+    a.db()
+        .write(move |tx| {
+            let mut message = Message::find(tx.conn(), message)?;
+            let source = message.markdown_source.as_deref().unwrap();
+            assert_eq!(source, expected);
+            message.update(
+                tx,
+                MessageChanges {
+                    markdown_source: Some(format!("{source}\n\nAn unrelated edit.")),
+                    ..Default::default()
+                },
+            )?;
+            let body = message.body(tx.conn())?.unwrap().body.unwrap();
+            assert_eq!(
+                tx.rich_text()
+                    .try_mentioned_user_ids(tx.conn(), &body)
+                    .unwrap(),
+                [DAVID]
+            );
+            assert!(
+                tx.conn()
+                    .prepare("PRAGMA foreign_key_check")?
+                    .query([])?
+                    .next()?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}

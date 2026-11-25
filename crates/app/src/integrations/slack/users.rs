@@ -7,7 +7,7 @@ use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::user::email_addresses::{ExternalEmailMatch, match_external_addresses, normalize};
 use campfire_db::user::slack_placeholder::{
-    audit_claim, claim_slack_placeholder, has_active_slack_import, is_unclaimed_slack_placeholder,
+    audit_claim, claim_slack_placeholder, has_running_slack_import, is_unclaimed_slack_placeholder,
 };
 use campfire_db::{Connection, Error, NewUser, Result, Room, Tx, User};
 use indexmap::{IndexMap, IndexSet};
@@ -67,7 +67,7 @@ pub(crate) fn claim_for_import(
     owner: &User,
     placeholder: &User,
 ) -> Result<()> {
-    if has_active_slack_import(tx.conn(), Some(run.id))? {
+    if has_running_slack_import(tx.conn(), Some(run.id))? {
         return Err(Error::Other(
             "Another Slack import is active. Retry this import after it finishes.".into(),
         ));

@@ -1,14 +1,17 @@
 //! Verified claims of Slack-imported accounts and their history.
+use base64::{Engine, engine::general_purpose::STANDARD_NO_PAD};
 use campfire_richtext::content::attachment_nodes;
+use campfire_richtext::markdown;
 use campfire_richtext::{Content, ruby::is_blank};
 use rails_compat::global_id::unverified_attachable_user;
-use rusqlite::params;
+use rusqlite::{params, params_from_iter};
+use std::collections::BTreeSet;
 
 use crate::audit_log::{AuditLog, Context, NewAuditLog};
 use crate::broadcasts::Broadcast;
 use crate::sql::{exists, query_all};
 use crate::{
-    Connection, Error, Event, Involvement, Membership, Message, Result, Role, Room,
+    ActivityItem, Connection, Error, Event, Involvement, Membership, Message, Result, Role, Room,
     RoomRemovalBroadcast, Status, Tx, User,
 };
 
@@ -94,7 +97,16 @@ pub fn has_active_slack_import(conn: &Connection, except_run_id: Option<i64>) ->
     )
 }
 
-/// The caller verifies ownership and excludes other active Slack runs in this same write.
+pub fn has_running_slack_import(conn: &Connection, except_run_id: Option<i64>) -> Result<bool> {
+    exists(
+        conn,
+        "SELECT 1 FROM slack_imports
+         WHERE status IN ('running', 'undoing') AND (?1 IS NULL OR id != ?1)",
+        [except_run_id],
+    )
+}
+
+/// The caller verifies ownership and checks the Slack import guard in this same write.
 pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &User) -> Result<()> {
     if !tx.in_transaction()
         || target.id == placeholder.id
@@ -114,7 +126,6 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
          WHERE slack_kind = 'user' AND record_type = 'User' AND record_id = ?1",
         params![from, to, tx.now()],
     )?;
-    conn.execute("DELETE FROM activity_items WHERE user_id = ?", [from])?;
     for (table, column) in [
         ("messages", "creator_id"),
         ("channel_threads", "creator_id"),
@@ -153,8 +164,10 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
         }
     }
     rename_user_suffix(tx, "Membership", ":user-", from, to)?;
-    retarget_mentions(tx, from, to)?;
-    conn.execute("DELETE FROM users WHERE id = ?", [from])?;
+    move_activity(tx, from, to)?;
+    retarget_mentions(tx, placeholder, target)?;
+    tx.conn()
+        .execute("DELETE FROM users WHERE id = ?", [from])?;
     Ok(())
 }
 
@@ -266,6 +279,12 @@ fn move_membership(tx: &mut Tx<'_>, source: &Membership, to: i64) -> Result<i64>
     if let Some(mut existing) = Membership::find_by_room_and_user(conn, source.room_id, to)? {
         if existing.involvement == Some(Involvement::Invisible)
             && let Some(involvement) = source.involvement.filter(|i| *i != Involvement::Invisible)
+            && exists(
+                conn,
+                "SELECT 1 FROM slack_import_records WHERE slack_kind = 'membership'
+                 AND record_type = 'Membership' AND record_id = ?",
+                [source.id],
+            )?
         {
             existing.update_involvement(tx, involvement)?;
         }
@@ -337,24 +356,49 @@ fn move_direct_membership(
             .or_else(|| key.find(":group"))
             .map(|start| &key[start..])
     });
-    let named_small_group =
-        members.len() <= 2 && room.name.as_deref().is_some_and(|n| !n.trim().is_empty());
+    let named = room.name.as_deref().is_some_and(|name| !is_blank(name));
+    let mut needs_group_suffix = false;
     if group_suffix.is_none()
-        && !named_small_group
         && let Some(existing) =
             Room::find_direct_for(tx.conn(), &members)?.filter(|r| r.id != room.id)
     {
-        // Legacy data can have a stale key. Actual membership controls access to the history.
-        let mut existing_members = existing.user_ids(tx.conn())?;
-        existing_members.sort_unstable();
-        if existing_members == members {
-            return merge_direct_rooms(tx, room, &existing, source.user_id, to, members.len() == 1);
+        if named || existing.name.as_deref().is_some_and(|name| !is_blank(name)) {
+            needs_group_suffix = existing.direct_member_key.is_none();
+        } else {
+            // Legacy data can have a stale key. Actual membership controls access to the history.
+            let mut existing_members = existing.user_ids(tx.conn())?;
+            existing_members.sort_unstable();
+            if existing_members == members {
+                return merge_direct_rooms(
+                    tx,
+                    room,
+                    &existing,
+                    source.user_id,
+                    to,
+                    members.len() == 1,
+                );
+            }
         }
     }
 
+    let member_key = Room::direct_member_key_for(&members);
+    if named && group_suffix.is_none() && !needs_group_suffix {
+        needs_group_suffix = exists(
+            tx.conn(),
+            "SELECT 1 FROM rooms WHERE id != ?1 AND deleted_at IS NULL AND type = 'Rooms::Direct'
+             AND (direct_member_key GLOB ?2 OR direct_member_key GLOB ?3)",
+            params![
+                room.id,
+                format!("{member_key}#*"),
+                format!("{member_key}:group*")
+            ],
+        )?;
+    }
     move_membership(tx, source, to)?;
+    let collision_suffix = format!("#{}", room.id);
+    let group_suffix = group_suffix.or(needs_group_suffix.then_some(collision_suffix.as_str()));
     if let Some(suffix) = group_suffix {
-        let mut key = format!("{}{suffix}", Room::direct_member_key_for(&members));
+        let mut key = format!("{member_key}{suffix}");
         if exists(
             tx.conn(),
             "SELECT 1 FROM rooms WHERE direct_member_key = ? AND id != ? AND deleted_at IS NULL",
@@ -371,6 +415,15 @@ fn move_direct_membership(
     }
     if Room::is_note_to_self_of(tx.conn(), room.id, to)? {
         scope_notes_mappings(tx, room.id, source.user_id, to)?;
+        let conn = tx.conn();
+        conn.execute(
+            "UPDATE slack_import_records SET created_record = 0, updated_at = ?
+             WHERE slack_kind = 'conversation' AND record_type = 'Room' AND record_id = ?",
+            params![tx.now(), room.id],
+        )?;
+        for membership in room.memberships(conn)? {
+            delete_membership_mapping(conn, membership.id)?;
+        }
     }
     broadcast_room_memberships(tx, room)
 }
@@ -487,19 +540,55 @@ fn broadcast_membership(tx: &mut Tx<'_>, membership_id: i64) {
     }));
 }
 
-fn retarget_mentions(tx: &Tx<'_>, from: i64, to: i64) -> Result<()> {
-    // Slack stores source Markdown by name, then renders it into Action Text user attachments.
-    // Resolve the saved IDs rather than changing every occurrence of the Slack display name.
+fn move_activity(tx: &mut Tx<'_>, from: i64, to: i64) -> Result<()> {
+    // Activity is unique per user and source, even when the event types differ. Let the
+    // recipient's existing row win. Authors and actors already have their post-claim IDs.
+    let moved = query_all(
+        tx.conn(),
+        "UPDATE activity_items AS src SET user_id = ?2
+         WHERE src.user_id = ?1 AND (
+             (src.source_type = 'Message' AND EXISTS (
+                 SELECT 1 FROM messages WHERE id = src.source_id AND creator_id != ?2))
+             OR (src.source_type = 'WorkThreadEvent' AND EXISTS (
+                 SELECT 1 FROM work_thread_events WHERE id = src.source_id AND actor_id IS NOT ?2)))
+           AND NOT EXISTS (
+             SELECT 1 FROM activity_items dst WHERE dst.user_id = ?2
+               AND dst.source_type = src.source_type AND dst.source_id = src.source_id)
+         RETURNING id",
+        params![from, to],
+        |row| row.get::<_, i64>(0),
+    )?;
+    tx.conn()
+        .execute("DELETE FROM activity_items WHERE user_id = ?", [from])?;
+    // The user_id update also increments activity_revision through the schema trigger.
+    for id in moved {
+        ActivityItem::broadcast_change(tx, to, id)?;
+    }
+    Ok(())
+}
+
+fn retarget_mentions(tx: &Tx<'_>, from: &User, to: &User) -> Result<()> {
     let conn = tx.conn();
-    let replacement = tx.rich_text().user_attachable_sgid(to);
+    let replacement = tx.rich_text().user_attachable_sgid(to.id);
+    let fragments = user_sgid_fragments(from.id);
+    let predicates = vec!["instr(body, ?) > 0"; fragments.len()].join(" OR ");
+    let sql = format!(
+        "SELECT id, record_id, body FROM action_text_rich_texts
+         WHERE id > ? AND record_type = 'Message' AND ({predicates})
+         ORDER BY id LIMIT 250"
+    );
     let mut cursor = 0;
     loop {
         let rows = query_all(
             conn,
-            "SELECT id, record_id, body FROM action_text_rich_texts
-             WHERE id > ? AND record_type = 'Message' AND instr(body, 'sgid=') > 0
-             ORDER BY id LIMIT 250",
-            [cursor],
+            &sql,
+            params_from_iter(
+                std::iter::once(&cursor as &dyn rusqlite::ToSql).chain(
+                    fragments
+                        .iter()
+                        .map(|fragment| fragment as &dyn rusqlite::ToSql),
+                ),
+            ),
             |row| {
                 Ok((
                     row.get::<_, i64>(0)?,
@@ -520,7 +609,7 @@ fn retarget_mentions(tx: &Tx<'_>, from: i64, to: i64) -> Result<()> {
                 if unverified_attachable_user(content.dom.attr(node, "sgid"))
                     .ok()
                     .flatten()
-                    .is_some_and(|gid| gid.id.parse::<i64>() == Ok(from))
+                    .is_some_and(|gid| gid.id.parse::<i64>() == Ok(from.id))
                 {
                     content.dom.set_attr(node, "sgid", &replacement);
                     changed = true;
@@ -532,10 +621,136 @@ fn retarget_mentions(tx: &Tx<'_>, from: i64, to: i64) -> Result<()> {
                     params![content.to_html(), id],
                 )?;
                 if let Some(message) = Message::find_by_id(conn, message_id)? {
+                    if let Some(source) = message.markdown_source.as_deref()
+                        && let Some(rewritten) = markdown::retarget_user_mentions(
+                            source,
+                            from.id,
+                            from.display_name(),
+                            to.id,
+                        )
+                        .map_err(|error| Error::Other(error.to_string()))?
+                    {
+                        conn.execute(
+                            "UPDATE messages SET markdown_source = ? WHERE id = ?",
+                            params![rewritten, message.id],
+                        )?;
+                    }
                     message.update_in_index(tx)?;
                 }
             }
         }
     }
     Ok(())
+}
+
+fn user_sgid_fragments(id: i64) -> BTreeSet<String> {
+    // JSON GIDs accept any app name. A quote or query delimiter ends the ID.
+    let path = format!("/User/{id}");
+    let mut fragments = base64_fragments(&format!("{path}\""), false);
+    fragments.extend(base64_fragments(&format!("{path}?"), true));
+
+    // The legacy message envelope encodes the Marshal string twice. The decoded GID
+    // check still decides whether a candidate is the claimed user.
+    for inner in both_base64_alphabets(base64_fragments(&path, false)) {
+        fragments.extend(base64_fragments(&inner, false));
+    }
+    both_base64_alphabets(fragments)
+}
+
+fn both_base64_alphabets(fragments: Vec<String>) -> BTreeSet<String> {
+    fragments
+        .into_iter()
+        .flat_map(|standard| [standard.replace('+', "-").replace('/', "_"), standard])
+        .collect()
+}
+
+fn base64_fragments(needle: &str, ends_with_query_delimiter: bool) -> Vec<String> {
+    let mut fragments = Vec::new();
+    for offset in 0_usize..3 {
+        let mut bytes = vec![0; offset];
+        bytes.extend_from_slice(needle.as_bytes());
+        // Keep the sextets made entirely of known bits from the needle.
+        let start = (offset * 8).div_ceil(6);
+        let end = bytes.len() * 8 / 6;
+        let encoded = STANDARD_NO_PAD.encode(&bytes);
+        let fragment = &encoded[start..end];
+        if ends_with_query_delimiter && bytes.len() % 3 == 2 {
+            // The low four bits of '?' distinguish it from a digit at this alignment.
+            // Include them with each possible pair of bits from the following byte.
+            fragments.extend(['8', '9', '+', '/'].map(|last| format!("{fragment}{last}")));
+        } else {
+            fragments.push(fragment.to_owned());
+        }
+    }
+    fragments
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rails_compat::Secrets;
+    use rails_compat::global_id::{ATTACHABLE_PURPOSE, verifier};
+    use rails_compat::message_verifier::{Digest, Encoding, MessageVerifier, Serializer};
+
+    #[test]
+    fn slack_claim_sgid_filter_matches_each_alignment_without_matching_longer_json_ids() {
+        let rails = verifier(&Secrets::new("slack-mention-test"));
+        let standard = MessageVerifier::new(
+            vec![7; 64],
+            Digest::Sha1,
+            Encoding::Strict,
+            Serializer::JsonWithFallback {
+                allow_marshal: true,
+            },
+        );
+        for digits in 1..=12 {
+            let id = "123456789012"[..digits].parse::<i64>().unwrap();
+            let fragments = user_sgid_fragments(id);
+            for signer in [&rails, &standard] {
+                for spaces in 0..6 {
+                    let padding = " ".repeat(spaces);
+                    for suffix in ["", "?expires_in", "?other=1", "?"] {
+                        let sign = |id| {
+                            let data = format!(r#"{padding}"gid://campfire/User/{id}{suffix}""#);
+                            signer.generate_raw(&data, Some(ATTACHABLE_PURPOSE), None)
+                        };
+                        let sgid = sign(id);
+                        assert_eq!(
+                            unverified_attachable_user(Some(&sgid)).unwrap().unwrap().id,
+                            id.to_string()
+                        );
+                        assert!(
+                            fragments.iter().any(|part| sgid.contains(part)),
+                            "missed id {id}, padding {spaces}, suffix {suffix:?}"
+                        );
+                        let longer = sign(id * 10 + 3);
+                        assert!(
+                            !fragments.iter().any(|part| longer.contains(part)),
+                            "matched longer id with prefix {id}, padding {spaces}, suffix {suffix:?}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn slack_claim_sgid_filter_keeps_legacy_rails_user_attachments() {
+        let vectors: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../../vectors/rails_compat.json")).unwrap();
+        for case in vectors["unverified_sgids"].as_array().unwrap() {
+            let Some(uri) = case["expected"].as_str() else {
+                continue;
+            };
+            let id = uri.rsplit('/').next().unwrap().parse().unwrap();
+            let sgid = case["sgid"].as_str().unwrap();
+            assert!(
+                user_sgid_fragments(id)
+                    .iter()
+                    .any(|part| sgid.contains(part)),
+                "missed {}",
+                case["case"]
+            );
+        }
+    }
 }
