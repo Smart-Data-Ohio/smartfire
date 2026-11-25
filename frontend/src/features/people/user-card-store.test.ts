@@ -96,15 +96,39 @@ describe("user card lifecycle", () => {
     expect(shown()).toBe("open:8");
   });
 
-  it("keeps the cold delay running across the same person's triggers", () => {
+  it("keeps the cold delay running across the same person's triggers, opening off the last", () => {
+    const avatar = document.createElement("span");
+    const name = document.createElement("span");
+
+    hoverEnter({ userId: 8, anchor: avatar, placement: "right-start" }, "mouse");
+    vi.advanceTimersByTime(OPEN_DELAY_MS - 50);
+    hoverEnter({ userId: 8, anchor: name, placement: "bottom-start" }, "mouse");
+    vi.advanceTimersByTime(50);
+
+    const next = getUserCardState();
+
+    expect(next.kind).toBe("open");
+    expect(next.kind === "closed" ? null : next.anchor).toBe(name);
+    expect(next.kind === "closed" ? null : next.placement).toBe("bottom-start");
+  });
+
+  it("swaps to the last of someone else's triggers the pointer reached during the warm delay", () => {
+    const avatar = document.createElement("span");
     const name = document.createElement("span");
 
     hoverEnter(target(8), "mouse");
-    vi.advanceTimersByTime(OPEN_DELAY_MS - 50);
-    hoverEnter(target(8, name), "mouse");
+    vi.advanceTimersByTime(OPEN_DELAY_MS);
+    hoverEnter({ userId: 9, anchor: avatar, placement: "right-start" }, "mouse");
+    vi.advanceTimersByTime(WARM_DELAY_MS - 50);
+    hoverEnter({ userId: 9, anchor: name, placement: "bottom-start" }, "mouse");
+    expect(shown()).toBe("open:8");
     vi.advanceTimersByTime(50);
 
-    expect(getUserCardState()).toMatchObject({ kind: "open", userId: 8, anchor: name });
+    const next = getUserCardState();
+
+    expect(shown()).toBe("open:9");
+    expect(next.kind === "closed" ? null : next.anchor).toBe(name);
+    expect(next.kind === "closed" ? null : next.placement).toBe("bottom-start");
   });
 
   it("swaps to someone else's card after the warm delay, showing the first until then", () => {

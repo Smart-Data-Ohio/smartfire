@@ -45,6 +45,12 @@ let state: UserCardState = CLOSED;
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 
+/**
+ * Whose card the scheduled hover open brings up, and the trigger it hangs off: the latest of that
+ * person's triggers the pointer reached while the delay ran.
+ */
+let incoming: CardTarget | undefined;
+
 let closedAt = Number.NEGATIVE_INFINITY;
 
 const listeners = new Set<() => void>();
@@ -68,6 +74,7 @@ function set(next: UserCardState): void {
 function clearTimer(): void {
   clearTimeout(timer);
   timer = undefined;
+  incoming = undefined;
 }
 
 /** Runs `step` after `ms`, replacing whatever was scheduled. */
@@ -77,6 +84,17 @@ function schedule(ms: number, step: () => void): void {
     timer = undefined;
     step();
   }, ms);
+}
+
+/** Opens `target`'s card by hover after `ms`, off whichever of their triggers is latest by then. */
+function scheduleOpen(ms: number, target: CardTarget): void {
+  schedule(ms, () => {
+    const latest = incoming ?? target;
+
+    incoming = undefined;
+    set({ kind: "open", via: "hover", ...latest });
+  });
+  incoming = target;
 }
 
 /** Whether a card shows (open, or in its close grace). */
@@ -96,9 +114,24 @@ export function subscribeUserCard(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** The card's state, for the one host and for triggers that mark themselves expanded. */
+/** The card's state, for the one host. */
 export function useUserCard(): UserCardState {
   return useSyncExternalStore(subscribeUserCard, getUserCardState, getUserCardState);
+}
+
+/**
+ * Whether the card shows hanging off `ref`'s element, for a trigger's `aria-expanded`. It is a
+ * boolean, so only the trigger whose answer changes renders again, not every one in the room.
+ */
+export function useUserCardExpanded(ref: { readonly current: Element | null }): boolean {
+  const expanded = () => shown(state) && ref.current !== null && state.anchor === ref.current;
+
+  return useSyncExternalStore(subscribeUserCard, expanded, expanded);
+}
+
+/** Whether the card still shows `userId` (open, or in its close grace). */
+export function userCardShows(userId: number): boolean {
+  return shown(state) && state.userId === userId;
 }
 
 /** The pointer came onto a trigger. Only a mouse hovers; touch and pen wait for the tap. */
@@ -121,9 +154,13 @@ export function hoverEnter(target: CardTarget, pointerType: string): void {
     return;
   }
 
-  if (current.kind === "pending" && current.userId === target.userId) {
+  if (incoming?.userId === target.userId) {
     // Same person, another trigger: keep the delay already running, hang it off this one.
-    set({ kind: "pending", ...target });
+    incoming = target;
+
+    if (current.kind === "pending") {
+      set({ kind: "pending", ...target });
+    }
 
     return;
   }
@@ -135,9 +172,7 @@ export function hoverEnter(target: CardTarget, pointerType: string): void {
   }
 
   // While a card shows, it keeps showing until the swap: no flash of nothing in between.
-  schedule(warm ? WARM_DELAY_MS : OPEN_DELAY_MS, () => {
-    set({ kind: "open", via: "hover", ...target });
-  });
+  scheduleOpen(warm ? WARM_DELAY_MS : OPEN_DELAY_MS, target);
 }
 
 /** The pointer left a trigger. */

@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
+  type FocusEvent,
   type KeyboardEvent,
   useEffect,
   useId,
@@ -11,6 +12,7 @@ import {
 import type { CustomStatus } from "../../gen/CustomStatus.ts";
 import type { PersonProfile } from "../../gen/PersonProfile.ts";
 import type { Presence } from "../../gen/Presence.ts";
+import type { UserRole } from "../../gen/UserRole.ts";
 import type { Placement } from "../../lib/anchor.ts";
 import { showPopover } from "../../lib/popover.ts";
 import { duringAppFocus } from "../../lib/reader-focus.ts";
@@ -35,6 +37,7 @@ import {
   cardEnter,
   cardLeave,
   closeUserCard,
+  userCardShows,
   useUserCard,
 } from "./user-card-store.ts";
 import "../../ui/floating.css";
@@ -54,22 +57,31 @@ const PROFILE_TTL_MS = 60_000;
 
 const MAX_CACHED_PROFILES = 100;
 
+/** Who is looking: what the server puts in a profile (an email, say) depends on both. */
+interface Viewer {
+  readonly id: number | null;
+  readonly role: UserRole | null;
+}
+
 const profiles = new Map<
   number,
-  { readonly viewerId: number | null; readonly at: number; readonly profile: PersonProfile }
+  { readonly viewer: Viewer; readonly at: number; readonly profile: PersonProfile }
 >();
 
-function freshProfile(userId: number, viewerId: number | null): PersonProfile | null {
+function freshProfile(userId: number, viewer: Viewer): PersonProfile | null {
   const hit = profiles.get(userId);
 
-  return hit !== undefined && hit.viewerId === viewerId && Date.now() - hit.at < PROFILE_TTL_MS
+  return hit !== undefined &&
+    hit.viewer.id === viewer.id &&
+    hit.viewer.role === viewer.role &&
+    Date.now() - hit.at < PROFILE_TTL_MS
     ? hit.profile
     : null;
 }
 
-function storeProfile(userId: number, viewerId: number | null, profile: PersonProfile): void {
+function storeProfile(userId: number, viewer: Viewer, profile: PersonProfile): void {
   profiles.delete(userId);
-  profiles.set(userId, { viewerId, at: Date.now(), profile });
+  profiles.set(userId, { viewer, at: Date.now(), profile });
 
   if (profiles.size > MAX_CACHED_PROFILES) {
     const oldest = profiles.keys().next().value;
@@ -91,11 +103,18 @@ export function clearUserCardProfiles(): void {
  * sees, a status line not yet in presence, or the whole person when the store has never seen
  * them). A failure leaves the card as it is.
  */
-function useCardProfile(userId: number, viewerId: number | null): PersonProfile | null {
-  const [loaded, setLoaded] = useState<PersonProfile | null>(() => freshProfile(userId, viewerId));
+function useCardProfile(
+  userId: number,
+  viewerId: number | null,
+  viewerRole: UserRole | null,
+): PersonProfile | null {
+  const [loaded, setLoaded] = useState<PersonProfile | null>(() =>
+    freshProfile(userId, { id: viewerId, role: viewerRole }),
+  );
 
   useEffect(() => {
-    const fresh = freshProfile(userId, viewerId);
+    const viewer = { id: viewerId, role: viewerRole };
+    const fresh = freshProfile(userId, viewer);
 
     if (fresh !== null) {
       setLoaded(fresh);
@@ -107,7 +126,7 @@ function useCardProfile(userId: number, viewerId: number | null): PersonProfile 
 
     peoplePages.profile(userId, controller.signal).then(
       (profile) => {
-        storeProfile(userId, viewerId, profile);
+        storeProfile(userId, viewer, profile);
 
         if (!controller.signal.aborted) {
           setLoaded(profile);
@@ -117,7 +136,7 @@ function useCardProfile(userId: number, viewerId: number | null): PersonProfile 
     );
 
     return () => controller.abort();
-  }, [userId, viewerId]);
+  }, [userId, viewerId, viewerRole]);
 
   return loaded;
 }
@@ -251,8 +270,9 @@ function ProfileLink({ userId, own }: { readonly userId: number; readonly own: b
 function UserCard({ userId, titleId }: CardProps) {
   const navigate = useNavigate();
   const viewerId = useViewerId();
+  const viewerRole = useStore((state) => state.me?.user.role ?? null);
   const held = useUser(userId);
-  const profile = useCardProfile(userId, viewerId);
+  const profile = useCardProfile(userId, viewerId, viewerRole);
 
   const user =
     held !== undefined && profile !== null
@@ -268,11 +288,23 @@ function UserCard({ userId, titleId }: CardProps) {
   const bot = user?.role === "bot";
   const bio = user?.bio?.trim() ?? "";
 
+  // As the server shows it: to an administrator, for an account still on the workspace. A profile
+  // fetched before a demotion or a deactivation still holds it until the next fetch.
+  const email =
+    viewerRole === "administrator" && status !== "deactivated"
+      ? (profile?.emailAddress ?? null)
+      : null;
+
   const message = () => {
     setMessaging(true);
     // Nobody else opens your note-to-self, as the sidebar's "Message yourself" does.
     directs.create(own ? [] : [userId]).then(
       (row) => {
+        // Dismissed (or swapped for someone else's) while it was on its way: stay put.
+        if (!userCardShows(userId)) {
+          return;
+        }
+
         closeUserCard();
         void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } });
       },
@@ -333,9 +365,9 @@ function UserCard({ userId, titleId }: CardProps) {
         ) : user === undefined ? null : (
           <PresenceLine userId={userId} customStatus={user.customStatus} profile={profile} />
         )}
-        {profile?.emailAddress == null ? null : (
-          <a className="user-card-email" href={`mailto:${profile.emailAddress}`}>
-            {profile.emailAddress}
+        {email === null ? null : (
+          <a className="user-card-email" href={`mailto:${email}`}>
+            {email}
           </a>
         )}
         {bio === "" || status === "deactivated" ? null : <p className="user-card-bio">{bio}</p>}
@@ -358,6 +390,16 @@ function UserCard({ userId, titleId }: CardProps) {
   );
 }
 
+/**
+ * Gives focus back to the trigger a card hung off, unless it is gone or out of the tab order (an
+ * avatar beside a name is hidden from assistive tech, and must not take focus).
+ */
+function restoreFocus(anchor: HTMLElement): void {
+  if (anchor.isConnected && anchor.getAttribute("aria-hidden") !== "true" && anchor.tabIndex >= 0) {
+    duringAppFocus(() => anchor.focus({ preventScroll: true }));
+  }
+}
+
 /** What the card last showed: kept through its exit so it doesn't go blank as it fades. */
 interface Shown {
   readonly userId: number;
@@ -370,8 +412,8 @@ interface Shown {
  * The one user card, mounted once by the app shell and opened from any avatar or name
  * (`UserCardTrigger`, `UserCardHover`, mentions in message HTML). It sits in the top layer beside
  * its trigger (a manual popover with CSS anchor positioning), and closes on Esc, a press outside
- * it, a scroll under it, navigation, or its trigger going away. Opened by a click, it takes focus
- * and gives it back to the trigger on Esc.
+ * it, a scroll under it, navigation, or its trigger going away. Opened by a click, it takes focus,
+ * gives it back to the trigger on Esc, and closes once focus moves on past it.
  */
 export function UserCardHost() {
   const card = useUserCard();
@@ -462,8 +504,14 @@ export function UserCardHost() {
 
     // A hover-opened card has no focus to catch the key, so Esc anywhere closes it.
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeUserCard();
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      closeUserCard();
+
+      if (via === "click") {
+        restoreFocus(anchor);
       }
     };
 
@@ -486,7 +534,7 @@ export function UserCardHost() {
       document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("scroll", onScroll, true);
     };
-  }, [visible, shown?.anchor, presence.ref]);
+  }, [visible, shown?.anchor, via, presence.ref]);
 
   if (!presence.mounted || shown === null) {
     return null;
@@ -500,11 +548,22 @@ export function UserCardHost() {
     event.preventDefault();
     event.stopPropagation();
     closeUserCard();
+    restoreFocus(shown.anchor);
+  };
 
-    const anchor = shown.anchor;
+  // Tabbing on past a card someone opened (to the page, not back to its trigger) closes it. Focus
+  // with nowhere to go (a button inside that went busy) leaves it open.
+  const onBlur = (event: FocusEvent<HTMLDivElement>) => {
+    const next = event.relatedTarget;
 
-    if (anchor.isConnected) {
-      duringAppFocus(() => anchor.focus({ preventScroll: true }));
+    if (
+      visible &&
+      via === "click" &&
+      next instanceof Node &&
+      !event.currentTarget.contains(next) &&
+      !shown.anchor.contains(next)
+    ) {
+      closeUserCard();
     }
   };
 
@@ -523,6 +582,7 @@ export function UserCardHost() {
       onPointerEnter={cardEnter}
       onPointerLeave={cardLeave}
       onKeyDown={onKeyDown}
+      onBlur={onBlur}
     >
       <UserCard key={shown.userId} userId={shown.userId} titleId={titleId} />
     </div>

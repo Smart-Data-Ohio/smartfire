@@ -430,7 +430,10 @@
     min-width: 0;
   }
 
-  /* The author's name is the card's link; its ::after stretches over the whole card. */
+  /*
+   * The author's name is the card's link; its ::after stretches over the whole card. The name and
+   * the avatar sit above it, so they (and not the rest of the card) hover or open the user card.
+   */
   .search-hit-link {
     color: var(--text);
     font-size: var(--text-ui);
@@ -444,6 +447,13 @@
     position: absolute;
     inset: 0;
     border-radius: inherit;
+  }
+
+  .search-hit-author,
+  .search-hit > .user-card-trigger,
+  .search-hit > .user-card-hover > .agent-link {
+    position: relative;
+    z-index: 1;
   }
 
   .search-hit-time,

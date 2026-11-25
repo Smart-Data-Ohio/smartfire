@@ -13,6 +13,12 @@ const SPOILER = "span[data-spoiler]";
 /** A spoiler that is still covered. */
 const COVERED = "span[data-spoiler]:not([data-revealed])";
 
+/**
+ * Dispatched (bubbling) on a spoiler once it is revealed, so what its contents lacked while covered
+ * (a mention chip's place in the tab order) can come back.
+ */
+export const SPOILER_REVEALED = "spoiler-revealed";
+
 /** Whether `element` sits inside a spoiler that is still covered (a mention in one has no card). */
 export function inCoveredSpoiler(element: Element): boolean {
   return element.closest(COVERED) !== null;
@@ -279,6 +285,8 @@ function reveal(spoiler: HTMLElement): void {
   for (const link of spoiler.querySelectorAll(HIDING_LINK)) {
     revealLink(link);
   }
+
+  spoiler.dispatchEvent(new Event(SPOILER_REVEALED, { bubbles: true }));
 }
 
 /** Puts back the focus, names and accessibility that `conceal` took from `node`. */

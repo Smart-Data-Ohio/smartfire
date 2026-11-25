@@ -169,6 +169,13 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
 
   const label = `${name}${place}, ${when}`;
 
+  // Only the name itself hovers the card: the link's stretch over the rest of the result doesn't.
+  const authorName = (
+    <UserCardHover userId={message.creatorId}>
+      <span className="search-hit-author">{name}</span>
+    </UserCardHover>
+  );
+
   return (
     <article className="search-hit" data-search-hit>
       <AuthorCardTrigger userId={message.creatorId} placement="right-start" duplicate>
@@ -176,30 +183,28 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
       </AuthorCardTrigger>
       <div className="search-hit-main">
         <div className="search-hit-head">
-          <UserCardHover userId={message.creatorId}>
-            {message.threadId === null ? (
-              <Link
-                to="/r/$roomId/m/$messageId"
-                params={{ roomId: message.roomId, messageId: message.id }}
-                className="search-hit-link"
-                aria-label={label}
-                data-search-hit-link
-              >
-                {name}
-              </Link>
-            ) : (
-              <Link
-                to="/r/$roomId/t/$threadId"
-                params={{ roomId: message.roomId, threadId: message.threadId }}
-                search={{ m: message.id }}
-                className="search-hit-link"
-                aria-label={label}
-                data-search-hit-link
-              >
-                {name}
-              </Link>
-            )}
-          </UserCardHover>
+          {message.threadId === null ? (
+            <Link
+              to="/r/$roomId/m/$messageId"
+              params={{ roomId: message.roomId, messageId: message.id }}
+              className="search-hit-link"
+              aria-label={label}
+              data-search-hit-link
+            >
+              {authorName}
+            </Link>
+          ) : (
+            <Link
+              to="/r/$roomId/t/$threadId"
+              params={{ roomId: message.roomId, threadId: message.threadId }}
+              search={{ m: message.id }}
+              className="search-hit-link"
+              aria-label={label}
+              data-search-hit-link
+            >
+              {authorName}
+            </Link>
+          )}
           <time
             className="search-hit-time"
             dateTime={message.createdAt}

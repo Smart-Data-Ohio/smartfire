@@ -1,7 +1,13 @@
 import { type MouseEvent, type PointerEvent, type ReactNode, useEffect, useRef } from "react";
 import type { Placement } from "../../lib/anchor.ts";
 import { AgentProfileLink, useAgentIdOf } from "../agents/agent-link.tsx";
-import { hoverEnter, hoverLeave, openByClick, releaseAnchor } from "./user-card-store.ts";
+import {
+  hoverEnter,
+  hoverLeave,
+  openByClick,
+  releaseAnchor,
+  useUserCardExpanded,
+} from "./user-card-store.ts";
 
 interface TriggerProps {
   readonly userId: number;
@@ -14,7 +20,8 @@ interface ButtonTriggerProps extends TriggerProps {
   readonly className?: string;
   /**
    * A second trigger for the same person beside their name (the avatar): out of the tab order and
-   * hidden from assistive tech, so the name is the one stop. A click still opens the card.
+   * hidden from assistive tech, so the name is the one stop. A click still opens the card, and
+   * never focuses it.
    */
   readonly duplicate?: boolean;
 }
@@ -47,6 +54,7 @@ export function UserCardTrigger({
 
   useReleaseOnUnmount(ref);
 
+  const expanded = useUserCardExpanded(ref);
   const target = (anchor: HTMLElement) => ({ userId, anchor, placement });
 
   return (
@@ -55,11 +63,13 @@ export function UserCardTrigger({
       type="button"
       className={className === undefined ? "user-card-trigger" : `user-card-trigger ${className}`}
       aria-haspopup="dialog"
+      aria-expanded={duplicate ? undefined : expanded}
       data-user-card-trigger={userId}
       onPointerEnter={(event: PointerEvent<HTMLButtonElement>) =>
         hoverEnter(target(event.currentTarget), event.pointerType)
       }
       onPointerLeave={hoverLeave}
+      onMouseDown={duplicate ? (event) => event.preventDefault() : undefined}
       onClick={(event: MouseEvent<HTMLButtonElement>) => openByClick(target(event.currentTarget))}
       tabIndex={duplicate ? -1 : undefined}
       aria-hidden={duplicate || undefined}

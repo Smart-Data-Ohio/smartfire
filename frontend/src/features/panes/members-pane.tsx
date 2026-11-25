@@ -41,35 +41,42 @@ function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
   const status =
     working ?? member.statusText ?? (member.bot ? null : PRESENCE_WORD[member.presence]);
 
-  const label = member.viewer
-    ? `${member.name} (you)`
-    : agentId === null
-      ? `Message ${member.name}`
-      : `Open ${member.name}'s profile`;
+  const label = agentId === null ? `Message ${member.name}` : `Open ${member.name}'s profile`;
+
+  const contents = (
+    <>
+      <UserCardHover userId={member.userId} placement="left">
+        <UserAvatar userId={member.userId} size={32} presence decorative />
+      </UserCardHover>
+      <span className="member-row-text">
+        <span className="member-row-name">
+          <UserCardHover userId={member.userId} placement="left">
+            <span className="member-row-label">{member.name}</span>
+          </UserCardHover>
+          {member.viewer ? <span className="member-row-you">(you)</span> : null}
+          {member.bot ? <AgentBadge userId={member.userId} status /> : null}
+        </span>
+        {status === null ? null : <span className="member-row-status">{status}</span>}
+      </span>
+    </>
+  );
 
   return (
     <li className="member-row" data-offline={member.presence === "offline" || undefined}>
-      <button
-        type="button"
-        className="member-row-main"
-        disabled={member.viewer}
-        aria-label={label}
-        onClick={() => onOpen(member)}
-      >
-        <UserCardHover userId={member.userId} placement="left">
-          <UserAvatar userId={member.userId} size={32} presence decorative />
-        </UserCardHover>
-        <span className="member-row-text">
-          <span className="member-row-name">
-            <UserCardHover userId={member.userId} placement="left">
-              <span className="member-row-label">{member.name}</span>
-            </UserCardHover>
-            {member.viewer ? <span className="member-row-you">(you)</span> : null}
-            {member.bot ? <AgentBadge userId={member.userId} status /> : null}
-          </span>
-          {status === null ? null : <span className="member-row-status">{status}</span>}
-        </span>
-      </button>
+      {member.viewer ? (
+        // Your own row opens nothing. Not a disabled button: browsers send a disabled button's
+        // contents no pointer events, and its avatar and name still show your card on hover.
+        <div className="member-row-main">{contents}</div>
+      ) : (
+        <button
+          type="button"
+          className="member-row-main"
+          aria-label={label}
+          onClick={() => onOpen(member)}
+        >
+          {contents}
+        </button>
+      )}
       {canStar(member) ? (
         <IconButton
           icon="star"
