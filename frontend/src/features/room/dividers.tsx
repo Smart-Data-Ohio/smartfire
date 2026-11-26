@@ -56,9 +56,13 @@ export function RoomIntro({ roomId }: { readonly roomId: number }) {
   if (self && otherId !== undefined) {
     return (
       <div className="room-intro enter-fade" data-empty={empty || undefined} data-note-to-self>
-        <UserAvatar userId={otherId} size={64} presence decorative />
+        <AuthorCardTrigger userId={otherId} placement="right-start" duplicate>
+          <UserAvatar userId={otherId} size={64} presence decorative />
+        </AuthorCardTrigger>
         <h2 className="room-intro-title">
-          <YouLabel name={viewerName ?? displayName} tagClassName="room-intro-you" />
+          <AuthorCardTrigger userId={otherId}>
+            <YouLabel name={viewerName ?? displayName} tagClassName="room-intro-you" />
+          </AuthorCardTrigger>
         </h2>
         <p className="room-intro-text">{NOTE_TO_SELF_LINE}</p>
       </div>

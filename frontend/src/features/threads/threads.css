@@ -347,11 +347,12 @@
     z-index: 1;
   }
 
-  .thread-row :is(button, a):not(.thread-row-cover) {
+  .thread-row :is(button, a, .thread-following-tag):not(.thread-row-cover) {
     pointer-events: auto;
   }
 
-  .thread-row > :is(.user-card-trigger, .user-card-hover > .agent-link) {
+  .thread-row > .user-card-trigger,
+  .thread-row > .user-card-hover > .agent-link {
     flex-shrink: 0;
     align-self: flex-start;
   }

@@ -138,18 +138,18 @@ function WideTitle({
         <>
           {otherId === undefined ? (
             <RoomGlyph kind={kind} iconName={null} size={18} className="room-title-icon" />
-          ) : self ? (
-            <UserAvatar userId={otherId} size={24} presence decorative />
           ) : (
             <AuthorCardTrigger userId={otherId} duplicate>
               <UserAvatar userId={otherId} size={24} presence decorative />
             </AuthorCardTrigger>
           )}
           <h1 className="room-title-name">
-            {otherId === undefined || self ? (
+            {otherId === undefined ? (
               <TitleName name={name} self={self} />
             ) : (
-              <AuthorCardTrigger userId={otherId}>{name}</AuthorCardTrigger>
+              <AuthorCardTrigger userId={otherId}>
+                <TitleName name={name} self={self} />
+              </AuthorCardTrigger>
             )}
           </h1>
           {self ? (

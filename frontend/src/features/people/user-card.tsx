@@ -156,13 +156,14 @@ function useCardProfile(
 
     peoplePages.cardProfile(userId, controller.signal).then(
       (reply) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
         const profile = cardFields(reply);
 
         storeProfile(userId, viewer, profile);
-
-        if (!controller.signal.aborted) {
-          setLoaded(profile);
-        }
+        setLoaded(profile);
       },
       () => undefined,
     );

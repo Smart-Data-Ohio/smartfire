@@ -13,6 +13,7 @@ import {
   meFixture,
   messageFixture,
   pageFixture,
+  roomDetailFixture,
   sidebarRowFixture,
   userFixture,
 } from "../../api/testing.ts";
@@ -20,6 +21,7 @@ import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { PersonProfile } from "../../gen/PersonProfile.ts";
 import type { User } from "../../gen/User.ts";
 import type { UserRole } from "../../gen/UserRole.ts";
+import { beginRoomRequest } from "../../store/join-state.ts";
 import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
 import { peoplePages } from "../../sync/admin.ts";
@@ -28,6 +30,7 @@ import { ActivityRow } from "../activity/activity-row.tsx";
 import { BodyHtml } from "../messages/body-html.tsx";
 import { ReplyQuote } from "../messages/message-content.tsx";
 import { MemberRow } from "../panes/members-pane.tsx";
+import { RoomIntro } from "../room/dividers.tsx";
 import { MessageRow } from "../room/message-row.tsx";
 import { SavedRow } from "../saved/saved-row.tsx";
 import { HitRow } from "../search/hit-row.tsx";
@@ -1060,5 +1063,112 @@ describe("cards from lists, results and quotes", () => {
 
     expect(link?.getAttribute("href")).toBe("/app/r/1/m/21");
     expect(link?.querySelector("[data-user-card-trigger]")).toBeNull();
+  });
+
+  it("raises an agent author's link above a reply quote and hovers its card", async () => {
+    const agent = {
+      ...userFixture(12, "Deploy Agent"),
+      role: "bot" as const,
+      agent: { agentId: 3, kind: "workspace" as const, status: "idle" as const, suspended: false },
+    };
+
+    const source = messageFixture(25, 1, { creatorId: 12 });
+
+    mutations.mergeUsers([agent]);
+    mutations.applyPage(1, pageFixture([source]), "replace");
+
+    const pathname = await renderWithCard(
+      <ReplyQuote message={messageFixture(26, 1, { replyToMessageId: source.id })} />,
+    );
+
+    const link = document.querySelector<HTMLElement>(
+      ".message-reply > .user-card-hover > .agent-link",
+    );
+
+    expect(link).not.toBeNull();
+    fireEvent.pointerEnter(link ?? document.body, { pointerType: "mouse" });
+    expect(await screen.findByRole("dialog", {}, { timeout: OPEN_DELAY_MS * 3 })).toBeTruthy();
+
+    fireEvent.click(link ?? document.body);
+    await waitFor(() => expect(pathname()).toBe("/agents/3"));
+  });
+
+  it("opens your own card from a note-to-self intro", async () => {
+    const viewer = userFixture(VIEWER, "Riel St. Amand");
+    const row = sidebarRowFixture(19, viewer.name, "direct", [VIEWER]);
+
+    signInAs("member");
+    mutations.mergeUsers([viewer]);
+    mutations.setRoomDetail(
+      {
+        ...roomDetailFixture(19),
+        room: row.room,
+        membership: row.membership,
+        displayName: viewer.name,
+        sidebarDisplayName: viewer.name,
+        directMemberIds: [VIEWER],
+        users: [viewer],
+        noteToSelf: true,
+      },
+      beginRoomRequest(),
+    );
+
+    await renderWithCard(<RoomIntro roomId={19} />);
+
+    const user = userEvent.setup();
+    const button = screen.getByRole("button", { name: /Riel St\. Amand/ });
+
+    expect(button.dataset.userCardTrigger).toBe(String(VIEWER));
+    await user.click(button);
+    await expectCardFor("Riel St. Amand(you)");
+
+    for (const key of ["{Enter}", " "]) {
+      button.focus();
+      await user.keyboard(key);
+      await expectCardFor("Riel St. Amand(you)");
+    }
+
+    const avatar = document.querySelector<HTMLElement>(
+      `[data-user-card-trigger="${VIEWER}"][aria-hidden="true"]`,
+    );
+
+    expect(avatar).not.toBeNull();
+    await user.click(avatar ?? document.body);
+    await expectCardFor("Riel St. Amand(you)");
+  });
+
+  it("does not cache an aborted admin profile reply after a viewer demotion", async () => {
+    const user = person();
+
+    let landAdmin: (reply: PersonProfile) => void = () => undefined;
+
+    signInAs("administrator");
+    mutations.mergeUsers([user]);
+    vi.mocked(peoplePages.cardProfile)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            landAdmin = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(profileOf(user, { emailAddress: null }));
+
+    await renderWithCard(<UserCardTrigger userId={PERSON}>Ashley</UserCardTrigger>);
+
+    const card = await openCard("Ashley");
+
+    act(() =>
+      mutations.mergeUsers([
+        {
+          ...userFixture(VIEWER, "Riel St. Amand"),
+          role: "member",
+          updatedAt: "2026-02-01T00:00:00.000000Z",
+        },
+      ]),
+    );
+    await waitFor(() => expect(cachedUserCardProfile(PERSON)).toBeDefined());
+    await act(async () => landAdmin(profileOf(user, { emailAddress: "ashley@example.com" })));
+    expect(cachedUserCardProfile(PERSON)?.emailAddress).toBeNull();
+    expect(within(card).queryByRole("link", { name: "ashley@example.com" })).toBeNull();
   });
 });

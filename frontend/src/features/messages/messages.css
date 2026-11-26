@@ -315,7 +315,8 @@
     inset: 0;
   }
 
-  .message-reply > :is(.user-card-trigger, .user-card-hover > .agent-link) {
+  .message-reply > .user-card-trigger,
+  .message-reply > .user-card-hover > .agent-link {
     position: relative;
     z-index: 1;
     flex-shrink: 0;

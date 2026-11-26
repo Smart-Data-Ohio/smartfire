@@ -551,7 +551,8 @@
     pointer-events: auto;
   }
 
-  .member-row-main > :is(.user-card-trigger, .user-card-hover > .agent-link) {
+  .member-row-main > .user-card-trigger,
+  .member-row-main > .user-card-hover > .agent-link {
     flex-shrink: 0;
     align-self: flex-start;
   }

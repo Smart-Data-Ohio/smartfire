@@ -27,7 +27,15 @@
       .thread-row-author
     ),
   .user-card-hover:hover
-    :is(.message-reply-author, .activity-author, .member-row-label, .search-hit-author) {
+    :is(
+      .message-reply-author,
+      .pin-card-author,
+      .saved-author,
+      .search-hit-author,
+      .activity-author,
+      .member-row-label,
+      .thread-row-author
+    ) {
     text-decoration: underline;
   }
 
