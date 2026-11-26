@@ -9,6 +9,9 @@ use std::collections::BTreeSet;
 
 use crate::audit_log::{AuditLog, Context, NewAuditLog};
 use crate::broadcasts::Broadcast;
+use crate::models::{
+    huddle_cleanup::HuddleCleanup, huddle_grant::HuddleGrant, room_delete::HuddleConfig,
+};
 use crate::sql::{exists, query_all};
 use crate::{
     ActivityItem, Connection, Error, Event, Involvement, Membership, Message, Result, Role, Room,
@@ -119,7 +122,6 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
     }
     let from = placeholder.id;
     let to = target.id;
-    let mut updated_messages = BTreeSet::new();
     let conn = tx.conn();
     // Undo may remove imported history. It must treat the destination account as pre-existing.
     conn.execute(
@@ -127,7 +129,7 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
          WHERE slack_kind = 'user' AND record_type = 'User' AND record_id = ?1",
         params![from, to, tx.now()],
     )?;
-    move_authored_messages(tx, from, to, &mut updated_messages)?;
+    move_authored_messages(tx, from, to)?;
     for (table, column) in [
         ("channel_threads", "creator_id"),
         ("channel_threads", "work_owner_id"),
@@ -166,12 +168,10 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
     }
     rename_user_suffix(tx, "Membership", ":user-", from, to)?;
     move_activity(tx, from, to)?;
-    retarget_mentions(tx, placeholder, target, &mut updated_messages)?;
-    for message_id in updated_messages {
-        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageUpdated { message_id }));
-    }
+    retarget_mentions(tx, placeholder, target)?;
     tx.conn()
         .execute("DELETE FROM users WHERE id = ?", [from])?;
+    tx.emit_after_commit(Event::broadcast(&Broadcast::SyncResync));
     Ok(())
 }
 
@@ -197,6 +197,19 @@ pub fn audit_claim(
 
 fn move_unique_references(tx: &Tx<'_>, from: i64, to: i64) -> Result<()> {
     let conn = tx.conn();
+    // Touch the messages while the source boosts still identify them.
+    let boosted_messages = query_all(
+        conn,
+        "SELECT id, updated_at FROM messages
+         WHERE id IN (SELECT message_id FROM boosts WHERE booster_id = ?)",
+        [from],
+        |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Timestamp>(1)?)),
+    )?;
+    let mut update = conn.prepare_cached("UPDATE messages SET updated_at = ? WHERE id = ?")?;
+    for (message_id, updated_at) in boosted_messages {
+        update.execute(params![message_revision_after(tx, updated_at), message_id])?;
+    }
+
     // A member can already have starred, blocked, or allowed their Slack identity.
     for (table, owner, other) in [
         ("user_stars", "user_id", "starred_user_id"),
@@ -476,8 +489,12 @@ fn merge_direct_rooms(
         "UPDATE events SET venue_room_id = ?2 WHERE venue_room_id = ?1",
         params![room.id, existing.id],
     )?;
-    // Grants from the removed DM point at its LiveKit room; revoke any active ones so the
-    // surviving DM issues fresh media credentials while keeping historical inbox items accessible.
+    // Capture the removed DM's LiveKit names before its grants move, including names from older secrets.
+    let config = HuddleConfig::from_env();
+    for name in HuddleGrant::stored_room_names(conn, room.id)? {
+        HuddleCleanup::create_room_deletion(tx, &name, config.admin_configured)?;
+    }
+    // Revoke moved credentials while keeping historical inbox items accessible.
     conn.execute(
         "UPDATE huddle_grants AS moved
          SET room_id = ?2,
@@ -587,12 +604,7 @@ fn move_activity(tx: &mut Tx<'_>, from: i64, to: i64) -> Result<()> {
     Ok(())
 }
 
-fn move_authored_messages(
-    tx: &Tx<'_>,
-    from: i64,
-    to: i64,
-    updated_messages: &mut BTreeSet<i64>,
-) -> Result<()> {
+fn move_authored_messages(tx: &Tx<'_>, from: i64, to: i64) -> Result<()> {
     let conn = tx.conn();
     let messages = query_all(
         conn,
@@ -608,7 +620,6 @@ fn move_authored_messages(
             message_revision_after(tx, updated_at),
             message_id
         ])?;
-        updated_messages.insert(message_id);
     }
     Ok(())
 }
@@ -619,12 +630,7 @@ fn message_revision_after(tx: &Tx<'_>, previous: Timestamp) -> Timestamp {
         .max(previous.since(jiff::SignedDuration::from_millis(1)))
 }
 
-fn retarget_mentions(
-    tx: &Tx<'_>,
-    from: &User,
-    to: &User,
-    updated_messages: &mut BTreeSet<i64>,
-) -> Result<()> {
+fn retarget_mentions(tx: &Tx<'_>, from: &User, to: &User) -> Result<()> {
     let replacement = tx.rich_text().user_attachable_sgid(to.id);
     let fragments = user_sgid_fragments(from.id);
     let predicates = vec!["instr(body, ?) > 0"; fragments.len()].join(" OR ");
@@ -700,7 +706,6 @@ fn retarget_mentions(
                         params![rewritten, updated_at, message_id],
                     )?;
                     message.update_in_index(tx)?;
-                    updated_messages.insert(message_id);
                 }
             }
         }

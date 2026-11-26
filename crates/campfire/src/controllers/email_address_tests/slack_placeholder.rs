@@ -1,6 +1,8 @@
 use super::super::password_reset_tests::{app_with_smtp, start_mail_runner};
 use super::*;
+use crate::controllers::spa::api_tests::{Sync, created_in, parse, serve};
 use crate::integrations::slack::{undoer::tests::undo, users};
+use campfire_api_types::{MessagePage, ServerFrame, SyncPayload};
 use campfire_db::models::slack::SlackWorkspace;
 use campfire_db::models::slack_import::{Kind, Mode, NewImport, SlackImport};
 use campfire_db::{
@@ -10,6 +12,7 @@ use rusqlite::params;
 use std::time::Duration;
 
 const SLACK_EMAIL: &str = "slack-owner@example.test";
+const JZ: i64 = 773523953;
 
 async fn prior_import(a: &TestApp, status: &'static str) -> (SlackImport, User) {
     let crypto = a.booted.app.ar_encryption.clone();
@@ -473,7 +476,6 @@ async fn slack_placeholder_first_notes_room_survives_import_undo() {
 async fn slack_placeholder_claim_preserves_both_named_group_dms() {
     use crate::controllers::presenters::test_support::JASON;
 
-    const JZ: i64 = 773523953;
     let a = app(MAIL).await.without_job_runner().await;
     let (_, placeholder) = prior_import(&a, "completed").await;
     let groups = a
@@ -1065,6 +1067,12 @@ async fn slack_placeholder_claim_preserves_huddle_history_when_merging_dms() {
                 (surviving, membership)
             );
             assert_eq!(moved.revoked_at, Some(Timestamp::from_jiff(claim_time)));
+            let cleanup_count: i64 = conn.query_row(
+                "SELECT count(*) FROM huddle_cleanups WHERE operation = 'delete_room' AND room_name = ?",
+                [&moved.room_name],
+                |row| row.get(0),
+            )?;
+            assert_eq!(cleanup_count, 1, "cleanup for the removed DM at claim time");
             assert!(
                 HuddleGrant::find_by_id(conn, active)?
                     .unwrap()
@@ -1099,18 +1107,79 @@ async fn slack_placeholder_claim_preserves_huddle_history_when_merging_dms() {
         })
         .await
         .unwrap();
+
+    a.db()
+        .write(move |tx| {
+            let room = Room::find(tx.conn(), surviving)?;
+            let active = HuddleGrant::find_by_id(tx.conn(), active)?.unwrap();
+            let collision = HuddleGrant::find_by_id(tx.conn(), collision)?.unwrap();
+            assert_ne!(active.room_name, collision.room_name);
+            let config = HuddleConfig {
+                api_secret: Some("slack-claim-rotated-huddle-secret".into()),
+                admin_configured: true,
+            };
+            let derived = rails_compat::jwt::livekit::room_name(
+                config.api_secret.as_deref().unwrap(),
+                surviving,
+            );
+            assert_ne!(active.room_name, derived);
+            campfire_db::models::room_delete::begin_destroy(tx, &room, &config)?;
+            for name in [active.room_name, collision.room_name, derived] {
+                let count: i64 = tx.conn().query_row(
+                    "SELECT count(*) FROM huddle_cleanups WHERE operation = 'delete_room' AND room_name = ?",
+                    [&name],
+                    |row| row.get(0),
+                )?;
+                assert_eq!(count, 1, "cleanup for {name}");
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+async fn expect_claim_resync(sync: &mut Sync, topic: &str) {
+    loop {
+        match sync.next().await {
+            Some(ServerFrame::Resync { topics, reason }) => {
+                assert_eq!(reason, "ring_rolled_over");
+                assert!(topics.iter().any(|item| item == "user"), "{topics:?}");
+                assert!(topics.iter().any(|item| item == topic), "{topics:?}");
+                return;
+            }
+            Some(ServerFrame::Batch { events }) => {
+                assert!(
+                    events
+                        .iter()
+                        .all(|event| !matches!(event.payload, SyncPayload::MessageUpdated(_))),
+                    "claim published per-message updates: {events:?}"
+                );
+            }
+            Some(ServerFrame::Ping) => {}
+            other => panic!("expected a resync, got {other:?}"),
+        }
+    }
+}
+
+async fn room_messages(peer: &mut Browser<'_>, room: i64) -> MessagePage {
+    let reply = peer
+        .send(Req::new(
+            Method::GET,
+            &format!("/api/v1/rooms/{room}/messages"),
+        ))
+        .await;
+    parse(&reply)
 }
 
 #[tokio::test]
-async fn slack_placeholder_claim_refreshes_authored_messages_once() {
-    use crate::controllers::spa::api_tests::{Sync, created_in, serve};
-    use campfire_api_types::SyncPayload;
+async fn slack_placeholder_claim_resyncs_authored_mentions_and_boosts() {
+    use campfire_db::Boost;
     use campfire_richtext::markdown::user_mention_token;
 
     let a = app(MAIL).await.without_job_runner().await;
     let (_, placeholder) = prior_import(&a, "completed").await;
     let from = placeholder.id;
-    let (room, plain, mentioned) = a
+    let (room, plain, mentioned, boosted) = a
         .db()
         .write(move |tx| {
             let room = Room::create_for(
@@ -1120,47 +1189,82 @@ async fn slack_placeholder_claim_refreshes_authored_messages_once() {
                 KEVIN,
                 &[KEVIN, DAVID, from],
             )?;
-            let attributes = || NewMessage {
+            let attributes = |creator_id| NewMessage {
                 room_id: room.id,
-                creator_id: from,
+                creator_id,
                 ..Default::default()
             };
-            let plain = Message::create_markdown(tx, attributes(), "Imported text")?;
-            let mentioned = Message::create_markdown(tx, attributes(), &user_mention_token(from))?;
-            let body = mentioned.body(tx.conn())?.unwrap().body.unwrap();
-            assert_eq!(
-                tx.rich_text()
-                    .try_mentioned_user_ids(tx.conn(), &body)
-                    .unwrap(),
-                [from]
-            );
-            Ok((room.id, plain, mentioned))
+            let plain = Message::create_markdown(tx, attributes(from), "Imported text")?;
+            let mentioned =
+                Message::create_markdown(tx, attributes(KEVIN), &user_mention_token(from))?;
+            let boosted = Message::create_markdown(tx, attributes(KEVIN), "Boosted text")?;
+            for booster in [from, DAVID] {
+                Boost::create(tx, boosted.id, booster, "nice work")?;
+            }
+            Ok((room.id, plain.id, mentioned.id, boosted.id))
         })
         .await
         .unwrap();
+
     let (addr, server) = serve(&a).await;
     let mut peer = a.sign_in(KEVIN).await;
-    let mut sync = Sync::connect(addr, &peer.cookie_header(), &[format!("room:{room}")]).await;
-    sync.welcome().await;
+    let topic = format!("room:{room}");
+    let mut sync = Sync::connect(addr, &peer.cookie_header(), std::slice::from_ref(&topic)).await;
+    let Some(ServerFrame::Welcome {
+        epoch,
+        seq,
+        resumed: false,
+        ..
+    }) = sync.next().await
+    else {
+        panic!("expected a fresh welcome");
+    };
+
+    let before = room_messages(&mut peer, room).await.messages;
+    assert_eq!(before[0].id, plain);
+    assert_eq!(before[0].creator_id, from);
+    assert_eq!(before[1].id, mentioned);
+    assert!(
+        before[1]
+            .body_html
+            .contains(&format!(r#"data-user-id="{from}""#))
+    );
+    assert_eq!(before[2].id, boosted);
+    assert_eq!(before[2].boosts.len(), 2);
 
     confirm_claim(&a).await;
-    let plain_id = plain.id;
-    let mentioned_id = mentioned.id;
-    let previous = [
-        (plain_id, plain.updated_at.to_wire()),
-        (mentioned_id, mentioned.updated_at.to_wire()),
-    ];
-    a.db()
-        .read(move |conn| {
-            let current = Message::find(conn, plain_id)?;
-            assert_eq!(current.creator_id, DAVID);
-            assert!(current.updated_at.to_wire() > plain.updated_at.to_wire());
-            Ok(())
-        })
-        .await
-        .unwrap();
+    expect_claim_resync(&mut sync, &topic).await;
 
-    // A later post on the same topic bounds the stream of claim publications.
+    let after = room_messages(&mut peer, room).await.messages;
+    assert_eq!(after.len(), before.len());
+    for (current, previous) in after.iter().zip(&before) {
+        assert_eq!(current.id, previous.id);
+        assert!(
+            current.updated_at > previous.updated_at,
+            "message {}",
+            current.id
+        );
+    }
+    assert_eq!(after[0].creator_id, DAVID);
+    assert!(
+        after[1]
+            .body_html
+            .contains(&format!(r#"data-user-id="{DAVID}""#))
+    );
+    assert_eq!(after[2].creator_id, KEVIN);
+    assert_eq!(after[2].boosts.len(), 1);
+    assert_eq!(after[2].boosts[0].booster_id, DAVID);
+
+    let mut reconnecting = Sync::open(
+        addr,
+        &peer.cookie_header(),
+        std::slice::from_ref(&topic),
+        json!({"epoch": epoch, "seq": seq}),
+    )
+    .await;
+    reconnecting.welcome().await;
+
+    // A later post bounds the live stream in case the claim also queued message updates.
     let reply = peer
         .write(
             Req::new(Method::POST, &format!("/api/v1/rooms/{room}/messages")).json_body(&json!({
@@ -1170,44 +1274,76 @@ async fn slack_placeholder_claim_refreshes_authored_messages_once() {
         )
         .await;
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
-    let created = created_in(room);
-    let mut updates = std::collections::BTreeMap::new();
-    loop {
-        let event = sync
-            .until(
-                |event| {
-                    created(event)
-                        || matches!(
-                            &event.payload,
-                            SyncPayload::MessageUpdated(item)
-                                if item.id == plain_id || item.id == mentioned_id
-                        )
+    sync.until(created_in(room), |event| {
+        matches!(event.payload, SyncPayload::MessageUpdated(_))
+    })
+    .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_resyncs_the_surviving_dm_timeline() {
+    let a = app(MAIL).await.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let from = placeholder.id;
+    let (surviving, imported, existing) = a
+        .db()
+        .write(move |tx| {
+            let source = Room::find_or_create_direct_for(tx, &[JZ, from], JZ)?;
+            let surviving = Room::find_or_create_direct_for(tx, &[JZ, DAVID], JZ)?;
+            let existing = Message::create_markdown(
+                tx,
+                NewMessage {
+                    room_id: surviving.id,
+                    creator_id: JZ,
+                    ..Default::default()
                 },
-                |_| false,
-            )
-            .await;
-        let SyncPayload::MessageUpdated(item) = event.payload else {
-            break;
-        };
-        let id = item.id;
-        assert!(
-            updates.insert(id, item).is_none(),
-            "duplicate update for {id}"
-        );
-    }
-    for (id, updated_at) in previous {
-        let item = updates
-            .remove(&id)
-            .expect("authored message published an update");
-        assert_eq!(item.creator_id, DAVID);
-        assert!(item.updated_at > updated_at);
-        if id == mentioned_id {
-            assert!(
-                item.body_html
-                    .contains(&format!(r#"data-user-id="{DAVID}""#))
-            );
-        }
-    }
+                "Existing DM history",
+            )?;
+            let imported = Message::create_imported(
+                tx,
+                NewMessage {
+                    room_id: source.id,
+                    creator_id: from,
+                    markdown_source: Some("Imported DM history".into()),
+                    ..Default::default()
+                },
+                tx.now().ago(SignedDuration::from_secs(60)),
+                None,
+            )?;
+            Ok((surviving.id, imported.id, existing.id))
+        })
+        .await
+        .unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut peer = a.sign_in(JZ).await;
+    let topic = format!("room:{surviving}");
+    let mut sync = Sync::connect(addr, &peer.cookie_header(), std::slice::from_ref(&topic)).await;
+    sync.welcome().await;
+    let before = room_messages(&mut peer, surviving).await;
+    assert_eq!(
+        before
+            .messages
+            .iter()
+            .map(|item| item.id)
+            .collect::<Vec<_>>(),
+        [existing]
+    );
+
+    confirm_claim(&a).await;
+    expect_claim_resync(&mut sync, &topic).await;
+
+    let after = room_messages(&mut peer, surviving).await;
+    assert_eq!(
+        after
+            .messages
+            .iter()
+            .map(|item| item.id)
+            .collect::<Vec<_>>(),
+        [imported, existing]
+    );
+    assert_eq!(after.messages[0].creator_id, DAVID);
+    assert!(after.messages[0].created_at < after.messages[1].created_at);
     server.abort();
 }
 
@@ -1268,9 +1404,8 @@ async fn slack_placeholder_claim_preserves_markdown_mentions_on_edit() {
 }
 
 #[tokio::test]
-async fn slack_placeholder_claim_preserves_literal_mentions_and_broadcasts_retargeted_body() {
-    use crate::controllers::spa::api_tests::{Sync, serve};
-    use campfire_api_types::{MessageSource, SyncPayload};
+async fn slack_placeholder_claim_preserves_literal_mentions_and_resyncs_retargeted_body() {
+    use campfire_api_types::MessageSource;
     use campfire_richtext::markdown::user_mention_token;
 
     let (a, clock) = app_with_clock(MAIL).await;
@@ -1328,11 +1463,13 @@ async fn slack_placeholder_claim_preserves_literal_mentions_and_broadcasts_retar
     let updated = |event: &campfire_api_types::SyncEvent| matches!(&event.payload, SyncPayload::MessageUpdated(item) if item.id == message);
 
     confirm_claim(&a).await;
-    let publication = sync.until(updated, |_| false).await;
-    assert_eq!(publication.topic, topic);
-    let SyncPayload::MessageUpdated(body) = publication.payload else {
-        unreachable!()
-    };
+    expect_claim_resync(&mut sync, &topic).await;
+    let body = room_messages(&mut author, room)
+        .await
+        .messages
+        .into_iter()
+        .find(|item| item.id == message)
+        .expect("retargeted message on the refetched timeline");
     assert!(body.body_html.contains("@[Sam]"), "{}", body.body_html);
     assert!(
         body.body_html
@@ -1367,7 +1504,6 @@ async fn slack_placeholder_claim_preserves_literal_mentions_and_broadcasts_retar
     let SyncPayload::MessageUpdated(edited) = publication.payload else {
         unreachable!()
     };
-    // The next update for this message is the author's edit, so the claim published once.
     assert!(
         edited.body_html.contains("An unrelated edit."),
         "{}",

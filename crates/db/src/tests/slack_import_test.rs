@@ -58,6 +58,68 @@ fn lease(t: &TestDb, id: i64) -> String {
 }
 
 #[test]
+fn slack_placeholder_claim_emits_one_resync_without_per_message_events() {
+    use crate::broadcasts::Broadcast;
+    use crate::models::user::slack_placeholder::claim_slack_placeholder;
+    use crate::{Message, NewMessage, NewUser, User};
+
+    let t = setup();
+    let import = start(&t);
+    status(&t, import, "completed");
+    let placeholder = t.write(move |tx| {
+        let user = User::create_slack_placeholder(
+            tx,
+            NewUser {
+                name: "Slack author".into(),
+                email_address: Some("slack-author@example.test".into()),
+                ..Default::default()
+            },
+            true,
+            None,
+            false,
+        )?;
+        tx.conn().execute(
+            "INSERT INTO slack_import_records
+             (slack_workspace_id, slack_import_id, slack_kind, slack_key, record_type, record_id, created_at, updated_at)
+             VALUES (1, ?, 'user', 'USLACKAUTHOR', 'User', ?, ?, ?)",
+            params![import, user.id, tx.now(), tx.now()],
+        )?;
+        for body in ["First imported message", "Second imported message"] {
+            Message::create_imported(
+                tx,
+                NewMessage {
+                    room_id: id("hq"),
+                    creator_id: user.id,
+                    body: Some(body.into()),
+                    ..Default::default()
+                },
+                tx.now(),
+                None,
+            )?;
+        }
+        Ok(user)
+    });
+    t.sink.take();
+    t.write(move |tx| {
+        let target = User::find(tx.conn(), id("david"))?;
+        claim_slack_placeholder(tx, &target, &placeholder)
+    });
+    let events: Vec<_> = t
+        .sink
+        .take()
+        .iter()
+        .filter_map(Event::as_broadcast)
+        .filter(|event| {
+            matches!(
+                event,
+                Broadcast::SyncResync | Broadcast::MessageUpdated { .. }
+            )
+        })
+        .collect();
+    assert_eq!(events, [Broadcast::SyncResync]);
+}
+
+#[test]
 fn slack_import_atomic_undo_claim_refuses_queue_arriving_after_precheck() {
     let t = setup();
     let first = start(&t);

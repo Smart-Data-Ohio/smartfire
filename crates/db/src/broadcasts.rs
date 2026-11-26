@@ -7,6 +7,7 @@ pub fn unread_rooms_stream_name(user_id: i64) -> String {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Broadcast {
+    SyncResync,
     MessageCreated {
         message_id: i64,
     },

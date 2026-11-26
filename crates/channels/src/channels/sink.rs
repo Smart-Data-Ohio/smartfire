@@ -306,6 +306,7 @@ pub(crate) fn messaging(
 ) -> anyhow::Result<()> {
     use campfire_db::broadcasts::Broadcast;
     match change {
+        Broadcast::SyncResync => cable.sync_resync(),
         Broadcast::Cable { stream, payload } => {
             if payload["syncRecorded"].as_bool() == Some(true) {
                 let mut classic = payload.clone();
