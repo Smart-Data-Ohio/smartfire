@@ -1094,7 +1094,7 @@ describe("cards from lists, results and quotes", () => {
   });
 
   it("opens your own card from a note-to-self intro", async () => {
-    const viewer = userFixture(VIEWER, "Riel St. Amand");
+    const viewer = userFixture(VIEWER, "Samira Haddad");
     const row = sidebarRowFixture(19, viewer.name, "direct", [VIEWER]);
 
     signInAs("member");
@@ -1116,16 +1116,16 @@ describe("cards from lists, results and quotes", () => {
     await renderWithCard(<RoomIntro roomId={19} />);
 
     const user = userEvent.setup();
-    const button = screen.getByRole("button", { name: /Riel St\. Amand/ });
+    const button = screen.getByRole("button", { name: /Samira Haddad/ });
 
     expect(button.dataset.userCardTrigger).toBe(String(VIEWER));
     await user.click(button);
-    await expectCardFor("Riel St. Amand(you)");
+    await expectCardFor("Samira Haddad(you)");
 
     for (const key of ["{Enter}", " "]) {
       button.focus();
       await user.keyboard(key);
-      await expectCardFor("Riel St. Amand(you)");
+      await expectCardFor("Samira Haddad(you)");
     }
 
     const avatar = document.querySelector<HTMLElement>(
@@ -1134,7 +1134,7 @@ describe("cards from lists, results and quotes", () => {
 
     expect(avatar).not.toBeNull();
     await user.click(avatar ?? document.body);
-    await expectCardFor("Riel St. Amand(you)");
+    await expectCardFor("Samira Haddad(you)");
   });
 
   it("does not cache an aborted admin profile reply after a viewer demotion", async () => {
@@ -1160,7 +1160,7 @@ describe("cards from lists, results and quotes", () => {
     act(() =>
       mutations.mergeUsers([
         {
-          ...userFixture(VIEWER, "Riel St. Amand"),
+          ...userFixture(VIEWER, "Samira Haddad"),
           role: "member",
           updatedAt: "2026-02-01T00:00:00.000000Z",
         },

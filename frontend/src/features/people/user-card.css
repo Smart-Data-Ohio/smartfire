@@ -48,7 +48,8 @@
     white-space: nowrap;
   }
 
-  :is(.room-title-name, .room-intro-title) > .user-card-trigger:hover {
+  :is(.room-title-name, .room-intro-title) > .user-card-trigger:hover,
+  :is(.room-title-name, .room-intro-title) > .user-card-hover > .agent-link:hover {
     text-decoration: underline;
   }
 
