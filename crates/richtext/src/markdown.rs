@@ -418,6 +418,7 @@ pub fn retarget_user_mentions(
         }
     }
     // An exact name resolved to the same user everywhere in the original render, if at all.
+    // This assumes the placeholder kept the same display name since rendering.
     let retarget_name = rendered_names > 0 && html_mentions >= rendered_ids + rendered_names;
     let replacement = user_mention_token(to);
     let mut rewritten = String::with_capacity(source.len());

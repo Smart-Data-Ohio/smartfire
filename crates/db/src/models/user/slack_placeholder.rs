@@ -12,7 +12,7 @@ use crate::broadcasts::Broadcast;
 use crate::sql::{exists, query_all};
 use crate::{
     ActivityItem, Connection, Error, Event, Involvement, Membership, Message, Result, Role, Room,
-    RoomRemovalBroadcast, Status, Tx, User,
+    RoomRemovalBroadcast, Status, Timestamp, Tx, User,
 };
 
 pub fn is_unclaimed_slack_placeholder(conn: &Connection, user_id: i64) -> Result<bool> {
@@ -119,6 +119,7 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
     }
     let from = placeholder.id;
     let to = target.id;
+    let mut updated_messages = BTreeSet::new();
     let conn = tx.conn();
     // Undo may remove imported history. It must treat the destination account as pre-existing.
     conn.execute(
@@ -126,8 +127,8 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
          WHERE slack_kind = 'user' AND record_type = 'User' AND record_id = ?1",
         params![from, to, tx.now()],
     )?;
+    move_authored_messages(tx, from, to, &mut updated_messages)?;
     for (table, column) in [
-        ("messages", "creator_id"),
         ("channel_threads", "creator_id"),
         ("channel_threads", "work_owner_id"),
         ("channel_threads", "result_updated_by_id"),
@@ -165,7 +166,10 @@ pub fn claim_slack_placeholder(tx: &mut Tx<'_>, target: &User, placeholder: &Use
     }
     rename_user_suffix(tx, "Membership", ":user-", from, to)?;
     move_activity(tx, from, to)?;
-    retarget_mentions(tx, placeholder, target)?;
+    retarget_mentions(tx, placeholder, target, &mut updated_messages)?;
+    for message_id in updated_messages {
+        tx.emit_after_commit(Event::broadcast(&Broadcast::MessageUpdated { message_id }));
+    }
     tx.conn()
         .execute("DELETE FROM users WHERE id = ?", [from])?;
     Ok(())
@@ -472,6 +476,18 @@ fn merge_direct_rooms(
         "UPDATE events SET venue_room_id = ?2 WHERE venue_room_id = ?1",
         params![room.id, existing.id],
     )?;
+    // Grants from the removed DM point at its LiveKit room; revoke any active ones so the
+    // surviving DM issues fresh media credentials while keeping historical inbox items accessible.
+    conn.execute(
+        "UPDATE huddle_grants AS moved
+         SET room_id = ?2,
+             membership_id = coalesce(member.id, src.membership_id),
+             revoked_at = coalesce(src.revoked_at, ?3)
+         FROM huddle_grants AS src
+         LEFT JOIN memberships AS member ON member.room_id = ?2 AND member.user_id = src.user_id
+         WHERE moved.id = src.id AND src.room_id = ?1",
+        params![room.id, existing.id, tx.now()],
+    )?;
     if notes {
         scope_notes_mappings(tx, room.id, from, to)?;
     }
@@ -571,7 +587,44 @@ fn move_activity(tx: &mut Tx<'_>, from: i64, to: i64) -> Result<()> {
     Ok(())
 }
 
-fn retarget_mentions(tx: &mut Tx<'_>, from: &User, to: &User) -> Result<()> {
+fn move_authored_messages(
+    tx: &Tx<'_>,
+    from: i64,
+    to: i64,
+    updated_messages: &mut BTreeSet<i64>,
+) -> Result<()> {
+    let conn = tx.conn();
+    let messages = query_all(
+        conn,
+        "SELECT id, updated_at FROM messages WHERE creator_id = ?",
+        [from],
+        |row| Ok((row.get::<_, i64>(0)?, row.get::<_, Timestamp>(1)?)),
+    )?;
+    let mut update =
+        conn.prepare_cached("UPDATE messages SET creator_id = ?, updated_at = ? WHERE id = ?")?;
+    for (message_id, updated_at) in messages {
+        update.execute(params![
+            to,
+            message_revision_after(tx, updated_at),
+            message_id
+        ])?;
+        updated_messages.insert(message_id);
+    }
+    Ok(())
+}
+
+fn message_revision_after(tx: &Tx<'_>, previous: Timestamp) -> Timestamp {
+    // Sync clients keep the held message on an updated_at tie at millisecond precision.
+    tx.now()
+        .max(previous.since(jiff::SignedDuration::from_millis(1)))
+}
+
+fn retarget_mentions(
+    tx: &Tx<'_>,
+    from: &User,
+    to: &User,
+    updated_messages: &mut BTreeSet<i64>,
+) -> Result<()> {
     let replacement = tx.rich_text().user_attachable_sgid(to.id);
     let fragments = user_sgid_fragments(from.id);
     let predicates = vec!["instr(body, ?) > 0"; fragments.len()].join(" OR ");
@@ -640,19 +693,14 @@ fn retarget_mentions(tx: &mut Tx<'_>, from: &User, to: &User) -> Result<()> {
                         .transpose()
                         .map_err(|error| Error::Other(error.to_string()))?
                         .flatten();
-                    // Sync clients keep the held body on an updated_at tie at millisecond precision.
-                    let updated_at = tx.now().max(
-                        message
-                            .updated_at
-                            .since(jiff::SignedDuration::from_millis(1)),
-                    );
+                    let updated_at = message_revision_after(tx, message.updated_at);
                     conn.execute(
                         "UPDATE messages SET markdown_source = coalesce(?, markdown_source),
                          updated_at = ? WHERE id = ?",
                         params![rewritten, updated_at, message_id],
                     )?;
                     message.update_in_index(tx)?;
-                    tx.broadcast_after_commit_once(&Broadcast::MessageUpdated { message_id });
+                    updated_messages.insert(message_id);
                 }
             }
         }

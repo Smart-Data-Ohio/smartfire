@@ -986,6 +986,232 @@ async fn slack_placeholder_claim_preserves_incoming_huddle_activity() {
 }
 
 #[tokio::test]
+async fn slack_placeholder_claim_preserves_huddle_history_when_merging_dms() {
+    use campfire_db::ActivityItem;
+    use campfire_db::models::{huddle_grant::HuddleGrant, room_delete::HuddleConfig};
+
+    fn config() -> HuddleConfig {
+        HuddleConfig {
+            api_secret: Some("slack-claim-huddle-test".into()),
+            ..Default::default()
+        }
+    }
+
+    let (a, clock) = app_with_clock(MAIL).await;
+    let a = a.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let from = placeholder.id;
+    let (source, surviving, source_member, membership, collision, active) = a
+        .db()
+        .write(move |tx| {
+            let source = Room::find_or_create_direct_for(tx, &[KEVIN, from], KEVIN)?;
+            let surviving = Room::find_or_create_direct_for(tx, &[KEVIN, DAVID], KEVIN)?;
+            let source_member =
+                Membership::find_by_room_and_user(tx.conn(), source.id, KEVIN)?.unwrap();
+            let membership =
+                Membership::find_by_room_and_user(tx.conn(), surviving.id, KEVIN)?.unwrap();
+            // Unseen grants in both rooms can still be active for the same session.
+            let session = Session::start(tx, KEVIN, None, None)?;
+            let config = config();
+            let collision =
+                HuddleGrant::issue(tx, session.id, source_member.id, source.id, &config)?;
+            let active = HuddleGrant::issue(tx, session.id, membership.id, surviving.id, &config)?;
+            Ok((
+                source.id,
+                surviving.id,
+                source_member.id,
+                membership.id,
+                collision.id,
+                active.id,
+            ))
+        })
+        .await
+        .unwrap();
+    let invite = a
+        .db()
+        .read(move |conn| {
+            Ok(
+                ActivityItem::find_by_user_and_source(conn, from, "HuddleGrant", collision)?
+                    .expect("placeholder received a huddle invitation"),
+            )
+        })
+        .await
+        .unwrap();
+    let (revoked, non_colliding_active) = a
+        .db()
+        .write(move |tx| {
+            let session = Session::start(tx, KEVIN, None, None)?;
+            let other_session = Session::start(tx, KEVIN, None, None)?;
+            let config = config();
+            let mut grant = HuddleGrant::issue(tx, session.id, source_member, source, &config)?;
+            grant.revoke(tx, false, &config)?;
+            let standalone =
+                HuddleGrant::issue(tx, other_session.id, source_member, source, &config)?;
+            Ok((grant, standalone.id))
+        })
+        .await
+        .unwrap();
+
+    let claim_time = "2026-03-02T16:00:01Z".parse().unwrap();
+    clock.set(claim_time);
+    confirm_claim(&a).await;
+
+    a.db()
+        .read(move |conn| {
+            assert!(Room::find_by_id(conn, source)?.is_none());
+            let moved = HuddleGrant::find_by_id(conn, collision)?.unwrap();
+            assert_eq!(
+                (moved.room_id, moved.membership_id),
+                (surviving, membership)
+            );
+            assert_eq!(moved.revoked_at, Some(Timestamp::from_jiff(claim_time)));
+            assert!(
+                HuddleGrant::find_by_id(conn, active)?
+                    .unwrap()
+                    .revoked_at
+                    .is_none()
+            );
+            let historical = HuddleGrant::find_by_id(conn, revoked.id)?.unwrap();
+            assert_eq!(
+                (historical.room_id, historical.membership_id),
+                (surviving, membership)
+            );
+            assert_eq!(historical.revoked_at, revoked.revoked_at);
+            let retired = HuddleGrant::find_by_id(conn, non_colliding_active)?.unwrap();
+            assert_eq!(
+                (retired.room_id, retired.membership_id),
+                (surviving, membership)
+            );
+            assert_eq!(retired.revoked_at, Some(Timestamp::from_jiff(claim_time)));
+
+            let recipient = User::find(conn, DAVID)?;
+            let item = ActivityItem::find_accessible(conn, &recipient, invite.id)?
+                .expect("recipient can read the transferred huddle invitation");
+            assert_eq!(item.source_id, collision);
+            assert_eq!(item.event_type, invite.event_type);
+            assert!(
+                conn.prepare("PRAGMA foreign_key_check")?
+                    .query([])?
+                    .next()?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn slack_placeholder_claim_refreshes_authored_messages_once() {
+    use crate::controllers::spa::api_tests::{Sync, created_in, serve};
+    use campfire_api_types::SyncPayload;
+    use campfire_richtext::markdown::user_mention_token;
+
+    let a = app(MAIL).await.without_job_runner().await;
+    let (_, placeholder) = prior_import(&a, "completed").await;
+    let from = placeholder.id;
+    let (room, plain, mentioned) = a
+        .db()
+        .write(move |tx| {
+            let room = Room::create_for(
+                tx,
+                RoomType::Open,
+                Some("Imported authors"),
+                KEVIN,
+                &[KEVIN, DAVID, from],
+            )?;
+            let attributes = || NewMessage {
+                room_id: room.id,
+                creator_id: from,
+                ..Default::default()
+            };
+            let plain = Message::create_markdown(tx, attributes(), "Imported text")?;
+            let mentioned = Message::create_markdown(tx, attributes(), &user_mention_token(from))?;
+            let body = mentioned.body(tx.conn())?.unwrap().body.unwrap();
+            assert_eq!(
+                tx.rich_text()
+                    .try_mentioned_user_ids(tx.conn(), &body)
+                    .unwrap(),
+                [from]
+            );
+            Ok((room.id, plain, mentioned))
+        })
+        .await
+        .unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut peer = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &peer.cookie_header(), &[format!("room:{room}")]).await;
+    sync.welcome().await;
+
+    confirm_claim(&a).await;
+    let plain_id = plain.id;
+    let mentioned_id = mentioned.id;
+    let previous = [
+        (plain_id, plain.updated_at.to_wire()),
+        (mentioned_id, mentioned.updated_at.to_wire()),
+    ];
+    a.db()
+        .read(move |conn| {
+            let current = Message::find(conn, plain_id)?;
+            assert_eq!(current.creator_id, DAVID);
+            assert!(current.updated_at.to_wire() > plain.updated_at.to_wire());
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    // A later post on the same topic bounds the stream of claim publications.
+    let reply = peer
+        .write(
+            Req::new(Method::POST, &format!("/api/v1/rooms/{room}/messages")).json_body(&json!({
+                "markdownSource": "After the claim",
+                "clientMessageId": "after-slack-claim",
+            })),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let created = created_in(room);
+    let mut updates = std::collections::BTreeMap::new();
+    loop {
+        let event = sync
+            .until(
+                |event| {
+                    created(event)
+                        || matches!(
+                            &event.payload,
+                            SyncPayload::MessageUpdated(item)
+                                if item.id == plain_id || item.id == mentioned_id
+                        )
+                },
+                |_| false,
+            )
+            .await;
+        let SyncPayload::MessageUpdated(item) = event.payload else {
+            break;
+        };
+        let id = item.id;
+        assert!(
+            updates.insert(id, item).is_none(),
+            "duplicate update for {id}"
+        );
+    }
+    for (id, updated_at) in previous {
+        let item = updates
+            .remove(&id)
+            .expect("authored message published an update");
+        assert_eq!(item.creator_id, DAVID);
+        assert!(item.updated_at > updated_at);
+        if id == mentioned_id {
+            assert!(
+                item.body_html
+                    .contains(&format!(r#"data-user-id="{DAVID}""#))
+            );
+        }
+    }
+    server.abort();
+}
+
+#[tokio::test]
 async fn slack_placeholder_claim_preserves_markdown_mentions_on_edit() {
     use campfire_db::models::message::MessageChanges;
     use campfire_richtext::markdown::{mention_token, user_mention_token};
