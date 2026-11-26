@@ -11,6 +11,7 @@ import { useAgentIdOf } from "../agents/agent-link.tsx";
 import { useWorkingPresence } from "../agents/working.ts";
 import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { canStar, groupMembers, type MemberEntry } from "./members.ts";
 import { PaneFrame } from "./pane-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton, PaneSearch } from "./pane-states.tsx";
@@ -33,38 +34,41 @@ interface MemberRowProps {
   readonly onStar: (member: MemberEntry) => void;
 }
 
-function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
+export function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
   const working = useWorkingPresence(member.bot ? member.userId : undefined);
   const agentId = useAgentIdOf(member.bot ? member.userId : undefined);
 
   const status =
     working ?? member.statusText ?? (member.bot ? null : PRESENCE_WORD[member.presence]);
 
-  const label = member.viewer
-    ? `${member.name} (you)`
-    : agentId === null
-      ? `Message ${member.name}`
-      : `Open ${member.name}'s profile`;
+  const label = agentId === null ? `Message ${member.name}` : `Open ${member.name}'s profile`;
 
   return (
     <li className="member-row" data-offline={member.presence === "offline" || undefined}>
-      <button
-        type="button"
-        className="member-row-main"
-        disabled={member.viewer}
-        aria-label={label}
-        onClick={() => onOpen(member)}
-      >
-        <UserAvatar userId={member.userId} size={32} presence decorative />
+      {/* The row's cover opens the conversation (an agent's profile); your own opens nothing. */}
+      {member.viewer ? null : (
+        <button
+          type="button"
+          className="member-row-cover"
+          aria-label={label}
+          onClick={() => onOpen(member)}
+        />
+      )}
+      <div className="member-row-main">
+        <AuthorCardTrigger userId={member.userId} placement="left" duplicate>
+          <UserAvatar userId={member.userId} size={32} presence decorative />
+        </AuthorCardTrigger>
         <span className="member-row-text">
           <span className="member-row-name">
-            <span className="member-row-label">{member.name}</span>
+            <AuthorCardTrigger userId={member.userId} placement="left">
+              <span className="member-row-label">{member.name}</span>
+            </AuthorCardTrigger>
             {member.viewer ? <span className="member-row-you">(you)</span> : null}
             {member.bot ? <AgentBadge userId={member.userId} status /> : null}
           </span>
           {status === null ? null : <span className="member-row-status">{status}</span>}
         </span>
-      </button>
+      </div>
       {canStar(member) ? (
         <IconButton
           icon="star"

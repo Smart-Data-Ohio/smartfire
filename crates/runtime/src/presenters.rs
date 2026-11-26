@@ -758,10 +758,9 @@ impl<'a> Presenter<'a> {
         ))
     }
 
-    /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
     /// The body as the SPA shows it. A Markdown body, or a forward still holding its Markdown
     /// snapshot (`forwarded_markdown_snapshot`), keeps its tables, which Action Text's allowlist
-    /// would drop.
+    /// would drop, and preserves server-generated `data-user-id` on mention chips.
     pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
         let Some(body) = self.stored_body(message)? else {
             return Ok(String::new());
@@ -769,15 +768,18 @@ impl<'a> Presenter<'a> {
         self.render_body_html(
             &body,
             message.markdown() || message.forwarded_markdown_snapshot(),
+            true,
         )
     }
 
-    fn render_body_html(&self, body: &str, markdown: bool) -> Result<String> {
+    fn render_body_html(&self, body: &str, markdown: bool, spa_mentions: bool) -> Result<String> {
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
         campfire_richtext::Content::load(body, &ctx)
             .and_then(|content| {
-                if markdown {
+                if spa_mentions {
+                    content.to_rendered_message_html_with_layout(&ctx, markdown)
+                } else if markdown {
                     content.to_rendered_markdown_html_with_layout(&ctx)
                 } else {
                     content.to_rendered_html_with_layout(&ctx)
@@ -788,7 +790,14 @@ impl<'a> Presenter<'a> {
 
     /// Compatibility entry point used by the bot and agent readers.
     pub fn editable_body(&self, message: &Message) -> Result<String> {
-        self.rendered_body_html(message)
+        let Some(body) = self.stored_body(message)? else {
+            return Ok(String::new());
+        };
+        self.render_body_html(
+            &body,
+            message.markdown() || message.forwarded_markdown_snapshot(),
+            false,
+        )
     }
 
     /// Message#editable_markdown_source passes rendered Content, not Content#to_html.
@@ -798,7 +807,7 @@ impl<'a> Presenter<'a> {
         }
         // A forwarded Markdown snapshot converts as Rails did, without its tables.
         let body = match self.stored_body(message)? {
-            Some(body) => self.render_body_html(&body, false)?,
+            Some(body) => self.render_body_html(&body, false, false)?,
             None => String::new(),
         };
         let resolver = self.resolver();

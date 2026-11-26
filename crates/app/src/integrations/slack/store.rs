@@ -3,7 +3,6 @@ use super::runner::{
     CATCHUP_LOOKBACK, Operation, Progress, Store, add, array, integer, present, string, truthy,
 };
 use super::{conversations, users, writer};
-use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::{Database, Error, Result, Room, Timestamp, Tx};
 use indexmap::{IndexMap, IndexSet};
@@ -218,19 +217,37 @@ pub fn convo_users(tx: &mut Tx<'_>, p: &Progress) -> Result<IndexMap<String, cam
         .map(|id| Room::is_note_to_self_of(tx.conn(), id, p.run.user_id))
         .transpose()?
         .unwrap_or(false);
-    if let Some(connection) = p
-        .run
-        .slack_connection_id
-        .map(|id| SlackConnection::find(tx.conn(), id))
-        .transpose()?
-        .flatten()
-        && (notes
-            || conversations::connected_self_dm(&p.conversation(), ids, &connection.slack_user_id))
-    {
-        users.insert(
-            connection.slack_user_id,
-            campfire_db::User::find(tx.conn(), p.run.user_id)?,
-        );
+    if let Some(connection) = users::run_connection(tx.conn(), &p.run)? {
+        let key = &connection.slack_user_id;
+        if notes || conversations::connected_self_dm(&p.conversation(), ids, key) {
+            // Notes stay private to the connected account even if a different user owns
+            // the workspace-wide author mapping.
+            users.insert(
+                key.clone(),
+                campfire_db::User::find(tx.conn(), p.run.user_id)?,
+            );
+        } else if ids.iter().any(|id| string(id) == *key) {
+            if let Some(placeholder) = users::mapped_placeholder(tx.conn(), &connection)? {
+                // Resolve before moving any history. A run already writing this conversation
+                // has cached room and thread IDs that a claim can invalidate.
+                if truthy(&p.state["convo"]["resolved"]) {
+                    return Err(Error::Other(
+                        "The connected Slack user still has an unclaimed placeholder. Restart the import to claim it.".into(),
+                    ));
+                }
+                let owner = campfire_db::User::find(tx.conn(), p.run.user_id)?;
+                users::claim_for_import(tx, &p.run, &owner, &placeholder)?;
+                // The claim can move multiple aliases of the same placeholder.
+                users = users::users_for(tx.conn(), &p.run, ids)?;
+            }
+            if !users.contains_key(key) {
+                let owner = campfire_db::User::find(tx.conn(), p.run.user_id)?;
+                if users::mapped_id(tx.conn(), p.run.slack_workspace_id, "user", key)?.is_none() {
+                    users::record(tx, &p.run, "user", key, "User", owner.id, false)?;
+                }
+                users.insert(key.clone(), owner);
+            }
+        }
     }
     for id in ids {
         let key = string(id);

@@ -48,6 +48,16 @@ describe("the mock's people pages", () => {
     expect(profile.status?.presence).toBe("online");
   });
 
+  it("leaves the sign-in link out of a card's read, and keeps the email", async () => {
+    const { server } = harness();
+    const card = await get<PersonProfile>(server, `/api/v1/people/${USER_IDS.theo}?card=1`);
+
+    Schema.decodeUnknownSync(PersonProfileSchema)(card);
+    expect(card.emailAddress).toBe("theo@smartdata.example");
+    expect(card.transferUrl).toBeNull();
+    expect(card.transferQrSvg).toBeNull();
+  });
+
   it("offers no DND toggle or ban button on your own page", async () => {
     const { server } = harness();
     const profile = await get<PersonProfile>(server, `/api/v1/people/${VIEWER_ID}`);

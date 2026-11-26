@@ -46,7 +46,9 @@ async fn setup_at(
     struct Sink(campfire_jobs::JobQueue, bool);
     impl campfire_db::EventSink for Sink {
         fn persist(&self, tx: &campfire_db::Tx<'_>, event: &Event) -> campfire_db::Result<()> {
-            if matches!(event, Event::Broadcast(_)) {
+            if matches!(event, Event::Broadcast(_))
+                && event.as_broadcast() != Some(campfire_db::broadcasts::Broadcast::SyncResync)
+            {
                 return Err(campfire_db::Error::Other(
                     "Slack test captured an unintended broadcast".into(),
                 ));

@@ -7,6 +7,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { CardSlot } from "../cards/card-slot.tsx";
 import { AppTag } from "../people/agent-badge.tsx";
 import { UNKNOWN_NAME, useIgnored, useUser } from "../people/people.ts";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { AttachmentGallery } from "./attachments.tsx";
 import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
@@ -147,7 +148,8 @@ function QuoteLink({
 
 /**
  * The line above a reply (or one being sent): who it answers and the start of what they said,
- * linking to the original.
+ * linking to the original. The link stretches over the whole line; a person's name sits above it
+ * and opens their card on hover, a click, a tap, Enter or Space.
  */
 export function ReplyQuote({
   message,
@@ -189,8 +191,14 @@ export function ReplyQuote({
   return (
     <div className="message-reply">
       <Icon name="corner-up-left" size={12} className="message-reply-icon" />
-      <QuoteLink source={source}>
+      {shown?.kind === "person" ? (
+        <AuthorCardTrigger userId={shown.userId}>
+          <span className="message-reply-author">{author}</span>
+        </AuthorCardTrigger>
+      ) : (
         <span className="message-reply-author">{author}</span>
+      )}
+      <QuoteLink source={source}>
         <span className="message-reply-text">{snippet(source)}</span>
       </QuoteLink>
     </div>

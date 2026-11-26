@@ -879,7 +879,7 @@ async fn slack_self_dm_keeps_missing_peer_skips_numeric_target_issue_and_canonic
     db.write(move |tx| {
         let group = Room::create_for(tx, RoomType::Direct, Some("Former group"), user, &[user])?;
         tx.conn().execute(
-            "UPDATE rooms SET direct_member_key=direct_member_key || ':group' WHERE id=?",
+            "UPDATE rooms SET direct_member_key=direct_member_key || '#' || id WHERE id=?",
             [group.id],
         )?;
         let target = conversations::resolve(
@@ -970,6 +970,91 @@ async fn slack_self_dm_owner_from_conversation_needs_no_placeholder_when_members
         assert_eq!(Room::find(c, notes)?.user_ids(c)?, vec![1]);
         assert!(Message::for_room(c, notes)?.is_empty());
         assert!(Message::search_in_room(c, notes, "slackselfnote")?.is_empty());
+        Ok(())
+    })
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn slack_personal_import_claims_a_known_placeholder_while_another_import_is_queued() {
+    let (db, crypto, _dir) = setup().await;
+    let user = owner(&db, false).await;
+    let previous = start(&db).await;
+    let placeholder = db
+        .write(move |tx| {
+            let run = SlackImport::find(tx.conn(), previous)?.unwrap();
+            tx.conn().execute(
+                "UPDATE slack_imports SET status='completed' WHERE id=?",
+                [previous],
+            )?;
+            let placeholder = User::create_slack_placeholder(
+                tx,
+                NewUser {
+                    name: "Slack Owner".into(),
+                    email_address: Some("different@example.com".into()),
+                    ..Default::default()
+                },
+                true,
+                None,
+                false,
+            )?;
+            users::record(tx, &run, "user", "UOWNER", "User", placeholder.id, true)?;
+            Ok(placeholder.id)
+        })
+        .await
+        .unwrap();
+    let mut response = provider(true, false);
+    let list = response
+        .iter_mut()
+        .find(|route| route.path.starts_with("/api/conversations.list"))
+        .unwrap();
+    *list = route(
+        &list.path,
+        json!({"ok":true,"channels":[
+            {"id":"DPEER","is_im":true,"user":"UPEER","num_members":2},
+            {"id":"GPRIVATE","name":"private-history","is_private":true,"num_members":2}
+        ]}),
+    );
+    response.push(route(
+        "/api/conversations.members?channel=GPRIVATE&limit=1000",
+        json!({"ok":true,"members":["UOWNER","UPEER"]}),
+    ));
+    response.push(route("/api/conversations.history?channel=GPRIVATE&oldest=1672531200.000000&limit=200",json!({"ok":true,"messages":[{"type":"message","user":"UOWNER","text":"private history","ts":"1700000021.000021"}],"has_more":false})));
+    let (_server, network) = fake(response).await;
+    let dry = personal(&db, user, true).await;
+    import(&db, crypto.clone(), dry, network.clone()).await;
+    db.read(move |c| {
+        assert!(User::find_by_id(c, placeholder)?.is_some());
+        let run = SlackImport::find(c, dry)?.unwrap();
+        assert_eq!(run.stats["users"]["matched"], 1);
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    let live = personal(&db, user, false).await;
+    let queued = start(&db).await;
+    import(&db, crypto, live, network).await;
+    db.read(move |c| {
+        assert_eq!(SlackImport::find(c, queued)?.unwrap().status, "queued");
+        assert!(User::find_by_id(c, placeholder)?.is_none());
+        assert_eq!(users::mapped_id(c, 1, "user", "UOWNER")?, Some(user));
+        for (conversation, key) in [
+            ("DPEER", "DPEER:1700000011.000011"),
+            ("GPRIVATE", "GPRIVATE:1700000021.000021"),
+        ] {
+            let room = users::mapped_id(c, 1, "conversation", conversation)?.unwrap();
+            let message = users::mapped_id(c, 1, "message", key)?.unwrap();
+            assert!(campfire_db::Membership::find_by_room_and_user(c, room, user)?.is_some());
+            assert_eq!(Message::find(c, message)?.creator_id, user);
+        }
+        assert!(
+            c.prepare("PRAGMA foreign_key_check")?
+                .query([])?
+                .next()?
+                .is_none()
+        );
         Ok(())
     })
     .await

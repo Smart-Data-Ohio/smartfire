@@ -3,6 +3,8 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { NOTE_TO_SELF_LINE, useNoteToSelf, useViewerName } from "../directs/note-to-self.ts";
 import { YouLabel } from "../directs/you-label.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
+import { GroupAvatars } from "../sidebar/group-avatars.tsx";
 import { ROOM_KIND_ICON } from "./room-icon.ts";
 
 /** A day boundary: a hairline with the day in a pill (Slack's). */
@@ -30,7 +32,10 @@ export function UnreadDivider({ count }: { readonly count: number }) {
 
 /**
  * The start of a room's history (and, for a room with no messages, its whole empty state): a big
- * glyph or the other person's avatar and a line that says where you are.
+ * glyph, the other person's avatar or a group's pair, and a line that says where you are. A 1:1
+ * DM names the other person in full, as the sidebar does (its header name can be a stale first
+ * name); an unnamed group DM keeps the sorted first names its header and sidebar row show. A 1:1
+ * DM's avatar and name open the other person's card.
  */
 export function RoomIntro({ roomId }: { readonly roomId: number }) {
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
@@ -42,16 +47,22 @@ export function RoomIntro({ roomId }: { readonly roomId: number }) {
     return <div className="room-intro" />;
   }
 
-  const { room, displayName, directMemberIds } = detail;
+  const { room, displayName, sidebarDisplayName, directMemberIds } = detail;
   const direct = room.kind === "direct";
   const otherId = direct ? directMemberIds[0] : undefined;
+  const group = direct && directMemberIds.length > 1;
+  const name = direct && !group ? sidebarDisplayName || displayName : displayName;
 
   if (self && otherId !== undefined) {
     return (
       <div className="room-intro enter-fade" data-empty={empty || undefined} data-note-to-self>
-        <UserAvatar userId={otherId} size={64} presence decorative />
+        <AuthorCardTrigger userId={otherId} placement="right-start" duplicate>
+          <UserAvatar userId={otherId} size={64} presence decorative />
+        </AuthorCardTrigger>
         <h2 className="room-intro-title">
-          <YouLabel name={viewerName ?? displayName} tagClassName="room-intro-you" />
+          <AuthorCardTrigger userId={otherId}>
+            <YouLabel name={viewerName ?? displayName} tagClassName="room-intro-you" />
+          </AuthorCardTrigger>
         </h2>
         <p className="room-intro-text">{NOTE_TO_SELF_LINE}</p>
       </div>
@@ -60,18 +71,30 @@ export function RoomIntro({ roomId }: { readonly roomId: number }) {
 
   return (
     <div className="room-intro enter-fade" data-empty={empty || undefined}>
-      {otherId === undefined ? (
+      {group ? (
+        <GroupAvatars ids={directMemberIds} size={64} />
+      ) : otherId === undefined ? (
         <span className="room-intro-glyph" aria-hidden="true">
           <Icon name={ROOM_KIND_ICON[room.kind]} size={28} />
         </span>
       ) : (
-        <UserAvatar userId={otherId} size={64} presence decorative />
+        <AuthorCardTrigger userId={otherId} placement="right-start" duplicate>
+          <UserAvatar userId={otherId} size={64} presence decorative />
+        </AuthorCardTrigger>
       )}
-      <h2 className="room-intro-title">{direct ? displayName : `Welcome to #${displayName}`}</h2>
+      <h2 className="room-intro-title">
+        {otherId !== undefined && !group ? (
+          <AuthorCardTrigger userId={otherId}>{name}</AuthorCardTrigger>
+        ) : direct ? (
+          name
+        ) : (
+          `Welcome to #${name}`
+        )}
+      </h2>
       <p className="room-intro-text">
         {direct
-          ? `This is the very beginning of your conversation with ${displayName}.`
-          : `This is the very beginning of #${displayName}.`}
+          ? `This is the very beginning of your conversation with ${name}.`
+          : `This is the very beginning of #${name}.`}
         {empty ? " No one has posted yet." : ""}
       </p>
     </div>

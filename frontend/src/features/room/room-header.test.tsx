@@ -8,11 +8,12 @@ import {
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { roomDetailFixture } from "../../api/testing.ts";
+import { meFixture, roomDetailFixture, sidebarRowFixture, userFixture } from "../../api/testing.ts";
 import { beginRoomRequest } from "../../store/join-state.ts";
 import { mutations } from "../../store/store.ts";
 import { DetailsPane } from "../panes/details-pane.tsx";
 import { openPane, useOpenPane } from "../panes/pane-store.ts";
+import { getUserCardState, resetUserCard } from "../people/user-card-store.ts";
 import { RoomHeader } from "./room-header.tsx";
 
 async function mount(topic: string | null, phone = false, announcement = false) {
@@ -54,6 +55,7 @@ async function mount(topic: string | null, phone = false, announcement = false) 
 }
 
 afterEach(() => {
+  resetUserCard();
   openPane(null);
   mutations.reset();
   vi.unstubAllGlobals();
@@ -113,5 +115,71 @@ describe("announcement room header", () => {
     await mount(null);
     expect(megaphone(document)).toBe(false);
     expect(screen.queryByText("Announcement")).toBeNull();
+  });
+});
+
+describe("note-to-self header", () => {
+  it("opens your own user card from the wide header avatar and title", async () => {
+    vi.stubGlobal("matchMedia", (media: string) =>
+      Object.assign(new EventTarget(), {
+        matches: false,
+        media,
+        onchange: null,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+      }),
+    );
+
+    const viewer = userFixture(1, "Samira Haddad");
+    const row = sidebarRowFixture(19, viewer.name, "direct", [1]);
+
+    mutations.setMe({ ...meFixture, user: viewer });
+    mutations.mergeUsers([viewer]);
+    mutations.setRoomDetail(
+      {
+        ...roomDetailFixture(19),
+        room: row.room,
+        membership: row.membership,
+        displayName: viewer.name,
+        sidebarDisplayName: viewer.name,
+        directMemberIds: [1],
+        users: [viewer],
+        noteToSelf: true,
+      },
+      beginRoomRequest(),
+    );
+
+    const root = createRootRoute();
+
+    const room = createRoute({
+      getParentRoute: () => root,
+      path: "/r/$roomId",
+      component: () => <RoomHeader roomId={19} />,
+    });
+
+    const router = createRouter({
+      routeTree: root.addChildren([room]),
+      history: createMemoryHistory({ initialEntries: ["/r/19"] }),
+    });
+
+    render(<RouterProvider router={router} />);
+    await act(() => router.load());
+
+    const user = userEvent.setup();
+    const title = screen.getByRole("button", { name: /Samira Haddad/ });
+
+    expect(title.dataset.userCardTrigger).toBe("1");
+    await user.click(title);
+    expect(getUserCardState()).toMatchObject({ kind: "open", userId: 1, via: "click" });
+
+    resetUserCard();
+
+    const avatar = document.querySelector<HTMLElement>(
+      '[data-user-card-trigger="1"][aria-hidden="true"]',
+    );
+
+    expect(avatar).not.toBeNull();
+    await user.click(avatar ?? document.body);
+    expect(getUserCardState()).toMatchObject({ kind: "open", userId: 1, via: "click" });
   });
 });

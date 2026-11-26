@@ -249,10 +249,26 @@ export function SlackImportGuideList({
   );
 }
 
-/** Concise plain-English answers to what gets imported and how privacy works. */
+/** The fact for people whose Slack email isn't their Smartfire one, which links to their profile. */
+export const LINKED_EMAIL_FACT_TITLE = "A different email in Slack";
+
+/**
+ * Concise plain-English answers to what gets imported and how privacy works. Imports match Slack
+ * people to accounts by email, including the addresses linked on the profile, so the first fact
+ * says where to link a Slack email that differs from yours here.
+ */
 export function SlackImportFacts() {
   return (
     <ul className="slack-guide-facts">
+      <li className="slack-guide-fact">
+        <strong>{LINKED_EMAIL_FACT_TITLE}:</strong>{" "}
+        <span className="text-muted">
+          If your Slack account uses another email address, add it under Email addresses in{" "}
+          <Link to="/settings">Profile settings</Link>. Confirming it matches your Slack history to
+          your account and moves over any unclaimed placeholder from an earlier import. Connecting
+          Slack also moves your unclaimed placeholder over.
+        </span>
+      </li>
       {PERSONAL_IMPORT_FACTS.map((fact) => (
         <li key={fact.title} className="slack-guide-fact">
           <strong>{fact.title}:</strong> <span className="text-muted">{fact.body}</span>

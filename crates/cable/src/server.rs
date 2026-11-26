@@ -375,6 +375,14 @@ impl<U: Send + Sync + 'static> Server<U> {
         self.inner.sync.get().is_some()
     }
 
+    /// Records a replay gap so live and resuming clients refetch after a bulk change.
+    pub fn sync_resync(&self) {
+        let Some(engine) = self.inner.sync.get() else {
+            return;
+        };
+        self.inner.hub.sequenced(|seq| engine.ring.skip(seq));
+    }
+
     /// Whether a sync event is worth building now: the engine is installed and a sync socket is
     /// open. While none is, this records a gap in the ring instead, so a client resuming from
     /// before it refetches rather than missing the events nobody built.

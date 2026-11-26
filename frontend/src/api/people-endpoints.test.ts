@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import { blocks, setIgnored } from "./people-endpoints.ts";
-import { FakeApi } from "./testing.ts";
+import { blocks, personProfile, setIgnored } from "./people-endpoints.ts";
+import { FakeApi, userFixture } from "./testing.ts";
 
 describe("personal ignore endpoints", () => {
   it.effect("reads only the viewer's ignore list", () =>
@@ -33,6 +33,38 @@ describe("personal ignore endpoints", () => {
         });
         expect((yield* fake.requests).at(-1)?.method).toBe(method);
       }
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+});
+
+describe("a person's profile", () => {
+  it.effect("asks for the user card's read with card=1, and the page's without it", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+
+      const profile = {
+        user: userFixture(2, "Ada"),
+        status: null,
+        dndAllowed: null,
+        emailAddress: null,
+        transferUrl: null,
+        transferQrSvg: null,
+        canBan: false,
+        ignoredByMe: false,
+        canManageBot: false,
+      };
+
+      yield* fake.reply("GET /people/2", profile);
+      yield* personProfile(2, true);
+      expect((yield* fake.requests).at(-1)).toMatchObject({
+        method: "GET",
+        path: "/people/2",
+        query: { card: "1" },
+      });
+
+      yield* fake.reply("GET /people/2", profile);
+      yield* personProfile(2);
+      expect((yield* fake.requests).at(-1)?.query).toBeUndefined();
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 });

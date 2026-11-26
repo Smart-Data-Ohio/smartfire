@@ -72,6 +72,10 @@ pub fn markdown_presentation(
 }
 
 impl RichText for AppRichText {
+    fn user_attachable_sgid(&self, user_id: i64) -> String {
+        crate::presenters::accounts::attachable_sgid(&self.secrets, user_id)
+    }
+
     fn resolve_boost_content(&self, conn: &Connection, content: &str) -> Result<String, String> {
         let content = campfire_richtext::ruby::strip(content);
         let name = content

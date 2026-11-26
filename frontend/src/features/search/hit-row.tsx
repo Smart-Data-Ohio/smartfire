@@ -11,10 +11,11 @@ import { YouLabel } from "../directs/you-label.tsx";
 import { FileSpoiler } from "../messages/file-spoiler.tsx";
 import { fileIcon, formatBytes } from "../messages/format.ts";
 import { messageFiles } from "../messages/message-files.ts";
-import { useSpoilerReveal } from "../messages/spoilers.ts";
 import { StickerMessage } from "../messages/sticker-message.tsx";
+import { useMessageBodyRef } from "../people/mention-cards.ts";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { hitTime } from "./format.ts";
 import { highlightHtml } from "./highlight.ts";
@@ -131,9 +132,10 @@ interface HitRowProps {
 
 /**
  * One matching message, Slack's search card: avatar, author and day-stamped time, the body with
- * the searched words marked, and its file. The author's name is the card's link (stretched over
- * the whole card) to the message in its room, or in its thread for a reply; links in the body
- * stay clickable above it. A newer copy in the live store wins; a deleted message drops out.
+ * the searched words marked, and its file. The card's link (stretched over the whole card, and
+ * named for the author, conversation and time) goes to the message in its room, or in its thread
+ * for a reply; the author's avatar and name (their user card), mentions and links in the body stay
+ * usable above it. A newer copy in the live store wins; a deleted message drops out.
  */
 export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
   const live = useStore((state) => state.messages[hit.id]);
@@ -153,7 +155,7 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
     [shownBody, terms],
   );
 
-  const bodyRef = useSpoilerReveal(html);
+  const bodyRef = useMessageBodyRef(html);
 
   if (deleted) {
     return null;
@@ -170,7 +172,9 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
 
   return (
     <article className="search-hit" data-search-hit>
-      <UserAvatar userId={message.creatorId} size={36} decorative />
+      <AuthorCardTrigger userId={message.creatorId} placement="right-start" duplicate>
+        <UserAvatar userId={message.creatorId} size={36} decorative />
+      </AuthorCardTrigger>
       <div className="search-hit-main">
         <div className="search-hit-head">
           {message.threadId === null ? (
@@ -180,9 +184,7 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
               className="search-hit-link"
               aria-label={label}
               data-search-hit-link
-            >
-              {name}
-            </Link>
+            />
           ) : (
             <Link
               to="/r/$roomId/t/$threadId"
@@ -191,10 +193,12 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
               className="search-hit-link"
               aria-label={label}
               data-search-hit-link
-            >
-              {name}
-            </Link>
+            />
           )}
+          {/* Only the name itself opens the card: the link's stretch over the rest doesn't. */}
+          <AuthorCardTrigger userId={message.creatorId}>
+            <span className="search-hit-author">{name}</span>
+          </AuthorCardTrigger>
           <time
             className="search-hit-time"
             dateTime={message.createdAt}

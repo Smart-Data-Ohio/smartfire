@@ -3,7 +3,7 @@ import { enhanceCodeBlocks } from "../../lib/code-highlight/code-blocks.ts";
 import { useMotionSafeHtml } from "../../lib/emoji/emoji-image.tsx";
 // The message body styles, for pages outside a room (the Slack plan's samples).
 import "../room/room.css";
-import { useSpoilerReveal } from "./spoilers.ts";
+import { useMessageBodyRef } from "../people/mention-cards.ts";
 
 type BodyHtmlProps = {
   readonly html: string;
@@ -21,8 +21,11 @@ type BodyHtmlProps = {
  *
  * A `||spoiler||` starts covered. Clicking it, or Enter or Space while it is focused, reveals
  * that one spoiler and does not bubble into the message row's actions. The composer preview uses
- * this same body, so spoilers there behave the same way. Spoilers bind through the same
- * `useSpoilerReveal` ref as every other place that inserts message HTML.
+ * this same body, so spoilers there behave the same way. Spoilers and mention chips bind through
+ * the same `useMessageBodyRef` ref as every other place that inserts message HTML.
+ *
+ * A person's mention chip opens their user card on hover or a click; one inside a covered spoiler
+ * waits until the spoiler is revealed.
  *
  * Under reduced motion an animated workspace icon shows its first frame.
  */
@@ -30,15 +33,15 @@ export function BodyHtml({ html, className, ...rest }: BodyHtmlProps) {
   const ref = useRef<HTMLDivElement>(null);
   // Switching motion inserts the markup again, so spoilers and code blocks follow `shown`.
   const shown = useMotionSafeHtml(html);
-  const spoilers = useSpoilerReveal(shown);
+  const body = useMessageBodyRef(shown);
 
   const attach = useCallback(
     (node: HTMLDivElement | null) => {
       ref.current = node;
 
-      return spoilers(node);
+      return body(node);
     },
-    [spoilers],
+    [body],
   );
 
   useLayoutEffect(() => {

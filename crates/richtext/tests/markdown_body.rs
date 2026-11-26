@@ -71,6 +71,23 @@ fn the_action_text_rendering_still_drops_tables() {
 }
 
 #[test]
+fn message_mention_ids_must_come_from_rendered_attachments() {
+    let ctx = RenderContext {
+        resolver: &NoRecords,
+        request_host: None,
+    };
+    let raw = r#"<span class="mention" data-user-id="17">Fake mention</span>"#;
+    for markdown in [false, true] {
+        let html = Content::load(raw, &ctx)
+            .unwrap()
+            .to_rendered_message_html_with_layout(&ctx, markdown)
+            .unwrap();
+        assert!(html.contains("Fake mention"), "{html}");
+        assert!(!html.contains("data-user-id"), "{html}");
+    }
+}
+
+#[test]
 fn column_alignment_survives() {
     let html = compact(&shown(
         "| L | C | R | N |\n| :--- | :---: | ---: | --- |\n| 1 | 2 | 3 | 4 |",

@@ -526,7 +526,11 @@ pub fn sidebar_direct_label_for_names(name: Option<&str>, member_names: &[&str])
 }
 
 pub fn direct_room_label_for_names(name: Option<&str>, member_names: &[&str]) -> String {
-    direct_label_for_names(name, member_names, sidebar_first_name)
+    if member_names.len() == 1 {
+        sidebar_direct_label_for_names(name, member_names)
+    } else {
+        direct_label_for_names(name, member_names, sidebar_first_name)
+    }
 }
 
 fn direct_label_for_names(
@@ -562,7 +566,35 @@ pub mod audit_logs;
 
 #[cfg(test)]
 mod tests {
-    use super::sidebar_direct_label_for_names;
+    use super::{direct_room_label_for_names, sidebar_direct_label_for_names};
+
+    #[test]
+    fn direct_room_labels_match_room_display_names() {
+        for (custom, members, expected) in [
+            (None, vec![], ""),
+            (None, vec!["Ada Lovelace"], "Ada Lovelace"),
+            (Some("  "), vec!["Ada Lovelace"], "Ada Lovelace"),
+            (Some("Project"), vec!["Ada Lovelace"], "Project"),
+            (
+                Some("Project"),
+                vec!["Ada Lovelace", "Grace Hopper"],
+                "Project",
+            ),
+            (None, vec!["Grace Hopper", "Ada Lovelace"], "Ada, Grace"),
+            (
+                None,
+                vec!["Grace Hopper", "Lin Chen", "Ada Lovelace"],
+                "Ada, Grace, Lin",
+            ),
+            (
+                None,
+                vec!["Zoe Rivera", "Lin Chen", "Grace Hopper", "Ada Lovelace"],
+                "Ada, Grace, Lin +1",
+            ),
+        ] {
+            assert_eq!(direct_room_label_for_names(custom, &members), expected);
+        }
+    }
 
     #[test]
     fn sidebar_direct_labels_keep_full_names() {

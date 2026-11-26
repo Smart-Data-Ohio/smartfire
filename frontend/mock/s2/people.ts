@@ -72,7 +72,8 @@ export function createPeople(
     return { people, users };
   };
 
-  const profile = (userId: number): PersonProfile => {
+  /** `card` (`?card=1`, the hover card's read) leaves out the sign-in link: no link is minted. */
+  const profile = (userId: number, card = false): PersonProfile => {
     const world = ctx.world();
     const user = world.users.get(userId);
 
@@ -83,7 +84,7 @@ export function createPeople(
     const active = person && user.status === "active";
     const other = userId !== VIEWER_ID;
     const presence = world.presence.get(userId);
-    const transferUrl = admin && active ? mockPersonTransferUrl(userId) : null;
+    const transferUrl = admin && active && !card ? mockPersonTransferUrl(userId) : null;
     const agent = user.agent === null ? null : agents.record(user.agent.agentId);
 
     return {
@@ -175,7 +176,9 @@ export function createPeople(
         ok(setIgnored(firstId(request), false)),
       ),
       route("GET", /^\/people$/, () => ok(directory())),
-      route("GET", /^\/people\/(\d+)$/, (request) => ok(profile(firstId(request)))),
+      route("GET", /^\/people\/(\d+)$/, (request) =>
+        ok(profile(firstId(request), request.query.get("card") === "1")),
+      ),
       route("POST", /^\/people\/(\d+)\/ban$/, (request) => setBanned(firstId(request), true)),
       route("DELETE", /^\/people\/(\d+)\/ban$/, (request) => setBanned(firstId(request), false)),
     ],

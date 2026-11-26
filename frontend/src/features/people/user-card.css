@@ -1,0 +1,249 @@
+/* The user card (Slack's hover card) and the names and avatars that open it. */
+@layer app {
+  /* A name or avatar as a trigger: it looks as it did, and says it opens something on hover. */
+  .user-card-trigger {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+
+  .user-card-trigger:hover
+    :is(
+      .message-author,
+      .message-reply-author,
+      .pin-card-author,
+      .saved-author,
+      .search-hit-author,
+      .activity-author,
+      .member-row-label,
+      .thread-row-author
+    ),
+  .user-card-hover:hover
+    :is(
+      .message-reply-author,
+      .pin-card-author,
+      .saved-author,
+      .search-hit-author,
+      .activity-author,
+      .member-row-label,
+      .thread-row-author
+    ) {
+    text-decoration: underline;
+  }
+
+  /* A title's name: it still ellipsizes, and underlines on hover like a link. */
+  :is(.room-title-name, .room-intro-title) > .user-card-trigger {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :is(.room-title-name, .room-intro-title) > .user-card-trigger:hover,
+  :is(.room-title-name, .room-intro-title) > .user-card-hover > .agent-link:hover {
+    text-decoration: underline;
+  }
+
+  /* A mention chip opens its person's card. */
+  .message-body .mention[data-user-id] .profile-card-name {
+    cursor: pointer;
+  }
+
+  /* Hover intent around something that already acts on click: no box of its own. */
+  .user-card-hover {
+    display: contents;
+  }
+
+  /* ── The card ─────────────────────────────────────────────────────────── */
+
+  .popover.user-card-surface {
+    --profile-hero-ring: var(--bg-raised);
+
+    width: 300px;
+    min-width: 0;
+    max-width: calc(100vw - var(--space-4));
+    padding: var(--space-2);
+  }
+
+  .user-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .user-card .profile-banner {
+    aspect-ratio: 3 / 1;
+  }
+
+  .user-card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding-inline: var(--space-2);
+    text-align: center;
+  }
+
+  .user-card-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .user-card-name {
+    max-width: 100%;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--text-strong);
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-title);
+  }
+
+  .user-card-you {
+    color: var(--text-muted);
+    font-weight: var(--weight-regular);
+  }
+
+  .user-card-account,
+  .user-card-pronouns {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    overflow-wrap: anywhere;
+  }
+
+  .user-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-1);
+  }
+
+  .user-card-badges:empty {
+    display: none;
+  }
+
+  .user-card-badge {
+    padding: 1px var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--bg-active);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-meta);
+  }
+
+  .user-card-badge[data-tone="admin"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .user-card-badge[data-tone="danger"] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  .user-card-presence {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-0-5);
+    max-width: 100%;
+  }
+
+  .user-card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    margin: 0;
+    color: var(--text);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .user-card-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--presence-offline);
+  }
+
+  .user-card-status[data-presence="online"] .user-card-dot {
+    background: var(--presence-online);
+  }
+
+  .user-card-status[data-presence="idle"] .user-card-dot {
+    background: var(--presence-away);
+  }
+
+  .user-card-status[data-presence="dnd"] .user-card-dot {
+    background: var(--presence-dnd);
+  }
+
+  .user-card-agent {
+    color: var(--agent);
+  }
+
+  .user-card-agent:is([data-tone="suspended"], [data-tone="inactive"]) {
+    color: var(--text-muted);
+  }
+
+  .user-card-agent[data-tone="failed"] {
+    color: var(--danger);
+  }
+
+  .user-card-status-text {
+    max-width: 100%;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    overflow-wrap: anywhere;
+  }
+
+  .user-card-email {
+    max-width: 100%;
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    overflow-wrap: anywhere;
+  }
+
+  .user-card-bio {
+    display: -webkit-box;
+    max-width: 100%;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .user-card-actions {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-1) var(--space-1);
+  }
+
+  .user-card-actions > * {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}

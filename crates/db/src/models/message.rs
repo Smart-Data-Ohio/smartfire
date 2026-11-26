@@ -1640,7 +1640,7 @@ impl Message {
         Ok(())
     }
 
-    fn update_in_index(&self, tx: &Tx<'_>) -> Result<()> {
+    pub(crate) fn update_in_index(&self, tx: &Tx<'_>) -> Result<()> {
         let body = self.plain_text_body(tx.conn(), tx.rich_text())?;
         tx.conn().execute_cached(
             "update message_search_index set body = ? where rowid = ?",

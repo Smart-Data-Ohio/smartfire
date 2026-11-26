@@ -24,9 +24,15 @@ export const peopleDirectory = Effect.fn("api.peopleDirectory")(function* () {
 
 const profileReply = wire<PersonProfile>(PersonProfileSchema);
 
-/** `GET /people/:id`: what the classic page shows this viewer about them. */
-export const personProfile = Effect.fn("api.personProfile")(function* (userId: number) {
-  return yield* call(get(`/people/${userId}`), profileReply);
+/**
+ * `GET /people/:id`: what the classic page shows this viewer about them. `card` asks for the user
+ * card's read (`?card=1`): the same reply with no sign-in link, so a hover never mints one.
+ */
+export const personProfile = Effect.fn("api.personProfile")(function* (
+  userId: number,
+  card = false,
+) {
+  return yield* call(get(`/people/${userId}`, card ? { card: "1" } : undefined), profileReply);
 });
 
 /** `POST` (ban) or `DELETE` (remove the ban) `/people/:id/ban`: their page as it now stands. */

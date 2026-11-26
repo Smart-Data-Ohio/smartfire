@@ -307,6 +307,7 @@
   }
 
   .thread-row {
+    position: relative;
     display: flex;
     align-items: flex-start;
     gap: var(--space-3);
@@ -322,9 +323,38 @@
     transition-duration: var(--duration-micro);
   }
 
-  .thread-row:focus-visible {
+  /* The row's open target, under its contents: only the starter's avatar and name sit above. */
+  .thread-row-cover {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .thread-row-cover:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: -2px;
+  }
+
+  .thread-row > :not(.thread-row-cover) {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* An agent starter's link: its hover wrapper takes no box, so the link itself rises. */
+  .thread-row > .user-card-hover > .agent-link {
+    position: relative;
+    z-index: 1;
+  }
+
+  .thread-row :is(button, a, .thread-following-tag):not(.thread-row-cover) {
+    pointer-events: auto;
+  }
+
+  .thread-row > .user-card-trigger,
+  .thread-row > .user-card-hover > .agent-link {
+    flex-shrink: 0;
+    align-self: flex-start;
   }
 
   .thread-row-main {

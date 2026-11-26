@@ -238,7 +238,7 @@ pub async fn email_address_confirmation_message(
                 return Ok(None);
             };
             if !job.matches_password(&user)
-                || !EmailAddress::is_available(conn, &email_address)?
+                || !EmailAddress::is_available_for(conn, user_id, &email_address)?
                 || EmailAddress::confirmation_retired(conn, user_id, &email_address, cursor)?
                 || password_changed_since(conn, user_id, requested_at)?
             {

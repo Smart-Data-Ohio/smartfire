@@ -805,6 +805,32 @@ async fn inactive_legacy_bot_profiles_hide_classic_actions() {
 }
 
 #[tokio::test]
+async fn people_profile_card_omits_admin_transfer_credentials() {
+    let a = app().await.expect("restored default seed");
+    let mut browser = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/people/{KEVIN}");
+
+    let response = browser.send(get(&format!("{path}?card=1"))).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let card: api::PersonProfile = parse(&response);
+    assert_eq!(card.user.id, KEVIN);
+    assert!(card.status.is_some());
+    assert!(card.email_address.is_some());
+    assert_eq!(card.transfer_url, None);
+    assert_eq!(card.transfer_qr_svg, None);
+
+    let response = browser.send(get(&path)).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let profile: api::PersonProfile = parse(&response);
+    assert_eq!(profile.email_address, card.email_address);
+    let url = profile.transfer_url.expect("administrator's transfer URL");
+    let qr = profile
+        .transfer_qr_svg
+        .expect("administrator's transfer QR");
+    assert_eq!(Some(qr), qr_code::transfer_svg(&url));
+}
+
+#[tokio::test]
 async fn profile_fields_follow_classic_visibility_and_request_zone() {
     let Some(a) = app().await else { return };
     a.db().write(|tx| {

@@ -7,6 +7,10 @@ use rusqlite::{Connection, Row, params};
 use crate::sql::{CachedStatements, query_all, query_one};
 use crate::{Error, Result, Timestamp, Tx, User};
 
+use super::slack_placeholder::{
+    claim_slack_placeholder, has_active_slack_import, is_unclaimed_slack_placeholder,
+};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EmailAddress {
     pub id: i64,
@@ -17,9 +21,17 @@ pub struct EmailAddress {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Confirmation {
     Added,
+    AddedAndClaimed { placeholder_id: i64 },
     AlreadyLinked,
     Taken,
     LimitReached,
+    ImportInProgress,
+}
+
+enum PrimaryClaim {
+    Free,
+    Placeholder(i64),
+    Taken,
 }
 
 #[derive(Debug)]
@@ -142,12 +154,15 @@ impl EmailAddress {
             && Self::by_address(conn, address)?.is_none())
     }
 
+    /// A confirmation email can prove ownership of an unclaimed Slack address.
+    pub fn is_available_for(conn: &Connection, user_id: i64, address: &str) -> Result<bool> {
+        Ok(Self::by_address(conn, address)?.is_none()
+            && !matches!(primary_claim(conn, user_id, address)?, PrimaryClaim::Taken))
+    }
+
     /// The immediate writer transaction serializes claims against primary and secondary writes.
-    pub fn confirm(tx: &Tx<'_>, user: &User, address: &str) -> Result<Confirmation> {
+    pub fn confirm(tx: &mut Tx<'_>, user: &User, address: &str) -> Result<Confirmation> {
         let address = address.trim();
-        if primary_conflict_for_secondary(tx.conn(), address, Some(user.id))? {
-            return Ok(Confirmation::Taken);
-        }
         if let Some((owner, _)) = Self::by_address(tx.conn(), address)? {
             return Ok(if owner == user.id {
                 Confirmation::AlreadyLinked
@@ -162,6 +177,10 @@ impl EmailAddress {
         {
             return Ok(Confirmation::AlreadyLinked);
         }
+        let primary = primary_claim(tx.conn(), user.id, address)?;
+        if matches!(primary, PrimaryClaim::Taken) {
+            return Ok(Confirmation::Taken);
+        }
         let count: i64 = tx.conn().query_row_cached(
             "SELECT count(*) FROM user_email_addresses WHERE user_id = ?",
             [user.id],
@@ -170,13 +189,23 @@ impl EmailAddress {
         if count >= MAX_SECONDARIES {
             return Ok(Confirmation::LimitReached);
         }
+        let result = if let PrimaryClaim::Placeholder(placeholder_id) = primary {
+            if has_active_slack_import(tx.conn(), None)? {
+                return Ok(Confirmation::ImportInProgress);
+            }
+            let placeholder = User::find(tx.conn(), placeholder_id)?;
+            claim_slack_placeholder(tx, user, &placeholder)?;
+            Confirmation::AddedAndClaimed { placeholder_id }
+        } else {
+            Confirmation::Added
+        };
         let now = tx.now();
         tx.conn().execute_cached(
             "INSERT INTO user_email_addresses (user_id, email_address, created_at, updated_at)
              VALUES (?, ?, ?, ?)",
             params![user.id, address, now, now],
         )?;
-        Ok(Confirmation::Added)
+        Ok(result)
     }
 }
 
@@ -224,18 +253,42 @@ pub(super) fn primary_conflict_for_secondary(
     address: &str,
     except: Option<i64>,
 ) -> Result<bool> {
+    Ok(!primary_matches(conn, address, except, 1)?.is_empty())
+}
+
+fn primary_claim(conn: &Connection, user_id: i64, address: &str) -> Result<PrimaryClaim> {
+    let matches = primary_matches(conn, address, None, 2)?;
+    Ok(match matches.as_slice() {
+        [] => PrimaryClaim::Free,
+        &[id] if id != user_id && is_unclaimed_slack_placeholder(conn, id)? => {
+            PrimaryClaim::Placeholder(id)
+        }
+        _ => PrimaryClaim::Taken,
+    })
+}
+
+fn primary_matches(
+    conn: &Connection,
+    address: &str,
+    except: Option<i64>,
+    limit: usize,
+) -> Result<Vec<i64>> {
     let normalized = normalize(address);
     let mut query = conn.prepare_cached(
-        "SELECT email_address FROM users
+        "SELECT id, email_address FROM users
          WHERE email_address IS NOT NULL AND (?1 IS NULL OR id != ?1)",
     )?;
     let mut rows = query.query([except])?;
+    let mut matches = Vec::new();
     while let Some(row) = rows.next()? {
-        if normalize(&row.get::<_, String>(0)?) == normalized {
-            return Ok(true);
+        if normalize(&row.get::<_, String>(1)?) == normalized {
+            matches.push(row.get(0)?);
+            if matches.len() == limit {
+                break;
+            }
         }
     }
-    Ok(false)
+    Ok(matches)
 }
 
 pub(super) fn invalid_primary(message: &str) -> Error {

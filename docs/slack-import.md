@@ -49,7 +49,12 @@ A DM imported by one participant is never duplicated when the other participant 
 
 Slack members without a Smartfire account become claimable placeholders (active users, matched by email). They claim the account by signing in with Google using the same email address — allowed automatically when the email's domain is in Google sign-in's allowed domains — or an administrator sends them the transfer link from their profile. People deleted in Slack, guests, and bots/apps become deactivated authors: their names stay on the history but they cannot sign in.
 
-If a member signed up with a different email than their Slack one, matching misses and their Slack identity becomes a separate placeholder. Fix that before import by changing the member's Smartfire email to the Slack one (the member can do this from their profile page, password-confirmed).
+If you use a different email in Smartfire, add your Slack email under **Profile → Email addresses**
+and confirm the link in your inbox. Future imports match that email to your account. If an earlier
+import created an unclaimed placeholder for you, confirming the address or connecting Slack moves
+the placeholder's imported history and room memberships to your account. If another import or undo
+is active, wait for it to finish, then confirm the link again or start your personal import.
+Connecting Slack keeps your linked email list as it was.
 
 ## Removing credentials afterwards
 

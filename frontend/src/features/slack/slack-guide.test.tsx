@@ -14,7 +14,11 @@ import type { SlackRunRow } from "../../gen/SlackRunRow.ts";
 import { mutations } from "../../store/store.ts";
 import { slack } from "../../sync/admin.ts";
 import { PersonalSlackSection } from "./personal-slack-section.tsx";
-import { personalGuideProgress, shouldOfferSlackPrompt } from "./slack-guide.tsx";
+import {
+  LINKED_EMAIL_FACT_TITLE,
+  personalGuideProgress,
+  shouldOfferSlackPrompt,
+} from "./slack-guide.tsx";
 import { isSlackPromptDismissed, SlackImportPrompt } from "./slack-import-prompt.tsx";
 
 const VIEWER_ID = 42;
@@ -272,6 +276,9 @@ describe("SlackImportPrompt", () => {
 
     expect(within(dialog).getByText("Connect your Slack account")).toBeTruthy();
     expect(within(dialog).getByText("Your privacy:")).toBeTruthy();
+    expect(
+      within(dialog).getByRole("link", { name: "Profile settings" }).getAttribute("href"),
+    ).toBe("/app/settings");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Go to Slack import" }));
 
@@ -358,6 +365,25 @@ describe("PersonalSlackSection walkthrough", () => {
     });
 
     expect(previewLink.getAttribute("href")).toBe("/app/settings/slack/12");
+  });
+
+  it("tells someone whose Slack email differs to link it in their profile, and links there", async () => {
+    vi.spyOn(slack, "personal").mockResolvedValue(personalPage());
+
+    const pathname = await renderWithPrompt("/settings/slack");
+    const fact = (await screen.findByText(`${LINKED_EMAIL_FACT_TITLE}:`)).closest("li");
+
+    expect(fact?.textContent).toContain(
+      "If your Slack account uses another email address, add it under Email addresses in Profile settings.",
+    );
+    expect(fact?.textContent).toContain("moves over any unclaimed placeholder");
+    expect(fact?.textContent).toContain("Connecting Slack also moves your unclaimed placeholder");
+
+    const profile = within(fact ?? document.body).getByRole("link", { name: "Profile settings" });
+
+    expect(profile.getAttribute("href")).toBe("/app/settings");
+    fireEvent.click(profile);
+    await waitFor(() => expect(pathname()).toBe("/settings"));
   });
 
   it("links to an active preview instead of an older completed preview", async () => {

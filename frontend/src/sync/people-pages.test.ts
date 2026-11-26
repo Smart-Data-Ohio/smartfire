@@ -55,6 +55,7 @@ function fakeRequests() {
   const bans: Promise<PersonProfile>[] = [];
   const allowances: Promise<Settings>[] = [];
   let profileCalls = 0;
+  const cardReads: boolean[] = [];
 
   const next = <A>(queue: Promise<A>[]): Promise<A> => {
     const reply = queue.shift();
@@ -66,8 +67,9 @@ function fakeRequests() {
 
   const requests: PeopleRequests = {
     directory: () => Promise.reject(new Error("unused")),
-    profile: () => {
+    profile: (_userId, card) => {
       profileCalls += 1;
+      cardReads.push(card);
 
       return next(profiles);
     },
@@ -75,7 +77,14 @@ function fakeRequests() {
     setDndAllowance: () => next(allowances),
   };
 
-  return { requests, profiles, bans, allowances, profileCalls: () => profileCalls };
+  return {
+    requests,
+    profiles,
+    bans,
+    allowances,
+    profileCalls: () => profileCalls,
+    cardReads: () => cardReads,
+  };
 }
 
 // SAFETY: the people pages never read a DND reply's body, only when it arrives.
@@ -282,5 +291,16 @@ describe("the people pages", () => {
     await pages.profile(SAM);
 
     expect(store.getState().dndAllowances[SAM]).toBe(true);
+  });
+
+  it("ask for the card's read (no sign-in link) only from the user card", async () => {
+    const fake = fakeRequests();
+    const pages = peoplePagesOver(fake.requests);
+
+    fake.profiles.push(Promise.resolve(page(sam(1))), Promise.resolve(page(sam(1))));
+    await pages.profile(SAM);
+    await pages.cardProfile(SAM);
+
+    expect(fake.cardReads()).toEqual([false, true]);
   });
 });

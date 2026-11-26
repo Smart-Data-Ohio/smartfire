@@ -1,0 +1,635 @@
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  type FocusEvent,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { CustomStatus } from "../../gen/CustomStatus.ts";
+import type { PersonProfile } from "../../gen/PersonProfile.ts";
+import type { Presence } from "../../gen/Presence.ts";
+import type { UserRole } from "../../gen/UserRole.ts";
+import type { Placement } from "../../lib/anchor.ts";
+import { showPopover } from "../../lib/popover.ts";
+import { duringAppFocus } from "../../lib/reader-focus.ts";
+import { usePresence } from "../../motion/presence.ts";
+import { useStore } from "../../store/store.ts";
+import { peoplePages } from "../../sync/admin.ts";
+import { directs } from "../../sync/directs.ts";
+import { Button } from "../../ui/button.tsx";
+import { originFor, useFloating } from "../../ui/floating.ts";
+import { toast } from "../../ui/toast-store.ts";
+import { useWorkingPresence } from "../agents/working.ts";
+import { YOU_TAG } from "../directs/note-to-self.ts";
+import { useViewerId } from "../messages/use-message.ts";
+import { AgentBadge } from "./agent-badge.tsx";
+import { agentKindLabel, agentTone, identityOf, toneLabel } from "./agent-identity.ts";
+import { UNKNOWN_NAME, useIgnored, usePresenceStatus, useUser } from "./people.ts";
+import { newerUser, presenceOf } from "./people-format.ts";
+import { ProfileHero } from "./profile-banner.tsx";
+import { UserAvatar } from "./user-avatar.tsx";
+import {
+  type CardVia,
+  cardEnter,
+  cardLeave,
+  closeUserCard,
+  isUserCardOpening,
+  pinUserCard,
+  useUserCard,
+} from "./user-card-store.ts";
+import "../../ui/floating.css";
+import "../../ui/popover.css";
+import "./user-card.css";
+
+/** The words beside a person's presence dot. */
+const PRESENCE_WORDS = {
+  online: "Active",
+  idle: "Away",
+  dnd: "Do not disturb",
+  offline: "Offline",
+} as const satisfies Record<Presence, string>;
+
+/** How long a fetched profile (an administrator's view of the email, the status line) stays fresh. */
+const PROFILE_TTL_MS = 60_000;
+
+const MAX_CACHED_PROFILES = 100;
+
+/** Who is looking: what the server puts in a profile (an email, say) depends on both. */
+interface Viewer {
+  readonly id: number | null;
+  readonly role: UserRole | null;
+}
+
+/** What the card shows of a fetched profile, and all it keeps: never a sign-in link. */
+export type CardProfile = Pick<PersonProfile, "user" | "status" | "emailAddress" | "ignoredByMe">;
+
+function cardFields({ user, status, emailAddress, ignoredByMe }: PersonProfile): CardProfile {
+  return { user, status, emailAddress, ignoredByMe };
+}
+
+const profiles = new Map<
+  number,
+  { readonly viewer: Viewer; readonly at: number; readonly profile: CardProfile }
+>();
+
+/** The cached card profile for `userId` as `viewer` sees it, forgetting one gone stale. */
+function freshProfile(userId: number, viewer: Viewer): CardProfile | null {
+  const hit = profiles.get(userId);
+
+  if (hit === undefined) {
+    return null;
+  }
+
+  if (Date.now() - hit.at >= PROFILE_TTL_MS) {
+    profiles.delete(userId);
+
+    return null;
+  }
+
+  return hit.viewer.id === viewer.id && hit.viewer.role === viewer.role ? hit.profile : null;
+}
+
+function storeProfile(userId: number, viewer: Viewer, profile: CardProfile): void {
+  profiles.delete(userId);
+  profiles.set(userId, { viewer, at: Date.now(), profile });
+
+  if (profiles.size > MAX_CACHED_PROFILES) {
+    const oldest = profiles.keys().next().value;
+
+    if (oldest !== undefined) {
+      profiles.delete(oldest);
+    }
+  }
+}
+
+/** Forgets the fetched profiles (tests). */
+export function clearUserCardProfiles(): void {
+  profiles.clear();
+}
+
+/** What the card keeps of `userId`'s fetched profile, if anything (tests). */
+export function cachedUserCardProfile(userId: number): CardProfile | undefined {
+  return profiles.get(userId)?.profile;
+}
+
+/**
+ * The viewer's role as the store has it now: their row in `users`, which every later copy of them
+ * (a demotion arriving by sync) lands in, before the sign-in's copy in `me`.
+ */
+function useViewerRole(viewerId: number | null): UserRole | null {
+  return useStore(
+    (state) =>
+      (viewerId === null ? undefined : state.users[viewerId]?.role) ?? state.me?.user.role ?? null,
+  );
+}
+
+/**
+ * Their profile as the card reads it (`?card=1`, without the sign-in link), fetched quietly once
+ * the card is up: the card draws from the store at once and this only adds what the store lacks
+ * (the email an administrator sees, a status line not yet in presence, or the whole person when
+ * the store has never seen them). A failure leaves the card as it is.
+ */
+function useCardProfile(
+  userId: number,
+  viewerId: number | null,
+  viewerRole: UserRole | null,
+): CardProfile | null {
+  const [loaded, setLoaded] = useState<CardProfile | null>(() =>
+    freshProfile(userId, { id: viewerId, role: viewerRole }),
+  );
+
+  useEffect(() => {
+    const viewer = { id: viewerId, role: viewerRole };
+    const fresh = freshProfile(userId, viewer);
+
+    if (fresh !== null) {
+      setLoaded(fresh);
+
+      return;
+    }
+
+    const controller = new AbortController();
+
+    peoplePages.cardProfile(userId, controller.signal).then(
+      (reply) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const profile = cardFields(reply);
+
+        storeProfile(userId, viewer, profile);
+        setLoaded(profile);
+      },
+      () => undefined,
+    );
+
+    return () => controller.abort();
+  }, [userId, viewerId, viewerRole]);
+
+  return loaded;
+}
+
+/** A custom status's emoji and words, or `null` when it has none or it has run out. */
+export function customStatusLine(status: CustomStatus | null, now: number): string | null {
+  if (status === null || (status.expiresAt !== null && Date.parse(status.expiresAt) <= now)) {
+    return null;
+  }
+
+  const line = [status.emoji, status.text]
+    .flatMap((part) => {
+      const trimmed = part?.trim() ?? "";
+
+      return trimmed === "" ? [] : [trimmed];
+    })
+    .join(" ");
+
+  return line === "" ? null : line;
+}
+
+/** A bot's or agent's line: its kind and what it's doing, as the room header shows it. */
+function AgentLine({ userId }: { readonly userId: number }) {
+  const identity = identityOf(useUser(userId));
+  const working = useWorkingPresence(userId);
+
+  if (identity.kind !== "agent") {
+    return <p className="user-card-status text-muted">Bot</p>;
+  }
+
+  const tone = agentTone(identity) ?? "idle";
+
+  return (
+    <p className="user-card-status user-card-agent" data-tone={tone}>
+      {agentKindLabel(identity.agentKind)} · {working ?? toneLabel(tone, identity.status)}
+    </p>
+  );
+}
+
+/** A person's presence dot and word, and their status line. */
+function PresenceLine({
+  userId,
+  customStatus,
+  profile,
+}: {
+  readonly userId: number;
+  readonly customStatus: CustomStatus | null;
+  readonly profile: CardProfile | null;
+}) {
+  const live = usePresenceStatus(userId);
+  const liveText = useStore((state) => state.presence[userId]?.statusText ?? null);
+  const loaded = profile?.status ?? null;
+
+  const presence =
+    live === undefined && loaded === null ? null : presenceOf(live, loaded?.presence ?? "offline");
+
+  const text = liveText ?? loaded?.statusText ?? customStatusLine(customStatus, Date.now());
+
+  if (presence === null && text === null) {
+    return null;
+  }
+
+  return (
+    <div className="user-card-presence">
+      {presence === null ? null : (
+        <p className="user-card-status" data-presence={presence}>
+          <span className="user-card-dot" aria-hidden="true" />
+          {PRESENCE_WORDS[presence]}
+        </p>
+      )}
+      {text === null ? null : <p className="user-card-status-text">{text}</p>}
+    </div>
+  );
+}
+
+interface CardProps {
+  readonly userId: number;
+  /** The card's opening, which a Message on its way checks still shows before it navigates. */
+  readonly openingId: number;
+  readonly titleId: string;
+}
+
+/** Where "View profile" goes: your settings, an agent's profile, or their person page. */
+function ProfileLink({ userId, own }: { readonly userId: number; readonly own: boolean }) {
+  const identity = identityOf(useUser(userId));
+
+  if (own) {
+    return (
+      <Link
+        to="/settings"
+        className="button"
+        data-variant="secondary"
+        data-size="sm"
+        onClick={closeUserCard}
+      >
+        Edit profile
+      </Link>
+    );
+  }
+
+  return identity.kind === "agent" ? (
+    <Link
+      to="/agents/$agentId"
+      params={{ agentId: identity.agentId }}
+      className="button"
+      data-variant="secondary"
+      data-size="sm"
+      preload={false}
+      onClick={closeUserCard}
+    >
+      View profile
+    </Link>
+  ) : (
+    <Link
+      to="/people/$userId"
+      params={{ userId }}
+      className="button"
+      data-variant="secondary"
+      data-size="sm"
+      preload={false}
+      onClick={closeUserCard}
+    >
+      View profile
+    </Link>
+  );
+}
+
+/**
+ * Someone's card, drawn from the store straight away: their banner and avatar, name (with the
+ * account name when a nickname differs, and pronouns), badges, presence or agent status, the email
+ * an administrator sees, their bio, and Message and View profile.
+ */
+function UserCard({ userId, openingId, titleId }: CardProps) {
+  const navigate = useNavigate();
+  const viewerId = useViewerId();
+  const viewerRole = useViewerRole(viewerId);
+  const held = useUser(userId);
+  const profile = useCardProfile(userId, viewerId, viewerRole);
+
+  const user =
+    held !== undefined && profile !== null
+      ? newerUser(profile.user, held)
+      : (held ?? profile?.user);
+
+  const ignoredNow = useIgnored(userId, profile?.ignoredByMe);
+  const [messaging, setMessaging] = useState(false);
+  const name = user?.name ?? UNKNOWN_NAME;
+  const own = userId === viewerId;
+  const ignored = !own && ignoredNow;
+  const status = user?.status;
+  const bot = user?.role === "bot";
+  const bio = user?.bio?.trim() ?? "";
+
+  // As the server shows it: to an administrator, for an account still on the workspace. A profile
+  // fetched before a demotion or a deactivation still holds it until the next fetch.
+  const email =
+    viewerRole === "administrator" && status !== "deactivated"
+      ? (profile?.emailAddress ?? null)
+      : null;
+
+  const message = () => {
+    // The pointer leaving a hover-opened card on its way somewhere must not drop the conversation.
+    pinUserCard();
+    setMessaging(true);
+    // Nobody else opens your note-to-self, as the sidebar's "Message yourself" does.
+    directs.create(own ? [] : [userId]).then(
+      (row) => {
+        // Dismissed (or swapped, or closed and opened again) while it was on its way: stay put.
+        if (!isUserCardOpening(openingId)) {
+          return;
+        }
+
+        closeUserCard();
+        void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } });
+      },
+      (error: Error) => {
+        setMessaging(false);
+        toast({
+          title: own ? "Couldn't open your notes" : `Couldn't message ${name}`,
+          description: error.message,
+          tone: "danger",
+        });
+      },
+    );
+  };
+
+  return (
+    <div className="user-card" data-status={status}>
+      <ProfileHero
+        userId={userId}
+        name={name}
+        url={status === "deactivated" ? null : (user?.bannerUrl ?? null)}
+        stillUrl={status === "deactivated" ? null : (user?.bannerStillUrl ?? null)}
+        size="card"
+      >
+        <UserAvatar userId={userId} size={64} presence={!bot} live decorative />
+      </ProfileHero>
+      <div className="user-card-body">
+        <div className="user-card-identity">
+          <h2 id={titleId} className="user-card-name">
+            {name}
+            {own ? <span className="user-card-you"> {YOU_TAG}</span> : null}
+          </h2>
+          {user !== undefined && user.accountName !== user.name ? (
+            <p className="user-card-account">{user.accountName}</p>
+          ) : null}
+          {user?.pronouns ? <p className="user-card-pronouns">{user.pronouns}</p> : null}
+        </div>
+        <div className="user-card-badges">
+          <AgentBadge userId={userId} status />
+          {user?.role === "administrator" ? (
+            <span className="user-card-badge" data-tone="admin">
+              Admin
+            </span>
+          ) : null}
+          {ignored ? <span className="user-card-badge">Ignored</span> : null}
+          {status === "banned" ? (
+            <span className="user-card-badge" data-tone="danger">
+              Banned
+            </span>
+          ) : null}
+          {status === "deactivated" && !bot ? (
+            <span className="user-card-badge">Deactivated</span>
+          ) : null}
+        </div>
+        {status === "deactivated" ? (
+          <p className="user-card-status text-muted">No longer on this account</p>
+        ) : bot ? (
+          <AgentLine userId={userId} />
+        ) : user === undefined ? null : (
+          <PresenceLine userId={userId} customStatus={user.customStatus} profile={profile} />
+        )}
+        {email === null ? null : (
+          <a className="user-card-email" href={`mailto:${email}`}>
+            {email}
+          </a>
+        )}
+        {bio === "" || status === "deactivated" ? null : <p className="user-card-bio">{bio}</p>}
+      </div>
+      <div className="user-card-actions">
+        {status === "active" ? (
+          <Button
+            variant="primary"
+            size="sm"
+            icon="message-circle"
+            loading={messaging}
+            onClick={message}
+          >
+            {own ? "Message yourself" : "Message"}
+          </Button>
+        ) : null}
+        <ProfileLink userId={userId} own={own} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Gives focus back to the trigger a card hung off, unless it is gone or out of the tab order (an
+ * avatar beside a name is hidden from assistive tech, and must not take focus).
+ */
+function restoreFocus(anchor: HTMLElement): void {
+  if (anchor.isConnected && anchor.getAttribute("aria-hidden") !== "true" && anchor.tabIndex >= 0) {
+    duringAppFocus(() => anchor.focus({ preventScroll: true }));
+  }
+}
+
+/** What the card last showed: kept through its exit so it doesn't go blank as it fades. */
+interface Shown {
+  readonly userId: number;
+  readonly openingId: number;
+  readonly anchor: HTMLElement;
+  readonly placement: Placement;
+  readonly via: CardVia;
+}
+
+/**
+ * The one user card, mounted once by the app shell and opened from any avatar or name
+ * (`UserCardTrigger`, `UserCardHover`, mentions in message HTML). It sits in the top layer beside
+ * its trigger (a manual popover with CSS anchor positioning), and closes on Esc, a press outside
+ * it, a scroll under it, navigation, or its trigger going away. Opened by a click, it takes focus,
+ * gives it back to the trigger on Esc, and closes once focus moves on past it.
+ */
+export function UserCardHost() {
+  const card = useUserCard();
+  const titleId = useId();
+  const floatingId = useId();
+  const visible = card.kind === "open" || card.kind === "closing";
+  const [shown, setShown] = useState<Shown | null>(null);
+  const pathname = useLocation({ select: (location) => location.pathname });
+  const lastPath = useRef(pathname);
+
+  if (
+    visible &&
+    (shown === null ||
+      shown.userId !== card.userId ||
+      shown.openingId !== card.openingId ||
+      shown.anchor !== card.anchor ||
+      shown.placement !== card.placement ||
+      shown.via !== card.via)
+  ) {
+    setShown({
+      userId: card.userId,
+      openingId: card.openingId,
+      anchor: card.anchor,
+      placement: card.placement,
+      via: card.via,
+    });
+  }
+
+  const presence = usePresence<HTMLDivElement>(visible);
+  const anchorRef = useMemo(() => ({ current: shown?.anchor ?? null }), [shown?.anchor]);
+  const placement = shown?.placement ?? "bottom-start";
+  const via = shown?.via;
+  const shownUserId = shown?.userId;
+
+  useFloating(floatingId, anchorRef, presence.ref, placement, presence.mounted && shown !== null);
+
+  useLayoutEffect(() => {
+    const surface = presence.ref.current;
+
+    if (visible && surface !== null) {
+      showPopover(surface);
+    }
+  }, [visible, presence.ref]);
+
+  // Opened by a click (or a key), focus goes in, onto Message or else View profile.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a click on someone else's trigger swaps the card's contents, and focus moves into the new ones
+  useLayoutEffect(() => {
+    const surface = presence.ref.current;
+
+    if (!visible || via !== "click" || surface === null) {
+      return;
+    }
+
+    surface
+      .querySelector<HTMLElement>(".user-card-actions :is(button, a[href])")
+      ?.focus({ preventScroll: true });
+  }, [visible, via, shownUserId, presence.ref]);
+
+  useEffect(() => {
+    if (lastPath.current !== pathname) {
+      lastPath.current = pathname;
+      closeUserCard();
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    const anchor = shown?.anchor;
+
+    if (!visible || anchor === undefined) {
+      return;
+    }
+
+    if (!anchor.isConnected) {
+      closeUserCard();
+
+      return;
+    }
+
+    const inCard = (target: EventTarget | null) =>
+      target instanceof Node && (presence.ref.current?.contains(target) ?? false);
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+
+      // A press on the trigger is the trigger's own (a click toggles the card).
+      if (!inCard(target) && !(target instanceof Node && anchor.contains(target))) {
+        closeUserCard();
+      }
+    };
+
+    // A hover-opened card has no focus to catch the key, so Esc anywhere closes it.
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      closeUserCard();
+
+      if (via === "click") {
+        restoreFocus(anchor);
+      }
+    };
+
+    // Whatever scrolled under the trigger would leave the card floating over the wrong thing.
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      const scroller = target === document ? document.documentElement : target;
+
+      if (!inCard(target) && scroller instanceof Node && scroller.contains(anchor)) {
+        closeUserCard();
+      }
+    };
+
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("scroll", onScroll, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("scroll", onScroll, true);
+    };
+  }, [visible, shown?.anchor, via, presence.ref]);
+
+  if (!presence.mounted || shown === null) {
+    return null;
+  }
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    closeUserCard();
+    restoreFocus(shown.anchor);
+  };
+
+  // Tabbing on past a card someone opened (to the page, not back to its trigger) closes it. Focus
+  // with nowhere to go (a button inside that went busy) leaves it open.
+  const onBlur = (event: FocusEvent<HTMLDivElement>) => {
+    const next = event.relatedTarget;
+
+    if (
+      visible &&
+      via === "click" &&
+      next instanceof Node &&
+      !event.currentTarget.contains(next) &&
+      !shown.anchor.contains(next)
+    ) {
+      closeUserCard();
+    }
+  };
+
+  return (
+    <div
+      ref={presence.ref}
+      id={floatingId}
+      role="dialog"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      popover="manual"
+      className="popover floating t-dropdown user-card-surface"
+      data-state={presence.state}
+      data-placement={placement}
+      data-origin={originFor(placement)}
+      onPointerEnter={cardEnter}
+      onPointerLeave={cardLeave}
+      onKeyDown={onKeyDown}
+      onBlur={onBlur}
+    >
+      <UserCard
+        key={shown.openingId}
+        userId={shown.userId}
+        openingId={shown.openingId}
+        titleId={titleId}
+      />
+    </div>
+  );
+}

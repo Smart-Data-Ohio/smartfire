@@ -12,6 +12,22 @@
     flex-shrink: 0;
   }
 
+  /* The author's avatar and name, and mentions in the body, open cards above the row's cover. */
+  .saved-row .user-card-trigger,
+  .saved-row .user-card-hover > .agent-link,
+  .saved-body .mention[data-user-id] {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
+  }
+
+  /* The avatar keeps its own size at the top of the row: no gutter beside it opens the card. */
+  .saved-row > .user-card-trigger,
+  .saved-row > .user-card-hover > .agent-link {
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+
   .saved-main {
     display: flex;
     flex: 1;

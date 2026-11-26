@@ -8,7 +8,6 @@ import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Avatar } from "../../ui/avatar.tsx";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
-import { AgentProfileLink } from "../agents/agent-link.tsx";
 import { MessageSteps } from "../agents/message-steps.tsx";
 import { PendingAttachmentView, PendingGallery } from "../messages/attachments.tsx";
 import {
@@ -26,6 +25,7 @@ import { displayedAuthor, webhookName } from "../messages/webhook-attribution.ts
 import { AgentBadge, AppTag } from "../people/agent-badge.tsx";
 import { isAgent, UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { ThreadIndicator } from "../threads/thread-indicator.tsx";
 import { InlineMarkdown } from "./inline-markdown.tsx";
 import "../messages/messages.css";
@@ -47,8 +47,9 @@ interface HeaderProps {
 }
 
 /**
- * Name (an agent's opens its profile), agent badge and time: the first row of a group. A webhook's
- * message shows the webhook's name and Discord's APP tag instead, with no profile to open.
+ * Name (opening their card; an agent's opens its profile), agent badge and time: the first row of
+ * a group. A webhook's message shows the webhook's name and Discord's APP tag instead, with no
+ * profile to open.
  */
 function MessageHeader({ creatorId, createdAt, edited, published, webhook = null }: HeaderProps) {
   const user = useUser(creatorId);
@@ -57,9 +58,9 @@ function MessageHeader({ creatorId, createdAt, edited, published, webhook = null
     <header className="message-header">
       {webhook === null ? (
         <>
-          <AgentProfileLink userId={creatorId}>
+          <AuthorCardTrigger userId={creatorId}>
             <span className="message-author">{user?.name ?? UNKNOWN_NAME}</span>
-          </AgentProfileLink>
+          </AuthorCardTrigger>
           <AgentBadge userId={creatorId} />
         </>
       ) : (
@@ -103,9 +104,9 @@ function Gutter({
           {...(webhook.avatarUrl === null ? {} : { src: webhook.avatarUrl })}
         />
       ) : groupStart ? (
-        <AgentProfileLink userId={creatorId} duplicate>
+        <AuthorCardTrigger userId={creatorId} placement="right-start" duplicate>
           <UserAvatar userId={creatorId} size={36} decorative />
-        </AgentProfileLink>
+        </AuthorCardTrigger>
       ) : (
         <time className="message-hover-time tabular" dateTime={createdAt}>
           {formatTime(createdAt)}

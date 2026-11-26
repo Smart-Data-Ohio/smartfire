@@ -10,6 +10,7 @@ import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { usePaneNavigation } from "../panes/use-right-pane.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { WorkLinks, WorkSummary } from "../work/work-facts.tsx";
 import { PrivateGlyph } from "./private-thread.tsx";
 import {
@@ -33,7 +34,7 @@ let lastTab: ThreadTab = "active";
 
 /**
  * A tracked thread's links and run, under its row: beside the row's button rather than in it,
- * since they're links. (Its status and owner read inside the button, with the row.)
+ * since they're links. (Its status and owner read in the row, over its button.)
  */
 function ThreadRowLinks({ thread, work }: { readonly thread: Thread; readonly work: WorkFacts }) {
   if (work.links.length === 0 && work.runUrl === null) {
@@ -51,22 +52,41 @@ function ThreadRowLinks({ thread, work }: { readonly thread: Thread; readonly wo
   );
 }
 
-function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpen: () => void }) {
+export function ThreadRow({
+  thread,
+  onOpen,
+}: {
+  readonly thread: Thread;
+  readonly onOpen: () => void;
+}) {
   const now = useNow();
   const membership = useStore((state) => state.threadMemberships[thread.id] ?? null);
   const creator = useStore((state) => state.users[thread.creatorId]);
   const unread = membership?.unreadAt != null;
   const following = membership?.involvement === "everything";
+  const creatorName = creator?.name ?? "Someone";
 
+  const label = [
+    thread.visibility === "private" ? "Private" : null,
+    threadTitle(thread),
+    unread ? "Unread" : null,
+    creatorName,
+    replyCountLabel(thread.replyCount),
+    lastReplyLabel(thread.lastActivityAt, now),
+    thread.status === "active" ? null : THREAD_STATUS_LABEL[thread.status],
+    following ? "Following" : null,
+  ]
+    .filter((part) => part !== null)
+    .join(", ");
+
+  // The row's cover opens the thread; its starter's avatar and name above it open their card.
   return (
     <li>
-      <button
-        type="button"
-        className="thread-row"
-        data-unread={unread || undefined}
-        onClick={onOpen}
-      >
-        <UserAvatar userId={thread.creatorId} size={32} decorative />
+      <div className="thread-row" data-unread={unread || undefined}>
+        <button type="button" className="thread-row-cover" aria-label={label} onClick={onOpen} />
+        <AuthorCardTrigger userId={thread.creatorId} placement="right-start" duplicate>
+          <UserAvatar userId={thread.creatorId} size={32} decorative />
+        </AuthorCardTrigger>
         <span className="thread-row-main">
           <span className="thread-row-name">
             {thread.visibility === "private" ? <PrivateGlyph /> : null}
@@ -74,7 +94,9 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
             {unread ? <span className="thread-row-dot" aria-label="Unread" role="img" /> : null}
           </span>
           <span className="thread-row-meta">
-            <span>{creator?.name ?? "Someone"}</span>
+            <AuthorCardTrigger userId={thread.creatorId}>
+              <span className="thread-row-author">{creatorName}</span>
+            </AuthorCardTrigger>
             <span aria-hidden="true">·</span>
             <span className="tabular">{replyCountLabel(thread.replyCount)}</span>
             <span aria-hidden="true">·</span>
@@ -98,7 +120,7 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
             </span>
           ) : null}
         </span>
-      </button>
+      </div>
       {thread.work === null ? null : <ThreadRowLinks thread={thread} work={thread.work} />}
     </li>
   );

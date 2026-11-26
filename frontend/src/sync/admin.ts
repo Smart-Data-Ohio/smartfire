@@ -348,7 +348,7 @@ export const slack = {
 /** The people pages over the S7 people endpoints; see `peoplePagesOver`. */
 export const peoplePages = peoplePagesOver({
   directory: () => runAction(peopleDirectory()),
-  profile: (userId) => runAction(personProfile(userId)),
+  profile: (userId, card) => runAction(personProfile(userId, card)),
   setBanned: (userId, banned) => runAction(setBanned(userId, banned)),
   setDndAllowance: (userId, allowed) => runAction(setDndAllowance(userId, allowed)),
 });

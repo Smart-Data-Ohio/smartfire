@@ -10,7 +10,10 @@ const HTML =
   '<span class="profile-card-name">Maya Okafor</span></span>' +
   "</action-text-attachment> &amp; friends</p>";
 
-/** The markup a body rendered before it went through `BodyHtml`, built the way it was. */
+/**
+ * The markup a body rendered before it went through `BodyHtml`, built the way it was, with the
+ * one change `BodyHtml` makes: the mention chip is a stop in the tab order that opens a card.
+ */
 function inlined(className: string, stale?: true): string {
   const { container } = render(
     <div
@@ -21,7 +24,10 @@ function inlined(className: string, stale?: true): string {
     />,
   );
 
-  return container.innerHTML;
+  return container.innerHTML.replace(
+    'data-user-id="7">',
+    'data-user-id="7" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">',
+  );
 }
 
 describe("BodyHtml", () => {

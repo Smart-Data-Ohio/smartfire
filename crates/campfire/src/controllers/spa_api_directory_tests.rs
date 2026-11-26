@@ -64,18 +64,22 @@ async fn full_name_sidebar_rows_follow_a_members_profile_rename() {
         .until(upserted(true, DIRECT_DAVID_JASON), |_| false)
         .await;
     assert_eq!(row_of(&event).sidebar_display_name, "Jason Full Name");
-    assert_eq!(row_of(&event).display_name, "Jason");
+    assert_eq!(row_of(&event).display_name, "Jason Full Name");
 
     let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
-    assert_eq!(
-        sidebar
-            .rows
-            .iter()
-            .find(|row| row.room.id == DIRECT_DAVID_JASON)
-            .unwrap()
-            .sidebar_display_name,
-        "Jason Full Name"
+    let row = sidebar
+        .rows
+        .iter()
+        .find(|row| row.room.id == DIRECT_DAVID_JASON)
+        .unwrap();
+    assert_eq!(row.sidebar_display_name, "Jason Full Name");
+    assert_eq!(row.display_name, "Jason Full Name");
+    let detail: api::RoomDetail = parse(
+        &david
+            .send(get(&format!("/api/v1/rooms/{DIRECT_DAVID_JASON}")))
+            .await,
     );
+    assert_eq!(detail.display_name, "Jason Full Name");
     let reply = david
         .write(json_body(
             Method::POST,
@@ -84,10 +88,9 @@ async fn full_name_sidebar_rows_follow_a_members_profile_rename() {
         ))
         .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert_eq!(
-        parse::<api::SidebarRow>(&reply).sidebar_display_name,
-        "Jason Full Name"
-    );
+    let row: api::SidebarRow = parse(&reply);
+    assert_eq!(row.sidebar_display_name, "Jason Full Name");
+    assert_eq!(row.display_name, "Jason Full Name");
 
     server.abort();
 }

@@ -9,7 +9,7 @@ use campfire_app::app::AppCtx;
 use campfire_db::User;
 use campfire_db::models::user::presentation;
 use campfire_db::models::{ignore_policy, user_block::UserBlock};
-use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action};
+use campfire_kit::{Ctx, Error, Kit, Param, Result, StatusCode, action};
 use campfire_people::controllers::qr_code;
 use campfire_people::controllers::users::{bans, find_user};
 use campfire_runtime::presenters;
@@ -157,10 +157,11 @@ async fn directory(c: &mut Ctx) -> Result {
 async fn profile(c: &mut Ctx) -> Result {
     let viewer = admin::viewer(c).await?;
     let user = find_user(c, "id").await?;
-    reply(c, &viewer, user.id).await
+    let include_transfer = c.query_params.get("card").and_then(Param::as_str) != Some("1");
+    reply(c, &viewer, user.id, include_transfer).await
 }
 
-async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
+async fn reply(c: &mut Ctx, viewer: &User, id: i64, include_transfer: bool) -> Result {
     let now = c.app().db.env().now();
     let secrets = c.app().secrets.clone();
     let zone = campfire_runtime::presenters::current::time_zone(c).await?;
@@ -233,7 +234,7 @@ async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    profile.transfer_url = (administrator && active).then(|| {
+    profile.transfer_url = (include_transfer && administrator && active).then(|| {
         // `users/profiles/_transfer.html:1`, exactly as G2's `AccountSettings.transfer_url`.
         let transfer =
             presenters::accounts::transfer_id(&c.app().secrets, profile.user.id, c.now());
@@ -268,5 +269,5 @@ async fn change_ban(c: &mut Ctx, banned: bool) -> Result {
     let id = user.id;
     // Classic has no server-side self, bot or deactivated guard; keep the same write path.
     bans::set_banned(c, user, banned).await?;
-    reply(c, &viewer, id).await
+    reply(c, &viewer, id, true).await
 }

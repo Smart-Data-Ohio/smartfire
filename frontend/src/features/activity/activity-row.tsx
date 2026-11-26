@@ -15,6 +15,7 @@ import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import type { MenuSource } from "../destinations/point-menu.tsx";
 import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import { EVENT_ICON, EVENT_LABEL, EVENT_TONE, statusChip } from "./activity-format.ts";
 
@@ -75,7 +76,9 @@ function ActivityGlyph({ item }: { readonly item: ActivityItem }) {
 
   return (
     <span className="activity-glyph" data-tone={tone}>
-      <UserAvatar userId={creatorId} size={36} decorative />
+      <AuthorCardTrigger userId={creatorId} placement="right-start" duplicate>
+        <UserAvatar userId={creatorId} size={36} decorative />
+      </AuthorCardTrigger>
       <span className="activity-kind-badge">
         <Icon name={icon} size={11} />
       </span>
@@ -98,7 +101,8 @@ interface ActivityRowProps {
 /**
  * One inbox entry, Slack's activity row: who (their avatar, badged with the kind), what kind and
  * where, the excerpt, and how long ago. Unread rows carry a dot and a heavier title; handled ones
- * a check. The whole row opens it (named by a summary, described by the excerpt); hover (or focus)
+ * a check. The row's cover opens it (named by a summary, described by the excerpt), and the
+ * creator's avatar and name above it open their user card; hover (or focus)
  * shows read and handled toggles and a menu. On touch screens a long press opens the menu and a
  * swipe toggles handled. Keys on a focused row: ↑/↓ move, Home/End jump, ⏎ opens, U toggles read,
  * E toggles handled, Shift+F10 the menu.
@@ -240,11 +244,12 @@ function ActivityContents({
     >
       <button
         type="button"
-        className="list-row-open activity-row"
+        className="list-row-open list-row-cover"
         aria-label={summary}
         aria-describedby={bodyId}
         onClick={() => onOpen(item)}
-      >
+      />
+      <div className="activity-row">
         <span className="activity-dot" aria-hidden="true" />
         <ActivityGlyph item={item} />
         <span className="activity-main">
@@ -258,7 +263,11 @@ function ActivityContents({
             <span className="activity-title">{title}</span>
           </span>
           <span className="activity-body">
-            {creator === undefined ? null : <span className="activity-author">{creator.name}</span>}
+            {creator === undefined ? null : (
+              <AuthorCardTrigger userId={creator.id}>
+                <span className="activity-author">{creator.name}</span>
+              </AuthorCardTrigger>
+            )}
             <span id={bodyId}>{source.body}</span>
           </span>
           {chip === null && !handled ? null : (
@@ -282,7 +291,7 @@ function ActivityContents({
             {timeAgo(occurredAt, now)}
           </time>
         </Tooltip>
-      </button>
+      </div>
     </ListRow>
   );
 }

@@ -2,9 +2,13 @@
 use std::collections::{HashMap, HashSet};
 
 use super::runner::{present, string, truthy};
+use campfire_db::audit_log::Context;
 use campfire_db::models::slack::SlackConnection;
 use campfire_db::models::slack_import::{IssueLevel, SlackImport};
 use campfire_db::user::email_addresses::{ExternalEmailMatch, match_external_addresses, normalize};
+use campfire_db::user::slack_placeholder::{
+    audit_claim, claim_slack_placeholder, has_running_slack_import, is_unclaimed_slack_placeholder,
+};
 use campfire_db::{Connection, Error, NewUser, Result, Room, Tx, User};
 use indexmap::{IndexMap, IndexSet};
 use rusqlite::{OptionalExtension, params};
@@ -15,6 +19,61 @@ pub const SLACKBOT_ID: &str = "USLACKBOT";
 pub fn mapped_id(conn: &Connection, workspace: i64, kind: &str, key: &str) -> Result<Option<i64>> {
     Ok(conn.query_row("SELECT record_id FROM slack_import_records WHERE slack_workspace_id=? AND slack_kind=? AND slack_key=?",
         params![workspace,kind,key],|r|r.get(0)).optional()?)
+}
+
+pub(crate) fn run_connection(
+    conn: &Connection,
+    run: &SlackImport,
+) -> Result<Option<SlackConnection>> {
+    Ok(run
+        .slack_connection_id
+        .map(|id| SlackConnection::find(conn, id))
+        .transpose()?
+        .flatten()
+        .filter(|connection| {
+            connection.user_id == run.user_id
+                && connection.slack_workspace_id == run.slack_workspace_id
+        }))
+}
+
+pub(crate) fn mapped_placeholder(
+    conn: &Connection,
+    connection: &SlackConnection,
+) -> Result<Option<User>> {
+    let id: Option<i64> = conn
+        .query_row(
+            "SELECT record_id FROM slack_import_records
+             WHERE slack_workspace_id = ? AND slack_kind = 'user' AND slack_key = ?
+               AND record_type = 'User' AND record_id != ?",
+            params![
+                connection.slack_workspace_id,
+                connection.slack_user_id,
+                connection.user_id
+            ],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if let Some(id) = id
+        && is_unclaimed_slack_placeholder(conn, id)?
+    {
+        return User::find_by_id(conn, id);
+    }
+    Ok(None)
+}
+
+pub(crate) fn claim_for_import(
+    tx: &mut Tx<'_>,
+    run: &SlackImport,
+    owner: &User,
+    placeholder: &User,
+) -> Result<()> {
+    if has_running_slack_import(tx.conn(), Some(run.id))? {
+        return Err(Error::Other(
+            "Another Slack import is active. Retry this import after it finishes.".into(),
+        ));
+    }
+    claim_slack_placeholder(tx, owner, placeholder)?;
+    audit_claim(tx, owner, placeholder.id, &Context::default())
 }
 
 pub fn notes_owner(conn: &Connection, room: &Room) -> Result<Option<i64>> {
@@ -338,17 +397,23 @@ pub fn map_page(
             !known.contains(&string(&member["id"])) && (dry || present(&member["id"]).is_some())
         })
         .collect();
-    let email_index = matchable_users(tx.conn(), &candidates)?;
-    let connection = run
-        .slack_connection_id
-        .map(|id| SlackConnection::find(tx.conn(), id))
-        .transpose()?
-        .flatten();
+    let connection = run_connection(tx.conn(), run)?;
     let owner = connection
         .as_ref()
         .map(|c| User::find_by_id(tx.conn(), c.user_id))
         .transpose()?
         .flatten();
+    if let (Some(connection), Some(owner)) = (&connection, &owner)
+        && known.contains(&connection.slack_user_id)
+        && let Some(placeholder) = mapped_placeholder(tx.conn(), connection)?
+    {
+        if !dry {
+            claim_for_import(tx, run, owner, &placeholder)?;
+        }
+        delta["matched"] = json!(1);
+        delta["total"] = json!(1);
+    }
+    let email_index = matchable_users(tx.conn(), &candidates)?;
     let mut new_claims = HashSet::new();
     for member in fresh {
         let key = string(&member["id"]);

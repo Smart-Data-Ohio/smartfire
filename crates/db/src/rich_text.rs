@@ -12,6 +12,11 @@ pub type UserNames<'a> = &'a dyn Fn(i64) -> Option<String>;
 /// reader it holds) for any record lookups: they must never check out another connection, which
 /// deadlocks once every pooled reader waits on the writer.
 pub trait RichText: Send + Sync {
+    /// Signs the replacement ID when re-attributing a saved mention.
+    fn user_attachable_sgid(&self, user_id: i64) -> String {
+        unsigned_user_sgid(user_id)
+    }
+
     /// Boost.resolve_content: app adapters supply the shared Icons catalog.
     fn resolve_boost_content(&self, _conn: &Connection, content: &str) -> Result<String, String> {
         Ok(campfire_richtext::ruby::strip(content).to_owned())
@@ -255,12 +260,17 @@ pub fn user_id_from_sgid(sgid: &str) -> Option<i64> {
 /// A mention attachment for tests, shaped like `MentionTestHelper#mention_attachment_for`
 /// but with an unsigned SGID.
 pub fn mention_attachment_for(user_id: i64) -> String {
+    let sgid = unsigned_user_sgid(user_id);
+    format!(
+        r#"<action-text-attachment sgid="{sgid}" content-type="application/vnd.campfire.mention"></action-text-attachment>"#
+    )
+}
+
+fn unsigned_user_sgid(user_id: i64) -> String {
     let payload = base64::engine::general_purpose::STANDARD.encode(format!(
         r#"{{"_rails":{{"data":"gid://campfire/User/{user_id}","pur":"attachable"}}}}"#
     ));
-    format!(
-        r#"<action-text-attachment sgid="{payload}--unsigned" content-type="application/vnd.campfire.mention"></action-text-attachment>"#
-    )
+    format!("{payload}--unsigned")
 }
 
 fn decode_entities(s: &str) -> String {

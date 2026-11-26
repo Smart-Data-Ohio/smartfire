@@ -464,23 +464,29 @@ impl HuddleGrant {
     pub fn revoke_for_user(tx: &mut Tx<'_>, id: i64, config: &HuddleConfig) -> Result<()> {
         Self::revoke_scope(tx, "user_id", id, true, config)
     }
+    pub(crate) fn stored_room_names(conn: &Connection, id: i64) -> Result<Vec<String>> {
+        let mut names: Vec<String> = query_all(
+            conn,
+            "SELECT DISTINCT room_name FROM huddle_grants WHERE room_id=? ORDER BY id",
+            [id],
+            |row| row.get(0),
+        )?;
+        names.retain(|name| !name.chars().all(char::is_whitespace));
+        Ok(names)
+    }
+
     pub fn revoke_for_room(tx: &mut Tx<'_>, id: i64, config: &HuddleConfig) -> Result<()> {
-        let name: Option<String> = tx
-            .conn()
-            .query_row_cached(
-                "SELECT room_name FROM huddle_grants WHERE room_id=? LIMIT 1",
-                [id],
-                |r| r.get(0),
-            )
-            .optional()?;
-        let name = name.or_else(|| {
-            config
-                .api_secret
-                .as_deref()
-                .map(|secret| rails_compat::jwt::livekit::room_name(secret, id))
-        });
+        let mut names = Self::stored_room_names(tx.conn(), id)?;
+        if let Some(name) = config
+            .api_secret
+            .as_deref()
+            .map(|secret| rails_compat::jwt::livekit::room_name(secret, id))
+            && !names.contains(&name)
+        {
+            names.push(name);
+        }
         Self::revoke_scope(tx, "room_id", id, false, config)?;
-        if let Some(name) = name.filter(|s| !s.chars().all(char::is_whitespace)) {
+        for name in names {
             HuddleCleanup::create_room_deletion(tx, &name, config.admin_configured)?;
         }
         Ok(())

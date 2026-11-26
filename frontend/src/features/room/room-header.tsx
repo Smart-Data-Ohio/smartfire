@@ -24,6 +24,7 @@ import { usePaneNavigation, usePhoneLayout } from "../panes/use-right-pane.ts";
 import { agentKindLabel, agentTone, identityOf, toneLabel } from "../people/agent-identity.ts";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { AuthorCardTrigger } from "../people/user-card-trigger.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { preloadRoomSettings, settingsOverState } from "../rooms/room-settings-host.tsx";
 import { HeaderSearch } from "../search/header-search.tsx";
@@ -115,7 +116,10 @@ function TitleName({ name, self }: { readonly name: string; readonly self: boole
   return <>{self ? <YouLabel name={name} tagClassName="room-title-you" /> : name}</>;
 }
 
-/** Wide screens: the glyph and name (a DM: the person and their status inline). */
+/**
+ * Wide screens: the glyph and name (a DM: the person and their status inline, their avatar and
+ * name opening their card).
+ */
 function WideTitle({
   roomId,
   kind,
@@ -135,10 +139,18 @@ function WideTitle({
           {otherId === undefined ? (
             <RoomGlyph kind={kind} iconName={null} size={18} className="room-title-icon" />
           ) : (
-            <UserAvatar userId={otherId} size={24} presence decorative />
+            <AuthorCardTrigger userId={otherId} duplicate>
+              <UserAvatar userId={otherId} size={24} presence decorative />
+            </AuthorCardTrigger>
           )}
           <h1 className="room-title-name">
-            <TitleName name={name} self={self} />
+            {otherId === undefined ? (
+              <TitleName name={name} self={self} />
+            ) : (
+              <AuthorCardTrigger userId={otherId}>
+                <TitleName name={name} self={self} />
+              </AuthorCardTrigger>
+            )}
           </h1>
           {self ? (
             <span className="room-header-topic">{NOTE_TO_SELF_LINE}</span>

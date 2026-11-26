@@ -27,9 +27,10 @@ and the limits to expect.
 
 ## Users and claiming
 
-Matching is by email, case-insensitive, and includes deactivated Smartfire
-users. The connection owner always maps to themselves: OAuth proved they are
-that Slack user, even when the emails differ.
+Fresh mappings match primary and confirmed secondary email addresses and include deactivated
+Smartfire users. A verified Slack connection maps a fresh Slack identity to the connection owner.
+If the mapping belongs to an unclaimed placeholder, Smartfire moves it to the owner when no other
+Slack import or undo is active. Mappings to established accounts stay with those accounts.
 
 Placeholders for active humans carry the Slack name (`real_name`, then
 `display_name`, then `name`), email, time zone (only when valid) and title as
@@ -43,11 +44,10 @@ no email, created with `skip_open_room_grant`.
 Bot authors on messages without a `user` field are keyed by `bot_id` (or
 username) so each bot maps once. `USLACKBOT` becomes a deactivated "Slackbot".
 
-If a member signed up with a different email than their Slack one, matching
-misses and their Slack identity becomes a separate placeholder. Fix that
-before import by changing the member's Smartfire email to the Slack one (the
-member can do this from their profile page, password-confirmed), so the
-import matches instead of minting a duplicate.
+If you use a different email in Smartfire, add your Slack email under **Profile → Email addresses**
+and confirm it before importing. If you already have an unclaimed placeholder, confirming the
+address or connecting Slack transfers its history, memberships, and Slack mappings to your account.
+Undo treats the receiving account and any existing rooms it merged into as pre-existing.
 
 ## Rooms and memberships
 
